@@ -1,0 +1,103 @@
+# CoAIleague
+
+CoAIleague is a B2B SaaS workforce management platform built exclusively for
+the physical security guard industry. It replaces fragmented tools (GetSling,
+Homebase, spreadsheets, phone calls, email chains) with a single intelligent
+command center where AI handles 80%+ of routine decisions autonomously.
+
+## What it does
+
+- **Scheduling & coverage management** — Shift creation, publication, and
+  conflict-free assignment for security officers across multiple sites.
+  Automatic gap detection and coverage recommendations.
+- **Time tracking & payroll** — GPS-verified clock-in/out, automatic
+  overtime calculation across state jurisdictions, ACH direct deposit
+  via Plaid, W-2 and 1099 contractor support.
+- **Incident reporting & compliance** — Field officers submit incident
+  reports from mobile. AI drafts legally articulate narratives, tracks
+  post-order compliance per client site, and generates regulatory
+  audit-ready documentation.
+- **Officer license & training management** — State Private Security
+  Bureau (PSB) license tracking, expiration alerts, training hour
+  logging exportable in state-required formats, firearms endorsement
+  verification.
+- **Client communications & portals** — Dedicated portals for the
+  security company's clients to view site status, officer rosters,
+  incident summaries, and service reports. Automated weekly briefings.
+- **Sales & proposal automation** — AI-generated, legally articulate
+  security scope proposals, e-signature workflow, automated follow-up.
+- **Trinity AI intelligence** — A self-aware operational AI (the central
+  nervous system) that proactively scans the platform, flags risks,
+  recommends coverage, drafts communications, and surfaces revenue
+  opportunities. Trinity uses a triad of Gemini, Claude, and OpenAI
+  under a Moral Compass rubric that prioritizes officer safety, truth
+  to the client, and dignity for all parties.
+
+## Who it serves
+
+CoAIleague serves three tiers of users in a multi-tenant architecture:
+
+1. **Security companies (tenants)** — The business customers. They run
+   their entire operation inside CoAIleague: scheduling, payroll,
+   incidents, billing, client management, compliance.
+2. **Security officers (end-users)** — Employees of tenant companies.
+   They clock in/out, submit incident reports, acknowledge post orders,
+   receive shift assignments, and communicate with supervisors through
+   the platform.
+3. **The tenant's clients** — Businesses that hire security companies.
+   They access a dedicated client portal to monitor site coverage,
+   review incident reports, and receive automated briefings.
+
+## Public pages
+
+- `/` — Landing page with product overview and primary CTA
+- `/features` — Detailed feature breakdown by module
+- `/pricing` — Subscription tier pricing (Free, Starter, Professional,
+  Business, Enterprise)
+- `/trinity-features` — Trinity AI capability overview
+- `/compare` — Comparison against competitor platforms
+- `/roi-calculator` — ROI calculator for security company operators
+- `/contact` — Sales contact and demo request form
+- `/support` — Support contact and help resources
+- `/terms` — Terms of Service
+- `/privacy` — Privacy Policy
+- `/status` — Public service status page
+
+## What CoAIleague does NOT do
+
+- It is not a general workforce management platform. It is built
+  specifically for physical security operations and will not serve
+  unrelated industries well.
+- It does not replace licensed security training providers. It tracks
+  and documents training, but does not deliver the training itself.
+- It does not act as a background check service. It integrates with
+  Checkr and similar providers but does not issue background checks.
+- It does not handle armed response dispatch for true emergency
+  situations — those must route to local law enforcement.
+
+## Key differentiators
+
+- **Trinity autonomy** — 80%+ of routine operational decisions handled
+  by AI without human intervention, under an auditable reasoning trace
+  for every consequential decision.
+- **Regulatory compliance infrastructure** — Audit-ready documentation
+  designed to be recognized by state Private Security Bureaus and
+  insurance auditors as a trusted reporting system.
+- **Multi-state awareness** — Labor law, license requirements, and
+  incident reporting formats adapt automatically per deployment state.
+- **Officer wellness detection** — Trinity monitors burnout signals
+  (consecutive days worked, response time degradation, call-off
+  patterns) and flags them to supervisors as wellness check recommendations.
+- **Christ-centered architecture** — Truth, dignity, and officer safety
+  are enforced at the AI decision layer through an explicit ethical
+  judge rubric, not as a mission statement.
+
+## Contact
+
+- Website: https://coaileague.com
+- Support: support@coaileague.com
+
+---
+
+This file follows the emerging llms.txt standard for AI crawler context.
+Last updated: 2026-04-07.
