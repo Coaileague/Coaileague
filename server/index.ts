@@ -652,11 +652,61 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
 
-// Handle uncaught exceptions to clean up port
-process.on('uncaughtException', (err) => {
-  console.error('[FATAL] Uncaught exception:', err);
-  removeLockFile();
-  process.exit(1);
+// =============================================================================
+// DEFENSIVE EXCEPTION HANDLERS
+// -----------------------------------------------------------------------------
+// Previously this handler called process.exit(1) on ANY uncaught exception,
+// which created a Railway crash-loop after every successful startup if any
+// background service threw. Now we LOG the exception with full context, leave
+// the process up, and let Railway/k8s health checks decide if a true restart
+// is warranted.
+//
+// CAVEAT: surviving an uncaught exception means the app may be in an
+// inconsistent state (mid-transaction, partial state mutation, leaked
+// resource). We accept that risk in exchange for visibility — the alternative
+// (silent restart loop) gave us zero diagnostic information about what was
+// throwing. Once the underlying root cause is found and fixed, this handler
+// should arguably go back to exiting on truly fatal conditions (OOM, EBADF,
+// etc.) — but for now, stay up, scream loudly in the logs, and let humans
+// triage.
+//
+// EXIT-WORTHY exceptions are still detected: out-of-memory errors and certain
+// system-level fatal codes will trigger an exit so the orchestrator can
+// recycle the container.
+// =============================================================================
+
+const FATAL_EXIT_CODES = new Set([
+  'ERR_OUT_OF_MEMORY',
+  'ERR_FS_FILE_TOO_LARGE',
+]);
+
+let crashCount = 0;
+const CRASH_LOG_DEDUPE_MS = 5_000;
+let lastCrashLogAt = 0;
+
+process.on('uncaughtException', (err: NodeJS.ErrnoException) => {
+  crashCount += 1;
+  const now = Date.now();
+  const shouldLog = now - lastCrashLogAt > CRASH_LOG_DEDUPE_MS;
+  if (shouldLog) {
+    lastCrashLogAt = now;
+    console.error('═══════════════════════════════════════════════════════════');
+    console.error(`[FATAL] Uncaught exception #${crashCount} (process surviving):`);
+    console.error('  name:    ', err?.name);
+    console.error('  message: ', err?.message);
+    console.error('  code:    ', err?.code);
+    console.error('  stack:\n', err?.stack);
+    console.error('═══════════════════════════════════════════════════════════');
+  }
+
+  // True fatal conditions still exit so the orchestrator can recycle us.
+  if (err?.code && FATAL_EXIT_CODES.has(err.code)) {
+    console.error('[FATAL] Exit-worthy code detected, exiting.');
+    removeLockFile();
+    process.exit(1);
+  }
+
+  // Otherwise stay up and let the next request / next tick proceed.
 });
 
 process.on('unhandledRejection', (reason, promise) => {
