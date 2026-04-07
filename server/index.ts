@@ -12,6 +12,7 @@ import { startAutonomousScheduler } from "./services/autonomousScheduler";
 import { ensureRequiredTables } from "./services/dbMigrationService";
 import { runLegacyBootstraps } from "./services/legacyBootstrapRegistry";
 import { ensureCriticalConstraints } from "./services/criticalConstraintsBootstrap";
+import { ensureWorkspaceIndexes } from "./services/workspaceIndexBootstrap";
 import { isProduction as isProductionEnv } from "./lib/isProduction";
 import { ensurePerformanceIndexes, registerNdsQueueMonitor } from "./services/performanceIndexService";
 import { validateAndLogConfiguration } from "./utils/configValidator";
@@ -732,6 +733,15 @@ async function initializeCriticalServices() {
     await ensureCriticalConstraints();
   } catch (error) {
     log.error('Critical constraints bootstrap failed', { error: error instanceof Error ? error.message : String(error) });
+  }
+
+  // workspace_id performance indexes — installs btree indexes on every
+  // multi-tenant table that lacks one in the Drizzle schema declaration.
+  // CLAUDE.md §9: All workspace_id columns indexed.
+  try {
+    await ensureWorkspaceIndexes();
+  } catch (error) {
+    log.error('Workspace index bootstrap failed', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Option B storage quota tables — create if not exists (idempotent)
