@@ -98,6 +98,7 @@ const TemplatesPage = lazy(() => import("@/pages/templates"));
 const Support = lazy(() => import("@/pages/support"));
 const TermsOfService = lazy(() => import("@/pages/terms-of-service"));
 const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
+const SmsOptOut = lazy(() => import("@/pages/sms-opt-out"));
 const StatusPage = lazy(() => import("@/pages/status"));
 const MobileHubPage = lazy(() => import("@/pages/mobile-hub"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
@@ -943,6 +944,7 @@ function AppContent() {
     "/support",
     "/terms",
     "/privacy",
+    "/sms/opt-out",
     "/error-403",
     "/error-404",
     "/error-500",
@@ -975,6 +977,7 @@ function AppContent() {
         <Route path="/support" component={Support} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/sms/opt-out" component={SmsOptOut} />
         <Route path="/status" component={StatusPage} />
         {/* Legacy chat routes redirect to support page */}
         <Route path="/helpdesk"><Redirect to="/support" /></Route>
