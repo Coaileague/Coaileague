@@ -1842,7 +1842,7 @@ Respond in JSON format:
         workspaceId,
         featureKey: 'quickbooks_error_analysis',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.2,
         maxOutputTokens: 500,
         metadata: { operation: context.operation, entityType: context.entityType }

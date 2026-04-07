@@ -10718,6 +10718,12 @@ export const platformUpdateCategoryEnum = pgEnum('platform_update_category', [
   'recovery',              // Recovery notifications
   'maintenance_update',    // Maintenance status updates
   'maintenance_postmortem',// Post-incident analysis
+  // Operational categories used by autonomous schedulers / billing automation
+  'billing',               // Invoicing, payment, credit, subscription updates
+  'scheduling',            // Schedule generation, shift updates
+  'payroll',               // Payroll runs, anomalies, approvals
+  'compliance',            // Compliance alerts, certifications
+  'notification',          // Generic notification category
 ]);
 
 // Tab group type for filtering What's New notifications

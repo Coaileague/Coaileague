@@ -73,7 +73,7 @@ Rules:
       userId: userId || 'system',
       featureKey: 'ai_sentiment_analysis',
       prompt,
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       temperature: 0.3,
       maxOutputTokens: 256
     });

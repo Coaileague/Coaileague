@@ -460,7 +460,7 @@ Generate a JSON schedule with format:
         workspaceId,
         featureKey: 'schedule_optimization',
         prompt,
-        model: 'gemini-1.5-pro',
+        model: 'gemini-2.5-pro',
         temperature: 0.3,
         maxOutputTokens: 2000,
         metadata: { employeeCount: employeeData.length, timeOffCount: timeOffData.length }
@@ -974,7 +974,7 @@ Generate a JSON schedule with format:
       workspaceId,
       featureKey: 'strategic_schedule_optimization',
       prompt,
-      model: 'gemini-1.5-pro',
+      model: 'gemini-2.5-pro',
       temperature: 0.3,
       maxOutputTokens: 8192,
       metadata: { 

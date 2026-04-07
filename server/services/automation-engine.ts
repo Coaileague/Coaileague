@@ -119,7 +119,7 @@ export class AutomationEngine {
         workspaceId: context.workspaceId || 'platform',
         featureKey: 'ai_automation',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
         maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
       });

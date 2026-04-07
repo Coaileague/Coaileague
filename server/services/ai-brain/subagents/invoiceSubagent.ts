@@ -743,7 +743,7 @@ Provide 2-3 sentences of executive-level recommendations to recover this revenue
         workspaceId,
         featureKey: 'invoice_gap_analysis',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.3,
         maxOutputTokens: 300,
         metadata: { clientCount: clientGaps.length, totalRevenue }

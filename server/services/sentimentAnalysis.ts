@@ -43,7 +43,7 @@ ${reviewText}`;
       workspaceId: workspaceId || 'platform',
       featureKey: 'ai_sentiment_analysis',
       prompt,
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       temperature: ANTI_YAP_PRESETS.simple.temperature,
       maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
     });
@@ -109,7 +109,7 @@ ${ticketText}`;
       workspaceId: workspaceId || 'platform',
       featureKey: 'ai_sentiment_analysis',
       prompt,
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       temperature: ANTI_YAP_PRESETS.simple.temperature,
       maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
     });
@@ -179,7 +179,7 @@ ${disputeText}`;
       workspaceId: workspaceId || 'platform',
       featureKey: 'ai_sentiment_analysis',
       prompt,
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       temperature: ANTI_YAP_PRESETS.simple.temperature,
       maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
     });

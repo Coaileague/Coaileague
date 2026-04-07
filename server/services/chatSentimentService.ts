@@ -76,7 +76,7 @@ Classification rules:
       workspaceId: workspaceId || 'platform',
       featureKey: 'ai_chat_sentiment',
       prompt,
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       temperature: ANTI_YAP_PRESETS.supervisor.temperature,
       maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
     });

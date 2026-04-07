@@ -16,7 +16,7 @@
  *   userId: 'user-456',
  *   featureKey: 'invoice_subagent',
  *   prompt: 'Analyze this invoice...',
- *   model: 'gemini-1.5-flash'
+ *   model: 'gemini-2.5-flash'
  * });
  */
 
@@ -29,11 +29,14 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 export interface MeteredGenerateOptions {
   workspaceId: string;
-  userId?: string;
+  userId?: string | null;
   featureKey: string;
   prompt: string;
   systemInstruction?: string;
-  model?: 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-2.0-flash-exp' | 'gemini-3-flash' | 'gemini-3-pro';
+  // Accept any string so callers can use newer Gemini model names without
+  // editing this union every time Google ships a model. Validated at runtime
+  // by the Google SDK.
+  model?: string;
   temperature?: number;
   maxOutputTokens?: number;
   metadata?: Record<string, any>;
@@ -85,22 +88,35 @@ class MeteredGeminiClient {
   async generate(options: MeteredGenerateOptions): Promise<MeteredGenerateResult> {
     const {
       workspaceId,
-      userId = 'system',
+      // Default userId to null (not "system") because ai_usage_events.user_id
+      // is a FK to users.id and the literal string "system" violates the
+      // constraint. Callers without a real user (system-internal calls) get
+      // null and the metering row is still recorded for billing.
+      userId = null,
       featureKey,
       prompt,
       systemInstruction,
-      model = 'gemini-1.5-flash',
+      // Default to gemini-2.5-flash. The previous default `gemini-1.5-flash`
+      // was deprecated and returns 404 from generativelanguage.googleapis.com.
+      model = 'gemini-2.5-flash',
       temperature = 0.7,
       maxOutputTokens = 2048,
       metadata = {}
     } = options;
+    // Normalize empty/legacy "system" sentinel to null at this layer so we
+    // never pass it to recordUsage / preAuthorize.
+    const effectiveUserId = userId && userId !== 'system' ? userId : null;
 
     console.log(`[MeteredGemini] Request: workspace=${workspaceId}, feature=${featureKey}`);
 
     // Step 1: Pre-authorize the request
+    // preAuthorize/finalizeBilling expect a string userId for credit lookups;
+    // empty string is safe (no user matches '') and avoids the FK violation
+    // that would happen if we wrote 'system' into ai_usage_events.
+    const userIdForGateway = effectiveUserId ?? '';
     const authResult = await aiCreditGateway.preAuthorize(
       workspaceId,
-      userId,
+      userIdForGateway,
       featureKey
     );
 
@@ -161,7 +177,7 @@ class MeteredGeminiClient {
       // Step 4: Finalize billing
       const billingResult = await aiCreditGateway.finalizeBilling(
         workspaceId,
-        userId,
+        userIdForGateway,
         featureKey,
         totalTokens,
         {
@@ -197,7 +213,7 @@ class MeteredGeminiClient {
       // Still record the attempt for audit
       await usageMeteringService.recordUsage({
         workspaceId,
-        userId,
+        userId: effectiveUserId,
         featureKey,
         usageType: 'api_call',
         usageAmount: 1,

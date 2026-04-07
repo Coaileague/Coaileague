@@ -61,6 +61,22 @@ interface LogPattern {
 // ============================================================================
 
 /**
+ * Map application-level severity to the gap_severity DB enum.
+ * Application interface uses: info | warning | error | critical | blocker
+ * DB enum (gap_severity) accepts: critical | high | medium | low | info
+ */
+function mapToGapSeverity(s: GapFinding['severity']): 'critical' | 'high' | 'medium' | 'low' | 'info' {
+  switch (s) {
+    case 'blocker':  return 'critical';
+    case 'critical': return 'critical';
+    case 'error':    return 'high';
+    case 'warning':  return 'medium';
+    case 'info':     return 'info';
+    default:         return 'low';
+  }
+}
+
+/**
  * Persist a gap finding to the database
  */
 async function persistGapFinding(finding: GapFinding, detectedBy: string): Promise<number | null> {
@@ -97,7 +113,7 @@ async function persistGapFinding(finding: GapFinding, detectedBy: string): Promi
         lineNumber: finding.lineNumber,
         columnNumber: finding.columnNumber,
         gapType: finding.gapType,
-        severity: finding.severity,
+        severity: mapToGapSeverity(finding.severity),
         title: finding.title,
         description: finding.description,
         technicalDetails: finding.technicalDetails,
@@ -543,7 +559,7 @@ Respond in JSON format:
         workspaceId,
         featureKey: 'log_analysis',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.3,
         maxOutputTokens: 1024,
         metadata: { logLength: logContent.length }

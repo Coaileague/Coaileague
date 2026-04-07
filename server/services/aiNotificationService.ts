@@ -199,7 +199,7 @@ SUMMARY:`;
       workspaceId: data.workspaceId || PLATFORM_WORKSPACE_ID,
       featureKey: 'ai_notification',
       prompt,
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       temperature: ANTI_YAP_PRESETS.notification.temperature,
       maxOutputTokens: ANTI_YAP_PRESETS.notification.maxTokens,
     });
@@ -670,7 +670,7 @@ export async function getNewUserWelcomeSummary(
         workspaceId: workspaceId || PLATFORM_WORKSPACE_ID,
         featureKey: 'ai_notification',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: ANTI_YAP_PRESETS.notification.temperature,
         maxOutputTokens: ANTI_YAP_PRESETS.notification.maxTokens,
       });

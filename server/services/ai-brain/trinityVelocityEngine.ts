@@ -247,7 +247,7 @@ Return a JSON object with a "subtasks" array.`;
         userId,
         featureKey: 'ai_trinity_orchestrator',
         prompt: decompositionPrompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.3,
         maxOutputTokens: 1024
       });
@@ -372,7 +372,7 @@ Provide your response as JSON with: confidence (0.0-1.0), data (object), and rec
         userId: context.userId,
         featureKey: 'ai_trinity_agent',
         prompt: agentPrompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.5,
         maxOutputTokens: 1024
       });
@@ -498,7 +498,7 @@ Synthesize these results into a coherent, actionable response for the user. Use 
         userId,
         featureKey: 'ai_trinity_orchestrator',
         prompt: consolidationPrompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.5,
         maxOutputTokens: 2048
       });

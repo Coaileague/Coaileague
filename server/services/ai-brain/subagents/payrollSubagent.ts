@@ -752,7 +752,7 @@ Provide 2-3 sentences of executive-level insights and recommended actions.`;
         workspaceId,
         featureKey: 'payroll_anomaly_insights',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.3,
         maxOutputTokens: 300,
         metadata: { anomalyCount: anomalies.length, employeeCount }

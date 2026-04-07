@@ -59,7 +59,7 @@ export async function extractDocumentData(
       workspaceId: workspaceId || 'platform',
       featureKey: 'ai_document_extraction',
       prompt,
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       temperature: ANTI_YAP_PRESETS.supervisor.temperature,
       maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
     });

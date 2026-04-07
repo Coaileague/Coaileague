@@ -107,7 +107,7 @@ Reply:`;
         userId: context.userId || 'system',
         featureKey: 'ai_smart_reply',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.7,
         maxOutputTokens: 128
       });
@@ -140,7 +140,7 @@ Return only valid JSON array, no markdown:`;
         userId: context.userId || 'system',
         featureKey: 'ai_smart_reply',
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.7,
         maxOutputTokens: 256
       });
