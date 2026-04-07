@@ -11,6 +11,7 @@ import { CACHING } from './config/platformConfig';
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
 import { ensureRequiredTables } from "./services/dbMigrationService";
 import { runLegacyBootstraps } from "./services/legacyBootstrapRegistry";
+import { ensureCriticalConstraints } from "./services/criticalConstraintsBootstrap";
 import { ensurePerformanceIndexes, registerNdsQueueMonitor } from "./services/performanceIndexService";
 import { validateAndLogConfiguration } from "./utils/configValidator";
 import { runArchitectureLint } from "./utils/architectureLinter";
@@ -721,6 +722,15 @@ async function initializeCriticalServices() {
     await runLegacyBootstraps();
   } catch (error) {
     log.error('Legacy bootstrap phase failed', { error: error instanceof Error ? error.message : String(error) });
+  }
+
+  // Critical raw-SQL constraints (race-condition guards, gist exclusions)
+  // that the Drizzle DSL cannot express. Idempotent — safe on every boot.
+  // 🔴 Critical for shift overlap prevention (RC5 Phase 2 — see shiftRoutes.ts)
+  try {
+    await ensureCriticalConstraints();
+  } catch (error) {
+    log.error('Critical constraints bootstrap failed', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Option B storage quota tables — create if not exists (idempotent)
