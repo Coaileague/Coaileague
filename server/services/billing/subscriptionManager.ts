@@ -16,9 +16,11 @@ import { workspaces, users, type Workspace } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { CreditManager, TIER_CREDIT_ALLOCATIONS } from './creditManager';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-09-30.clover',
+    })
+  : null;
 
 // Subscription tier pricing (monthly base prices)
 // MIDDLEWARE PRICING: Fair value for automation layer connecting to HRIS/accounting
@@ -104,6 +106,20 @@ export class SubscriptionManager {
   }
 
   /**
+   * Returns the Stripe client, throwing a clear error if STRIPE_SECRET_KEY is not configured.
+   * This allows the app to start without Stripe and only fail at the point a Stripe
+   * operation is actually attempted.
+   */
+  private getStripe(): Stripe {
+    if (!stripe) {
+      throw new Error(
+        'Stripe is not configured. Set the STRIPE_SECRET_KEY environment variable to enable billing features.'
+      );
+    }
+    return stripe;
+  }
+
+  /**
    * Create or update Stripe customer for workspace
    */
   async ensureStripeCustomer(workspaceId: string): Promise<string> {
@@ -128,7 +144,7 @@ export class SubscriptionManager {
       .limit(1);
 
     // Create new Stripe customer
-    const customer = await stripe.customers.create({
+    const customer = await this.getStripe().customers.create({
       email: owner?.email || undefined,
       metadata: {
         workspaceId: workspace.id,
@@ -180,11 +196,11 @@ export class SubscriptionManager {
 
       // Attach payment method if provided
       if (paymentMethodId) {
-        await stripe.paymentMethods.attach(paymentMethodId, {
+        await this.getStripe().paymentMethods.attach(paymentMethodId, {
           customer: customerId,
         });
 
-        await stripe.customers.update(customerId, {
+        await this.getStripe().customers.update(customerId, {
           invoice_settings: {
             default_payment_method: paymentMethodId,
           },
@@ -192,7 +208,7 @@ export class SubscriptionManager {
       }
 
       // Create subscription
-      const subscription = await stripe.subscriptions.create({
+      const subscription = await this.getStripe().subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],
         payment_behavior: 'default_incomplete',
@@ -263,7 +279,7 @@ export class SubscriptionManager {
       // Handle downgrade to free
       if (newTier === 'free') {
         if (workspace.stripeSubscriptionId) {
-          await stripe.subscriptions.cancel(workspace.stripeSubscriptionId);
+          await this.getStripe().subscriptions.cancel(workspace.stripeSubscriptionId);
         }
 
         await db.update(workspaces)
@@ -301,10 +317,10 @@ export class SubscriptionManager {
         throw new Error(`Stripe price ID not configured for ${newTier} ${billingCycle}`);
       }
 
-      const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
+      const subscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
       const currentItem = subscription.items.data[0];
 
-      await stripe.subscriptions.update(workspace.stripeSubscriptionId, {
+      await this.getStripe().subscriptions.update(workspace.stripeSubscriptionId, {
         items: [
           {
             id: currentItem.id,
@@ -353,7 +369,7 @@ export class SubscriptionManager {
       }
 
       if (immediate) {
-        await stripe.subscriptions.cancel(workspace.stripeSubscriptionId);
+        await this.getStripe().subscriptions.cancel(workspace.stripeSubscriptionId);
 
         await db.update(workspaces)
           .set({
@@ -367,7 +383,7 @@ export class SubscriptionManager {
         await this.creditManager.initializeCredits(workspaceId, 'free');
       } else {
         // Cancel at period end
-        await stripe.subscriptions.update(workspace.stripeSubscriptionId, {
+        await this.getStripe().subscriptions.update(workspace.stripeSubscriptionId, {
           cancel_at_period_end: true,
         });
 
@@ -414,7 +430,7 @@ export class SubscriptionManager {
       }
 
       // Retrieve current Stripe subscription state
-      const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
+      const subscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
       
       const targetTier = tier || workspace.subscriptionTier as SubscriptionTier || 'starter';
       const stripeSubId = workspace.stripeSubscriptionId;
@@ -424,7 +440,7 @@ export class SubscriptionManager {
         case 'active':
           // Already active - update tier if different and remove pending cancellation
           if (subscription.cancel_at_period_end) {
-            await stripe.subscriptions.update(stripeSubId, {
+            await this.getStripe().subscriptions.update(stripeSubId, {
               cancel_at_period_end: false,
               metadata: {
                 ...subscription.metadata,
@@ -444,7 +460,7 @@ export class SubscriptionManager {
 
         case 'paused':
           // Resume paused subscription - this activates it in Stripe
-          await stripe.subscriptions.resume(stripeSubId, {
+          await this.getStripe().subscriptions.resume(stripeSubId, {
             billing_cycle_anchor: 'now',
           });
           console.log(`[SubscriptionManager] Stripe subscription ${stripeSubId} resumed from paused`);
@@ -595,7 +611,7 @@ export class SubscriptionManager {
     let stripeSubscription: Stripe.Subscription | null = null;
     if (workspace.stripeSubscriptionId) {
       try {
-        stripeSubscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
+        stripeSubscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
       } catch (error) {
         console.error('Failed to retrieve Stripe subscription:', error);
       }
@@ -636,7 +652,7 @@ export class SubscriptionManager {
       throw new Error('No Stripe customer associated with this workspace');
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await this.getStripe().billingPortal.sessions.create({
       customer: workspace.stripeCustomerId,
       return_url: returnUrl,
     });
@@ -663,7 +679,7 @@ export class SubscriptionManager {
     // If no Stripe subscription, check if there should be one
     if (!workspace.stripeSubscriptionId && workspace.stripeCustomerId) {
       // Look for active subscriptions for this customer
-      const subscriptions = await stripe.subscriptions.list({
+      const subscriptions = await this.getStripe().subscriptions.list({
         customer: workspace.stripeCustomerId,
         status: 'active',
         limit: 1,
@@ -686,7 +702,7 @@ export class SubscriptionManager {
     // If has Stripe subscription, verify it's in sync
     if (workspace.stripeSubscriptionId) {
       try {
-        const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
+        const subscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
         const stripeStatus = this.mapStripeStatus(subscription.status);
         const stripeTier = (subscription.metadata.tier as SubscriptionTier) || workspace.subscriptionTier;
 

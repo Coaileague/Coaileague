@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request, Response } from 'express';
 
 /**
@@ -94,12 +94,11 @@ export const chatMessageLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Key by user ID only - authenticated users tracked per-user
-  // Anonymous users handled by default IP-based rate limiting
+  // Anonymous users fall back to IPv6-safe IP-based key
   keyGenerator: (req: Request) => {
     // @ts-ignore - req.user is added by requireAuth middleware
     if (req.user?.id) return req.user.id;
-    // Return undefined to use default IP-based key (with proper IPv6 normalization)
-    return undefined;
+    return ipKeyGenerator(req);
   },
   skipFailedRequests: false,
   handler: (req: Request, res: Response) => {
@@ -124,12 +123,11 @@ export const chatUploadLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Key by user ID only - authenticated users tracked per-user
-  // Anonymous users handled by default IP-based rate limiting
+  // Anonymous users fall back to IPv6-safe IP-based key
   keyGenerator: (req: Request) => {
     // @ts-ignore - req.user is added by requireAuth middleware
     if (req.user?.id) return req.user.id;
-    // Return undefined to use default IP-based key (with proper IPv6 normalization)
-    return undefined;
+    return ipKeyGenerator(req);
   },
   skipFailedRequests: false,
   handler: (req: Request, res: Response) => {
@@ -154,12 +152,11 @@ export const chatConversationLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Key by user ID only - authenticated users tracked per-user
-  // Anonymous users handled by default IP-based rate limiting
+  // Anonymous users fall back to IPv6-safe IP-based key
   keyGenerator: (req: Request) => {
     // @ts-ignore - req.user is added by requireAuth middleware
     if (req.user?.id) return req.user.id;
-    // Return undefined to use default IP-based key (with proper IPv6 normalization)
-    return undefined;
+    return ipKeyGenerator(req);
   },
   skipFailedRequests: false,
   handler: (req: Request, res: Response) => {
