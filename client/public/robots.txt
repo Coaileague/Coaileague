@@ -107,5 +107,80 @@ Disallow: /diagnostics
 Disallow: /mobile-hub
 Disallow: /mobile-more
 
+# ── AI CRAWLER RULES (CLAUDE.md §16) ─────────────────────────────────────────
+# Explicit allow/disallow for the AI crawlers (Claude, Gemini, GPT). They get
+# the same public-page access as general search bots and are blocked from
+# every authenticated route. llms.txt is explicitly allowed so they can
+# pick up the plain-English platform summary.
+
+User-agent: GPTBot
+Allow: /$
+Allow: /features
+Allow: /pricing
+Allow: /trinity-features
+Allow: /compare
+Allow: /roi-calculator
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /support
+Allow: /templates
+Allow: /status
+Allow: /llms.txt
+Disallow: /workspace/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+User-agent: ClaudeBot
+Allow: /$
+Allow: /features
+Allow: /pricing
+Allow: /trinity-features
+Allow: /compare
+Allow: /roi-calculator
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /support
+Allow: /templates
+Allow: /status
+Allow: /llms.txt
+Disallow: /workspace/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+User-agent: Google-Extended
+Allow: /$
+Allow: /features
+Allow: /pricing
+Allow: /trinity-features
+Allow: /compare
+Allow: /roi-calculator
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /support
+Allow: /templates
+Allow: /status
+Allow: /llms.txt
+Disallow: /workspace/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
 # Sitemap location
 Sitemap: https://coaileague.com/sitemap.xml
