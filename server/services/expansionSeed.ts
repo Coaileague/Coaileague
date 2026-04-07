@@ -30,8 +30,8 @@ async function q(sql: string, params: any[] = []): Promise<any> {
 }
 
 export async function runExpansionSeed(): Promise<{ success: boolean; message: string }> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  if (isProduction) return { success: true, message: "Skipped — production" };
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return { success: true, message: "Skipped — production" };
 
   // Sentinel check
   const check = await q(`SELECT id FROM subcontractor_companies WHERE id = 'sc-acme-001' LIMIT 1`);

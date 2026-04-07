@@ -46,25 +46,14 @@ export type InvoiceWithPaymentTotal = Invoice & {
 // ============================================================================
 // TRINITY (MASCOT) ACCESS TYPES
 // ============================================================================
+// Role types are re-exported from the canonical RBAC SSOT
+// (shared/lib/rbac/roleDefinitions.ts) per CLAUDE.md §8.
+// Previously this file declared its own truncated WorkspaceRole (7 values)
+// which conflicted with the canonical definition (11 values), causing
+// silent type mismatches.
 
-export type PlatformRole = 
-  | 'root_admin' 
-  | 'deputy_admin' 
-  | 'sysop' 
-  | 'support_manager' 
-  | 'support_agent' 
-  | 'compliance_officer' 
-  | 'Bot' 
-  | 'none';
-
-export type WorkspaceRole = 
-  | 'org_owner' 
-  | 'co_owner' 
-  | 'department_manager' 
-  | 'supervisor' 
-  | 'staff' 
-  | 'auditor' 
-  | 'contractor';
+export type { PlatformRole, WorkspaceRole } from './lib/rbac/roleDefinitions';
+import type { PlatformRole, WorkspaceRole } from './lib/rbac/roleDefinitions';
 
 export interface TrinityAccessContext {
   platformRole?: PlatformRole | null;
@@ -88,7 +77,10 @@ export const TRINITY_ALLOWED_PLATFORM_ROLES: PlatformRole[] = [
   'compliance_officer'
 ];
 
-export const TRINITY_ALLOWED_WORKSPACE_ROLES: WorkspaceRole[] = ['org_owner', 'co_owner', 'admin'];
+// Trinity is accessible to org owners and co-owners. The previous list
+// included 'admin' which is not a member of WorkspaceRole — kept for reference
+// but removed because the type-mismatch silently broke Trinity access checks.
+export const TRINITY_ALLOWED_WORKSPACE_ROLES: WorkspaceRole[] = ['org_owner', 'co_owner'];
 
 export function canAccessTrinity(context: TrinityAccessContext): boolean {
   const { platformRole, workspaceRole, isOrgOwner } = context;

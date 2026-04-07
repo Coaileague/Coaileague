@@ -34,7 +34,8 @@ import {
 const WS = 'dev-acme-security-ws';
 
 export async function runCommunicationsSeed(): Promise<{ success: boolean; message: string }> {
-  if (process.env.REPLIT_DEPLOYMENT === '1') {
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) {
     return { success: true, message: 'Skipped - production environment' };
   }
 

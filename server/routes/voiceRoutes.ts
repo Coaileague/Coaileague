@@ -975,20 +975,20 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
     // ── Post-call SMS confirmation ─────────────────────────────────────────────
     // Send the caller their case number via SMS immediately after the case is
     // created, so they have a written record even after the call ends.
+    // Awaited to satisfy "no fire-and-forget" rule (CLAUDE.md §9); sendSMS
+    // persists to smsAttemptLog regardless of outcome, so failures are logged.
     if (callerNumber && callerNumber.trim().length >= 10) {
-      setImmediate(async () => {
-        try {
-          const { sendSMS } = await import('../services/smsService');
-          const orgName = workspace?.name || 'your organization';
-          const smsBody = lang === 'es'
-            ? `Hola${callerName ? ` ${callerName.split(' ')[0]}` : ''}, su caso de soporte fue creado: ${supportCase.case_number}. Un especialista de ${orgName} le dará seguimiento pronto. Responda STOP para dejar de recibir mensajes.`
-            : `Hi${callerName ? ` ${callerName.split(' ')[0]}` : ''}, your support case has been created: ${supportCase.case_number}. A specialist from ${orgName} will follow up with you shortly. Reply STOP to unsubscribe.`;
-          await sendSMS({ to: callerNumber, body: smsBody, workspaceId, type: 'system_alert' });
-          log.info(`[VoiceRoutes] Post-call SMS sent to ${callerNumber} — case ${supportCase.case_number}`);
-        } catch (smsErr: any) {
-          log.warn(`[VoiceRoutes] Post-call SMS failed (non-fatal): ${smsErr?.message}`);
-        }
-      });
+      try {
+        const { sendSMS } = await import('../services/smsService');
+        const orgName = workspace?.name || 'your organization';
+        const smsBody = lang === 'es'
+          ? `Hola${callerName ? ` ${callerName.split(' ')[0]}` : ''}, su caso de soporte fue creado: ${supportCase.case_number}. Un especialista de ${orgName} le dará seguimiento pronto. Responda STOP para dejar de recibir mensajes.`
+          : `Hi${callerName ? ` ${callerName.split(' ')[0]}` : ''}, your support case has been created: ${supportCase.case_number}. A specialist from ${orgName} will follow up with you shortly. Reply STOP to unsubscribe.`;
+        await sendSMS({ to: callerNumber, body: smsBody, workspaceId, type: 'system_alert' });
+        log.info(`[VoiceRoutes] Post-call SMS sent to ${callerNumber} — case ${supportCase.case_number}`);
+      } catch (smsErr: any) {
+        log.warn(`[VoiceRoutes] Post-call SMS failed (non-fatal): ${smsErr?.message}`);
+      }
     }
 
     // Speak the cause number to the caller

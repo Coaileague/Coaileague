@@ -1,6 +1,7 @@
 const CRITICAL_VARS = [
   'DATABASE_URL',
-  'JWT_SECRET',
+  'SESSION_SECRET',          // express-session secret (auth.ts asserts at startup)
+  'ENCRYPTION_KEY',          // AES-256-GCM master key (encryption.ts)
   'RESEND_API_KEY',
   'TWILIO_ACCOUNT_SID',
   'TWILIO_AUTH_TOKEN',

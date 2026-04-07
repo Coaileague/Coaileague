@@ -4,8 +4,8 @@ export function validateEnvironment() {
   const required = [
     'DATABASE_URL',
     'SESSION_SECRET',
+    'ENCRYPTION_KEY',
     'GEMINI_API_KEY',
-    'JWT_SECRET',
     'RESEND_API_KEY',
     'TWILIO_ACCOUNT_SID',
     'TWILIO_AUTH_TOKEN',
@@ -15,7 +15,6 @@ export function validateEnvironment() {
     'ANTHROPIC_API_KEY',
     'OPENAI_API_KEY',
     'GRANDFATHERED_TENANT_ID',
-    'ENCRYPTION_KEY'
   ];
   const optional = [
     'MONITORING_WEBHOOK_URL',

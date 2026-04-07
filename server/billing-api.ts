@@ -19,12 +19,16 @@ import { eq } from 'drizzle-orm';
 import { requireAuth } from './auth';
 import { type AuthenticatedRequest } from './rbac';
 import Stripe from 'stripe';
+import { getStripe } from './services/billing/stripeClient';
 import { isFeatureEnabled } from '@shared/platformConfig';
 // Import type augmentation for Express Request.user
 import './types';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing.
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
 });
 
 export const billingRouter = Router();

@@ -10,6 +10,7 @@
 
 import { AI } from '../config/platformConfig';
 import { createLogger } from '../lib/logger';
+import { isProduction as isProductionEnv } from '../lib/isProduction';
 const log = createLogger('configValidator');
 
 
@@ -166,7 +167,8 @@ export function validateConfiguration(): ConfigValidationResult {
     }
   }
 
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1';
+  // Use the canonical isProduction helper (Replit, Railway, Cloud Run, NODE_ENV=production)
+  const isProduction = isProductionEnv();
   if (isProduction) {
     for (const config of PRODUCTION_REQUIRED_CONFIGS) {
       if (!config.value) {

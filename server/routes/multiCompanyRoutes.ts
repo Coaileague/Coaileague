@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db";
+import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { requireAuth } from "../rbac";
 import { requirePlan } from '../tierGuards';
 import { platformActionHub } from "../services/helpai/platformActionHub";
@@ -196,34 +197,29 @@ router.get('/officer-pool', requireAuth, async (req: any, res) => {
   }
 });
 
-// Idempotent Migrations
-(async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS workspace_relationships (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        parent_workspace_id varchar NOT NULL,
-        child_workspace_id varchar NOT NULL,
-        relationship_type varchar NOT NULL CHECK (relationship_type IN ('subsidiary','franchise','partner')),
-        created_by varchar,
-        created_at timestamptz DEFAULT NOW(),
-        is_active boolean DEFAULT true,
-        UNIQUE(parent_workspace_id, child_workspace_id)
-      );
-      CREATE TABLE IF NOT EXISTS consolidated_reports (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        parent_workspace_id varchar NOT NULL,
-        report_type varchar NOT NULL,
-        period_start date,
-        period_end date,
-        data jsonb,
-        generated_at timestamptz DEFAULT NOW()
-      );
-    `);
-    log.info('Multi-company tables initialized');
-  } catch (err) {
-    log.error('Failed to initialize multi-company tables', err);
-  }
-})().catch((err: unknown) => log.error('[MultiCompany] Module-level init failure:', err));
+// Idempotent migrations (deferred to post-DB-ready bootstrap phase)
+registerLegacyBootstrap('multiCompany', async (p) => {
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS workspace_relationships (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      parent_workspace_id varchar NOT NULL,
+      child_workspace_id varchar NOT NULL,
+      relationship_type varchar NOT NULL CHECK (relationship_type IN ('subsidiary','franchise','partner')),
+      created_by varchar,
+      created_at timestamptz DEFAULT NOW(),
+      is_active boolean DEFAULT true,
+      UNIQUE(parent_workspace_id, child_workspace_id)
+    );
+    CREATE TABLE IF NOT EXISTS consolidated_reports (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      parent_workspace_id varchar NOT NULL,
+      report_type varchar NOT NULL,
+      period_start date,
+      period_end date,
+      data jsonb,
+      generated_at timestamptz DEFAULT NOW()
+    );
+  `);
+});
 
 export default router;

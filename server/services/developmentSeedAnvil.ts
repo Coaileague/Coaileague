@@ -21,8 +21,8 @@ const WS = "dev-anvil-security-ws";
 const PASS_HASH = "$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe";
 
 export async function runAnvilCoreSeed(): Promise<{ success: boolean; message: string }> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  if (isProduction) return { success: true, message: "Skipped — production" };
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return { success: true, message: "Skipped — production" };
 
   // CATEGORY C — Raw SQL retained: LIMIT | Tables: workspaces | Verified: 2026-03-23
   const existing = await typedQuery(sql`

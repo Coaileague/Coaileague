@@ -325,19 +325,30 @@ export async function sendSMS(message: SMSMessage): Promise<SMSResult> { // infr
     log.info(`[SMS] Sent to ${maskedPhone}: ${result.sid}`);
 
     if (message.workspaceId) {
-      // CATEGORY C — Raw SQL retained: SMS cost logging INSERT via db.$client | Tables: external_cost_log | Verified: 2026-03-23
-      db.$client.query(
-        `INSERT INTO external_cost_log (workspace_id, user_id, service_name, call_type, units_consumed, cost_microcents, metadata)
-         VALUES ($1, $2, 'twilio_sms', $3, 1, 800, $4)`,
-        [message.workspaceId, message.userId || null, message.type || 'sms_notification', JSON.stringify({ sid: result.sid, to: message.to })]
-      ).catch((err) => log.warn('[smsService] Fire-and-forget failed:', err));
+      // Cost ledger write is awaited (no fire-and-forget per CLAUDE.md §9).
+      // Failure is logged but does not fail the send — the SMS already
+      // succeeded and the attempt is tracked in smsAttemptLog.
+      try {
+        // CATEGORY C — Raw SQL retained: SMS cost logging INSERT via db.$client | Tables: external_cost_log | Verified: 2026-03-23
+        await db.$client.query(
+          `INSERT INTO external_cost_log (workspace_id, user_id, service_name, call_type, units_consumed, cost_microcents, metadata)
+           VALUES ($1, $2, 'twilio_sms', $3, 1, 800, $4)`,
+          [message.workspaceId, message.userId || null, message.type || 'sms_notification', JSON.stringify({ sid: result.sid, to: message.to })]
+        );
+      } catch (err) {
+        log.warn('[smsService] Cost ledger write failed (non-fatal):', err);
+      }
 
-      voiceSmsMeteringService.recordSmsMessage({
-        workspaceId: message.workspaceId,
-        messageSid: result.sid,
-        callType: message.type || 'sms_notification',
-        twilioCostCents: 104,
-      }).catch((e: Error) => log.warn('[smsService] SMS metering error:', e.message));
+      try {
+        await voiceSmsMeteringService.recordSmsMessage({
+          workspaceId: message.workspaceId,
+          messageSid: result.sid,
+          callType: message.type || 'sms_notification',
+          twilioCostCents: 104,
+        });
+      } catch (e: any) {
+        log.warn('[smsService] SMS metering error:', e?.message || String(e));
+      }
     }
 
     return {

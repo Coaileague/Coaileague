@@ -1,14 +1,15 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { platformActionHub } from "../services/helpai/platformActionHub";
+import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { createLogger } from "../lib/logger";
 const log = createLogger('TrainingCertificationRoutes');
 
 const router = Router();
 
-// --- SCHEMAS ---
-(async () => {
-  await pool.query(`
+// --- SCHEMAS (deferred to post-DB-ready bootstrap phase) ---
+registerLegacyBootstrap('trainingCertification', async (p) => {
+  await p.query(`
     CREATE TABLE IF NOT EXISTS training_curriculums (
       id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
       workspace_id varchar NOT NULL,
@@ -57,7 +58,7 @@ const router = Router();
       created_at timestamptz DEFAULT NOW()
     );
   `);
-})().catch((err: unknown) => log.error('[TrainingCerts] Module-level table init failure:', err));
+});
 
 // --- TRINITY ACTIONS ---
 platformActionHub.registerAction({

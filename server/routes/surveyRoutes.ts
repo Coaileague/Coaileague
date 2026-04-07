@@ -4,6 +4,7 @@ import { db, pool } from "../db";
 import { requireAuth } from "../auth";
 import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
 import { platformActionHub } from '../services/helpai/platformActionHub';
+import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { sanitizeError } from '../middleware/errorHandler';
 import { createLogger } from '../lib/logger';
 const log = createLogger('SurveyRoutes');
@@ -12,9 +13,9 @@ const log = createLogger('SurveyRoutes');
 const router = Router();
 const publicRouter = Router();
 
-// --- Idempotent Migrations ---
-(async () => {
-  await pool.query(`
+// --- Idempotent migrations (deferred to post-DB-ready bootstrap phase) ---
+registerLegacyBootstrap('surveys', async (p) => {
+  await p.query(`
     CREATE TABLE IF NOT EXISTS survey_templates (
       id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
       workspace_id varchar NOT NULL,
@@ -54,7 +55,7 @@ const publicRouter = Router();
       created_at timestamptz DEFAULT NOW()
     );
   `);
-})().catch(err => log.error("Migration error in surveyRoutes:", err));
+});
 
 // --- Trinity Actions ---
 platformActionHub.registerAction({

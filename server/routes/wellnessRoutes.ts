@@ -3,42 +3,39 @@ import { requireAuth } from "../rbac";
 import { pool } from "../db";
 import { platformEventBus } from "../services/platformEventBus";
 import { platformActionHub } from "../services/helpai/platformActionHub";
+import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { createLogger } from '../lib/logger';
 const log = createLogger('WellnessRoutes');
 
 
 const router = Router();
 
-// Table initialization
-(async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS wellness_check_configs (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL UNIQUE,
-        default_interval_minutes integer DEFAULT 30,
-        escalation_threshold_minutes integer DEFAULT 15,
-        supervisor_notification_enabled boolean DEFAULT true,
-        emergency_contact_enabled boolean DEFAULT false,
-        created_at timestamptz DEFAULT NOW(),
-        updated_at timestamptz DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS wellness_check_events (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL,
-        session_id varchar NOT NULL,
-        employee_id varchar NOT NULL,
-        event_type varchar NOT NULL CHECK (event_type IN ('check_in','missed_check_in','sos_triggered','session_started','session_ended','supervisor_alerted')),
-        latitude numeric,
-        longitude numeric,
-        notes text,
-        created_at timestamptz DEFAULT NOW()
-      );
-    `);
-  } catch (error) {
-    log.error("Error creating wellness tables:", error);
-  }
-})();
+// Table initialization (deferred to post-DB-ready bootstrap phase)
+registerLegacyBootstrap('wellness', async (p) => {
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS wellness_check_configs (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL UNIQUE,
+      default_interval_minutes integer DEFAULT 30,
+      escalation_threshold_minutes integer DEFAULT 15,
+      supervisor_notification_enabled boolean DEFAULT true,
+      emergency_contact_enabled boolean DEFAULT false,
+      created_at timestamptz DEFAULT NOW(),
+      updated_at timestamptz DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS wellness_check_events (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL,
+      session_id varchar NOT NULL,
+      employee_id varchar NOT NULL,
+      event_type varchar NOT NULL CHECK (event_type IN ('check_in','missed_check_in','sos_triggered','session_started','session_ended','supervisor_alerted')),
+      latitude numeric,
+      longitude numeric,
+      notes text,
+      created_at timestamptz DEFAULT NOW()
+    );
+  `);
+});
 
 // Trinity Actions Registration
 platformActionHub.registerAction({

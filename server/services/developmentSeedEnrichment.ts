@@ -27,7 +27,8 @@ import { clients, employeeAvailability, shifts, timeEntries, invoices, invoiceLi
 const WS = 'dev-acme-security-ws';
 
 export async function runDevDataEnrichment(): Promise<{ success: boolean; message: string }> {
-  if (process.env.REPLIT_DEPLOYMENT === '1') {
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) {
     return { success: true, message: 'Skipped - production environment' };
   }
 

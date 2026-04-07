@@ -10,6 +10,10 @@ import { monitoringService } from "./monitoring";
 import { CACHING } from './config/platformConfig';
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
 import { ensureRequiredTables } from "./services/dbMigrationService";
+import { runLegacyBootstraps } from "./services/legacyBootstrapRegistry";
+import { ensureCriticalConstraints } from "./services/criticalConstraintsBootstrap";
+import { ensureWorkspaceIndexes } from "./services/workspaceIndexBootstrap";
+import { isProduction as isProductionEnv } from "./lib/isProduction";
 import { ensurePerformanceIndexes, registerNdsQueueMonitor } from "./services/performanceIndexService";
 import { validateAndLogConfiguration } from "./utils/configValidator";
 import { runArchitectureLint } from "./utils/architectureLinter";
@@ -199,7 +203,10 @@ import { trinityKnowledgeService } from "./services/ai-brain/trinityKnowledgeSer
 import { complianceScoringBridge } from "./services/compliance/complianceScoringBridge";
 import { runProductionSeed, runPasswordMigrations, runDataCorrections, runWorkspaceHealthCorrections, runProductionDataCleanup } from "./services/productionSeed";
 import { runDevelopmentSeed, ensurePhase0Seed, ensurePhase0ExtendedSeed } from "./services/developmentSeed";
-import { assertEnvironment } from "./config/envValidation";
+// NOTE: assertEnvironment from ./config/envValidation is intentionally NOT
+// imported. The active validator is validateEnvironment from ./startup/
+// validateEnvironment which is called inside startServer(). Keeping a single
+// source of truth avoids drift between the two var lists.
 
 const log = createLogger('server');
 
@@ -281,7 +288,7 @@ app.get('/api/platform/readiness', rateLimitMiddleware(
   checks.aiEngine = { status: process.env.GEMINI_API_KEY ? 'configured' : 'MISSING' };
   checks.monitoringWebhook = { status: process.env.MONITORING_WEBHOOK_URL ? 'configured' : 'not-set', detail: 'For error alerts' };
   checks.nodeEnv = { status: process.env.NODE_ENV || 'development' };
-  checks.deployment = { status: process.env.REPLIT_DEPLOYMENT === '1' ? 'production' : 'development' };
+  checks.deployment = { status: isProductionEnv() ? 'production' : 'development' };
 
   const critical = ['database', 'sessionSecret', 'encryptionKey', 'corsOrigins', 'stripe', 'stripeWebhook', 'emailService', 'aiEngine'];
   const failures = critical.filter(k => checks[k].status === 'MISSING' || checks[k].status === 'WEAK' || checks[k].status === 'open');
@@ -483,14 +490,9 @@ app.use(helmet({
     includeSubDomains: true,
     preload: false,
   },
-  permissionsPolicy: {
-    features: {
-      camera: ["'none'"],
-      microphone: ["'self'"],
-      geolocation: ["'self'"],
-      payment: ["'self'"]
-    }
-  }
+  // NOTE: Permissions-Policy header is set by the manual middleware at the
+  // top of this file (see app.use at line ~211). Helmet 7+ does not accept a
+  // permissionsPolicy option — passing it here was silently ignored.
 }));
 
 // CRITICAL: Explicitly remove X-Frame-Options header to ensure Replit webview works
@@ -500,7 +502,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const isProdDeployment = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1';
+const isProdDeployment = isProductionEnv();
 const explicitAllowedOrigins: string[] = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
   : [];
@@ -544,7 +546,7 @@ app.set('trust proxy', 1);
 
 // Startup configuration validation — catch misconfigs before they cause runtime failures
 const configValid = validateAndLogConfiguration();
-if (!configValid && (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1')) {
+if (!configValid && isProductionEnv()) {
   log.error('[FATAL] Configuration validation failed in production — refusing to start');
   process.exit(1);
 }
@@ -713,6 +715,33 @@ async function initializeCriticalServices() {
     await ensureRequiredTables();
   } catch (error) {
     log.error('Database migration check failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+  }
+
+  // Legacy table bootstraps — runs CREATE TABLE IF NOT EXISTS statements that
+  // were previously fired from module-load IIFEs in route files. Now collected
+  // into a single registry so they execute after the DB pool is verified up.
+  try {
+    await runLegacyBootstraps();
+  } catch (error) {
+    log.error('Legacy bootstrap phase failed', { error: error instanceof Error ? error.message : String(error) });
+  }
+
+  // Critical raw-SQL constraints (race-condition guards, gist exclusions)
+  // that the Drizzle DSL cannot express. Idempotent — safe on every boot.
+  // 🔴 Critical for shift overlap prevention (RC5 Phase 2 — see shiftRoutes.ts)
+  try {
+    await ensureCriticalConstraints();
+  } catch (error) {
+    log.error('Critical constraints bootstrap failed', { error: error instanceof Error ? error.message : String(error) });
+  }
+
+  // workspace_id performance indexes — installs btree indexes on every
+  // multi-tenant table that lacks one in the Drizzle schema declaration.
+  // CLAUDE.md §9: All workspace_id columns indexed.
+  try {
+    await ensureWorkspaceIndexes();
+  } catch (error) {
+    log.error('Workspace index bootstrap failed', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Option B storage quota tables — create if not exists (idempotent)

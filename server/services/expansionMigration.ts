@@ -11,7 +11,8 @@ const log = createLogger('expansionMigration');
 
 
 export async function runExpansionMigration(): Promise<void> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+  const { isProduction: isProd } = await import('../lib/isProduction');
+  const isProduction = isProd();
   log.info(`[ExpansionMigration] Starting expansion table migration (production=${isProduction})...`);
 
   const statements: string[] = [

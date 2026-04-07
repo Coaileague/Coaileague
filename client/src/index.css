@@ -5329,6 +5329,53 @@ body[data-scroll-locked]:not([data-scroll-locked="0"]) {
   overflow: hidden;
 }
 
+/* ============================================================================
+   PHASE Q — MOBILE SCROLL GUARANTEE (CLAUDE.md §10 universal rendering)
+   ============================================================================
+   These rules are the last-line guarantee that touch-scrolling works on
+   public pages and the workspace shell on every mobile device. They protect
+   against overlay containers, nested transform contexts, and Suspense
+   fallbacks accidentally blocking pan-y gestures.
+
+   Hard rules enforced here:
+     1. The public scroll root and workspace main element have GPU-accelerated
+        scroll with iOS momentum (-webkit-overflow-scrolling: touch)
+     2. Touch-action is pan-y (vertical scroll always allowed)
+     3. Pointer events on the scroll container itself stay on, regardless
+        of what fixed-position descendants are doing
+     4. Hardware acceleration via translate3d defeats Safari touch-event
+        bugs caused by ancestor will-change/transform contexts
+   ============================================================================ */
+
+.public-page-scroll-root,
+main#main-content {
+  /* Force GPU compositing — defeats iOS touch-event bugs in transform layers */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  /* Re-assert critical scroll properties (defense in depth against overrides) */
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  pointer-events: auto !important;
+  /* Permit overscroll bounce on iOS so users feel the page is alive */
+  overscroll-behavior-y: contain;
+}
+
+/* Defeat the case where a public-route .fixed overlay (chat dock, FAB,
+   announcement banner) is empty/transparent but still receives touch events
+   on iOS Safari, blocking the page beneath from scrolling. */
+body[data-public-route="true"] .fixed:empty,
+body[data-public-route="true"] .fixed[aria-hidden="true"] {
+  display: none !important;
+}
+
+/* On mobile breakpoints, ensure NO ancestor of the scroll root can constrain
+   touch action narrower than pan-y. */
+@media (max-width: 768px) {
+  html, body, #root, [data-slot="sidebar-wrapper"] {
+    touch-action: pan-y !important;
+  }
+}
+
 @keyframes msg-sparkle {
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.15); }

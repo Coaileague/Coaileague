@@ -30,7 +30,22 @@ const log = createLogger('SraTrinityRoutes');
 
 const router = Router();
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy proxy: avoids module-load crash if OPENAI_API_KEY is missing.
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (_openai) return _openai;
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) {
+    throw new Error('OPENAI_API_KEY is not set. SRA Trinity audit routes are unavailable.');
+  }
+  _openai = new OpenAI({ apiKey: key });
+  return _openai;
+}
+const openai = new Proxy({} as OpenAI, {
+  get(_t, prop) {
+    return (getOpenAI() as any)[prop];
+  },
+});
 
 /** Typed shape of the `trinity_context` jsonb column stored in sra_audit_sessions */
 interface TrinityContextData {

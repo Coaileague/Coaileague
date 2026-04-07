@@ -19,6 +19,7 @@
  */
 
 import Stripe from 'stripe';
+import { getStripe } from './stripeClient';
 import { db } from '../../db';
 import { workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -29,15 +30,12 @@ import { isBillingExcluded } from './billingConstants';
 
 const log = createLogger('MiddlewareFees');
 
-// GAP-62 FIX: Added timeout and maxNetworkRetries — missing from original config.
-// Without these, a Stripe network failure hangs indefinitely (no timeout) and the
-// call is retried with crypto.randomUUID() if the caller wraps it in a retry loop,
-// causing potential duplicate charges. timeout=10000ms + maxNetworkRetries=2 lets
-// Stripe's own deterministic idempotency retry logic handle network blips safely.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-  timeout: 10000,
-  maxNetworkRetries: 2,
+// GAP-62 FIX: timeout + maxNetworkRetries are configured inside getStripe().
+// Lazy getter prevents module-load crash if STRIPE_SECRET_KEY is missing.
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
 });
 
 export interface MiddlewareFeeResult {

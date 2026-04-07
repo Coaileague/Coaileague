@@ -1,14 +1,16 @@
 /**
  * Development Database Seeding Service
- * 
+ *
  * Populates realistic simulated data for development and testing.
- * Only runs in development mode (when REPLIT_DEPLOYMENT is NOT '1').
+ * Only runs in development mode — guarded by isProduction() which
+ * detects Replit, Railway, Cloud Run, and NODE_ENV=production.
  * Uses idempotent INSERT ... ON CONFLICT DO NOTHING for safe re-runs.
- * 
+ *
  * Trigger: Runs on server startup in development mode
  * Guard: Checks for sentinel workspace to avoid duplicate seeding
  */
 
+import { isProduction } from '../lib/isProduction';
 import { db } from "../db";
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { typedExec, typedQuery } from '../lib/typedSql';
@@ -20,9 +22,7 @@ import {
 const DEV_SENTINEL_WORKSPACE = 'dev-acme-security-ws';
 
 export async function runDevelopmentSeed(): Promise<{ success: boolean; message: string }> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  
-  if (isProduction) {
+  if (isProduction()) {
     return { success: true, message: 'Skipped - production environment' };
   }
 
@@ -646,7 +646,7 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
  * All inserts use ON CONFLICT DO NOTHING — safe to call on every restart.
  */
 export async function ensurePhase0Seed(): Promise<void> {
-  if (process.env.REPLIT_DEPLOYMENT === '1') return;
+  if (isProduction()) return;
 
   try {
     const DEV_WS = 'dev-acme-security-ws';
@@ -870,7 +870,7 @@ export async function ensurePhase0Seed(): Promise<void> {
  * All inserts use ON CONFLICT DO NOTHING — safe to call on every restart.
  */
 export async function ensurePhase0ExtendedSeed(): Promise<void> {
-  if (process.env.REPLIT_DEPLOYMENT === '1') return;
+  if (isProduction()) return;
 
   try {
     const DEV_WS = 'dev-acme-security-ws';

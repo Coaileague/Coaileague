@@ -56,8 +56,8 @@ IN WITNESS WHEREOF, the parties execute this Agreement as of the date signed bel
 `.trim();
 
 export async function runContractsAndIncidentsSeed(): Promise<{ success: boolean; message: string }> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  if (isProduction) return { success: true, message: "Skipped — production" };
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return { success: true, message: "Skipped — production" };
 
   // CATEGORY C — Raw SQL retained: LIMIT | Tables: client_contracts | Verified: 2026-03-23
   const check = await typedQuery(sql`

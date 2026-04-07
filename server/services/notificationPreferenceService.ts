@@ -319,7 +319,7 @@ export function previewTemplate(bodyTemplate: string, sampleData?: Record<string
   const defaults: Record<string, string> = {
     first_name: 'Jane',
     last_name: 'Smith',
-    workspace_name: 'Acme Security',
+    workspace_name: 'Your Security Company',
     shift_date: '2026-04-01',
     shift_time: '08:00',
     position: 'Security Officer',

@@ -3,16 +3,16 @@ import { pool } from '../db';
 import { requireAuth } from '../rbac';
 import { platformActionHub } from '../services/helpai/platformActionHub';
 import { platformEventBus } from '../services/platformEventBus';
+import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { createLogger } from '../lib/logger';
 const log = createLogger('GateDutyRoutes');
 
 
 const router = express.Router();
 
-// Idempotent table creation
-(async () => {
-  try {
-    await pool.query(`
+// Idempotent table creation (deferred to post-DB-ready bootstrap phase)
+registerLegacyBootstrap('gateDuty', async (p) => {
+  await p.query(`
       CREATE TABLE IF NOT EXISTS gate_vehicle_logs (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
         workspace_id varchar NOT NULL,
@@ -75,10 +75,7 @@ const router = express.Router();
         created_at timestamptz DEFAULT NOW()
       );
     `);
-  } catch (err) {
-    log.error('Failed to create gate duty tables:', err);
-  }
-})();
+});
 
 // Trinity Actions
 platformActionHub.registerAction({

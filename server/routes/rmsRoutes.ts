@@ -172,7 +172,9 @@ rmsRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspac
     const { meteredGemini } = await import("../services/billing/meteredGeminiClient");
     const aiNarrativeResult = await meteredGemini.generate({ workspaceId, userId: req.user?.id || req.session?.userId || "system", featureKey: "rms_narrative_polish", prompt });
     const aiNarrative = aiNarrativeResult.text;
-    await q(`UPDATE incident_reports SET ai_narrative = $1, updated_at = NOW() WHERE id = $2`, [aiNarrative, req.params.id]);
+    // Tenant isolation: enforce workspace_id in the UPDATE WHERE clause
+    // (CLAUDE.md §1 — every query scoped by workspace_id, no exceptions)
+    await q(`UPDATE incident_reports SET ai_narrative = $1, updated_at = NOW() WHERE id = $2 AND workspace_id = $3`, [aiNarrative, req.params.id, workspaceId]);
     res.json({ aiNarrative });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });

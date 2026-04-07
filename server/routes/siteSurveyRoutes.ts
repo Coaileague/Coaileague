@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db';
 import { platformActionHub } from '../services/helpai/platformActionHub';
+import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
 const log = createLogger('SiteSurveyRoutes');
@@ -8,53 +9,46 @@ const log = createLogger('SiteSurveyRoutes');
 
 const router = Router();
 
-// Schema Migration
-const initSchema = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS site_surveys (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL,
-        client_id varchar,
-        site_name varchar NOT NULL,
-        address text,
-        conducted_by varchar,
-        conducted_at timestamptz DEFAULT NOW(),
-        status varchar DEFAULT 'draft' CHECK (status IN ('draft','in_progress','completed','archived')),
-        overall_risk_level varchar DEFAULT 'low' CHECK (overall_risk_level IN ('low','medium','high','critical')),
-        summary text,
-        recommendations text,
-        created_at timestamptz DEFAULT NOW(),
-        updated_at timestamptz DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS site_survey_zones (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL,
-        survey_id varchar NOT NULL,
-        zone_name varchar NOT NULL,
-        zone_type varchar CHECK (zone_type IN ('entry','perimeter','interior','parking','server_room','high_value','other')),
-        risk_level varchar DEFAULT 'low' CHECK (risk_level IN ('low','medium','high','critical')),
-        notes text,
-        created_at timestamptz DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS site_survey_requirements (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL,
-        survey_id varchar NOT NULL,
-        requirement_type varchar NOT NULL CHECK (requirement_type IN ('access_control','cctv','lighting','patrol_frequency','guard_post','alarm_system','visitor_management','other')),
-        description text,
-        is_met boolean DEFAULT false,
-        priority varchar DEFAULT 'medium' CHECK (priority IN ('low','medium','high','critical')),
-        created_at timestamptz DEFAULT NOW()
-      );
-    `);
-    log.info('Site Survey schema initialized');
-  } catch (err) {
-    log.error('Error initializing Site Survey schema:', err);
-  }
-};
-
-initSchema();
+// Schema migration (deferred to post-DB-ready bootstrap phase)
+registerLegacyBootstrap('siteSurvey', async (p) => {
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS site_surveys (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL,
+      client_id varchar,
+      site_name varchar NOT NULL,
+      address text,
+      conducted_by varchar,
+      conducted_at timestamptz DEFAULT NOW(),
+      status varchar DEFAULT 'draft' CHECK (status IN ('draft','in_progress','completed','archived')),
+      overall_risk_level varchar DEFAULT 'low' CHECK (overall_risk_level IN ('low','medium','high','critical')),
+      summary text,
+      recommendations text,
+      created_at timestamptz DEFAULT NOW(),
+      updated_at timestamptz DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS site_survey_zones (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL,
+      survey_id varchar NOT NULL,
+      zone_name varchar NOT NULL,
+      zone_type varchar CHECK (zone_type IN ('entry','perimeter','interior','parking','server_room','high_value','other')),
+      risk_level varchar DEFAULT 'low' CHECK (risk_level IN ('low','medium','high','critical')),
+      notes text,
+      created_at timestamptz DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS site_survey_requirements (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL,
+      survey_id varchar NOT NULL,
+      requirement_type varchar NOT NULL CHECK (requirement_type IN ('access_control','cctv','lighting','patrol_frequency','guard_post','alarm_system','visitor_management','other')),
+      description text,
+      is_met boolean DEFAULT false,
+      priority varchar DEFAULT 'medium' CHECK (priority IN ('low','medium','high','critical')),
+      created_at timestamptz DEFAULT NOW()
+    );
+  `);
+});
 
 // Trinity Actions
 platformActionHub.registerAction({

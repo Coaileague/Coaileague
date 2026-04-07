@@ -2,6 +2,7 @@ import { Router } from "express";
 import { pool } from "../db";
 import { requireAuth } from "../rbac";
 import { platformActionHub } from "../services/helpai/platformActionHub";
+import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { createLogger } from "../lib/logger";
 const log = createLogger('RecognitionRoutes');
 
@@ -217,10 +218,9 @@ router.get("/milestones", requireAuth, async (req: any, res) => {
   }
 });
 
-// Idempotent migrations
-(async () => {
-  const { pool } = await import('../db');
-  await pool.query(`
+// Idempotent migrations (deferred to post-DB-ready bootstrap phase)
+registerLegacyBootstrap('recognition', async (p) => {
+  await p.query(`
     CREATE TABLE IF NOT EXISTS recognition_awards (
       id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
       workspace_id varchar NOT NULL,
@@ -247,6 +247,6 @@ router.get("/milestones", requireAuth, async (req: any, res) => {
       created_at timestamptz DEFAULT NOW()
     );
   `);
-})().catch((err: unknown) => log.error('[Recognition] Module-level table init failure:', err));
+});
 
 export default router;

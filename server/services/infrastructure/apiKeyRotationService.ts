@@ -335,15 +335,19 @@ class ApiKeyRotationService {
         },
       });
 
-      // Emit event
-      platformEventBus.publish({
-        type: 'api_key_rotated',
-        category: 'feature',
-        title: 'API Key Rotated',
-        description: `Key "${oldKey.name}" has been rotated`,
-        userId: performedBy,
-        metadata: { keyId, keyType: oldKey.key_type },
-      }).catch((err) => log.warn('[apiKeyRotationService] Fire-and-forget failed:', err));
+      // Emit event (awaited; non-blocking failure)
+      try {
+        await platformEventBus.publish({
+          type: 'api_key_rotated',
+          category: 'feature',
+          title: 'API Key Rotated',
+          description: `Key "${oldKey.name}" has been rotated`,
+          userId: performedBy,
+          metadata: { keyId, keyType: oldKey.key_type },
+        });
+      } catch (err) {
+        log.warn('[apiKeyRotationService] Event publish failed (non-fatal):', err);
+      }
 
       log.info(`[ApiKeyRotation] Rotated key: ${oldKey.name}`);
       
@@ -414,13 +418,17 @@ class ApiKeyRotationService {
       `);
 
       for (const key of (expiringResult as any[]) || []) {
-        platformEventBus.publish({
-          type: 'api_key_expiring',
-          category: 'feature',
-          title: 'API Key Expiring Soon',
-          description: `Key "${key.name}" expires on ${new Date(key.expires_at).toLocaleDateString()}`,
-          metadata: { keyId: key.id, expiresAt: key.expires_at },
-        }).catch((err) => log.warn('[apiKeyRotationService] Fire-and-forget failed:', err));
+        try {
+          await platformEventBus.publish({
+            type: 'api_key_expiring',
+            category: 'feature',
+            title: 'API Key Expiring Soon',
+            description: `Key "${key.name}" expires on ${new Date(key.expires_at).toLocaleDateString()}`,
+            metadata: { keyId: key.id, expiresAt: key.expires_at },
+          });
+        } catch (err) {
+          log.warn('[apiKeyRotationService] Event publish failed (non-fatal):', err);
+        }
       }
 
     } catch (error) {

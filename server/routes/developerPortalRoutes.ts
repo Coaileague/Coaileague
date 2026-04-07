@@ -4,44 +4,41 @@ import crypto from 'crypto';
 import { pool } from "../db";
 import { requireAuth } from "../rbac";
 import { platformActionHub } from '../services/helpai/platformActionHub';
+import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { createLogger } from '../lib/logger';
 const log = createLogger('DeveloperPortalRoutes');
 
 
 const router = Router();
 
-// === DB Migrations ===
-(async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS developer_api_keys (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL,
-        name varchar NOT NULL,
-        key_hash varchar NOT NULL,
-        key_prefix varchar(8) NOT NULL,
-        scopes text[] DEFAULT '{}',
-        last_used_at timestamptz,
-        expires_at timestamptz,
-        is_active boolean DEFAULT true,
-        created_by varchar,
-        created_at timestamptz DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS developer_api_key_usage (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        api_key_id varchar NOT NULL,
-        workspace_id varchar NOT NULL,
-        endpoint varchar,
-        method varchar,
-        response_status integer,
-        response_time_ms integer,
-        timestamp timestamptz DEFAULT NOW()
-      );
-    `);
-  } catch (err) {
-    log.error('Failed to initialize developer portal tables:', err);
-  }
-})().catch((err: unknown) => log.error('[DeveloperPortal] Module-level init failure:', err));
+// === DB migrations (deferred to post-DB-ready bootstrap phase) ===
+registerLegacyBootstrap('developerPortal', async (p) => {
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS developer_api_keys (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL,
+      name varchar NOT NULL,
+      key_hash varchar NOT NULL,
+      key_prefix varchar(8) NOT NULL,
+      scopes text[] DEFAULT '{}',
+      last_used_at timestamptz,
+      expires_at timestamptz,
+      is_active boolean DEFAULT true,
+      created_by varchar,
+      created_at timestamptz DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS developer_api_key_usage (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      api_key_id varchar NOT NULL,
+      workspace_id varchar NOT NULL,
+      endpoint varchar,
+      method varchar,
+      response_status integer,
+      response_time_ms integer,
+      timestamp timestamptz DEFAULT NOW()
+    );
+  `);
+});
 
 // === Trinity Actions ===
 platformActionHub.registerAction({

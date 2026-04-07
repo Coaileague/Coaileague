@@ -95,8 +95,6 @@ import {
   type InsertPerformanceReview,
   type PtoRequest,
   type InsertPtoRequest,
-  type EmployeeTermination,
-  type InsertEmployeeTermination,
   type Client,
   type InsertClient,
   type ClientRate,
@@ -143,8 +141,6 @@ import {
   type InsertHelposAiSession,
   type HelposAiTranscriptEntry,
   type InsertHelposAiTranscriptEntry,
-  type AuditLog,
-  type InsertAuditLog,
   type FeatureFlag,
   type InsertFeatureFlag,
   type PlatformRevenue,
@@ -192,8 +188,6 @@ import {
   type PushSubscription,
   type InsertPushSubscription,
   type UserNotificationPreferences,
-  type AuditLog,
-  type InsertAuditLog,
   type IdRegistry,
   type InsertIdRegistry,
   type WriteAheadLog,
@@ -247,8 +241,18 @@ import {
   employeeTerminations,
   type InsertEmployeeTermination,
   type EmployeeTermination,
+  type AuditLog,
+  type InsertAuditLog,
+  type User,
+  type UpsertUser,
+  type Workspace,
+  type InsertWorkspace,
+  type Employee,
+  type InsertEmployee,
+  type WorkspaceTheme,
+  type SupportAuditLog,
 } from '@shared/schema';
-import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
+import type { PaginatedResponse, ClientWithInvoiceCount, WorkspaceRole } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, gte, count, gt, inArray, not, ne } from "drizzle-orm";

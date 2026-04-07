@@ -11,6 +11,7 @@
  */
 
 import Stripe from 'stripe';
+import { getStripe } from './stripeClient';
 import crypto from 'crypto';
 import { db } from '../../db';
 import { platformEventBus } from '../platformEventBus';
@@ -29,10 +30,11 @@ import { universalAudit } from '../universalAuditService';
 
 const log = createLogger('SubscriptionManager');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-  timeout: 10000,
-  maxNetworkRetries: 2,
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing.
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
 });
 
 // Subscription tier pricing (monthly base prices)

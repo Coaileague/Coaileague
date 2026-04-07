@@ -247,8 +247,11 @@ incidentPipelineRouter.patch("/:id/status", requireAuth as any, ensureWorkspaceA
       params.push(userId);
     }
 
+    // Tenant isolation: enforce workspace_id in WHERE clause atomically
+    // even though row was already verified above (CLAUDE.md §1).
+    params.push(workspaceId);
     await q(
-      `UPDATE incident_reports SET ${updates.join(", ")} WHERE id = $1`,
+      `UPDATE incident_reports SET ${updates.join(", ")} WHERE id = $1 AND workspace_id = $${pi}`,
       params
     );
 
@@ -303,9 +306,10 @@ incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWor
       return res.status(402).json({ error: "Insufficient credits", message: sanitizeError(creditError), creditsRequired: 10 });
     }
 
+    // Tenant isolation: enforce workspace_id atomically (CLAUDE.md §1)
     await q(
-      `UPDATE incident_reports SET status = 'trinity_processing', updated_at = NOW() WHERE id = $1`,
-      [req.params.id]
+      `UPDATE incident_reports SET status = 'trinity_processing', updated_at = NOW() WHERE id = $1 AND workspace_id = $2`,
+      [req.params.id, workspaceId]
     );
 
     const polishedDescription = `[Trinity Polished] ${rawText}\n\nIncident Type: ${incident.incident_type}\nSeverity: ${incident.severity}\nLocation: ${incident.location_address || "Not specified"}\n\nThis report has been reviewed and formatted by Trinity AI for professional presentation. All factual content from the original officer report has been preserved while improving clarity and structure.`;
@@ -325,13 +329,14 @@ incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWor
 
     const revisionCount = (incident.trinity_revision_count || 0) + 1;
 
+    // Tenant isolation: enforce workspace_id atomically (CLAUDE.md §1)
     await q(
-      `UPDATE incident_reports SET 
-        polished_description = $2, polished_summary = $3, 
+      `UPDATE incident_reports SET
+        polished_description = $2, polished_summary = $3,
         trinity_legal_flags = $4, trinity_revision_count = $5,
         status = 'pending_review', updated_at = NOW()
-       WHERE id = $1`,
-      [req.params.id, polishedDescription, polishedSummary, JSON.stringify(legalFlags), revisionCount]
+       WHERE id = $1 AND workspace_id = $6`,
+      [req.params.id, polishedDescription, polishedSummary, JSON.stringify(legalFlags), revisionCount, workspaceId]
     );
 
     await q(

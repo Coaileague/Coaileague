@@ -3,47 +3,44 @@ import { pool } from "../db";
 import { requireAuth } from "../rbac";
 import { platformActionHub } from "../services/helpai/platformActionHub";
 import { platformEventBus } from "../services/platformEventBus";
+import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { createLogger } from '../lib/logger';
 const log = createLogger('ComplianceEvidenceRoutes');
 
 
 const router = Router();
 
-// --- SCHEMAS ---
-(async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS compliance_evidence (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL,
-        officer_id varchar NOT NULL,
-        evidence_type varchar NOT NULL CHECK (evidence_type IN ('license_photo_front','license_photo_back','firearms_qualification','tcole_certificate','background_check_consent','drug_test_result','id_front','id_back','training_certificate','other')),
-        document_url text,
-        sha256_hash varchar,
-        verified_by varchar,
-        verified_at timestamptz,
-        expiry_date date,
-        status varchar DEFAULT 'pending_review' CHECK (status IN ('pending_review','verified','rejected','expired')),
-        rejection_reason text,
-        trinity_confidence_score decimal(4,3),
-        trinity_extracted_data jsonb DEFAULT '{}',
-        created_at timestamptz DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS compliance_verification_log (
-        id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id varchar NOT NULL,
-        officer_id varchar NOT NULL,
-        evidence_id varchar,
-        action varchar CHECK (action IN ('submitted','verified','rejected','expired','re_submitted')),
-        actor_id varchar,
-        notes text,
-        created_at timestamptz DEFAULT NOW()
-      );
-    `);
-  } catch (error) {
-    log.error("Failed to initialize compliance evidence tables:", error);
-  }
-})().catch((err: unknown) => log.error('[ComplianceEvidence] Module-level init failure:', err));
+// --- SCHEMAS (deferred to post-DB-ready bootstrap phase) ---
+registerLegacyBootstrap('complianceEvidence', async (p) => {
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS compliance_evidence (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL,
+      officer_id varchar NOT NULL,
+      evidence_type varchar NOT NULL CHECK (evidence_type IN ('license_photo_front','license_photo_back','firearms_qualification','tcole_certificate','background_check_consent','drug_test_result','id_front','id_back','training_certificate','other')),
+      document_url text,
+      sha256_hash varchar,
+      verified_by varchar,
+      verified_at timestamptz,
+      expiry_date date,
+      status varchar DEFAULT 'pending_review' CHECK (status IN ('pending_review','verified','rejected','expired')),
+      rejection_reason text,
+      trinity_confidence_score decimal(4,3),
+      trinity_extracted_data jsonb DEFAULT '{}',
+      created_at timestamptz DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS compliance_verification_log (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      workspace_id varchar NOT NULL,
+      officer_id varchar NOT NULL,
+      evidence_id varchar,
+      action varchar CHECK (action IN ('submitted','verified','rejected','expired','re_submitted')),
+      actor_id varchar,
+      notes text,
+      created_at timestamptz DEFAULT NOW()
+    );
+  `);
+});
 
 // --- TRINITY ACTIONS ---
 platformActionHub.registerAction({

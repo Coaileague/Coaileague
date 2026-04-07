@@ -3415,14 +3415,18 @@ export function startAutonomousScheduler() {
             recordsProcessed: totalSynced,
             details: { clientsSynced: totalSynced, workspacesScanned: workspaceIds.length },
           });
-          platformEventBus.publish({
-            type: 'client.created',
-            category: 'feature',
-            title: 'New staffing leads discovered',
-            description: `QB staffing scan found ${totalSynced} new inbound email contact${totalSynced !== 1 ? 's' : ''} and added them as leads.`,
-            workspaceId: workspaceIds[0] || undefined,
-            metadata: { source: 'qb_staffing_scan', clientsSynced: totalSynced, workspaces: workspaceIds.length },
-          }).catch((err) => log.warn('[autonomousScheduler] Fire-and-forget failed:', err));
+          try {
+            await platformEventBus.publish({
+              type: 'client.created',
+              category: 'feature',
+              title: 'New staffing leads discovered',
+              description: `QB staffing scan found ${totalSynced} new inbound email contact${totalSynced !== 1 ? 's' : ''} and added them as leads.`,
+              workspaceId: workspaceIds[0] || undefined,
+              metadata: { source: 'qb_staffing_scan', clientsSynced: totalSynced, workspaces: workspaceIds.length },
+            });
+          } catch (err) {
+            log.warn('[autonomousScheduler] Event publish failed (non-fatal):', err);
+          }
         }
       } catch (err: any) {
         log.error('QB weekly staffing scan error', { error: (err instanceof Error ? err.message : String(err)) });

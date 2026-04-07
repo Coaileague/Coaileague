@@ -1,6 +1,7 @@
 import express from 'express';
 import { pool } from '../db';
 import { platformActionHub } from '../services/helpai/platformActionHub';
+import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { createLogger } from '../lib/logger';
 const log = createLogger('InsuranceRoutes');
 
@@ -178,10 +179,9 @@ router.post('/certificates/generate', async (req: any, res) => {
 
 export default router;
 
-// Idempotent migration
-(async () => {
-  const { pool } = await import('../db');
-  await pool.query(`
+// Idempotent migration (deferred to post-DB-ready bootstrap phase)
+registerLegacyBootstrap('insurance', async (p) => {
+  await p.query(`
     CREATE TABLE IF NOT EXISTS insurance_policies (
       id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
       workspace_id varchar NOT NULL,
@@ -209,4 +209,4 @@ export default router;
       created_at timestamptz DEFAULT NOW()
     );
   `);
-})().catch((err: unknown) => log.error('[Insurance] Module-level table init failure:', err));
+});

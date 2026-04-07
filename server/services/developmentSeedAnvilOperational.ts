@@ -44,8 +44,8 @@ async function seedTable(name: string, fn: () => Promise<void>): Promise<void> {
 }
 
 export async function runAnvilOperationalSeed(): Promise<{ success: boolean; message: string }> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  if (isProduction) return { success: true, message: "Skipped — production" };
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return { success: true, message: "Skipped — production" };
 
   // CATEGORY C — Raw SQL retained: LIMIT | Tables: guard_tours | Verified: 2026-03-23
   const check = await typedQuery(sql`SELECT id FROM guard_tours WHERE id = 'anvil-tour-001' LIMIT 1`);

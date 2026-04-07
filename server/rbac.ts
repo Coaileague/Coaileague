@@ -194,6 +194,12 @@ export interface AuthenticatedRequest extends Request {
   getWorkspaceId?: () => string;
 }
 
+// NOTE: A narrowed AuthedRequest type was attempted but broke Express
+// RouteHandler signature compatibility. The TS18048 'req.user is possibly
+// undefined' errors are addressed by inline narrowing helpers in handlers
+// instead — see assertAuthed() below or use req.user!.id once the route
+// is gated by requireAuth middleware.
+
 export async function getUserWorkspaceRole(
   userId: string,
   workspaceId: string

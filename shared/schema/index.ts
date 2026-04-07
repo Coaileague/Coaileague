@@ -1,29 +1,20 @@
-// Schema Domain Module Barrel Export
-// Provides organized domain-specific access to schema exports
+// Schema Barrel — bridges legacy `shared/schema.ts` exports with newer
+// `shared/schema/domains/*` tables that aren't in the legacy file yet.
 //
-// USAGE:
-//   import { shifts, insertShiftSchema } from '@shared/schema/scheduling';
-//   import { invoices, InsertInvoice } from '@shared/schema/finance';
+// IMPORTANT: `import from '@shared/schema'` resolves to `shared/schema.ts`
+// (file wins over directory in module resolution), NOT to this index.
+// This index is only loaded when something explicitly imports
+// `@shared/schema/...` sub-paths.
 //
-// For backwards compatibility, all exports remain available from '@shared/schema'
+// The previous barrel re-exported a set of half-finished domain barrels
+// (./ai, ./chat, ./clients, ./compliance, ./documents, ./finance,
+// ./gamification, ./hr, ./integrations, ./notifications, ./onboarding,
+// ./platform, ./scheduling) that referenced non-existent exports in
+// shared/schema.ts and produced thousands of TypeScript errors. Those
+// sub-files had zero real importers and have been deleted.
 
-// Common utilities
+// Common utilities (kept — re-exports zod helpers used by domain files)
 export * from './common';
-
-// Domain modules
-export * from './ai';
-export * from './chat';
-export * from './clients';
-export * from './compliance';
-export * from './documents';
-export * from './finance';
-export * from './gamification';
-export * from './hr';
-export * from './integrations';
-export * from './notifications';
-export * from './onboarding';
-export * from './platform';
-export * from './scheduling';
 
 // ── Pass 1 new tables — domains-only, not in legacy schema.ts ────────────────
 // These tables exist only in shared/schema/domains/ and must be explicitly

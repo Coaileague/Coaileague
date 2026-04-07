@@ -288,7 +288,8 @@ function getScorecardForCandidate(email: string): ScorecardFixture | null {
 // ─── Main Seed Function ───────────────────────────────────────────────────────
 
 export async function seedAcmeCandidates(): Promise<{ seeded: number; skipped: number }> {
-  if (process.env.REPLIT_DEPLOYMENT === '1') {
+  const { isProduction } = await import('../../lib/isProduction');
+  if (isProduction()) {
     return { seeded: 0, skipped: 0 };
   }
 

@@ -262,10 +262,10 @@ router.post('/provision/:employeeId', requireAuth, async (req: AuthenticatedRequ
       [category, workspaceId]
     );
 
-    // Get employee hire date for due_date calculation
+    // Get employee hire date (workspace_id enforced for tenant isolation per CLAUDE.md §1)
     const { rows: empRows } = await pool.query(
-      `SELECT hire_date FROM employees WHERE id = $1 LIMIT 1`,
-      [employeeId]
+      `SELECT hire_date FROM employees WHERE id = $1 AND workspace_id = $2 LIMIT 1`,
+      [employeeId, workspaceId]
     );
     const hireDate = empRows[0]?.hire_date ? new Date(empRows[0].hire_date) : new Date();
 

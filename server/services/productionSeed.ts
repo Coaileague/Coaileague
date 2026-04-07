@@ -5,7 +5,8 @@
  * on first deployment. Uses idempotent INSERT ... ON CONFLICT DO NOTHING
  * to safely handle re-runs.
  * 
- * Trigger: Runs on server startup when REPLIT_DEPLOYMENT=1 (production)
+ * Trigger: Runs on server startup when isProduction() returns true
+ *          (Replit, Railway, Cloud Run, NODE_ENV=production)
  * Guard: Checks for sentinel user to avoid duplicate runs
  */
 
@@ -24,9 +25,9 @@ const SENTINEL_EMAIL = process.env.ROOT_ADMIN_EMAIL || 'root@coaileague.local';
  * EXPORTED so it can be called independently in server/index.ts
  */
 export async function runDataCorrections(): Promise<void> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  if (!isProduction) return;
-  
+  const { isProduction } = await import('../lib/isProduction');
+  if (!isProduction()) return;
+
   console.log('🔧 Data Corrections Service: Starting...');
 
   try {
@@ -53,9 +54,9 @@ export async function runDataCorrections(): Promise<void> {
  * EXPORTED so it can be called from server/index.ts
  */
 export async function runProductionDataCleanup(): Promise<void> {
-  // Guard: only runs in deployed production (REPLIT_DEPLOYMENT=1)
-  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  if (!isProduction) return;
+  // Guard: only runs in deployed production (Replit, Railway, Cloud Run, NODE_ENV=production)
+  const { isProduction } = await import('../lib/isProduction');
+  if (!isProduction()) return;
 
   console.log('🧹 Production Data Cleanup: Starting...');
 
@@ -219,8 +220,8 @@ export async function runProductionDataCleanup(): Promise<void> {
 export async function runPasswordMigrations(): Promise<void> {
   console.log('🔑 Password Migration Service: Starting...');
   
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1';
-  if (isProduction) {
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) {
     console.log('🔑 Password Migration: SKIPPED in production (passwords must be changed via user flow)');
     console.log('🔑 Password Migration Service: Complete');
     return;
@@ -337,11 +338,12 @@ export async function ensureSystemEntities(): Promise<void> {
 }
 
 export async function runProductionSeed(): Promise<{ success: boolean; message: string }> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  
-  console.log(`🌱 Production Seed: Environment check - REPLIT_DEPLOYMENT=${process.env.REPLIT_DEPLOYMENT}`);
-  
-  if (!isProduction) {
+  const { isProduction } = await import('../lib/isProduction');
+  const isProd = isProduction();
+
+  console.log(`🌱 Production Seed: Environment check - production=${isProd}`);
+
+  if (!isProd) {
     console.log('🌱 Production Seed: Skipping (not in production deployment)');
     return { success: true, message: 'Skipped - not in production' };
   }

@@ -1,5 +1,6 @@
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { sql } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import { RETRIES } from './config/platformConfig';
 import { createLogger } from './lib/logger';

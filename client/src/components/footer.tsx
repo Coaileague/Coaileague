@@ -15,7 +15,11 @@ interface FooterProps {
   variant?: "light" | "dark";
 }
 
-export function Footer({ variant = "light" }: FooterProps) {
+// Default variant is "dark" to match CLAUDE.md §11 platform aesthetic
+// (Dark navy command-center). Pages on a light background must opt in
+// explicitly with variant="light" — otherwise dark text would render
+// invisibly on the dark navy chrome.
+export function Footer({ variant = "dark" }: FooterProps) {
   const [, setLocation] = useLocation();
 
   const bgClass = variant === "dark" ? "bg-slate-900 border-slate-800" : "bg-background border-border";

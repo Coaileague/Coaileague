@@ -161,11 +161,15 @@ Your responses have been recorded and will be reviewed by our hiring team. You c
 We appreciate your interest in joining the team!`
     );
 
-    // Update candidate stage
-    await pool.query(
-      `UPDATE interview_candidates SET stage = 'awaiting_decision' WHERE id = $1`,
-      [room.candidate_id]
-    ).catch((err) => log.warn('[interviewChatOrchestrator] Fire-and-forget failed:', err));
+    // Update candidate stage (awaited; non-blocking failure handled in try)
+    try {
+      await pool.query(
+        `UPDATE interview_candidates SET stage = 'awaiting_decision' WHERE id = $1`,
+        [room.candidate_id]
+      );
+    } catch (err) {
+      log.warn('[interviewChatOrchestrator] Candidate stage update failed (non-fatal):', err);
+    }
 
     log.info(`Interview completed chatroom=${chatroomId} score=${overallScore} rec=${recommendation}`);
   }
