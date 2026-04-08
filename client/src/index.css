@@ -9,6 +9,31 @@
 @tailwind utilities;
 
 /* ============================================================================
+   SCROLL FIX v9 — react-remove-scroll-bar override (the actual culprit)
+   ============================================================================
+   `react-remove-scroll-bar` (used internally by every Radix Dialog/Sheet/
+   Popover/Tooltip via `react-remove-scroll`) injects a runtime <style>
+   tag containing:
+       body[data-scroll-locked] { overflow: hidden !important; ... }
+   The attribute leaks in many cases (Suspense boundaries, nested
+   overlays, hot reload, route changes mid-animation, tooltip portal
+   cleanup). When the attribute is set without an actual visible modal,
+   the entire page becomes unscrollable.
+
+   This rule uses `html body[data-scroll-locked]` (specificity 0,1,2 = 12)
+   to beat the lib's `body[data-scroll-locked]` (specificity 0,1,1 = 11).
+   Both rules are !important; higher specificity wins on tie.
+
+   When a real modal IS open, the modal overlay's own `overflow: hidden`
+   on the backdrop handles in-modal scroll lock — we don't need body
+   scroll lock at all. Body scroll always stays unblocked. */
+html body[data-scroll-locked] {
+  overflow: auto !important;
+  overscroll-behavior: auto !important;
+  position: static !important;
+}
+
+/* ============================================================================
    BASE RESETS - Minimal responsive defaults
    Component-level styles take precedence for sizing/layout
    ============================================================================ */
@@ -6562,11 +6587,6 @@ select:focus-visible,
 
 /* ======================================================================
    PUBLIC PAGE SCROLL — scroll fix v7
-   Do NOT set overflow or height on html/body/#root for public routes.
-   The global rules (no overflow, no height) let the window scroll
-   naturally. The only thing we need on public routes is to guarantee
-   the horizontal overflow is clipped (so wide marketing images don't
-   cause horizontal scroll).
    ====================================================================== */
 body[data-public-route="true"] {
   overflow-x: hidden !important;
