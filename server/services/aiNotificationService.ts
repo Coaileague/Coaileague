@@ -21,9 +21,27 @@ import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
 
 const log = createLogger('AiNotificationService');
 
-// Direct Gemini client for fallback when metered billing fails (for system notifications)
-const geminiApiKey = process.env.GEMINI_API_KEY;
-const directGenAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+// LAZY INIT (CLAUDE.md §F): construct GoogleGenerativeAI on first use, not at
+// module load. The previous module-load instantiation was guarded by a
+// truthy check, but if any future change makes it unconditional it would
+// crash boot when GEMINI_API_KEY is unset. Lazy factory + null fallback
+// preserves the existing `directGenAI` consumers, returning null when no
+// key is present so callers fall through to metered billing as before.
+let _directGenAI: GoogleGenerativeAI | null | undefined = undefined;
+function getDirectGenAI(): GoogleGenerativeAI | null {
+  if (_directGenAI === undefined) {
+    const k = process.env.GEMINI_API_KEY;
+    _directGenAI = k ? new GoogleGenerativeAI(k) : null;
+  }
+  return _directGenAI;
+}
+const directGenAI = new Proxy({} as GoogleGenerativeAI, {
+  get(_t, prop) {
+    const inst = getDirectGenAI();
+    if (!inst) return undefined;
+    return (inst as any)[prop];
+  },
+}) as GoogleGenerativeAI | null;
 
 type UpdateCategory = "feature" | "improvement" | "bugfix" | "security" | "announcement";
 type AlertSeverity = "info" | "warning" | "critical";

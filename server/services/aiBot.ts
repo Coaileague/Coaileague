@@ -4,9 +4,26 @@ import OpenAI from "openai";
 import { storage } from '../storage';
 import { usageMeteringService } from '../services/billing/usageMetering';
 
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+// LAZY INIT (CLAUDE.md §F module-load crash hardening):
+// Module-load OpenAI(...) used to crash boot when AI_INTEGRATIONS_OPENAI_API_KEY
+// was unset. Lazy factory only constructs the SDK on first use, and the Proxy
+// preserves all existing call sites (`openai.chat.completions.create(...)` still
+// works). If the env var is missing the error happens at call time as a clear
+// runtime error instead of crashing the entire server boot.
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    _openai = new OpenAI({
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    });
+  }
+  return _openai;
+}
+const openai = new Proxy({} as OpenAI, {
+  get(_t, prop) {
+    return (getOpenAI() as any)[prop];
+  },
 });
 
 // Cost-efficient model for chat support (subscribers pay for usage)

@@ -41,6 +41,7 @@ import { platformEventBus } from "./platformEventBus";
 import { publishEvent } from "./orchestration/pipelineErrorHandler";
 import { calculateStateTax, calculateBonusTaxation } from "./taxCalculator";
 import Stripe from "stripe";
+import { getStripe } from "./billing/stripeClient";
 import { emailService } from './emailService';
 import { sendInvoiceGeneratedEmail } from './emailCore';
 import { getAppBaseUrl } from '../utils/getAppBaseUrl';
@@ -873,12 +874,10 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
       return { success: false, error: 'Stripe not configured' };
     }
 
-    // Initialize Stripe — GAP-62 FIX: added timeout and maxNetworkRetries
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-09-30.clover',
-      timeout: 10000,
-      maxNetworkRetries: 2,
-    });
+    // Lazy Stripe singleton (CLAUDE.md §F) — replaces per-call new Stripe(...)
+    // which leaked sockets and reinitialized on every invocation. The
+    // canonical factory in billing/stripeClient.ts handles config and caching.
+    const stripe = getStripe();
 
     // Get invoice with line items and client
     const [invoice] = await db

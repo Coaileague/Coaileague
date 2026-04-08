@@ -396,6 +396,61 @@ const constraints: CriticalConstraint[] = [
   },
 ];
 
+/**
+ * GENERIC ID-DEFAULT BACKFILL
+ *
+ * Drizzle declares varchar("id").primaryKey().default(sql`gen_random_uuid()`)
+ * for ~650 tables across the schema, but drizzle-kit push does NOT propagate
+ * the SQL default to varchar columns (only to its native uuid type). The
+ * result is a NOT NULL violation on every INSERT that omits id — the root
+ * cause of the spam in production logs:
+ *   - "Failed to log to database" (UniversalStepLogger)
+ *   - "Failed to persist alert" (TrinityNotifier)
+ *   - "Failed to record thought" (TrinityThoughtEngine)
+ *   - "Failed to create execution" (AutomationExecutionTracker)
+ *   - "[TrinityOrchestrationGateway] Flush error" (every 30s)
+ *   - "Audit log failed" (every cron tick)
+ *
+ * Adding 650 individual bootstrap entries is impractical. This generic
+ * backfill scans pg_attribute for every text/varchar `id` column on a
+ * non-system schema table that lacks a default and applies
+ * `gen_random_uuid()::text` to it in one pass. Idempotent — once a column
+ * has the default, subsequent runs skip it via the WHERE clause.
+ */
+async function backfillGenRandomUuidDefaults(): Promise<{ scanned: number; patched: number; failed: number }> {
+  let scanned = 0;
+  let patched = 0;
+  let failed = 0;
+  try {
+    const { rows } = await pool.query(`
+      SELECT c.table_schema, c.table_name, c.column_name
+      FROM information_schema.columns c
+      JOIN information_schema.tables t
+        ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+      WHERE c.table_schema = 'public'
+        AND t.table_type = 'BASE TABLE'
+        AND c.column_name = 'id'
+        AND c.data_type IN ('character varying', 'text')
+        AND (c.column_default IS NULL OR c.column_default = '')
+    `);
+    scanned = rows.length;
+    for (const r of rows) {
+      try {
+        await pool.query(
+          `ALTER TABLE "${r.table_name}" ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
+        );
+        patched++;
+      } catch (err: any) {
+        failed++;
+        log.warn(`[idDefaultBackfill] Failed on ${r.table_name}.id: ${err?.message?.slice(0, 120)}`);
+      }
+    }
+  } catch (err: any) {
+    log.error(`[idDefaultBackfill] Scan failed: ${err?.message}`);
+  }
+  return { scanned, patched, failed };
+}
+
 export async function ensureCriticalConstraints(): Promise<void> {
   log.info(`[criticalConstraints] Verifying ${constraints.length} critical constraints`);
   let installed = 0;
@@ -422,4 +477,15 @@ export async function ensureCriticalConstraints(): Promise<void> {
   log.info(
     `[criticalConstraints] Complete: ${alreadyPresent} already present, ${installed} installed, ${failed} failed`
   );
+
+  // Generic id-default backfill — patches any varchar/text id column on a
+  // public-schema table that lacks a default. Idempotent and self-skipping.
+  const back = await backfillGenRandomUuidDefaults();
+  if (back.scanned > 0) {
+    log.info(
+      `[idDefaultBackfill] Scanned ${back.scanned} columns missing id defaults — patched ${back.patched}, failed ${back.failed}`
+    );
+  } else {
+    log.info(`[idDefaultBackfill] All public-schema id columns have defaults — no patches needed`);
+  }
 }
