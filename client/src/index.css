@@ -5346,33 +5346,26 @@ body[data-scroll-locked]:not([data-scroll-locked="0"]) {
 }
 
 /* ============================================================================
-   PHASE Q — MOBILE SCROLL GUARANTEE (CLAUDE.md §10 universal rendering)
+   PHASE Q — MOBILE SCROLL GUARANTEE (scroll fix v4 — simplified)
    ============================================================================
-   These rules are the last-line guarantee that touch-scrolling works on
-   public pages and the workspace shell on every mobile device. They protect
-   against overlay containers, nested transform contexts, and Suspense
-   fallbacks accidentally blocking pan-y gestures.
+   The previous version of this block applied `transform: translate3d(0,0,0)`
+   to .public-page-scroll-root and main#main-content. That transform created
+   a new stacking context AND a new containing block for any fixed-position
+   descendants — which interacted badly with the rest of the scroll model
+   and was suspected of causing the "wheel/touch don't scroll" symptom on
+   the homepage.
 
-   Hard rules enforced here:
-     1. The public scroll root and workspace main element have GPU-accelerated
-        scroll with iOS momentum (-webkit-overflow-scrolling: touch)
-     2. Touch-action is pan-y (vertical scroll always allowed)
-     3. Pointer events on the scroll container itself stay on, regardless
-        of what fixed-position descendants are doing
-     4. Hardware acceleration via translate3d defeats Safari touch-event
-        bugs caused by ancestor will-change/transform contexts
-   ============================================================================ */
+   The transform was added back when these elements WERE the scroll
+   containers. After scroll fix v3 (body owns scroll natively), the
+   transform serves no purpose and was actively harming scroll. Removed.
+
+   The remaining rules just guarantee touch-action and pointer-events
+   stay correct. */
 
 .public-page-scroll-root,
 main#main-content {
-  /* Force GPU compositing — defeats iOS touch-event bugs in transform layers */
-  transform: translate3d(0, 0, 0);
-  -webkit-transform: translate3d(0, 0, 0);
-  /* Re-assert critical scroll properties (defense in depth against overrides) */
-  -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
   pointer-events: auto !important;
-  /* Permit overscroll bounce on iOS so users feel the page is alive */
   overscroll-behavior-y: contain;
 }
 

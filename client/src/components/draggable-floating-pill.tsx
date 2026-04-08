@@ -142,7 +142,10 @@ export function DraggableFloatingPill({
           position: 'fixed',
           left: `${position.x}px`,
           top: `${position.y}px`,
-          touchAction: 'none', // Prevent scroll while dragging
+          // Was 'none' (would prevent scroll while dragging the pill)
+          // — changed to 'pan-y' so the pill never blocks vertical
+          // scroll on mobile (CLAUDE.md scroll fix v4).
+          touchAction: 'pan-y',
         }}
         className={cn(
           "z-50 select-none",

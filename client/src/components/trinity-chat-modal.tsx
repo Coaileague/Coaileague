@@ -1362,9 +1362,12 @@ function TrinityModal({ onClose }: TrinityModalProps) {
           onDragEnd={handleDragEnd}
         >
             {/* Large Touch Target Drag Handle - iPhone Messages style */}
-            <div 
+            <div
               className="flex flex-col items-center pt-2 pb-3 shrink-0 cursor-grab active:cursor-grabbing select-none"
-              style={{ touchAction: 'none' }}
+              // Was 'none' — changed to 'pan-y' so the drag handle never
+              // blocks vertical scroll on mobile (CLAUDE.md scroll fix v4).
+              // Drag still works via pointer events.
+              style={{ touchAction: 'pan-y' }}
               onPointerDown={(e) => {
                 e.preventDefault();
                 mobileDragControls.start(e);

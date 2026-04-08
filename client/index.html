@@ -25,33 +25,41 @@
       })();
     </script>
     <!-- ============================================================ -->
-    <!-- SCROLL PASSTHROUGH — MUST RUN BEFORE REACT LOADS             -->
+    <!-- SCROLL PASSTHROUGH — NUCLEAR OPTION (scroll fix v4)          -->
     <!-- ============================================================ -->
     <!--
-      react-remove-scroll (used by Radix Dialog/Sheet/Popover, Vaul, etc.)
-      installs non-passive bubble-phase wheel + touchmove listeners on
-      `document` that call preventDefault() and block global scroll when
-      their lockStack has stale entries. The capture-phase listener below
-      fires BEFORE any bubble-phase listener, so stopImmediatePropagation()
-      aborts the dispatch before react-remove-scroll's shouldPrevent
-      handler runs.
+      Definitive fix for scroll being blocked by react-remove-scroll
+      (used by Radix Dialog/Sheet/Popover, Vaul, etc).
 
-      Events inside a real overlay (dialog, alertdialog, vaul drawer, or
-      Radix ScrollArea viewport) are left alone so in-overlay scroll and
-      legitimate background-scroll-lock still work.
+      We monkey-patch EventTarget.prototype.addEventListener BEFORE any
+      module bundle loads. Any subsequent registration of a `wheel` or
+      `touchmove` listener — anywhere in the application or in any
+      third-party library — is forced to be passive. The browser
+      silently ignores preventDefault() calls inside passive listeners,
+      so react-remove-scroll's shouldPrevent handler can call
+      preventDefault() all it wants and the browser will still scroll.
 
-      Must live inline in <head> BEFORE the React module bundle so the
-      listener is installed before any React effect runs.
+      This is intentionally the nuclear option: it unblocks scroll
+      definitively at the cost of disabling preventDefault() on
+      wheel/touchmove anywhere in the app. The trade-off is acceptable
+      because:
+        - Native browser scroll is the primary user interaction
+        - In-modal scroll lock is enforced by `overflow:hidden` on the
+          modal backdrop and CSS `body.modal-open { overflow: hidden }`
+        - No legitimate code path in the app needs to preventDefault on
+          wheel/touchmove for production behavior
     -->
     <script>
       (function(){
-        function scrollPassthrough(e){
-          if(!e.target.closest('[role=dialog],[role=alertdialog],[data-vaul-dialog],[data-radix-scroll-area-viewport]')){
-            e.stopImmediatePropagation();
+        var _orig = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, fn, opts) {
+          if (type === 'wheel' || type === 'touchmove') {
+            var passive = (typeof opts === 'object' && opts !== null) ? Object.assign({}, opts) : {};
+            passive.passive = true;
+            return _orig.call(this, type, fn, passive);
           }
-        }
-        document.addEventListener('wheel', scrollPassthrough, {capture:true, passive:false});
-        document.addEventListener('touchmove', scrollPassthrough, {capture:true, passive:false});
+          return _orig.call(this, type, fn, opts);
+        };
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-content" />

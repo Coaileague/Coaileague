@@ -189,7 +189,10 @@ export function UniversalSheet({
             justifyContent: 'center',
             padding: 'var(--space-3) 0',
             cursor: 'grab',
-            touchAction: 'none',
+            // Was 'none' — changed to 'pan-y' (scroll fix v4). The
+            // drag handle drag uses pointer events which still work
+            // independently of touch-action.
+            touchAction: 'pan-y',
           }}
         >
           <div style={{ width: 36, height: 4, borderRadius: 'var(--radius-full)', background: 'var(--color-border-emphasis)' }} />
