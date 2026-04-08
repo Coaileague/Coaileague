@@ -228,6 +228,13 @@ export class A2AProtocolRepository {
     metadata?: Record<string, any>;
   }): Promise<any> {
     try {
+      // ON CONFLICT (id) DO NOTHING so restarts don't error on the
+      // 7 core subagent seed inserts (payroll-subagent, invoice-subagent,
+      // scheduling-subagent, analytics-subagent, notification-subagent,
+      // compliance-subagent, trinity-coordinator). Railway log forensics
+      // 2026-04-08. Uses `.returning()` after the conflict clause — when
+      // a row is skipped due to conflict, `result` will be undefined and
+      // the logging code below handles that cleanly.
       const [result] = await db.insert(a2aAgents).values({
         workspaceId: 'system',
         id: agent.id,
@@ -240,7 +247,7 @@ export class A2AProtocolRepository {
         messagesSent: 0,
         messagesReceived: 0,
         successRate: 1.0,
-      }).returning();
+      }).onConflictDoNothing({ target: a2aAgents.id }).returning();
       log.info(`[A2ARepo] Agent persisted: ${agent.name}`);
       return result;
     } catch (error: any) {

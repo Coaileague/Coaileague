@@ -31,7 +31,12 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 export interface MeteredGenerateOptions {
   workspaceId: string;
-  userId?: string;
+  // Nullable for system-initiated calls (no real user). Previously some
+  // callers passed `'system'` as a sentinel which propagated into
+  // ai_usage_events and triggered a FK violation against the users
+  // table. Pass `null` or omit for system calls. (Railway log
+  // forensics 2026-04-08, FIX 10.)
+  userId?: string | null;
   featureKey: string;
   prompt: string;
   systemInstruction?: string;

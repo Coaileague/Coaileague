@@ -237,7 +237,7 @@ export async function populateHolidaysForYear(year: number): Promise<void> {
 
   // Get all workspace IDs (exclude cancelled/suspended)
   const { rows: workspaces } = await pool.query(
-    `SELECT id FROM workspaces WHERE (subscription_status NOT IN ('cancelled', 'suspended') OR subscription_status IS NULL) AND (workspace_state IS NULL OR workspace_state != 'trial_expired') LIMIT 5000`
+    `SELECT id FROM workspaces WHERE (subscription_status NOT IN ('cancelled', 'suspended') OR subscription_status IS NULL) AND (workspace_type IS NULL OR workspace_type != 'trial_expired') LIMIT 5000`
   );
   
   for (const ws of workspaces) {

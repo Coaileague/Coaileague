@@ -151,7 +151,7 @@ class DynamicMessageService {
       
       const result = await meteredGemini.generate({
         workspaceId: workspaceId,
-        userId: 'system',
+        userId: null,
         featureKey: 'dynamic_message_generation',
         prompt,
         systemInstruction: this.getSystemInstruction(),
@@ -193,7 +193,7 @@ class DynamicMessageService {
       
       const result = await meteredGemini.generate({
         workspaceId: workspaceId,
-        userId: 'system',
+        userId: null,
         featureKey: 'dynamic_motd',
         prompt: `Generate a brief, friendly MOTD (message of the day) for a chat room called "${roomName}". ${modesInfo}. ${botsInfo}. Include 2-3 useful slash commands they can use. Keep it under 50 words. No emojis.`,
         systemInstruction: `You are generating chat room welcome messages. Be concise, helpful, and professional. Sound like a knowledgeable system, not a chatbot. Use natural language.`,

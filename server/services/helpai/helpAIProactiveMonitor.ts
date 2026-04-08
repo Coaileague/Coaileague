@@ -86,7 +86,7 @@ class HelpAIProactiveMonitor {
             FROM workspace_members wm
             JOIN workspaces w ON w.id = wm.workspace_id
             WHERE wm.workspace_id IS NOT NULL
-              AND (w.workspace_state IS NULL OR w.workspace_state != 'trial_expired')
+              AND (w.workspace_type IS NULL OR w.workspace_type != 'trial_expired')
               AND (w.subscription_status IS NULL OR w.subscription_status NOT IN ('cancelled', 'deleted'))
             LIMIT 50`
       );

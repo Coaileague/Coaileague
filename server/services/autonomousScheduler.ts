@@ -3339,7 +3339,7 @@ export function startAutonomousScheduler() {
         const dateStr = yesterday.toISOString().split('T')[0];
 
         const { rows: wsRows } = await pool.query(
-          `SELECT id FROM workspaces WHERE subscription_status NOT IN ('cancelled','deleted') AND (workspace_state IS NULL OR workspace_state != 'trial_expired') LIMIT 500`
+          `SELECT id FROM workspaces WHERE subscription_status NOT IN ('cancelled','deleted') AND (workspace_type IS NULL OR workspace_type != 'trial_expired') LIMIT 500`
         );
         const { aiMeteringService } = await import('./billing/aiMeteringService');
         let rolled = 0;

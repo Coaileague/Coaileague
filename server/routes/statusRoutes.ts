@@ -104,7 +104,7 @@ async function runHealthChecks(): Promise<ServiceHealth[]> {
     const start = Date.now();
     // Check recent AI activity in the last 10 minutes
     const { rows } = await pool.query(
-      `SELECT COUNT(*) as c FROM sra_audit_log WHERE action LIKE '%ai%' AND created_at > now() - interval '10 minutes' LIMIT 1`
+      `SELECT COUNT(*) as c FROM sra_audit_log WHERE action_type LIKE '%ai%' AND timestamp > now() - interval '10 minutes' LIMIT 1`
     ).catch(() => ({ rows: [{ c: '0' }] }));
     checks.push({
       name: 'Trinity AI',

@@ -97,7 +97,7 @@ export async function scheduleSmartAI(request: ScheduleSmartRequest): Promise<Sc
   // Guard Rails: Create request context
   const requestContext: AIRequestContext = {
     workspaceId: request.workspaceId,
-    userId: request.userId || 'system',
+    userId: request.userId || null,
     organizationId: 'platform',
     requestId: crypto.randomUUID().slice(0, 8),
     timestamp: new Date(),

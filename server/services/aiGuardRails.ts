@@ -19,7 +19,15 @@ import DOMPurify from 'isomorphic-dompurify';
 
 export interface AIRequestContext {
   workspaceId: string;
-  userId: string;
+  // `userId` is NULLABLE because system-initiated AI calls (scheduled
+  // jobs, cron pipelines, dynamic message broadcasts, etc.) have no
+  // real user. Previously callers passed `'system'` as a sentinel
+  // string, which then propagated into ai_usage_events INSERTs and
+  // triggered a foreign-key violation against the users table (no
+  // user row with id='system' exists). Pass `null` for system-
+  // initiated calls; the FK column is nullable in the Drizzle schema.
+  // Railway log forensics 2026-04-08 (FIX 10).
+  userId: string | null;
   organizationId: string;
   requestId: string;
   timestamp: Date;

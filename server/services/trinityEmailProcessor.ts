@@ -84,7 +84,7 @@ export class TrinityEmailProcessor {
     // This supports per-workspace provisioned addresses (trinity@, careers@, etc.)
     const pea = await pool.query(
       `SELECT pea.workspace_id, pea.address_type, pea.trinity_calltype, pea.auto_trinity_process,
-              w.id, w.name, w.slug, w.subscription_tier, w.workspace_state,
+              w.id, w.name, w.slug, w.subscription_tier, w.workspace_type,
               w.trinity_email, w.careers_email, w.verify_email, w.support_email, w.calloffs_email
        FROM platform_email_addresses pea
        JOIN workspaces w ON w.id = pea.workspace_id
