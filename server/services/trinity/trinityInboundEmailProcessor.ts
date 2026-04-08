@@ -31,6 +31,7 @@ import { storage } from '../../storage';
 import { platformEventBus } from '../platformEventBus';
 import { fireCallOffSequence } from '../staffingBroadcastService';
 import { createLogger } from '../../lib/logger';
+import { scheduleNonBlocking } from '../../lib/scheduleNonBlocking';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 const log = createLogger('trinityInboundEmailProcessor');
 
@@ -316,24 +317,20 @@ async function processCalloff(
   });
 
   // CONFIRM: send confirmation reply via NDS — P27-G02 FIX
-  setImmediate(async () => {
-    try {
-      const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-      const { PLATFORM } = await import('../../config/platformConfig');
-      const confirmSubject = `Calloff Received — ${shiftDate}`;
-      const confirmHtml = `<p>Hi ${sender.name},</p><p>Your calloff for <strong>${shiftDate}</strong> has been received and a replacement is being arranged. Your supervisor has been notified.</p><p>— ${PLATFORM.name} Operations</p>`;
-      await NotificationDeliveryService.send({
-        type: 'internal_email_received',
-        workspaceId: sender.workspaceId || 'system',
-        recipientUserId: email.fromEmail,
-        channel: 'email',
-        subject: confirmSubject,
-        body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
-        idempotencyKey: `calloff-confirm-${logId}`,
-      });
-    } catch (err: unknown) {
-      log.warn('[TrinityInboundEmail] Calloff confirmation email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-    }
+  scheduleNonBlocking('inbound-email.calloff-confirm', async () => {
+    const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+    const { PLATFORM } = await import('../../config/platformConfig');
+    const confirmSubject = `Calloff Received — ${shiftDate}`;
+    const confirmHtml = `<p>Hi ${sender.name},</p><p>Your calloff for <strong>${shiftDate}</strong> has been received and a replacement is being arranged. Your supervisor has been notified.</p><p>— ${PLATFORM.name} Operations</p>`;
+    await NotificationDeliveryService.send({
+      type: 'internal_email_received',
+      workspaceId: sender.workspaceId || 'system',
+      recipientUserId: email.fromEmail,
+      channel: 'email',
+      subject: confirmSubject,
+      body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
+      idempotencyKey: `calloff-confirm-${logId}`,
+    });
   });
 
   return {
@@ -427,24 +424,20 @@ async function processIncident(
   });
 
   // CONFIRM: send acknowledgment via NDS — P27-G02 FIX
-  setImmediate(async () => {
-    try {
-      const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-      const { PLATFORM } = await import('../../config/platformConfig');
-      const confirmSubject = `Incident Report Received — ${incidentNumber}`;
-      const confirmHtml = `<p>Hi ${sender.name},</p><p>Your incident report has been received (Reference: <strong>${incidentNumber}</strong>) and routed to your supervisor for review.</p><p>— ${PLATFORM.name} Operations</p>`;
-      await NotificationDeliveryService.send({
-        type: 'internal_email_received',
-        workspaceId: sender.workspaceId || 'system',
-        recipientUserId: email.fromEmail,
-        channel: 'email',
-        subject: confirmSubject,
-        body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
-        idempotencyKey: `incident-confirm-${logId}`,
-      });
-    } catch (err: unknown) {
-      log.warn('[TrinityInboundEmail] Incident confirmation email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-    }
+  scheduleNonBlocking('inbound-email.incident-confirm', async () => {
+    const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+    const { PLATFORM } = await import('../../config/platformConfig');
+    const confirmSubject = `Incident Report Received — ${incidentNumber}`;
+    const confirmHtml = `<p>Hi ${sender.name},</p><p>Your incident report has been received (Reference: <strong>${incidentNumber}</strong>) and routed to your supervisor for review.</p><p>— ${PLATFORM.name} Operations</p>`;
+    await NotificationDeliveryService.send({
+      type: 'internal_email_received',
+      workspaceId: sender.workspaceId || 'system',
+      recipientUserId: email.fromEmail,
+      channel: 'email',
+      subject: confirmSubject,
+      body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
+      idempotencyKey: `incident-confirm-${logId}`,
+    });
   });
 
   return { downstreamRecordId: report.id, downstreamRecordType: 'incident_report' };
@@ -463,24 +456,20 @@ async function processDocs(
 
   if (attachments.length === 0) {
     // No attachments — reply asking to resubmit via NDS — P27-G02 FIX
-    setImmediate(async () => {
-      try {
-        const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-        const { PLATFORM } = await import('../../config/platformConfig');
-        const confirmSubject = 'Document Submission — Attachment Required';
-        const confirmHtml = `<p>Hi ${sender.name},</p><p>We received your email but no document was attached. Please resubmit your email with the document attached.</p><p>— ${PLATFORM.name} Document Processing</p>`;
-        await NotificationDeliveryService.send({
-          type: 'internal_email_received',
-          workspaceId: sender.workspaceId || 'system',
-          recipientUserId: email.fromEmail,
-          channel: 'email',
-          subject: confirmSubject,
-          body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
-          idempotencyKey: `docs-no-attachment-confirm-${logId}`,
-        });
-      } catch (err: unknown) {
-        log.warn('[TrinityInboundEmail] Docs no-attachment notice email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-      }
+    scheduleNonBlocking('inbound-email.docs-no-attachment', async () => {
+      const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+      const { PLATFORM } = await import('../../config/platformConfig');
+      const confirmSubject = 'Document Submission — Attachment Required';
+      const confirmHtml = `<p>Hi ${sender.name},</p><p>We received your email but no document was attached. Please resubmit your email with the document attached.</p><p>— ${PLATFORM.name} Document Processing</p>`;
+      await NotificationDeliveryService.send({
+        type: 'internal_email_received',
+        workspaceId: sender.workspaceId || 'system',
+        recipientUserId: email.fromEmail,
+        channel: 'email',
+        subject: confirmSubject,
+        body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
+        idempotencyKey: `docs-no-attachment-confirm-${logId}`,
+      });
     });
     return { needsReview: true, reviewReason: 'No attachments in docs@ email' };
   }
@@ -565,23 +554,19 @@ async function processDocs(
   });
 
   // CONFIRM via NDS — P27-G02 FIX
-  setImmediate(async () => {
-    try {
-      const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-      const confirmSubject = 'Document Received';
-      const confirmHtml = `<p>Hi ${sender.name},</p><p>Your document${attachments.length > 1 ? 's have' : ' has'} been received and routed for review. ${reviewerNote}</p><p>— CoAIleague Document Processing</p>`;
-      await NotificationDeliveryService.send({
-        type: 'internal_email_received',
-        workspaceId: sender.workspaceId || 'system',
-        recipientUserId: email.fromEmail,
-        channel: 'email',
-        subject: confirmSubject,
-        body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
-        idempotencyKey: `docs-received-confirm-${logId}`,
-      });
-    } catch (err: unknown) {
-      log.warn('[TrinityInboundEmail] Document received confirmation email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-    }
+  scheduleNonBlocking('inbound-email.docs-received', async () => {
+    const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+    const confirmSubject = 'Document Received';
+    const confirmHtml = `<p>Hi ${sender.name},</p><p>Your document${attachments.length > 1 ? 's have' : ' has'} been received and routed for review. ${reviewerNote}</p><p>— CoAIleague Document Processing</p>`;
+    await NotificationDeliveryService.send({
+      type: 'internal_email_received',
+      workspaceId: sender.workspaceId || 'system',
+      recipientUserId: email.fromEmail,
+      channel: 'email',
+      subject: confirmSubject,
+      body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
+      idempotencyKey: `docs-received-confirm-${logId}`,
+    });
   });
 
   return { downstreamRecordId: vaultIds[0], downstreamRecordType: 'document_vault' };
@@ -640,23 +625,19 @@ async function processSupport(
   // ── Tier 0: FAQ exact match ────────────────────────────────────────────────
   const faqAnswer = await emailFaqLookup(fullBody, workspaceId);
   if (faqAnswer) {
-    setImmediate(async () => {
-      try {
-        const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-        const subject = `Re: ${email.subject || 'Your Support Request'}`;
-        const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${faqAnswer}</p><p>If this didn't fully answer your question, simply reply to this email and we'll follow up right away.</p><p>— Trinity Support</p>`;
-        await NotificationDeliveryService.send({
-          type: 'internal_email_received',
-          workspaceId,
-          recipientUserId: email.fromEmail,
-          channel: 'email',
-          subject,
-          body: { to: email.fromEmail, subject, html },
-          idempotencyKey: `support-faq-reply-${logId}`,
-        });
-      } catch (err: unknown) {
-        log.warn('[TrinityInboundEmail] FAQ reply email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-      }
+    scheduleNonBlocking('inbound-email.support-faq-reply', async () => {
+      const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+      const subject = `Re: ${email.subject || 'Your Support Request'}`;
+      const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${faqAnswer}</p><p>If this didn't fully answer your question, simply reply to this email and we'll follow up right away.</p><p>— Trinity Support</p>`;
+      await NotificationDeliveryService.send({
+        type: 'internal_email_received',
+        workspaceId,
+        recipientUserId: email.fromEmail,
+        channel: 'email',
+        subject,
+        body: { to: email.fromEmail, subject, html },
+        idempotencyKey: `support-faq-reply-${logId}`,
+      });
     });
     return { downstreamRecordType: 'faq_resolved' };
   }
@@ -664,23 +645,19 @@ async function processSupport(
   // ── Tier 1: Category instant answer ───────────────────────────────────────
   const instantAnswer = EMAIL_INSTANT_ANSWERS[category];
   if (instantAnswer) {
-    setImmediate(async () => {
-      try {
-        const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-        const subject = `Re: ${email.subject || 'Your Support Request'}`;
-        const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${instantAnswer}</p><p>If you need further help, reply here and our support team will assist you.</p><p>— Trinity Support</p>`;
-        await NotificationDeliveryService.send({
-          type: 'internal_email_received',
-          workspaceId,
-          recipientUserId: email.fromEmail,
-          channel: 'email',
-          subject,
-          body: { to: email.fromEmail, subject, html },
-          idempotencyKey: `support-instant-reply-${logId}`,
-        });
-      } catch (err: unknown) {
-        log.warn('[TrinityInboundEmail] Instant answer reply email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-      }
+    scheduleNonBlocking('inbound-email.support-instant-reply', async () => {
+      const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+      const subject = `Re: ${email.subject || 'Your Support Request'}`;
+      const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${instantAnswer}</p><p>If you need further help, reply here and our support team will assist you.</p><p>— Trinity Support</p>`;
+      await NotificationDeliveryService.send({
+        type: 'internal_email_received',
+        workspaceId,
+        recipientUserId: email.fromEmail,
+        channel: 'email',
+        subject,
+        body: { to: email.fromEmail, subject, html },
+        idempotencyKey: `support-instant-reply-${logId}`,
+      });
     });
     return { downstreamRecordType: 'auto_resolved' };
   }
@@ -693,23 +670,19 @@ async function processSupport(
     if (aiResult.canResolve && aiResult.answer && aiResult.answer.length > 30) {
       aiAnswerResolved = true;
       const aiAnswer = aiResult.answer;
-      setImmediate(async () => {
-        try {
-          const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-          const subject = `Re: ${email.subject || 'Your Support Request'}`;
-          const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${aiAnswer.replace(/\n/g, '<br>')}</p><p>If this didn't fully resolve your question, reply here and a specialist will follow up.</p><p>— Trinity Support</p>`;
-          await NotificationDeliveryService.send({
-            type: 'internal_email_received',
-            workspaceId,
-            recipientUserId: email.fromEmail,
-            channel: 'email',
-            subject,
-            body: { to: email.fromEmail, subject, html },
-            idempotencyKey: `support-ai-reply-${logId}`,
-          });
-        } catch (err: unknown) {
-          log.warn('[TrinityInboundEmail] AI reply email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-        }
+      scheduleNonBlocking('inbound-email.support-ai-reply', async () => {
+        const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+        const subject = `Re: ${email.subject || 'Your Support Request'}`;
+        const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${aiAnswer.replace(/\n/g, '<br>')}</p><p>If this didn't fully resolve your question, reply here and a specialist will follow up.</p><p>— Trinity Support</p>`;
+        await NotificationDeliveryService.send({
+          type: 'internal_email_received',
+          workspaceId,
+          recipientUserId: email.fromEmail,
+          channel: 'email',
+          subject,
+          body: { to: email.fromEmail, subject, html },
+          idempotencyKey: `support-ai-reply-${logId}`,
+        });
       });
       return { downstreamRecordType: 'ai_resolved' };
     }
@@ -750,23 +723,19 @@ async function processSupport(
     relatedEntityId: ticket.id,
   });
 
-  setImmediate(async () => {
-    try {
-      const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-      const confirmSubject = `Support Request Received — ${ticketNumber}`;
-      const confirmHtml = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>We've received your support request (Ticket: <strong>${ticketNumber}</strong>). ${routingNote} We will follow up with you shortly.</p><p>— Trinity Support</p>`;
-      await NotificationDeliveryService.send({
-        type: 'internal_email_received',
-        workspaceId,
-        recipientUserId: email.fromEmail,
-        channel: 'email',
-        subject: confirmSubject,
-        body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
-        idempotencyKey: `support-confirm-${logId}`,
-      });
-    } catch (err: unknown) {
-      log.warn('[TrinityInboundEmail] Support ticket confirmation email failed (non-blocking):', err instanceof Error ? err.message : String(err));
-    }
+  scheduleNonBlocking('inbound-email.support-ticket-confirm', async () => {
+    const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+    const confirmSubject = `Support Request Received — ${ticketNumber}`;
+    const confirmHtml = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>We've received your support request (Ticket: <strong>${ticketNumber}</strong>). ${routingNote} We will follow up with you shortly.</p><p>— Trinity Support</p>`;
+    await NotificationDeliveryService.send({
+      type: 'internal_email_received',
+      workspaceId,
+      recipientUserId: email.fromEmail,
+      channel: 'email',
+      subject: confirmSubject,
+      body: { to: email.fromEmail, subject: confirmSubject, html: confirmHtml },
+      idempotencyKey: `support-confirm-${logId}`,
+    });
   });
 
   return { downstreamRecordId: ticket.id, downstreamRecordType: 'support_ticket' };

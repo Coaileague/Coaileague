@@ -17,6 +17,7 @@
  */
 
 import { createLogger } from '../../lib/logger';
+import { scheduleNonBlocking } from '../../lib/scheduleNonBlocking';
 import { BILLING } from '../../../shared/billingConfig';
 import { db } from '../../db';
 import { aiUsageEvents } from '@shared/schema';
@@ -789,13 +790,9 @@ export class CreditManager {
       if (HARD_CAP_TIERS.has(tier) && allocation > 0) {
         const threshold = Math.floor(allocation * 0.1);
         if (balance <= threshold && balance > 0) {
-          setImmediate(async () => {
-            try {
-              const { onLowBalance } = await import('../billing/upsellService');
-              await onLowBalance(workspaceId, balance, allocation);
-            } catch {
-              // Non-critical — never block the hot path
-            }
+          scheduleNonBlocking('credit.low-balance-alert', async () => {
+            const { onLowBalance } = await import('../billing/upsellService');
+            await onLowBalance(workspaceId, balance, allocation);
           });
         }
       }

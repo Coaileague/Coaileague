@@ -24,6 +24,7 @@ import {
   publishPlatformUpdate,
 } from './platformEventBus';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('scheduleLiveNotifier');
 
 
@@ -230,7 +231,7 @@ export async function onSchedulePublished(params: {
   }
 
   // Non-blocking: send weekly schedule email to each assigned officer
-  setImmediate(async () => {
+  scheduleNonBlocking('schedule.weekly-email-fanout', async () => {
     try {
       const { sendWeeklyScheduleEmail } = await import('./emailCore');
 

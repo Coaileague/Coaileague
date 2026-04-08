@@ -19,6 +19,7 @@ import { aiBrainEvents } from './internalEventEmitter';
 import { db } from '../../db';
 import { platformAwarenessEvents } from '@shared/schema';
 import { createLogger } from '../../lib/logger';
+import { scheduleNonBlocking } from '../../lib/scheduleNonBlocking';
 const log = createLogger('platformAwarenessHelper');
 
 export type DatabaseOperation = 'create' | 'update' | 'delete' | 'read';
@@ -68,7 +69,7 @@ export function notifyTrinity(
   if (operation === 'read') return;
   if (SKIP_AWARENESS_RESOURCES.has(resourceType)) return;
 
-  setImmediate(async () => {
+  scheduleNonBlocking('platform-awareness.notify-trinity', async () => {
     try {
       const eventType = `${resourceType}_${operation}`;
 

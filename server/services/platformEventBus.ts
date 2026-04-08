@@ -14,6 +14,7 @@ import { platformUpdates, notifications, platformRoles, systemAuditLogs, employe
 import { eq, and, inArray, gte, isNull } from 'drizzle-orm';
 import { notificationEngine } from './universalNotificationEngine';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 
 const log = createLogger('PlatformEventBus');
 
@@ -525,8 +526,8 @@ class PlatformEventBus {
     const timestamp = new Date().toISOString();
     log.info('Event published', { eventType: event.type, title: event.title });
 
-    // Use setImmediate to ensure event publishing doesn't block the main execution flow
-    setImmediate(async () => {
+    // Use scheduleNonBlocking so event publishing doesn't block the main execution flow
+    scheduleNonBlocking('platform-event-bus.publish', async () => {
       // THALAMUS — Universal Sensory Gateway (fire-and-forget, never blocks publish)
       // Every platform event passes through the thalamus for classification and logging.
       try {

@@ -22,6 +22,7 @@ import { twiml, logCallAction, updateCallSession } from '../voiceOrchestrator';
 import { platformEventBus } from '../../platformEventBus';
 import { verifyClockInPin } from '../clockInPinService';
 import { createLogger } from '../../../lib/logger';
+import { scheduleNonBlocking } from '../../../lib/scheduleNonBlocking';
 const log = createLogger('staffExtension');
 
 
@@ -383,39 +384,35 @@ export async function processClockIn(params: {
 
   // 11. Notify supervisors/managers asynchronously
   // Find workspace members with manager/supervisor/owner roles to notify
-  setImmediate(async () => {
-    try {
-      const managerRoles = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'department_manager', 'supervisor'];
-      const managers = await db.select({ userId: workspaceMembers.userId })
-        .from(workspaceMembers)
-        .where(and(
-          eq(workspaceMembers.workspaceId, workspaceId),
-          eq(workspaceMembers.status, 'active'),
-          inArray(workspaceMembers.role, managerRoles),
-        ))
-        .limit(5);
+  scheduleNonBlocking('voice-clock-in.manager-notify', async () => {
+    const managerRoles = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'department_manager', 'supervisor'];
+    const managers = await db.select({ userId: workspaceMembers.userId })
+      .from(workspaceMembers)
+      .where(and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.status, 'active'),
+        inArray(workspaceMembers.role, managerRoles),
+      ))
+      .limit(5);
 
-      if (managers.length > 0) {
-        const { NotificationDeliveryService } = await import('../../notificationDeliveryService');
-        await Promise.all(managers.map(m =>
-          NotificationDeliveryService.send({
-            type: 'clock_in_notification',
-            workspaceId,
-            recipientUserId: m.userId,
-            channel: 'in_app',
-            subject: `Voice Clock-In — ${employee.firstName} ${employee.lastName}`,
-            body: {
-              title: 'Employee Clocked In via Voice',
-              message: `${employee.firstName} ${employee.lastName} clocked in via voice phone. Reference: ${referenceId}`,
-              actionUrl: '/time-tracking',
-              referenceId,
-            },
-            idempotencyKey: `voice-clockin-${referenceId}-${m.userId}`,
-          }).catch((err) => log.warn('[staffExtension] Fire-and-forget notification failed:', err))
-        ));
-      }
-    } catch (err: any) {
-      log.warn('[StaffExtension] Error sending SMS notification', { error: err.message });
+    if (managers.length > 0) {
+      const { NotificationDeliveryService } = await import('../../notificationDeliveryService');
+      await Promise.allSettled(managers.map(m =>
+        NotificationDeliveryService.send({
+          type: 'clock_in_notification',
+          workspaceId,
+          recipientUserId: m.userId,
+          channel: 'in_app',
+          subject: `Voice Clock-In — ${employee.firstName} ${employee.lastName}`,
+          body: {
+            title: 'Employee Clocked In via Voice',
+            message: `${employee.firstName} ${employee.lastName} clocked in via voice phone. Reference: ${referenceId}`,
+            actionUrl: '/time-tracking',
+            referenceId,
+          },
+          idempotencyKey: `voice-clockin-${referenceId}-${m.userId}`,
+        })
+      ));
     }
   });
 

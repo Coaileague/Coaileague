@@ -21,6 +21,7 @@ import crypto from 'crypto';
 import { RETRIES } from '../../config/platformConfig';
 import { typedExec, typedQuery } from '../../lib/typedSql';
 import { createLogger } from '../../lib/logger';
+import { scheduleNonBlocking } from '../../lib/scheduleNonBlocking';
 const log = createLogger('durableJobQueue');
 
 
@@ -288,28 +289,24 @@ class DurableJobQueueService {
           alertTarget: 'support@coaileague.com',
         });
         // Best-effort structured alert via trinityAutonomousNotifier (non-blocking)
-        setImmediate(async () => {
-          try {
-            const { notifySupportStaff } = await import('../ai-brain/trinityAutonomousNotifier');
-            await notifySupportStaff({
-              workspaceId: 'system',
-              severity: 'critical',
-              category: 'performance',
-              title: `DLQ Sentinel: ${staleJobs.length} stale dead-letter job(s) — unresolved >4 hours`,
-              description: `Job types affected: ${[...new Set(staleJobs.map((j: any) => j.type))].join(', ')}. Oldest job ID: ${staleJobs[0]?.id}. Immediate ops review required.`,
-              suggestedAction: 'Review dead-letter jobs in the DLQ dashboard. Retry or escalate as appropriate.',
-              autoFixAvailable: false,
-              autoFixRisk: 'low',
-              metadata: {
-                staleJobCount: staleJobs.length,
-                jobTypes: [...new Set(staleJobs.map((j: any) => j.type))],
-                oldestJobId: staleJobs[0]?.id,
-                sampleJobs: staleJobs.slice(0, 5).map((j: any) => ({ id: j.id, type: j.type, error: j.error })),
-              },
-            });
-          } catch (alertErr: unknown) {
-            log.warn('[DurableJobQueue] DLQ alert notification failed (non-blocking):', alertErr instanceof Error ? alertErr.message : String(alertErr));
-          }
+        scheduleNonBlocking('durable-job-queue.dlq-sentinel-alert', async () => {
+          const { notifySupportStaff } = await import('../ai-brain/trinityAutonomousNotifier');
+          await notifySupportStaff({
+            workspaceId: 'system',
+            severity: 'critical',
+            category: 'performance',
+            title: `DLQ Sentinel: ${staleJobs.length} stale dead-letter job(s) — unresolved >4 hours`,
+            description: `Job types affected: ${[...new Set(staleJobs.map((j: any) => j.type))].join(', ')}. Oldest job ID: ${staleJobs[0]?.id}. Immediate ops review required.`,
+            suggestedAction: 'Review dead-letter jobs in the DLQ dashboard. Retry or escalate as appropriate.',
+            autoFixAvailable: false,
+            autoFixRisk: 'low',
+            metadata: {
+              staleJobCount: staleJobs.length,
+              jobTypes: [...new Set(staleJobs.map((j: any) => j.type))],
+              oldestJobId: staleJobs[0]?.id,
+              sampleJobs: staleJobs.slice(0, 5).map((j: any) => ({ id: j.id, type: j.type, error: j.error })),
+            },
+          });
         });
       }
     } catch (err: unknown) {

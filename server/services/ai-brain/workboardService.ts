@@ -11,6 +11,7 @@
 import crypto from 'crypto';
 import { db } from '../../db';
 import { createLogger } from '../../lib/logger';
+import { scheduleNonBlocking } from '../../lib/scheduleNonBlocking';
 import { 
   InsertAiWorkboardTask, 
   AiWorkboardTask,
@@ -1166,34 +1167,23 @@ export interface DatabaseEvent {
  * and does not block the calling endpoint
  */
 export async function postDatabaseEventToAIBrain(event: DatabaseEvent): Promise<void> {
-  try {
-    // Fire and forget - don't await, just log
-    setImmediate(async () => {
-      try {
-        await workboardService.submitTask({
-          workspaceId: event.workspaceId,
-          userId: event.userId,
-          requestType: 'system',
-          requestContent: `[DB_EVENT] ${event.eventType}: ${event.entityType}#${event.entityId}`,
-          requestMetadata: {
-            eventType: event.eventType,
-            entityType: event.entityType,
-            entityId: event.entityId,
-            changes: event.changes,
-            ...event.metadata,
-            source: 'database_event',
-            timestamp: new Date().toISOString(),
-          },
-          priority: 'low', // Background observability task
-        });
-        log.info(`[AIBrain] Database event logged: ${event.eventType} for ${event.entityType}#${event.entityId}`);
-      } catch (err) {
-        // Silently log errors - don't let AI Brain logging affect main operations
-        log.error('[AIBrain] Failed to log database event:', err);
-      }
+  scheduleNonBlocking('ai-brain.db-event-log', async () => {
+    await workboardService.submitTask({
+      workspaceId: event.workspaceId,
+      userId: event.userId,
+      requestType: 'system',
+      requestContent: `[DB_EVENT] ${event.eventType}: ${event.entityType}#${event.entityId}`,
+      requestMetadata: {
+        eventType: event.eventType,
+        entityType: event.entityType,
+        entityId: event.entityId,
+        changes: event.changes,
+        ...event.metadata,
+        source: 'database_event',
+        timestamp: new Date().toISOString(),
+      },
+      priority: 'low', // Background observability task
     });
-  } catch (err) {
-    // Outer catch for any synchronous errors
-    log.error('[AIBrain] Error posting database event:', err);
-  }
+    log.info(`[AIBrain] Database event logged: ${event.eventType} for ${event.entityType}#${event.entityId}`);
+  });
 }

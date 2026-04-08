@@ -2,6 +2,7 @@ import rateLimit from 'express-rate-limit';
 import type { Request, Response } from 'express';
 import { RATE_LIMITS } from '../config/platformConfig';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('rateLimiter');
 
 /**
@@ -59,20 +60,16 @@ function logRateLimitViolation(req: Request, limitType: string): void {
     if (entry.count >= VIOLATION_ALERT_THRESHOLD) {
       log.warn(`[RateLimiter] REPEAT_VIOLATION: ip=${ip} limiter=${limitType} count=${entry.count} in ${VIOLATION_WINDOW_MS / 60000} min — admin alert fired`);
       // Fire admin alert via platform event bus (non-blocking — dynamic import avoids circular deps + ESM compat)
-      setImmediate(async () => {
-        try {
-          const { platformEventBus } = await import('../services/platformEventBus');
-          platformEventBus.publish('rate_limit_violation', {
-            ip,
-            limitType,
-            count: entry.count,
-            windowMs: VIOLATION_WINDOW_MS,
-            path: req.path,
-            userAgent: req.headers['user-agent'],
-          });
-        } catch (err: any) {
-          log.warn('[RateLimiter] Error logging violation (non-blocking)', err?.message);
-        }
+      scheduleNonBlocking('rate-limiter.violation-alert', async () => {
+        const { platformEventBus } = await import('../services/platformEventBus');
+        platformEventBus.publish('rate_limit_violation', {
+          ip,
+          limitType,
+          count: entry.count,
+          windowMs: VIOLATION_WINDOW_MS,
+          path: req.path,
+          userAgent: req.headers['user-agent'],
+        });
       });
     }
   }
