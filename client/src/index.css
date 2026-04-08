@@ -2302,9 +2302,16 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
   
   /* Ensure Cards and containers don't overflow on mobile */
   @media (max-width: 768px) {
-    /* Prevent horizontal scroll on mobile */
+    /* Prevent horizontal scroll on mobile.
+       SCROLL FIX v16: use `clip` not `hidden`. Per CSS spec, `overflow-x: hidden`
+       with `overflow-y: visible` COMPUTES overflow-y to `auto`, which makes the
+       element a scroll container. Combined with `body { overscroll-behavior-y:
+       contain }` below, body becomes a DEAD scroll container (scrollHeight ===
+       clientHeight) that traps wheel/touch events and breaks the scroll chain
+       to the viewport. `overflow-x: clip` does NOT trigger the auto-computation
+       and does NOT create a scroll container. */
     body, html {
-      overflow-x: hidden;
+      overflow-x: clip;
       max-width: 100vw;
     }
     
@@ -2370,10 +2377,14 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
     object-fit: cover;
   }
 
-  /* Prevent horizontal overflow on all levels */
+  /* Prevent horizontal overflow on all levels.
+     SCROLL FIX v16: use `clip` not `hidden` — see the comment in the
+     @media(max-width: 768px) block above for the full explanation. TL;DR:
+     `overflow-x: hidden` implicitly computes `overflow-y` to `auto` which
+     makes body a dead scroll container that traps wheel/touch events. */
   html,
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
     max-width: 100vw;
   }
 
@@ -4308,9 +4319,14 @@ span[data-testid="logo-text-force"].autoforce-logo-force,
   hyphens: auto;
 }
 
-/* Prevent horizontal scroll on mobile */
+/* Prevent horizontal scroll on mobile.
+   SCROLL FIX v16: use `clip` not `hidden` — see the detailed comment
+   on the @layer base html/body rule above. `overflow-x: hidden` with
+   `overflow-y: visible` computes overflow-y to `auto`, which creates a
+   dead scroll container on body that traps wheel/touch events and
+   breaks the scroll chain to the viewport. `clip` avoids that. */
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 
@@ -4877,10 +4893,14 @@ body[data-nav-overlay-open="true"] [role="main"] {
   }
 }
 
-/* Overscroll bounce prevention — keep contained on the body level.
+/* SCROLL FIX v16: `overscroll-behavior-y: contain` removed from body.
+   It was paired with the old overflow-x: hidden bug — if body ever becomes
+   a scroll container again, contain would break the wheel/touch chain to
+   the viewport. The actual scroll containers (.public-page-scroll-root,
+   .shell-page-container) still set contain themselves.
+
    user-select: none globally; text areas re-enable it below. */
 body {
-  overscroll-behavior-y: contain;
   -webkit-user-select: none;
   user-select: none;
 }
