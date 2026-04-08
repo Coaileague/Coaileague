@@ -477,6 +477,131 @@ const constraints: CriticalConstraint[] = [
       );
     },
   },
+  // ── PHASE U: SchemaParity-SKIP bypass (production log forensics 2026-04-08) ──
+  //
+  // SchemaParityService.autoFix() at server/services/schemaParityService.ts:161
+  // marks a missing column as `autoFixable: hasDefault || isNullable`. The
+  // 18 columns below are declared in the Drizzle schema as NOT NULL with
+  // no default, so the auto-fix marks them `autoFixable: false` and SKIPS
+  // them every boot — emitting the notorious
+  //     "Auto-fix complete: 0 fixed, 0 failed, 21 skipped"
+  // line while the live database stays permanently broken. Every INSERT
+  // that touches these tables aborts ("column does not exist") and
+  // cascades into the audit-log / UniversalStepLogger / RLRepo error
+  // storm on every automation cycle.
+  //
+  // Fix: add the columns UNCONDITIONALLY on boot, as NULLABLE (so existing
+  // rows don't violate a new NOT NULL). The Drizzle INSERTs will always
+  // provide values, so the nullable-ness in the live DB is a harmless
+  // divergence from the schema declaration — NOT NULL is still enforced
+  // at the application layer by Zod + Drizzle. Safer than either (a)
+  // leaving the column missing or (b) trying to tighten NOT NULL on a
+  // populated table without a default.
+  //
+  // `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` is idempotent — once the
+  // column exists, subsequent boots skip the operation silently.
+  //
+  // This entry is a belt-and-suspenders fallback to scanMissingColumns()
+  // below. If the generic scanner catches these first, this no-ops.
+  // If anything prevents the generic scanner from reaching these tables
+  // (import resolution, getTableConfig throw, etc.), this explicit list
+  // still runs because it bypasses all introspection.
+  {
+    name: 'missing_columns_phase_u_explicit',
+    rationale: 'Explicitly add 18 columns declared in Drizzle but missing from live DB because SchemaParity.autoFix skips NOT-NULL-without-default columns (production log forensics).',
+    isPresent: async () => {
+      // Present only when EVERY target column is already in the live DB.
+      const targets: Array<[string, string]> = [
+        ['ai_brain_action_logs', 'action_type'],
+        ['ai_workboard_tasks', 'task_type'],
+        ['client_contract_access_tokens', 'workspace_id'],
+        ['contractor_pool', 'workspace_id'],
+        ['deals', 'workspace_id'],
+        ['email_templates', 'workspace_id'],
+        ['governance_approvals', 'workspace_id'],
+        ['helpos_faqs', 'workspace_id'],
+        ['internal_emails', 'workspace_id'],
+        ['key_rotation_history', 'key_type'],
+        ['managed_api_keys', 'key_name'],
+        ['message_reactions', 'workspace_id'],
+        ['onboarding_tasks', 'workspace_id'],
+        ['rfps', 'workspace_id'],
+        ['training_attempts', 'workspace_id'],
+        ['training_attempts', 'employee_id'],
+        ['training_attempts', 'module_id'],
+        ['training_modules', 'category'],
+      ];
+      const { rows } = await pool.query(
+        `SELECT table_name, column_name
+           FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND (table_name, column_name) IN (${targets.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ')})`,
+        targets.flat(),
+      );
+      return rows.length === targets.length;
+    },
+    apply: async () => {
+      // Each ALTER is wrapped in its own try so a single failure (e.g.
+      // parent table missing because an earlier bootstrap failed) does
+      // not abort the entire pass. Added as NULLABLE — see the block
+      // comment above for why.
+      const additions: Array<{ table: string; column: string; type: string }> = [
+        { table: 'ai_brain_action_logs', column: 'action_type', type: 'varchar(100)' },
+        { table: 'ai_workboard_tasks', column: 'task_type', type: 'varchar(100)' },
+        { table: 'client_contract_access_tokens', column: 'workspace_id', type: 'varchar' },
+        { table: 'contractor_pool', column: 'workspace_id', type: 'varchar' },
+        { table: 'deals', column: 'workspace_id', type: 'varchar' },
+        { table: 'email_templates', column: 'workspace_id', type: 'varchar' },
+        { table: 'governance_approvals', column: 'workspace_id', type: 'varchar' },
+        { table: 'helpos_faqs', column: 'workspace_id', type: 'varchar' },
+        { table: 'internal_emails', column: 'workspace_id', type: 'varchar' },
+        { table: 'key_rotation_history', column: 'key_type', type: 'varchar(100)' },
+        { table: 'managed_api_keys', column: 'key_name', type: 'varchar(255)' },
+        { table: 'message_reactions', column: 'workspace_id', type: 'varchar' },
+        { table: 'onboarding_tasks', column: 'workspace_id', type: 'varchar' },
+        { table: 'rfps', column: 'workspace_id', type: 'varchar' },
+        { table: 'training_attempts', column: 'workspace_id', type: 'varchar' },
+        { table: 'training_attempts', column: 'employee_id', type: 'varchar' },
+        { table: 'training_attempts', column: 'module_id', type: 'varchar' },
+        { table: 'training_modules', column: 'category', type: 'varchar(100)' },
+      ];
+      let added = 0;
+      let skipped = 0;
+      let failed = 0;
+      for (const a of additions) {
+        try {
+          // First verify the parent table exists — skip cleanly if not
+          // (better than erroring on a missing table for a feature that
+          // isn't installed in this environment).
+          const { rows: tableRows } = await pool.query(
+            `SELECT 1 FROM information_schema.tables
+              WHERE table_schema = 'public' AND table_name = $1`,
+            [a.table],
+          );
+          if (tableRows.length === 0) {
+            log.warn(
+              `[phaseU] Parent table ${a.table} missing — cannot add ${a.column}`,
+            );
+            skipped++;
+            continue;
+          }
+          await pool.query(
+            `ALTER TABLE "${a.table}" ADD COLUMN IF NOT EXISTS "${a.column}" ${a.type}`,
+          );
+          log.info(`[phaseU] ensured ${a.table}.${a.column} (${a.type})`);
+          added++;
+        } catch (err: any) {
+          failed++;
+          log.warn(
+            `[phaseU] Failed on ${a.table}.${a.column}: ${err?.message?.slice(0, 160)}`,
+          );
+        }
+      }
+      log.info(
+        `[phaseU] explicit column backfill: ${added} ensured, ${skipped} skipped (missing table), ${failed} failed`,
+      );
+    },
+  },
   {
     name: 'no_overlapping_employee_shifts',
     rationale: 'Sole atomic enforcement of shift overlap prevention (RC5 Phase 2 — see shiftRoutes.ts). Picks tsrange vs tstzrange at install time based on the live start_time/end_time column type so the GIST expression stays IMMUTABLE.',

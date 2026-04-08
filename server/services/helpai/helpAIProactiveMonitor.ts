@@ -96,8 +96,24 @@ class HelpAIProactiveMonitor {
       await Promise.allSettled(
         workspaceIds.map(wsId => this.monitorWorkspace(wsId))
       );
-    } catch (err) {
-      log.error('[HelpAIProactiveMonitor] Cycle error:', err);
+    } catch (err: any) {
+      // OBSERVABILITY (Phase 1 Domain 1 — 2026-04-08): previously this
+      // logged `err` as a single opaque argument, which some logger
+      // shims render as `[object Object]` and drop the message entirely.
+      // Surface the full PG/error context so the root cause becomes
+      // visible in Railway logs. No logic change.
+      log.error('[HelpAIProactiveMonitor] Cycle error', {
+        message: err instanceof Error ? err.message : String(err),
+        code: err?.code,
+        detail: err?.detail,
+        column: err?.column,
+        constraint: err?.constraint,
+        table: err?.table,
+        schema: err?.schema,
+        where: err?.where,
+        routine: err?.routine,
+        stack: err?.stack?.split('\n').slice(0, 8).join(' | '),
+      });
     }
   }
 
@@ -150,8 +166,17 @@ class HelpAIProactiveMonitor {
       for (const alert of unresolved) {
         await this.fireAlert(alert);
       }
-    } catch (err) {
-      log.error(`[HelpAIProactiveMonitor] Workspace ${workspaceId} error:`, err);
+    } catch (err: any) {
+      // OBSERVABILITY: surface full PG error context (see cycle-error block above).
+      log.error(`[HelpAIProactiveMonitor] Workspace ${workspaceId} error`, {
+        message: err instanceof Error ? err.message : String(err),
+        code: err?.code,
+        detail: err?.detail,
+        column: err?.column,
+        constraint: err?.constraint,
+        table: err?.table,
+        stack: err?.stack?.split('\n').slice(0, 8).join(' | '),
+      });
     } finally {
       this.runningWorkspaces.delete(workspaceId);
     }

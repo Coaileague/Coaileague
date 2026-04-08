@@ -284,7 +284,22 @@ export async function initializeHolidays(): Promise<void> {
     
     log.info(`[HolidayService] Holiday initialization complete for ${currentYear} and ${nextYear}`);
   } catch (err: any) {
-    log.error('[HolidayService] Initialization failed (non-fatal):', err.message);
+    // OBSERVABILITY (Phase 1 Domain 1): the previous `err.message`-only
+    // log hid the root cause of "Initialization failed (non-fatal)".
+    // Surface the full PG error context so we can diagnose it without
+    // another round-trip through production logs.
+    log.error('[HolidayService] Initialization failed (non-fatal)', {
+      message: err instanceof Error ? err.message : String(err),
+      code: err?.code,
+      detail: err?.detail,
+      column: err?.column,
+      constraint: err?.constraint,
+      table: err?.table,
+      schema: err?.schema,
+      where: err?.where,
+      routine: err?.routine,
+      stack: err?.stack?.split('\n').slice(0, 8).join(' | '),
+    });
   }
 }
 

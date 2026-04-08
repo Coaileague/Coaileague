@@ -8,6 +8,20 @@ import { LegacyRedirectRoutes, HelpdeskRoomRedirect } from "@/lib/legacyRedirect
 import { useScrollLockGuard } from "@/hooks/useScrollLockGuard";
 import { UniversalLogoSpinner } from "@/components/ui/universal-logo-spinner";
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type MouseEvent, type TouchEvent, type CSSProperties } from "react";
+// ─────────────────────────────────────────────────────────────────────────
+// AUTH PAGES — STATIC IMPORTS (NOT lazy)
+// Auth-critical routes must be in the main bundle. A missing Vite chunk
+// for login/register/forgot/reset breaks authentication completely —
+// users cannot recover from the broken state because they can't log in.
+// Production incident (2026-04-08): forgot-password-D6HD4Ojg.js was
+// referenced by index.html but not served by Railway, leaving the
+// reset flow permanently broken. These four imports are deliberately
+// eager so the auth flow survives any chunk-delivery failure.
+// ─────────────────────────────────────────────────────────────────────────
+import CustomLogin from "@/pages/custom-login";
+import CustomRegister from "@/pages/custom-register";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import { queryClient } from "./lib/queryClient";
 
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -131,10 +145,8 @@ const LeadersHub = lazy(() => import("@/pages/leaders-hub"));
 const TrinityInsights = lazy(() => import("@/pages/trinity-insights"));
 // Critical public-facing pages use lazyWithRetry to survive transient 503/network errors
 const Homepage = lazyWithRetry(() => import("@/pages/homepage"));
-const CustomLogin = lazyWithRetry(() => import("@/pages/custom-login"));
 const TrinityChat = lazyWithRetry(() => import("@/pages/trinity-chat"));
 const TrinityFeatures = lazyWithRetry(() => import("@/pages/trinity-features"));
-const CustomRegister = lazyWithRetry(() => import("@/pages/custom-register"));
 const PricingPage = lazyWithRetry(() => import("@/pages/pricing"));
 const Contact = lazyWithRetry(() => import("@/pages/contact"));
 const ROICalculator = lazyWithRetry(() => import("@/pages/roi-calculator"));
@@ -270,8 +282,9 @@ const Updates = lazy(() => import("@/pages/updates"));
 const Help = lazy(() => import("@/pages/help"));
 const CompanyReports = lazy(() => import("@/pages/company-reports"));
 const PayInvoice = lazy(() => import("@/pages/pay-invoice"));
-const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
-const ResetPassword = lazy(() => import("@/pages/reset-password"));
+// Auth pages are EAGERLY imported (see top of file). A broken lazy chunk
+// here brings down the entire auth flow — users cannot log in, register,
+// or recover a password. Auth cannot depend on chunk availability.
 const Expenses = lazy(() => import("@/pages/expenses"));
 const Mileage = lazy(() => import("@/pages/mileage"));
 const ExpenseApprovals = lazy(() => import("@/pages/expense-approvals"));
