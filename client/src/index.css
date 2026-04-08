@@ -35,21 +35,19 @@
    CRITICAL: Never use 100vw (includes scrollbar width on Windows ~15-17px)
    ============================================================================ */
 
-/* SCROLL FIX v3 (2026-04-08): NUKE the explicit-container model.
-   The previous "html and body never scroll, child div owns scroll" model
-   was elegant in theory but kept breaking in production — wheel events
-   reached the wrong target, flexbox quirks blocked overflow, the chain
-   of overflow:hidden + height:100% containers prevented native scroll
-   from finding the inner scrollable ancestor.
-
-   New model: html and body scroll natively. No fancy containment. The
-   browser just scrolls the document like every other website on the
-   internet. Works on every browser, every device, no quirks. Workspace
-   pages still use main#main-content as the scroll container because
-   that's a flex layout shell with a fixed-height header — but everywhere
-   else, body owns scroll. */
+/* SCROLL FIX v5 (2026-04-08): per user directive — remove ALL fixed
+   height rules from html/body/#root. Scroll is global CSS and must not
+   be per-page. The prior `html { height: 100% }` constrained the root
+   element to viewport, preventing normal document scrolling. Now:
+     html  { height: auto; min-height: 100% }
+     body  { height: auto; min-height: 100%; overflow-y: auto }
+     #root { height: auto; min-height: 100%; overflow: visible }
+   This is the standard way every website on the internet handles scroll:
+   the document height grows with content and the browser scrolls
+   naturally. */
 html {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -57,7 +55,9 @@ html {
 }
 
 body {
+  height: auto;
   min-height: 100%;
+  overflow-y: auto;
   /* touch-action: pan-y so the browser knows vertical pan is allowed
      on touch devices. Without this Radix's scroll-lock rules can
      accidentally restrict it to none. */
@@ -152,11 +152,14 @@ body {
    Ensures React content is always visible after mounting
    ============================================================================ */
 #root {
-  /* SCROLL FIX v3: #root is now a normal block. No explicit height, no
-     overflow rules. It just contains the React tree. The browser scrolls
-     the document (body/html) when content overflows the viewport. This
-     is the standard way every website handles scroll. */
+  /* SCROLL FIX v5: #root is a normal block that grows with content.
+     min-height: 100% so it always fills the viewport when content is
+     short; height: auto so it grows past the viewport when content
+     overflows; overflow: visible so it never clips its children.
+     Body owns scroll, #root never does. */
+  height: auto;
   min-height: 100%;
+  overflow: visible;
   visibility: visible !important;
   opacity: 1 !important;
 }
@@ -6566,11 +6569,33 @@ select:focus-visible,
 
 /* ======================================================================
    PUBLIC PAGE SCROLL — body is the scroll container for public routes.
-   With the v3 scroll fix html and body are no longer overflow:hidden,
-   so the document scrolls natively. These rules are intentionally
-   minimal — they just ensure body has visible overflow on public routes
-   (in case some other rule sets it to hidden).
+   Scroll fix v5 — explicit, high-specificity overrides guarantee no
+   ancestor/descendant rule can clip vertical scroll on public routes.
+   !important is required here because there are multiple earlier rules
+   (mobile breakpoints, dark mode, etc.) that set body properties and
+   could accidentally override the scroll model.
    ====================================================================== */
 body[data-public-route="true"] {
-  overflow-x: hidden;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100vh !important;
+}
+
+html:has(body[data-public-route="true"]) {
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100% !important;
+}
+
+body[data-public-route="true"] #root {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 100% !important;
+}
+
+body[data-public-route="true"] .public-page-scroll-root {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 100vh !important;
 }

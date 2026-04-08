@@ -1161,7 +1161,9 @@ function AppContent() {
   const currentPath = (location.split('?')[0].split('#')[0]) || '/';
   const isMobileChat = currentPath === '/mobile-chat';
   const isChatRoute = currentPath === '/chatrooms' || currentPath.startsWith('/chatrooms/') || currentPath === '/chat' || currentPath.startsWith('/chat/') || currentPath === '/helpdesk';
-  const isFixedHeightRoute = isChatRoute || currentPath === '/schedule';
+  // NOTE: isFixedHeightRoute is computed AFTER isPublicRoute below so that
+  // public routes are guaranteed to never hit the fixed-height/overflow-
+  // hidden branch of the workspace mobile layout. Scroll fix v5.
   
   // CRITICAL: Public routes that should render IMMEDIATELY without waiting for auth loading
   const PUBLIC_ROUTES = new Set([
@@ -1211,7 +1213,7 @@ function AppContent() {
     "/go-live",
   ]);
   
-  const isPublicRoute = PUBLIC_ROUTES.has(currentPath) || 
+  const isPublicRoute = PUBLIC_ROUTES.has(currentPath) ||
                         currentPath.startsWith("/onboarding/") ||
                         currentPath.startsWith("/pay-invoice/") ||
                         currentPath.startsWith("/accept-offer/") ||
@@ -1228,6 +1230,13 @@ function AppContent() {
                         currentPath === "/create-org" ||
                         currentPath === "/accept-invite";
 
+  // isFixedHeightRoute forces `overflow-hidden` on main#main-content for
+  // chat + schedule pages (they own their own internal scroll). Public
+  // routes are always allowed to scroll normally — forcing false here
+  // guarantees a public route can never accidentally hit the
+  // overflow-hidden branch of the workspace mobile layout. Scroll fix v5.
+  const isFixedHeightRoute = !isPublicRoute && (isChatRoute || currentPath === '/schedule');
+
   // Tag body with current route type (CSS uses this to disable fixed-overlay
   // pointer-events on public pages), and clear any stale Radix scroll-lock
   // attributes / inline overflow overrides left by sheets from the prior page.
@@ -1237,7 +1246,10 @@ function AppContent() {
     } else {
       document.body.removeAttribute('data-public-route');
     }
-    // Resetting inline styles to "" falls back to the CSS rule (overflow:hidden) — correct.
+    // Scroll fix v5: clear any inline styles that Radix scroll-lock may
+    // have left on body/html from a prior dialog. Falling back to the CSS
+    // rules now gives overflow-y: auto and height: auto (global model),
+    // NOT overflow: hidden like the previous explicit-container model.
     document.body.style.overflow = '';
     document.body.style.paddingRight = '';
     document.body.style.height = '';
@@ -1845,8 +1857,11 @@ function AppContent() {
           </>
           )}
           
-          {/* Main content with sidebar */}
-          <div className="flex flex-1 min-h-0 w-full overflow-hidden">
+          {/* Main content with sidebar — scroll fix v5: was `overflow-hidden`
+              which clipped vertical scroll on the entire workspace shell.
+              Changed to `overflow-x-hidden` so only horizontal overflow is
+              clipped; vertical scroll flows through to main#main-content. */}
+          <div className="flex flex-1 min-h-0 w-full overflow-x-hidden">
             {/* Desktop Sidebar - REMOVED: Now using WorkspaceTabsNav for unified navigation */}
             
             {/* Main content container */}
