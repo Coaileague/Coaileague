@@ -24,6 +24,36 @@
         } catch(e) {}
       })();
     </script>
+    <!-- ============================================================ -->
+    <!-- SCROLL PASSTHROUGH — MUST RUN BEFORE REACT LOADS             -->
+    <!-- ============================================================ -->
+    <!--
+      react-remove-scroll (used by Radix Dialog/Sheet/Popover, Vaul, etc.)
+      installs non-passive bubble-phase wheel + touchmove listeners on
+      `document` that call preventDefault() and block global scroll when
+      their lockStack has stale entries. The capture-phase listener below
+      fires BEFORE any bubble-phase listener, so stopImmediatePropagation()
+      aborts the dispatch before react-remove-scroll's shouldPrevent
+      handler runs.
+
+      Events inside a real overlay (dialog, alertdialog, vaul drawer, or
+      Radix ScrollArea viewport) are left alone so in-overlay scroll and
+      legitimate background-scroll-lock still work.
+
+      Must live inline in <head> BEFORE the React module bundle so the
+      listener is installed before any React effect runs.
+    -->
+    <script>
+      (function(){
+        function scrollPassthrough(e){
+          if(!e.target.closest('[role=dialog],[role=alertdialog],[data-vaul-dialog],[data-radix-scroll-area-viewport]')){
+            e.stopImmediatePropagation();
+          }
+        }
+        document.addEventListener('wheel', scrollPassthrough, {capture:true, passive:false});
+        document.addEventListener('touchmove', scrollPassthrough, {capture:true, passive:false});
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -512,12 +542,21 @@
       // Module scripts execute BEFORE DOMContentLoaded in modern browsers,
       // so React may already be mounted before any DOMContentLoaded handler runs.
       // We use polling every 50ms as the most reliable cross-browser approach.
+      //
+      // MIN_DISPLAY_MS enforces a 3000 ms floor so the brand moment is always
+      // perceived as deliberate. Without this floor, React mounts in 200-600 ms
+      // on a warm cache and the loader flickers past before the user sees it.
+      // If React mounts before the floor expires, we defer dismissal until the
+      // floor elapses.
       (function() {
+        var MIN_DISPLAY_MS = 3000;
+        var startedAt = Date.now();
         var dismissed = false;
         var pollInterval = null;
         var rescueTimer = null;
+        var pendingDismiss = false;
 
-        function dismissLoader() {
+        function hideLoader() {
           if (dismissed) return;
           dismissed = true;
           if (pollInterval) clearInterval(pollInterval);
@@ -528,16 +567,27 @@
           setTimeout(function() { el.classList.add('gone'); }, 350);
         }
 
+        function requestDismiss() {
+          if (dismissed || pendingDismiss) return;
+          var elapsed = Date.now() - startedAt;
+          if (elapsed >= MIN_DISPLAY_MS) {
+            hideLoader();
+          } else {
+            pendingDismiss = true;
+            setTimeout(hideLoader, MIN_DISPLAY_MS - elapsed);
+          }
+        }
+
         function checkRoot() {
           var root = document.getElementById('root');
-          if (root && root.childElementCount > 0) dismissLoader();
+          if (root && root.childElementCount > 0) requestDismiss();
         }
 
         // Poll every 50ms — catches React mount regardless of script execution order
         pollInterval = setInterval(checkRoot, 50);
 
         // Also listen for explicit React signal (belt-and-suspenders)
-        window.addEventListener('coaileague:mounted', dismissLoader);
+        window.addEventListener('coaileague:mounted', requestDismiss);
 
         // Rescue: after 25 s still not mounted, show the Reload button
         rescueTimer = setTimeout(function() {

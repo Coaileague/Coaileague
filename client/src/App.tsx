@@ -2332,7 +2332,7 @@ export default function App() {
                         <TrinityModalProvider>
                         <ChatDockProvider>
                         <ResponsiveAppFrame>
-                          {showSplash && <SplashScreen onComplete={handleSplashComplete} minDisplayTime={1800} />}
+                          {showSplash && <SplashScreen onComplete={handleSplashComplete} minDisplayTime={3000} />}
                           <ConnectionStatusBanner />
                           <OfflineIndicator />
                           <SWUpdateBanner />

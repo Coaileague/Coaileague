@@ -78,6 +78,48 @@ const constraints: CriticalConstraint[] = [
     },
   },
   {
+    name: 'shift_status_value_pending',
+    rationale: 'shift_status enum was missing "pending" — application code references it (production log forensics 2026-04-08)',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+         WHERE t.typname = 'shift_status' AND e.enumlabel = 'pending'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`ALTER TYPE shift_status ADD VALUE IF NOT EXISTS 'pending'`);
+    },
+  },
+  {
+    name: 'shift_status_value_denied',
+    rationale: 'shift_status enum was missing "denied" — referenced by criticalConstraintsBootstrap exclusion constraint and shift trading flows',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+         WHERE t.typname = 'shift_status' AND e.enumlabel = 'denied'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`ALTER TYPE shift_status ADD VALUE IF NOT EXISTS 'denied'`);
+    },
+  },
+  {
+    name: 'shift_status_value_approved',
+    rationale: 'shift_status enum was missing "approved" — application code references it for approval flows',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+         WHERE t.typname = 'shift_status' AND e.enumlabel = 'approved'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`ALTER TYPE shift_status ADD VALUE IF NOT EXISTS 'approved'`);
+    },
+  },
+  {
     name: 'audit_action_value_service_unhealthy',
     rationale: 'healthCheckAggregation writes service_unhealthy audit rows but the live enum was missing it',
     isPresent: async () => {
@@ -127,6 +169,136 @@ const constraints: CriticalConstraint[] = [
   // This column is infrastructure — the route-level version-check pattern
   // is a separate follow-up. Adding the column first is idempotent and
   // non-breaking: unused columns default to 1 on existing rows.
+  // ── Phase Y: id-column gen_random_uuid() defaults ──────────────────────
+  // The Drizzle schema declares `varchar("id").primaryKey().default(sql`gen_random_uuid()`)`
+  // for these tables, but drizzle-kit push does not reliably propagate the
+  // default to the live PostgreSQL column when the column is varchar (only
+  // for Drizzle's native uuid type). The result was INSERTs that omit `id`
+  // failing with "null value in column \"id\" violates not-null constraint".
+  // ALTER COLUMN ... SET DEFAULT is idempotent and safe to re-run.
+  {
+    name: 'audit_logs_id_default',
+    rationale: 'audit_logs.id default missing in live DB (Drizzle declares it but drizzle-kit push skips varchar SQL defaults)',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'audit_logs' AND column_name = 'id'
+           AND column_default LIKE '%gen_random_uuid%'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE audit_logs ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
+      );
+    },
+  },
+  {
+    name: 'token_usage_log_id_default',
+    rationale: 'token_usage_log.id default missing in live DB (Drizzle declares it but drizzle-kit push skips varchar SQL defaults)',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'token_usage_log' AND column_name = 'id'
+           AND column_default LIKE '%gen_random_uuid%'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE token_usage_log ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
+      );
+    },
+  },
+  {
+    name: 'interview_questions_bank_id_default',
+    rationale: 'interview_questions_bank.id default missing in live DB (Drizzle declares it but drizzle-kit push skips varchar SQL defaults)',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'interview_questions_bank' AND column_name = 'id'
+           AND column_default LIKE '%gen_random_uuid%'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE interview_questions_bank ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
+      );
+    },
+  },
+  {
+    name: 'trinity_requests_id_default',
+    rationale: 'trinity_requests.id default missing in live DB — TrinityOrchestrationGateway.flushRequestBuffer logs "Flush error" every 30s because INSERTs omit id and the column lacks gen_random_uuid() default',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'trinity_requests' AND column_name = 'id'
+           AND column_default LIKE '%gen_random_uuid%'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE trinity_requests ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
+      );
+    },
+  },
+  // ── Phase Z: trinity_self_awareness unique index ────────────────────────
+  // trinitySelfAwarenessService.upsertFact uses ON CONFLICT (category, fact_key)
+  // which requires a unique constraint or unique index on exactly those two
+  // columns. The Drizzle schema declares it as uniqueIndex("tsa_category_key_unique")
+  // but drizzle-kit push did not propagate it to the live DB, so 17 boot-time
+  // upsertFact calls failed with "no unique or exclusion constraint matching
+  // the ON CONFLICT specification". This bootstrap installs the index
+  // idempotently. Also installs the trinity_self_awareness id default for the
+  // same varchar(id) drizzle-kit-push limitation.
+  {
+    name: 'trinity_self_awareness_id_default',
+    rationale: 'trinity_self_awareness.id default missing — upsertFact INSERTs omit id and rely on gen_random_uuid()',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'trinity_self_awareness' AND column_name = 'id'
+           AND column_default LIKE '%gen_random_uuid%'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE trinity_self_awareness ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
+      );
+    },
+  },
+  {
+    name: 'trinity_self_awareness_category_key_unique',
+    rationale: 'ON CONFLICT (category, fact_key) target in trinitySelfAwarenessService.upsertFact requires this unique index — 17 upsert errors at boot when missing',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_indexes
+         WHERE tablename = 'trinity_self_awareness'
+           AND indexname = 'tsa_category_key_unique'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // Drop any partial duplicates that would violate the new unique
+      // constraint before installing it. Without this, ON a re-deploy where
+      // the bootstrap failed previously and duplicates accumulated, the
+      // CREATE would error.
+      await pool.query(`
+        DELETE FROM trinity_self_awareness a
+        USING trinity_self_awareness b
+        WHERE a.ctid < b.ctid
+          AND a.category = b.category
+          AND a.fact_key = b.fact_key
+      `);
+      await pool.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS tsa_category_key_unique
+           ON trinity_self_awareness (category, fact_key)`
+      );
+    },
+  },
   {
     name: 'shifts_version_column',
     rationale: 'Optimistic locking for concurrent shift edits (CLAUDE.md §15)',
