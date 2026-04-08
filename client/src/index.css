@@ -148,8 +148,23 @@ body {
    Ensures React content is always visible after mounting
    ============================================================================ */
 #root {
+  /* SCROLL FIX (2026-04-08): #root used to be `overflow: hidden` to enforce
+     the explicit-container model (.public-page-scroll-root for public pages,
+     main#main-content for workspace pages). The hidden overflow combined with
+     `height: 100%` was clipping the wheel-scroll target chain — wheel events
+     fire on the cursor's element but the browser walked up looking for a
+     scrollable ancestor and found the hidden #root before reaching the inner
+     scroll container, breaking native wheel scroll on every page.
+
+     Switching to `overflow-y: auto` lets #root act as a fallback scroll
+     container. On public pages where .public-page-scroll-root can scroll,
+     the inner one wins. On workspace pages where main#main-content can
+     scroll, the inner one wins. If either inner container fails to scroll
+     for any reason, #root takes over and scroll still works. */
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   visibility: visible !important;
   opacity: 1 !important;
@@ -1902,15 +1917,21 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
    touch-action: pan-y + -webkit-overflow-scrolling: touch = iOS momentum scroll. */
 
 .public-page-scroll-root {
-  height: 100%;
+  /* SCROLL FIX (2026-04-08): removed `display: flex; flex-direction: column`.
+     Flex containers with `height: 100%` and `overflow-y: auto` whose child
+     uses `min-height: 100vh` (which the homepage does) hit a Chromium/Safari
+     wheel-scroll quirk where text-drag autoscroll works but wheel events
+     never reach the scroll container. Plain block layout with overflow-y:
+     auto behaves correctly. The homepage doesn't depend on flex on the
+     parent — its own root div is min-h-screen which already handles the
+     vertical full-height layout. */
+  min-height: 100%;
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 /* Shadcn SidebarProvider injects min-h-svh on its wrapper div.

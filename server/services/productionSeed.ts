@@ -147,12 +147,23 @@ export async function runProductionDataCleanup(): Promise<void> {
       }
 
       console.log('🧹 Step 2: Cleaning Statewide workspace — removing all non-owner data...');
-      const deleted = await tx.execute(sql`
-        DELETE FROM employees 
-        WHERE workspace_id = ${protectedWs} 
-        AND user_id IS DISTINCT FROM ${REAL_OWNER_USER_ID}
-      `);
-      console.log(`🧹 Step 2a: Removed ${deleted.rowCount || 0} sandbox employees`);
+      // Skip step 2 entirely if either the protected workspace or its
+      // owner ID isn't configured. Without both, we cannot safely identify
+      // which rows to keep vs. delete and the previous code crashed with
+      // "REAL_OWNER_USER_ID is not defined" because that variable never
+      // existed — the env var is GRANDFATHERED_TENANT_OWNER_ID.
+      let deletedRows = 0;
+      if (protectedWs && GRANDFATHERED_OWNER) {
+        const deleted = await tx.execute(sql`
+          DELETE FROM employees
+          WHERE workspace_id = ${protectedWs}
+          AND user_id IS DISTINCT FROM ${GRANDFATHERED_OWNER}
+        `);
+        deletedRows = deleted.rowCount || 0;
+      } else {
+        console.log('🧹 Step 2: Skipped — protected workspace or owner ID not configured');
+      }
+      console.log(`🧹 Step 2a: Removed ${deletedRows} sandbox employees`);
 
       for (const table of WORKSPACE_SCOPED_TABLES) {
         if (table === 'employees') continue;

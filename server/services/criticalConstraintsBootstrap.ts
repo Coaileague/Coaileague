@@ -211,6 +211,57 @@ const constraints: CriticalConstraint[] = [
     },
   },
   {
+    name: 'token_usage_log_timestamp_default',
+    rationale: 'token_usage_log.timestamp NOT NULL violation — TokenUsageService omits timestamp on every write because Drizzle declares defaultNow().notNull() but drizzle-kit push did not propagate the default. Fires constantly in production logs.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'token_usage_log' AND column_name = 'timestamp'
+           AND column_default LIKE '%now%'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE token_usage_log ALTER COLUMN timestamp SET DEFAULT NOW()`
+      );
+    },
+  },
+  {
+    name: 'audit_logs_user_id_nullable',
+    rationale: 'audit_logs.user_id is NOT NULL in live DB but Drizzle declares it nullable. System-actor writes (payrollDeadlineNudgeService, healthCheckAggregation, metricsDashboard) omit user_id and fail constantly with "null value in column user_id violates not-null constraint" — every audit log write from a non-user actor errors out.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'audit_logs' AND column_name = 'user_id'
+           AND is_nullable = 'YES'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE audit_logs ALTER COLUMN user_id DROP NOT NULL`
+      );
+    },
+  },
+  {
+    name: 'cron_run_log_id_default',
+    rationale: 'cron_run_log.id missing default — autonomousScheduler.trackJobExecution INSERT fails with "Failed to insert initial cron_run_log" because the id column lacks gen_random_uuid() default in the live DB.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'cron_run_log' AND column_name = 'id'
+           AND (column_default LIKE '%gen_random_uuid%' OR column_default LIKE '%nextval%')`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE cron_run_log ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
+      );
+    },
+  },
+  {
     name: 'interview_questions_bank_id_default',
     rationale: 'interview_questions_bank.id default missing in live DB (Drizzle declares it but drizzle-kit push skips varchar SQL defaults)',
     isPresent: async () => {

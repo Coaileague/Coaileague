@@ -9,6 +9,40 @@ const log = createLogger('g5TableInit');
 
 
 export async function initGroup5Tables(): Promise<void> {
+  // Idempotent ALTER COLUMN add-ons. Earlier g5TableInit versions created
+  // some tables (sales_activities, sales_proposals, sales_email_threads,
+  // work_order_evidence) without lead_id / workspace_id, and CREATE TABLE
+  // IF NOT EXISTS does not back-fill new columns. The CREATE INDEX
+  // statements below referenced those missing columns and erroreds every
+  // boot. These ALTER TABLE ADD COLUMN IF NOT EXISTS statements are
+  // idempotent and safe to re-run.
+  const columnPatches = [
+    `ALTER TABLE IF EXISTS sales_activities ADD COLUMN IF NOT EXISTS lead_id VARCHAR`,
+    `ALTER TABLE IF EXISTS sales_activities ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS sales_proposals ADD COLUMN IF NOT EXISTS lead_id VARCHAR`,
+    `ALTER TABLE IF EXISTS sales_proposals ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS sales_email_threads ADD COLUMN IF NOT EXISTS lead_id VARCHAR`,
+    `ALTER TABLE IF EXISTS sales_email_threads ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS work_order_evidence ADD COLUMN IF NOT EXISTS work_order_id VARCHAR`,
+    `ALTER TABLE IF EXISTS work_order_evidence ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS sales_leads ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS sales_leads ADD COLUMN IF NOT EXISTS lead_score INTEGER DEFAULT 0`,
+    `ALTER TABLE IF EXISTS chat_bot_commands ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS work_orders ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS work_orders ADD COLUMN IF NOT EXISTS client_id VARCHAR`,
+    `ALTER TABLE IF EXISTS work_orders ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'draft'`,
+    `ALTER TABLE IF EXISTS patrol_tours ADD COLUMN IF NOT EXISTS patrol_route_id VARCHAR`,
+    `ALTER TABLE IF EXISTS patrol_tours ADD COLUMN IF NOT EXISTS officer_id VARCHAR`,
+    `ALTER TABLE IF EXISTS patrol_tours ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS officer_availability ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS officer_availability ADD COLUMN IF NOT EXISTS officer_id VARCHAR`,
+    `ALTER TABLE IF EXISTS shift_trade_requests ADD COLUMN IF NOT EXISTS workspace_id VARCHAR`,
+    `ALTER TABLE IF EXISTS shift_trade_requests ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'`,
+  ];
+  for (const patch of columnPatches) {
+    try { await pool.query(patch); } catch { /* idempotent — table may not exist yet */ }
+  }
+
   const stmts = [
     // ─── 35B: SALES ENGINE ───────────────────────────────────────────────────
     `CREATE TABLE IF NOT EXISTS sales_leads (
