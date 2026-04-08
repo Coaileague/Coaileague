@@ -40,7 +40,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { LogoMark } from '@/components/ui/logo-mark';
+import { LogoMark } from '@/components/ui/coaileague-logo-mark';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
 
 import {

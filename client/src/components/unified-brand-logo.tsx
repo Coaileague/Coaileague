@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 type LogoVariant = "full" | "compact" | "icon";

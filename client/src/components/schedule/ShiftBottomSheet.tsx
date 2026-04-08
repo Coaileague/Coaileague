@@ -48,7 +48,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Loader2, Clock, User, Briefcase, MapPin, FileText, Sparkles, X, Repeat, ChevronDown, Calendar } from 'lucide-react';
-import { LogoMark } from '@/components/ui/logo-mark';
+import { LogoMark } from '@/components/ui/coaileague-logo-mark';
 import type { Employee, Client, Shift } from '@shared/schema';
 import { formatRoleDisplay } from '@/lib/utils';
 

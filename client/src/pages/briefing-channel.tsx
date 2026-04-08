@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { queryClient, apiRequest } from "@/lib/queryClient";

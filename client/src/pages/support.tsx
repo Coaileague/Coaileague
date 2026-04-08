@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { TrinityBadge } from "@/components/trinity-marketing-hero";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { Loader2, Mail, Send } from "lucide-react";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { UniversalHeader } from "@/components/universal-header";

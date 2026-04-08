@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MobileResponsiveSheet } from "@/components/canvas-hub";
 import { Users, ChevronRight } from "lucide-react";
 import { IrcRoleBadge, IrcSigil, mapToIrcRole, isTrinityBot, IRC_ROLE_ORDER, type IrcRole } from "./IrcRoleBadge";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
 interface OnlineUser {
   id: string;

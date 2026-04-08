@@ -6,7 +6,7 @@
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { TrinityLogo } from '@/components/trinity-logo';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 
 interface AskTrinityButtonProps {
   onClick?: () => void;

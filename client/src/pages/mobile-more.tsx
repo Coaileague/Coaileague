@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Redirect } from "wouter";
 import { performLogout } from "@/lib/logoutHandler";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import {
   Clock, Users, Building2, Shield,
   FolderOpen, Activity, Eye, MessageSquare, Megaphone, FileText,

@@ -9,7 +9,7 @@
 import { ResponsiveDialog } from "@/components/canvas-hub";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import {
   Bell, AlertCircle, Info, Sparkles, Zap, Heart, Star, CheckCircle
 } from "lucide-react";

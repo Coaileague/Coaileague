@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { triggerHaptic } from "@/hooks/use-touch-swipe";
 import { cn } from "@/lib/utils";
 import { PushNotificationPrompt } from "@/components/push-notification-prompt";

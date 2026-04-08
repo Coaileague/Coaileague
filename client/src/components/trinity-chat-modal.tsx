@@ -64,7 +64,7 @@ import {
   ImagePlus,
   X as XIcon,
 } from 'lucide-react';
-import { TrinityLogo } from '@/components/trinity-logo';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import TrinityRedesign from '@/components/trinity-redesign';
 import { Suspense } from 'react';
 import { TrinityAgentPanel } from '@/components/trinity';

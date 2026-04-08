@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Shield, TrendingUp, MessageCircle, Calendar, Clock, ArrowRightLeft, Repeat, AlertCircle, Loader2, Bell } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
 interface Update {
   id: string;

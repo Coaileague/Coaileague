@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { UniversalModal, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Download, X, Share, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
 const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 

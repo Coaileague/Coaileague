@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { logoConfig } from "@/config/logoConfig";
-import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import { TrinityMascotIcon } from "@/components/ui/coaileague-logo-mark";
 
 interface CoAIleagueStaticLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";

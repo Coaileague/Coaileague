@@ -40,7 +40,7 @@ import { ConflictAlerts } from '@/components/schedule/ConflictAlerts';
 import { TrinityInsightsPanel } from '@/components/schedule/TrinityInsightsPanel';
 import { TrinityTrainingPanel } from '@/components/schedule/TrinityTrainingPanel';
 import { TrinityStatusBar, TrinityThinkingPanel } from '@/components/schedule/TrinitySchedulingFeedback';
-import { TrinityLogo } from '@/components/trinity-logo';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { TrinityLoadingSpinner } from '@/components/trinity-loading-overlay';
 import { useSimpleMode } from '@/contexts/SimpleModeContext';
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';

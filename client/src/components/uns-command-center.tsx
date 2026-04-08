@@ -9,7 +9,7 @@ import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalMod
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, CheckCircle2, ExternalLink, Check, X, Trash2, GripHorizontal, AlertTriangle, Info, Wrench, Clock, Megaphone } from "lucide-react";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { humanizeTitle, humanizeText, generateStructuredBreakdown, type StructuredBreakdown } from "@shared/utils/humanFriendlyCopy";
 import { BroadcastComposer } from "./broadcasts/BroadcastComposer";
 import { PLATFORM_SUPPORT_ROLES } from '@shared/platformConfig';

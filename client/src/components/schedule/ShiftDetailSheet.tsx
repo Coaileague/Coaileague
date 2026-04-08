@@ -43,7 +43,7 @@ import {
   ExternalLink,
   Play,
 } from 'lucide-react';
-import { TrinityLogo } from '@/components/trinity-logo';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import {
   DropdownMenu,
   DropdownMenuContent,

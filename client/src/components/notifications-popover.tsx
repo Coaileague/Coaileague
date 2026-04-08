@@ -7,7 +7,7 @@ import {
   Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck,
   MessageCircle, Trash2, CheckCircle2
 } from "lucide-react";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import {
   Popover,

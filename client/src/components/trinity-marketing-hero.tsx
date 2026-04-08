@@ -14,7 +14,7 @@ import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Bot, Zap, Brain, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TrinityLogo } from '@/components/trinity-logo';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import TrinityRedesign from '@/components/trinity-redesign';
 import { Suspense } from 'react';
 

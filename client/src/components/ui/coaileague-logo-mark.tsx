@@ -1,28 +1,51 @@
 /**
- * CoAIleagueLogoMark — the canonical CoAIleague brand mark.
+ * CoAIleagueLogoMark — THE canonical CoAIleague brand mark.
  *
- * This is the Trinity Triquetra (three interlocking filled loops in teal /
- * cyan / blue gradients with a central glowing nexus). Matches the static
- * asset at `client/public/logo.svg` exactly, inlined as React so it can
- * be styled, sized, and animated per-instance without fetching an SVG.
+ * The Trinity Triquetra: three interlocking filled loops in teal / cyan /
+ * blue gradients with a central glowing nexus. Matches the static asset at
+ * `client/public/logo.svg` exactly, inlined as React so it can be styled,
+ * sized, and animated per-instance without fetching an SVG.
  *
- * This is NOT:
- *   - `TrinityLogo` (the three-arrow Trinity sub-brand icon)
- *   - `TrinityMascotIcon` (the three-blob AI mascot flower)
+ * This is the SINGLE SOURCE OF TRUTH for the platform brand mark. The old
+ * separate logo components (TrinityLogo, TrinityMascotIcon, LogoMark, etc.)
+ * now alias to this file so the whole codebase renders one consistent mark.
  *
- * Those are Trinity-family marks used inside Trinity features. This file
- * is the platform-level CoAIleague brand mark used in splash screens,
- * loaders, and anywhere "the logo" is meant.
+ * `useId()` namespaces the SVG gradient/filter IDs so multiple instances on
+ * the same page don't collide.
  *
- * `useId()` is used to namespace the SVG gradient/filter IDs so multiple
- * instances on the same page don't collide.
+ * Size API:
+ *   - number          → used as CSS px (e.g., `size={32}`)
+ *   - CSS string      → passed through (e.g., `size="2rem"`, `size="50%"`)
+ *   - size keyword    → `"xs" | "sm" | "md" | "lg" | "xl" | "2xl"` resolved
+ *                       via SIZE_MAP. Preserves backward compatibility with
+ *                       the old TrinityMascotIcon API.
  */
 
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 
-interface CoAIleagueLogoMarkProps {
-  size?: number | string;
+export type LogoMarkSizeKeyword = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+export type LogoMarkSize = number | string | LogoMarkSizeKeyword;
+
+const SIZE_MAP: Record<LogoMarkSizeKeyword, number> = {
+  xs: 20,
+  sm: 24,
+  md: 32,
+  lg: 48,
+  xl: 64,
+  "2xl": 96,
+};
+
+function resolveSize(size: LogoMarkSize): number | string {
+  if (typeof size === "number") return size;
+  if (typeof size === "string" && size in SIZE_MAP) {
+    return SIZE_MAP[size as LogoMarkSizeKeyword];
+  }
+  return size;
+}
+
+export interface CoAIleagueLogoMarkProps {
+  size?: LogoMarkSize;
   className?: string;
 }
 
@@ -31,6 +54,7 @@ export function CoAIleagueLogoMark({
   className,
 }: CoAIleagueLogoMarkProps) {
   const reactId = useId();
+  const resolved = resolveSize(size);
   const id = {
     teal: `coai-teal-${reactId}`,
     cyan: `coai-cyan-${reactId}`,
@@ -41,8 +65,8 @@ export function CoAIleagueLogoMark({
 
   return (
     <svg
-      width={size}
-      height={size}
+      width={resolved}
+      height={resolved}
       viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -113,5 +137,22 @@ export function CoAIleagueLogoMark({
     </svg>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// LEGACY NAME ALIASES
+// ─────────────────────────────────────────────────────────────────────────
+// The old separate logo components have been collapsed into this one
+// canonical mark. Their export names are re-exported here so existing
+// call sites can switch to importing from this file without any JSX
+// changes — they all render the same triquetra.
+//
+// Any call site that still imports from `@/components/trinity-logo`,
+// `@/components/ui/trinity-mascot`, or `@/components/ui/logo-mark` should
+// be migrated to import from this file. Once all importers are migrated,
+// the old files can be safely deleted.
+// ─────────────────────────────────────────────────────────────────────────
+export const TrinityLogo = CoAIleagueLogoMark;
+export const TrinityMascotIcon = CoAIleagueLogoMark;
+export const LogoMark = CoAIleagueLogoMark;
 
 export default CoAIleagueLogoMark;

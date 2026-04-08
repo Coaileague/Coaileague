@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Check, CheckCheck, Sparkles } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
 import { IrcRoleBadge, IrcSigil, mapToIrcRole, isTrinityBot, type IrcRole } from "./IrcRoleBadge";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
 interface MessageBubbleProps {
   message: ChatMessage;

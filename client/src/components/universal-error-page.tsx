@@ -16,7 +16,7 @@ import {
   Wrench
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import TrinityRedesign from "@/components/trinity-redesign";
 import { errorConfig, getErrorMessage, getRecoveryActions } from "@/config/errorConfig";
 import { apiRequest } from "@/lib/queryClient";

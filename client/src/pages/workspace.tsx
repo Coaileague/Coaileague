@@ -9,7 +9,7 @@ import {
   CheckCircle, Receipt, ShieldCheck, Book, MessageSquare,
   Truck, HelpCircle, ArrowRight, Activity
 } from "lucide-react";
-import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { UniversalSpinner } from "@/components/ui/universal-spinner";
 import type { WorkspaceFeature } from "@shared/workspaceFeatures";
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
@@ -54,7 +54,7 @@ export default function Workspace() {
   if (isLoading || featuresLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4">
-        <TrinityMascotAnimated size="lg" state="loading" showSparkles />
+        <UniversalSpinner size="lg" />
         <span className="text-lg font-semibold text-muted-foreground">Loading workspace...</span>
       </div>
     );

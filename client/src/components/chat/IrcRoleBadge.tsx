@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { Bot, Shield, Crown, Star, Wrench, User, Eye, Briefcase, ClipboardList } from "lucide-react";
 
 /**

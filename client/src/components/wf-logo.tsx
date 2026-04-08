@@ -3,7 +3,7 @@
  * Single source of truth: trinity-logo.tsx
  */
 
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { cn } from "@/lib/utils";
 
 interface WFLogoProps {

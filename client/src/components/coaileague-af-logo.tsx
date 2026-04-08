@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { logoConfig, getLogoSize } from "@/config/logoConfig";
-import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import { TrinityMascotIcon } from "@/components/ui/coaileague-logo-mark";
 import TrinityRedesign from "@/components/trinity-redesign";
 import { Suspense } from "react";
 

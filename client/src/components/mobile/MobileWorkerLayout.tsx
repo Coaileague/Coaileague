@@ -33,7 +33,7 @@ import {
 import { UniversalModal, UniversalModalTrigger, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { performLogout, setLogoutTransitionLoader } from "@/lib/logoutHandler";
 import { useTransitionLoaderIfMounted } from "@/components/canvas-hub";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import TrinityRedesign from "@/components/trinity-redesign";
 import { Suspense, useEffect } from "react";
 import { useTrinityModal } from "@/components/trinity-chat-modal";

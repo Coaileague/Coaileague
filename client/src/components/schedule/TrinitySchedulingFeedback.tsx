@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrinityLogo } from '@/components/trinity-logo';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { ChevronDown, ChevronUp, Loader2, X, CheckCircle, AlertTriangle, ClipboardCheck, Brain, Lightbulb, Zap, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TrinitySchedulingSession, TrinityThought } from '@/hooks/use-trinity-scheduling-progress';

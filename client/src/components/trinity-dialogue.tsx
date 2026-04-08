@@ -38,7 +38,7 @@ import {
   Terminal,
   ListChecks,
 } from 'lucide-react';
-import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
+import { TrinityMascotIcon } from '@/components/ui/coaileague-logo-mark';
 import TrinityRedesign from '@/components/trinity-redesign';
 import { Suspense } from 'react';
 

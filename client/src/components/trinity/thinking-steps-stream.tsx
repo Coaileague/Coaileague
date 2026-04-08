@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Loader2, X, Circle, Brain } from 'lucide-react';
-import { TrinityLogo } from '@/components/trinity-logo';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import TrinityRedesign from '@/components/trinity-redesign';
 import { Suspense } from 'react';
 import type { ThinkingStep } from '@/hooks/use-trinity-state';

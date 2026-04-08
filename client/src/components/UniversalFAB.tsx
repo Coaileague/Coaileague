@@ -29,7 +29,7 @@ import { useChatUnreadTotal } from "@/hooks/useChatManager";
 import { markCoreActionPerformed } from "@/lib/pushNotifications";
 import { useFABPosition } from "@/hooks/useFABPosition";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { isTrinityAccessAllowed } from "@/config/trinity";
 import { useAuth } from "@/hooks/useAuth";

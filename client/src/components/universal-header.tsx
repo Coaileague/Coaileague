@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AISearchTrigger } from "@/components/ai-search";
 import { TrinityMiniButton } from "@/components/trinity-button";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { useChatDock } from "@/contexts/ChatDockContext";
 import { useChatUnreadTotal } from "@/hooks/useChatManager";
