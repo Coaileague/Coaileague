@@ -35,15 +35,21 @@
    CRITICAL: Never use 100vw (includes scrollbar width on Windows ~15-17px)
    ============================================================================ */
 
-/* Root containment - catch overflow leaks */
+/* SCROLL FIX v3 (2026-04-08): NUKE the explicit-container model.
+   The previous "html and body never scroll, child div owns scroll" model
+   was elegant in theory but kept breaking in production — wheel events
+   reached the wrong target, flexbox quirks blocked overflow, the chain
+   of overflow:hidden + height:100% containers prevented native scroll
+   from finding the inner scrollable ancestor.
+
+   New model: html and body scroll natively. No fancy containment. The
+   browser just scrolls the document like every other website on the
+   internet. Works on every browser, every device, no quirks. Workspace
+   pages still use main#main-content as the scroll container because
+   that's a flex layout shell with a fixed-height header — but everywhere
+   else, body owns scroll. */
 html {
-  /* Explicit-container scroll model: html never scrolls.
-     Every page type owns its own scroll container (public-page-scroll-root
-     for public pages; <main> for workspace). This eliminates all
-     iOS Safari body-scroll and touch-action inheritance issues. */
-  height: 100dvh;
-  overflow: hidden;
-  touch-action: pan-y;
+  height: 100%;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -51,12 +57,10 @@ html {
 }
 
 body {
-  /* Never scrolls — delegate to explicit containers below. */
-  height: 100%;
-  overflow: hidden;
-  /* CRITICAL: touch-action: pan-y on body so that child scroll containers
-     receive pan gestures. Without this, Radix's data-scroll-locked rule
-     (or any ancestor touch-action restriction) would block one-finger swipe. */
+  min-height: 100%;
+  /* touch-action: pan-y so the browser knows vertical pan is allowed
+     on touch devices. Without this Radix's scroll-lock rules can
+     accidentally restrict it to none. */
   touch-action: pan-y;
 }
 
@@ -148,24 +152,11 @@ body {
    Ensures React content is always visible after mounting
    ============================================================================ */
 #root {
-  /* SCROLL FIX (2026-04-08): #root used to be `overflow: hidden` to enforce
-     the explicit-container model (.public-page-scroll-root for public pages,
-     main#main-content for workspace pages). The hidden overflow combined with
-     `height: 100%` was clipping the wheel-scroll target chain — wheel events
-     fire on the cursor's element but the browser walked up looking for a
-     scrollable ancestor and found the hidden #root before reaching the inner
-     scroll container, breaking native wheel scroll on every page.
-
-     Switching to `overflow-y: auto` lets #root act as a fallback scroll
-     container. On public pages where .public-page-scroll-root can scroll,
-     the inner one wins. On workspace pages where main#main-content can
-     scroll, the inner one wins. If either inner container fails to scroll
-     for any reason, #root takes over and scroll still works. */
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  /* SCROLL FIX v3: #root is now a normal block. No explicit height, no
+     overflow rules. It just contains the React tree. The browser scrolls
+     the document (body/html) when content overflows the viewport. This
+     is the standard way every website handles scroll. */
+  min-height: 100%;
   visibility: visible !important;
   opacity: 1 !important;
 }
@@ -6581,22 +6572,12 @@ select:focus-visible,
 }
 
 /* ======================================================================
-   PUBLIC PAGE SCROLL — CSS-level scroll unlock (JS useEffect is primary)
-   Inline styles set by AppContent's useEffect override these, but keep
-   this as a CSS fallback for SSR or hydration timing edge cases.
+   PUBLIC PAGE SCROLL — body is the scroll container for public routes.
+   With the v3 scroll fix html and body are no longer overflow:hidden,
+   so the document scrolls natively. These rules are intentionally
+   minimal — they just ensure body has visible overflow on public routes
+   (in case some other rule sets it to hidden).
    ====================================================================== */
 body[data-public-route="true"] {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  height: auto !important;
-}
-
-html:has(body[data-public-route="true"]) {
-  overflow-y: auto !important;
-  height: auto !important;
-}
-
-body[data-public-route="true"] #root {
-  overflow: auto !important;
-  height: auto !important;
+  overflow-x: hidden;
 }

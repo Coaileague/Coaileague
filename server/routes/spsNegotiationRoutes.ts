@@ -300,8 +300,12 @@ spsNegotiationRouter.post('/:id/convert-to-contract', async (req: any, res) => {
       expiresAt,
       recipientName: thread.clientName,
       recipientEmail: thread.clientEmail,
-      orgSignerName: 'Brigido Guillen',
-      orgSignerEmail: 'admin@statewideprotective.com',
+      // White-label (CLAUDE.md §6): signer comes from the authenticated
+      // user. Hardcoded tenant identity removed.
+      orgSignerName: (req.user as any)?.firstName
+        ? `${(req.user as any).firstName} ${(req.user as any).lastName || ''}`.trim()
+        : 'Authorized Signer',
+      orgSignerEmail: (req.user as any)?.email || 'noreply@coaileague.com',
       clientCompanyName: thread.clientCompanyName || null,
       clientContactName: thread.clientName,
       serviceLocation: thread.serviceLocation || null,

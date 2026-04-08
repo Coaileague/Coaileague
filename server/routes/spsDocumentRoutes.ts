@@ -2,6 +2,11 @@
  * SPS Document Routes — /api/sps/documents
  * CRUD for employee packets, client contracts, and proposals.
  * Workspace-scoped. All actions audit-logged.
+ *
+ * WHITE-LABEL (CLAUDE.md §6 White-Label Rule): all tenant-facing email
+ * templates and AI prompts read company name + license + signer email
+ * from the calling workspace's record. There are NO hardcoded references
+ * to Statewide Protective Services or any other tenant in this file.
  */
 import { Router } from 'express';
 import { db } from '../db';
@@ -21,6 +26,45 @@ const log = createLogger('SpsDocumentRoutes');
 
 
 export const spsDocumentRouter = Router();
+
+/**
+ * Resolve workspace-level branding for use in tenant-facing email templates.
+ * CLAUDE.md §6: white-label means no hardcoded company names anywhere.
+ * This helper reads the workspace row and returns a sanitized branding
+ * object every email template can interpolate. License number and state
+ * code fall back to neutral phrasing when the workspace row doesn't have
+ * the field set.
+ */
+async function getWorkspaceBranding(workspaceId: string | null | undefined): Promise<{
+  companyName: string;
+  legalNotice: string;
+  state: string;
+}> {
+  if (!workspaceId) {
+    return {
+      companyName: 'Your security company',
+      legalNotice: 'This is an automated message, please do not reply.',
+      state: 'TX',
+    };
+  }
+  try {
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    const name = (ws as any)?.name || 'Your security company';
+    const license = (ws as any)?.licenseNumber || (ws as any)?.metadata?.licenseNumber || null;
+    const state = (ws as any)?.state || (ws as any)?.metadata?.state || 'TX';
+    const legalNotice = license
+      ? `${name}, LIC#${license}. This is an automated message, please do not reply.`
+      : `${name}. This is an automated message, please do not reply.`;
+    return { companyName: name, legalNotice, state };
+  } catch (err) {
+    log.warn('[spsDocumentRoutes] Failed to resolve workspace branding:', err);
+    return {
+      companyName: 'Your security company',
+      legalNotice: 'This is an automated message, please do not reply.',
+      state: 'TX',
+    };
+  }
+}
 
 // ── Sequence counters stored in a simple in-memory map per workspace
 // (For production: use a DB sequence or atomic counter)
@@ -78,10 +122,12 @@ spsDocumentRouter.post('/', async (req: any, res) => {
       expiresAt,
       recipientName: input.recipientName,
       recipientEmail: input.recipientEmail,
+      // White-label: signer name + email come from the authenticated user.
+      // No hardcoded tenant identity (CLAUDE.md §6).
       orgSignerName: (req.user as any)?.firstName
         ? `${(req.user as any).firstName} ${(req.user as any).lastName || ''}`.trim()
-        : 'Brigido Guillen',
-      orgSignerEmail: (req.user as any)?.email || 'admin@statewideprotective.com',
+        : 'Authorized Signer',
+      orgSignerEmail: (req.user as any)?.email || 'noreply@coaileague.com',
       hireDate: input.hireDate ? input.hireDate as any : null,
       position: input.position || null,
       payRate: input.payRate ? input.payRate as any : null,
@@ -240,23 +286,28 @@ spsDocumentRouter.post('/:id/send', async (req: any, res) => {
       let html = "";
       const portalUrl = `${req.protocol}://${req.get('host')}/sps-packet/${doc.accessToken}`;
 
+      // White-label: every customer-facing template reads its branding
+      // from the calling workspace (CLAUDE.md §6). Never hardcode tenant
+      // identity.
+      const branding = await getWorkspaceBranding(workspaceId);
+
       if (doc.documentType === 'employee_packet') {
-        subject = "Your SPS Onboarding Packet is Ready — Action Required";
+        subject = `Your ${branding.companyName} Onboarding Packet is Ready — Action Required`;
         html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-            <h2 style="color: #2563EB;">Welcome to Statewide Protective Services</h2>
+            <h2 style="color: #2563EB;">Welcome to ${branding.companyName}</h2>
             <p>Hello ${doc.recipientName},</p>
-            <p>Your digital onboarding packet is ready for completion. This packet includes all necessary Texas state requirements and company policies.</p>
+            <p>Your digital onboarding packet is ready for completion. This packet includes all necessary state requirements and company policies.</p>
             <div style="margin: 30px 0; text-align: center;">
               <a href="${portalUrl}" style="background-color: #2563EB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Complete Onboarding Packet</a>
             </div>
             <p style="color: #64748b; font-size: 0.875rem;">This link will expire in 7 days. Please complete it as soon as possible to ensure timely processing of your employment.</p>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="font-size: 0.75rem; color: #94a3b8;">Statewide Protective Services LLC, LIC#C11608501. This is an automated message, please do not reply.</p>
+            <p style="font-size: 0.75rem; color: #94a3b8;">${branding.legalNotice}</p>
           </div>
         `;
       } else if (doc.documentType === 'proposal') {
-        subject = `SPS Proposal ${doc.documentNumber} — Your Security Services Proposal`;
+        subject = `${branding.companyName} Proposal ${doc.documentNumber} — Your Security Services Proposal`;
         html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
             <h2 style="color: #2563EB;">Security Services Proposal</h2>
@@ -266,11 +317,11 @@ spsDocumentRouter.post('/:id/send', async (req: any, res) => {
               <a href="${portalUrl}" style="background-color: #2563EB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Proposal</a>
             </div>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="font-size: 0.75rem; color: #94a3b8;">Statewide Protective Services LLC, LIC#C11608501. This is an automated message, please do not reply.</p>
+            <p style="font-size: 0.75rem; color: #94a3b8;">${branding.legalNotice}</p>
           </div>
         `;
       } else if (doc.documentType === 'client_contract') {
-        subject = `SPS Contract ${doc.documentNumber} Ready for Signature`;
+        subject = `${branding.companyName} Contract ${doc.documentNumber} Ready for Signature`;
         html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
             <h2 style="color: #2563EB;">Service Contract Signature Required</h2>
@@ -280,7 +331,7 @@ spsDocumentRouter.post('/:id/send', async (req: any, res) => {
               <a href="${portalUrl}" style="background-color: #2563EB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Review & Sign Contract</a>
             </div>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="font-size: 0.75rem; color: #94a3b8;">Statewide Protective Services LLC, LIC#C11608501. This is an automated message, please do not reply.</p>
+            <p style="font-size: 0.75rem; color: #94a3b8;">${branding.legalNotice}</p>
           </div>
         `;
       }
@@ -313,10 +364,12 @@ spsDocumentRouter.post('/:id/id-verify', async (req: any, res) => {
       .where(and(eq(spsDocuments.id, req.params.id), eq(spsDocuments.workspaceId, workspaceId)));
     if (!existing) return res.status(404).json({ error: 'Document not found' });
 
-    // Call Vision AI for ID verification
+    // Call Vision AI for ID verification — branding pulled from workspace
+    // (CLAUDE.md §6 white-label rule)
+    const verifyBranding = await getWorkspaceBranding(workspaceId);
     let verificationResult: any = null;
     try {
-      const prompt = `You are an ID verification assistant for a licensed Texas security company (Statewide Protective Services, LIC#C11608501).
+      const prompt = `You are an ID verification assistant for a licensed security company (${verifyBranding.companyName}).
 Analyze this ${documentType} image and extract the following information.
 Return ONLY valid JSON, no markdown, no code blocks.
 
