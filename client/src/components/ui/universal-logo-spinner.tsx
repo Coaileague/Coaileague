@@ -8,8 +8,9 @@
  *  - Pulsing gold glow (Trinity brand amber #F59E0B) via drop-shadow
  *  - All keyframes ease-in-out so motion feels alive, not mechanical
  *
- * Wraps <TrinityLogo> as the base graphic so the brand mark is always on
- * screen during loading — reinforcing brand recognition.
+ * Wraps <TrinityMascotIcon> as the base graphic — the CoAIleague logomark
+ * (three-blob cyan/purple/gold glowing flower) used universally for the
+ * brand. NOT the three-arrow Trinity sub-brand icon.
  *
  * Sizing map:
  *   sm  = 24px — inline in buttons, table rows, small card fallbacks
@@ -23,7 +24,7 @@
  */
 
 import { motion } from "framer-motion";
-import { TrinityLogo } from "@/components/trinity-logo";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
 import { cn } from "@/lib/utils";
 
 export type UniversalLogoSpinnerSize = "sm" | "md" | "lg" | "xl";
@@ -146,9 +147,12 @@ export function UniversalLogoSpinner({
             width: "100%",
             height: "100%",
             transformStyle: "preserve-3d",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <TrinityLogo size={px} />
+          <TrinityMascotIcon size={px} />
         </motion.div>
       </motion.div>
 
