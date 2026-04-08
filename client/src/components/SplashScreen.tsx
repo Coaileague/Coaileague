@@ -1,29 +1,51 @@
+/**
+ * SplashScreen — the branded launch experience shown on first app boot.
+ *
+ * DESIGN RESTORED (2026-04-08):
+ *   The splash is a BRANDED DARK NAVY LAUNCH EXPERIENCE. Intentionally
+ *   dark. Intentionally not theme-aware. This is the Trinity AI Co-Pilot
+ *   brand moment — the three-arrow Trinity mark, the CoAIleague wordmark,
+ *   the status text, the progress bar. The layout and visual identity
+ *   match the canonical April 6 reference screenshots.
+ *
+ *   A previous cleanup pass (commit 96f59d42) incorrectly treated the
+ *   splash as general UI and replaced it with a theme-aware `bg-background`
+ *   + <UniversalLogoSpinner> layout. That was wrong. The splash and
+ *   loading screen are a standalone branded launch surface with their
+ *   own intentional design — they were never meant to participate in
+ *   the general-UI theme system. Restored.
+ *
+ * IMPLEMENTATION:
+ *   The visual is provided by <LoadingScreen /> (which is a fully
+ *   self-contained 441-line component with all SVG + keyframes inlined).
+ *   SplashScreen wraps it in a framer-motion AnimatePresence + a
+ *   minimum-display-time gate so the brand moment is always perceived
+ *   as deliberate (3 seconds by default, never a flash).
+ *
+ *   Why reuse LoadingScreen instead of duplicating: the splash (first
+ *   boot) and the loading screen (auth-resolving) should look identical.
+ *   Duplicating 441 lines of SVG + keyframes would be a maintenance
+ *   hazard. One visual, two lifecycles.
+ */
+
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UniversalSpinner } from "@/components/ui/universal-spinner";
-
-const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 interface SplashScreenProps {
   onComplete: () => void;
   minDisplayTime?: number;
 }
 
-// Default minimum display time bumped from 800ms → 1800ms → 3000ms after
-// repeated user feedback that the splash flickered past too fast to register
-// the brand. 3000ms matches the HTML-loader floor in index.html so there is
-// no perceptible jump between the two phases. The minimum exists so the
-// splash is always perceived as deliberate, never a flash.
-//
-// Task 2A (2026-04-08): the splash now uses the theme-aware `bg-background`
-// token (white in light mode, dark navy in dark mode) instead of the
-// hardcoded navy `.overlay-blocking` class. Text colors use `text-foreground`
-// and `text-muted-foreground` so they stay readable in both modes.
-//
-// Spinner overhaul v3 (2026-04-08): uses <UniversalSpinner size="lg" /> —
-// CSS-only animation wrapping the CoAIleague Trinity Triquetra logo mark.
-// Single source of truth across splash, auth transition, in-page loaders.
-export function SplashScreen({ onComplete, minDisplayTime = 3000 }: SplashScreenProps) {
+// Default minimum display time = 3000 ms. Bumped from 800 → 1800 → 3000
+// after user feedback that the splash flickered past too fast to register
+// the brand. 3000 ms matches the HTML-loader floor in index.html so there
+// is no perceptible jump between the pre-React HTML loader phase and the
+// React-mounted SplashScreen phase.
+export function SplashScreen({
+  onComplete,
+  minDisplayTime = 3000,
+}: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
@@ -48,33 +70,15 @@ export function SplashScreen({ onComplete, minDisplayTime = 3000 }: SplashScreen
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 flex flex-col items-center justify-center bg-background text-foreground pointer-events-none"
+          transition={{ duration: 0.4 }}
+          className="fixed inset-0"
           style={{ zIndex: "var(--z-splash)" }}
           data-testid="splash-screen"
         >
-          <div className="flex flex-col items-center gap-8 pointer-events-auto">
-            <UniversalSpinner size="lg" />
-
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-foreground mb-1">
-                {PLATFORM_NAME}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                AI-Powered Workforce Intelligence
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">
-                Initializing Trinity AI
-              </span>
-            </div>
-          </div>
+          <LoadingScreen />
         </motion.div>
       )}
     </AnimatePresence>
