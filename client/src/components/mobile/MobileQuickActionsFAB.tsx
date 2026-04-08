@@ -231,11 +231,18 @@ export function MobileQuickActionsFAB() {
   }, [location]);
 
   useEffect(() => {
+    // Scroll fix v6: explicit clear-on-close + clear-on-unmount pattern
+    // (per user directive). The previous `prev` capture pattern could
+    // propagate stale 'hidden' state. Now we unconditionally clear when
+    // the FAB menu is NOT expanded and on unmount.
     if (isExpanded) {
-      const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isExpanded]);
 
   if (!isMobile || keyboardVisible || isModalOpen) {

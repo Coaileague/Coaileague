@@ -43,11 +43,16 @@ export function UniversalDrawer({
   }, [open, onClose]);
 
   useEffect(() => {
+    // Scroll fix v6: explicit clear-on-close + clear-on-unmount pattern
+    // (per user directive). See UniversalSheet.tsx for rationale.
     if (open) {
-      const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
 
   if (!open) return null;

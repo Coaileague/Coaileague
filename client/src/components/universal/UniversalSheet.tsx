@@ -32,11 +32,19 @@ export function UniversalSheet({
   }, [open, defaultSnap]);
 
   useEffect(() => {
+    // Scroll fix v6: explicit clear-on-close + clear-on-unmount pattern
+    // (per user directive). The previous `prev = body.style.overflow`
+    // capture could propagate stale 'hidden' state if the sheet was
+    // opened while another lock was still active. Now we unconditionally
+    // clear on close/unmount to guarantee scroll is restored.
     if (open) {
-      const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
 
   const snapHeight = (idx: number) =>

@@ -35,19 +35,19 @@
    CRITICAL: Never use 100vw (includes scrollbar width on Windows ~15-17px)
    ============================================================================ */
 
-/* SCROLL FIX v5 (2026-04-08): per user directive — remove ALL fixed
-   height rules from html/body/#root. Scroll is global CSS and must not
-   be per-page. The prior `html { height: 100% }` constrained the root
-   element to viewport, preventing normal document scrolling. Now:
-     html  { height: auto; min-height: 100% }
-     body  { height: auto; min-height: 100%; overflow-y: auto }
-     #root { height: auto; min-height: 100%; overflow: visible }
-   This is the standard way every website on the internet handles scroll:
-   the document height grows with content and the browser scrolls
-   naturally. */
+/* SCROLL FIX v6 (2026-04-08) — all !important.
+   Three components (UniversalSheet, UniversalDrawer, MobileQuickActionsFAB)
+   set `document.body.style.overflow = 'hidden'` via inline style on
+   mount. Inline styles without !important are in the "author normal"
+   cascade level and beat non-important stylesheet rules of ANY
+   specificity. Marking these rules !important promotes them to the
+   "author important" level which beats inline non-important.
+
+   This is the global default. Modal-open and data-scroll-locked
+   explicit states are overridden by later rules later in the stylesheet. */
 html {
-  height: auto;
-  min-height: 100%;
+  height: auto !important;
+  min-height: 100% !important;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -55,9 +55,9 @@ html {
 }
 
 body {
-  height: auto;
-  min-height: 100%;
-  overflow-y: auto;
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-y: auto !important;
   /* touch-action: pan-y so the browser knows vertical pan is allowed
      on touch devices. Without this Radix's scroll-lock rules can
      accidentally restrict it to none. */
@@ -152,14 +152,12 @@ body {
    Ensures React content is always visible after mounting
    ============================================================================ */
 #root {
-  /* SCROLL FIX v5: #root is a normal block that grows with content.
-     min-height: 100% so it always fills the viewport when content is
-     short; height: auto so it grows past the viewport when content
-     overflows; overflow: visible so it never clips its children.
-     Body owns scroll, #root never does. */
-  height: auto;
-  min-height: 100%;
-  overflow: visible;
+  /* SCROLL FIX v6: bulletproof !important rules so no inline style or
+     component can break the scroll model. #root grows with content,
+     never clips, and never owns scroll itself. */
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
   visibility: visible !important;
   opacity: 1 !important;
 }
@@ -5338,14 +5336,26 @@ textarea,
    NEVER set touch-action:none on body — that kills one-finger swipe on ALL
    child scroll containers (pan-y on a child loses to none on an ancestor).
    ============================================================================ */
+/* Scroll fix v6: modal-open and Radix scroll-lock previously forced
+   body overflow:hidden which also killed vertical scroll on the whole
+   page if the class/attribute leaked. We still want to prevent
+   background scroll when a modal is open, so we use CSS position:fixed
+   on body.modal-open which is the Bootstrap-style scroll-lock pattern,
+   but only as overflow-x. The vertical scroll guarantee from the
+   global `body { overflow-y: auto !important }` rule always wins. */
 body.modal-open {
-  overflow: hidden !important;
+  overflow-x: hidden !important;
 }
 
 /* Radix sets data-scroll-locked when any dialog/sheet opens.
-   overflow:hidden prevents background scroll without breaking touch-action. */
+   We do NOT force body overflow:hidden here anymore — Radix's own
+   react-remove-scroll handles background scroll-lock via its own
+   listeners, and those listeners are forced to passive:true by the
+   addEventListener hijack in index.html, so they can't preventDefault
+   anyway. This rule is kept as a no-op placeholder in case future
+   Radix versions need a body-level hook. */
 body[data-scroll-locked]:not([data-scroll-locked="0"]) {
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* ============================================================================
