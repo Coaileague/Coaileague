@@ -1917,21 +1917,25 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
    touch-action: pan-y + -webkit-overflow-scrolling: touch = iOS momentum scroll. */
 
 .public-page-scroll-root {
-  /* SCROLL FIX (2026-04-08): removed `display: flex; flex-direction: column`.
-     Flex containers with `height: 100%` and `overflow-y: auto` whose child
-     uses `min-height: 100vh` (which the homepage does) hit a Chromium/Safari
-     wheel-scroll quirk where text-drag autoscroll works but wheel events
-     never reach the scroll container. Plain block layout with overflow-y:
-     auto behaves correctly. The homepage doesn't depend on flex on the
-     parent — its own root div is min-h-screen which already handles the
-     vertical full-height layout. */
-  min-height: 100%;
+  /* SCROLL FIX v2 (2026-04-08): this element no longer owns the scroll.
+     #root above is now `overflow-y: auto` and acts as the canonical scroll
+     container for public pages. .public-page-scroll-root is just a layout
+     wrapper that provides full width and lets content flow naturally.
+
+     Why not let .public-page-scroll-root own the scroll?
+     - With `display: flex; flex-direction: column` + `height: 100%` +
+       `overflow-y: auto`, Chromium and Safari hit a wheel-scroll quirk
+       where text-drag autoscroll works but wheel events are ignored.
+     - With `min-height: 100%` + `overflow-y: auto`, the container grows
+       with content (defeating the height bound), so overflow never
+       triggers and scrollbar never appears.
+     The clean solution is to delegate scroll to #root and treat this
+     element as a pure layout wrapper. */
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  min-height: 100%;
+  /* Reset any inherited touch-action restriction so the browser uses
+     #root's touch-action: pan-y for touch handling. */
   touch-action: pan-y;
-  overscroll-behavior-y: auto;
 }
 
 /* Shadcn SidebarProvider injects min-h-svh on its wrapper div.
