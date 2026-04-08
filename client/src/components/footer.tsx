@@ -42,7 +42,7 @@ export function Footer({ variant = "dark" }: FooterProps) {
               />
             </div>
             <p className={`text-sm max-w-xs ${variant === "dark" ? "text-slate-400" : "text-muted-foreground"}`}>
-              Autonomous Management Solutions for modern enterprises.
+              Intelligent Workforce Management for modern enterprises.
             </p>
           </div>
 

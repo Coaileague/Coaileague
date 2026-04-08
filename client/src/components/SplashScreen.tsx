@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { UniversalLogoSpinner } from "@/components/ui/universal-logo-spinner";
 
 const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
@@ -13,6 +14,15 @@ interface SplashScreenProps {
 // the brand. 3000ms matches the HTML-loader floor in index.html so there is
 // no perceptible jump between the two phases. The minimum exists so the
 // splash is always perceived as deliberate, never a flash.
+//
+// Task 2A (2026-04-08): the splash now uses the theme-aware `bg-background`
+// token (white in light mode, dark navy in dark mode) instead of the
+// hardcoded navy `.overlay-blocking` class. Text colors use `text-foreground`
+// and `text-muted-foreground` so they stay readable in both modes.
+//
+// Task 2B/C: the bulky `.css-spinner` has been replaced with the new
+// <UniversalLogoSpinner size="xl" /> — one living animation source across
+// the entire app.
 export function SplashScreen({ onComplete, minDisplayTime = 3000 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
   const onCompleteRef = useRef(onComplete);
@@ -42,12 +52,12 @@ export function SplashScreen({ onComplete, minDisplayTime = 3000 }: SplashScreen
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="overlay-blocking"
-          style={{ zIndex: 'var(--z-splash)' }}
+          className="fixed inset-0 flex flex-col items-center justify-center bg-background text-foreground pointer-events-none"
+          style={{ zIndex: "var(--z-splash)" }}
           data-testid="splash-screen"
         >
-          <div className="flex flex-col items-center gap-8">
-            <div className="css-spinner" style={{ width: 56, height: 56, borderWidth: 5 }} />
+          <div className="flex flex-col items-center gap-8 pointer-events-auto">
+            <UniversalLogoSpinner size="xl" />
 
             <div className="text-center">
               <h2 className="text-2xl font-bold text-foreground mb-1">
@@ -60,7 +70,9 @@ export function SplashScreen({ onComplete, minDisplayTime = 3000 }: SplashScreen
 
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">Initializing Trinity AI</span>
+              <span className="text-xs text-muted-foreground">
+                Initializing Trinity AI
+              </span>
             </div>
           </div>
         </motion.div>

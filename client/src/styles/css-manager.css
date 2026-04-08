@@ -13,13 +13,17 @@
 /* ============================================================
    OVERLAY BACKGROUNDS
    Rule: NEVER use bg-black for full-screen overlays.
-   Use --overlay-bg (brand dark navy) so users see our brand
-   color during loading — not a void of nothingness.
+
+   THEME FIX (Task 2A): `--overlay-bg` now follows the active theme
+   — it's `hsl(var(--background))` which resolves to white in light
+   mode and dark navy in dark mode. Previously it was hardcoded to
+   #0a1729, which broke light-mode visitors who saw a dark backdrop
+   flash behind the splash and transition overlays.
    ============================================================ */
 :root {
   /* Full-screen blocking overlays (login transition, splash, maintenance) */
-  --overlay-bg: #0a1729;
-  --overlay-bg-soft: rgba(10, 23, 41, 0.97);
+  --overlay-bg: hsl(var(--background));
+  --overlay-bg-soft: hsl(var(--background) / 0.97);
 
   /* Semi-transparent backdrop overlays (modals, sheets, drawers) */
   --backdrop-heavy: rgba(0, 0, 0, 0.5);

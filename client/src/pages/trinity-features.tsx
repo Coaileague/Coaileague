@@ -77,7 +77,7 @@ const TRINITY_CAPABILITIES = [
   {
     icon: Calendar,
     name: "Scheduling (Her Core Job)",
-    description: "Runs your entire schedule around the clock. Fills gaps, handles calloffs, prevents overtime, and keeps every site covered every night — no phone calls to you required.",
+    description: "Runs your entire schedule around the clock. Fills gaps, handles calloffs, prevents overtime, and keeps every site covered every night — so your calls are reserved for what actually needs you.",
     color: "bg-primary/10 text-primary",
   },
   {
@@ -112,8 +112,8 @@ const TRINITY_CAPABILITIES = [
   },
   {
     icon: MapPin,
-    name: "Officer Safety — Always Watching",
-    description: "Tracks GPS and check-ins in real time. Responds to panic alerts in seconds. Notifies supervisors, dispatches help, and documents everything — automatically.",
+    name: "Officer Safety — Always Monitoring",
+    description: "Tracks GPS and check-ins in real time. Responds to panic alerts in seconds. Notifies all supervisors simultaneously and documents everything — automatically. Officers should contact 911 directly for any emergency.",
     color: "bg-red-500/10 text-red-400",
   },
   {
@@ -139,7 +139,7 @@ function WhoIsTrinitySection() {
             <span className="block text-violet-400">She Is a Mind Built for Your Business.</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Trinity is CoAIleague's core product and the reason everything works. She is an artificial intelligence with a simulated human brain — one that thinks ahead, learns from experience, recognizes patterns before they become problems, and refuses to do anything that could hurt your company or your people. She does not just follow instructions. She understands your business and runs it.
+            Trinity is CoAIleague's core product and the reason everything works. She is an artificial intelligence with a simulated human brain — one that thinks ahead, learns from experience, recognizes patterns before they become problems, and refuses to do anything that could hurt your company or your people. She does not just follow instructions. She understands your business and works tirelessly to run it — under your leadership.
           </p>
         </div>
 
@@ -175,7 +175,7 @@ function WhoIsTrinitySection() {
               <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">Her Conscience</p>
               <h3 className="text-xl font-bold text-foreground mb-3">She Has Values She Will Not Compromise On.</h3>
               <p className="text-muted-foreground leading-relaxed mb-5 text-sm">
-                Trinity does not just do whatever you ask. She was built with a conscience — a set of principles she holds regardless of any instruction. These are not bugs or limitations. They are what make her trustworthy. She works for you. But she also protects you from yourself, from legal risk, and from anything that could harm your people.
+                Trinity does not just do whatever you ask. She was built with a conscience — a set of principles she holds regardless of any instruction. These are not bugs or limitations. They are what make her trustworthy. She works for you. But she also flags risks, surfaces blind spots, and helps your leadership make better decisions for your people.
               </p>
               <div className="grid sm:grid-cols-2 gap-3">
                 {CONSCIENCE_ITEMS.map((item) => (
@@ -268,9 +268,10 @@ interface FeatureSectionProps {
   reverse?: boolean;
   gold?: boolean;
   purple?: boolean;
+  disclaimer?: string;
 }
 
-function FeatureSection({ eyebrow, headline, body, items, visual, reverse, gold, purple }: FeatureSectionProps) {
+function FeatureSection({ eyebrow, headline, body, items, visual, reverse, gold, purple, disclaimer }: FeatureSectionProps) {
   const bg = gold ? "bg-primary/5 border-t border-b border-primary/20" : "border-t border-border";
   const eyebrowColor = purple ? "text-violet-400" : gold ? "text-foreground/60" : "text-primary";
 
@@ -282,6 +283,11 @@ function FeatureSection({ eyebrow, headline, body, items, visual, reverse, gold,
             <p className={`text-xs font-semibold uppercase tracking-widest mb-2 ${eyebrowColor}`}>{eyebrow}</p>
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4 leading-tight">{headline}</h2>
             <p className="text-muted-foreground leading-relaxed">{body}</p>
+            {disclaimer && (
+              <p className="text-xs italic text-muted-foreground/70 mt-3 leading-relaxed">
+                {disclaimer}
+              </p>
+            )}
             <FeatureList items={items} />
           </div>
           <div className="flex items-center justify-center">
@@ -423,7 +429,6 @@ function SafetyMock() {
         <Button size="sm" variant="outline" className="flex-1 text-xs">Dispatch</Button>
         <Button size="sm" className="flex-1 text-xs">Alert Supervisor</Button>
       </div>
-      <p className="text-[10px] text-muted-foreground">Officers should call 911 directly in emergencies</p>
     </div>
   );
 }
@@ -477,7 +482,7 @@ const AI_CARDS = [
   {
     icon: Zap,
     title: "Acts Without Being Asked",
-    body: "Trinity self-assigns tasks she knows need to be done. She tries three different approaches before escalating to a human. She runs while you sleep.",
+    body: "Trinity self-assigns tasks she knows need to be done. She resolves routine tasks automatically — and escalates anything that needs human judgment. She runs while you sleep.",
   },
   {
     icon: Brain,
@@ -500,10 +505,10 @@ const AI_CARDS = [
 
 function PricingTeaser() {
   const TEASER_TIERS = [
-    { name: "Starter", price: "$199/month", seats: "10 seats" },
-    { name: "Professional", price: "$749/month", seats: "30 seats" },
-    { name: "Business", price: "$2,249/month", seats: "75 seats" },
-    { name: "Enterprise", price: "$6,999/month", seats: "200 seats" },
+    { name: "Starter", price: "$299/month", seats: "10 seats" },
+    { name: "Professional", price: "$999/month", seats: "30 seats" },
+    { name: "Business", price: "$2,999/month", seats: "75 seats" },
+    { name: "Enterprise", price: "$7,999/month", seats: "200 seats" },
     { name: "Strategic", price: "Contact Us", seats: "300+ officers" },
   ];
 
@@ -559,9 +564,12 @@ export default function TrinityFeatures() {
           <div className="max-w-3xl mx-auto px-4">
             <Badge variant="secondary" className="mb-4">AI-Powered Security Operations</Badge>
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
-              Trinity Doesn't Assist Your Operation.
-              <span className="block text-primary">She Runs It.</span>
+              Trinity Doesn't Just Assist Your Operation.
+              <span className="block text-primary">She Powers It.</span>
             </h1>
+            <p className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider mb-5">
+              Under your direction and the supervision of your licensed management.
+            </p>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
               Trinity is the first AI system purpose-built for security workforce operations. Not a chatbot. Not a scheduling tool with AI bolted on. A cognitive operating system that manages your schedules, payroll, compliance, invoicing, officer safety, and client relationships — autonomously.
             </p>
@@ -582,6 +590,25 @@ export default function TrinityFeatures() {
           </div>
         </section>
 
+        {/* Platform responsibility callout — renders above the first feature section
+            to make the scope of Trinity's autonomy unambiguous for prospects and regulators. */}
+        <section className="border-b border-border bg-gradient-to-b from-primary/10 via-primary/5 to-background py-6">
+          <div className="max-w-4xl mx-auto px-4">
+            <div
+              className="rounded-lg border border-primary/30 bg-card/60 backdrop-blur-sm px-5 py-4 flex items-start gap-3 shadow-sm"
+              data-testid="callout-platform-responsibility"
+            >
+              <Lock className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">Platform responsibility.</span>{" "}
+                Trinity automates your administrative workload and surfaces operational intelligence
+                — all decisions affecting personnel, safety, and legal compliance remain the
+                responsibility of licensed management.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Who is Trinity? — Full Spotlight */}
         <WhoIsTrinitySection />
 
@@ -591,7 +618,7 @@ export default function TrinityFeatures() {
         {/* Section 1 — Autonomous Operations */}
         <FeatureSection
           eyebrow="Autonomous Operations"
-          headline={"Runs Your Operation.\nWhile You Sleep."}
+          headline={"Handles the Workload.\nWhile You Sleep."}
           body="Trinity manages your business the way you would if you never needed to sleep. She fills coverage gaps before shifts start, predicts calloffs before they happen, prevents overtime before it hits your payroll, and keeps every site covered every night — without a single phone call to you."
           items={[
             "AI-powered scheduling and coverage management",
@@ -702,7 +729,8 @@ export default function TrinityFeatures() {
         <FeatureSection
           eyebrow="Legal Compliance"
           headline={"Protected in Every State.\nCited to the Statute."}
-          body="Trinity knows security licensing law in every state you operate in. When she flags a compliance issue, she cites the exact statute. She blocks assignments that would create violations before they happen. She generates audit-ready compliance reports automatically. One DPS violation can cost more than a year of CoAIleague. Trinity makes sure you never face one."
+          body="Trinity knows security licensing law in every state you operate in. When she flags a compliance issue, she cites the exact statute. She blocks assignments that would create violations before they happen. She generates audit-ready compliance reports automatically. One DPS violation can cost more than a year of CoAIleague. Trinity is built to keep you ahead of violations — flagging risks before they happen, cited to the statute."
+          disclaimer="Compliance alerts are informational and do not constitute legal advice."
           items={[
             "Texas DPS Chapter 1702 compliance built in",
             "All 50 states licensing requirements monitored",
@@ -720,7 +748,7 @@ export default function TrinityFeatures() {
         <FeatureSection
           eyebrow="Field Safety"
           headline={"Your Officers Are Never\nAlone Out There."}
-          body="Trinity is the operations center your officers never had. Panic alerts reach every supervisor simultaneously. Lone worker check-ins are monitored automatically. Dispatch status is tracked in real time. GPS-stamped proof of service protects you legally on every shift."
+          body="Trinity is the operations center your officers never had. Panic alerts reach every supervisor simultaneously. Lone worker check-ins are monitored automatically. Dispatch status is tracked in real time. GPS-stamped proof of service protects you legally on every shift. Trinity is not an emergency response service — officers should contact 911 directly for any life-threatening emergency."
           items={[
             "One-touch panic alert — all supervisors notified",
             "Lone worker automated check-in monitoring",

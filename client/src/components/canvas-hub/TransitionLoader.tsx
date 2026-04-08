@@ -4,6 +4,7 @@ import * as React from "react"
 import { createContext, useContext, useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useLayerManager } from "./LayerManager"
+import { UniversalLogoSpinner } from "@/components/ui/universal-logo-spinner"
 
 export type TransitionStatus = 'loading' | 'success' | 'error' | 'syncing'
 
@@ -239,7 +240,7 @@ function TransitionOverlay({ state, zIndex }: TransitionOverlayProps) {
           data-testid="overlay-transition-loader"
         >
           <div className="flex flex-col items-center gap-8">
-            <div className="css-spinner" style={{ width: 56, height: 56, borderWidth: 5 }} />
+            <UniversalLogoSpinner size="xl" />
 
             <div className="text-center">
               <h2

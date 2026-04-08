@@ -6,6 +6,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { LegacyRedirectRoutes, HelpdeskRoomRedirect } from "@/lib/legacyRedirects";
 import { useScrollLockGuard } from "@/hooks/useScrollLockGuard";
+import { UniversalLogoSpinner } from "@/components/ui/universal-logo-spinner";
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type MouseEvent, type TouchEvent, type CSSProperties } from "react";
 import { queryClient } from "./lib/queryClient";
 
@@ -109,10 +110,9 @@ const DeveloperPortal = lazy(() => import("@/pages/developers"));
 const PageLoader = () => (
   <div
     data-testid="react-suspense-spinner"
-    style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}
+    className="min-h-screen bg-background flex flex-col items-center justify-center gap-4"
   >
-    <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '4px solid rgba(14,116,144,0.2)', borderTopColor: '#0e7490', animation: 'spin 0.75s linear infinite' }} />
-    <span style={{ fontSize: '14px', color: 'hsl(var(--muted-foreground))', fontFamily: 'system-ui,sans-serif' }}>Loading...</span>
+    <UniversalLogoSpinner size="md" label="Loading…" />
   </div>
 );
 

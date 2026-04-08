@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { 
+import {
   ArrowRight, Cpu, X, Check, Shield, Lock, Activity, RefreshCw, MessageSquare, DollarSign, Play
 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
@@ -10,6 +10,7 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import featuresOverviewImg from '@/assets/marketing/features-overview.png';
 import { SEO, PAGE_SEO, STRUCTURED_DATA } from '@/components/seo';
 import { useAuth } from '@/hooks/useAuth';
+import { UniversalLogoSpinner } from '@/components/ui/universal-logo-spinner';
 
 const homepageConfig: CanvasPageConfig = {
   id: 'homepage',
@@ -45,7 +46,7 @@ export default function Homepage() {
   if (!isLoading && isAuthenticated) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
-        <div className="w-10 h-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
+        <UniversalLogoSpinner size="lg" label="Redirecting to your dashboard…" />
       </div>
     );
   }
