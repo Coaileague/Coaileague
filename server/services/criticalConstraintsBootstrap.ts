@@ -262,6 +262,40 @@ const constraints: CriticalConstraint[] = [
     },
   },
   {
+    name: 'audit_logs_drop_stale_not_nulls',
+    rationale: 'The Drizzle audit_logs schema only declares id and created_at as NOT NULL. The live DB has many additional NOT NULL columns (user_role, user_name, action, entity_type, entity_id, etc.) inherited from previous schema migrations that drizzle-kit push never reverted. System-actor writes omit most of these and fail with "null value in column ... violates not-null constraint". This generic scan finds every NOT NULL column on audit_logs except id and created_at and drops the constraint to match the schema.',
+    isPresent: async () => {
+      // Present (i.e. needs no work) when audit_logs has zero NOT NULL
+      // columns other than id + created_at
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'audit_logs'
+           AND is_nullable = 'NO'
+           AND column_name NOT IN ('id', 'created_at')
+         LIMIT 1`
+      );
+      return rows.length === 0;
+    },
+    apply: async () => {
+      const { rows } = await pool.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'audit_logs'
+           AND is_nullable = 'NO'
+           AND column_name NOT IN ('id', 'created_at')`
+      );
+      for (const r of rows) {
+        try {
+          await pool.query(
+            `ALTER TABLE audit_logs ALTER COLUMN "${r.column_name}" DROP NOT NULL`
+          );
+          log.info(`[criticalConstraints] dropped NOT NULL on audit_logs.${r.column_name}`);
+        } catch (err: any) {
+          log.warn(`[criticalConstraints] failed to drop NOT NULL on audit_logs.${r.column_name}: ${err?.message?.slice(0, 120)}`);
+        }
+      }
+    },
+  },
+  {
     name: 'token_usage_monthly_ws_month_unique',
     rationale: 'tokenUsageMonthly.upsertMonthlyUsage() uses ON CONFLICT (workspace_id, month_year) DO UPDATE which requires a unique constraint or index on exactly those columns. The Drizzle schema declares unique("uq_token_usage_monthly_ws_month") but drizzle-kit push did not propagate it to the live DB, so monthly token rollups error every time TokenUsageService.recordUsage() runs.',
     isPresent: async () => {

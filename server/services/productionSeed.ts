@@ -124,91 +124,115 @@ export async function runProductionDataCleanup(): Promise<void> {
       return;
     }
 
-    await db.transaction(async (tx) => {
-      if (devWorkspaces.length > 0) {
-        console.log(`🧹 Step 1: Removing ${devWorkspaces.length} non-production workspaces:`);
-        for (const ws of devWorkspaces) {
-          console.log(`   - ${ws.id} (${ws.name})`);
+    // 25P02 fix: every cleanup statement is wrapped in its own savepoint
+    // (a Drizzle nested transaction). When any statement fails, only that
+    // savepoint is rolled back — the outer transaction stays alive and
+    // subsequent statements can still run. The previous try/catch pattern
+    // silently swallowed the JS error but did NOT clear PostgreSQL's
+    // aborted-transaction state, so every later tx.execute() failed with
+    // 25P02 ("current transaction is aborted, commands ignored until end
+    // of transaction block"). Savepoints are the correct way to do
+    // partial-failure-tolerant cleanup inside a single transaction.
+    const savepoint = async (label: string, fn: (sp: any) => Promise<void>): Promise<void> => {
+      try {
+        await db.transaction(async (sp) => {
+          await fn(sp);
+        });
+      } catch (err: any) {
+        // Don't log the entire txn abort cascade — just the original
+        // failure. Most failures here are missing tables in dev or
+        // foreign-key constraints during cascade cleanup, both expected.
+        if (err?.code !== '25P02' && err?.code !== '42P01') {
+          console.log(`🧹 [${label}] failed (non-fatal): ${err?.message}`);
         }
+      }
+    };
 
-        for (const ws of devWorkspaces) {
-          for (const table of WORKSPACE_SCOPED_TABLES) {
-            try {
-              await tx.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${ws.id}'`));
-            } catch {}
-          }
-          try {
-            await tx.execute(sql.raw(`DELETE FROM workspaces WHERE id = '${ws.id}'`));
-          } catch (err) {
-            console.log(`🧹 Could not delete workspace ${ws.id}: ${(err as any)?.message}`);
-          }
-        }
-        console.log('🧹 Step 1: Complete');
+    if (devWorkspaces.length > 0) {
+      console.log(`🧹 Step 1: Removing ${devWorkspaces.length} non-production workspaces:`);
+      for (const ws of devWorkspaces) {
+        console.log(`   - ${ws.id} (${ws.name})`);
       }
 
-      console.log('🧹 Step 2: Cleaning Statewide workspace — removing all non-owner data...');
-      // Skip step 2 entirely if either the protected workspace or its
-      // owner ID isn't configured. Without both, we cannot safely identify
-      // which rows to keep vs. delete and the previous code crashed with
-      // "REAL_OWNER_USER_ID is not defined" because that variable never
-      // existed — the env var is GRANDFATHERED_TENANT_OWNER_ID.
-      let deletedRows = 0;
-      if (protectedWs && GRANDFATHERED_OWNER) {
-        const deleted = await tx.execute(sql`
+      for (const ws of devWorkspaces) {
+        for (const table of WORKSPACE_SCOPED_TABLES) {
+          await savepoint(`step1.delete.${table}`, async (sp) => {
+            await sp.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${ws.id}'`));
+          });
+        }
+        await savepoint(`step1.delete.workspace.${ws.id}`, async (sp) => {
+          await sp.execute(sql.raw(`DELETE FROM workspaces WHERE id = '${ws.id}'`));
+        });
+      }
+      console.log('🧹 Step 1: Complete');
+    }
+
+    console.log('🧹 Step 2: Cleaning Statewide workspace — removing all non-owner data...');
+    // Skip step 2 entirely if either the protected workspace or its
+    // owner ID isn't configured. Without both, we cannot safely identify
+    // which rows to keep vs. delete and the previous code crashed with
+    // "REAL_OWNER_USER_ID is not defined" because that variable never
+    // existed — the env var is GRANDFATHERED_TENANT_OWNER_ID.
+    if (protectedWs && GRANDFATHERED_OWNER) {
+      await savepoint('step2.delete.employees', async (sp) => {
+        const deleted = await sp.execute(sql`
           DELETE FROM employees
           WHERE workspace_id = ${protectedWs}
           AND user_id IS DISTINCT FROM ${GRANDFATHERED_OWNER}
         `);
-        deletedRows = deleted.rowCount || 0;
-      } else {
-        console.log('🧹 Step 2: Skipped — protected workspace or owner ID not configured');
-      }
-      console.log(`🧹 Step 2a: Removed ${deletedRows} sandbox employees`);
+        console.log(`🧹 Step 2a: Removed ${deleted.rowCount || 0} sandbox employees`);
+      });
+    } else {
+      console.log('🧹 Step 2: Skipped — protected workspace or owner ID not configured');
+    }
 
-      for (const table of WORKSPACE_SCOPED_TABLES) {
-        if (table === 'employees') continue;
-        try {
-          await tx.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${protectedWs || ""}'`));
-        } catch {}
-      }
-      console.log('🧹 Step 2b: All sandbox clients, shifts, invoices, etc. removed');
+    for (const table of WORKSPACE_SCOPED_TABLES) {
+      if (table === 'employees') continue;
+      await savepoint(`step2.delete.${table}`, async (sp) => {
+        await sp.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${protectedWs || ""}'`));
+      });
+    }
+    console.log('🧹 Step 2b: All sandbox clients, shifts, invoices, etc. removed');
 
-      console.log('🧹 Step 3: Removing phantom users (dev/test/tenant IDs)...');
-      try {
-        await tx.execute(sql`
-          DELETE FROM platform_roles 
-          WHERE user_id IN (
-            SELECT id FROM users 
-            WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%' 
-            OR id LIKE 'demo-%' OR id = 'root-admin-workfos'
-          )
-        `);
-      } catch {}
-      try {
-        await tx.execute(sql`
-          DELETE FROM employees 
-          WHERE user_id IN (
-            SELECT id FROM users 
-            WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%' 
-            OR id LIKE 'demo-%'
-          )
-        `);
-      } catch {}
-      await tx.execute(sql`
-        DELETE FROM users 
-        WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%' 
+    console.log('🧹 Step 3: Removing phantom users (dev/test/tenant IDs)...');
+    await savepoint('step3.delete.platform_roles', async (sp) => {
+      await sp.execute(sql`
+        DELETE FROM platform_roles
+        WHERE user_id IN (
+          SELECT id FROM users
+          WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
+          OR id LIKE 'demo-%' OR id = 'root-admin-workfos'
+        )
+      `);
+    });
+    await savepoint('step3.delete.employees', async (sp) => {
+      await sp.execute(sql`
+        DELETE FROM employees
+        WHERE user_id IN (
+          SELECT id FROM users
+          WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
+          OR id LIKE 'demo-%'
+        )
+      `);
+    });
+    await savepoint('step3.delete.users', async (sp) => {
+      await sp.execute(sql`
+        DELETE FROM users
+        WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
         OR id LIKE 'demo-%' OR id = 'root-admin-workfos'
       `);
-      console.log('🧹 Step 3: Phantom users removed');
+    });
+    console.log('🧹 Step 3: Phantom users removed');
 
-      console.log('🧹 Step 4: Cleaning platform workspace of non-system employees...');
-      await tx.execute(sql`
-        DELETE FROM employees 
+    console.log('🧹 Step 4: Cleaning platform workspace of non-system employees...');
+    await savepoint('step4.delete.platform_employees', async (sp) => {
+      await sp.execute(sql`
+        DELETE FROM employees
         WHERE workspace_id = ${PLATFORM_WS}
         AND id NOT IN ('8d31a497-e9fe-48d9-b819-9c6869948c39', 'helpai-employee', 'trinity-employee')
       `);
-      console.log('🧹 Step 4: Platform workspace cleaned');
     });
+    console.log('🧹 Step 4: Platform workspace cleaned');
 
     console.log('🧹 ========================================');
     console.log('🧹 Production Data Cleanup: COMPLETE');

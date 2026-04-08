@@ -273,7 +273,22 @@ class TrinityOrchestrationGateway {
         }))).catch((err) => log.warn('[trinityOrchestrationGateway] Fire-and-forget failed:', err));
       }
     } catch (error: any) {
-      log.error('[TrinityOrchestrationGateway] Flush error:', (error instanceof Error ? error.message : String(error)));
+      // Detailed error logging — Postgres errors carry code/detail/
+      // column/constraint/table fields that explain WHAT actually
+      // failed. The previous one-liner only logged .message which
+      // hides the real cause.
+      log.error('[TrinityOrchestrationGateway] Flush error:', {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail,
+        column: error?.column,
+        constraint: error?.constraint,
+        table: error?.table,
+        schema: error?.schema,
+        where: error?.where,
+        firstRow: toFlush[0],
+        rowCount: toFlush.length,
+      });
       this.requestBuffer = [...toFlush, ...this.requestBuffer].slice(0, 1000);
     }
   }

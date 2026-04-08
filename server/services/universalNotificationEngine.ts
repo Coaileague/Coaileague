@@ -1033,7 +1033,11 @@ export class UniversalNotificationEngine {
         : (payload.description && payload.description.trim())
           ? payload.description
           : finalTitle;
-      const [update] = await db.insert(platformUpdates).values({
+      // Insert with ON CONFLICT DO NOTHING — same-millisecond bursts
+      // (multiple platform updates emitted in the same tick) can collide
+      // on the deterministic id. The duplicate-by-title check above
+      // handles 24h dedupe; this guards against the millisecond race.
+      const inserted = await db.insert(platformUpdates).values({
         id: updateId,
         title: finalTitle,
         description: safeDescription,
@@ -1045,7 +1049,15 @@ export class UniversalNotificationEngine {
         learnMoreUrl: payload.learnMoreUrl,
         metadata: enrichedMetadata,
         date: new Date(),
-      }).returning({ id: platformUpdates.id });
+      }).onConflictDoNothing({ target: platformUpdates.id })
+        .returning({ id: platformUpdates.id });
+
+      // If onConflictDoNothing skipped the insert, returning() yields []
+      if (inserted.length === 0) {
+        log.info(`[UniversalNotificationEngine] Platform update id collision (idempotent skip): ${updateId}`);
+        return { success: true, id: updateId, isDuplicate: true };
+      }
+      const update = inserted[0];
 
       log.info(`[UniversalNotificationEngine] Platform update stored in What's New: ${finalTitle}`);
       // NOTE: Platform updates go to the What's New feed (/whats-new page) ONLY.
@@ -1078,7 +1090,20 @@ export class UniversalNotificationEngine {
 
       return { success: true, id: update.id };
     } catch (error: any) {
-      log.error("[UniversalNotificationEngine] Error creating platform update:", error);
+      // Detailed Postgres error logging — expose code/detail/column/
+      // constraint so we can diagnose ON CONFLICT failures, NOT NULL
+      // violations, FK constraint failures, etc. The previous one-liner
+      // hid the real cause.
+      log.error("[UniversalNotificationEngine] Error creating platform update:", {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail,
+        column: error?.column,
+        constraint: error?.constraint,
+        table: error?.table,
+        schema: error?.schema,
+        hint: error?.hint,
+      });
       return { success: false };
     }
   }
