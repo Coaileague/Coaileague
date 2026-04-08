@@ -6,6 +6,7 @@ import { requireAuth, type AuthenticatedRequest } from "../rbac";
 import { sql } from "drizzle-orm";
 import { typedExec } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('OnboardingFormsRoutes');
 
 
@@ -220,7 +221,7 @@ router.post("/submit", requireAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     // ── PDF Generation — non-blocking ───────────────────────────────────────
-    setImmediate(async () => {
+    scheduleNonBlocking('onboarding-forms.pdf-generation', async () => {
       try {
         const { generateAndStorePdf } = await import('../services/formsPdfService');
         const { workspaces } = await import('@shared/schema');

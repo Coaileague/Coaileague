@@ -13,6 +13,7 @@ import * as notificationHelpers from "../notifications";
 import { broadcastToWorkspace, broadcastNotificationToUser } from "../websocket";
 import { calculateInvoiceLineItem, sumFinancialValues, toFinancialString, formatCurrency } from '../services/financialCalculator';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('SchedulesRoutes');
 
 
@@ -200,7 +201,7 @@ router.post('/publish', requireManager, async (req: any, res) => {
     }).catch(err => log.error('Failed to mark notificationsSent:', err));
 
     // T005 FIX: Send email to each affected employee with their specific shifts
-    setImmediate(async () => {
+    scheduleNonBlocking('schedules.publish-employee-emails', async () => {
       try {
         const { emailService } = await import('../services/emailService');
         const appUrl = process.env.REPLIT_DOMAINS?.split(',')[0]

@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 import { pool } from '../db';
 import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { trinityEmailProcessor } from '../services/trinityEmailProcessor';
 import { sendCanSpamCompliantEmail, isResendConfigured } from '../services/emailCore';
 import { generateAndStorePdf, generateAndGetPdf } from '../services/formsPdfService';
@@ -264,7 +265,7 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
     );
 
     // Trinity + PDF + Email pipeline — all async, non-blocking
-    setImmediate(async () => {
+    scheduleNonBlocking('platform-forms.trinity-pdf-email-pipeline', async () => {
       const submissionRow = sub.rows[0];
       const workspaceId = inv.workspace_id || inv.pf_workspace_id;
 
@@ -526,7 +527,7 @@ router.post('/signing/sequences', requireAuth, async (req: Request, res: Respons
         ? `${(user as any).first_name} ${(user as any).last_name || ''}`.trim()
         : PLATFORM.name;
       const signingUrl = `${baseUrl}/sign/${firstToken.token}`;
-      setImmediate(async () => {
+      scheduleNonBlocking('platform-forms.signing-request-email', async () => {
         await sendCanSpamCompliantEmail({
           to: firstToken.signer_email,
           subject: `Signature Required: ${documentTitle}`,
@@ -671,7 +672,7 @@ router.post('/sign/:token', async (req: Request, res: Response) => {
         if (nextSigningToken) {
           const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
           const nextSigningUrl = `${baseUrl}/sign/${nextSigningToken}`;
-          setImmediate(async () => {
+          scheduleNonBlocking('platform-forms.next-signer-email', async () => {
             await sendCanSpamCompliantEmail({
               to: nextSigner.email,
               subject: `Your Turn to Sign: ${t.document_title}`,
@@ -984,7 +985,7 @@ router.post('/:formId/invite', requireAuth, async (req: Request, res: Response) 
     // Send invitation email via Resend
     if (email && isResendConfigured()) {
       const senderName = (user as any).first_name ? `${(user as any).first_name} ${(user as any).last_name || ''}`.trim() : `Your ${PLATFORM.name} Team`;
-      setImmediate(async () => {
+      scheduleNonBlocking('platform-forms.invitation-email', async () => {
         await sendCanSpamCompliantEmail({
           to: email,
           subject: `Action Required: Please complete — ${form.title}`,

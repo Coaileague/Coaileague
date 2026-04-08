@@ -15,6 +15,7 @@ import {
 } from '../services/emailCore';
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('OnboardingInlineRoutes');
 
 
@@ -1420,7 +1421,7 @@ router.post('/approve/:employeeId', async (req: AuthenticatedRequest, res) => {
     }
 
     // Notify the management team that a new officer is now active and ready for shift assignments
-    setImmediate(async () => {
+    scheduleNonBlocking('onboarding.management-team-notification', async () => {
       try {
         const { db } = await import('../db');
         const { employees: empTable } = await import('../../shared/schema');

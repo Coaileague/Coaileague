@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { pool } from '../db';
 import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { interviewChatOrchestrator } from '../services/interviewChatOrchestrator';
 
 const log = createLogger('InterviewChatroomRoutes');
@@ -185,7 +186,7 @@ router.post('/room/:token/message', async (req: Request, res: Response) => {
     );
 
     // Process response async
-    setImmediate(async () => {
+    scheduleNonBlocking('interview.process-candidate-response', async () => {
       await interviewChatOrchestrator.processCandidateResponse(room.id, text.trim());
     });
 

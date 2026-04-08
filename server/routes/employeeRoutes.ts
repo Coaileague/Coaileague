@@ -20,6 +20,7 @@ import { deletionProtection } from "../services/deletionProtectionService";
 import type { AuthenticatedRequest } from "../rbac";
 import { getPositionById, getWorkspaceRoleForPosition, getAuthorityLevel } from "@shared/positionRegistry";
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('EmployeeRoutes');
 
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
@@ -927,47 +928,39 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
       log.error('[Onboarding] Failed to load onboarding workflow module:', err instanceof Error ? err.message : String(err));
     }
     
-    setImmediate(async () => {
-      try {
-        const { postDatabaseEventToAIBrain } = await import('../services/ai-brain/workboardService');
-        postDatabaseEventToAIBrain({
-          eventType: 'employee_hired',
-          workspaceId,
-          userId: req.user?.id || 'system',
-          entityType: 'employee',
-          entityId: employee.id,
-          metadata: { name: `${employee.firstName} ${employee.lastName}`, role: employee.role, source: 'manual_create' },
-        });
-      } catch (err) {
-        log.error('[AIBrain] Event post error:', err);
-      }
+    scheduleNonBlocking('employee.ai-brain-event-hired', async () => {
+      const { postDatabaseEventToAIBrain } = await import('../services/ai-brain/workboardService');
+      postDatabaseEventToAIBrain({
+        eventType: 'employee_hired',
+        workspaceId,
+        userId: req.user?.id || 'system',
+        entityType: 'employee',
+        entityId: employee.id,
+        metadata: { name: `${employee.firstName} ${employee.lastName}`, role: employee.role, source: 'manual_create' },
+      });
     });
 
-    // Wire email seat provisioning — fire-and-forget, non-blocking
-    setImmediate(async () => {
-      try {
-        const emp = updatedEmployee || employee;
-        if (emp.userId && emp.firstName && emp.lastName) {
-          const { pool: pgPool } = await import('../db');
-          const wsRow = await pgPool.query(
-            `SELECT email_slug FROM workspaces WHERE id = $1`,
-            [workspaceId]
+    // Wire email seat provisioning — non-blocking
+    scheduleNonBlocking('employee.email-seat-provisioning', async () => {
+      const emp = updatedEmployee || employee;
+      if (emp.userId && emp.firstName && emp.lastName) {
+        const { pool: pgPool } = await import('../db');
+        const wsRow = await pgPool.query(
+          `SELECT email_slug FROM workspaces WHERE id = $1`,
+          [workspaceId]
+        );
+        const emailSlug = wsRow.rows[0]?.email_slug;
+        if (emailSlug) {
+          const { emailProvisioningService } = await import('../services/email/emailProvisioningService');
+          await emailProvisioningService.reserveUserEmailAddress(
+            workspaceId,
+            emp.userId,
+            emp.firstName,
+            emp.lastName,
+            emailSlug,
           );
-          const emailSlug = wsRow.rows[0]?.email_slug;
-          if (emailSlug) {
-            const { emailProvisioningService } = await import('../services/email/emailProvisioningService');
-            await emailProvisioningService.reserveUserEmailAddress(
-              workspaceId,
-              emp.userId,
-              emp.firstName,
-              emp.lastName,
-              emailSlug,
-            );
-            log.info(`[EmailProvisioning] Reserved @coaileague.com seat for employee ${emp.id}`);
-          }
+          log.info(`[EmailProvisioning] Reserved @coaileague.com seat for employee ${emp.id}`);
         }
-      } catch (emailErr: unknown) {
-        log.warn('[EmailProvisioning] Non-blocking seat reservation failed:', emailErr instanceof Error ? emailErr.message : String(emailErr));
       }
     });
 

@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { orgFinanceSettings, deductionConfigs, insertOrgFinanceSettingsSchema, insertDeductionConfigSchema } from "@shared/schema";
 import { z } from "zod";
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('FinanceSettingsRoutes');
 
 
@@ -76,20 +77,16 @@ router.patch("/finance-settings", requireOwner, async (req: AuthenticatedRequest
     // GAP-AUDIT-1 FIX: Audit trail write for finance settings changes (rate multipliers,
     // accounting mode, QB sync toggle, invoice config). These are high-impact financial
     // configuration changes that require a full immutable record.
-    setImmediate(async () => {
-      try {
-        const { billingAuditLog } = await import('@shared/schema');
-        await db.insert(billingAuditLog).values({
-          workspaceId,
-          eventType: 'finance_settings_updated',
-          actorType: 'user',
-          actorId: req.user?.id,
-          idempotencyKey: `finance-settings-${workspaceId}-${Date.now()}`,
-          newState: parsed.data,
-        }).onConflictDoNothing();
-      } catch (auditErr: any) {
-        log.error('[BillingAudit] finance_settings billing_audit_log write failed:', auditErr?.message);
-      }
+    scheduleNonBlocking('finance-settings.audit-write', async () => {
+      const { billingAuditLog } = await import('@shared/schema');
+      await db.insert(billingAuditLog).values({
+        workspaceId,
+        eventType: 'finance_settings_updated',
+        actorType: 'user',
+        actorId: req.user?.id,
+        idempotencyKey: `finance-settings-${workspaceId}-${Date.now()}`,
+        newState: parsed.data,
+      }).onConflictDoNothing();
     });
 
     res.json(existing);

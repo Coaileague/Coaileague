@@ -5,6 +5,7 @@ import { platformActionHub } from "../services/helpai/platformActionHub";
 import { platformEventBus } from "../services/platformEventBus";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('ComplianceEvidenceRoutes');
 
 
@@ -182,28 +183,24 @@ router.post("/", requireAuth, async (req: any, res) => {
       await client.query('COMMIT');
 
       // ── Notify managers: new evidence pending review ────────────────────
-      setImmediate(async () => {
-        try {
-          const { universalNotificationEngine } = await import('../services/universalNotificationEngine');
-          await universalNotificationEngine.sendNotification({
-            workspaceId: req.workspaceId,
-            recipientRole: 'manager',
-            type: 'compliance_evidence_pending',
-            priority: 'normal',
-            title: 'Compliance Document Pending Review',
-            message: `New ${evidenceType.replace(/_/g, ' ')} submitted by officer ${officerId} is awaiting compliance review.`,
-            metadata: { evidenceId: evidence.id, officerId, evidenceType, documentUrl, trinityConfidence },
-          });
-          platformEventBus.emit('evidence_submitted_pending_review', {
-            workspaceId: req.workspaceId,
-            evidenceId: evidence.id,
-            officerId,
-            evidenceType,
-            trinityConfidence,
-          });
-        } catch (notifyErr) {
-          log.error('[ComplianceEvidence] pending review notification failed:', notifyErr);
-        }
+      scheduleNonBlocking('compliance-evidence.pending-review-notify', async () => {
+        const { universalNotificationEngine } = await import('../services/universalNotificationEngine');
+        await universalNotificationEngine.sendNotification({
+          workspaceId: req.workspaceId,
+          recipientRole: 'manager',
+          type: 'compliance_evidence_pending',
+          priority: 'normal',
+          title: 'Compliance Document Pending Review',
+          message: `New ${evidenceType.replace(/_/g, ' ')} submitted by officer ${officerId} is awaiting compliance review.`,
+          metadata: { evidenceId: evidence.id, officerId, evidenceType, documentUrl, trinityConfidence },
+        });
+        platformEventBus.emit('evidence_submitted_pending_review', {
+          workspaceId: req.workspaceId,
+          evidenceId: evidence.id,
+          officerId,
+          evidenceType,
+          trinityConfidence,
+        });
       });
 
       res.json(evidence);

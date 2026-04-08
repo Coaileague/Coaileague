@@ -59,6 +59,7 @@ import multer from "multer";
 import { Readable } from "stream";
 import OpenAI from "openai";
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { PLATFORM } from '../config/platformConfig';
 const log = createLogger('MiscRoutes');
 
@@ -1006,7 +1007,7 @@ router.post("/api/contact", async (req, res) => {
     });
 
     // ─── TRINITY TRIAGE (async — does not block response) ──────────────────────
-    setImmediate(async () => {
+    scheduleNonBlocking('contact.trinity-triage', async () => {
       try {
         const { meteredGemini } = await import('../services/billing/meteredGeminiClient');
 

@@ -14,6 +14,7 @@ import crypto from "crypto";
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { EMAIL, PLATFORM } from '../config/platformConfig';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('ResendWebhooks');
 
 
@@ -714,7 +715,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
 
       // Async processing per platform address type — non-blocking
       if (routeType !== 'discard' && fromEmail) {
-        setImmediate(async () => {
+        scheduleNonBlocking('resend-inbound.platform-reply', async () => {
           try {
             if (platformAddr === 'trinity@coaileague.com') {
               // trinity@ is reserved for outbound marketing + reply classification.
