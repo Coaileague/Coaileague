@@ -18,6 +18,7 @@ import { eq, and, or, isNull } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { getAppBaseUrl } from '../utils/getAppBaseUrl';
 import { createLogger } from '../lib/logger';
+import { isProduction } from '../lib/isProduction';
 const log = createLogger('emailCore');
 
 
@@ -440,7 +441,15 @@ async function sendMeteredEmail(
 }
 
 async function getCredentials() {
-  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.REPLIT_DEPLOYMENT;
+  // Canonical production detection per CLAUDE.md §A. The previous local
+  // check `NODE_ENV === 'production' || REPLIT_DEPLOYMENT` does NOT detect
+  // Railway deployments — REPLIT_DEPLOYMENT is undefined on Railway and
+  // NODE_ENV may or may not be set. On a misdetected environment the
+  // caller falls through to a dev noop client that returns a fake success
+  // id, which is exactly the silent password-reset failure we chased down
+  // on 2026-04-08. Use the helper so new hosting environments are added
+  // in exactly one place.
+  const isProd = isProduction();
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -493,11 +502,11 @@ async function getCredentials() {
       log.error('[Email] Resend connector fetch failed:', connError.message);
     }
   } else {
-    if (isProduction) {
+    if (isProd) {
       log.error('[Email] PRODUCTION: Missing REPLIT_CONNECTORS_HOSTNAME or auth token for Resend connector');
     }
   }
-  
+
   if (process.env.RESEND_API_KEY) {
     log.info('[Email] Using RESEND_API_KEY fallback');
     return {
@@ -505,8 +514,8 @@ async function getCredentials() {
       fromEmail: process.env.RESEND_FROM_EMAIL || EMAIL.senders.noreply
     };
   }
-  
-  if (isProduction) {
+
+  if (isProd) {
     log.error('[Email] CRITICAL: No Resend credentials available in PRODUCTION. Emails will NOT be sent.');
   }
   return null;
@@ -516,12 +525,19 @@ async function getCredentials() {
 // Access tokens expire, so a new client must be created each time.
 export async function getUncachableResendClient() {
   const credentials = await getCredentials();
-  
+
   if (!credentials) {
-    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.REPLIT_DEPLOYMENT;
+    // Canonical production detection per CLAUDE.md §A. The previous local
+    // check `NODE_ENV === 'production' || REPLIT_DEPLOYMENT` did not detect
+    // Railway, which meant the noop client below fell through to the dev
+    // fake-success branch on Railway deploys. Under that branch, a missing
+    // RESEND_API_KEY produced emails that appeared to "send" (returning a
+    // synthetic `dev-${Date.now()}` id) but never actually delivered. The
+    // password reset silent failure on 2026-04-08 traced directly to this.
+    const isProd = isProduction();
     resendConfigured = false;
 
-    if (isProduction) {
+    if (isProd) {
       log.error('[EMAIL] CRITICAL: Resend credentials not available in PRODUCTION. Emails will fail to send. Configure the Resend integration or set RESEND_API_KEY.');
     }
 
@@ -529,7 +545,7 @@ export async function getUncachableResendClient() {
       client: {
         emails: {
           send: async (params: any) => {
-            if (isProduction) {
+            if (isProd) {
               log.error(`[EMAIL] PRODUCTION ERROR: Cannot send email to ${params.to} - Resend not configured. Subject: ${params.subject}`);
               throw new Error('Email delivery unavailable: Resend is not configured in production');
             }
@@ -542,7 +558,7 @@ export async function getUncachableResendClient() {
       fromEmail: process.env.RESEND_FROM_EMAIL || EMAIL.senders.noreply
     };
   }
-  
+
   resendConfigured = true;
   return {
     client: new Resend(credentials.apiKey),

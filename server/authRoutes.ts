@@ -690,16 +690,44 @@ router.post("/api/auth/reset-password-request", async (req, res) => {
     const result = await createPasswordResetToken(data.email);
 
     if (result.token && result.user) {
-      // Send password reset email
-      await emailService.sendPasswordResetEmail(
+      // Capture the email send result — we MUST NOT return 200 to the user
+      // without at least logging a delivery failure internally. Without this,
+      // a missing RESEND_API_KEY or a Resend API rejection produces a silent
+      // failure: the UI says "Check your email" while no email ever arrives.
+      // (Production forensics, 2026-04-08.)
+      //
+      // We still return a 200 to the browser regardless of the send outcome
+      // for enumeration protection — revealing whether an account exists or
+      // whether the email pipeline is healthy is an information leak. But
+      // when the send actually fails, we now log a loud ERROR with full
+      // context so ops can see it in Railway logs and act.
+      const sendResult = await emailService.sendPasswordResetEmail(
         result.user.id,
         data.email,
         result.token,
         result.user.firstName || undefined
       );
+
+      if (!sendResult?.success) {
+        console.error(
+          `[PasswordReset] DELIVERY FAILED for user ${result.user.id} <${data.email}>: ${sendResult?.error ?? 'unknown error'}`,
+          {
+            userId: result.user.id,
+            email: data.email,
+            error: sendResult?.error,
+          },
+        );
+      } else {
+        console.log(
+          `[PasswordReset] Email dispatched for user ${result.user.id} (resendId=${sendResult.resendId ?? 'none'})`,
+        );
+      }
     }
 
-    // Always return success to prevent email enumeration
+    // Always return success to prevent email enumeration.
+    // The ambiguity is intentional: the user sees the same message whether
+    // the account exists, the email send succeeded, or the email send failed.
+    // Internal observability is provided by the logs above.
     res.json({
       message:
         "If an account exists with that email, a reset link has been sent",
