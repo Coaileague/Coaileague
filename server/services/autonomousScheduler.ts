@@ -709,6 +709,11 @@ const SCHEDULER_CONFIG = {
     schedule: '0 7 * * *', // Every day at 7 AM — before shift start
     description: 'Daily training certificate renewal scan: flag expired certs, notify officers, create interventions'
   },
+  approvalExpiry: {
+    enabled: true,
+    schedule: '*/15 * * * *', // Every 15 minutes
+    description: 'Mark pending AI approvals as expired once they pass their expiresAt timestamp. Prevents stale approvals from accumulating indefinitely and blocking automation — ai_approval_requests.expiresAt was never being enforced before this job was wired in (workflow audit 2026-04-08).'
+  },
 };
 
 // ============================================================================
@@ -2602,6 +2607,45 @@ export function startAutonomousScheduler() {
       });
     });
     log.info('Training Certificate Renewal registered', { schedule: SCHEDULER_CONFIG.trainingRenewal.schedule, description: SCHEDULER_CONFIG.trainingRenewal.description });
+  }
+
+  // 3f. Approval Expiry Sweep (every 15 minutes)
+  //
+  // Marks pending AI approvals as expired once they pass their
+  // expiresAt timestamp. Without this, the `expireOldApprovals` method
+  // on approvalRequestService existed but was never invoked by any
+  // cron — so stale approvals accumulated in the aiApprovalRequests
+  // table indefinitely and blocked automation that was waiting on
+  // them. Workflow audit 2026-04-08 flagged this as "approval workflows
+  // / expireOldApprovals never called by cron" — this is the fix.
+  registerJobInfo('Approval Expiry Sweep', SCHEDULER_CONFIG.approvalExpiry.schedule, SCHEDULER_CONFIG.approvalExpiry.description, SCHEDULER_CONFIG.approvalExpiry.enabled);
+  if (SCHEDULER_CONFIG.approvalExpiry.enabled) {
+    cron.schedule(SCHEDULER_CONFIG.approvalExpiry.schedule, () => {
+      trackJobExecution('Approval Expiry Sweep', async () => {
+        const startTime = Date.now();
+        try {
+          const { approvalRequestService } = await import('./ai-brain/approvalRequestService');
+          const expiredCount = await approvalRequestService.expireOldApprovals();
+          emitAutomationEvent({
+            jobName: 'Approval Expiry Sweep',
+            category: 'governance',
+            success: true,
+            duration: Date.now() - startTime,
+            recordsProcessed: expiredCount,
+            details: { expiredCount },
+          });
+        } catch (err: any) {
+          emitAutomationEvent({
+            jobName: 'Approval Expiry Sweep',
+            category: 'governance',
+            success: false,
+            details: { error: (err instanceof Error ? err.message : String(err)) },
+          });
+          throw err;
+        }
+      });
+    });
+    log.info('Approval Expiry Sweep registered', { schedule: SCHEDULER_CONFIG.approvalExpiry.schedule, description: SCHEDULER_CONFIG.approvalExpiry.description });
   }
 
   // 4. Idempotency Key Cleanup (4 AM daily)

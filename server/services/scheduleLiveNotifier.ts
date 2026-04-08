@@ -27,6 +27,34 @@ import { createLogger } from '../lib/logger';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('scheduleLiveNotifier');
 
+/**
+ * Structured error context for schedule notifier catch blocks.
+ *
+ * Every `[ScheduleLive] Error in onX...` log now surfaces the full
+ * PG error fields (code, detail, column, constraint, table, schema,
+ * where, routine) plus the top 6 stack frames. Prior to this helper
+ * the catch blocks logged just `error` as a single argument, which
+ * the logger shim collapsed to `[object Object]` and dropped the
+ * message entirely — the workflow audit on 2026-04-08 flagged this
+ * as the root cause of shift notifications being "likely broken but
+ * invisible". Observability only — no logic change.
+ */
+function logNotifierError(label: string, err: any, extra?: Record<string, unknown>) {
+  log.error(label, {
+    message: err instanceof Error ? err.message : String(err),
+    code: err?.code,
+    detail: err?.detail,
+    column: err?.column,
+    constraint: err?.constraint,
+    table: err?.table,
+    schema: err?.schema,
+    where: err?.where,
+    routine: err?.routine,
+    stack: err?.stack?.split('\n').slice(0, 6).join(' | '),
+    ...(extra ?? {}),
+  });
+}
+
 
 export interface ShiftInfo {
   id: string;
@@ -95,7 +123,7 @@ async function getEmployeeName(employeeId: string): Promise<string> {
       return `${employee.firstName} ${employee.lastName}`.trim() || 'Employee';
     }
   } catch (error) {
-    log.error('[ScheduleLive] Error getting employee name:', error);
+    logNotifierError('[ScheduleLive] Error getting employee name', error);
   }
   return 'Employee';
 }
@@ -134,7 +162,7 @@ export async function onShiftCreated(
 
     log.info(`[ScheduleLive] Shift created: Notified ${affectedIds.length} employee(s)`);
   } catch (error) {
-    log.error('[ScheduleLive] Error in onShiftCreated:', error);
+    logNotifierError('[ScheduleLive] Error in onShiftCreated', error);
   }
 }
 
@@ -171,7 +199,7 @@ export async function onShiftUpdated(
 
     log.info(`[ScheduleLive] Shift updated: Notified ${affectedIds.length} employee(s) - ${changes}`);
   } catch (error) {
-    log.error('[ScheduleLive] Error in onShiftUpdated:', error);
+    logNotifierError('[ScheduleLive] Error in onShiftUpdated', error);
   }
 }
 
@@ -207,7 +235,7 @@ export async function onShiftDeleted(
 
     log.info(`[ScheduleLive] Shift deleted: Notified ${affectedIds.length} employee(s)`);
   } catch (error) {
-    log.error('[ScheduleLive] Error in onShiftDeleted:', error);
+    logNotifierError('[ScheduleLive] Error in onShiftDeleted', error);
   }
 }
 
@@ -227,7 +255,7 @@ export async function onSchedulePublished(params: {
     await notifySchedulePublished(params);
     log.info(`[ScheduleLive] Schedule published: Notified ${params.affectedEmployeeIds.length} employee(s) for ${params.weekStart} - ${params.weekEnd}`);
   } catch (error) {
-    log.error('[ScheduleLive] Error in onSchedulePublished:', error);
+    logNotifierError('[ScheduleLive] Error in onSchedulePublished', error);
   }
 
   // Non-blocking: send weekly schedule email to each assigned officer
@@ -324,7 +352,7 @@ export async function onSchedulePublished(params: {
 
       log.info(`[ScheduleLive] Weekly schedule emails sent to ${shiftsByEmployee.size} employee(s) for week of ${params.weekStart}`);
     } catch (emailErr: any) {
-      log.warn('[ScheduleLive] Weekly schedule email send failed (non-blocking):', emailErr.message);
+      logNotifierError('[ScheduleLive] Weekly schedule email send failed (non-blocking)', emailErr);
     }
   });
 }
@@ -355,7 +383,7 @@ export async function onShiftSwap(
     await notifyShiftSwap(eventMap[eventType], params);
     log.info(`[ScheduleLive] Shift swap ${eventType}: Notified affected employees`);
   } catch (error) {
-    log.error('[ScheduleLive] Error in onShiftSwap:', error);
+    logNotifierError('[ScheduleLive] Error in onShiftSwap', error);
   }
 }
 
@@ -388,7 +416,7 @@ export async function onAutomationScheduleChange(params: {
 
     log.info(`[ScheduleLive] Automation schedule change: ${params.actionType} - ${params.affectedEmployeeIds.length} affected`);
   } catch (error) {
-    log.error('[ScheduleLive] Error in onAutomationScheduleChange:', error);
+    logNotifierError('[ScheduleLive] Error in onAutomationScheduleChange', error);
   }
 }
 
