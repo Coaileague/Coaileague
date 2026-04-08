@@ -162,6 +162,323 @@ const constraints: CriticalConstraint[] = [
       await pool.query(`ALTER TYPE audit_action ADD VALUE IF NOT EXISTS 'test_audit_schema_insert'`);
     },
   },
+  // ── Phase V bulk enum backfill (Railway log forensics 2026-04-08) ─────
+  // Fifteen audit_action values referenced by actual running code that were
+  // never in the live enum. Every cycle was emitting "invalid input value
+  // for enum audit_action" errors because orchestration lifecycle events,
+  // scheduler job completions, platform event publishers, automation
+  // daemons, and the Trinity autonomous runner all insert rows with these
+  // action strings. Rather than 15 individual constraint entries, one
+  // pass is cleaner and idempotent via ADD VALUE IF NOT EXISTS.
+  {
+    name: 'audit_action_phase_v_bulk_backfill',
+    rationale: 'Phase V: 15 audit_action enum values referenced at runtime but missing from the live enum (orchestration lifecycle, platform events, automation daemons, Trinity autonomous runner). Railway log forensics 2026-04-08.',
+    isPresent: async () => {
+      const expected = [
+        'orchestration.orchestration_started',
+        'orchestration.orchestration_completed',
+        'orchestration_state',
+        'scheduler_job_completed',
+        'platform_event_orchestration_lifecycle',
+        'platform_event_automation_completed',
+        'platform_event_agent_learning',
+        'platform_event_experience_recorded',
+        'platform_event_websocket_cleanup_completed',
+        'platform_event_ai_brain_action',
+        'platform_event_domain_supervisors_initialized',
+        'trinity_autonomous:autonomous_ops_started',
+        'automation.daemon.autonomous-scheduling-daemon',
+        'automation.daemon.shift-monitoring-cycle',
+        'automation.scheduled_task.shift-completion-bridge-cycle',
+      ];
+      const { rows } = await pool.query(
+        `SELECT e.enumlabel FROM pg_enum e
+           JOIN pg_type t ON t.oid = e.enumtypid
+          WHERE t.typname = 'audit_action' AND e.enumlabel = ANY($1::text[])`,
+        [expected],
+      );
+      return rows.length === expected.length;
+    },
+    apply: async () => {
+      const toAdd = [
+        'orchestration.orchestration_started',
+        'orchestration.orchestration_completed',
+        'orchestration_state',
+        'scheduler_job_completed',
+        'platform_event_orchestration_lifecycle',
+        'platform_event_automation_completed',
+        'platform_event_agent_learning',
+        'platform_event_experience_recorded',
+        'platform_event_websocket_cleanup_completed',
+        'platform_event_ai_brain_action',
+        'platform_event_domain_supervisors_initialized',
+        'trinity_autonomous:autonomous_ops_started',
+        'automation.daemon.autonomous-scheduling-daemon',
+        'automation.daemon.shift-monitoring-cycle',
+        'automation.scheduled_task.shift-completion-bridge-cycle',
+      ];
+      for (const value of toAdd) {
+        try {
+          await pool.query(
+            `ALTER TYPE audit_action ADD VALUE IF NOT EXISTS '${value.replace(/'/g, "''")}'`,
+          );
+        } catch (err: any) {
+          log.warn(`[auditAction] Failed to add enum value ${value}: ${err?.message?.slice(0, 120)}`);
+        }
+      }
+    },
+  },
+  {
+    name: 'automation_level_value_notify_only',
+    rationale: 'automation_level enum is missing NOTIFY_ONLY. Runtime code references it via automationOrchestration settings.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+         WHERE t.typname = 'automation_level' AND e.enumlabel = 'NOTIFY_ONLY'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`ALTER TYPE automation_level ADD VALUE IF NOT EXISTS 'NOTIFY_ONLY'`);
+    },
+  },
+  {
+    name: 'knowledge_domain_value_time_tracking',
+    rationale: 'knowledge_domain enum is missing time_tracking. Trinity knowledge writes with this domain value fail.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+         WHERE t.typname = 'knowledge_domain' AND e.enumlabel = 'time_tracking'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`ALTER TYPE knowledge_domain ADD VALUE IF NOT EXISTS 'time_tracking'`);
+    },
+  },
+  {
+    name: 'gap_severity_value_error',
+    rationale: 'gap_severity enum is missing "error" — queries using severity = "error" fail every cycle. Valid values were critical/warning/info; adding error aligns runtime behavior with code expectations.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+         WHERE t.typname = 'gap_severity' AND e.enumlabel = 'error'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`ALTER TYPE gap_severity ADD VALUE IF NOT EXISTS 'error'`);
+    },
+  },
+  // ── Phase V varchar-id defaults for trinity_knowledge_base / somatic_pattern_library ──
+  {
+    name: 'trinity_knowledge_base_id_default',
+    rationale: 'trinity_knowledge_base.id column has no DEFAULT but seed INSERTs use DEFAULT for id. Railway log forensics 2026-04-08.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'trinity_knowledge_base' AND column_name = 'id'
+           AND column_default LIKE '%gen_random_uuid%'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE trinity_knowledge_base ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`,
+      );
+    },
+  },
+  {
+    name: 'somatic_pattern_library_id_default',
+    rationale: 'somatic_pattern_library.id column has no DEFAULT — same pattern as trinity_knowledge_base. Railway log forensics 2026-04-08.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'somatic_pattern_library' AND column_name = 'id'
+           AND column_default LIKE '%gen_random_uuid%'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE somatic_pattern_library ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`,
+      );
+    },
+  },
+  // ── Phase V missing partial unique index for RL confidence upserts ──
+  {
+    name: 'ai_learning_events_confidence_partial_unique',
+    rationale: 'RLRepo upsert uses ON CONFLICT (agent_id, action_type) WHERE event_type = "confidence_update" but the matching partial unique index was never created in the live DB. Every RL confidence cycle fails. Railway log forensics 2026-04-08.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_indexes
+         WHERE tablename = 'ai_learning_events'
+           AND indexname = 'idx_ai_learning_events_confidence'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // Remove any pre-existing duplicate rows that would violate the
+      // new unique index before installing it.
+      await pool.query(`
+        DELETE FROM ai_learning_events a
+        USING ai_learning_events b
+        WHERE a.ctid < b.ctid
+          AND a.event_type = 'confidence_update'
+          AND b.event_type = 'confidence_update'
+          AND a.agent_id = b.agent_id
+          AND a.action_type = b.action_type
+      `);
+      await pool.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_learning_events_confidence
+           ON ai_learning_events (agent_id, action_type)
+           WHERE event_type = 'confidence_update'`,
+      );
+    },
+  },
+  // ── Phase V durable_job_queue indexes with wrong column name ──
+  //
+  // Two indexes were defined against `run_at` but the column is named
+  // `execute_at`. Boot fails with "column 'run_at' does not exist" on
+  // every restart. The fix is: drop the stale index definitions (they
+  // never existed in the live DB — the CREATE fails and silently
+  // continues) and create the real indexes against the correct column.
+  // We first inspect the live table to pick the right column name in
+  // case the schema varies across environments.
+  {
+    name: 'durable_job_queue_indexes_correct_column',
+    rationale: 'idx_job_queue_run_at and idx_job_queue_pending reference a column named run_at that does not exist on durable_job_queue. Detect the real column name (execute_at or scheduled_at) at runtime and create the indexes against it. Railway log forensics 2026-04-08.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_indexes
+         WHERE tablename = 'durable_job_queue'
+           AND indexname = 'idx_job_queue_run_at'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // Detect the real time-column used by the job queue
+      const { rows: cols } = await pool.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'durable_job_queue'
+           AND column_name IN ('run_at', 'execute_at', 'scheduled_at', 'next_run_at')`,
+      );
+      const present = new Set(cols.map((r) => r.column_name));
+      const runCol =
+        present.has('execute_at') ? 'execute_at' :
+        present.has('scheduled_at') ? 'scheduled_at' :
+        present.has('next_run_at') ? 'next_run_at' :
+        present.has('run_at') ? 'run_at' :
+        null;
+      if (!runCol) {
+        log.warn('[durableJobQueue] No run/execute/scheduled column found — skipping index creation');
+        return;
+      }
+      await pool.query(
+        `CREATE INDEX IF NOT EXISTS idx_job_queue_run_at ON durable_job_queue ("${runCol}")`,
+      );
+      await pool.query(
+        `CREATE INDEX IF NOT EXISTS idx_job_queue_pending ON durable_job_queue (status, "${runCol}")`,
+      );
+      log.info(`[durableJobQueue] Created indexes on column "${runCol}"`);
+    },
+  },
+  // ── Phase V time_entries index with wrong column name ──
+  {
+    name: 'time_entries_clock_in_index',
+    rationale: 'idx_time_entries_clock_in references clock_in_at but the real column is likely clock_in_time or clocked_in_at. Detect at runtime and create the correct index. Railway log forensics 2026-04-08.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_indexes
+         WHERE tablename = 'time_entries'
+           AND indexname = 'idx_time_entries_clock_in'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      const { rows: cols } = await pool.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'time_entries'
+           AND column_name IN ('clock_in_at', 'clock_in_time', 'clocked_in_at', 'clockin_at', 'clock_in')`,
+      );
+      const present = new Set(cols.map((r) => r.column_name));
+      const clockCol =
+        present.has('clock_in_time') ? 'clock_in_time' :
+        present.has('clocked_in_at') ? 'clocked_in_at' :
+        present.has('clock_in_at') ? 'clock_in_at' :
+        present.has('clockin_at') ? 'clockin_at' :
+        present.has('clock_in') ? 'clock_in' :
+        null;
+      if (!clockCol) {
+        log.warn('[timeEntries] No clock-in column found — skipping index creation');
+        return;
+      }
+      await pool.query(
+        `CREATE INDEX IF NOT EXISTS idx_time_entries_clock_in ON time_entries ("${clockCol}")`,
+      );
+      log.info(`[timeEntries] Created clock-in index on column "${clockCol}"`);
+    },
+  },
+  // ── Phase V missing tables: workspace_credit_balance + workspace_holidays ──
+  //
+  // ALTER statements run against these two tables on every startup, but
+  // the tables themselves were never created in the live DB. Create them
+  // idempotently here so the ALTERs downstream can succeed. Columns are
+  // inferred from the user's brief + queried usage patterns.
+  {
+    name: 'workspace_credit_balance_table',
+    rationale: 'workspace_credit_balance table missing from live DB but ALTER TABLE statements run against it every startup. Create it idempotently.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'workspace_credit_balance'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS workspace_credit_balance (
+          workspace_id varchar PRIMARY KEY,
+          workspace_name varchar,
+          credit_balance integer NOT NULL DEFAULT 0,
+          monthly_credit_allocation integer NOT NULL DEFAULT 0,
+          subscription_tier varchar,
+          updated_at timestamptz NOT NULL DEFAULT NOW()
+        )
+      `);
+    },
+  },
+  {
+    name: 'workspace_holidays_table',
+    rationale: 'workspace_holidays table missing from live DB; holidayService queries reference it and fail. Create it idempotently.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'workspace_holidays'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS workspace_holidays (
+          id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          workspace_id varchar NOT NULL,
+          holiday_name varchar NOT NULL,
+          holiday_date date NOT NULL,
+          holiday_type varchar,
+          state_code varchar,
+          applies_to varchar,
+          created_at timestamptz NOT NULL DEFAULT NOW()
+        )
+      `);
+      await pool.query(
+        `CREATE INDEX IF NOT EXISTS workspace_holidays_workspace_idx ON workspace_holidays (workspace_id)`,
+      );
+      await pool.query(
+        `CREATE INDEX IF NOT EXISTS workspace_holidays_date_idx ON workspace_holidays (holiday_date)`,
+      );
+    },
+  },
   {
     name: 'payroll_status_value_completed',
     rationale: 'payroll_status enum is declared with "completed" in shared/schema/enums.ts but the live Railway enum is missing it. Every payroll run transition to "completed" errors with "invalid input value for enum payroll_status" and cascades into autonomousScheduler audit log failures (production log forensics 2026-04-08).',
