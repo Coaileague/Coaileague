@@ -25,6 +25,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { PLATFORM } from '../config/platformConfig';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('VoiceRoutes');
 
 import { db } from '../db';
@@ -567,22 +568,18 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
 
       // Trigger Twilio transcription asynchronously for completed recordings
       if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-        setImmediate(async () => {
-          try {
-            const twilio = (await import('twilio')).default;
-            const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-            const baseUrl = process.env.APP_URL || '';
-            // Use a typed create call; statusCallbackUrl is a valid Twilio param
-            // transcriptions.create accepts optional params beyond the TS typings
-            await (twilioClient.recordings(RecordingSid).transcriptions.create as (
-              opts: { statusCallbackUrl?: string }
-            ) => Promise<unknown>)({
-              statusCallbackUrl: `${baseUrl}/api/voice/transcription-done`,
-            });
-            log.info(`[VoiceRoutes] Transcription requested for recording ${RecordingSid}`);
-          } catch (txErr: any) {
-            log.warn(`[VoiceRoutes] Transcription request failed (non-fatal): ${txErr.message}`);
-          }
+        scheduleNonBlocking('voice.transcription-request', async () => {
+          const twilio = (await import('twilio')).default;
+          const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          const baseUrl = process.env.APP_URL || '';
+          // Use a typed create call; statusCallbackUrl is a valid Twilio param
+          // transcriptions.create accepts optional params beyond the TS typings
+          await (twilioClient.recordings(RecordingSid).transcriptions.create as (
+            opts: { statusCallbackUrl?: string }
+          ) => Promise<unknown>)({
+            statusCallbackUrl: `${baseUrl}/api/voice/transcription-done`,
+          });
+          log.info(`[VoiceRoutes] Transcription requested for recording ${RecordingSid}`);
         });
       }
     }

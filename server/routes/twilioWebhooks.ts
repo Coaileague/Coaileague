@@ -26,6 +26,7 @@ import { generateComprehensiveScorecard } from '../services/recruitment/scorecar
 import { sendSMS } from '../services/smsService'; // infra
 import { platformEventBus } from '../services/platformEventBus';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { PLATFORM } from '../config/platformConfig';
 const log = createLogger('TwilioWebhooks');
 
@@ -228,7 +229,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
       res.set('Content-Type', 'text/xml');
       res.send(emptyTwiml); // Acknowledge Twilio immediately
 
-      setImmediate(async () => {
+      scheduleNonBlocking('twilio.inbound-sms-trinity-triage', async () => {
         try {
           const { resolveInboundSms } = await import('../services/trinityVoice/smsAutoResolver');
           const result = await resolveInboundSms({ fromPhone: from, message: body });
@@ -238,15 +239,13 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
         } catch (err: any) {
           log.warn(`[TrinitySmsTriage] Auto-resolver error for ${from}:`, err?.message);
           // Fallback reply so caller isn't left hanging
-          try {
-            await sendSMS({
-              to: from,
-              body: 'Hi! Trinity here. We received your message and a support specialist will follow up with you shortly.',
-              type: 'system_alert',
-            });
-          } catch (err: any) {
-            log.warn('[TwilioWebhooks] Failed to emit inbound event to WebSocket (non-critical)', { error: err.message });
-          }
+          await sendSMS({
+            to: from,
+            body: 'Hi! Trinity here. We received your message and a support specialist will follow up with you shortly.',
+            type: 'system_alert',
+          }).catch((sendErr: any) => {
+            log.warn('[TwilioWebhooks] Fallback SMS send failed (non-critical)', { error: sendErr?.message });
+          });
         }
       });
       return;

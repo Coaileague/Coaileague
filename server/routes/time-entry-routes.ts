@@ -41,6 +41,7 @@ import { db, pool } from '../db';
 import { checkSchedulingEligibility } from '../services/compliance/trinityComplianceEngine';
 import { storage } from '../storage';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('TimeEntryRoutes');
 
 
@@ -470,33 +471,29 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
         const licenseCheck = await checkSchedulingEligibility(employee.id, workspaceId);
         if (!licenseCheck.eligible) {
           // Alert all workspace supervisors/managers via in-app notification
-          setImmediate(async () => {
-            try {
-              const supervisors = await db.select({ userId: employees.userId, workspaceRole: employees.workspaceRole })
-                .from(employees)
-                .where(and(
-                  eq(employees.workspaceId, workspaceId),
-                  eq(employees.isActive, true),
-                ));
-              const supervisorIds = supervisors
-                .filter(e => ['org_owner','co_owner','org_manager','manager','department_manager','supervisor'].includes(e.workspaceRole || ''))
-                .map(e => e.userId)
-                .filter(Boolean);
+          scheduleNonBlocking('time-entry.license-expired-supervisor-alert', async () => {
+            const supervisors = await db.select({ userId: employees.userId, workspaceRole: employees.workspaceRole })
+              .from(employees)
+              .where(and(
+                eq(employees.workspaceId, workspaceId),
+                eq(employees.isActive, true),
+              ));
+            const supervisorIds = supervisors
+              .filter(e => ['org_owner','co_owner','org_manager','manager','department_manager','supervisor'].includes(e.workspaceRole || ''))
+              .map(e => e.userId)
+              .filter(Boolean);
 
-              for (const supUserId of supervisorIds) {
-                await storage.createNotification({
-                  workspaceId,
-                  userId: supUserId,
-                  type: 'compliance_alert',
-                  title: 'License Expired — Clock-In Blocked',
-                  message: `${employee.firstName} ${employee.lastName} was blocked from clocking in: ${licenseCheck.blockReason || 'security license expired'}. Immediate action required.`,
-                  actionUrl: `/employees/${employee.id}`,
-                  relatedEntityType: 'employee',
-                  relatedEntityId: employee.id,
-                }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
-              }
-            } catch (_alertErr: any) {
-              log.warn('[TimeEntry] Non-critical alert error', { error: _alertErr.message });
+            for (const supUserId of supervisorIds) {
+              await storage.createNotification({
+                workspaceId,
+                userId: supUserId,
+                type: 'compliance_alert',
+                title: 'License Expired — Clock-In Blocked',
+                message: `${employee.firstName} ${employee.lastName} was blocked from clocking in: ${licenseCheck.blockReason || 'security license expired'}. Immediate action required.`,
+                actionUrl: `/employees/${employee.id}`,
+                relatedEntityType: 'employee',
+                relatedEntityId: employee.id,
+              }).catch((err: any) => log.warn('[time-entry] supervisor notification failed', err?.message));
             }
           });
 
@@ -626,87 +623,79 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
     });
     // LATE CLOCK-IN: Notify field managers and flag the entry for manual approval
     if (lateClockInMinutes > 0) {
-      setImmediate(async () => {
-        try {
-          const managers = await db.select({ userId: employees.userId })
-            .from(employees)
-            .where(and(
-              eq(employees.workspaceId, workspaceId),
-              or(
-                eq(employees.workspaceRole as any, 'manager'),
-                eq(employees.workspaceRole as any, 'supervisor'),
-                eq(employees.workspaceRole as any, 'department_manager'),
-                eq(employees.workspaceRole as any, 'field_supervisor')
-              )
-            ));
-          const employeeName = `${employee.firstName} ${employee.lastName}`;
-          const shiftLabel = resolvedShift
-            ? `${new Date(resolvedShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : 'scheduled time';
-          for (const mgr of managers) {
-            if (!mgr.userId) continue;
-            await universalNotificationEngine.sendNotification({
-              workspaceId: workspaceId,
-              userId: mgr.userId,
-              type: 'issue_detected',
-              title: `Late Clock-In — ${employeeName}`,
-              message: `${employeeName} clocked in ${lateClockInMinutes} minute${lateClockInMinutes !== 1 ? 's' : ''} late (shift was ${shiftLabel}). This requires your approval.`,
-              severity: 'warning',
-              metadata: {
-                alertType: 'late_clock_in',
-                timeEntryId: newEntry.id,
-                employeeId: employee.id,
-                employeeName,
-                minutesLate: lateClockInMinutes,
-                source: 'clock_in_enforcement',
-              },
-            });
-          }
-        } catch (notifyErr) {
-          log.error('[ClockIn] Failed to notify managers about late clock-in:', notifyErr);
+      scheduleNonBlocking('time-entry.late-clock-in-manager-alert', async () => {
+        const managers = await db.select({ userId: employees.userId })
+          .from(employees)
+          .where(and(
+            eq(employees.workspaceId, workspaceId),
+            or(
+              eq(employees.workspaceRole as any, 'manager'),
+              eq(employees.workspaceRole as any, 'supervisor'),
+              eq(employees.workspaceRole as any, 'department_manager'),
+              eq(employees.workspaceRole as any, 'field_supervisor')
+            )
+          ));
+        const employeeName = `${employee.firstName} ${employee.lastName}`;
+        const shiftLabel = resolvedShift
+          ? `${new Date(resolvedShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : 'scheduled time';
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await universalNotificationEngine.sendNotification({
+            workspaceId: workspaceId,
+            userId: mgr.userId,
+            type: 'issue_detected',
+            title: `Late Clock-In — ${employeeName}`,
+            message: `${employeeName} clocked in ${lateClockInMinutes} minute${lateClockInMinutes !== 1 ? 's' : ''} late (shift was ${shiftLabel}). This requires your approval.`,
+            severity: 'warning',
+            metadata: {
+              alertType: 'late_clock_in',
+              timeEntryId: newEntry.id,
+              employeeId: employee.id,
+              employeeName,
+              minutesLate: lateClockInMinutes,
+              source: 'clock_in_enforcement',
+            },
+          });
         }
       });
     }
 
     // ON-TIME CLOCK-IN: Notify assigned supervisors so they have real-time site awareness
     if (lateClockInMinutes === 0) {
-      setImmediate(async () => {
-        try {
-          const employeeName = `${employee.firstName} ${employee.lastName}`;
-          const shiftLabel = resolvedShift
-            ? `${new Date(resolvedShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : 'scheduled time';
-          // Notify supervisors and field supervisors in the workspace
-          const workspaceSups = await db.select({ userId: employees.userId })
-            .from(employees)
-            .where(and(
-              eq(employees.workspaceId, workspaceId),
-              or(
-                eq(employees.workspaceRole as any, 'supervisor'),
-                eq(employees.workspaceRole as any, 'field_supervisor'),
-                eq(employees.workspaceRole as any, 'department_manager'),
-              )
-            ));
-          for (const s of workspaceSups) {
-            if (!s.userId) continue;
-            await universalNotificationEngine.sendNotification({
-              workspaceId,
-              userId: s.userId,
-              type: 'shift_confirmed',
-              title: `Officer On-Site — ${employeeName}`,
-              message: `${employeeName} clocked in on time at ${shiftLabel}.`,
-              severity: 'info',
-              metadata: {
-                alertType: 'clock_in_confirmed',
-                timeEntryId: newEntry.id,
-                employeeId: employee.id,
-                employeeName,
-                source: 'clock_in_enforcement',
-              },
-            });
-          }
-        } catch (onTimeNotifyErr) {
-          log.error('[ClockIn] Failed to send on-time supervisor notification:', onTimeNotifyErr);
+      scheduleNonBlocking('time-entry.on-time-clock-in-supervisor-alert', async () => {
+        const employeeName = `${employee.firstName} ${employee.lastName}`;
+        const shiftLabel = resolvedShift
+          ? `${new Date(resolvedShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : 'scheduled time';
+        // Notify supervisors and field supervisors in the workspace
+        const workspaceSups = await db.select({ userId: employees.userId })
+          .from(employees)
+          .where(and(
+            eq(employees.workspaceId, workspaceId),
+            or(
+              eq(employees.workspaceRole as any, 'supervisor'),
+              eq(employees.workspaceRole as any, 'field_supervisor'),
+              eq(employees.workspaceRole as any, 'department_manager'),
+            )
+          ));
+        for (const s of workspaceSups) {
+          if (!s.userId) continue;
+          await universalNotificationEngine.sendNotification({
+            workspaceId,
+            userId: s.userId,
+            type: 'shift_confirmed',
+            title: `Officer On-Site — ${employeeName}`,
+            message: `${employeeName} clocked in on time at ${shiftLabel}.`,
+            severity: 'info',
+            metadata: {
+              alertType: 'clock_in_confirmed',
+              timeEntryId: newEntry.id,
+              employeeId: employee.id,
+              employeeName,
+              source: 'clock_in_enforcement',
+            },
+          });
         }
       });
     }

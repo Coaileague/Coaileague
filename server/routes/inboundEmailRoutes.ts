@@ -13,6 +13,7 @@
 import { Router, type Request, type Response } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { pool } from '../db';
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 const log = createLogger('InboundEmailRoutes');
@@ -181,14 +182,9 @@ async function handleInboundWebhook(
   res.status(200).json({ received: true, category });
 
   // Process async — never block the Resend acknowledgment
-  setImmediate(async () => {
-    try {
-      const result = await processInboundEmail(parsed);
-      log.info(`[InboundEmail] ${category} processed:`, result.status, result.message);
-    } catch (err: any) {
-      // Check 10: Failure must not propagate — email is already logged in processor
-      log.error(`[InboundEmail] Unhandled processor error for ${targetAddress}:`, err.message);
-    }
+  scheduleNonBlocking(`inbound-email.${category}`, async () => {
+    const result = await processInboundEmail(parsed);
+    log.info(`[InboundEmail] ${category} processed:`, result.status, result.message);
   });
 }
 
@@ -318,57 +314,49 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
     // Return 200 immediately — before any async processing
     res.status(200).json({ received: true, routed: true, routeType: route.route_type });
 
-    // Step 8: Trinity auto-process (fire-and-forget)
+    // Step 8: Trinity auto-process (deferred via scheduleNonBlocking)
     if (route.auto_process && route.process_as && workspaceId) {
-      setImmediate(async () => {
-        try {
-          const { trinityEmailProcessor } = await import('../services/trinityEmailProcessor');
-          await trinityEmailProcessor.processInbound({
-            to: toEmail,
-            from: fromEmail,
-            subject,
-            body: bodyText || '',
-            htmlBody: bodyHtml,
-            messageId: messageId || `inbound-${emailId}`,
+      scheduleNonBlocking('inbound-email.trinity-auto-process', async () => {
+        const { trinityEmailProcessor } = await import('../services/trinityEmailProcessor');
+        await trinityEmailProcessor.processInbound({
+          to: toEmail,
+          from: fromEmail,
+          subject,
+          body: bodyText || '',
+          htmlBody: bodyHtml,
+          messageId: messageId || `inbound-${emailId}`,
+        });
+        // Mark as processed
+        if (emailId) {
+          await pool.query(
+            `UPDATE platform_emails SET trinity_processed=true, trinity_processed_at=NOW(), trinity_action_taken=$1 WHERE id=$2`,
+            [route.process_as, emailId]
+          );
+        }
+        // NDS: trinity processed
+        if (workspaceId && targetUserId) {
+          await NotificationDeliveryService.send({
+            type: 'trinity_email_processed',
+            workspaceId,
+            recipientUserId: targetUserId,
+            channel: 'in_app',
+            body: { processAs: route.process_as, summary: subject, emailId },
           });
-          // Mark as processed
-          if (emailId) {
-            await pool.query(
-              `UPDATE platform_emails SET trinity_processed=true, trinity_processed_at=NOW(), trinity_action_taken=$1 WHERE id=$2`,
-              [route.process_as, emailId]
-            );
-          }
-          // NDS: trinity processed
-          if (workspaceId && targetUserId) {
-            await NotificationDeliveryService.send({
-              type: 'trinity_email_processed',
-              workspaceId,
-              recipientUserId: targetUserId,
-              channel: 'in_app',
-              body: { processAs: route.process_as, summary: subject, emailId },
-            });
-          }
-        } catch (err: any) {
-          log.error('[InboundEmail/root] Trinity processing error:', err.message);
         }
       });
     }
 
     // Step 9: user_inbox — NDS new_email_received
     if (route.route_type === 'user_inbox' && targetUserId && workspaceId) {
-      setImmediate(async () => {
-        try {
-          await NotificationDeliveryService.send({
-            type: 'new_email_received',
-            workspaceId,
-            recipientUserId: targetUserId,
-            channel: 'in_app',
-            body: { from: fromEmail, subject, emailId },
-            idempotencyKey: emailId ? `new_email_received-${emailId}` : undefined,
-          });
-        } catch (err: any) {
-          log.error('[InboundEmail/root] NDS error:', err.message);
-        }
+      scheduleNonBlocking('inbound-email.user-inbox-nds', async () => {
+        await NotificationDeliveryService.send({
+          type: 'new_email_received',
+          workspaceId,
+          recipientUserId: targetUserId,
+          channel: 'in_app',
+          body: { from: fromEmail, subject, emailId },
+          idempotencyKey: emailId ? `new_email_received-${emailId}` : undefined,
+        });
       });
     }
 
@@ -438,37 +426,33 @@ inboundEmailRouter.post('/per-org', async (req: Request, res: Response) => {
   // Acknowledge immediately — never block Resend acknowledgment
   res.status(200).json({ received: true, routing: 'per-org' });
 
-  setImmediate(async () => {
-    try {
-      const workspace = await trinityEmailProcessor.resolveWorkspaceFromEmail(toEmail);
-      if (!workspace) {
-        log.warn(`[InboundEmail/per-org] No workspace matched for ${toEmail}`);
-        return;
-      }
-
-      const fromRaw = payload.from || '';
-      const fromMatch = fromRaw.match(/^(?:"?([^"<]+)"?\s+)?<?([^>]+)>?$/);
-      const fromEmail = fromMatch?.[2]?.trim() || fromRaw.trim();
-
-      const messageId = payload.headers?.['message-id']
-        || payload.headers?.['Message-ID']
-        || `per-org-${Date.now()}`;
-
-      const emailData: InboundEmailData = {
-        to: toEmail,
-        from: fromEmail,
-        subject: payload.subject || '(no subject)',
-        body: payload.text || '',
-        htmlBody: payload.html || undefined,
-        messageId,
-        attachments: payload.attachments,
-      };
-
-      await trinityEmailProcessor.processInbound(emailData);
-      log.info(`[InboundEmail/per-org] Processed email for workspace ${workspace.id} type=${trinityEmailProcessor.getAddressType(toEmail, workspace)}`);
-    } catch (err: any) {
-      log.error(`[InboundEmail/per-org] Error processing per-org email to ${toEmail}:`, err.message);
+  scheduleNonBlocking('inbound-email.per-org-process', async () => {
+    const workspace = await trinityEmailProcessor.resolveWorkspaceFromEmail(toEmail);
+    if (!workspace) {
+      log.warn(`[InboundEmail/per-org] No workspace matched for ${toEmail}`);
+      return;
     }
+
+    const fromRaw = payload.from || '';
+    const fromMatch = fromRaw.match(/^(?:"?([^"<]+)"?\s+)?<?([^>]+)>?$/);
+    const fromEmail = fromMatch?.[2]?.trim() || fromRaw.trim();
+
+    const messageId = payload.headers?.['message-id']
+      || payload.headers?.['Message-ID']
+      || `per-org-${Date.now()}`;
+
+    const emailData: InboundEmailData = {
+      to: toEmail,
+      from: fromEmail,
+      subject: payload.subject || '(no subject)',
+      body: payload.text || '',
+      htmlBody: payload.html || undefined,
+      messageId,
+      attachments: payload.attachments,
+    };
+
+    await trinityEmailProcessor.processInbound(emailData);
+    log.info(`[InboundEmail/per-org] Processed email for workspace ${workspace.id} type=${trinityEmailProcessor.getAddressType(toEmail, workspace)}`);
   });
 });
 
