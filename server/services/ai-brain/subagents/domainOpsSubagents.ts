@@ -111,8 +111,19 @@ async function persistGapFinding(finding: GapFinding, detectedBy: string): Promi
 
     log.info(`Persisted gap finding: ${finding.title}`);
     return inserted.id;
-  } catch (error) {
-    log.error('Error persisting gap finding:', error);
+  } catch (error: any) {
+    // Detailed Postgres error logging — expose code/detail/column/
+    // constraint so the actual cause is visible in production logs.
+    // Previous one-liner hid everything except error.toString().
+    log.error('Error persisting gap finding:', {
+      message: error?.message,
+      code: error?.code,
+      detail: error?.detail,
+      column: error?.column,
+      constraint: error?.constraint,
+      table: error?.table,
+      finding: { title: finding.title, gapType: finding.gapType, severity: finding.severity },
+    });
     return null;
   }
 }

@@ -9,28 +9,32 @@
 @tailwind utilities;
 
 /* ============================================================================
-   SCROLL FIX v9 — react-remove-scroll-bar override (the actual culprit)
+   SCROLL FIX v11 — NUCLEAR GLOBAL OVERRIDE (per user directive)
    ============================================================================
-   `react-remove-scroll-bar` (used internally by every Radix Dialog/Sheet/
-   Popover/Tooltip via `react-remove-scroll`) injects a runtime <style>
-   tag containing:
-       body[data-scroll-locked] { overflow: hidden !important; ... }
-   The attribute leaks in many cases (Suspense boundaries, nested
-   overlays, hot reload, route changes mid-animation, tooltip portal
-   cleanup). When the attribute is set without an actual visible modal,
-   the entire page becomes unscrollable.
+   After 10 previous scroll fix attempts, the user has instructed the
+   simplest possible rule: force html, body, and #root to always be
+   scrollable with no height constraint, regardless of what any other
+   rule (from this file or any injected runtime style like
+   react-remove-scroll-bar) tries to do.
 
-   This rule uses `html body[data-scroll-locked]` (specificity 0,1,2 = 12)
-   to beat the lib's `body[data-scroll-locked]` (specificity 0,1,1 = 11).
-   Both rules are !important; higher specificity wins on tie.
+   Placed at the TOP of the stylesheet (right after @tailwind) so that
+   anyone reading this file sees it first. Order of appearance is NOT
+   the cascade tie-breaker here — !important + specificity is — but
+   putting it at the top makes the intent unmistakable. */
+html,
+body,
+#root {
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100vh !important;
+}
 
-   When a real modal IS open, the modal overlay's own `overflow: hidden`
-   on the backdrop handles in-modal scroll lock — we don't need body
-   scroll lock at all. Body scroll always stays unblocked. */
+/* Override `react-remove-scroll-bar`'s runtime <style> injection which
+   contains `body[data-scroll-locked] { overflow: hidden !important }`.
+   Using `html body[data-scroll-locked]` (specificity 0,1,2) beats the
+   lib's `body[data-scroll-locked]` (specificity 0,1,1) on tie. */
 html body[data-scroll-locked] {
   overflow: auto !important;
-  overscroll-behavior: auto !important;
-  position: static !important;
 }
 
 /* ============================================================================

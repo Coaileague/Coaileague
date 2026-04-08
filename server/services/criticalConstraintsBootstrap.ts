@@ -262,6 +262,23 @@ const constraints: CriticalConstraint[] = [
     },
   },
   {
+    name: 'audit_logs_user_role_nullable',
+    rationale: 'audit_logs.user_role is NOT NULL in live DB but Drizzle declares it nullable. System-actor writes (cron jobs, healthchecks, watchdogs) omit user_role and fail with "null value in column user_role violates not-null constraint". Covered by the generic audit_logs_drop_stale_not_nulls scanner below, but kept as an explicit entry per user directive so the intent is unambiguous.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'audit_logs' AND column_name = 'user_role'
+           AND is_nullable = 'YES'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE audit_logs ALTER COLUMN user_role DROP NOT NULL`
+      );
+    },
+  },
+  {
     name: 'audit_logs_drop_stale_not_nulls',
     rationale: 'The Drizzle audit_logs schema only declares id and created_at as NOT NULL. The live DB has many additional NOT NULL columns (user_role, user_name, action, entity_type, entity_id, etc.) inherited from previous schema migrations that drizzle-kit push never reverted. System-actor writes omit most of these and fail with "null value in column ... violates not-null constraint". This generic scan finds every NOT NULL column on audit_logs except id and created_at and drops the constraint to match the schema.',
     isPresent: async () => {

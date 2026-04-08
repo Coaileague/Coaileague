@@ -95,14 +95,20 @@ export function FeatureTutorialOverlay({
   const isLastStep = currentStep === steps.length - 1;
 
   return (
-    <div className="fixed inset-0 z-[9999]" data-testid={`tutorial-overlay-${featureId}`}>
+    // SCROLL FIX (2026-04-08): outer overlay is pointer-events: none so
+    // wheel/touch still scrolls the page beneath. The highlight+card
+    // inner divs opt back into pointer-events: auto where needed.
+    // This component is currently dead code (never imported) but the
+    // bug is latent — if anyone mounts it in the future, scroll would
+    // break without these guards.
+    <div className="fixed inset-0 z-[9999] pointer-events-none" data-testid={`tutorial-overlay-${featureId}`}>
       {/* Dark overlay with cutout */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" />
+
       {/* Highlight area */}
       {highlightPosition && (
         <div
-          className="absolute border-2 border-primary rounded-lg animate-pulse-glow"
+          className="absolute border-2 border-primary rounded-lg animate-pulse-glow pointer-events-none"
           style={{
             top: highlightPosition.top,
             left: highlightPosition.left,
@@ -112,9 +118,9 @@ export function FeatureTutorialOverlay({
           }}
         />
       )}
-      
-      {/* Tutorial Card */}
-      <div className={`absolute ${highlightPosition ? 'bottom-8 left-1/2 -translate-x-1/2' : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'}`}>
+
+      {/* Tutorial Card — opts into pointer-events so Next/Back/Skip work */}
+      <div className={`absolute pointer-events-auto ${highlightPosition ? 'bottom-8 left-1/2 -translate-x-1/2' : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'}`}>
         <Card className="w-[400px] max-w-[90vw] p-6 animate-success-pop bg-card/95 backdrop-blur-md border-primary/20">
           {/* Header */}
           <div className="flex items-start justify-between mb-4">

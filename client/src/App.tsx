@@ -2288,30 +2288,6 @@ function AppContent() {
 }
 
 export default function App() {
-  // ── SCROLL DIAGNOSTIC v10 (per user directive) ────────────────────────
-  // Logs computed body/html overflow + data-scroll-locked state every 2s.
-  // After Railway redeploys, open DevTools console and copy a few lines
-  // back to me. They will tell us:
-  //   1. Whether data-scroll-locked is actually present on body
-  //   2. What computed `overflow` value the browser sees on body and html
-  //   3. Whether our `html body[data-scroll-locked] { overflow: auto !important }`
-  //      override is winning the cascade
-  // If overflow is still 'hidden' with our override in place, we'll need
-  // a more aggressive `body { overflow: auto !important }` (no attribute).
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // eslint-disable-next-line no-console
-      console.log('[scroll-diag] data-scroll-locked:', document.body.hasAttribute('data-scroll-locked'),
-        '| body.overflow:', window.getComputedStyle(document.body).overflow,
-        '| html.overflow:', window.getComputedStyle(document.documentElement).overflow,
-        '| body.scrollHeight:', document.body.scrollHeight,
-        '| body.clientHeight:', document.body.clientHeight,
-        '| body.style.overflow inline:', document.body.style.overflow || '(none)',
-        '| body.attrs:', document.body.getAttributeNames().filter(a => a.startsWith('data-')).join(','));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
   const [showSplash, setShowSplash] = useState(() => {
     // Never show the splash screen on public/marketing routes —
     // it covers everything (fixed inset-0 z-99999) and would blank the page.

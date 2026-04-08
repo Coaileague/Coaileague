@@ -141,7 +141,17 @@ class TrinityOrchestrationGateway {
         const backoffMs = Math.min(60000 * Math.pow(2, this.consecutiveFlushFailures - 1), 300000);
         this.flushBackoffUntil = Date.now() + backoffMs;
         if (this.consecutiveFlushFailures <= 2) {
-          log.warn('[TrinityOrchestrationGateway] Flush error:', (err instanceof Error ? err.message : String(err)));
+          // Detailed Postgres error logging — matches the inner catch.
+          log.warn('[TrinityOrchestrationGateway] Flush error (outer catch):', {
+            message: err?.message,
+            code: err?.code,
+            detail: err?.detail,
+            column: err?.column,
+            constraint: err?.constraint,
+            table: err?.table,
+            schema: err?.schema,
+            hint: err?.hint,
+          });
         }
       });
     }, this.BUFFER_FLUSH_INTERVAL);

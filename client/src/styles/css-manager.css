@@ -96,7 +96,19 @@
    of composing raw Tailwind classes on every overlay.
    ============================================================ */
 
-/* Full-screen blocking overlay (splash, login transition) */
+/* Full-screen blocking overlay (splash, login transition)
+ *
+ * SCROLL FIX (2026-04-08): this class is used by `SplashScreen` and
+ * `TransitionLoader`'s `<TransitionOverlay>`. TransitionLoaderProvider
+ * is mounted unconditionally in the App tree, so if its `state.isActive`
+ * ever gets stuck true (a transition that starts but never completes)
+ * the overlay stays mounted forever — full-viewport, fixed, with no
+ * `pointer-events: none`, blocking every wheel and touch event below it.
+ *
+ * Fix: the overlay is now `pointer-events: none` by default, so it is
+ * purely visual and cannot intercept scroll/click even if it leaks.
+ * Children (the centered spinner/brand) opt in to `pointer-events: auto`
+ * via `.overlay-blocking > *`. */
 .overlay-blocking {
   position: fixed;
   inset: 0;
@@ -106,6 +118,11 @@
   justify-content: center;
   background-color: var(--overlay-bg);
   color: hsl(var(--foreground));
+  pointer-events: none;
+}
+
+.overlay-blocking > * {
+  pointer-events: auto;
 }
 
 /* Semi-transparent backdrop behind modals/sheets */
