@@ -8,31 +8,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================================
-   SCROLL FIX v11 — NUCLEAR GLOBAL OVERRIDE (per user directive)
-   ============================================================================
-   After 10 previous scroll fix attempts, the user has instructed the
-   simplest possible rule: force html, body, and #root to always be
-   scrollable with no height constraint, regardless of what any other
-   rule (from this file or any injected runtime style like
-   react-remove-scroll-bar) tries to do.
+/* SCROLL FIX v14 (2026-04-08) — The v11 NUCLEAR OVERRIDE block that used to
+   live here has been DELETED. It forced `overflow-y: auto !important` and
+   `height: auto !important` on html, body, and #root, which destroyed the
+   scroll container model: `.public-page-scroll-root` (the real scroll
+   container) got an unconstrained parent, expanded to fit its content, and
+   had nothing to overflow against, so wheel input did nothing. The v7 block
+   below (which deliberately sets NO overflow/height on html/body/#root) is
+   now the single source of truth for document-level scroll.
 
-   Placed at the TOP of the stylesheet (right after @tailwind) so that
-   anyone reading this file sees it first. Order of appearance is NOT
-   the cascade tie-breaker here — !important + specificity is — but
-   putting it at the top makes the intent unmistakable. */
-html,
-body,
-#root {
-  overflow-y: auto !important;
-  height: auto !important;
-  min-height: 100vh !important;
-}
-
-/* Override `react-remove-scroll-bar`'s runtime <style> injection which
-   contains `body[data-scroll-locked] { overflow: hidden !important }`.
-   Using `html body[data-scroll-locked]` (specificity 0,1,2) beats the
-   lib's `body[data-scroll-locked]` (specificity 0,1,1) on tie. */
+   The override for `react-remove-scroll-bar` is preserved below — it's still
+   needed to defeat the library's runtime <style> injection that sets
+   `body[data-scroll-locked] { overflow: hidden !important }`. */
 html body[data-scroll-locked] {
   overflow: auto !important;
 }
@@ -5350,11 +5337,9 @@ textarea,
    ============================================================================ */
 /* Scroll fix v6: modal-open and Radix scroll-lock previously forced
    body overflow:hidden which also killed vertical scroll on the whole
-   page if the class/attribute leaked. We still want to prevent
-   background scroll when a modal is open, so we use CSS position:fixed
-   on body.modal-open which is the Bootstrap-style scroll-lock pattern,
-   but only as overflow-x. The vertical scroll guarantee from the
-   global `body { overflow-y: auto !important }` rule always wins. */
+   page if the class/attribute leaked. Only hide horizontal overflow here
+   — per v7 the body has no overflow-y rule at all, so the window remains
+   the scroll container and wheel/touch input continues to work. */
 body.modal-open {
   overflow-x: hidden !important;
 }
