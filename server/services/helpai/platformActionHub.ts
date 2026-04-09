@@ -133,9 +133,11 @@ export interface ActionResult {
   actionId: string;
   message: string;
   data?: any;
+  error?: string;
   executionTimeMs: number;
   notificationSent?: boolean;
   broadcastSent?: boolean;
+  requiresHumanConfirmation?: boolean;
 }
 
 export interface ActionHandler {

@@ -445,6 +445,11 @@ export interface PlatformEvent {
   version?: string;
   workspaceId?: string; // null = global/platform-wide, set = workspace-specific
   userId?: string;
+  eventType?: string;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  source?: string;
+  timestamp?: string | Date;
+  data?: Record<string, any>;
   metadata?: Record<string, any> & {
     conversationId?: string;
     roomSlug?: string;
@@ -455,6 +460,7 @@ export interface PlatformEvent {
     audience?: 'room' | 'workspace' | 'user' | 'staff' | 'all';
     severity?: 'low' | 'medium' | 'high' | 'critical';
     chatEventType?: string;
+    payrollRunId?: string;
   };
   payload?: Record<string, any>;
   priority?: number;
@@ -464,6 +470,7 @@ export interface PlatformEvent {
 }
 
 export interface EventSubscriber {
+  id?: string;
   name: string;
   handler: (event: PlatformEvent) => Promise<void>;
 }

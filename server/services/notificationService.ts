@@ -30,6 +30,9 @@ interface CreateNotificationParams {
   relatedEntityId?: string;
   metadata?: Record<string, any>;
   createdBy?: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  data?: Record<string, any>;
+  category?: string;
 }
 
 // All notification_type enum values that exist in the DB.
