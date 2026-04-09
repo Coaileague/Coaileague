@@ -267,7 +267,7 @@ class WorkboardService {
       await this.updateTaskStatus(taskId, 'in_progress', 'system');
       const startTime = Date.now();
 
-      const result = await subagentSupervisor.executeParallel({
+      const result = await subagentSupervisor.executeFastModeParallel({
         agentId: analysisResult.agentId,
         taskId,
         content: task.requestContent,

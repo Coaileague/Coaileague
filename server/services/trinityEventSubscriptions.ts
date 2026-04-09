@@ -680,7 +680,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
             actionUrl: `/payroll`,
             metadata: { payrollRunId, affectedCount: affectedEmployeeIds?.length || 0 },
-          }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
+          }).catch((err: any) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
         }
 
         // Also broadcast real-time alert to workspace
@@ -737,7 +737,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'normal',
             actionUrl: `/clients`,
             metadata: { clientId, missingFields },
-          }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
+          }).catch((err: any) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] client.created handler error:', (err instanceof Error ? err.message : String(err)));

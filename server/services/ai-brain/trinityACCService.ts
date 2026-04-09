@@ -736,7 +736,7 @@ class TrinityACCService {
         ORDER BY detected_at DESC
       `, [workspaceId, today.toISOString()]);
 
-      const allRows = (result as any[]) || [];
+      const allRows = (result as unknown as any[]) || [];
 
       const byCategory: Record<number, number> = {};
       const bySeverity: Record<string, number> = {};

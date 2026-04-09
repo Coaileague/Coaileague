@@ -765,7 +765,7 @@ class TrinityThalamusService {
         LIMIT 500
       `, [workspaceId, sevenDaysAgo.toISOString()]);
 
-      const allRows = (result as any[]) || [];
+      const allRows = (result as unknown as any[]) || [];
       const todayRows = allRows.filter(r => new Date(r.arrived_at) >= today);
 
       const bySignalType: Record<string, number> = {};

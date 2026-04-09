@@ -260,7 +260,7 @@ class AutomationGovernanceService {
       await db.update(workspaces)
         .set({ automationPolicyBlob: merged })
         .where(eq(workspaces.id, request.workspaceId));
-      const updated = { id: `${request.workspaceId}-policy`, workspaceId: request.workspaceId, ...merged } as WorkspaceAutomationPolicy;
+      const updated = { id: `${request.workspaceId}-policy`, workspaceId: request.workspaceId, ...merged } as unknown as WorkspaceAutomationPolicy;
       this.policyCache.set(request.workspaceId, updated);
       return updated;
     } catch (error) {

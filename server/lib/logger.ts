@@ -24,20 +24,28 @@ function safeStringify(obj: unknown): string {
   }
 }
 
-function formatLog(level: LogLevel, context: string, message: string, meta?: unknown) {
+function formatLog(level: LogLevel, context: string, message: string, ...args: unknown[]) {
   const timestamp = new Date().toISOString();
   const base: Record<string, unknown> = { timestamp, level: level.toUpperCase(), context, message };
-  if (meta !== undefined && meta !== null) {
-    if (meta instanceof Error) {
-      base.error = { message: meta.message, stack: meta.stack, name: meta.name };
-    } else if (typeof meta === 'object' && !Array.isArray(meta)) {
-      try {
-        const keys = Object.keys(meta as object);
-        if (keys.length > 0) Object.assign(base, meta);
-      } catch { base.meta = safeStringify(meta); }
-    } else {
-      base.meta = String(meta);
+  // Support both single-meta and variadic styles:
+  // log.info('msg', { key: val })  -- single object meta
+  // log.info('msg', val1, val2)    -- variadic console.log style
+  if (args.length === 1) {
+    const meta = args[0];
+    if (meta !== undefined && meta !== null) {
+      if (meta instanceof Error) {
+        base.error = { message: meta.message, stack: meta.stack, name: meta.name };
+      } else if (typeof meta === 'object' && !Array.isArray(meta)) {
+        try {
+          const keys = Object.keys(meta as object);
+          if (keys.length > 0) Object.assign(base, meta);
+        } catch { base.meta = safeStringify(meta); }
+      } else {
+        base.meta = String(meta);
+      }
     }
+  } else if (args.length > 1) {
+    base.meta = args.map(a => (typeof a === 'string' ? a : safeStringify(a))).join(' ');
   }
   if (isProduction) {
     return safeStringify(base);
@@ -55,30 +63,30 @@ function shouldLog(level: LogLevel): boolean {
 }
 
 export interface Logger {
-  verbose: (message: string, meta?: unknown) => void;
-  debug: (message: string, meta?: unknown) => void;
-  info: (message: string, meta?: unknown) => void;
-  warn: (message: string, meta?: unknown) => void;
-  error: (message: string, meta?: unknown) => void;
+  verbose: (message: string, ...args: unknown[]) => void;
+  debug: (message: string, ...args: unknown[]) => void;
+  info: (message: string, ...args: unknown[]) => void;
+  warn: (message: string, ...args: unknown[]) => void;
+  error: (message: string, ...args: unknown[]) => void;
   child: (childContext: string) => Logger;
 }
 
 export function createLogger(context: string): Logger {
   return {
-    verbose: (message: string, meta?: unknown) => {
-      if (shouldLog('verbose')) console.log(formatLog('verbose', context, message, meta));
+    verbose: (message: string, ...args: unknown[]) => {
+      if (shouldLog('verbose')) console.log(formatLog('verbose', context, message, ...args));
     },
-    debug: (message: string, meta?: unknown) => {
-      if (shouldLog('debug')) console.log(formatLog('debug', context, message, meta));
+    debug: (message: string, ...args: unknown[]) => {
+      if (shouldLog('debug')) console.log(formatLog('debug', context, message, ...args));
     },
-    info: (message: string, meta?: unknown) => {
-      if (shouldLog('info')) console.log(formatLog('info', context, message, meta));
+    info: (message: string, ...args: unknown[]) => {
+      if (shouldLog('info')) console.log(formatLog('info', context, message, ...args));
     },
-    warn: (message: string, meta?: unknown) => {
-      if (shouldLog('warn')) console.warn(formatLog('warn', context, message, meta));
+    warn: (message: string, ...args: unknown[]) => {
+      if (shouldLog('warn')) console.warn(formatLog('warn', context, message, ...args));
     },
-    error: (message: string, meta?: unknown) => {
-      if (shouldLog('error')) console.error(formatLog('error', context, message, meta));
+    error: (message: string, ...args: unknown[]) => {
+      if (shouldLog('error')) console.error(formatLog('error', context, message, ...args));
     },
     child: (childContext: string) => createLogger(`${context}:${childContext}`),
   };

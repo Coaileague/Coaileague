@@ -170,7 +170,7 @@ function canApproveTimeEntries(workspaceRole: string): boolean {
  */
 timeEntryRouter.get('/status', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -295,7 +295,7 @@ timeEntryRouter.get('/status', requireAuth, readLimiter, async (req: Authenticat
  */
 timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -924,7 +924,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
  */
 timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1211,7 +1211,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
  */
 timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('manager'), async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
     const { approved, reason } = req.body;
     if (typeof approved !== 'boolean') return res.status(400).json({ error: 'approved (boolean) required' });
@@ -1250,7 +1250,7 @@ timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('m
  */
 timeEntryRouter.post('/break/start', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1352,7 +1352,7 @@ timeEntryRouter.post('/break/start', requireAuth, mutationLimiter, async (req: A
  */
 timeEntryRouter.post('/break/end', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1444,7 +1444,7 @@ timeEntryRouter.post('/break/end', requireAuth, mutationLimiter, async (req: Aut
  */
 timeEntryRouter.get('/entries', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1520,7 +1520,7 @@ timeEntryRouter.get('/entries', requireAuth, readLimiter, async (req: Authentica
  */
 timeEntryRouter.get('/entries/:id', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1588,7 +1588,7 @@ timeEntryRouter.get('/entries/:id', requireAuth, readLimiter, async (req: Authen
  */
 timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager', 'co_owner', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1762,7 +1762,7 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
  */
 timeEntryRouter.post('/entries/:id/approve', requireWorkspaceRole(['department_manager', 'co_owner', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1857,7 +1857,7 @@ timeEntryRouter.post('/entries/:id/approve', requireWorkspaceRole(['department_m
  */
 timeEntryRouter.post('/entries/:id/reject', requireWorkspaceRole(['department_manager', 'co_owner', 'org_owner']), mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1973,7 +1973,7 @@ timeEntryRouter.post('/entries/:id/reject', requireWorkspaceRole(['department_ma
  */
 timeEntryRouter.get('/active', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -2013,7 +2013,7 @@ timeEntryRouter.get('/active', requireAuth, readLimiter, async (req: Authenticat
  */
 timeEntryRouter.get('/reports/summary', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -2117,7 +2117,7 @@ timeEntryRouter.get('/reports/summary', requireAuth, readLimiter, async (req: Au
  */
 timeEntryRouter.get('/reports/export', requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -2210,7 +2210,7 @@ timeEntryRouter.get('/reports/export', requireAuth, readLimiter, async (req: Aut
  */
 timeEntryRouter.get('/reports/compliance', requireWorkspaceRole(['department_manager', 'co_owner', 'org_owner']), readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -2286,7 +2286,7 @@ timeEntryRouter.get('/reports/compliance', requireWorkspaceRole(['department_man
  */
 timeEntryRouter.get('/workspace/all', requireWorkspaceRole(['org_owner', 'co_owner', 'support_manager']), async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -2370,7 +2370,7 @@ timeEntryRouter.get('/workspace/all', requireWorkspaceRole(['org_owner', 'co_own
  */
 timeEntryRouter.post('/acknowledge-post-orders', requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -2431,7 +2431,7 @@ timeEntryRouter.post('/acknowledge-post-orders', requireAuth, mutationLimiter, a
  */
 timeEntryRouter.get('/workspace/stats', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: AuthenticatedRequest, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });

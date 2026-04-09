@@ -87,7 +87,7 @@ class LoneWorkerService {
     });
 
     const rows = await db.select().from(loneWorkerSessions).where(eq(loneWorkerSessions.id, id));
-    const session = rows[0] as LoneWorkerSession;
+    const session = rows[0] as unknown as LoneWorkerSession;
 
     await platformEventBus.publish({
       type: 'lone_worker_session_started',
@@ -142,7 +142,7 @@ class LoneWorkerService {
       : await db.select().from(loneWorkerSessions).where(and(eq(loneWorkerSessions.workspaceId, data.workspaceId), eq(loneWorkerSessions.employeeId, data.employeeId!), eq(loneWorkerSessions.status, 'active'))).limit(1);
 
     if (!fetchResult.length) return null;
-    const session = fetchResult[0] as LoneWorkerSession;
+    const session = fetchResult[0] as unknown as LoneWorkerSession;
 
     await platformEventBus.publish({
       type: 'lone_worker_checked_in',
@@ -224,7 +224,7 @@ class LoneWorkerService {
       ))
       .orderBy(desc(loneWorkerSessions.createdAt));
 
-    return result as LoneWorkerSession[];
+    return result as unknown as LoneWorkerSession[];
   }
 
   private registerTrinityActions() {

@@ -202,7 +202,7 @@ export class TrinityStaffingSkill extends BaseSkill {
     const parsedRequest = await this.parseWorkRequest(context, payload);
     
     if (!parsedRequest.success) {
-      return parsedRequest as SkillResult<null>;
+      return parsedRequest as unknown as SkillResult<null>;
     }
 
     return {

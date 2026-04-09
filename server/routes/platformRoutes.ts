@@ -210,8 +210,8 @@ function normalizeEmail(email: string | null | undefined): string | null {
       res.json(results);
     } catch (error: unknown) {
       log.error("Error fetching organizations:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ error: "Invalid query parameters", details: (error as any).errors });
       }
       res.status(500).json({ error: "Failed to fetch organizations" });
     }
@@ -275,7 +275,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
 
       // Validate request body
       const validated = masterKeysUpdateSchema.parse(req.body);
-      const rootUserId = req.user.id;
+      const rootUserId = req.user!.id;
 
       // Fetch workspace BEFORE updating for Stripe sync
       const [existingWorkspace] = await db
@@ -439,7 +439,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
             return res.status(500).json({ 
               error: 'Failed to update Stripe subscription',
               message: 'Unable to sync billing override with Stripe. Please retry or contact support.',
-              details: stripeError.message,
+              details: stripeError instanceof Error ? stripeError.message : String(stripeError),
             });
           }
         }
@@ -452,8 +452,8 @@ function normalizeEmail(email: string | null | undefined): string | null {
       });
     } catch (error: unknown) {
       log.error("Error updating organization:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ error: "Invalid request data", details: (error as any).errors });
       }
       res.status(500).json({ error: "Failed to update organization" });
     }
@@ -470,7 +470,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
 
       // Validate request body
       const validated = masterKeysResetSchema.parse(req.body);
-      const rootUserId = req.user.id;
+      const rootUserId = req.user!.id;
       const { reason } = validated;
 
       const [updated] = await db
@@ -535,8 +535,8 @@ function normalizeEmail(email: string | null | undefined): string | null {
       });
     } catch (error: unknown) {
       log.error("Error resetting organization:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ error: "Invalid request data", details: (error as any).errors });
       }
       res.status(500).json({ error: "Failed to reset organization" });
     }
@@ -902,7 +902,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         .update(platformRoles)
         .set({
           revokedAt: new Date(),
-          revokedBy: req.user.id,
+          revokedBy: req.user!.id,
           revokedReason: reason || `Replaced with ${role} role`,
         })
         .where(and(
@@ -913,7 +913,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
       // If role is 'none', just revoke without granting new
       if (role === 'none') {
         await storage.createAuditLog({
-          userId: req.user.id,
+          userId: req.user!.id,
           workspaceId: null,
           action: 'platform_role_removed',
           entityType: 'platform_role',
@@ -921,7 +921,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
           details: {
             targetUserId: userId,
             targetEmail: user.email,
-            removedBy: req.user.email,
+            removedBy: req.user!.email,
             reason: reason || 'Role removed by platform admin',
           },
           ipAddress: req.ip || req.socket.remoteAddress,
@@ -944,13 +944,13 @@ function normalizeEmail(email: string | null | undefined): string | null {
           workspaceId: PLATFORM_WORKSPACE_ID,
           userId,
           role,
-          grantedBy: req.user.id,
+          grantedBy: req.user!.id,
           grantedReason: reason || `Granted ${role} role`,
         })
         .returning();
 
       await storage.createAuditLog({
-        userId: req.user.id,
+        userId: req.user!.id,
         workspaceId: null,
         action: 'platform_role_assigned',
         entityType: 'platform_role',
@@ -959,7 +959,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
           targetUserId: userId,
           targetEmail: user.email,
           role,
-          assignedBy: req.user.email,
+          assignedBy: req.user!.email,
           reason: reason || `Granted ${role} role`,
         },
         ipAddress: req.ip || req.socket.remoteAddress,
@@ -996,7 +996,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         .update(platformRoles)
         .set({
           revokedAt: new Date(),
-          revokedBy: req.user.id,
+          revokedBy: req.user!.id,
           revokedReason: reason || 'Role revoked by admin',
         })
         .where(and(
@@ -1005,7 +1005,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         ));
 
       await storage.createAuditLog({
-        userId: req.user.id,
+        userId: req.user!.id,
         workspaceId: null,
         action: 'platform_role_revoked',
         entityType: 'platform_role',
@@ -1013,7 +1013,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         details: {
           targetUserId: userId,
           revokedRole: targetPlatformRole,
-          revokedBy: req.user.email,
+          revokedBy: req.user!.email,
           reason: reason || 'Role revoked by admin',
         },
         ipAddress: req.ip || req.socket.remoteAddress,
@@ -1076,7 +1076,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         await db.insert(platformRoles).values({
           userId: newUser.id,
           role: platformRole,
-          grantedBy: req.user.id,
+          grantedBy: req.user!.id,
           grantedReason: `Created with ${platformRole} role`,
         });
       }
@@ -1203,8 +1203,8 @@ function normalizeEmail(email: string | null | undefined): string | null {
           workspaceId: PLATFORM_WORKSPACE_ID,
           userId: user.id,
           role,
-          grantedBy: req.user.id,
-          grantedReason: `Granted by ${req.user.email}`,
+          grantedBy: req.user!.id,
+          grantedReason: `Granted by ${req.user!.email}`,
         })
         .returning();
 
@@ -1231,7 +1231,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         .update(platformRoles)
         .set({
           revokedAt: new Date(),
-          revokedBy: req.user.id,
+          revokedBy: req.user!.id,
           revokedReason: 'Role revoked by admin',
         })
         .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
@@ -1265,7 +1265,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         .set({
           isSuspended: true,
           suspendedAt: new Date(),
-          suspendedBy: req.user.id,
+          suspendedBy: req.user!.id,
           suspendedReason: reason,
         })
         .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
@@ -1332,7 +1332,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
         .update(platformRoles)
         .set({
           revokedAt: new Date(),
-          revokedBy: req.user.id,
+          revokedBy: req.user!.id,
           revokedReason: `Role changed to ${newRole}`,
         })
         .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
@@ -1343,7 +1343,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
           workspaceId: PLATFORM_WORKSPACE_ID,
           userId,
           role: newRole,
-          grantedBy: req.user.id,
+          grantedBy: req.user!.id,
           grantedReason: 'Role changed from previous role',
         })
         .returning();
@@ -1425,7 +1425,7 @@ Keep answers under 200 words unless detail is critical. Today is ${new Date().to
 
     await db.insert(helpaiActionLog).values({
       workspaceId: PLATFORM_WORKSPACE_ID,
-      userId: req.user.id,
+      userId: req.user!.id,
       actionType: 'query',
       actionName: `Bot query: ${bot.name}`,
       toolUsed: bot.agentId,
@@ -1464,7 +1464,7 @@ router.post('/team/bots/:agentId/action', requirePlatformStaff, async (req: Auth
     if (action === 'suspend') {
       updates.status = 'suspended';
       updates.suspendedAt = new Date();
-      updates.suspendedBy = req.user.id;
+      updates.suspendedBy = req.user!.id;
       updates.suspensionReason = reason || 'Manually suspended by support team';
     } else if (action === 'activate' || action === 'restart') {
       updates.status = 'active';
@@ -1497,7 +1497,7 @@ router.post('/team/agents/:userId/action', requirePlatformStaff, async (req: Aut
       return res.status(400).json({ error: `Invalid action: ${action}` });
     }
 
-    if (userId === req.user.id) {
+    if (userId === req.user!.id) {
       return res.status(400).json({ error: 'Cannot perform actions on your own account' });
     }
 
@@ -1523,7 +1523,7 @@ router.post('/team/agents/:userId/action', requirePlatformStaff, async (req: Aut
         if (action === 'remove' && targetRole) {
           await tx.update(platformRoles).set({
             revokedAt: new Date(),
-            revokedBy: req.user.id,
+            revokedBy: req.user!.id,
             revokedReason: reason || 'Removed from support team',
           }).where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
         }
@@ -1537,14 +1537,14 @@ router.post('/team/agents/:userId/action', requirePlatformStaff, async (req: Aut
       await db.transaction(async (tx) => {
         await tx.update(platformRoles).set({
           revokedAt: new Date(),
-          revokedBy: req.user.id,
+          revokedBy: req.user!.id,
           revokedReason: reason || 'Demoted',
         }).where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
         await tx.insert(platformRoles).values({
           workspaceId: PLATFORM_WORKSPACE_ID,
           userId,
           role: demotedRole,
-          grantedBy: req.user.id,
+          grantedBy: req.user!.id,
           grantedReason: reason || `Demoted from ${targetRole.role}`,
         });
       });
@@ -1560,7 +1560,7 @@ router.post('/team/agents/:userId/action', requirePlatformStaff, async (req: Aut
         if (targetRole) {
           await tx.update(platformRoles).set({
             revokedAt: new Date(),
-            revokedBy: req.user.id,
+            revokedBy: req.user!.id,
             revokedReason: `Role changed to ${newRole}`,
           }).where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
         }
@@ -1568,7 +1568,7 @@ router.post('/team/agents/:userId/action', requirePlatformStaff, async (req: Aut
           workspaceId: PLATFORM_WORKSPACE_ID,
           userId,
           role: newRole,
-          grantedBy: req.user.id,
+          grantedBy: req.user!.id,
           grantedReason: `Role changed`,
         });
       });
@@ -1607,7 +1607,7 @@ router.post('/team/bots', requirePlatformStaff, async (req: AuthenticatedRequest
       isGlobal: true,
       status: 'active',
       role: data.role,
-      createdBy: req.user.id,
+      createdBy: req.user!.id,
     }).returning();
 
     res.json({ success: true, bot: newBot });
@@ -1646,7 +1646,7 @@ router.post('/team/agents', requirePlatformStaff, async (req: AuthenticatedReque
       workspaceId: PLATFORM_WORKSPACE_ID,
       userId: targetUser.id,
       role,
-      grantedBy: req.user.id,
+      grantedBy: req.user!.id,
       grantedReason: 'Added to support team',
     }).returning();
 

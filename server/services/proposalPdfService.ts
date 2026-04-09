@@ -130,7 +130,7 @@ function renderFooter(doc: PDFKit.PDFDocument, proposalId: string) {
 export async function generateProposalPdf(proposalId: string, workspaceId: string): Promise<Buffer> {
   const rows = await q(`SELECT * FROM proposals WHERE id=$1 AND workspace_id=$2`, [proposalId, workspaceId]);
   if (!rows.length) throw new Error('Proposal not found');
-  const proposal = rows[0] as ProposalData;
+  const proposal = rows[0] as unknown as ProposalData;
 
   const wsRows = await q(`SELECT name FROM workspaces WHERE id=$1`, [workspaceId]);
   const orgName = (wsRows[0] as any)?.name || proposal.company_name || 'Security Organization';

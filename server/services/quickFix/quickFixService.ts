@@ -600,7 +600,7 @@ class QuickFixService {
     try {
       const { pool } = await import('../../db');
       const result = await typedPool('SELECT 1 AS alive');
-      const isAlive = (result as any[])?.[0]?.alive === 1;
+      const isAlive = (result as unknown as any[])?.[0]?.alive === 1;
       return { connectionAlive: isAlive, connectionsRefreshed: false, note: 'Connection pool is managed by the database driver', timestamp: new Date().toISOString() };
     } catch (error) {
       log.error('[QuickFix] Connection verification failed:', error);
