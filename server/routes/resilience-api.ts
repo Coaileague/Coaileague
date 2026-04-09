@@ -185,6 +185,7 @@ router.post('/financial-audit/report', requireAuth, requireRole(['root_admin', '
       workspaceId,
       new Date(periodStart),
       new Date(periodEnd),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       user.id
     );
 

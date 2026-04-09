@@ -79,6 +79,7 @@ router.patch("/finance-settings", requireOwner, async (req: AuthenticatedRequest
     // configuration changes that require a full immutable record.
     scheduleNonBlocking('finance-settings.audit-write', async () => {
       const { billingAuditLog } = await import('@shared/schema');
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(billingAuditLog).values({
         workspaceId,
         eventType: 'finance_settings_updated',

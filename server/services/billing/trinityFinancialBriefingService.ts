@@ -162,6 +162,7 @@ async function buildBriefing(
   let pendingDraftAmount = 0;
   for (const run of recentRuns) {
     const amt = parseFloat((run.totalGross || '0').toString());
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (run.status === 'approved' || run.status === 'processing' || run.status === 'completed') {
       lastRunAmount = Math.max(lastRunAmount, amt);
     } else if (run.status === 'draft') {

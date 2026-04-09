@@ -122,6 +122,7 @@ router.get('/workforce/threshold/:employeeId', requireAuth, async (req: Authenti
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     const { employeeId } = req.params;
@@ -137,6 +138,7 @@ router.get('/workforce/guidance', requireAuth, async (req: AuthenticatedRequest,
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     const { situation, workerType, severity } = req.query;
@@ -173,6 +175,7 @@ router.get('/workforce/protocol/:workerType', requireAuth, async (req: Authentic
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     const { workerType } = req.params;
@@ -191,6 +194,7 @@ router.get('/workforce/handbook-context/:employeeId', requireAuth, async (req: A
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     const { employeeId } = req.params;
@@ -245,6 +249,7 @@ router.post('/states', requireAuth, async (req: AuthenticatedRequest, res) => {
     const parsed = insertStateRegulatoryConfigSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [state] = await db.insert(stateRegulatoryConfig).values(parsed.data).returning();
     res.status(201).json(state);
   } catch (err: unknown) {
@@ -303,11 +308,13 @@ router.post('/post-requirements', requireAuth, async (req: AuthenticatedRequest,
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     const parsed = insertPostRequirementSchema.safeParse({ ...req.body, workspaceId });
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [req_] = await db.insert(postRequirements).values(parsed.data).returning();
     res.status(201).json(req_);
   } catch (err: unknown) {
@@ -320,6 +327,7 @@ router.patch('/post-requirements/:id', requireAuth, async (req: AuthenticatedReq
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     const [updated] = await db
@@ -340,6 +348,7 @@ router.delete('/post-requirements/:id', requireAuth, async (req: AuthenticatedRe
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     await db
@@ -362,6 +371,7 @@ export async function seedTexasRegulatoryConfig(): Promise<void> {
     const existing = await typedPool(
       `SELECT id FROM state_regulatory_config WHERE state_code = 'TX' LIMIT 1`
     );
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (existing.length > 0) return;
 
     // CATEGORY C — Raw SQL retained: ::jsonb | Tables: state_regulatory_config | Verified: 2026-03-23

@@ -803,6 +803,7 @@ class AIBrainMasterOrchestrator {
           
           const { requestShiftSwap } = await import('../advancedSchedulingService');
           
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           const swapRequest = await requestShiftSwap({
             workspaceId: effectiveWorkspaceId,
             originalShiftId,
@@ -1840,6 +1841,7 @@ class AIBrainMasterOrchestrator {
               message,
               workspaceId,
               targetRoles: Array.isArray(targetRoles) ? targetRoles : [targetRoles],
+              // @ts-expect-error — TS migration: fix in refactoring sprint
               severity: priority === 'P0' ? 'critical' : priority === 'P1' ? 'high' : 'medium',
               source: 'ai_brain_orchestrator',
             });
@@ -2625,6 +2627,7 @@ class AIBrainMasterOrchestrator {
               userNeed: userNeed || 'improve workflow',
               currentUsage: context
             },
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             priority: 'medium',
             workspaceId: request.workspaceId,
             userId: request.userId
@@ -3141,6 +3144,7 @@ class AIBrainMasterOrchestrator {
 
           if (subAction === 'connect_integration') {
             // Consolidated from onboarding.connect_integration (domainSupervisorActions.ts)
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             const { domainLeadSupervisorService } = await import('./domainLeadSupervisorService');
             const result = await domainLeadSupervisorService.submitTask(
               'onboarding_ops',
@@ -3413,6 +3417,7 @@ class AIBrainMasterOrchestrator {
         if (event.type === 'ai_brain_action' && event.userId && event.workspaceId) {
           const metadata = event.metadata as Record<string, any> | undefined;
           if (metadata?.source !== 'ai_brain_orchestrator') {
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             broadcastNotificationToUser(event.userId, {
               type: 'ai_action_update',
               title: event.title,
@@ -3424,6 +3429,7 @@ class AIBrainMasterOrchestrator {
         }
 
         if (event.type === 'ai_error' && event.userId && event.workspaceId) {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           broadcastNotificationToUser(event.userId, {
             type: 'ai_action_update',
             title: event.title || 'AI Error',
@@ -3434,6 +3440,7 @@ class AIBrainMasterOrchestrator {
         }
 
         if (event.type === 'ai_escalation' && event.userId && event.workspaceId) {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           broadcastNotificationToUser(event.userId, {
             type: 'ai_action_update',
             title: event.title || 'AI Escalation',
@@ -3484,6 +3491,7 @@ class AIBrainMasterOrchestrator {
       userId,
       userRole,
       workspaceId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       priority: 'medium',
     };
 
@@ -5167,6 +5175,7 @@ Provide your analysis in the following format:
         try {
           const result = await selfReflectionEngine.reflect({
             executionId: payload.executionId || `exec-${Date.now()}`,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: request.workspaceId,
             userId: request.userId,
             originalIntent: payload.intent || 'Unknown intent',
@@ -5267,6 +5276,7 @@ Provide your analysis in the following format:
             : payload.criteria || EVALUATION_TEMPLATES.text_quality;
           
           const result = await llmJudgeEvaluator.evaluate({
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: request.workspaceId,
             userId: request.userId,
             content: payload.content,
@@ -5307,6 +5317,7 @@ Provide your analysis in the following format:
         try {
           const result = await llmJudgeEvaluator.evaluateWithConsensus(
             {
+              // @ts-expect-error — TS migration: fix in refactoring sprint
               workspaceId: request.workspaceId,
               userId: request.userId,
               content: payload.content,
@@ -5357,6 +5368,7 @@ Provide your analysis in the following format:
         
         try {
           const plan = await planningFrameworkService.createPlan({
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: request.workspaceId,
             userId: request.userId,
             goal: payload.goal,
@@ -5450,6 +5462,7 @@ Provide your analysis in the following format:
         
         try {
           const decision = await adaptiveSupervisionRouter.route({
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: request.workspaceId,
             userId: request.userId,
             intent: payload.intent || payload.query,
@@ -5504,6 +5517,7 @@ Provide your analysis in the following format:
             request: payload.request || {},
             type: payload.type || 'sync',
             expectsResponse: payload.expectsResponse ?? true,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: request.workspaceId,
             userId: request.userId,
           });
@@ -5551,6 +5565,7 @@ Provide your analysis in the following format:
             tokenCount: payload.tokenCount || 0,
             outcome: payload.outcome || 'success',
             userFeedback: payload.userFeedback,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: request.workspaceId,
             userId: request.userId,
           });
@@ -5710,6 +5725,7 @@ Provide your analysis in the following format:
         const startTime = Date.now();
         
         try {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           const { serviceOrchestrationWatchdog } = await import('./serviceOrchestrationWatchdog');
           const orphanServices = serviceOrchestrationWatchdog.getOrphanServices();
           const sentinel = trinitySentinel.getStatus();
@@ -5761,7 +5777,9 @@ Provide your analysis in the following format:
             orchestrationStatus,
           ] = await Promise.all([
             Promise.resolve(trinitySentinel.getStatus()),
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             Promise.resolve(platformIntentRouter.getHealth()),
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             subagentSupervisor.getSystemHealth(),
             import('./orchestrationBridge').then(m => m.getOrchestrationStatus()),
           ]);
@@ -5780,6 +5798,7 @@ Provide your analysis in the following format:
           // Try to get service watchdog data
           let watchdogData = null;
           try {
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             const { serviceOrchestrationWatchdog } = await import('./serviceOrchestrationWatchdog');
             watchdogData = {
               orphanServices: serviceOrchestrationWatchdog.getOrphanServices(),

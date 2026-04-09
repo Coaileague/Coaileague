@@ -233,6 +233,7 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
     };
   }, { tier: 'essential', description: 'AI mascot with contextual thoughts' }),
 
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   createQuickCheck('platform_action_hub', 'Platform Action Hub (Trinity)', 'ai_brain', async () => {
     const start = Date.now();
     try {

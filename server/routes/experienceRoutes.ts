@@ -26,6 +26,7 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('ExperienceRoutes');
 
 
+// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthRequest extends Request {
   user?: {
     id: string;

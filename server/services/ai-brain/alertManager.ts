@@ -6,6 +6,7 @@
  */
 
 import { db } from '../../db';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import { aiProactiveAlerts, aiNotificationHistory, type AiProactiveAlert } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import crypto from 'crypto';

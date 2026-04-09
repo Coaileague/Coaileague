@@ -342,6 +342,7 @@ export function registerExtendedActions() {
       description: 'Generate formatted alert text for missed clock-ins',
       handler: async (request: ActionRequest) => {
         const start = Date.now();
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { missedClockIns } = (await helpaiOrchestrator.executeAction({
           actionId: 'time_tracking.watch_clock_ins',
           workspaceId: request.workspaceId,

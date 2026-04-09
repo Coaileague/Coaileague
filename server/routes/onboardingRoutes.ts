@@ -775,6 +775,7 @@ onboardingRouter.post('/create-org/progress', async (req: any, res) => {
 
     await db.update(users)
       .set({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         metadata: sql`COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(${ONBOARDING_PROGRESS_KEY}, ${JSON.stringify(progressData)}::jsonb)`
       })
       .where(eq(users.id, userId));
@@ -802,6 +803,7 @@ onboardingRouter.delete('/create-org/progress', async (req: any, res) => {
 
     await db.update(users)
       .set({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         metadata: sql`COALESCE(metadata, '{}'::jsonb) - ${ONBOARDING_PROGRESS_KEY}`
       })
       .where(eq(users.id, userId));

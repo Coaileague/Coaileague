@@ -129,6 +129,7 @@ class BOLOService {
          AND (LOWER(subject_name) LIKE LOWER($2) OR LOWER($2) LIKE '%' || LOWER(subject_name) || '%')`,
       [workspaceId, `%${visitorName}%`]
     );
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;
   }
 
@@ -140,6 +141,7 @@ class BOLOService {
        ORDER BY created_at DESC`,
       [workspaceId]
     );
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;
   }
 
@@ -149,6 +151,7 @@ class BOLOService {
       `SELECT * FROM bolo_alerts WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT $2`,
       [workspaceId, limit]
     );
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;
   }
 

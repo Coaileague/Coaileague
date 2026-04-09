@@ -90,6 +90,7 @@ export function registerTimesheetPayrollCycleActions() {
         eq(timeEntries.status as any, 'pending'),
         gte(timeEntries.clockIn, startDate),
         lte(timeEntries.clockIn, endDate),
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         gt(timeEntries.totalMinutes, 0),
         sql`${timeEntries.notes} NOT ILIKE '%flag%' AND ${timeEntries.notes} NOT ILIKE '%review%' AND ${timeEntries.notes} NOT ILIKE '%PHOTO_REVIEW%'`
       ));

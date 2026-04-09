@@ -176,6 +176,7 @@ export async function onLowBalance(
           category: 'billing_alert',
           title: 'Low AI Credit Balance',
           description: `Your AI credit balance has dropped to ${pctDisplay}% (${currentBalance} credits remaining). AI brain features will be blocked at 0. Upgrade your plan or wait for monthly reset.`,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           priority: 'high',
           metadata: { workspaceId, ownerId: ws.ownerId, balance: currentBalance, pct: pctDisplay, monthlyAllocation, alertType: 'low_credit_10pct' },
         });

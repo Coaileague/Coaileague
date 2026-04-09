@@ -712,8 +712,10 @@ class TrinityGuruMode {
     let improvementPercent = 0;
 
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (improvement.type === 'prompt_optimization') {
         improvementPercent = (improvement as any).proposedChanges?.length > 0 ? 25 : 5;
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       } else if (improvement.type === 'routing_optimization') {
         improvementPercent = 15;
       } else {

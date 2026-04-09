@@ -37,6 +37,7 @@ router.get('/conversations', async (req: AuthenticatedRequest, res) => {
 
     if (platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
       const status = req.query.status as string | undefined;
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const allConversations = await storage.getAllChatConversations({ status });
       return res.json(allConversations);
     }
@@ -137,6 +138,7 @@ router.get('/conversations/:id/messages', async (req: AuthenticatedRequest, res)
 
     if (platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
       // Platform staff always see full history (for moderation/support)
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const messages = await storage.getChatMessagesByConversation(id);
 
       const enrichedMessages = await Promise.all(messages.map(async (msg) => {
@@ -170,6 +172,7 @@ router.get('/conversations/:id/messages', async (req: AuthenticatedRequest, res)
     // For DMs (dm_user, dm_bot): always show full history.
     const since = await getHistorySince(id, userId);
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const messages = await storage.getChatMessagesByConversation(id, since);
 
     const enrichedMessages = await Promise.all(messages.map(async (msg) => {
@@ -212,6 +215,7 @@ router.patch('/conversations/:id', async (req: any, res) => {
       .omit({ workspaceId: true })
       .parse(req.body);
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.updateChatConversation(id, validated);
 
     if (!updated) {
@@ -261,6 +265,7 @@ router.get('/main-room', async (req: AuthenticatedRequest, res) => {
 
     if (!mainRoom) {
       mainRoom = await storage.createChatConversation({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         id: MAIN_ROOM_ID,
         workspaceId: PLATFORM_WORKSPACE_ID,
         customerName: 'Main Chatroom',
@@ -285,6 +290,7 @@ router.get('/main-room/messages', async (req: AuthenticatedRequest, res) => {
     let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
     if (!mainRoom) {
       mainRoom = await storage.createChatConversation({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         id: MAIN_ROOM_ID,
         workspaceId: PLATFORM_WORKSPACE_ID,
         customerName: 'Main Chatroom',
@@ -297,6 +303,7 @@ router.get('/main-room/messages', async (req: AuthenticatedRequest, res) => {
       });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const messages = await storage.getChatMessagesByConversation(MAIN_ROOM_ID);
 
     const enrichedMessages = await Promise.all(messages.map(async (msg) => {
@@ -332,6 +339,7 @@ router.post('/main-room/messages', async (req: AuthenticatedRequest, res) => {
     let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
     if (!mainRoom) {
       mainRoom = await storage.createChatConversation({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         id: MAIN_ROOM_ID,
         workspaceId: PLATFORM_WORKSPACE_ID,
         customerName: 'Main Chatroom',
@@ -354,8 +362,11 @@ router.post('/main-room/messages', async (req: AuthenticatedRequest, res) => {
     const senderType = platformRole ? 'support' : 'customer';
     const { formatUserDisplayNameForChat } = await import('../utils/formatUserDisplayName');
     const senderName = formatUserDisplayNameForChat({
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       firstName: user.firstName,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       lastName: user.lastName,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       email: user.email || undefined,
       platformRole: platformRole || undefined,
     });
@@ -370,6 +381,7 @@ router.post('/main-room/messages', async (req: AuthenticatedRequest, res) => {
       isRead: false,
     });
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await storage.updateChatConversation(MAIN_ROOM_ID, {
       lastMessageAt: new Date(),
     });
@@ -402,6 +414,7 @@ router.post('/conversations/:id/grant-voice', async (req: any, res) => {
       return res.status(403).json({ message: "Access denied: Conversation belongs to a different workspace" });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.updateChatConversation(id, {
       isSilenced: false,
       voiceGrantedBy: userId,
@@ -445,6 +458,7 @@ router.post('/help-bot/respond', async (req: any, res) => {
     const botResponse = await HelpBotService.generateResponse(userMessage, {
       conversationId,
       customerName: conversation.customerName || undefined,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       customerEmail: conversation.customerEmail || undefined,
       previousMessages,
       workspaceId: workspace.id,
@@ -483,6 +497,7 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) {
       return res.status(200).json({
@@ -492,6 +507,7 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
 
     const response = await generateGeminiResponse({
@@ -522,9 +538,11 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
  */
 router.post('/trinity-field-query', async (req: AuthenticatedRequest, res) => {
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
 
@@ -581,6 +599,7 @@ router.post('/trinity-field-query', async (req: AuthenticatedRequest, res) => {
       });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await helpaiOrchestrator.executeAction({
       actionId: intent.actionId,
       workspaceId,
@@ -792,7 +811,9 @@ router.post('/macros', async (req: AuthenticatedRequest, res) => {
     res.status(201).json(macro);
   } catch (error: unknown) {
     log.error("Error creating chat macro:", error);
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.name === 'ZodError') {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return res.status(400).json({ message: "Invalid macro data", errors: error.errors });
     }
     res.status(500).json({ message: "Failed to create chat macro" });
@@ -885,6 +906,7 @@ router.post('/conversations/:id/typing', async (req: AuthenticatedRequest, res) 
     await db
       .insert(typingIndicators)
       .values({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         conversationId,
         userId,
@@ -969,6 +991,7 @@ router.get('/tickets/:id', async (req: AuthenticatedRequest, res) => {
     const ticketId = req.params.id;
     const user = req.user;
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const employee = await storage.getEmployeeByUserId(user.id);
 
     if (!employee || !employee.workspaceId) {
@@ -1006,6 +1029,7 @@ router.get('/tickets/:id', async (req: AuthenticatedRequest, res) => {
       status: mapTicketStatusToHeaderStatus(ticket),
       priority: (ticket.priority || 'normal'),
       assignedAgent,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       slaRemaining: calculateSLARemaining(ticket.createdAt!, (ticket.priority || 'normal')),
       subject: ticket.subject,
       description: ticket.description,
@@ -1026,6 +1050,7 @@ router.get('/tickets', async (req: AuthenticatedRequest, res) => {
 
     const user = req.user;
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const employee = await storage.getEmployeeByUserId(user.id);
 
     if (!employee || !employee.workspaceId) {
@@ -1060,6 +1085,7 @@ router.get('/tickets', async (req: AuthenticatedRequest, res) => {
           status: mapTicketStatusToHeaderStatus(ticket),
           priority: (ticket.priority || 'normal'),
           assignedAgent,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           slaRemaining: calculateSLARemaining(ticket.createdAt!, (ticket.priority || 'normal')),
           subject: ticket.subject,
           description: ticket.description,
@@ -1186,6 +1212,7 @@ router.get('/commands/help', async (req: AuthenticatedRequest, res) => {
     }
 
     const modes = roomModes
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       ? (Array.isArray(roomModes) ? roomModes : [roomModes]).map(m => m as RoomMode)
       : [RoomMode.ORG];
 

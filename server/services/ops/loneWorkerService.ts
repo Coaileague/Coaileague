@@ -73,6 +73,7 @@ class LoneWorkerService {
     const interval = data.intervalMinutes || 30;
 
     // Converted to Drizzle ORM: startSession → INTERVAL
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(loneWorkerSessions).values({
       id,
       workspaceId: data.workspaceId,

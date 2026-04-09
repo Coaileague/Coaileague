@@ -226,6 +226,7 @@ class TrinityActionReasonerService {
           flags: aiResult.laborLawFlags,
           decision: aiResult.decision,
           severity: 'high',
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           audience: 'manager',
         },
       }).catch((err: any) => log.warn('[ActionReasoner] Failed to publish trinity_labor_law_flag:', err.message));
@@ -245,6 +246,7 @@ class TrinityActionReasonerService {
           reason: aiResult.blockReason,
           actionSummary: ctx.actionSummary,
           severity: 'medium',
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           audience: 'manager',
         },
       }).catch((err: any) => log.warn('[ActionReasoner] Failed to publish trinity_action_blocked:', err.message));

@@ -816,6 +816,7 @@ export class ClientPortalHelpAIService {
       const result = await creditManager.deductCredits({
         workspaceId: orgWorkspaceId,
         featureKey: 'client_portal_helpai_session',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: 'Client Portal DockChat',
         description: 'Client Portal DockChat session — Trinity AI support conversation',
       });

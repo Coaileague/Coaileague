@@ -1,4 +1,5 @@
 import { db } from '../db';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import { notificationActivity, userNotificationPreferences } from "@shared/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 

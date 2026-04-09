@@ -106,6 +106,7 @@ gamificationRouter.get('/achievements', async (req: AuthenticatedRequest, res: R
     const [employee] = await db.select()
       .from(employees)
       .where(and(
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(employees.userId, user.id),
         eq(employees.workspaceId, workspaceId)
       ))

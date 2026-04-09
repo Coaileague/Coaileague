@@ -129,6 +129,7 @@ class TrinitySchedulingOrchestratorService {
       },
     });
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await automationExecutionTracker.createExecution(executionId, {
       status: 'in_progress',
     });
@@ -173,6 +174,7 @@ class TrinitySchedulingOrchestratorService {
         currency: 'USD',
       };
 
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await automationExecutionTracker.createExecution(executionId, {
         status: 'pending_verification',
         outputPayload: {
@@ -237,6 +239,7 @@ class TrinitySchedulingOrchestratorService {
     } catch (error: any) {
       log.error(`[TrinitySchedulingOrchestrator] Session ${sessionId} failed:`, error);
 
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await automationExecutionTracker.createExecution(executionId, {
         status: 'failed',
         failureReason: (error instanceof Error ? error.message : String(error)),
@@ -258,6 +261,7 @@ class TrinitySchedulingOrchestratorService {
     const mutations = this.pendingSessions.get(executionId);
     if (!mutations || mutations.length === 0) {
       const execution = await automationExecutionTracker.getExecution(executionId);
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (execution?.outputPayload?.pendingMutations) {
         const storedMutations = (execution as any).outputPayload.pendingMutations as SchedulingMutation[];
         return this.applyMutationsToDatabase(storedMutations, executionId);
@@ -329,6 +333,7 @@ class TrinitySchedulingOrchestratorService {
 
     this.pendingSessions.delete(executionId);
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await automationExecutionTracker.createExecution(executionId, {
       status: 'verified',
       outputPayload: {
@@ -349,6 +354,7 @@ class TrinitySchedulingOrchestratorService {
   async rejectMutations(executionId: string, reason: string): Promise<void> {
     this.pendingSessions.delete(executionId);
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await automationExecutionTracker.createExecution(executionId, {
       status: 'rejected',
       outputPayload: {

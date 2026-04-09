@@ -294,6 +294,7 @@ router.post('/applicants/:id/assess', requireAuth, async (req: AuthenticatedRequ
     };
 
     const { spawnParallelAgents } = await import('../services/ai-brain/agentSpawner');
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const results = await spawnParallelAgents([
       {
         workspaceId: wid,

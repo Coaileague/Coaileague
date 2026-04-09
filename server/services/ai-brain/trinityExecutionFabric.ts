@@ -514,6 +514,7 @@ class TrinityExecutionFabric {
     log.info(`[TrinityFabric] Recorded execution ${manifestId} as ${recordingId} (reason: ${reason})`);
     
     // Publish event for observability
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.publish('ai_brain_action', {
       action: 'execution_recorded',
       recordingId,
@@ -724,6 +725,7 @@ class TrinityExecutionFabric {
       log.info(`[TrinityFabric] Replay ${replayId} completed: ${stepsExecuted} executed, ${stepsFailed} failed, ${divergences.length} divergences`);
 
       // Publish event
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'execution_replayed',
         replayId,

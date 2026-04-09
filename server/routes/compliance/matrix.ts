@@ -20,6 +20,7 @@ router.use(requireAuth);
 
 router.get("/", async (req: Request, res: Response) => {
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace required" });

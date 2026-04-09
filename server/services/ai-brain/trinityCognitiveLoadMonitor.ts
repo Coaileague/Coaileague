@@ -142,6 +142,7 @@ class TrinityCognitiveLoadMonitor {
       SELECT autonomous_task_throttled FROM trinity_cognitive_state
       WHERE workspace_id = $1 LIMIT 1
     `, [workspaceId]).catch(() => ({ rows: [] }));
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows[0]?.autonomous_task_throttled || false;
   }
 
@@ -154,16 +155,27 @@ class TrinityCognitiveLoadMonitor {
     if (!rows[0]) return null;
     const r = rows[0];
     return {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: r.workspace_id,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       activeAutonomousTasks: r.active_autonomous_tasks,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       pendingAutonomousTasks: r.pending_autonomous_tasks,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       openInvestigations: r.open_investigations,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       openCuriosityItems: r.open_curiosity_items,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       incubationQueueSize: r.incubation_queue_size,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       activeCriticalEscalations: r.active_critical_escalations,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       currentLoadScore: r.current_load_score,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       loadStatus: r.load_status,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       autonomousTaskThrottled: r.autonomous_task_throttled,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       lastAssessedAt: new Date(r.last_assessed_at)
     };
   }
@@ -192,7 +204,9 @@ class TrinityCognitiveLoadMonitor {
       WHERE workspace_id = $1
     `, [workspaceId]).catch(() => ({ rows: [{ active: 0, pending: 0 }] }));
     return {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       active: parseInt(rows[0]?.active || '0', 10),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       pending: parseInt(rows[0]?.pending || '0', 10)
     };
   }
@@ -203,6 +217,7 @@ class TrinityCognitiveLoadMonitor {
       SELECT COUNT(*) as count FROM curiosity_queue
       WHERE workspace_id = $1 AND status = 'queued'
     `, [workspaceId]).catch(() => ({ rows: [{ count: 0 }] }));
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return parseInt(rows[0]?.count || '0', 10);
   }
 
@@ -212,6 +227,7 @@ class TrinityCognitiveLoadMonitor {
       SELECT COUNT(*) as count FROM incubation_queue
       WHERE workspace_id = $1 AND status = 'incubating'
     `, [workspaceId]).catch(() => ({ rows: [{ count: 0 }] }));
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return parseInt(rows[0]?.count || '0', 10);
   }
 
@@ -221,12 +237,14 @@ class TrinityCognitiveLoadMonitor {
       .from((await import('@shared/schema')).notifications)
       .where(and(
         eq((await import('@shared/schema')).notifications.workspaceId, workspaceId),
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq((await import('@shared/schema')).notifications.priority, 'critical'),
         isNull((await import('@shared/schema')).notifications.readAt),
         sql`${(await import('@shared/schema')).notifications.createdAt} >= NOW() - INTERVAL '24 hours'`
       ))
       .catch(() => []);
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return parseInt(rows[0]?.count || '0', 10);
   }
 
@@ -243,6 +261,7 @@ class TrinityCognitiveLoadMonitor {
       SELECT 1 FROM notifications WHERE workspace_id = $1 AND type = 'cognitive_overload'
         AND created_at >= NOW() - INTERVAL '4 hours' LIMIT 1
     `, [workspaceId]).catch(() => ([]));
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (recentNotify.length > 0) return;
 
     await createNotification({

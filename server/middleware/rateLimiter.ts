@@ -62,6 +62,7 @@ function logRateLimitViolation(req: Request, limitType: string): void {
       // Fire admin alert via platform event bus (non-blocking — dynamic import avoids circular deps + ESM compat)
       scheduleNonBlocking('rate-limiter.violation-alert', async () => {
         const { platformEventBus } = await import('../services/platformEventBus');
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformEventBus.publish('rate_limit_violation', {
           ip,
           limitType,

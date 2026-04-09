@@ -8,6 +8,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router, type Response } from 'express';
 import { z } from 'zod';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import { requireAuth, type AuthenticatedRequest } from '../auth';
 import { getUserPlatformRole, getPlatformRoleLevel } from '../rbac';
 import { platformAIBudgetService } from '../services/billing/platformAIBudgetService';

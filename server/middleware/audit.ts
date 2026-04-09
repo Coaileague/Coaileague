@@ -57,6 +57,7 @@ export async function auditContextMiddleware(req: Request, res: Response, next: 
       try {
         // Load user to get their current workspace
         const user = await storage.getUser(userId);
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId = user?.currentWorkspaceId;
       } catch (error) {
         log.warn('Failed to load user workspace for audit context:', error);

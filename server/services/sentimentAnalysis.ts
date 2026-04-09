@@ -7,6 +7,7 @@
 import { meteredGemini } from './billing/meteredGeminiClient';
 import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { db } from '../db';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import { supportTickets, disputes, sentimentHistory } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 

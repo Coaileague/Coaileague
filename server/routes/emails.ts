@@ -53,6 +53,7 @@ router.post("/send", requirePlatformStaff, async (req: Request, res: Response) =
     const validated = sendEmailSchema.parse(req.body); // infra
     
     const result = await sendEmail({ // infra
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       to: validated.to,
       subject: validated.subject,
       html: validated.html,

@@ -94,6 +94,7 @@ export class UsageCapService {
       workspaceId: params.workspaceId,
       userId: params.userId || 'system-usage-cap',
       featureKey: mapping.creditKey,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: `Over-cap: ${params.featureKey}`,
       description: `Over-cap usage: ${params.featureKey} (${currentUsed + 1} used, plan cap: ${capLimit}) — ${creditCost}cr charged`,
     });

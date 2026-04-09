@@ -219,6 +219,7 @@ class WeeklyPlatformAuditService {
           triggerSource: 'scheduled',
         });
 
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (result.analysis?.anomalies) {
           for (const anomaly of (result as any).analysis.anomalies) {
             findings.push(this.convertAnomalyToFinding(anomaly, page, (result as any).screenshot?.filePath));

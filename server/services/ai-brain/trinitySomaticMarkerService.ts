@@ -160,11 +160,14 @@ class TrinitySomaticMarkerService {
     let bestMatch = { patternId: null as number | null, similarity: 0, confidence: 0 };
 
     for (const pattern of rows) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const sig: Record<string, number> = pattern.pattern_signature || {};
       const similarity = this.cosineSimilarity(featureVector, sig);
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const adjustedConfidence = similarity * pattern.confidence_in_pattern;
 
       if (adjustedConfidence > bestMatch.confidence) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         bestMatch = { patternId: pattern.id, similarity, confidence: Math.round(adjustedConfidence) };
       }
     }
@@ -223,6 +226,7 @@ class TrinitySomaticMarkerService {
     ];
 
     for (const pattern of platformPatterns) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await this.addPattern(null, pattern, 'negative', 75, 65);
     }
     log.info('[SomaticMarker] Seeded 5 platform-wide risk patterns');

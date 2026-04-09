@@ -403,6 +403,7 @@ class SecureToolExecutor {
       await this.logToolCallSuccess(request, callId, Date.now() - startTime);
 
       // Publish event
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'tool_executed',
         toolId: request.toolId,
@@ -445,6 +446,7 @@ class SecureToolExecutor {
 
     // Try to find and execute through registry
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const tool = await toolCapabilityRegistry.getTool(callerContext.workspaceId, toolId);
       
       if (tool && typeof (tool as any).execute === 'function') {

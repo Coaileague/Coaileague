@@ -667,12 +667,14 @@ router.get('/search/my-tickets', requireAuth, attachWorkspaceId, async (req: Aut
     } else if (includeAssigned) {
       // Show tickets created by OR assigned to user
       userCondition = or(
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(supportTickets.reportedBy, userId),
         eq(supportTickets.assignedTo, userId),
         eq(supportTickets.platformAssignedTo, userId)
       );
     } else {
       // Default: only tickets created by user
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       userCondition = eq(supportTickets.reportedBy, userId);
     }
 

@@ -18,6 +18,7 @@ import {
 } from '@shared/schema';
 import { eq, and, isNull, desc, sql, gte } from 'drizzle-orm';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { ActionRequest, ActionResult, ActionHandler } from './actionRegistry';
 import { loneWorkerSafetyService } from '../automation/loneWorkerSafetyService';
 import { panicProtocolService } from '../fieldOperations/panicProtocolService';

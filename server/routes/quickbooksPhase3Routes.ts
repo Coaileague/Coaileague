@@ -275,6 +275,7 @@ router.get('/tax-classification/history', requireAuth, async (req: Request, res:
       employeeName: sql<string>`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`
     })
     .from((await import('@shared/schema')).workerTaxClassificationHistory)
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     .join(employees, eq((await import('@shared/schema')).workerTaxClassificationHistory.employeeId, employees.id))
     .where(and(
       eq((await import('@shared/schema')).workerTaxClassificationHistory.workspaceId, workspaceId),

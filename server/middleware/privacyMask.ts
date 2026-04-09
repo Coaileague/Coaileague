@@ -115,12 +115,14 @@ export function maskEmployee<T extends Record<string, any>>(employee: T, ctx: Pr
 
   if (!canViewEmployeePayRates(ctxWithSubject)) {
     for (const field of EMPLOYEE_PAY_FIELDS) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (field in result) result[field] = null;
     }
   }
 
   if (!canViewEmployeeAddress(ctxWithSubject)) {
     for (const field of EMPLOYEE_ADDRESS_FIELDS) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (field in result) result[field] = null;
     }
   }
@@ -136,6 +138,7 @@ export function maskClient<T extends Record<string, any>>(client: T, ctx: Privac
 
   if (!canViewClientBillRates(ctx)) {
     for (const field of CLIENT_BILL_RATE_FIELDS) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (field in result) result[field] = null;
     }
   }

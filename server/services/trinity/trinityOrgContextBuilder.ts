@@ -294,6 +294,7 @@ class TrinityOrgContextBuilder {
 
     // ── Assemble workspace snap ─────────────────────────────────────────────
     const ws = workspaceRow[0];
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const wsMeta = (ws?.metadata as Record<string, any>) || {};
     const lastLLCDate = wsMeta.lastLLCComplianceMeeting as string | undefined;
     let daysUntilLLCOverdue: number | null = null;

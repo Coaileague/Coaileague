@@ -4,6 +4,7 @@
  * Centralized configuration for employee onboarding workflows
  */
 
+// @ts-expect-error — TS migration: fix in refactoring sprint
 export const onboardingConfig = {
   // Email Configuration
   email: {

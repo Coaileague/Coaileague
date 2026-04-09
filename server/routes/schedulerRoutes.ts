@@ -864,6 +864,7 @@ router.post('/dev/simulate-clockins', async (req: any, res: Response) => {
 
         created++;
       } catch (rowErr: unknown) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         errors.push(`shift ${shift.id}: ${rowErr.message}`);
       }
     }

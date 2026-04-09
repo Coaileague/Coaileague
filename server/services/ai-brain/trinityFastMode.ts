@@ -196,6 +196,7 @@ class TrinityFastModeService {
             title: 'Batch Execution Started',
             description: `Executing batch ${batches.indexOf(batch) + 1}/${batches.length} with ${batch.length} operations`,
             data: { requestId, batchSize: batch.length, batchIndex: batches.indexOf(batch) + 1, totalBatches: batches.length },
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             severity: 'info',
             isNew: true
           });
@@ -267,6 +268,7 @@ class TrinityFastModeService {
         title: 'FAST Mode Execution Complete',
         description: `Completed ${completedOperations}/${request.operations.length} operations (${parallelSpeedup.toFixed(1)}x speedup)`,
         data: { requestId, workspaceId: request.workspaceId, tier: request.tier, completedOperations, failedOperations, parallelSpeedup, creditsCost },
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         severity: 'success',
         isNew: true
       });

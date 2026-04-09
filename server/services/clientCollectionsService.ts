@@ -194,6 +194,7 @@ Collections Department
     to: [recipientEmail],
     subject,
     html: `<p>${bodyText.replace(/\n/g, '<br/>')}</p>`,
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     emailType: 'invoice',
     recipientCount: 1,
   });

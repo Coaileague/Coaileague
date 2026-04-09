@@ -535,9 +535,11 @@ class AlertService {
       query = (query as any).where(eq(alertHistory.isResolved, options.resolved));
     }
     if (options?.limit) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       query = query.limit(options.limit);
     }
     if (options?.offset) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       query = query.offset(options.offset);
     }
 

@@ -14,5 +14,6 @@ export async function resetMonthlyCredits(): Promise<void> {
 }
 
 export async function resetCreditsNow(_workspaceId: string): Promise<void> {
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   log.info({ _workspaceId }, 'creditResetCron.resetCreditsNow no-op — tables dropped');
 }

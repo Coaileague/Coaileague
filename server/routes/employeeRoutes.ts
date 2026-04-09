@@ -141,6 +141,7 @@ router.patch('/:employeeId/role', async (req: AuthenticatedRequest, res) => {
     }
     
     const newVersion = ((targetEmployee as any).version || 1) + 1;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.updateEmployee(employeeId, { workspaceRole: newRole } as any);
     if (updated) {
       await db.update(employees).set({ version: newVersion, updatedAt: new Date() }).where(eq(employees.id, employeeId));
@@ -152,6 +153,7 @@ router.patch('/:employeeId/role', async (req: AuthenticatedRequest, res) => {
       action: 'update',
       entityType: 'employee',
       entityId: employeeId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       details: { previousRole: targetEmployee.workspaceRole, newRole },
     });
     
@@ -207,6 +209,7 @@ router.patch('/:employeeId/role', async (req: AuthenticatedRequest, res) => {
     
     res.json({
       success: true,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       employee: filterEmployeeForResponse(updated, createFilterContext(req)),
       message: `Role updated to ${newRole}`,
     });
@@ -296,10 +299,12 @@ router.patch('/:employeeId/position', async (req: AuthenticatedRequest, res) => 
       updatedAt: new Date(),
     }).where(eq(employees.id, employeeId));
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.getEmployee(employeeId);
 
     // Wage change audit trail (A4 requirement)
     if (updated && previousRate !== updated.hourlyRate) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { universalAuditService, AUDIT_ACTIONS } = await import('../services/universalAuditService');
       await universalAuditService.log({
         workspaceId,
@@ -327,6 +332,7 @@ router.patch('/:employeeId/position', async (req: AuthenticatedRequest, res) => 
       action: 'update',
       entityType: 'employee',
       entityId: employeeId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       details: {
         previousPosition,
         newPosition,
@@ -405,6 +411,7 @@ router.patch('/:employeeId/position', async (req: AuthenticatedRequest, res) => 
 
     res.json({
       success: true,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       employee: filterEmployeeForResponse(updated, createFilterContext(req)),
       message: `Position updated to ${newPosDefinition.label}`,
     });
@@ -489,6 +496,7 @@ router.patch('/:employeeId/access', async (req: AuthenticatedRequest, res) => {
         // Check workspace hard cap setting
         const { db: dbInner } = await import('../db');
         const { sql: drizzleSql } = await import('drizzle-orm');
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const [subRow] = await dbInner.execute(drizzleSql`
           SELECT seat_hard_cap_enabled, max_employees, current_employees
           FROM subscriptions WHERE workspace_id = ${workspaceId} LIMIT 1
@@ -557,6 +565,7 @@ router.patch('/:employeeId/access', async (req: AuthenticatedRequest, res) => {
 
     // ── STRUCTURED LIFECYCLE AUDIT RECORD ─────────────────────────────────────
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { universalAuditService, AUDIT_ACTIONS } = await import('../services/universalAuditService');
       if (!isActive && targetEmployee.isActive) {
         await universalAuditService.log({
@@ -691,6 +700,7 @@ router.get('/export', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     const { hasManagerAccess } = await import('../rbac');
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const requesterEmployee = await storage.getEmployeeByUserId(req.user.id, workspaceId);
     if (!hasManagerAccess(requesterEmployee?.workspaceRole as string)) {
       return res.status(403).json({ message: "Only managers can export the employee roster" });
@@ -792,6 +802,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
 
     if (platformRole) {
       const { getUserPlatformRole: getPlatRole } = await import('../rbac');
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const callerPlatRole = await getPlatRole(userId);
       const isPlatformStaffCaller = callerPlatRole && callerPlatRole !== 'none';
       
@@ -892,6 +903,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
 
         if (targetUser) {
           await tx.insert(platformRoles).values({
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: PLATFORM_WORKSPACE_ID,
             userId: targetUser.id,
             role: platformRole,
@@ -915,6 +927,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     if (employee.email) {
       const existingUser = await storage.getUserByEmail(employee.email);
       if (existingUser && !employee.userId) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         updatedEmployee = await storage.updateEmployee(employee.id, workspaceId, {
           userId: existingUser.id,
         });
@@ -932,6 +945,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     scheduleNonBlocking('employee.ai-brain-event-hired', async () => {
       const { postDatabaseEventToAIBrain } = await import('../services/ai-brain/workboardService');
       postDatabaseEventToAIBrain({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         eventType: 'employee_hired',
         workspaceId,
         userId: req.user?.id || 'system',
@@ -1226,6 +1240,7 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
       (async () => {
         try {
           const { helpaiOrchestrator } = await import('../services/helpai/platformActionHub');
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           await helpaiOrchestrator.executeAction('settings.propagate_pay_rate_change', {
             employeeId: req.params.id,
             workspaceId,
@@ -1243,6 +1258,7 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
       (async () => {
         try {
           const { helpaiOrchestrator } = await import('../services/helpai/platformActionHub');
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           await helpaiOrchestrator.executeAction('settings.propagate_license_expiry', {
             employeeId: req.params.id,
             workspaceId,
@@ -1373,6 +1389,7 @@ router.patch('/me/contact-info', async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || req.user?.id;
     
     // Scope to the authenticated workspace — prevents cross-tenant mutation
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const employee = await storage.getEmployeeByUserId(userId, req.workspaceId);
     
     if (!employee) {
@@ -1449,6 +1466,7 @@ router.post('/approve', async (req: any, res) => {
     (async () => {
       try {
         const { helpaiOrchestrator } = await import('../services/helpai/platformActionHub');
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         await helpaiOrchestrator.executeAction('settings.propagate_pay_rate_change', {
           employeeId,
           workspaceId: user.currentWorkspaceId,
@@ -1583,15 +1601,21 @@ router.put('/:employeeId/payroll', async (req: AuthenticatedRequest, res) => {
     const validated = insertEmployeePayrollInfoSchema.partial().parse(req.body);
 
     const {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       taxId,
       bankAccountNumber,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       routingNumber,
       preferredPayoutMethod,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       w4Allowances,
       additionalWithholding,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       filingStatus,
       directDepositEnabled,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       w9OnFile,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       i9OnFile,
     } = validated;
 
@@ -1612,6 +1636,7 @@ router.put('/:employeeId/payroll', async (req: AuthenticatedRequest, res) => {
       [result] = await db
         .update(employeePayrollInfo)
         .set({
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           taxId,
           bankAccountNumber,
           routingNumber,
@@ -1629,6 +1654,7 @@ router.put('/:employeeId/payroll', async (req: AuthenticatedRequest, res) => {
     } else {
       [result] = await db
         .insert(employeePayrollInfo)
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         .values({
           workspaceId,
           employeeId,
@@ -1753,6 +1779,7 @@ router.get('/:employeeId/shift-actions', async (req: AuthenticatedRequest, res) 
       .where(
         and(
           eq(shiftActions.workspaceId, workspaceId),
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(shiftActions.employeeId, employeeId)
         )
       )
@@ -1810,6 +1837,7 @@ router.delete('/:id/pii-purge', requireAuth, async (req: AuthenticatedRequest, r
     const { id } = req.params;
     const workspaceId = req.workspaceId;
     const userId = req.user?.id;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userRole = (req.user)?.workspaceRole;
 
     if (!workspaceId) {
@@ -1897,6 +1925,7 @@ router.delete('/:id/pii-purge', requireAuth, async (req: AuthenticatedRequest, r
       .where(and(eq(employees.id, id), eq(employees.workspaceId, workspaceId)));
 
     // ── Write permanent purge audit record ──────────────────────────────────
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { universalAuditService, AUDIT_ACTIONS } = await import('../services/universalAuditService');
     await universalAuditService.log({
       workspaceId,

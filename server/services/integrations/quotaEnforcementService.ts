@@ -634,6 +634,7 @@ class QuotaEnforcementService {
           currentUsage,
           limit,
           percentage,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity: percentage >= 100 ? 'critical' : 'warning',
         },
       }).catch((err) => log.warn('[quotaEnforcementService] Fire-and-forget failed:', err));

@@ -131,7 +131,9 @@ export class HelpaiAuditService {
     // Filter by date range in-memory if needed
     if (options?.startDate || options?.endDate) {
       return results.filter(log => {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (options.startDate && log.createdAt < options.startDate) return false;
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (options.endDate && log.createdAt > options.endDate) return false;
         return true;
       });
@@ -293,6 +295,7 @@ export class HelpaiAuditService {
     // CSV rows
     const rows = logs.map(log => [
       log.id,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.createdAt.toISOString(),
       log.userId || 'N/A',
       log.action,

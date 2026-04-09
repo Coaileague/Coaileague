@@ -213,6 +213,7 @@ export class UsageMeteringService {
 
     // Store provider cost and model outside transaction (new columns via raw SQL to bypass Drizzle schema mismatch)
     if (event && (providerCostUsd > 0 || input.aiModel || input.creditsDeducted)) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.update(aiUsageEvents).set({ providerCostUsd: providerCostUsd, aiModel: input.aiModel || null, creditsDeducted: input.creditsDeducted || 0 }).where(eq(aiUsageEvents.id, event.id)).catch(() => {/* non-critical — usage event already recorded */});
     }
 

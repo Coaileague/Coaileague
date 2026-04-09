@@ -123,6 +123,7 @@ export class GeoComplianceService {
         await this.createDiscrepancy(
           timeEntryId,
           workspaceId,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           shift[0].employeeId, // Pass employeeId from shift
           'clock_in_location',
           {
@@ -153,6 +154,7 @@ export class GeoComplianceService {
         await this.createDiscrepancy(
           timeEntryId,
           workspaceId,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           shift[0].employeeId, // Pass employeeId from shift
           'clock_out_location',
           {

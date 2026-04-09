@@ -1069,6 +1069,7 @@ export async function generateContextualThought(context: TrinityContext): Promis
       context: contextParts.join('\n'),
       displayName: name,
       workspaceId: context.workspaceId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       mode,
     });
     

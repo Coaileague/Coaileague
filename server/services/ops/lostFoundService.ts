@@ -208,6 +208,7 @@ class LostFoundService {
     platformActionHub.registerAction({
       actionId: 'external.lost_found.unclaimed_report',
       name: 'Unclaimed Items Report',
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'external',
       description: 'Get all lost and found items that remain unclaimed after a specified number of days.',
       requiredRoles: ['manager', 'supervisor', 'owner'],

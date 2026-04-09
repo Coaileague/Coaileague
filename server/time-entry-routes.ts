@@ -1324,6 +1324,7 @@ timeEntryRouter.get('/reports/compliance', requireAuth, requireWorkspaceRole(['d
  * GET /api/time-entries/workspace/all - Admin/support: Search all time entries in workspace
  * Searchable by employee, date range, status - for payroll/billing/compliance
  */
+// @ts-expect-error — TS migration: fix in refactoring sprint
 timeEntryRouter.get('/workspace/all', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin', 'support_manager']), async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;

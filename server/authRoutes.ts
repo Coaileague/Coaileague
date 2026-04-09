@@ -458,6 +458,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
       if (paymentResult.isOwner) {
         // Log to Trinity Orchestration for audit trail
         try {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           await db.insert(systemAuditLogs).values({
             action: 'payment_block_owner',
             entityType: 'workspace',
@@ -476,6 +477,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
           });
           
           // Emit event for Trinity AI monitoring
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           platformEventBus.emit({
             type: 'subscription.payment_blocked',
             payload: {

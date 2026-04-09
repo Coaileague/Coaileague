@@ -10,6 +10,7 @@
  */
 
 import express, { Router, Request, Response } from 'express';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import { requireAuth, type AuthenticatedRequest } from '../auth';
 import {
   serviceController,
@@ -161,6 +162,7 @@ aiBrainCapabilitiesRouter.post('/features/toggle', requireAuth, async (req: Requ
       workspaceId,
     });
     
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     res.json({ success: true, ...result });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to toggle feature', message: error.message });

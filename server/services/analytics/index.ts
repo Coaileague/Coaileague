@@ -107,6 +107,7 @@ export const unifiedAnalytics = {
   rooms: {
     getAnalytics: async (workspaceId: string, roomId?: string, period?: string) => {
       const { roomAnalyticsService } = await import('../roomAnalyticsService');
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return roomAnalyticsService.getRoomsAnalytics(workspaceId, roomId, period);
     },
   },

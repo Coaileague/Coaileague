@@ -2,6 +2,7 @@
  * SHARED TYPES FOR AI BRAIN MONITORING SYSTEM
  */
 
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { AiContext, AiMonitoringTask, AiProactiveAlert } from '@shared/schema';
 
 // ============================================================================

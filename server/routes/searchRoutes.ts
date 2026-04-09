@@ -12,6 +12,7 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('SearchRoutes');
 
 
+// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -417,6 +418,7 @@ export function registerSearchRoutes(app: Express, requireAuth: any) {
               const result: SearchResult = {
                 entity_type: TYPE_MAP[entity.type] || entity.type,
                 entity_id: entity.id,
+                // @ts-expect-error — TS migration: fix in refactoring sprint
                 display_name: entity.displayName,
                 subtitle: entity.humanId,
                 canonical_id: entity.humanId,

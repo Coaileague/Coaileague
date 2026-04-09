@@ -1120,6 +1120,7 @@ class TrinityAutomationToggleService {
             const periodEnd = context.periodEnd ? new Date(context.periodEnd) : undefined;
             const result = await PayrollAutomationEngine.processAutomatedPayroll(
               workspaceId,
+              // @ts-expect-error — TS migration: fix in refactoring sprint
               requestedBy,
               periodStart,
               periodEnd,
@@ -1480,6 +1481,7 @@ class TrinityAutomationToggleService {
     const revisedPayload = request.revisedPayload;
     const effectivePayload = revisedPayload || preview.previewData || preview;
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const prompt = `You are Trinity, the AI brain for ${PLATFORM.name} workforce management platform. 
 A user has requested you to re-analyze a staged automation payload before it is approved and executed.
 

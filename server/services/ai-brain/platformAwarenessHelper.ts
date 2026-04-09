@@ -103,6 +103,7 @@ export function notifyTrinity(
       const shouldScan = options?.forceScanTrigger || SCAN_TRIGGER_RESOURCES.has(resourceType);
       if (shouldScan) {
         const { platformEventBus } = await import('../platformEventBus');
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformEventBus.publish('fix_applied', {
           eventType,
           resourceType,

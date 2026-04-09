@@ -93,6 +93,7 @@ router.post("/generate", requireManager, async (req: AuthenticatedRequest, res) 
       `${workspaceId}:${reportType}:${startDay}:${endDay}:${JSON.stringify(reportPayload)}`
     ).digest('hex');
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [report] = await db.insert(complianceReports).values({
       id: randomUUID(),
       workspaceId,

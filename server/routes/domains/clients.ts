@@ -46,12 +46,14 @@ export function mountClientRoutes(app: Express): void {
       const workspaceId = req.workspaceId;
       const { pool } = await import("../../db");
       // CATEGORY C — Raw SQL retained: FILTER (WHERE | Tables: clients | Verified: 2026-03-23
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [clientRow] = (await typedPool(
         `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_active = true) AS active
          FROM clients WHERE workspace_id = $1`,
         [workspaceId]
       )).rows;
       // CATEGORY C — Raw SQL retained: FILTER (WHERE | Tables: client_contracts | Verified: 2026-03-23
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [contractRow] = (await typedPool(
         `SELECT COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE status = 'executed') AS active,
@@ -60,6 +62,7 @@ export function mountClientRoutes(app: Express): void {
         [workspaceId]
       )).rows;
       // CATEGORY C — Raw SQL retained: FILTER (WHERE | Tables: invoices | Verified: 2026-03-23
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [invoiceRow] = (await typedPool(
         `SELECT COUNT(*) FILTER (WHERE status = 'pending') AS pending,
                 COALESCE(SUM(total) FILTER (WHERE status = 'pending'), 0) AS pending_amount

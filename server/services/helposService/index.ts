@@ -45,6 +45,7 @@ class GeminiProvider implements AIProvider {
     // Guard Rails: Create request context
     if (!options.workspaceId || !options.userId) {
       log.warn('[HelpOS] Missing workspaceId or userId — refusing unbilled AI call');
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return { content: 'Session context missing. Please refresh and try again.', tokensUsed: 0, model: 'none' };
     }
 

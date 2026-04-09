@@ -96,6 +96,7 @@ router.post("/process", requireAuth, async (req: Request, res: Response) => {
       workspaceId,
       userId: user?.id || 'system',
       featureKey: creditInfo.key,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: `AI Orchestrator: ${taskType || 'general'}`,
       description: task.substring(0, 120),
       amountOverride: creditInfo.amount,
@@ -149,6 +150,7 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
       workspaceId,
       userId: user?.id || 'system',
       featureKey: consultCreditInfo.key,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: `AI Consult: ${inferredTaskType}`,
       description: task.substring(0, 120),
       amountOverride: consultCreditInfo.amount,

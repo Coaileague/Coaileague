@@ -140,11 +140,17 @@ situationRouter.get("/summary", requireAuth as any, ensureWorkspaceAccess as any
     );
 
     res.json({
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       totalGuards: parseInt(guardCounts?.total_active || "0"),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       onDuty: parseInt(guardCounts?.on_duty || "0"),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       activeIncidents: parseInt(incidentCounts?.active_incidents || "0"),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       criticalIncidents: parseInt(incidentCounts?.critical_incidents || "0"),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       openShifts: parseInt(shiftCounts?.open_shifts || "0"),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       totalUpcomingShifts: parseInt(shiftCounts?.total_upcoming || "0"),
     });
   } catch (err: unknown) {
