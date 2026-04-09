@@ -2157,7 +2157,7 @@ class PlatformActionHub {
       handler = { ...handler, outputSchema: {} };
     }
     ACTION_REGISTRY.set(handler.actionId, handler);
-    log.info(`[Platform Action Hub] Registered action: ${handler.actionId}`);
+    log.verbose(`[Platform Action Hub] Registered action: ${handler.actionId}`);
   }
 
   /**
