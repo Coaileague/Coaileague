@@ -21,12 +21,15 @@ import { eq, and } from 'drizzle-orm';
 import { auditLogger } from '../audit-logger';
 import { providerPreferenceService } from './providerPreferenceService';
 import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
+import { getStripe, isStripeConfigured } from './stripeClient';
 
 const log = createLogger('stripeConnectPayoutService');
-// Initialize Stripe with API key
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-01-27.acacia' as any, timeout: 10000, maxNetworkRetries: 2 })
-  : null;
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 export interface ConnectAccountStatus {
   hasAccount: boolean;
@@ -49,7 +52,7 @@ class StripeConnectPayoutService {
    * Check if Stripe Connect is available
    */
   isAvailable(): boolean {
-    return !!stripe;
+    return isStripeConfigured();
   }
 
   /**
@@ -61,10 +64,10 @@ class StripeConnectPayoutService {
     employeeEmail: string,
     employeeName: string
   ): Promise<ConnectAccountStatus> {
-    if (!stripe) {
-      return { 
-        hasAccount: false, 
-        payoutsEnabled: false, 
+    if (!isStripeConfigured()) {
+      return {
+        hasAccount: false,
+        payoutsEnabled: false,
         requiresOnboarding: true,
         error: 'Stripe not configured'
       } as ConnectAccountStatus & { error: string };
@@ -188,7 +191,7 @@ class StripeConnectPayoutService {
    * Create onboarding link for employee to complete account setup
    */
   private async createOnboardingLink(accountId: string, workspaceId: string): Promise<string> {
-    if (!stripe) throw new Error('Stripe not configured');
+    if (!isStripeConfigured()) throw new Error('Stripe not configured');
 
     const baseUrl = getAppBaseUrl();
 
@@ -213,7 +216,7 @@ class StripeConnectPayoutService {
     payrollEntryId: string,
     workspaceId: string
   ): Promise<PayoutResult> {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return { success: false, amount: 0, currency: 'usd', error: 'Stripe not configured' };
     }
 
@@ -506,7 +509,7 @@ class StripeConnectPayoutService {
     employeeId: string,
     limit: number = 10
   ): Promise<Array<{ id: string; amount: number; status: string; created: Date }>> {
-    if (!stripe) return [];
+    if (!isStripeConfigured()) return [];
 
     try {
       const [employee] = await db.select()

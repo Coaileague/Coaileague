@@ -31,12 +31,16 @@ import Stripe from 'stripe';
 import { meteredGemini } from './billing/meteredGeminiClient';
 import { universalAudit, AUDIT_ACTIONS } from './universalAuditService';
 import { createLogger } from '../lib/logger';
+import { getStripe, isStripeConfigured } from './billing/stripeClient';
 const log = createLogger('onboardingPipelineService');
 
 
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' })
-  : null;
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 export interface OnboardingProgress {
   workspaceId: string;

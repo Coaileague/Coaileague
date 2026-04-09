@@ -36,13 +36,16 @@ import { requestTimeout } from "./middleware/requestTimeout";
 import { notificationStateManager } from "./services/notificationStateManager";
 import { setupWebSocket } from "./websocket";
 import Stripe from "stripe";
+import { getStripe, isStripeConfigured } from "./services/billing/stripeClient";
 
 // ============================================================================
-// STRIPE SINGLETON - Security & Performance Optimization
+// STRIPE SINGLETON — Lazy proxy (CLAUDE.md §F): avoids module-load crash
 // ============================================================================
-export const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-09-30.clover" as any })
-  : null;
+export const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 // ============================================================================
 // DOMAIN ROUTE MOUNTS — 15 canonical domains + audit

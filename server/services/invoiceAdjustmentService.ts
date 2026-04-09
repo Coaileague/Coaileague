@@ -311,11 +311,9 @@ export async function refundInvoice(
   const stripePaymentIntentId: string | null = (invoice as any).paymentIntentId || null;
   if (stripePaymentIntentId) {
     try {
-      const Stripe = (await import('stripe')).default;
-      // GAP-62 FIX: Added timeout and maxNetworkRetries to refund Stripe client.
-      const stripe = process.env.STRIPE_SECRET_KEY
-        ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' as any, timeout: 10000, maxNetworkRetries: 2 })
-        : null;
+      // Use canonical lazy Stripe factory (CLAUDE.md §F).
+      const { getStripe: getLazyStripe, isStripeConfigured: isConfigured } = await import('./billing/stripeClient');
+      const stripe = isConfigured() ? getLazyStripe() : null;
 
       if (stripe) {
         const stripeRefund = await stripe.refunds.create({

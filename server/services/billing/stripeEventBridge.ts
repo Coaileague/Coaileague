@@ -28,12 +28,16 @@ import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { AccountStateService } from './accountState';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { createLogger } from '../../lib/logger';
+import { getStripe, isStripeConfigured } from './stripeClient';
 
 const log = createLogger('StripeEventBridge');
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover', timeout: 10000, maxNetworkRetries: 2 })
-  : null;
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 interface StripeEventResult {
   success: boolean;
@@ -75,7 +79,7 @@ class StripeEventBridge {
   async processEvent(event: Stripe.Event): Promise<StripeEventResult> {
     log.info('Processing event', { eventType: event.type, eventId: event.id });
 
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       log.warn('Stripe not configured, skipping event');
       return { success: false, eventType: event.type, action: 'skipped', message: 'Stripe not configured', error: 'STRIPE_SECRET_KEY not set' };
     }
@@ -561,7 +565,7 @@ class StripeEventBridge {
           .where(eq(workspaces.id, workspaceId))
           .limit(1);
 
-        if (!workspace?.stripeSubscriptionId || !stripe) {
+        if (!workspace?.stripeSubscriptionId || !isStripeConfigured()) {
           return { success: false, actionId: request.actionId, message: 'No Stripe subscription found' };
         }
 

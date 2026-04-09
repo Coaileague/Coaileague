@@ -314,10 +314,10 @@ router.delete("/clients/:clientId", requireManager, async (req: AuthenticatedReq
 //   - Middleware transaction fees (payroll per-run, invoice processing, payout ACH)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Use canonical lazy Stripe factory (CLAUDE.md §F) — single API version, shared singleton.
+import { getStripe as getCanonicalStripe } from '../services/billing/stripeClient';
 function getStripe(): Stripe {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
-  return new Stripe(key, { apiVersion: "2024-06-20" as any });
+  return getCanonicalStripe();
 }
 
 // List all saved payment methods for this workspace's Stripe customer

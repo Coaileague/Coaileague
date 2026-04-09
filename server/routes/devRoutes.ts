@@ -781,8 +781,8 @@ router.post('/stripe-payroll-test', requirePlatformAdmin, async (req: Authentica
       return res.status(503).json({ error: 'STRIPE_SECRET_KEY not configured' });
     }
 
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-01-27.acacia' as any });
+    const { getStripe: getCanonicalStripe } = await import('../services/billing/stripeClient');
+    const stripe = getCanonicalStripe();
 
     // Get Anvil's pending payroll run
     // CATEGORY C — Raw SQL retained: ORDER BY | Tables: payroll_runs | Verified: 2026-03-23
@@ -950,8 +950,8 @@ router.post('/stripe-invoice-test', requirePlatformAdmin, async (req: Authentica
       return res.status(503).json({ error: 'STRIPE_SECRET_KEY not configured' });
     }
 
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-01-27.acacia' as any });
+    const { getStripe: getCanonicalStripe2 } = await import('../services/billing/stripeClient');
+    const stripe = getCanonicalStripe2();
 
     // CATEGORY C — Raw SQL retained: IS NULL | Tables: invoices, clients | Verified: 2026-03-23
     const invoices = await typedQuery(sql`

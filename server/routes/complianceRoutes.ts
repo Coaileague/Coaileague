@@ -38,15 +38,18 @@ import Stripe from 'stripe';
 import { universalAudit } from '../services/universalAuditService';
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
+import { getStripe, isStripeConfigured } from '../services/billing/stripeClient';
 const log = createLogger('ComplianceRoutes');
 
 
 const router = Router();
 
-let stripe: Stripe | null = null;
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' as any });
-}
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AUDITOR TOKEN UTILITIES  (stateless HMAC-signed tokens)

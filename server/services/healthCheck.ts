@@ -422,7 +422,8 @@ export async function checkStripe(): Promise<ServiceHealth> {
     }
 
     // Lightweight connectivity probe - fetch balance (cheap API call)
-    const stripe = new Stripe(stripeKey, { apiVersion: '2025-09-30.clover' });
+    const { getStripe: getLazyStripe } = await import('./billing/stripeClient');
+    const stripe = getLazyStripe();
     await stripe.balance.retrieve({ timeout: 5000 }); // 5 second timeout
     const latencyMs = Date.now() - startTime;
 

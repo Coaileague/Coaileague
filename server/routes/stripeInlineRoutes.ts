@@ -12,6 +12,7 @@ import { platformEventBus } from "../services/platformEventBus";
 import { multiplyFinancialValues, toFinancialString } from '../services/financialCalculator';
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
+import { getStripe, isStripeConfigured } from '../services/billing/stripeClient';
 const log = createLogger('StripeInlineRoutes');
 
 
@@ -32,12 +33,14 @@ function _pruneStripeEventCache() {
 }
 setInterval(_pruneStripeEventCache, 60 * 60 * 1000).unref(); // hourly cleanup
 
-let stripe: Stripe | null = null;
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-09-30.clover' as any,
-  });
-} else {
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
+
+if (!isStripeConfigured()) {
   log.warn('STRIPE_SECRET_KEY not found. Payment processing disabled. Add keys to activate.');
 }
 
@@ -79,13 +82,13 @@ const flexAuth: RequestHandler = async (req: any, res, next) => {
 router.get('/config', async (req, res) => {
   res.json({
     publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY || null,
-    isConfigured: !!stripe,
+    isConfigured: isStripeConfigured(),
   });
 });
 
 router.post('/connect-account', flexAuth, async (req: any, res) => {
   try {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.status(503).json({ 
         message: "Stripe integration requires STRIPE_SECRET_KEY. Please add your Stripe keys to activate payment processing." 
       });
@@ -133,7 +136,7 @@ router.post('/connect-account', flexAuth, async (req: any, res) => {
 
 router.post('/onboarding-link', flexAuth, async (req: any, res) => {
   try {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });
     }
 
@@ -159,7 +162,7 @@ router.post('/onboarding-link', flexAuth, async (req: any, res) => {
 
 router.post('/pay-invoice', requireAuth, async (req: any, res) => {
   try {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });
     }
 
@@ -325,7 +328,7 @@ router.post('/pay-invoice', requireAuth, async (req: any, res) => {
 
 router.post('/create-subscription', requireAuth, async (req: any, res) => {
   try {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });
     }
 
@@ -480,7 +483,7 @@ router.post('/create-subscription', requireAuth, async (req: any, res) => {
 
 router.post('/webhook', async (req: any, res) => {
   try {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.status(503).send('Stripe not configured');
     }
     const sig = req.headers['stripe-signature'];
@@ -580,7 +583,7 @@ router.post('/webhook', async (req: any, res) => {
  */
 router.post('/billing-portal', requireAuth, async (req: any, res) => {
   try {
-    if (!stripe) return res.status(503).json({ message: 'Payment processing not configured' });
+    if (!isStripeConfigured()) return res.status(503).json({ message: 'Payment processing not configured' });
 
     const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
@@ -621,7 +624,7 @@ router.post('/billing-portal', requireAuth, async (req: any, res) => {
  */
 router.post('/create-subscription-checkout', requireAuth, async (req: any, res) => {
   try {
-    if (!stripe) return res.status(503).json({ message: 'Payment processing not configured' });
+    if (!isStripeConfigured()) return res.status(503).json({ message: 'Payment processing not configured' });
 
     const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
@@ -716,7 +719,7 @@ router.get('/connect-status', flexAuth, async (req: any, res) => {
       });
     }
 
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.json({
         status: 'stripe_not_configured',
         accountId: workspace.stripeConnectedAccountId,
@@ -815,7 +818,7 @@ router.get('/fee-schedule', flexAuth, async (req: any, res) => {
 
 router.post('/connect-dashboard', flexAuth, async (req: any, res) => {
   try {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });
     }
 

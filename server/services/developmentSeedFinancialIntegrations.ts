@@ -22,15 +22,19 @@ import { and, desc, eq, or, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { clients, invoices, payrollRuns, quickbooksSyncReceipts, employees, employeePayrollInfo, payrollEntries } from '@shared/schema';
+import { getStripe, isStripeConfigured } from './billing/stripeClient';
 
 const ACME = 'dev-acme-security-ws';
 const ANVIL = 'dev-anvil-security-ws';
 const QB_SANDBOX_REALM = '9341456086062919';
 const QB_SANDBOX_BASE = 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-01-27.acacia' as any })
-  : null;
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 // ─── Sentinel ─────────────────────────────────────────────────────────────────
 async function alreadySeeded(): Promise<boolean> {
@@ -379,7 +383,7 @@ async function seedAnvilStripeMode() {
   `);
   console.log('[FinancialSeed] Anvil: billing_settings_blob → Stripe-local mode');
 
-  if (!stripe) {
+  if (!isStripeConfigured()) {
     console.warn('[FinancialSeed] Anvil: STRIPE_SECRET_KEY not set — seeding simulated Stripe IDs only');
     await seedAnvilStripeFallback();
     return;
@@ -494,7 +498,7 @@ async function seedAnvilStripeMode() {
 }
 
 async function seedAnvilInvoicePaymentIntents() {
-  if (!stripe) return;
+  if (!isStripeConfigured()) return;
 
   // Converted to Drizzle ORM: LIKE
   const anvilInvoicesRows = await db.select({

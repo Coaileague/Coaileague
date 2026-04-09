@@ -32,6 +32,7 @@ import { executionPipeline, type PipelineContext } from './executionPipeline';
 import { emailService } from './emailService';
 import Stripe from 'stripe';
 import { createLogger } from '../lib/logger';
+import { getStripe, isStripeConfigured } from './billing/stripeClient';
 const log = createLogger('enterpriseOnboardingOrchestrator');
 
 
@@ -79,12 +80,14 @@ export interface PhaseResult {
 }
 
 // ============================================================================
-// STRIPE INTEGRATION
+// STRIPE INTEGRATION — Lazy proxy (CLAUDE.md §F)
 // ============================================================================
 
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-01-27.acacia' })
-  : null;
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 // ============================================================================
 // ENTERPRISE ONBOARDING ORCHESTRATOR

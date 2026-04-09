@@ -89,10 +89,14 @@ import { unmarkEntriesAsBilled } from "../services/automation/billableHoursAggre
 import Stripe from "stripe";
 import { sendInvoiceGeneratedEmail } from "../services/emailCore";
 import { requireAuth } from "../auth";
+import { getStripe, isStripeConfigured } from "../services/billing/stripeClient";
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' as any })
-  : null;
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
+});
 
 import { rateLimitMiddleware } from "../services/infrastructure/rateLimiting";
 import { idempotencyMiddleware } from "../middleware/idempotency";
@@ -2083,7 +2087,7 @@ import { createHash } from "crypto";
 
   router.post('/:id/create-payment', async (req, res) => {
     try {
-      if (!stripe) {
+      if (!isStripeConfigured()) {
         return res.status(503).json({ message: 'Payment processing not configured' });
       }
 
@@ -3507,7 +3511,7 @@ router.post('/portal/:accessToken/invoice/:invoiceId/dispute', async (req, res) 
 // Returns { clientSecret, publishableKey, amount, currency, invoiceNumber }.
 router.post('/portal/:accessToken/invoice/:invoiceId/create-payment-intent', async (req, res) => {
   try {
-    if (!stripe) {
+    if (!isStripeConfigured()) {
       return res.status(503).json({ message: 'Payment processing is not configured for this system. Please contact your service provider.' });
     }
 

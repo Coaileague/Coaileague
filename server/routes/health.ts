@@ -138,7 +138,8 @@ rootRouter.get('/health', async (_req: Request, res: Response) => {
   // Test Stripe connection if enabled
   if (FEATURES.STRIPE_PAYMENTS) {
     try {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+      const { getStripe } = await import('../services/billing/stripeClient');
+      const stripe = getStripe();
       await Promise.race([
         stripe.prices.list({ limit: 1 }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Stripe timeout')), 2000))
