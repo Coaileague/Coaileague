@@ -23,6 +23,7 @@ import { eq, and, isNull, isNotNull, inArray, sql, not } from "drizzle-orm";
 import { guardAgainstProduction } from "../services/workspaceGuard";
 import { typedCount } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { trainingAttempts } from '@shared/schema';
 const log = createLogger('TrinityTrainingRoutes');
 
 

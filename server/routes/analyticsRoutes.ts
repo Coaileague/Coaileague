@@ -21,6 +21,7 @@ import {
   workspaces
 } from '@shared/schema';
 import { createLogger } from '../lib/logger';
+import { aiUsageLog } from '@shared/schema';
 const log = createLogger('AnalyticsRoutes');
 
 

@@ -19,6 +19,7 @@ import { sendReportDeliveryEmail } from "../services/emailCore";
 import { ObjectStorageService, objectStorageClient } from "../objectStorage";
 import { randomUUID } from "crypto";
 import { createLogger } from '../lib/logger';
+import { contractDocuments } from '@shared/schema';
 const log = createLogger('ContentInlineRoutes');
 
 
