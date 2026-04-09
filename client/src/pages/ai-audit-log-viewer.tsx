@@ -77,14 +77,14 @@ function ActionLogCard({ log, onReview }: { log: AiBrainActionLog; onReview: (id
 
   const resultConfig = getResultConfig(log.result);
   const ResultIcon = resultConfig.icon;
-  const domainColor = getDomainColor(log.actionType);
+  const domainColor = getDomainColor(log.actorType);
 
   const actionData = log.actionData as Record<string, unknown> | null;
   const createdAt = new Date(log.createdAt);
   const timeAgo = getTimeAgo(createdAt);
 
-  const domain = (log.actionType || 'unknown').split('.')[0];
-  const action = (log.actionType || 'unknown').split('.').slice(1).join('.');
+  const domain = (log.actorType || 'unknown').split('.')[0];
+  const action = (log.actorType || 'unknown').split('.').slice(1).join('.');
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -218,7 +218,7 @@ export default function AIAuditLogViewer() {
     return logs.filter(log => {
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
-        const matchesType = (log.actionType || '').toLowerCase().includes(searchLower);
+        const matchesType = (log.actorType || '').toLowerCase().includes(searchLower);
         const matchesId = log.id.toLowerCase().includes(searchLower);
         const matchesResult = (log.result || '').toLowerCase().includes(searchLower);
         if (!matchesType && !matchesId && !matchesResult) return false;

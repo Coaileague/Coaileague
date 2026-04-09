@@ -1137,8 +1137,8 @@ class FastModeService {
     // Top agents used
     const agentCounts: Record<string, number> = {};
     fastModeTasks.forEach(t => {
-      if (t.assignedAgentName) {
-        agentCounts[t.assignedAgentName] = (agentCounts[t.assignedAgentName] || 0) + 1;
+      if (t.assignedAgentId) {
+        agentCounts[t.assignedAgentId] = (agentCounts[t.assignedAgentId] || 0) + 1;
       }
     });
     const topAgentsUsed = Object.entries(agentCounts)

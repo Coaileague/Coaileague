@@ -599,7 +599,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     });
 
     req.user = testUser;
-    req.userId = testUser.id;
+    req.user = testUser.id;
     req.isTestMode = true;
     req.workspaceId = TEST_MODE_WORKSPACE_ID;
     req.workspaceRole = 'org_owner';
@@ -625,7 +625,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   if (botToken && validateTrinityBotToken(botToken)) {
     log.info('Trinity bot bypass granted', { endpoint, method, ip: ipAddress });
     req.user = TRINITY_BOT_USER;
-    req.userId = TRINITY_BOT_USER.id;
+    req.user = TRINITY_BOT_USER.id;
     req.platformRole = 'Bot';
     req.workspaceRole = undefined;
     req.isTrinityBot = true;
@@ -673,7 +673,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       _dbDegraded: true,
     };
     req.user = degradedUser;
-    req.userId = authenticatedUserId;
+    req.user = authenticatedUserId;
     if (wsId && !req.workspaceId) req.workspaceId = wsId;
     log.warn('[requireAuth] DB circuit open — using session-based degraded auth', { userId: authenticatedUserId, path: endpoint });
     return next();
@@ -784,7 +784,7 @@ export const requireAuthWithElevation: RequestHandler = async (req, res, next) =
       }
 
       req.user = user;
-      req.authContext = {
+      req.auditContext = {
         isSupportElevated: true,
         elevationId: elevationContext.elevationId,
         platformRole: elevationContext.platformRole,
@@ -815,7 +815,7 @@ export const requireAuthWithElevation: RequestHandler = async (req, res, next) =
   }
 
   req.user = user;
-  req.authContext = { isSupportElevated: false };
+  req.auditContext = { isSupportElevated: false };
   next();
 };
 

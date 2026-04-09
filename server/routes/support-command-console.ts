@@ -205,7 +205,7 @@ supportCommandRouter.post('/force-notification', requireSupportRole, async (req:
       // Platform-wide - notify all users using their current workspace
       const allUsers = await db.select({ 
         id: users.id, 
-        currentWorkspace: users.currentWorkspace 
+        currentWorkspace: users.currentWorkspaceId 
       }).from(users);
       notificationScope = `${allUsers.length} users platform-wide`;
       
@@ -1275,7 +1275,7 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
     try {
       allUsers = await db.select({ 
         id: users.id, 
-        currentWorkspace: users.currentWorkspace 
+        currentWorkspace: users.currentWorkspaceId 
       }).from(users);
     } catch (error) {
       log.warn('[TestCountdown] Could not fetch users:', error);

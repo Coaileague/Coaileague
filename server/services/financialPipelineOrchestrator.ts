@@ -350,7 +350,7 @@ export async function processPayrollThroughPipeline(
   }
 
   const profile = await getConfidenceProfileAsync(workspaceId);
-  const totalPay = Number(payrollRun.totalGross) || 0;
+  const totalPay = Number(payrollRun.totalGrossPay) || 0;
 
   const confidenceResult = scoreOperation(workspaceId, 'payroll_processing', totalPay, {
     missing: 0,

@@ -143,7 +143,7 @@ router.post('/sync/:provider', requireAuth, async (req: Request, res: Response) 
   try {
     const provider = req.params.provider as HRISProvider;
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || req.session?.workspaceId;
-    const userId = req.session?.userId || req.userId;
+    const userId = req.session?.userId || req.user;
 
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: 'Workspace ID required' });

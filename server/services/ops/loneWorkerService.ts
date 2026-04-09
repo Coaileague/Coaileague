@@ -200,7 +200,7 @@ class LoneWorkerService {
       title: `${urgency}: Lone Worker Missed Check-In`,
       description: `${s.employee_name || 'Officer'} has missed ${missedCount} check-in(s). Escalating to ${level}.`,
       workspaceId,
-      metadata: { sessionId, employeeId: s.employee_id, missedCount, level, requiresImmediateResponse: missedCount >= 3 },
+      metadata: { sessionId, employeeId: s.employeeId, missedCount, level, requiresImmediateResponse: missedCount >= 3 },
     });
 
     await broadcastToWorkspace(workspaceId, {

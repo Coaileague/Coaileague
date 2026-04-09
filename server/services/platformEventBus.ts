@@ -770,7 +770,7 @@ class PlatformEventBus {
         
         const recipientRoles = getRecipientRoles(event.visibility || 'all');
         
-        await notificationEngine.sendNotificationToRoles({
+        await notificationEngine.sendNotification({
           workspaceId: event.workspaceId,
           roles: recipientRoles,
           title: event.title,

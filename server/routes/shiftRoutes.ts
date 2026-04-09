@@ -268,7 +268,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/pending', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = req.workspace?.id || req.workspaceId;
+      const workspaceId = req.workspaceId?.id || req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const shifts = await getPendingShifts(workspaceId);
@@ -281,7 +281,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = req.workspace?.id || req.workspaceId;
+      const workspaceId = req.workspaceId?.id || req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const stats = await getApprovalStats(workspaceId);
@@ -1501,7 +1501,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         requiredSkills: shift.requiredSkills || [],
         requiredCertifications: shift.requiredCertifications || [],
         maxDistance: 50,
-        maxPayRate: shift.maxPayRate ? parseFloat(shift.maxPayRate) : undefined,
+        maxPayRate: shift.payRate ? parseFloat(shift.payRate) : undefined,
       });
 
       if (scoredCandidates.length === 0) {
@@ -1818,7 +1818,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         requestReason: fillRequestParsed.data.reason || "No qualified internal employees available",
         requiredSkills: shift.requiredSkills || [],
         preferredSkills: fillRequestParsed.data.preferredSkills || [],
-        maxPayRate: shift.maxPayRate || fillRequestParsed.data.maxPayRate || "0",
+        maxPayRate: shift.payRate || fillRequestParsed.data.maxPayRate || "0",
         maxDistance: fillRequestParsed.data.maxDistance || 50,
         status: "searching",
         createdBy: userId,
@@ -1858,7 +1858,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         }
 
         // Pay rate bonus (lower rate is better for margin)
-        const maxPay = parseFloat(shift.maxPayRate || fillRequestParsed.data.maxPayRate || "100");
+        const maxPay = parseFloat(shift.payRate || fillRequestParsed.data.maxPayRate || "100");
         const contractorRate = parseFloat(contractor.minHourlyRate);
         if (contractorRate <= maxPay) {
           score += 0.15;

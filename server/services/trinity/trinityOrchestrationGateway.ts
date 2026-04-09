@@ -768,7 +768,7 @@ class TrinityOrchestrationGateway {
     let status: PlatformAuditResult['status'] = 'NOT_BUILT';
 
     // Check feature registry for related features
-    const allFeatures = featureRegistryService.getAllFeatures();
+    const allFeatures = featureRegistryService.getFeature();
     const matchedFeatures = allFeatures.filter(f => 
       keywords.some(kw => 
         f.key.toLowerCase().includes(kw) || 

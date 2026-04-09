@@ -2222,7 +2222,7 @@ router.get('/connections', requireAuth, requireWorkspaceMembership('query'), asy
       status: conn.status,
       companyId: conn.companyId,
       companyName: (conn.metadata as any)?.companyName || null,
-      lastSyncedAt: conn.lastSyncedAt,
+      lastSyncedAt: conn.lastSyncAt,
       accessTokenExpiresAt: conn.accessTokenExpiresAt,
       refreshTokenExpiresAt: conn.refreshTokenExpiresAt,
     }));

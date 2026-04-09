@@ -9,7 +9,7 @@ const router = Router();
 router.get("/summary", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -27,7 +27,7 @@ router.get("/summary", async (req: AuthenticatedRequest, res) => {
 router.post("/lockdown", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -47,7 +47,7 @@ router.post("/lockdown", async (req: AuthenticatedRequest, res) => {
 router.post("/lockdown/release", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const rootRoles = ["root_admin", "deputy_admin"];
     if (!rootRoles.includes(platformRole || "")) {
@@ -67,7 +67,7 @@ router.post("/lockdown/release", async (req: AuthenticatedRequest, res) => {
 router.post("/blackout", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -87,7 +87,7 @@ router.post("/blackout", async (req: AuthenticatedRequest, res) => {
 router.post("/blackout/resolve", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -104,7 +104,7 @@ router.post("/blackout/resolve", async (req: AuthenticatedRequest, res) => {
 router.post("/dispute", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -124,7 +124,7 @@ router.post("/dispute", async (req: AuthenticatedRequest, res) => {
 router.post("/purge", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const rootRoles = ["root_admin", "deputy_admin"];
     if (!rootRoles.includes(platformRole || "")) {
@@ -144,7 +144,7 @@ router.post("/purge", async (req: AuthenticatedRequest, res) => {
 router.get("/script/:type", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -166,7 +166,7 @@ router.get("/script/:type", async (req: AuthenticatedRequest, res) => {
 router.get("/audit", async (req: AuthenticatedRequest, res) => {
   try {
 
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop"];
     if (!guruRoles.includes(platformRole || "")) {

@@ -589,7 +589,7 @@ export class SandboxQuickBooksSimulator {
         )
       );
     
-    const approvedEntries = allApprovedEntries.filter(e => !e.invoiced);
+    const approvedEntries = allApprovedEntries.filter(e => !e.invoiceId);
 
     if (approvedEntries.length === 0) {
       return { success: true, message: 'No unbilled time entries to invoice', details: { invoicesCreated: 0 } };
@@ -876,7 +876,7 @@ export class SandboxQuickBooksSimulator {
         clockOut: entry.clockOut,
         totalHours: parseFloat(entry.totalHours || '0'),
         status: entry.status,
-        invoiced: entry.invoiced,
+        invoiced: entry.invoiceId,
       });
     }
 

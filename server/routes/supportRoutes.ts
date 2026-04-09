@@ -1324,7 +1324,7 @@ router.get('/chatrooms', async (req: AuthenticatedRequest, res) => {
 router.post('/session/elevate', async (req: AuthenticatedRequest, res) => {
   try {
     const elevatedSessionService = await import("../services/session/elevatedSessionService");
-    const userId = req.userId!;
+    const userId = req.user!;
     const sessionId = req.sessionID;
 
     const eligibility = await elevatedSessionService.canReceiveElevation(userId);
@@ -1381,7 +1381,7 @@ router.get('/session/status', async (req: AuthenticatedRequest, res) => {
 router.post('/session/revoke', async (req: AuthenticatedRequest, res) => {
   try {
     const elevatedSessionService = await import("../services/session/elevatedSessionService");
-    const userId = req.userId!;
+    const userId = req.user!;
     const count = await elevatedSessionService.revokeAllUserElevations(userId, 'manual_logout');
     res.json({ success: true, revokedCount: count });
   } catch (error: unknown) {
@@ -1393,7 +1393,7 @@ router.post('/session/ai-service', async (req: AuthenticatedRequest, res) => {
   try {
     const { aiBrainAuthorizationService } = await import("../services/ai-brain/aiBrainAuthorizationService");
 
-    const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+    const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.user!);
     if (!authCheck.valid || !['root_admin', 'deputy_admin', 'sysop'].includes(authCheck.role || '')) {
       return res.status(403).json({ success: false, error: 'Insufficient permissions to issue AI service elevations' });
     }

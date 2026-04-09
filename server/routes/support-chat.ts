@@ -28,7 +28,7 @@ router.post('/session', async (req: Request, res: Response) => {
     const { guestEmail, guestName, userAgent, url, workspaceId, issueDescription, quickbooksId } = req.body;
     
     const session = await supportSessionService.createSession({
-      userId: authReq.userId,
+      userId: authReq.user,
       guestEmail,
       guestName: guestName || 'Guest',
       userAgent: userAgent || req.headers['user-agent'],
@@ -154,7 +154,7 @@ router.get('/queue', requirePlatformStaff, async (req: Request, res: Response) =
 router.post('/session/:sessionId/join', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const staffId = req.userId!;
+    const staffId = req.user!;
     const staffInfo = await storage.getUserDisplayInfo(staffId);
     const { formatStaffDisplayNameForEndUser } = await import('../utils/formatUserDisplayName');
     const staffName = staffInfo
@@ -185,7 +185,7 @@ router.post('/session/:sessionId/staff-message', requirePlatformStaff, async (re
   try {
     const { sessionId } = req.params;
     const { content } = req.body;
-    const staffId = req.userId!;
+    const staffId = req.user!;
 
     if (!content?.trim()) {
       return res.status(400).json({ success: false, error: 'Message content required' });
@@ -275,7 +275,7 @@ router.get('/sessions/all', requirePlatformStaff, async (req: AuthenticatedReque
 
 router.get('/my-sessions', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const sessions = supportSessionService.getActiveStaffSessions(req.userId!);
+    const sessions = supportSessionService.getActiveStaffSessions(req.user!);
     
     res.json({
       success: true,
@@ -363,7 +363,7 @@ router.get('/my-tickets', requireAuth, async (req: AuthenticatedRequest, res: Re
     const { supportTickets } = await import('@shared/schema');
     const { eq, desc } = await import('drizzle-orm');
 
-    const userId = req.userId!;
+    const userId = req.user!;
     
     const tickets = await db.select()
       .from(supportTickets)

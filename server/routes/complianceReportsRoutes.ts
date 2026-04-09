@@ -54,7 +54,7 @@ router.get("/list", requireManager, async (req: AuthenticatedRequest, res) => {
 router.post("/generate", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
-    const userId = req.userId!;
+    const userId = req.user!;
     const { reportType, periodStart, periodEnd, jurisdiction } = req.body;
 
     const reportMeta = REPORT_TYPES.find(r => r.id === reportType);

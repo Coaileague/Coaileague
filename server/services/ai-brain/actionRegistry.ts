@@ -365,12 +365,12 @@ class AIBrainActionRegistry {
               data: {
                 shiftId: openShift.id,
                 step: 'assigning',
-                message: `Assigning to ${assignment.employeeName} (score: ${assignment.assignmentScore.toFixed(0)})...`,
+                message: `Assigning to ${assignment.employeeName} (score: ${assignment.assignment.toFixed(0)})...`,
                 progress: 80,
                 assignedEmployee: {
                   id: assignment.employeeId,
                   name: assignment.employeeName,
-                  score: assignment.assignmentScore,
+                  score: assignment.assignment,
                 },
               }
             });

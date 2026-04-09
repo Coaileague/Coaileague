@@ -172,10 +172,10 @@ class AdvancedUsageAnalyticsService {
     return {
       currentBalance: creditRecord.currentBalance,
       lifetimePurchased: creditRecord.totalCreditsEarned || 0,
-      lifetimeUsed: creditRecord.totalCreditsUsed || 0,
+      lifetimeUsed: creditRecord.totalCreditsSpent || 0,
       averageDailyUsage: Math.round(averageDailyUsage * 10) / 10,
       projectedDaysRemaining,
-      lowBalanceWarning: creditRecord.currentBalance < (creditRecord.lowBalanceThreshold || 50),
+      lowBalanceWarning: creditRecord.currentBalance < (creditRecord.lowBalanceAlertThreshold || 50),
       lastPurchaseDate: null,
       lastUsageDate: creditRecord.lastUsedAt?.toISOString() || null
     };
@@ -236,7 +236,7 @@ class AdvancedUsageAnalyticsService {
       ));
 
     const topAgents = await db.select({
-      agentName: aiWorkboardTasks.assignedAgentName,
+      agentName: aiWorkboardTasks.assignedAgentId,
       taskCount: count(),
       creditsUsed: sql<number>`COALESCE(SUM(${aiWorkboardTasks.fastModeCredits}), 0)`
     })
@@ -246,7 +246,7 @@ class AdvancedUsageAnalyticsService {
         gte(aiWorkboardTasks.createdAt, startDate),
         lte(aiWorkboardTasks.createdAt, endDate)
       ))
-      .groupBy(aiWorkboardTasks.assignedAgentName)
+      .groupBy(aiWorkboardTasks.assignedAgentId)
       .orderBy(desc(count()))
       .limit(5);
 

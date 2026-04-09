@@ -159,7 +159,7 @@ class ReportBotPdfService {
       // ── Get workspace/org name ───────────────────────────────────────────
       let orgName = 'Security Services';
       try {
-        const ws = await storage.getWorkspaceById(workspaceId);
+        const ws = await storage.getWorkspace(workspaceId);
         orgName = ws?.name || orgName;
       } catch {}
 

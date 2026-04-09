@@ -199,7 +199,7 @@ export function registerInfraActions() {
       quickbooksEntityType: 'Invoice',
       success: syncSuccess,
       amount: String(parseFloat(invoice.total || '0')),
-      description: `Trinity QB push — Invoice ${invoice.invoice_number}`,
+      description: `Trinity QB push — Invoice ${invoice.invoiceNumber}`,
       errorMessage: syncError,
       trinityVerified: true,
       createdAt: sql`now()`,

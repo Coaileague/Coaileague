@@ -487,10 +487,10 @@ class SubagentBanker {
     return {
       balance: creditsAccount?.currentBalance || 0,
       lifetimePurchased: creditsAccount?.totalCreditsEarned || 0,
-      lifetimeUsed: creditsAccount?.totalCreditsUsed || 0,
+      lifetimeUsed: creditsAccount?.totalCreditsSpent || 0,
       lifetimeBonuses: 0,
       isActive: creditsAccount ? !creditsAccount.isSuspended : true,
-      lowBalanceWarning: (creditsAccount?.currentBalance || 0) < (creditsAccount?.lowBalanceThreshold || 50),
+      lowBalanceWarning: (creditsAccount?.currentBalance || 0) < (creditsAccount?.lowBalanceAlertThreshold || 50),
       recentTransactions: recentTx.map(tx => ({
         type: tx.transactionType,
         credits: tx.amount,

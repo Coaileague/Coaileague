@@ -247,12 +247,12 @@ export async function auditWorkspaceHandbooks(workspaceId: string): Promise<Hand
     id: complianceDocuments.id,
     title: complianceDocuments.title,
     content: complianceDocuments.content,
-    documentType: complianceDocuments.documentType,
+    documentType: complianceDocuments.documentTypeId,
   })
     .from(complianceDocuments)
     .where(and(
       eq(complianceDocuments.workspaceId, workspaceId),
-      inArray(complianceDocuments.documentType, ['employee_handbook', 'handbook', 'policy']),
+      inArray(complianceDocuments.documentTypeId, ['employee_handbook', 'handbook', 'policy']),
       ne(complianceDocuments.status, 'archived')
     ))
     .orderBy(desc(complianceDocuments.createdAt))

@@ -51,7 +51,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     const parsed = insertDisciplinaryRecordSchema.safeParse({
       ...req.body,
       workspaceId,
-      issuedBy: req.userId,
+      issuedBy: req.user,
     });
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.errors });

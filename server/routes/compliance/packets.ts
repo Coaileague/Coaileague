@@ -272,7 +272,7 @@ router.post("/generate", requireAuth, mutationLimiter, async (req: Request, res:
             .filter(d => d.employeeId === er.employee?.id)
             .map(d => ({
               id: d.id,
-              documentTypeName: d.documentTypeName,
+              documentTypeName: d.documentName,
               fileName: d.fileName,
               fileHash: d.fileHashSha256,
               isLocked: d.isLocked,

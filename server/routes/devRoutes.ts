@@ -1288,7 +1288,7 @@ router.post('/simulate-shift-room-scenarios', requirePlatformAdmin, async (req: 
       results['C_clockbot_flow'] = {
         passed: !!te,
         detail: te
-          ? `ClockBot time entry created: ${te.id} (gps_status=${te.gps_verification_status}, trinity_assisted=${te.trinity_assisted_clockin})`
+          ? `ClockBot time entry created: ${te.id} (gps_status=${te.gpsVerificationStatus}, trinity_assisted=${te.trinityAssistedClockin})`
           : 'Time entry not found — ClockBot requires the shift room to have officerEmployeeId in its context metadata',
       };
     } catch (err: unknown) {
@@ -1375,7 +1375,7 @@ router.post('/simulate-shift-room-scenarios', requirePlatformAdmin, async (req: 
       ]).onConflictDoNothing();
 
       // Generate the meeting summary PDF
-      await meetingBotPdfService.generateMeetingSummaryPdf({
+      await meetingBotPdfService.generateAndSaveMeetingSummary({
         conversationId: meetingConvId,
         workspaceId: ACME,
         requestedBy: simUserId,
@@ -1396,7 +1396,7 @@ router.post('/simulate-shift-room-scenarios', requirePlatformAdmin, async (req: 
       results['E_meetingbot_pdf'] = {
         passed: !!doc,
         detail: doc
-          ? `MeetingBot PDF saved to document safe: ${doc.id} (category=${doc.category}, file=${doc.file_name})`
+          ? `MeetingBot PDF saved to document safe: ${doc.id} (category=${doc.category}, file=${doc.fileName})`
           : 'Meeting PDF not found in org_documents — may be async or object storage path issue',
       };
     } catch (err: unknown) {
@@ -1720,7 +1720,7 @@ router.post('/test/email', requireAuth, requirePlatformAdmin, async (req: Authen
           timestamp: new Date(),
           workspaceId: req.workspaceId || 'coaileague-platform-workspace',
         };
-        const trinityResult = await trinityEmailProcessor.processInboundEmail(simulatedInbound as any);
+        const trinityResult = await trinityEmailProcessor.processInbound(simulatedInbound as any);
         diagnostics.trinitySimulation = { success: true, result: trinityResult };
         log.info('[DevRoutes/test-email] Trinity inbound simulation complete');
       } catch (trinityErr: any) {

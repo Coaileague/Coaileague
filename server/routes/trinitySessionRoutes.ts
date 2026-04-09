@@ -14,7 +14,7 @@ const router = Router();
 
 router.get("/", async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.userId || req.user?.id || req.user?.claims?.sub;
+    const userId = req.user || req.user?.id || req.user?.claims?.sub;
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
@@ -54,7 +54,7 @@ router.post("/:sessionId/turn", async (req: AuthenticatedRequest, res) => {
 
 router.post("/:sessionId/escalate", async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.userId!;
+    const userId = req.user!;
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {

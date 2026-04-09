@@ -731,7 +731,7 @@ export function registerCoreSubagentActions(orchestrator: any): void {
         startDate: cutoff,
       });
 
-      const employees = await storage.getEmployees(workspaceId);
+      const employees = await storage.getEmployee(workspaceId);
       const employeeMap = Object.fromEntries(employees.map(e => [e.id, `${e.firstName} ${e.lastName}`]));
 
       const IRS_RATE = 0.70;

@@ -55,13 +55,13 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
     if (limit) filters.limit = parseInt(limit as string, 10);
     if (offset) filters.offset = parseInt(offset as string, 10);
-    if (myFeedback === 'true') filters.userId = req.userId!;
+    if (myFeedback === 'true') filters.userId = req.user!;
     
     const feedbackList = await storage.getFeedbackList(filters);
     
     const feedbackWithUserVotes = await Promise.all(
       feedbackList.map(async (fb) => {
-        const userVote = await storage.getUserFeedbackVote(fb.id, req.userId!);
+        const userVote = await storage.getUserFeedbackVote(fb.id, req.user!);
         return { ...fb, userVote: userVote?.voteType || null };
       })
     );
@@ -86,7 +86,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
     
     const comments = await storage.getFeedbackComments(id);
-    const userVote = await storage.getUserFeedbackVote(id, req.userId!);
+    const userVote = await storage.getUserFeedbackVote(id, req.user!);
     
     res.json({ 
       success: true, 
@@ -116,7 +116,7 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    if (feedback.userId !== req.userId) {
+    if (feedback.userId !== req.user) {
       return res.status(403).json({ success: false, error: "Only the author can edit this feedback" });
     }
     
@@ -159,7 +159,7 @@ router.patch('/:id/status', requireAuth, async (req: AuthenticatedRequest, res) 
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    const updated = await storage.updateFeedbackStatus(id, status, req.userId!, note);
+    const updated = await storage.updateFeedbackStatus(id, status, req.user!, note);
     res.json({ success: true, data: updated });
   } catch (error: unknown) {
     log.error("Error updating feedback status:", error);
@@ -185,7 +185,7 @@ router.post('/:id/vote', requireAuth, async (req: AuthenticatedRequest, res) => 
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    const result = await storage.voteFeedback(id, req.userId!, voteType);
+    const result = await storage.voteFeedback(id, req.user!, voteType);
     res.json({ success: true, data: result });
   } catch (error: unknown) {
     log.error("Error voting on feedback:", error);
@@ -213,7 +213,7 @@ router.post('/:id/comments', requireAuth, async (req: AuthenticatedRequest, res)
     
     const comment = await storage.createFeedbackComment({
       feedbackId: id,
-      userId: req.userId!,
+      userId: req.user!,
       content: content.trim(),
       parentId: parentId || null,
     });
@@ -280,7 +280,7 @@ router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    if (feedback.userId !== req.userId) {
+    if (feedback.userId !== req.user) {
       return res.status(403).json({ success: false, error: "Only the author can delete this feedback" });
     }
     
