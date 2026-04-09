@@ -490,7 +490,7 @@ class PlatformEventBus {
       this.subscribers.set(key, []);
     }
     this.subscribers.get(key)!.push(subscriber);
-    log.info('Subscriber registered', { subscriberName: subscriber.name, eventType });
+    log.verbose('Subscriber registered', { subscriberName: subscriber.name, eventType });
   }
 
   /**
@@ -516,7 +516,7 @@ class PlatformEventBus {
       this.internalListeners.set(eventName, []);
     }
     this.internalListeners.get(eventName)!.push(listener);
-    log.info('Internal listener registered', { eventName });
+    log.verbose('Internal listener registered', { eventName });
   }
 
   /**
@@ -524,7 +524,7 @@ class PlatformEventBus {
    */
   async publish(event: PlatformEvent): Promise<void> {
     const timestamp = new Date().toISOString();
-    log.info('Event published', { eventType: event.type, title: event.title });
+    log.verbose('Event published', { eventType: event.type, title: event.title });
 
     // Use scheduleNonBlocking so event publishing doesn't block the main execution flow
     scheduleNonBlocking('platform-event-bus.publish', async () => {
@@ -677,7 +677,7 @@ class PlatformEventBus {
       // Skip internal system events — these are AI/infrastructure lifecycle events
       // that are meaningless (and often alarming) to end users.
       if (PlatformEventBus.SYSTEM_INTERNAL_EVENT_TYPES.has(event.type)) {
-        log.info('Skipping internal system event (not user-facing)', { eventType: event.type, title: event.title });
+        log.verbose('Skipping internal system event (not user-facing)', { eventType: event.type, title: event.title });
         return;
       }
 

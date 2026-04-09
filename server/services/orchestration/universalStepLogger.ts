@@ -599,7 +599,7 @@ class UniversalStepLogger {
     context.steps.push(stepEntry);
     context.updatedAt = new Date();
     
-    log.info(`[UniversalStepLogger] [${orchestrationId}] Step ${step}: ${STEP_DESCRIPTIONS[step]}`);
+    log.verbose(`[UniversalStepLogger] [${orchestrationId}] Step ${step}: ${STEP_DESCRIPTIONS[step]}`);
     
     try {
       const result = await executor();
@@ -625,7 +625,7 @@ class UniversalStepLogger {
       // Persist state for durability after each step
       await this.persistOrchestrationState(context);
       
-      log.info(`[UniversalStepLogger] [${orchestrationId}] Step ${step}: ${stepEntry.status} (${stepEntry.durationMs}ms)`);
+      log.verbose(`[UniversalStepLogger] [${orchestrationId}] Step ${step}: ${stepEntry.status} (${stepEntry.durationMs}ms)`);
       
       // Release lock on completion/failure (use correct lockKey format)
       if (options?.acquireLock) {
@@ -940,7 +940,7 @@ class UniversalStepLogger {
       error,
     });
     
-    log.info(`[UniversalStepLogger] [${context.orchestrationId}] Step ${step}: ${status}`);
+    log.verbose(`[UniversalStepLogger] [${context.orchestrationId}] Step ${step}: ${status}`);
   }
 
   /**
