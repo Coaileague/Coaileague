@@ -366,7 +366,7 @@ Respond with JSON:
     });
 
     if (!meteredResult.success) {
-      return this.getFallbackRouting(query, context);
+      return (this as any).getFallbackRouting(query, context);
     }
 
     const text = meteredResult.text;

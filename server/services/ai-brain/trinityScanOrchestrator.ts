@@ -205,7 +205,7 @@ class TrinityScanOrchestrator {
       const performanceMap = new Map<string, { success: number; fail: number; total: number }>();
       
       for (const record of telemetry) {
-        const key = record.subagentName || 'unknown';
+        const key = (record as any).subagentName || 'unknown';
         const current = performanceMap.get(key) || { success: 0, fail: 0, total: 0 };
         current.total++;
         if (record.status === 'completed') current.success++;
@@ -252,7 +252,7 @@ class TrinityScanOrchestrator {
       // Analyze automation patterns
       const actionTypes = new Map<string, number>();
       for (const action of actions) {
-        const type = action.actionType || 'unknown';
+        const type = (action as any).actionType || 'unknown';
         actionTypes.set(type, (actionTypes.get(type) || 0) + 1);
       }
 
@@ -294,7 +294,7 @@ class TrinityScanOrchestrator {
       const gapCategories = new Map<string, { count: number; descriptions: string[] }>();
 
       for (const gap of gaps) {
-        const category = gap.category || 'unknown';
+        const category = (gap as any).category || 'unknown';
         const current = gapCategories.get(category) || { count: 0, descriptions: [] };
         current.count++;
         if (gap.gapDescription && current.descriptions.length < 5) {

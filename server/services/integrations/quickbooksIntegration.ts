@@ -545,10 +545,10 @@ export class QuickBooksIntegration {
       email: c.email,
       phone: c.phone,
       address: c.address ? {
-        line1: (c.address as any).street || (c.address as any).line1,
-        city: (c.address as any).city,
-        state: (c.address as any).state,
-        postalCode: (c.address as any).zip || (c.address as any).postalCode,
+        line1: (c as any).address.street || (c as any).address.line1,
+        city: (c as any).address.city,
+        state: (c as any).address.state,
+        postalCode: (c as any).address.zip || (c as any).address.postalCode,
       } : undefined,
     })));
 

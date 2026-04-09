@@ -146,7 +146,7 @@ class ReportBotPdfService {
         attachmentUrl: m.attachmentUrl,
         isBot: m.senderType === 'bot' || m.isSystemMessage || false,
         createdAt: new Date(m.createdAt || Date.now()),
-        metadata: m.metadata,
+        metadata: (m as any).metadata,
       }));
 
       // ── Quality scan on officer messages ─────────────────────────────────

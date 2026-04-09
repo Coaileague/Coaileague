@@ -270,8 +270,8 @@ export class SandboxQuickBooksSimulator {
       displayName: `${e.firstName} ${e.lastName}`,
       companyName: '',
       email: e.email || '',
-      taxId: e.ssn || undefined,
-      is1099: e.employmentType === '1099' || e.employmentType === 'contractor',
+      taxId: (e as any).ssn || undefined,
+      is1099: (e as any).employmentType === '(1099 as any)' || (e as any).employmentType === 'contractor',
       balance: 0,
       syncStatus: e.quickbooksVendorId ? 'synced' : 'pending' as const,
       qbId: e.quickbooksVendorId || undefined,
@@ -354,14 +354,14 @@ export class SandboxQuickBooksSimulator {
         id: run.id,
         payPeriodStart: new Date(run.periodStart!),
         payPeriodEnd: new Date(run.periodEnd!),
-        payDate: run.payDate ? new Date(run.payDate) : new Date(),
+        payDate: (run as any).payDate ? new Date(run.payDate) : new Date(),
         totalGross: parseFloat(run.totalGrossPay || '0'),
         totalNet: parseFloat(run.totalNetPay || '0'),
         totalTaxes: parseFloat(run.totalFederalTax || '0') + parseFloat(run.totalStateTax || '0') + parseFloat(run.totalFicaTax || '0'),
         employeeCount: entries.length,
         status: run.status as any,
         entries: entryDetails,
-        syncStatus: run.quickbooksPayrollId ? 'synced' : 'pending',
+        syncStatus: (run as any).quickbooksPayrollId ? 'synced' : 'pending',
       });
     }
 
@@ -913,7 +913,7 @@ export class SandboxQuickBooksSimulator {
         startTime: shift.startTime,
         endTime: shift.endTime,
         status: shift.status,
-        shiftType: shift.shiftType,
+        shiftType: (shift as any).shiftType,
       });
     }
 

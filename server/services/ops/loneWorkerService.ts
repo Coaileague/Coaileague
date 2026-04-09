@@ -87,7 +87,7 @@ class LoneWorkerService {
     });
 
     const rows = await db.select().from(loneWorkerSessions).where(eq(loneWorkerSessions.id, id));
-    const session = rows[0] as LoneWorkerSession;
+    const session = rows[0] as unknown as LoneWorkerSession;
 
     await platformEventBus.publish({
       type: 'lone_worker_session_started',
@@ -142,7 +142,7 @@ class LoneWorkerService {
       : await db.select().from(loneWorkerSessions).where(and(eq(loneWorkerSessions.workspaceId, data.workspaceId), eq(loneWorkerSessions.employeeId, data.employeeId!), eq(loneWorkerSessions.status, 'active'))).limit(1);
 
     if (!fetchResult.length) return null;
-    const session = fetchResult[0] as LoneWorkerSession;
+    const session = fetchResult[0] as unknown as LoneWorkerSession;
 
     await platformEventBus.publish({
       type: 'lone_worker_checked_in',
@@ -198,7 +198,7 @@ class LoneWorkerService {
       type: 'lone_worker_missed_checkin',
       category: 'automation',
       title: `${urgency}: Lone Worker Missed Check-In`,
-      description: `${s.employee_name || 'Officer'} has missed ${missedCount} check-in(s). Escalating to ${level}.`,
+      description: `${(s as any).employee_name || 'Officer'} has missed ${missedCount} check-in(s). Escalating to ${level}.`,
       workspaceId,
       metadata: { sessionId, employeeId: s.employeeId, missedCount, level, requiresImmediateResponse: missedCount >= 3 },
     });
@@ -210,7 +210,7 @@ class LoneWorkerService {
     });
 
     // Real-time escalation via WebSocket broadcast — supervisors monitoring the dashboard see the alert
-    log.warn(`Lone worker missed check-in escalated to ${level}: ${s.employee_name || 'officer'}, missed=${missedCount}`);
+    log.warn(`Lone worker missed check-in escalated to ${level}: ${(s as any).employee_name || 'officer'}, missed=${missedCount}`);
   }
 
   async listActiveSessions(workspaceId: string): Promise<LoneWorkerSession[]> {
@@ -224,7 +224,7 @@ class LoneWorkerService {
       ))
       .orderBy(desc(loneWorkerSessions.createdAt));
 
-    return result as LoneWorkerSession[];
+    return result as unknown as LoneWorkerSession[];
   }
 
   private registerTrinityActions() {

@@ -222,7 +222,7 @@ export class GustoService {
       first_name: employee.firstName,
       last_name: employee.lastName,
       email: employee.email,
-      jobs: employee.payRate ? [
+      jobs: (employee as any).payRate ? [
         {
           title: employee.position || 'Employee',
           rate: Number(employee.payRate),
@@ -341,10 +341,10 @@ export class GustoService {
     const gustoPayroll: Partial<GustoPayroll> = {
       company_id: companyId,
       pay_period: {
-        start_date: payrollRun.startDate.toISOString().split('T')[0],
-        end_date: payrollRun.endDate.toISOString().split('T')[0],
+        start_date: (payrollRun as any).startDate.toISOString().split('T')[0],
+        end_date: (payrollRun as any).endDate.toISOString().split('T')[0],
       },
-      payroll_deadline: payrollRun.payDate?.toISOString().split('T')[0],
+      payroll_deadline: (payrollRun as any).payDate?.toISOString().split('T')[0],
     };
 
     const createGustoPayroll = withUsageTracking(
@@ -368,8 +368,8 @@ export class GustoService {
         featureKey: 'payroll_creation',
         metadata: {
           payrollRunId,
-          startDate: payrollRun.startDate,
-          endDate: payrollRun.endDate,
+          startDate: (payrollRun as any).startDate,
+          endDate: (payrollRun as any).endDate,
         },
       }
     );
@@ -384,7 +384,7 @@ export class GustoService {
       entityType: 'payroll_run',
       coaileagueEntityId: payrollRunId,
       partnerEntityId: result.payrollId,
-      partnerEntityName: `Payroll ${payrollRun.startDate.toLocaleDateString()}`,
+      partnerEntityName: `Payroll ${(payrollRun as any).startDate.toLocaleDateString()}`,
       syncStatus: 'synced',
       lastSyncAt: new Date(),
       mappingSource: 'auto',
@@ -444,7 +444,7 @@ export class GustoService {
 
       timeActivities.push({
         employee_id: employeeMapping.partnerEntityId,
-        date: entry.periodEnd.toISOString().split('T')[0],
+        date: (entry as any).periodEnd.toISOString().split('T')[0],
         hours_worked: Number(entry.regularHours || 0) + Number(entry.overtimeHours || 0),
       });
     }

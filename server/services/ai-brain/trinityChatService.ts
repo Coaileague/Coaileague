@@ -604,7 +604,7 @@ class TrinityChatService {
     let thalamicSignal: any = null;
     try {
       // Determine trust tier from request context
-      const trustTier = request.trustTier || 'officer';
+      const trustTier = (request as any).trustTier || 'officer';
       thalamicSignal = await trinityThalamus.processChat(message, userId, workspaceId, trustTier);
     } catch {
       // Thalamus must never block chat — always non-fatal
@@ -1287,7 +1287,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         actionType: 'chat_response',
         workspaceId,
         userId,
-        trustTier: request.trustTier || 'officer',
+        trustTier: (request as any).trustTier || 'officer',
         intendedOutput: aiResponse.text,
         expectedDurationMs: 5000,
         actualDurationMs: timeMs,
@@ -2368,7 +2368,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         .limit(500);
 
       const entityTurns = turns.filter(t => {
-        const refs = (t.toolResults as any)?.entityRefs;
+        const refs = (t as any).toolResults?.entityRefs;
         return refs && refs[entityKey] === entityId;
       });
 

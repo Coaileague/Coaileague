@@ -642,9 +642,9 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         userRole: req.user?.role || 'user',
         action: 'create',
         entityType: 'payroll_run',
-        entityId: payrollRun.id,
+        entityId: (payrollRun as any).id,
         actionDescription: `Payroll run created for period ${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}`,
-        changes: { after: { payrollRunId: payrollRun.id, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), status: 'pending' } },
+        changes: { after: { payrollRunId: (payrollRun as any).id, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), status: 'pending' } },
         isSensitiveData: true,
         complianceTag: 'soc2',
       }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll run creation', { error: err?.message }));
@@ -656,7 +656,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         {
           workspaceId,
           userId,
-          payrollRunId: payrollRun.id,
+          payrollRunId: (payrollRun as any).id,
           periodStart: periodStartStr,
           periodEnd: periodEndStr,
           createdBy: userId,
@@ -664,7 +664,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       ).catch(err => log.error('Failed to create payroll notification:', err));
 
       const { broadcastToWorkspace: bcastRunCreated } = await import('../services/websocketService');
-      bcastRunCreated(workspaceId, { type: 'payroll_updated', action: 'run_created', runId: payrollRun.id });
+      bcastRunCreated(workspaceId, { type: 'payroll_updated', action: 'run_created', runId: (payrollRun as any).id });
       platformEventBus.publish({
         type: 'payroll_run_created',
         category: 'automation',
@@ -673,7 +673,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         workspaceId,
         userId,
         metadata: {
-          payrollRunId: payrollRun.id,
+          payrollRunId: (payrollRun as any).id,
           periodStart: periodStart.toISOString(),
           periodEnd: periodEnd.toISOString(),
           createdBy: userId,
@@ -691,8 +691,8 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         actorEmail: req.user?.email || null,
         description: `Payroll run created for period ${periodStartStr} to ${periodEndStr}`,
         relatedEntityType: 'payroll_run',
-        relatedEntityId: payrollRun.id,
-        newState: { status: payrollRun.status, periodStart, periodEnd, totalGross: payrollRun.totalGrossPay },
+        relatedEntityId: (payrollRun as any).id,
+        newState: { status: (payrollRun as any).status, periodStart, periodEnd, totalGross: payrollRun.totalGrossPay },
         ipAddress: req.ip || null,
         userAgent: req.get('user-agent') || null,
       }).catch(err => log.error('[BillingAudit] billing_audit_log write failed for payroll create', { error: err?.message }));
@@ -1135,7 +1135,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           payrollRunId: id,
           processedBy: userId,
           totalGrossPay: updated.totalGrossPay,
-          totalNetPay: updated.totalNet,
+          totalNetPay: (updated as any).totalNet,
           employeeCount,
         },
         visibility: 'manager',
@@ -1575,7 +1575,7 @@ router.post("/calculate-taxes", async (req, res) => {
 
 router.get("/entries", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = (req as any).workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const entries = await db.select().from(payrollEntries).where(eq(payrollEntries.workspaceId, workspaceId));
@@ -1588,7 +1588,7 @@ router.get("/entries", async (req: AuthenticatedRequest, res) => {
 
 router.get("/deductions", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = (req as any).workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const payrollEntryId = req.query.payrollEntryId as string | undefined;
@@ -1606,7 +1606,7 @@ router.get("/deductions", async (req: AuthenticatedRequest, res) => {
 
 router.get("/garnishments", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = (req as any).workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const payrollEntryId = req.query.payrollEntryId as string | undefined;
@@ -1689,7 +1689,7 @@ router.post("/deductions/:payrollEntryId", async (req: AuthenticatedRequest, res
     if (!parsed.success) return res.status(400).json({ error: 'Invalid deduction data', details: parsed.error.flatten() });
     const { employeeId, deductionType, amount, isPreTax, description } = parsed.data;
     if (businessRuleResponse(res, [validateDeductionAmount(amount, undefined, 'amount')])) return;
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = (req as any).workspaceId?.id;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const deduction = await addDeduction(
@@ -1714,7 +1714,7 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
     const parsed = payrollGarnishmentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid garnishment data', details: parsed.error.flatten() });
     const { employeeId, garnishmentType, amount, priority, caseNumber, description } = parsed.data;
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = (req as any).workspaceId?.id;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const garnishment = await addGarnishment(
@@ -2567,7 +2567,7 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
         } catch (dbErr: unknown) {
           log.error(
             '[FinancialAudit] CRITICAL: Plaid transfer initiated but pay stub DB update failed — transfer ID may be orphaned. Manual reconciliation required.',
-            { payStubId: stub.id, employeeId: empId, transferId: transfer.transferId, amount: netPay, runId, error: dbErr?.message }
+            { payStubId: stub.id, employeeId: empId, transferId: transfer.transferId, amount: netPay, runId, error: (dbErr as any)?.message }
           );
           // Fall through: transfer IS in flight, we report it as retried despite tracking failure
         }

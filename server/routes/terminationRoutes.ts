@@ -143,7 +143,7 @@ router.patch("/terminations/:id/complete", requireAuth, async (req: any, res) =>
         const { eq, and, gte } = await import('drizzle-orm');
         const now = new Date();
 
-        const futureShifts = await db.select({ id: shifts.id, assignedEmployeeIds: shifts.assignedEmployeeIds })
+        const futureShifts = await db.select({ id: shifts.id, assignedEmployeeIds: (shifts as any).assignedEmployeeIds })
           .from(shifts)
           .where(and(
             eq(shifts.workspaceId, workspace.id),

@@ -96,7 +96,7 @@ class LostFoundService {
     });
 
     const rows = await db.select().from(lostFoundItems).where(eq(lostFoundItems.id, id));
-    const item = rows.rows[0] as LostFoundItem;
+    const item = (rows as any).rows[0] as LostFoundItem;
 
     await platformEventBus.publish({
       type: 'lost_found_item_logged',
@@ -131,7 +131,7 @@ class LostFoundService {
     }).where(and(eq(lostFoundItems.id, data.itemId), eq(lostFoundItems.workspaceId, data.workspaceId)));
 
     const rows = await db.select().from(lostFoundItems).where(eq(lostFoundItems.id, data.itemId));
-    const item = rows.rows[0] as LostFoundItem;
+    const item = (rows as any).rows[0] as LostFoundItem;
 
     await platformEventBus.publish({
       type: 'lost_found_item_claimed',

@@ -100,7 +100,7 @@ class VisitorLogService {
     });
 
     const rows = await db.select().from(visitorLogs).where(eq(visitorLogs.id, id));
-    const visitor = rows.rows[0] as VisitorLog;
+    const visitor = (rows as any).rows[0] as VisitorLog;
 
     // Cross-reference against active BOLOs
     const boloMatches = await boloService.checkVisitorAgainstBOLOs(data.workspaceId, data.visitorName);
@@ -142,7 +142,7 @@ class VisitorLogService {
       checkedOutBy: checkedOutBy || null,
     }).where(and(eq(visitorLogs.id, visitorLogId), eq(visitorLogs.workspaceId, workspaceId)));
     const rows = await db.select().from(visitorLogs).where(eq(visitorLogs.id, visitorLogId));
-    const visitor = rows.rows[0] as VisitorLog;
+    const visitor = (rows as any).rows[0] as VisitorLog;
 
     await platformEventBus.publish({
       type: 'visitor_checked_out',

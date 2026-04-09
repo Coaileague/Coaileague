@@ -885,7 +885,7 @@ class WeeklyBillingRunServiceImpl {
       const { exceptionQueueProcessor } = await import('./exceptionQueueProcessor');
       
       for (const error of errors) {
-        await exceptionQueueProcessor.addException({
+        await (exceptionQueueProcessor as any).addException({
           workspaceId: error.workspaceId,
           exceptionType: 'billing_generation_error',
           description: error.error || 'Unknown billing error',

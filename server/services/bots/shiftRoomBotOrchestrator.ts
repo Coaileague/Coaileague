@@ -495,7 +495,7 @@ async function buildShiftFieldIntel(
           ctx.siteName.toLowerCase().includes((po.name || '').toLowerCase())
         ) || allPostOrders[0];
         const content = (relevant as any).content || (relevant as any).description || JSON.stringify(relevant);
-        postOrdersText = `POST ORDERS (${relevant.name || ctx.siteName}):\n${content.slice(0, 800)}`;
+        postOrdersText = `POST ORDERS (${(relevant as any).name || ctx.siteName}):\n${content.slice(0, 800)}`;
       }
     } catch {
       // Best-effort
@@ -531,7 +531,7 @@ async function buildShiftFieldIntel(
         .from(chatMessages)
         .where(and(
           eq(chatMessages.conversationId, conversationId),
-          sql`${chatMessages.metadata}->>'botEvent' = 'incident_ack'`
+          sql`${(chatMessages as any).metadata}->>'botEvent' = 'incident_ack'`
         ));
       incidentsFiled = Number(incResult?.count ?? 0);
     } catch {
@@ -2080,7 +2080,7 @@ class ShiftRoomBotOrchestrator {
         .select({
           message: chatMessages.message,
           senderType: chatMessages.senderType,
-          metadata: chatMessages.metadata,
+          metadata: (chatMessages as any).metadata,
           createdAt: chatMessages.createdAt,
         })
         .from(chatMessages)
@@ -2579,7 +2579,7 @@ class ShiftRoomBotOrchestrator {
 
         // Find their shift room
         const [room] = await db
-          .select({ id: chatConversations.id, metadata: chatConversations.metadata })
+          .select({ id: chatConversations.id, metadata: (chatConversations as any).metadata })
           .from(chatConversations)
           .where(and(
             eq(chatConversations.shiftId, entry.shiftId),
@@ -2591,7 +2591,7 @@ class ShiftRoomBotOrchestrator {
         if (!room) continue;
 
         // Don't spam — check if we already sent a 12h warning this hour
-        const meta = (room.metadata as any) || {};
+        const meta = (room as any).metadata || {};
         const warningKey = `clockout12h_${format(now, 'yyyy-MM-dd-HH')}`;
         if (meta[warningKey]) continue;
 
@@ -2648,7 +2648,7 @@ class ShiftRoomBotOrchestrator {
           if (now < shiftStart || now > shiftEnd) continue;
 
           // Only send once per overnight window (check metadata flag)
-          const meta = (room.metadata as any) || {};
+          const meta = (room as any).metadata || {};
           const briefKey = `overnightBrief_${format(now, 'yyyy-MM-dd-HH')}`;
           if (meta[briefKey]) continue;
 
@@ -2738,7 +2738,7 @@ class ShiftRoomBotOrchestrator {
         const shiftEnd = new Date(shift.endTime);
         // Trigger end-of-shift message when shift end is within the 5-minute window
         if (shiftEnd >= fiveMinAgo && shiftEnd <= fiveMinFuture) {
-          const meta = (room.metadata as any) || {};
+          const meta = (room as any).metadata || {};
           if (meta.endOfShiftFired) continue;
 
           await sendBotMessage({

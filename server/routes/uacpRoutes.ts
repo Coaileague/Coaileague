@@ -32,7 +32,7 @@ const router = Router();
 
 // Middleware to check admin access
 const requireAdminAccess = (req: any, res: any, next: any) => {
-  const user = req.user as any;
+  const user = req.user;
   const allowedRoles = ['org_owner', 'co_owner', 'org_admin', 'root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
   
   if (!allowedRoles.includes(user?.role) && !allowedRoles.includes(user?.platformRole)) {
@@ -51,8 +51,8 @@ const requireAdminAccess = (req: any, res: any, next: any) => {
  */
 router.get('/dashboard', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;
 
     // Count agents by status
     const agentStats = await db.select({
@@ -139,7 +139,7 @@ router.post('/authorize', requireAuth, async (req, res) => {
 router.get('/access-summary/:entityType/:entityId', requireAdminAccess, async (req, res) => {
   try {
     const { entityType, entityId } = req.params;
-    const user = req.user as any;
+    const user = req.user;
 
     const summary = await policyDecisionPoint.getAccessSummary(
       entityType as EntityType,
@@ -165,7 +165,7 @@ router.get('/access-summary/:entityType/:entityId', requireAdminAccess, async (r
  */
 router.get('/agents', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const agents = await agentIdentityService.listAgents(user.currentWorkspaceId);
     res.json({ agents });
 
@@ -201,7 +201,7 @@ router.get('/agents/:agentId', requireAdminAccess, async (req, res) => {
  */
 router.post('/agents', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { 
       agentId, name, description, entityType, 
       role, permissions, allowedTools, allowedDomains,
@@ -248,7 +248,7 @@ router.post('/agents', requireAdminAccess, async (req, res) => {
  */
 router.patch('/agents/:agentId', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { agentId } = req.params;
     const updates = req.body;
 
@@ -273,7 +273,7 @@ router.patch('/agents/:agentId', requireAdminAccess, async (req, res) => {
  */
 router.post('/agents/:agentId/suspend', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { agentId } = req.params;
     const { reason } = req.body;
 
@@ -301,7 +301,7 @@ router.post('/agents/:agentId/suspend', requireAdminAccess, async (req, res) => 
  */
 router.post('/agents/:agentId/reactivate', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { agentId } = req.params;
 
     const result = await agentIdentityService.reactivateAgent(agentId, user.id);
@@ -351,7 +351,7 @@ router.post('/agents/:agentId/token', requireAdminAccess, async (req, res) => {
 router.get('/attributes/:entityType/:entityId', requireAdminAccess, async (req, res) => {
   try {
     const { entityType, entityId } = req.params;
-    const user = req.user as any;
+    const user = req.user;
 
     const attributes = await db.select()
       .from(entityAttributes)
@@ -360,7 +360,7 @@ router.get('/attributes/:entityType/:entityId', requireAdminAccess, async (req, 
         eq(entityAttributes.isActive, true),
         or(
           isNull(entityAttributes.workspaceId),
-          eq(entityAttributes.workspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace')
+          eq((entityAttributes as any).workspaceId, req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId || 'no-workspace')
         )
       ))
       .orderBy(entityAttributes.attributeName);
@@ -379,7 +379,7 @@ router.get('/attributes/:entityType/:entityId', requireAdminAccess, async (req, 
  */
 router.post('/attributes', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { entityType, entityId, attributeName, attributeValue, attributeType, expiresAt } = req.body;
 
     if (!entityType || !entityId || !attributeName || attributeValue === undefined) {
@@ -417,8 +417,8 @@ router.post('/attributes', requireAdminAccess, async (req, res) => {
  */
 router.delete('/attributes/:id', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;
 
     await db.update(entityAttributes)
       .set({ isActive: false, updatedAt: new Date() })
@@ -444,13 +444,13 @@ router.delete('/attributes/:id', requireAdminAccess, async (req, res) => {
  */
 router.get('/policies', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
 
     const policies = await db.select()
       .from(accessPolicies)
       .where(or(
         eq(accessPolicies.isGlobal, true),
-        eq(accessPolicies.workspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace')
+        eq((accessPolicies as any).workspaceId, req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId || 'no-workspace')
       ))
       .orderBy(accessPolicies.priority);
 
@@ -468,7 +468,7 @@ router.get('/policies', requireAdminAccess, async (req, res) => {
  */
 router.post('/policies', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { 
       name, description, effect, priority,
       subjectConditions, resourceType, resourcePattern,
@@ -483,7 +483,7 @@ router.post('/policies', requireAdminAccess, async (req, res) => {
     // Only root/platform admins can create global policies
     if (isGlobal) {
       const adminRoles = ['root', 'platform_admin', 'root_admin'];
-      if (!adminRoles.includes(user.role) && !adminRoles.includes(user.platformRole)) {
+      if (!adminRoles.includes(user.role) && !adminRoles.includes((user as any).platformRole)) {
         return res.status(403).json({ error: 'Only platform admins can create global policies' });
       }
     }
@@ -522,9 +522,9 @@ router.post('/policies', requireAdminAccess, async (req, res) => {
  */
 router.patch('/policies/:id', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const updates = req.body;
-    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;
 
     await db.update(accessPolicies)
       .set({ ...updates, updatedAt: new Date() })
@@ -551,8 +551,8 @@ router.patch('/policies/:id', requireAdminAccess, async (req, res) => {
  */
 router.delete('/policies/:id', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;
     await db.update(accessPolicies)
       .set({ isActive: false, updatedAt: new Date() })
       .where(and(eq(accessPolicies.id, req.params.id), eq(accessPolicies.workspaceId, workspaceId)));
@@ -577,14 +577,14 @@ router.delete('/policies/:id', requireAdminAccess, async (req, res) => {
  */
 router.get('/events', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { limit = 50, eventType, targetId } = req.query;
 
     let query = db.select()
       .from(accessControlEvents)
       .where(or(
         isNull(accessControlEvents.workspaceId),
-        eq(accessControlEvents.workspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace')
+        eq((accessControlEvents as any).workspaceId, req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId || 'no-workspace')
       ))
       .orderBy(desc(accessControlEvents.createdAt))
       .limit(Math.min(Number(limit) || 50, 500));
@@ -609,7 +609,7 @@ router.get('/events', requireAdminAccess, async (req, res) => {
  */
 router.get('/users', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
 
     const userList = await db.select({
       id: users.id,
@@ -621,7 +621,7 @@ router.get('/users', requireAdminAccess, async (req, res) => {
       lastLoginAt: users.lastLoginAt,
     })
     .from(users)
-    .where(eq(users.currentWorkspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace'))
+    .where(eq(users.currentWorkspaceId, req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId || 'no-workspace'))
     .orderBy(users.email);
 
     res.json({ users: userList });
@@ -638,7 +638,7 @@ router.get('/users', requireAdminAccess, async (req, res) => {
  */
 router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
   try {
-    const actor = req.user as any;
+    const actor = req.user;
     const { userId } = req.params;
     const { role } = req.body;
 
@@ -736,11 +736,11 @@ router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
  */
 router.post('/seed-agents', requireAdminAccess, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     
     // Only root/platform admins can seed agents
     const adminRoles = ['root', 'platform_admin', 'root_admin'];
-    if (!adminRoles.includes(user.role) && !adminRoles.includes(user.platformRole)) {
+    if (!adminRoles.includes(user.role) && !adminRoles.includes((user as any).platformRole)) {
       return res.status(403).json({ error: 'Only platform admins can seed agents' });
     }
 

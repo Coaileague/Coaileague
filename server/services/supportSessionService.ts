@@ -551,7 +551,7 @@ class SupportSessionService {
     // Notify support staff via Trinity Autonomous Notifier
     try {
       const { trinityAutonomousNotifier } = await import('./ai-brain/trinityAutonomousNotifier');
-      await trinityAutonomousNotifier.emitAlert({
+      await (trinityAutonomousNotifier as any).emitAlert({
         id: randomUUID(),
         severity: 'warning',
         category: 'platform',

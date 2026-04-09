@@ -613,7 +613,7 @@ app.use((req, res, next) => {
     
     // Track metrics in monitoring service
     const userId = req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.session?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req as any).session?.currentWorkspaceId;
     
     monitoringService.trackRequest(
       path,
@@ -1711,8 +1711,8 @@ process.on('unhandledRejection', (reason: any, promise) => {
     const message = err.message || "Internal Server Error";
 
     const userId = req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.session?.currentWorkspaceId;
-    const requestId = req.id;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req as any).session?.currentWorkspaceId;
+    const requestId = (req as any).id;
     
     monitoringService.logError(err, {
       userId,

@@ -19,7 +19,7 @@ router.get("/availability", requireAuth, async (req: AuthenticatedRequest, res) 
   try {
     const wid = req.workspaceId;
     if (!wid) return res.status(400).json({ error: "Workspace required" });
-    const { officerId } = req.query as any;
+    const { officerId } = (req as any).query;
     const uid = req.user?.id;
 
     // Officers can see own availability; managers see all
@@ -123,7 +123,7 @@ router.get("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
     const wid = req.workspaceId;
     const uid = req.user?.id;
     if (!wid || !uid) return res.status(400).json({ error: "Auth required" });
-    const { status, mine } = req.query as any;
+    const { status, mine } = (req as any).query;
     const isManagerOrAbove = req.user?.role && ["owner","co_owner","org_admin","manager"].includes(req.user.role);
 
     let q = `SELECT t.*,

@@ -236,7 +236,7 @@ export async function calculateOfficerComplianceScore(
       AND clock_in > NOW() - INTERVAL '90 days'
   `);
 
-  const statsRow = (gpsStats.rows || (gpsStats as any))?.[0];
+  const statsRow = ((gpsStats as any).rows || (gpsStats as any))?.[0];
   if (statsRow) {
     const total = Number(statsRow.total_count ?? 0);
     const verified = Number(statsRow.verified_count ?? 0);

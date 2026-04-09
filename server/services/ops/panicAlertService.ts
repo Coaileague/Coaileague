@@ -83,7 +83,7 @@ class PanicAlertService {
     });
 
     const rows = await db.select().from(panicAlerts).where(eq(panicAlerts.id, id));
-    const alert = rows.rows[0] as PanicAlert;
+    const alert = (rows as any).rows[0] as PanicAlert;
 
     // Notify all supervisors and managers immediately
     await this.notifyEmergencyContacts(payload.workspaceId, alert);
@@ -130,7 +130,7 @@ class PanicAlertService {
       resolvedBy: acknowledgedBy,
     }).where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId)));
     const rows = await db.select().from(panicAlerts).where(eq(panicAlerts.id, alertId));
-    const alert = rows.rows[0] as PanicAlert;
+    const alert = (rows as any).rows[0] as PanicAlert;
 
     await platformEventBus.publish({
       type: 'panic_alert_acknowledged',
@@ -153,7 +153,7 @@ class PanicAlertService {
       resolvedBy: resolvedBy,
     }).where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId)));
     const rows = await db.select().from(panicAlerts).where(eq(panicAlerts.id, alertId));
-    const alert = rows.rows[0] as PanicAlert;
+    const alert = (rows as any).rows[0] as PanicAlert;
 
     await platformEventBus.publish({
       type: 'panic_alert_resolved',

@@ -586,7 +586,7 @@ supportRouter.post(
         return res.status(403).json({ error: 'No workspace selected' });
       }
 
-      const workspaceId = req.workspaceId || user?.workspaceId || user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
 
       // Parse and validate request body
       let reportData: ServiceIncidentReportPayload;

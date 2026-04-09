@@ -134,7 +134,7 @@ async function onIncidentCreated(event: PlatformEvent): Promise<void> {
 
       if (reporter?.supervisorId) {
         const supervisor = await db.query.employees.findFirst({
-          where: eq(employees.id, reporter.supervisorId),
+          where: eq(employees.id, (reporter as any).supervisorId),
         });
 
         if (supervisor?.phone) {
@@ -143,10 +143,10 @@ async function onIncidentCreated(event: PlatformEvent): Promise<void> {
             const client = await db.query.clients.findFirst({
               where: eq(clients.id, siteId),
             });
-            siteName = client?.companyName || client?.name || siteName;
+            siteName = client?.companyName || (client as any)?.name || siteName;
           }
 
-          await NotificationDeliveryService.send({ type: 'incident_alert', workspaceId: workspaceId || 'system', recipientUserId: reporter.supervisorId || supervisor.phone, channel: 'sms', body: { to: supervisor.phone, body: `INCIDENT at ${siteName}\nType: ${incidentType}\nGuard: ${reporter.firstName} ${reporter.lastName}\nAction: ${actionTaken || 'Pending'}\nView: ${APP_URL}/incidents/${incidentId}` } });
+          await NotificationDeliveryService.send({ type: 'incident_alert', workspaceId: workspaceId || 'system', recipientUserId: (reporter as any).supervisorId || supervisor.phone, channel: 'sms', body: { to: supervisor.phone, body: `INCIDENT at ${siteName}\nType: ${incidentType}\nGuard: ${reporter.firstName} ${reporter.lastName}\nAction: ${actionTaken || 'Pending'}\nView: ${APP_URL}/incidents/${incidentId}` } });
         }
       }
     }
@@ -172,11 +172,11 @@ async function onGPSViolation(event: PlatformEvent): Promise<void> {
 
     if (employee?.supervisorId) {
       const supervisor = await db.query.employees.findFirst({
-        where: eq(employees.id, employee.supervisorId),
+        where: eq(employees.id, (employee as any).supervisorId),
       });
 
       if (supervisor?.phone) {
-        await NotificationDeliveryService.send({ type: 'schedule_notification', workspaceId: workspaceId || 'system', recipientUserId: employee.supervisorId || supervisor.phone, channel: 'sms', body: { to: supervisor.phone, body: `GPS ALERT: ${employee.firstName} ${employee.lastName} attempted clock-in ${Math.round(distance)}m from ${siteName}. Possible fraud attempt.` } });
+        await NotificationDeliveryService.send({ type: 'schedule_notification', workspaceId: workspaceId || 'system', recipientUserId: (employee as any).supervisorId || supervisor.phone, channel: 'sms', body: { to: supervisor.phone, body: `GPS ALERT: ${employee.firstName} ${employee.lastName} attempted clock-in ${Math.round(distance)}m from ${siteName}. Possible fraud attempt.` } });
       }
     }
   } catch (err: any) {
@@ -680,7 +680,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
             actionUrl: `/payroll`,
             metadata: { payrollRunId, affectedCount: affectedEmployeeIds?.length || 0 },
-          }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
+          }).catch((err: any) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
         }
 
         // Also broadcast real-time alert to workspace
@@ -737,7 +737,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'normal',
             actionUrl: `/clients`,
             metadata: { clientId, missingFields },
-          }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
+          }).catch((err: any) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] client.created handler error:', (err instanceof Error ? err.message : String(err)));
@@ -763,7 +763,7 @@ export function initializeTrinityEventSubscriptions(): void {
           const { syncInvoiceToQuickBooks } = await import('./quickbooksClientBillingSync');
           const result = await syncInvoiceToQuickBooks(invoiceId);
           if (result.success) {
-            log.info(`[TrinityEvents] QB invoice sync succeeded — invoiceId=${invoiceId}, qboId=${result.qboId}`);
+            log.info(`[TrinityEvents] QB invoice sync succeeded — invoiceId=${invoiceId}, qboId=${(result as any).qboId}`);
           } else {
             log.error(`[TrinityEvents] QB invoice sync failed — invoiceId=${invoiceId}: ${result.error}`);
             // Notify org owner of sync failure (non-blocking)

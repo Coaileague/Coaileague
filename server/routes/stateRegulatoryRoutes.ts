@@ -240,7 +240,7 @@ router.get('/states/:stateCode', async (req, res) => {
 // POST /api/regulatory/states — platform admin creates state config
 router.post('/states', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    if (!req.user?.isPlatformAdmin) return res.status(403).json({ error: 'Platform admin only' });
+    if (!(req as any).user?.isPlatformAdmin) return res.status(403).json({ error: 'Platform admin only' });
 
     const parsed = insertStateRegulatoryConfigSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
@@ -255,7 +255,7 @@ router.post('/states', requireAuth, async (req: AuthenticatedRequest, res) => {
 // PATCH /api/regulatory/states/:stateCode
 router.patch('/states/:stateCode', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    if (!req.user?.isPlatformAdmin) return res.status(403).json({ error: 'Platform admin only' });
+    if (!(req as any).user?.isPlatformAdmin) return res.status(403).json({ error: 'Platform admin only' });
 
     const [updated] = await db
       .update(stateRegulatoryConfig)

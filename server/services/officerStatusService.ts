@@ -52,7 +52,7 @@ export async function getOfficerCurrentStatus(employeeId: string, workspaceId: s
         shiftStart: shifts.startTime,
         shiftEnd: shifts.endTime,
         siteId: shifts.siteId,
-        siteName: shifts.siteName,
+        siteName: (shifts as any).siteName,
         siteAddress: sites.addressLine1,
         timeEntryId: timeEntries.id,
         clockIn: timeEntries.clockIn,
@@ -154,7 +154,7 @@ export async function getScheduledOfficersStatus(workspaceId: string): Promise<O
         shiftStart: shifts.startTime,
         shiftEnd: shifts.endTime,
         siteId: shifts.siteId,
-        siteName: shifts.siteName,
+        siteName: (shifts as any).siteName,
         siteAddress: sites.addressLine1,
         timeEntryId: timeEntries.id,
         clockIn: timeEntries.clockIn,
@@ -171,7 +171,7 @@ export async function getScheduledOfficersStatus(workspaceId: string): Promise<O
       })
       .from(shifts)
       .innerJoin(employees, and(
-        eq(drizzleSql`${employees.id}::text`, drizzleSql`${shifts.assignedEmployeeId}::text`),
+        eq(drizzleSql`${employees.id}::text`, drizzleSql`${(shifts as any).assignedEmployeeId}::text`),
         eq(employees.workspaceId, shifts.workspaceId),
       ))
       .leftJoin(sites, and(eq(sites.id, shifts.siteId), eq(sites.workspaceId, shifts.workspaceId)))

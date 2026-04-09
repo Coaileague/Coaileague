@@ -659,8 +659,8 @@ export async function exportShiftHistory(
     endTime: shifts.endTime,
     employeeId: shifts.employeeId,
     clientId: shifts.clientId,
-    locationAddress: shifts.locationAddress,
-    notes: shifts.notes,
+    locationAddress: (shifts as any).locationAddress,
+    notes: (shifts as any).notes,
     createdAt: shifts.createdAt,
   }).from(shifts)
     .where(and(...filters))

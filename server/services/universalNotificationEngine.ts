@@ -162,6 +162,10 @@ export interface NotificationPayload {
   targetRoles?: string[];
   actionUrl?: string;
   recipientUserId?: string;
+  recipientRole?: string;
+  targetUserIds?: string[];
+  source?: string;
+  skipFeatureCheck?: boolean;
 }
 
 export class UniversalNotificationEngine {

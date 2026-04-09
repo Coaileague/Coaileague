@@ -834,7 +834,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}&limit=500`,
         PaginatedShiftListResponse
       );
-      return result.data as Shift[];
+      return result.data as unknown as Shift[];
     },
   });
   const {

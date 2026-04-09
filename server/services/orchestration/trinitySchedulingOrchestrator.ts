@@ -259,7 +259,7 @@ class TrinitySchedulingOrchestratorService {
     if (!mutations || mutations.length === 0) {
       const execution = await automationExecutionTracker.getExecution(executionId);
       if (execution?.outputPayload?.pendingMutations) {
-        const storedMutations = execution.outputPayload.pendingMutations as SchedulingMutation[];
+        const storedMutations = (execution as any).outputPayload.pendingMutations as SchedulingMutation[];
         return this.applyMutationsToDatabase(storedMutations, executionId);
       }
       return { success: true, appliedCount: 0, errors: [] };

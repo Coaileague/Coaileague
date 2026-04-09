@@ -156,7 +156,7 @@ export function registerCommsProactiveActions() {
       openShiftsToday: parseInt(String((openShiftsToday[0] as any)?.count || 0)),
       expiringCertsNext7Days: parseInt(String((expiringDocs[0] as any)?.count || 0)),
       pendingPayrollApprovals: parseInt(String((pendingPayroll[0] as any)?.count || 0)),
-      overdueInvoices: overdue.status === 'fulfilled' ? (overdue.value as any)?.overdueCount || 0 : 'unavailable',
+      overdueInvoices: overdue.status === 'fulfilled' ? (overdue as any).value?.overdueCount || 0 : 'unavailable',
       revenueForecast: forecast.status === 'fulfilled' ? forecast.value : null,
       weeklyScheduleSummary: weeklyReport.status === 'fulfilled' ? weeklyReport.value : null,
     };

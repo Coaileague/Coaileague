@@ -125,7 +125,7 @@ function resolveAuditorId(req: Request): string | null {
 async function requireAuditorOrStandardAuth(req: Request, res: Response, next: Function) {
   const auditorId = resolveAuditorId(req);
   if (auditorId) {
-    req.auditorId = auditorId;
+    (req as any).auditorId = auditorId;
     // Property 1 + 2: enforce DB-level isActive and expiresAt
     return enforceAuditorSession(req, res, next);
   }
@@ -135,7 +135,7 @@ async function requireAuditorOrStandardAuth(req: Request, res: Response, next: F
 async function requireAuditorOrManagerAuth(req: Request, res: Response, next: Function) {
   const auditorId = resolveAuditorId(req);
   if (auditorId) {
-    req.auditorId = auditorId;
+    (req as any).auditorId = auditorId;
     // Property 1 + 2: enforce DB-level isActive and expiresAt
     return enforceAuditorSession(req, res, next);
   }
@@ -146,7 +146,7 @@ const router = Router();
 
 router.get("/audit", requireAuth, requireManager, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace required" });
     }
@@ -172,7 +172,7 @@ router.get("/employee/:employeeId/eligibility", requireAuth, requireManager, asy
 
 router.post("/employee/:employeeId/check-suspension", requireAuth, requireManager, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     const { employeeId } = req.params;
 
     if (!workspaceId) {
@@ -194,7 +194,7 @@ router.post("/employee/:employeeId/check-suspension", requireAuth, requireManage
 
 router.post("/grievance-score-adjustment", requireAuth, requireManager, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     const userId = req.user?.id;
     if (!workspaceId || !userId) {
       return res.status(400).json({ success: false, error: "Workspace and user required" });
@@ -247,7 +247,7 @@ router.patch("/config", requireAuth, requireAdmin, async (req: Request, res: Res
 
 router.get("/hiring-score/:employeeId", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
-    const requestingWorkspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const requestingWorkspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { employeeId } = req.params;
     const { authorizationToken } = req.query;
 
@@ -333,7 +333,7 @@ router.get("/hiring-score/:employeeId", requireAuth, requireManagerRole, async (
 
 router.post("/hiring-score/:employeeId/authorize", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const userId = req.user?.id;
     const { employeeId } = req.params;
     const hsParsed = hiringScoreAuthSchema.safeParse(req.body);
@@ -458,12 +458,12 @@ router.get("/state-requirements/:stateCode/:guardType", requireAuth, async (req:
 
 router.get("/onboarding-status", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req.user as any)?.id;
+    const userId = (req.user)?.id;
     if (!userId) {
       return res.status(401).json({ success: false, error: "Not authenticated" });
     }
 
-    const workspaceId = (req as any).workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = (req as any).workspaceId || (req.user)?.currentWorkspaceId;
 
     const employee = await db.query.employees.findFirst({
       where: workspaceId
@@ -490,7 +490,7 @@ router.get("/onboarding-status", requireAuth, async (req: Request, res: Response
 router.get("/onboarding-status/:employeeId", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
     const { employeeId } = req.params;
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace required" });
     }
@@ -528,7 +528,7 @@ router.get("/point-rules", requireAuditorOrStandardAuth, async (_req: Request, r
 router.get("/compliance-score/:employeeId", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
     const { employeeId } = req.params;
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "No workspace context" });
     }
@@ -582,7 +582,7 @@ router.get("/compliance-score-history/:employeeId", requireAuth, requireManagerR
 
 router.get("/scoreboard", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "No workspace context" });
     }
@@ -597,7 +597,7 @@ router.get("/scoreboard", requireAuth, requireManagerRole, async (req: Request, 
 
 router.get("/audit-report", requireAuditorOrManagerAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "No workspace context" });
     }
@@ -639,7 +639,7 @@ router.get("/audit-report", requireAuditorOrManagerAuth, async (req: Request, re
 
 router.get("/workspace-overview", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "No workspace context" });
     }
@@ -678,8 +678,8 @@ router.post("/cross-org-hiring-score/request", requireAuth, requireManagerRole, 
       return res.status(400).json({ success: false, error: "Invalid input", details: cohParsed.error.flatten().fieldErrors });
     }
     const { employeeId, purpose } = cohParsed.data;
-    const requestingWorkspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
-    const requestedBy = (req.user as any)?.id;
+    const requestingWorkspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
+    const requestedBy = (req.user)?.id;
 
     if (!employeeId || !purpose) {
       return res.status(400).json({ success: false, error: "employeeId and purpose are required" });
@@ -714,7 +714,7 @@ router.post("/cross-org-hiring-score/request", requireAuth, requireManagerRole, 
 router.get("/cross-org-hiring-score/verify/:token", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
-    const requestingWorkspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const requestingWorkspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     const auth = await getComplianceAuthToken(token);
 
     if (!auth) {
@@ -722,7 +722,7 @@ router.get("/cross-org-hiring-score/verify/:token", requireAuth, requireManagerR
     }
 
     if (auth.requestingWorkspaceId !== requestingWorkspaceId) {
-      log.warn(`[Compliance Enforcement] Cross-org token workspace mismatch: token workspace=${auth.requestingWorkspaceId}, requesting workspace=${requestingWorkspaceId}, user=${(req.user as any)?.id}, employee=${auth.employeeId}`);
+      log.warn(`[Compliance Enforcement] Cross-org token workspace mismatch: token workspace=${auth.requestingWorkspaceId}, requesting workspace=${requestingWorkspaceId}, user=${(req.user)?.id}, employee=${auth.employeeId}`);
       return res.status(403).json({ success: false, error: "This authorization token belongs to a different organization" });
     }
 

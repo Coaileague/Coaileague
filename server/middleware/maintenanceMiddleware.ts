@@ -176,7 +176,7 @@ export async function maintenanceMiddleware(
     const bypassCheck = validateBypassToken(req);
     
     if (bypassCheck.valid) {
-      const user = req.user as any;
+      const user = req.user;
       logBypassAccess(req, user);
       return next();
     }

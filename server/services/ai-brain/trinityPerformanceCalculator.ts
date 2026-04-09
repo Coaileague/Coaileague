@@ -74,7 +74,7 @@ class TrinityPerformanceCalculator {
       { score: attendance.score, weight: 0.30 },
       { score: reports.qualityScore, weight: 0.10 },
       { score: reports.submissionScore, weight: 0.10 },
-      ...(client !== null ? [{ score: client.score, weight: 0.15 }] : []),
+      ...(client !== null ? [{ score: (client as any).score, weight: 0.15 }] : []),
       { score: responseTime.score, weight: 0.10 },
     ];
     const totalWeight = weightedScores.reduce((sum, s) => sum + s.weight, 0);
@@ -93,7 +93,7 @@ class TrinityPerformanceCalculator {
       attendanceScore: attendance.score,
       reportQualityScore: reports.qualityScore,
       reportSubmissionScore: reports.submissionScore,
-      clientSatisfactionScore: client !== null ? client.score : null,
+      clientSatisfactionScore: client !== null ? (client as any).score : null,
       responseTimeScore: responseTime.score,
       supervisorInputScore: null,
       compositeScore: composite,
@@ -178,7 +178,7 @@ class TrinityPerformanceCalculator {
   private async calcReportScores(workspaceId: string, employeeId: string, start: Date, end: Date) {
     // Converted to Drizzle ORM: CASE WHEN → sql fragment
     const reportStats = await db.select({
-      avgQuality: sql<number>`avg(case when ${dailyActivityReports.qualityScore} is not null then ${dailyActivityReports.qualityScore} else 75 end)`,
+      avgQuality: sql<number>`avg(case when ${(dailyActivityReports as any).qualityScore} is not null then ${(dailyActivityReports as any).qualityScore} else 75 end)`,
       submitted: sql<number>`count(*)::int`
     })
     .from(dailyActivityReports)

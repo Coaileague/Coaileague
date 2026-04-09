@@ -554,7 +554,7 @@ class PlatformEventBus {
         await trinityThalamus.processPlatformEvent(
           eventPayload,
           event.workspaceId,
-          event.userId || (event.metadata as any)?.userId,
+          event.userId || (event as any).metadata?.userId,
         );
       } catch (err: any) {
         log.warn('[platformEventBus] Thalamus processing failed:', err.message);

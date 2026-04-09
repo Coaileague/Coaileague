@@ -66,7 +66,7 @@ Scoring guide:
 - 0-39: Not qualified, major gaps or red flags`;
 
     const response = await ai.generateContent(prompt, { temperature: 0.1, maxOutputTokens: 600 }); // withGemini
-    const text = response.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+    const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
     const parsed = JSON.parse(text);
 
     return {
@@ -179,7 +179,7 @@ Return ONLY valid JSON:
 }`;
 
     const response = await ai.generateContent(prompt, { temperature: 0.1, maxOutputTokens: 200 }); // withGemini
-    const text = response.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+    const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
     const parsed = JSON.parse(text);
 
     return {

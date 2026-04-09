@@ -325,7 +325,7 @@ sessionCheckpointRouter.patch('/trinity-diagnostics/:workspaceId/toggle', async 
       return res.status(404).json({ error: 'User not found' });
     }
     
-    const platformRole = user[0].platformRole;
+    const platformRole = (user as any)[0]?.platformRole;
     const isPlatformSupport = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'].includes(platformRole || '');
     
     // If not platform support, check workspace ownership or employee role

@@ -661,11 +661,11 @@ class NotificationSubagentService {
     let bundledCount = 0;
 
     for (const n of notifs) {
-      const priority = (n.metadata as any)?.priority as NotificationPriority;
+      const priority = (n as any).metadata?.priority as NotificationPriority;
       if (priority && byPriority[priority] !== undefined) {
         byPriority[priority]++;
       }
-      if ((n.metadata as any)?.isBundled) bundledCount++;
+      if ((n as any).metadata?.isBundled) bundledCount++;
     }
 
     return {

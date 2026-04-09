@@ -511,7 +511,7 @@ class QuickFixService {
 
         case 'restart_service':
           result = await this.executeRestartService(request.payloadJson);
-          changesSummary = `Service restarted: ${(request.payloadJson as any)?.serviceName || 'unknown'}`;
+          changesSummary = `Service restarted: ${(request as any).payloadJson?.serviceName || 'unknown'}`;
           break;
 
         case 'refresh_connections':
@@ -521,7 +521,7 @@ class QuickFixService {
 
         case 'force_logout_user':
           result = await this.executeForceLogout(request.payloadJson);
-          changesSummary = `User sessions invalidated: ${(request.payloadJson as any)?.targetUserId}`;
+          changesSummary = `User sessions invalidated: ${(request as any).payloadJson?.targetUserId}`;
           break;
 
         default:
@@ -600,7 +600,7 @@ class QuickFixService {
     try {
       const { pool } = await import('../../db');
       const result = await typedPool('SELECT 1 AS alive');
-      const isAlive = (result as any[])?.[0]?.alive === 1;
+      const isAlive = (result as unknown as any[])?.[0]?.alive === 1;
       return { connectionAlive: isAlive, connectionsRefreshed: false, note: 'Connection pool is managed by the database driver', timestamp: new Date().toISOString() };
     } catch (error) {
       log.error('[QuickFix] Connection verification failed:', error);

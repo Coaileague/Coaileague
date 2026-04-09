@@ -581,7 +581,7 @@ class TrinityProactiveScannerService {
 
     const hoursThisWeek = await db.select({
       employeeId: timeEntries.employeeId,
-      totalMinutes: sql`SUM(${timeEntries.totalMinutes})`,
+      totalMinutes: sql`SUM(${(timeEntries as any).totalMinutes})`,
     })
       .from(timeEntries)
       .where(and(
@@ -1179,8 +1179,8 @@ class TrinityProactiveScannerService {
           gte(shifts.startTime, tomorrowStart),
           lte(shifts.startTime, tomorrowEnd),
           eq(shifts.requiresAcknowledgment, true),
-          isNull(shifts.acknowledgedAt as any),
-          isNull(shifts.deniedAt as any),
+          isNull(shifts as any).acknowledgedAt,
+          isNull(shifts as any).deniedAt,
         ))
         .catch(() => []);
       if (unconfirmedTomorrow.length > 0) {
@@ -1223,7 +1223,7 @@ class TrinityProactiveScannerService {
           eq(orchestrationRuns.actionId, 'trinity.brief_dedup'),
           eq(orchestrationRuns.status, 'completed')
         ))
-        .orderBy(desc(orchestrationRuns.completedAt as any))
+        .orderBy(desc(orchestrationRuns as any).completedAt)
         .limit(1)
         .catch(() => []);
       if (dedupRecord.length > 0 && dedupRecord[0].outputResult) {

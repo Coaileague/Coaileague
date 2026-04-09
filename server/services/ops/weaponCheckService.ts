@@ -59,7 +59,7 @@ class WeaponCheckService {
       `SELECT is_armed, armed_license_verified, guard_card_expiry_date FROM employees WHERE id=$1 AND workspace_id=$2`,
       [employeeId, workspaceId]
     );
-    if (!rows.length) return { valid: false, reason: 'Employee not found' };
+    if (!(rows as any).length) return { valid: false, reason: 'Employee not found' };
 
     const emp = rows[0];
     if (!emp.is_armed) return { valid: false, reason: 'Employee does not have armed officer designation' };
@@ -93,7 +93,7 @@ class WeaponCheckService {
       `SELECT * FROM weapons WHERE id=$1 AND workspace_id=$2`,
       [data.weaponId, data.workspaceId]
     );
-    if (!weaponRows.length) throw new Error('Weapon not found');
+    if (!(weaponRows as any).length) throw new Error('Weapon not found');
     const weapon = weaponRows[0];
 
     // Check no active checkout for this weapon
@@ -154,7 +154,7 @@ class WeaponCheckService {
       `SELECT wc.*, w.serial_number, w.make, w.model FROM weapon_checkouts wc JOIN weapons w ON w.id=wc.weapon_id WHERE wc.id=$1`,
       [data.checkoutId]
     );
-    if (!rows.length) throw new Error('Checkout record not found');
+    if (!(rows as any).length) throw new Error('Checkout record not found');
     const checkout = rows[0];
 
     if (data.conditionAtCheckin === 'damaged') {

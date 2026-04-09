@@ -297,7 +297,7 @@ class SecureToolExecutor {
     // Check workspace access if required
     if (policy.requiresWorkspaceAccess && callerContext.workspaceId) {
       try {
-        const hasAccess = await aiBrainAuthorizationService.canAccessWorkspace(
+        const hasAccess = await (aiBrainAuthorizationService as any).canAccessWorkspace(
           callerContext.userId,
           callerContext.workspaceId,
           callerRole
@@ -447,8 +447,8 @@ class SecureToolExecutor {
     try {
       const tool = await toolCapabilityRegistry.getTool(callerContext.workspaceId, toolId);
       
-      if (tool && typeof tool.execute === 'function') {
-        return await tool.execute(action, parameters, callerContext);
+      if (tool && typeof (tool as any).execute === 'function') {
+        return await (tool as any).execute(action, parameters, callerContext);
       }
 
       // SECURITY: Only allow simulation for bypass-eligible roles

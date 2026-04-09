@@ -34,6 +34,7 @@ export interface EmailCampaignOptions extends EmailOptions {
   userId?: string;
   emailType: "sales" | "marketing" | "onboarding" | "client_onboarding" | "upsell" | "support" | "notification";
   recipientCount?: number;
+  templateId?: string;
 }
 
 // Pricing per email type (in cents)

@@ -200,7 +200,7 @@ export function registerInvoiceEmailActions() {
         const result = await checkOverdueInvoices(workspaceId);
         
         // Enhance with totals
-        const overdueCount = result.length;
+        const overdueCount = (result as any).length;
         const totalOverdueAmount = result.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
 
         return createResult(request.actionId, true, `Found ${overdueCount} overdue invoices`, {
@@ -307,7 +307,7 @@ export function registerInvoiceEmailActions() {
       if (statusAction === 'overdue_scan') {
         try {
           const result = await checkOverdueInvoices(workspaceId);
-          const overdueCount = result.length;
+          const overdueCount = (result as any).length;
           const totalOverdueAmount = result.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
           return createResult(request.actionId, true, `Found ${overdueCount} overdue invoices`, {
             overdueCount, totalOverdueAmount, clients: result
@@ -383,7 +383,7 @@ export function registerInvoiceEmailActions() {
 
         return createResult(request.actionId, result.success, result.success ? 'Email sent' : 'Failed to send email', {
           sent: result.success,
-          messageId: (result.data as any)?.data?.id
+          messageId: (result as any).data?.data?.id
         }, start);
       } catch (error: any) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);

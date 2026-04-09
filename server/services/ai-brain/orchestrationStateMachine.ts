@@ -882,7 +882,7 @@ class OrchestrationStateMachine {
       const toolValidation = await this.validateToolsForExecution(
         overlayId,
         toolIds,
-        manifest.subagentId || 'orchestrator',
+        (manifest as any).subagentId || 'orchestrator',
         permResult.grantedPermissions,
         [], // User consents - would come from workspace settings
         'ORCHESTRATOR' // Model tier for orchestration

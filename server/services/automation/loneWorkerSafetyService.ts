@@ -499,7 +499,7 @@ class LoneWorkerSafetyService {
         .where(
           and(
             eq(employees.workspaceId, check.workspaceId),
-            (employees.workspaceRole as any)
+            (employees as any).workspaceRole
           )
         );
 

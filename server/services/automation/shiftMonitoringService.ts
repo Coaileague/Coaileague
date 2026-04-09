@@ -476,7 +476,7 @@ class ShiftMonitoringService {
             eq(employees.isActive, true)
           ),
         });
-        if (!officer || officer.overtimeEligible === false) continue;
+        if (!officer || (officer as any).overtimeEligible === false) continue;
 
         const gapHours = (shiftStart.getTime() - new Date(onSite.endTime).getTime()) / (1000 * 60 * 60);
         const stayLateNote = gapHours <= 0

@@ -193,7 +193,7 @@ router.post("/api/documents/validate", requireAuth, readLimiter, async (req: Aut
       });
     }
 
-    const validationResults = documentExtractionService.validateExtractedData(entityType, mappedData);
+    const validationResults = (documentExtractionService as any).validateExtractedData(entityType, mappedData);
 
     res.json({
       success: true,

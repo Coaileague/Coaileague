@@ -571,7 +571,7 @@ class AIOrchestrationService {
         avgLatencyMs: health.avgLatency24hMs ?? 0,
         successRate: parseFloat(health.successRate24h?.toString() || '1'),
         errorCount1h: health.errorCount1h ?? 0,
-        status: (health.status as any) || 'healthy',
+        status: (health as any).status || 'healthy',
       };
     } catch (error) {
       return null;

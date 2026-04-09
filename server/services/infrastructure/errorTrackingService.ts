@@ -475,16 +475,16 @@ class ErrorTrackingService {
         GROUP BY e.severity
       `);
 
-      const total = (totalResult.rows as any[])[0]?.total || 0;
-      const critical = (criticalResult.rows as any[])[0]?.total || 0;
+      const total = ((totalResult as any).rows as any[])[0]?.total || 0;
+      const critical = ((criticalResult as any).rows as any[])[0]?.total || 0;
       
       const errorsBySource: Record<string, number> = {};
-      for (const row of (bySourceResult.rows as any[]) || []) {
+      for (const row of ((bySourceResult as any).rows as any[]) || []) {
         errorsBySource[row.source] = row.count;
       }
       
       const errorsBySeverity: Record<string, number> = {};
-      for (const row of (bySeverityResult.rows as any[]) || []) {
+      for (const row of ((bySeverityResult as any).rows as any[]) || []) {
         errorsBySeverity[row.severity] = row.count;
       }
 
@@ -492,7 +492,7 @@ class ErrorTrackingService {
         totalErrors: total,
         criticalErrors: critical,
         errorRate: total / windowMinutes,
-        topErrors: ((topResult.rows as any[]) || []).map(r => ({
+        topErrors: (((topResult as any).rows as any[]) || []).map(r => ({
           fingerprint: r.fingerprint,
           message: r.message,
           count: r.count,

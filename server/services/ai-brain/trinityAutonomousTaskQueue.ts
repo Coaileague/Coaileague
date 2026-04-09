@@ -300,7 +300,7 @@ class TrinityAutonomousTaskQueue {
         ${shifts.workspaceId} = ${workspaceId}
         AND ${shifts.startTime} >= NOW()
         AND ${shifts.startTime} <= NOW() + INTERVAL '48 hours'
-        AND ${shifts.assignedEmployeeId} IS NULL
+        AND ${(shifts as any).assignedEmployeeId} IS NULL
         AND ${shifts.status} != 'cancelled'
       `)
       .catch(() => [{ count: '0' }]);
@@ -345,7 +345,7 @@ class TrinityAutonomousTaskQueue {
       ${shifts.workspaceId} = ${workspaceId}
       AND ${shifts.startTime} >= date_trunc('week', NOW())
       AND ${shifts.endTime} IS NOT NULL
-      AND ${shifts.assignedEmployeeId} IS NOT NULL
+      AND ${(shifts as any).assignedEmployeeId} IS NOT NULL
     `)
     .groupBy(employees.id, employees.firstName, employees.lastName)
     .having(sql`SUM(EXTRACT(EPOCH FROM (${shifts.endTime} - ${shifts.startTime})) / 3600.0) >= 32`)

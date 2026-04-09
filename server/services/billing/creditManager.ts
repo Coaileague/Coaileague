@@ -548,7 +548,7 @@ export const CREDIT_COSTS = {
 // Pool usage: Support bots, FAQ AI, helpdesk AI, support staff AI all draw from this
 // ============================================================================
 
-const SUPPORT_POOL_MONTHLY_ALLOCATION = BILLING.supportPoolMonthlyCredits;
+const SUPPORT_POOL_MONTHLY_ALLOCATION = (BILLING as any).supportPoolMonthlyCredits;
 
 const SUPPORT_POOL_CONTRIBUTION_PER_TIER: Record<string, number> = {
   'free': 5,
@@ -872,7 +872,7 @@ export class CreditManager {
         balanceAfter: 0,
         featureKey: r.featureKey,
         featureName: r.activityType || r.featureKey,
-        description: (r.metadata as any)?.description || '',
+        description: (r as any).metadata?.description || '',
         actorType: 'AI' as const,
         createdAt: r.createdAt,
       }));

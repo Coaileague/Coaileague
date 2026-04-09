@@ -207,7 +207,7 @@ async function phase3_subscription_tiers() {
   ];
 
   for (const expected of expectedTiers) {
-    const tier = (BILLING.tiers as any)[expected.id];
+    const tier = (BILLING as any).tiers[expected.id];
     const priceMatch = tier?.monthlyPrice === expected.price;
     const creditMatch = tier?.monthlyCredits === expected.credits;
     const empMatch = tier?.maxEmployees === expected.maxEmp;
@@ -878,7 +878,7 @@ async function phase13_tier_escalation_paths() {
 
   for (const tier of tiers) {
     const monthlyCredits = TIER_CREDIT_ALLOCATIONS[tier];
-    const tierConfig = (BILLING.tiers as any)[tier];
+    const tierConfig = (BILLING as any).tiers[tier];
     record({
       name: `${tier} Credits Match Between Sources`,
       phase: 'TIER_ESCALATION',

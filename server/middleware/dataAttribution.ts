@@ -56,7 +56,7 @@ export function dataAttributionMiddleware(req: Request, _res: Response, next: Ne
       actorId: userId,
       actorType: 'user',
       actorBot: null,
-      actorRole: req.workspaceRole || req.userRole || user.role || null,
+      actorRole: req.workspaceRole || (req as any).userRole || user.role || null,
       actorIp: getClientIp(req),
     };
   } else {

@@ -277,24 +277,24 @@ class SchedulingSubagentService {
       // Check maximum daily hours
       for (const shift of empShifts) {
         const hours = this.calculateShiftHours(shift.startTime, shift.endTime);
-        const maxDaily = laborLaws.find(l => l.ruleType === 'max_daily_hours');
+        const maxDaily = laborLaws.find(l => (l as any).ruleType === 'max_daily_hours');
         
         if (maxDaily && hours > parseFloat(maxDaily.ruleValue)) {
           violations.push({
             ruleId: maxDaily.id,
             ruleName: 'Maximum Daily Hours',
             severity: 'critical',
-            description: `Shift exceeds ${maxDaily.ruleValue}h maximum daily limit`,
+            description: `Shift exceeds ${(maxDaily as any).ruleValue}h maximum daily limit`,
             affectedEmployees: [employeeId],
-            suggestedFix: `Split shift or reduce to ${maxDaily.ruleValue}h maximum`,
+            suggestedFix: `Split shift or reduce to ${(maxDaily as any).ruleValue}h maximum`,
           });
           appliedRules.push('max_daily_hours');
         }
 
         // Check required breaks
-        const breakRule = laborLaws.find(l => l.ruleType === 'required_break');
+        const breakRule = laborLaws.find(l => (l as any).ruleType === 'required_break');
         if (breakRule && hours >= parseFloat(breakRule.threshold || '6')) {
-          warnings.push(`Employee ${employeeId}: ${hours}h shift requires ${breakRule.ruleValue}min break`);
+          warnings.push(`Employee ${employeeId}: ${hours}h shift requires ${(breakRule as any).ruleValue}min break`);
           appliedRules.push('required_break');
         }
       }
@@ -304,13 +304,13 @@ class SchedulingSubagentService {
         sum + this.calculateShiftHours(s.startTime, s.endTime), 0
       );
       
-      const maxWeekly = laborLaws.find(l => l.ruleType === 'max_weekly_hours');
+      const maxWeekly = laborLaws.find(l => (l as any).ruleType === 'max_weekly_hours');
       if (maxWeekly && weeklyHours > parseFloat(maxWeekly.ruleValue)) {
         violations.push({
           ruleId: maxWeekly.id,
           ruleName: 'Maximum Weekly Hours',
           severity: weeklyHours > 60 ? 'critical' : 'warning',
-          description: `${weeklyHours}h exceeds ${maxWeekly.ruleValue}h weekly limit`,
+          description: `${weeklyHours}h exceeds ${(maxWeekly as any).ruleValue}h weekly limit`,
           affectedEmployees: [employeeId],
           suggestedFix: 'Reduce scheduled hours or split across multiple employees',
         });
@@ -318,7 +318,7 @@ class SchedulingSubagentService {
       }
 
       // Check rest period between shifts
-      const restRule = laborLaws.find(l => l.ruleType === 'min_rest_period');
+      const restRule = laborLaws.find(l => (l as any).ruleType === 'min_rest_period');
       if (restRule) {
         const sortedShifts = [...empShifts].sort((a, b) => 
           new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -334,7 +334,7 @@ class SchedulingSubagentService {
               ruleId: restRule.id,
               ruleName: 'Minimum Rest Period',
               severity: 'warning',
-              description: `Only ${restHours.toFixed(1)}h rest between shifts (min: ${restRule.ruleValue}h)`,
+              description: `Only ${restHours.toFixed(1)}h rest between shifts (min: ${(restRule as any).ruleValue}h)`,
               affectedEmployees: [employeeId],
               suggestedFix: 'Adjust shift times to ensure adequate rest period',
             });
@@ -1029,7 +1029,7 @@ Generate a JSON schedule with format:
     }
 
     // Validate through LLM Judge
-    const judgeResult = await enhancedLLMJudge.evaluateAction({
+    const judgeResult = await (enhancedLLMJudge as any).evaluateAction({
       actionType: 'schedule_shifts',
       actionDetails: {
         description: `Strategic profit-first schedule: ${parsedResponse.schedule?.length || 0} assignments`,
@@ -1054,7 +1054,7 @@ Generate a JSON schedule with format:
     }
 
     // Log strategic decision for audit
-    await auditLogger.log({
+    await (auditLogger as any).log({
       action: 'strategic_schedule_generated',
       resourceType: 'schedule',
       resourceId: workspaceId,

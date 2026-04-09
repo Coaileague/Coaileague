@@ -44,6 +44,7 @@ export interface MeteredGenerateOptions {
   temperature?: number;
   maxOutputTokens?: number;
   metadata?: Record<string, any>;
+  feature?: string;
   /** When true, forces the model to return valid JSON (responseMimeType: application/json) */
   jsonMode?: boolean;
 }
@@ -268,9 +269,9 @@ class MeteredGeminiClient {
   } {
     const summary = aiCreditGateway.getBillingSummary(featureKey);
     return {
-      isFree: summary.isFree,
-      tier: summary.tier,
-      estimatedCredits: summary.creditCost
+      isFree: (summary as any).isFree,
+      tier: (summary as any).tier,
+      estimatedCredits: (summary as any).creditCost
     };
   }
 

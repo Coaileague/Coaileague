@@ -592,7 +592,7 @@ router.get('/auto', requireManager, async (req: AuthenticatedRequest, res) => {
 
 router.get('/company-data', requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { report, startDate, endDate } = req.query;
     const reportType = (report as string) || 'general';
 

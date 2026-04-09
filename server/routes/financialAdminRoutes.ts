@@ -264,7 +264,7 @@ router.get(
          WHERE is_active = true
          ORDER BY service_name, unit_name`
       );
-      res.json({ success: true, rates: result, total: result.length });
+      res.json({ success: true, rates: result, total: (result as any).length });
     } catch (error: unknown) {
       res.status(500).json({ success: false, error: sanitizeError(error) });
     }

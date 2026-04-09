@@ -30,7 +30,7 @@ async function phase1_signup_flow_simulation() {
   const tiers: Array<'free' | 'starter' | 'professional' | 'enterprise'> = ['free', 'starter', 'professional', 'enterprise'];
 
   for (const tier of tiers) {
-    const tierConfig = (BILLING.tiers as any)[tier];
+    const tierConfig = (BILLING as any).tiers[tier];
     const hasName = !!tierConfig?.name;
     const hasPrice = tierConfig?.monthlyPrice !== undefined;
     const hasCredits = tierConfig?.monthlyCredits > 0 || tier === 'free';
@@ -79,7 +79,7 @@ async function phase2_initial_credit_allocation() {
   };
 
   for (const [tier, expected] of Object.entries(expectedCredits)) {
-    const billingCredits = (BILLING.tiers as any)[tier]?.monthlyCredits;
+    const billingCredits = (BILLING as any).tiers[tier]?.monthlyCredits;
     const allocCredits = TIER_CREDIT_ALLOCATIONS[tier as keyof typeof TIER_CREDIT_ALLOCATIONS];
     const monthlyCredits = TIER_MONTHLY_CREDITS[tier];
 
@@ -131,7 +131,7 @@ async function phase3_subscription_stripe_wiring() {
   for (let i = 0; i < tiers.length; i++) {
     const tier = tiers[i];
     const stripeKey = stripeNames[i];
-    const billingPrice = (BILLING.tiers as any)[tier].monthlyPrice;
+    const billingPrice = (BILLING as any).tiers[tier].monthlyPrice;
     const stripePrice = (STRIPE_PRODUCTS as any)[stripeKey].amount;
 
     record({

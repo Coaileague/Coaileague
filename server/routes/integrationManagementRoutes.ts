@@ -36,13 +36,13 @@ router.use(requireAuth);
 function getIntegrationContext(req: Request): IntegrationAccessContext {
   const user = req.user || {};
   return {
-    userId: user.id || '',
-    workspaceId: req.workspaceId || user.workspaceId || user.activeWorkspaceId || user.currentWorkspaceId || '',
-    platformRole: user.platformRole || '',
-    workspaceRole: user.workspaceRole || '',
+    userId: (user as any).id || '',
+    workspaceId: req.workspaceId || (user as any).workspaceId || (user as any).activeWorkspaceId || (user as any).currentWorkspaceId || '',
+    platformRole: (user as any).platformRole || '',
+    workspaceRole: (user as any).workspaceRole || '',
     accessLevel: integrationManagementService.determineAccessLevel(
-      user.platformRole || '',
-      user.workspaceRole || ''
+      (user as any).platformRole || '',
+      (user as any).workspaceRole || ''
     )
   };
 }
@@ -50,8 +50,8 @@ function getIntegrationContext(req: Request): IntegrationAccessContext {
 function getSupportContext(req: Request): SupportContext {
   const user = req.user || {};
   return {
-    userId: user.id || '',
-    platformRole: user.platformRole || '',
+    userId: (user as any).id || '',
+    platformRole: (user as any).platformRole || '',
     accessLevel: integrationPartnerService.determineSupportAccessLevel(user.platformRole || '')
   };
 }
@@ -291,7 +291,7 @@ router.post('/connection-request', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'integrationId and integrationName are required' });
     }
 
-    const workspaceId = req.workspaceId || user.workspaceId || user.workspace_id;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || (user as any).workspace_id;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: 'No workspace associated with this session' });
     }

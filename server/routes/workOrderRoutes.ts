@@ -19,7 +19,7 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const wid = req.workspaceId;
     if (!wid) return res.status(400).json({ error: "Workspace required" });
-    const { status, client_id, type, limit = 50, offset = 0 } = req.query as any;
+    const { status, client_id, type, limit = 50, offset = 0 } = (req as any).query;
 
     const conditions = ["workspace_id = $1"];
     const params: any[] = [wid];

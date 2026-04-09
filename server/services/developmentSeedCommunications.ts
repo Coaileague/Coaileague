@@ -56,8 +56,8 @@ export async function runCommunicationsSeed(): Promise<{ success: boolean; messa
   // =========================================================================
   console.log('[CommsSeed] Inserting internal emails...');
   const now = new Date();
-  const d = (daysAgo: number, hoursOffset = 0) =>
-    new Date(now.getTime() - daysAgo * 86400000 - hoursOffset * 3600000).toISOString();
+  const d = (daysAgo: number, hoursOffset = 0, minutesOffset = 0) =>
+    new Date(now.getTime() - daysAgo * 86400000 - hoursOffset * 3600000 - minutesOffset * 60000).toISOString();
 
   const emails = [
     {

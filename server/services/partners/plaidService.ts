@@ -253,7 +253,7 @@ export async function getTransferStatus(transferId: string): Promise<{
   const transfer = response.data.transfer;
   return {
     status: transfer.status,
-    failureReason: (transfer.failure_reason as any)?.description || undefined,
+    failureReason: (transfer as any).failure_reason?.description || undefined,
   };
 }
 

@@ -202,7 +202,7 @@ class PlatformMaintenanceService {
     }
     
     // System users always bypass
-    if (userId === 'system' || userId === HELPAI.userId || userId.startsWith('bot_')) {
+    if (userId === 'system' || userId === (HELPAI as any).userId || userId.startsWith('bot_')) {
       return { allowed: true };
     }
     
@@ -327,7 +327,7 @@ class PlatformMaintenanceService {
     }
     
     // Emit IRC event for support channel
-    ircEmitter.systemMessage({
+    (ircEmitter as any).systemMessage({
       roomId: this.supportChannelId,
       content: `[AUDIT] ${message}`,
       metadata: {

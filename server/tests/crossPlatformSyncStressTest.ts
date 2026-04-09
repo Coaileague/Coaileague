@@ -224,7 +224,7 @@ async function phase3_pricing_display_sync() {
   ];
 
   for (const ec of employeeCounts) {
-    const configValue = (BILLING.tiers as any)[ec.tier].maxEmployees;
+    const configValue = (BILLING as any).tiers[ec.tier].maxEmployees;
     record({
       name: `${ec.tier} Employee Limit Sync`,
       phase: 'PRICE_SYNC',
@@ -1085,7 +1085,7 @@ async function phase16_data_path_tracing() {
   });
 
   const allTiersInMatrix = [...matrixFeatureIds].every(id => {
-    const entry = (BILLING.featureMatrix as any)[id];
+    const entry = (BILLING as any).featureMatrix[id];
     return entry.free !== undefined && entry.starter !== undefined && entry.professional !== undefined && entry.enterprise !== undefined;
   });
 

@@ -118,7 +118,7 @@ router.use(requirePlatformStaff);
       const validatedData = validationResult.data;
 
       const [newLead] = await db.insert(leads).values({
-        workspaceId: req.workspaceId || (req.user as any)?.currentWorkspaceId,
+        workspaceId: req.workspaceId || (req.user)?.currentWorkspaceId,
         ...validatedData,
         leadStatus: 'new',
         source: 'manual',
@@ -149,7 +149,7 @@ router.use(requirePlatformStaff);
       if (!salesWorkspaceId) {
         return res.status(400).json({ success: false, error: 'Workspace context required for AI lead generation' });
       }
-      const userId = req.user?.id || req.user?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
 
       const aiResult = await getMeteredOpenAICompletion({
         workspaceId: salesWorkspaceId,
@@ -244,7 +244,7 @@ Return ONLY valid JSON array with this exact structure:
 
         // Insert validated lead into database
         const [newLead] = await db.insert(leads).values({
-          workspaceId: req.workspaceId || (req.user as any)?.currentWorkspaceId,
+          workspaceId: req.workspaceId || (req.user)?.currentWorkspaceId,
           companyName: validLead.companyName,
           contactName: validLead.contactName,
           contactTitle: validLead.contactTitle,
@@ -352,7 +352,7 @@ Return ONLY valid JSON array with this exact structure:
             if (!emailWorkspaceId) {
               throw new Error('Workspace context required for AI email generation');
             }
-            const emailUserId = req.user?.id || req.user?.claims?.sub;
+            const emailUserId = req.user?.id || (req.user)?.claims?.sub;
 
             const emailAiResult = await getMeteredOpenAICompletion({
               workspaceId: emailWorkspaceId,
@@ -410,7 +410,7 @@ Return ONLY valid JSON array with this exact structure:
 
   router.get("/deals", async (req, res) => {
     try {
-      const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
           if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
       const allDeals = workspaceId
         ? await db.select().from(deals)
@@ -426,7 +426,7 @@ Return ONLY valid JSON array with this exact structure:
 
   router.post("/deals", async (req, res) => {
     try {
-      const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "workspaceId is required" });
       }
@@ -451,7 +451,7 @@ Return ONLY valid JSON array with this exact structure:
 
   router.get("/rfps", async (req, res) => {
     try {
-      const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
           if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
       const allRfps = await db.query.rfps.findMany({
         where: workspaceId ? (rfps, { eq }) => eq(rfps.workspaceId, workspaceId) : undefined,
@@ -500,7 +500,7 @@ router.post("/invitations/send", async (req, res) => {
     const token = crypto.randomUUID();
     const uniqueInviteCode = (customInviteCode || generateUniqueInviteCode(organizationName)).toUpperCase();
     const result = await db.insert(orgInvitations).values({
-      workspaceId: req.workspaceId || (req.user as any)?.currentWorkspaceId,
+      workspaceId: req.workspaceId || (req.user)?.currentWorkspaceId,
       email,
       organizationName,
       contactName,
@@ -530,7 +530,7 @@ router.post("/invitations/send-enhanced", async (req, res) => {
     
     // Create invitation record
     const [invitation] = await db.insert(orgInvitations).values({
-      workspaceId: req.workspaceId || (req.user as any)?.currentWorkspaceId,
+      workspaceId: req.workspaceId || (req.user)?.currentWorkspaceId,
       email,
       organizationName,
       contactName,
@@ -683,7 +683,7 @@ router.post("/proposals", async (req, res) => {
   try {
     const { title, description, prospectEmail, prospectName, suggestedTier, estimatedValue } = req.body;
     const result = await db.insert(proposals).values({
-      workspaceId: req.workspaceId || (req.user as any)?.currentWorkspaceId,
+      workspaceId: req.workspaceId || (req.user)?.currentWorkspaceId,
       proposalName: title,
       proposalType: 'sales',
       description,

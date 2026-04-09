@@ -238,7 +238,7 @@ async function test_2_3_LowBalanceBehavior() {
 
 async function test_2_4_RefundLogic() {
   const hasRefund = typeof creditManager.refundCredits === 'function';
-  const hasRefundHistory = typeof creditManager.getRefundHistory === 'function';
+  const hasRefundHistory = typeof (creditManager as any).getRefundHistory === 'function';
   
   record({
     name: 'Credit Refund Mechanism',

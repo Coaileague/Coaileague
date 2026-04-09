@@ -141,7 +141,7 @@ router.get('/subagents/domain/:domain', requireSubagentAccess, async (req: Reque
 
 router.patch('/subagents/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = (req as any).params;
     
     // Validate input - reject unknown fields
     const validation = subagentUpdateSchema.safeParse(req.body);
@@ -170,7 +170,7 @@ router.patch('/subagents/:id', requireSubagentAccess, async (req: Request, res: 
 
 router.post('/subagents/:id/toggle', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = (req as any).params;
     
     // Validate input
     const validation = subagentToggleSchema.safeParse(req.body);
@@ -211,7 +211,7 @@ router.get('/health', requireSubagentAccess, async (req: Request, res: Response)
 
 router.get('/telemetry', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    const { subagentId, workspaceId, limit = 50 } = req.query;
+    const { subagentId, workspaceId, limit = 50 } = (req as any).query;
     
     let query = db.select().from(subagentTelemetry);
     
@@ -235,7 +235,7 @@ router.get('/telemetry', requireSubagentAccess, async (req: Request, res: Respon
 router.get('/telemetry/:executionId', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const [telemetry] = await db.select().from(subagentTelemetry)
-      .where(eq(subagentTelemetry.executionId, req.params.executionId));
+      .where(eq(subagentTelemetry.executionId, (req as any).params.executionId));
     
     if (!telemetry) {
       return res.status(404).json({ success: false, error: 'Telemetry not found' });
@@ -253,7 +253,7 @@ router.get('/telemetry/:executionId', requireSubagentAccess, async (req: Request
 
 router.get('/metrics/self-correction', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    const { workspaceId, subagentId, since } = req.query;
+    const { workspaceId, subagentId, since } = (req as any).query;
     
     const metrics = await subagentSupervisor.getSelfCorrectionMetrics({
       workspaceId: workspaceId as string | undefined,
@@ -340,9 +340,9 @@ router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedR
         byDomain: creditsByDomain,
         recentTransactions: recentTransactions.slice(0, 10).map(t => ({
           id: t.id,
-          type: t.transactionType,
+          type: (t as any).transactionType,
           amount: t.amount,
-          feature: t.featureName,
+          feature: (t as any).featureName,
           timestamp: t.createdAt,
         })),
         selfCorrectionMetrics: {
@@ -365,7 +365,7 @@ router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedR
 
 router.get('/interventions', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    const { workspaceId, status = 'pending' } = req.query;
+    const { workspaceId, status = 'pending' } = (req as any).query;
     
     let interventions;
     if (status === 'pending') {
@@ -390,7 +390,7 @@ router.get('/interventions', requireSubagentAccess, async (req: Request, res: Re
 router.get('/interventions/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const [intervention] = await db.select().from(supportInterventions)
-      .where(eq(supportInterventions.id, req.params.id));
+      .where(eq(supportInterventions.id, (req as any).params.id));
     
     if (!intervention) {
       return res.status(404).json({ success: false, error: 'Intervention not found' });
@@ -405,11 +405,11 @@ router.get('/interventions/:id', requireSubagentAccess, async (req: Request, res
 router.post('/interventions/:id/approve', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
-    const platformRole = req.platformRole;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    const platformRole = (req as any).platformRole;
     
     const approved = await subagentSupervisor.approveIntervention(
-      req.params.id,
+      (req as any).params.id,
       userId!,
       platformRole
     );
@@ -427,7 +427,7 @@ router.post('/interventions/:id/approve', requireSubagentAccess, async (req: Req
 router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
     
     // Validate input
     const validation = interventionRejectSchema.safeParse(req.body);
@@ -446,7 +446,7 @@ router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Requ
         rejectionReason: validation.data.reason,
         updatedAt: new Date(),
       })
-      .where(eq(supportInterventions.id, req.params.id))
+      .where(eq(supportInterventions.id, (req as any).params.id))
       .returning();
     
     if (!updated) {
@@ -465,7 +465,7 @@ router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Requ
 
 router.get('/access-control', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    const { workspaceId, resourceType } = req.query;
+    const { workspaceId, resourceType } = (req as any).query;
     
     let query = db.select().from(trinityAccessControl);
     
@@ -485,7 +485,7 @@ router.get('/access-control', requireSubagentAccess, async (req: Request, res: R
 
 router.get('/access-control/:workspaceId/:resourceType/:resourceId', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    const { workspaceId, resourceType, resourceId } = req.params;
+    const { workspaceId, resourceType, resourceId } = (req as any).params;
     
     const [control] = await db.select().from(trinityAccessControl)
       .where(and(
@@ -507,7 +507,7 @@ router.get('/access-control/:workspaceId/:resourceType/:resourceId', requireSuba
 router.post('/access-control', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
     
     // Validate input - reject unknown fields
     const validation = accessControlSchema.safeParse(req.body);
@@ -538,7 +538,7 @@ router.post('/access-control', requireSubagentAccess, async (req: Request, res: 
 router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
     
     // Validate input - reject unknown fields
     const validation = accessControlUpdateSchema.safeParse(req.body);
@@ -557,7 +557,7 @@ router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, 
         configuredAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(trinityAccessControl.id, req.params.id))
+      .where(eq(trinityAccessControl.id, (req as any).params.id))
       .returning();
     
     if (!updated) {
@@ -573,7 +573,7 @@ router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, 
 router.delete('/access-control/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const [deleted] = await db.delete(trinityAccessControl)
-      .where(eq(trinityAccessControl.id, req.params.id))
+      .where(eq(trinityAccessControl.id, (req as any).params.id))
       .returning();
     
     if (!deleted) {
@@ -593,8 +593,8 @@ router.delete('/access-control/:id', requireSubagentAccess, async (req: Request,
 router.post('/execute', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
-    const platformRole = req.platformRole;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    const platformRole = (req as any).platformRole;
     
     // Validate input - reject unknown fields
     const validation = executeTestSchema.safeParse(req.body);
@@ -640,7 +640,7 @@ const meetingModeSchema = z.object({
 router.post('/performance-meetings/conduct', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = req.workspaceId || authReq.session?.workspaceId || 'platform-system';
+    const workspaceId = (req as any).workspaceId || authReq.session?.workspaceId || 'platform-system';
     
     const validation = meetingModeSchema.safeParse(req.body);
     if (!validation.success) {
@@ -664,7 +664,7 @@ router.post('/performance-meetings/conduct', requireSubagentAccess, async (req: 
 router.post('/performance-meetings/fast', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = req.workspaceId || authReq.session?.workspaceId || 'platform-system';
+    const workspaceId = (req as any).workspaceId || authReq.session?.workspaceId || 'platform-system';
     
     const result = await subagentPerformanceMeetingService.triggerFastMeeting(workspaceId);
     

@@ -193,7 +193,7 @@ BEGIN;
       escapeSQL(emp.id),
       escapeSQL(emp.userId),
       escapeSQL(emp.workspaceId),
-      escapeSQL(emp.employeeId),
+      escapeSQL((emp as any).employeeId),
       escapeSQL(emp.firstName),
       escapeSQL(emp.lastName),
       escapeSQL(emp.email),

@@ -373,7 +373,7 @@ class DurableJobQueueService {
         FOR UPDATE SKIP LOCKED
       `);
 
-      const jobs = (result.rows as any[]) || [];
+      const jobs = ((result as any).rows as any[]) || [];
       
       if (jobs.length === 0) return;
 

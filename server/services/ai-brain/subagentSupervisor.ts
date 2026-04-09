@@ -2502,7 +2502,7 @@ class SubagentSupervisor {
       // Count by category to get domain popularity
       const domainCounts: Record<string, number> = {};
       recentTasks.forEach(t => {
-        const domain = t.category || 'general';
+        const domain = (t as any).category || 'general';
         domainCounts[domain] = (domainCounts[domain] || 0) + 1;
       });
       

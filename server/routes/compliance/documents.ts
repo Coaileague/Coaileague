@@ -68,7 +68,7 @@ const router = Router();
 
 router.get("/employee/:employeeId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { employeeId } = req.params;
     
     if (!workspaceId) {
@@ -106,7 +106,7 @@ router.get("/employee/:employeeId", requireAuth, async (req: Request, res: Respo
 
 router.get("/record/:recordId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { recordId } = req.params;
     
     if (!workspaceId) {
@@ -133,7 +133,7 @@ router.get("/record/:recordId", requireAuth, async (req: Request, res: Response)
 
 router.get("/:documentId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     
     if (!workspaceId) {
@@ -178,7 +178,7 @@ router.get("/:documentId", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace required" });
     }
@@ -359,7 +359,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/:documentId/lock", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     const lockParsed = lockDocumentSchema.safeParse(req.body);
     if (!lockParsed.success) {
@@ -426,7 +426,7 @@ router.post("/:documentId/lock", requireAuth, async (req: Request, res: Response
 
 router.patch("/:documentId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     
     if (!workspaceId) {
@@ -472,8 +472,8 @@ router.patch("/:documentId", requireAuth, async (req: Request, res: Response) =>
     const updates: any = { updatedAt: new Date() };
     
     for (const field of allowedUpdates) {
-      if ((updateParsed.data as any)[field] !== undefined) {
-        updates[field] = (updateParsed.data as any)[field];
+      if ((updateParsed as any).data[field] !== undefined) {
+        updates[field] = (updateParsed as any).data[field];
       }
     }
     
@@ -520,7 +520,7 @@ router.patch("/:documentId", requireAuth, async (req: Request, res: Response) =>
 
 router.delete("/:documentId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     
     if (!workspaceId) {
@@ -635,7 +635,7 @@ router.post("/validate-requirements", requireAuth, async (req: Request, res: Res
           requiresColor: type.requiresColor,
           requiresFrontSide: type.requiresFrontImage,
           requiresBackSide: type.requiresBackImage,
-          description: type.validationRules
+          description: (type as any).validationRules
         }
       });
     }
@@ -653,7 +653,7 @@ router.post("/validate-requirements", requireAuth, async (req: Request, res: Res
 
 router.post("/:documentId/verify-hash", requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     const hashParsed = verifyHashSchema.safeParse(req.body);
     if (!hashParsed.success) {

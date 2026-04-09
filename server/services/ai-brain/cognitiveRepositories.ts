@@ -581,7 +581,7 @@ export class RLLoopRepository {
         RETURNING id
       `);
       log.verbose(`[RLRepo] Confidence model upserted: ${model.agentId}/${model.actionType}`);
-      return (result as any[])[0] ?? null;
+      return (result as unknown as any[])[0] ?? null;
     } catch (error: any) {
       log.error(`[RLRepo] Failed to upsert confidence model:`, (error instanceof Error ? error.message : String(error)));
       return null;

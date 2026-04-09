@@ -228,7 +228,7 @@ class UniversalStepLogger {
         if (this.activeLocks.get(lockKey) === orchestrationId) {
           this.activeLocks.delete(lockKey);
           // Mark completed in idempotency service to free the key
-          idempotencyService.markCompleted(lockKey, 'released');
+          (idempotencyService as any).markCompleted(lockKey, 'released');
         }
       }
       this.heldLockKeys.delete(orchestrationId);
@@ -633,7 +633,7 @@ class UniversalStepLogger {
         this.activeLocks.delete(lockKey);
         const heldKeys = this.heldLockKeys.get(orchestrationId);
         if (heldKeys) heldKeys.delete(lockKey);
-        idempotencyService.markCompleted(lockKey, 'released');
+        (idempotencyService as any).markCompleted(lockKey, 'released');
       }
       
       return result;
@@ -662,7 +662,7 @@ class UniversalStepLogger {
         this.activeLocks.delete(lockKey);
         const heldKeys = this.heldLockKeys.get(orchestrationId);
         if (heldKeys) heldKeys.delete(lockKey);
-        idempotencyService.markCompleted(lockKey, 'released');
+        (idempotencyService as any).markCompleted(lockKey, 'released');
       }
       
       return { success: false, error: stepEntry.error, errorCode: 'UNHANDLED_EXCEPTION' };

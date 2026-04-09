@@ -139,16 +139,16 @@ router.post('/onboarding-link', flexAuth, async (req: any, res) => {
 
     const workspace = await resolveWorkspace(req);
     
-    if (!workspace || !workspace.stripeConnectedAccountId) {
+    if (!workspace || !(workspace as any).stripeConnectedAccountId) {
       return res.status(400).json({ message: "Connect account must be created first" });
     }
 
     const accountLink = await stripe.accountLinks.create({
-      account: workspace.stripeConnectedAccountId,
+      account: (workspace as any).stripeConnectedAccountId,
       refresh_url: `${req.protocol}://${req.get('host')}/settings`,
       return_url: `${req.protocol}://${req.get('host')}/settings?stripe_onboarding=success`,
       type: 'account_onboarding',
-    }, { idempotencyKey: `onboard-link-${workspace.stripeConnectedAccountId}-${Math.floor(Date.now() / 60000)}` });
+    }, { idempotencyKey: `onboard-link-${(workspace as any).stripeConnectedAccountId}-${Math.floor(Date.now() / 60000)}` });
 
     res.json({ url: accountLink.url });
   } catch (error: unknown) {
@@ -179,7 +179,7 @@ router.post('/pay-invoice', requireAuth, async (req: any, res) => {
     }
 
     const workspace = await storage.getWorkspace(invoice.workspaceId);
-    if (!workspace || !workspace.stripeConnectedAccountId) {
+    if (!workspace || !(workspace as any).stripeConnectedAccountId) {
       return res.status(400).json({ message: "Workspace Stripe account not configured" });
     }
 
@@ -195,7 +195,7 @@ router.post('/pay-invoice', requireAuth, async (req: any, res) => {
       confirm: true,
       application_fee_amount: platformFeeCents,
       transfer_data: {
-        destination: workspace.stripeConnectedAccountId,
+        destination: (workspace as any).stripeConnectedAccountId,
       },
       metadata: {
         invoiceId: invoice.id,
@@ -705,7 +705,7 @@ router.get('/connect-status', flexAuth, async (req: any, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    if (!workspace.stripeConnectedAccountId) {
+    if (!(workspace as any).stripeConnectedAccountId) {
       return res.json({
         status: 'not_started',
         accountId: null,
@@ -719,7 +719,7 @@ router.get('/connect-status', flexAuth, async (req: any, res) => {
     if (!stripe) {
       return res.json({
         status: 'stripe_not_configured',
-        accountId: workspace.stripeConnectedAccountId,
+        accountId: (workspace as any).stripeConnectedAccountId,
         chargesEnabled: false,
         payoutsEnabled: false,
         detailsSubmitted: false,
@@ -824,7 +824,7 @@ router.post('/connect-dashboard', flexAuth, async (req: any, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    if (!workspace.stripeConnectedAccountId) {
+    if (!(workspace as any).stripeConnectedAccountId) {
       return res.status(400).json({ message: "No Stripe Connect account linked to this workspace" });
     }
 
@@ -833,7 +833,7 @@ router.post('/connect-dashboard', flexAuth, async (req: any, res) => {
     res.json({ url: loginLink.url });
   } catch (error: unknown) {
     log.error("Error creating Connect dashboard link:", error);
-    if (error?.type === 'StripeInvalidRequestError' && error?.message?.includes('standard')) {
+    if (error?.type === 'StripeInvalidRequestError' && (error as any)?.message?.includes('standard')) {
       const dashboardUrl = `https://dashboard.stripe.com`;
       return res.json({ url: dashboardUrl, note: 'Standard accounts use the main Stripe Dashboard' });
     }

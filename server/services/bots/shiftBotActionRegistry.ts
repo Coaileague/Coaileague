@@ -46,7 +46,7 @@ export function registerShiftBotActions(): void {
         officerUserId: emp.userId,
         officerEmployeeId: emp.id,
         officerName,
-        createdBy: request.context?.userId || 'trinity',
+        createdBy: (request as any).context?.userId || 'trinity',
       });
       return { success: true, actionId: request.actionId, message: `Shift room ${result.created ? 'created' : 'already existed'} for shift ${shiftId}`, data: result };
     },
@@ -108,8 +108,8 @@ export function registerShiftBotActions(): void {
       // Trigger the clock-in confirm message in the room
       await shiftRoomBotOrchestrator.handleShiftRoomMessage({
         conversationId, workspaceId,
-        senderId: request.context?.userId || 'trinity',
-        senderName: request.context?.userName || 'Trinity',
+        senderId: (request as any).context?.userId || 'trinity',
+        senderName: (request as any).context?.userName || 'Trinity',
         senderRole: 'supervisor',
         message: 'CONFIRM',
         messageType: 'text',
@@ -132,8 +132,8 @@ export function registerShiftBotActions(): void {
       const { meetingBotPdfService } = await import('./meetingBotPdfService');
       const result = await meetingBotPdfService.generateAndSaveMeetingSummary(
         conversationId, workspaceId,
-        request.context?.userId || 'system',
-        endedByName || request.context?.userName || 'Trinity'
+        (request as any).context?.userId || 'system',
+        endedByName || (request as any).context?.userName || 'Trinity'
       );
       return { success: result.success, actionId: request.actionId, message: result.success ? `Meeting summary saved: ${result.documentId}` : result.error || 'Failed', data: result };
     },
@@ -153,8 +153,8 @@ export function registerShiftBotActions(): void {
       const { shiftRoomBotOrchestrator } = await import('./shiftRoomBotOrchestrator');
       await shiftRoomBotOrchestrator.handleShiftRoomMessage({
         conversationId, workspaceId,
-        senderId: request.context?.userId || 'trinity',
-        senderName: askerName || request.context?.userName || 'Trinity',
+        senderId: (request as any).context?.userId || 'trinity',
+        senderName: askerName || (request as any).context?.userName || 'Trinity',
         senderRole: 'employee',
         message: `@HelpAI ${question}`,
         messageType: 'text',

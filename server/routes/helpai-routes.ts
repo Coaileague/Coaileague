@@ -181,7 +181,7 @@ helpaiRouter.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const startTime = Date.now();
-      const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       const userId = req.user?.id;
 
       if (!workspaceId) {
@@ -268,7 +268,7 @@ helpaiRouter.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace required' });
       }
@@ -302,7 +302,7 @@ helpaiRouter.get(
   requireHelpAIAccess,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace required' });
       }
@@ -353,7 +353,7 @@ helpaiRouter.get(
   requireHelpAIAccess,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace required' });
       }
@@ -393,7 +393,7 @@ helpaiRouter.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const registryStats = await helpaiRegistryService.getRegistryStats();
-      const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       let auditStats = null;
 
       if (workspaceId) {
@@ -575,7 +575,7 @@ helpaiRouter.post(
         workspaceId: req.user?.currentWorkspaceId,
         userId: req.user?.id || 'unknown',
         userRole: req.user?.role || 'employee',
-        platformRole: req.platformRole || req.user?.platformRole,
+        platformRole: req.platformRole || (req.user)?.platformRole,
         priority: priority || 'normal',
         isTestMode: isTestMode || false
       };
@@ -678,7 +678,7 @@ helpaiRouter.post(
         workspaceId: req.user?.currentWorkspaceId,
         userId: req.user?.id || 'unknown',
         userRole: req.user?.role || 'employee',
-        platformRole: req.platformRole || req.user?.platformRole
+        platformRole: req.platformRole || (req.user)?.platformRole
       };
 
       const result = await helpaiOrchestrator.executeAction(request);
@@ -727,7 +727,7 @@ helpaiRouter.post('/chat', async (req: Request, res: Response) => {
     // Try custom auth first (session-based)
     if (authReq.session?.userId) {
       userId = authReq.session.userId;
-      userName = authReq.session.userName || 'User';
+      userName = (authReq as any).session.userName || 'User';
       workspaceId = authReq.session.workspaceId || workspaceId;
     }
     // Try Replit Auth (OIDC)
@@ -1005,7 +1005,7 @@ helpaiRouter.get('/admin/sessions', requireAuth, requireHelpAIAccess, async (req
   try {
     const user = req.user;
     const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 50), 500);
-    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;
 
     const sessions = await helpAIOrchestrator.getSessionHistory(workspaceId, limit);
     const stats = await helpAIOrchestrator.getSessionStats(workspaceId);
@@ -1037,7 +1037,7 @@ helpaiRouter.get('/admin/sessions/:id/actions', requireAuth, requireHelpAIAccess
 helpaiRouter.get('/admin/stats', requireAuth, requireHelpAIAccess, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;
     const stats = await helpAIOrchestrator.getSessionStats(workspaceId);
     res.json({ success: true, stats });
   } catch (error: unknown) {

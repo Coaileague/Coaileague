@@ -171,7 +171,7 @@ class DataResearchSkill extends BaseSkill {
 
         case 'sites': {
           const data = await db.select().from(sites).where(eq(sites.workspaceId, wsId)).limit(200);
-          const active = data.filter(s => s.isActive).length;
+          const active = data.filter(s => (s as any).isActive).length;
           const summary = { total: data.length, active, inactive: data.length - active };
           logs.push(`Sites: ${data.length} records queried`);
           return { data, summary, dataPoints: data.length };

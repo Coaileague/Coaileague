@@ -191,7 +191,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
         data: result,
         logs,
         tokensUsed: aiInsights ? 500 : 0,
-        executionTimeMs: Date.now() - context.startTime,
+        executionTimeMs: Date.now() - (context as any).startTime,
       };
 
     } catch (error: any) {
@@ -204,7 +204,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
         },
         logs,
         tokensUsed: 0,
-        executionTimeMs: Date.now() - context.startTime,
+        executionTimeMs: Date.now() - (context as any).startTime,
       };
     }
   }

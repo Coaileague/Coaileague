@@ -23,7 +23,7 @@ router.get("/", async (req, res) => {
       return res.status(401).json({ success: false, error: "Not authenticated" });
     }
 
-    const workspaceId = req.workspaceId || user.workspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace ID required" });
     }
@@ -66,7 +66,7 @@ router.get("/pending-count", async (req, res) => {
       return res.status(401).json({ success: false, error: "Not authenticated" });
     }
 
-    const workspaceId = req.workspaceId || user.workspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId;
     
     // Platform admins without a workspace context get 0 count (they view all workspaces)
     const callerPlatRole2 = await getUserPlatformRole(user.id);
@@ -98,7 +98,7 @@ router.get("/pending", async (req, res) => {
       return res.status(401).json({ success: false, error: "Not authenticated" });
     }
 
-    const workspaceId = req.workspaceId || user.workspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace ID required" });
     }
@@ -136,7 +136,7 @@ router.get("/all-pending-counts", async (req, res) => {
     if (!user?.id) {
       return res.status(401).json({ success: false, error: "Not authenticated" });
     }
-    const workspaceId = req.workspaceId || user.workspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId;
     if (!workspaceId) {
       return res.json({ success: true, data: { shifts: 0, timesheets: 0, timeoff: 0, expenses: 0, total: 0 } });
     }
@@ -185,7 +185,7 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ success: false, error: "Approval not found" });
     }
 
-    const workspaceId = req.workspaceId || user.workspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId;
     if (workspaceId && approval.workspaceId && approval.workspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: "Access denied" });
     }
@@ -195,7 +195,7 @@ router.get("/:id", async (req, res) => {
       approval: {
         ...approval,
         createdAt: approval.createdAt?.toISOString(),
-        decisionAt: approval.decisionAt?.toISOString(),
+        decisionAt: (approval as any).decisionAt?.toISOString(),
         expiresAt: approval.expiresAt?.toISOString(),
       },
     });

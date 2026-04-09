@@ -210,7 +210,7 @@ class GoalExecutionService {
         });
 
         try {
-          plan = await planningFrameworkService.generatePlan({
+          plan = await (planningFrameworkService as any).generatePlan({
             planId: crypto.randomUUID(),
             workspaceId: context.workspaceId,
             userId: context.userId,
@@ -322,7 +322,7 @@ class GoalExecutionService {
             const stepResult = await this.executeStep(step, context);
             
             // Get ACTUAL confidence from parity layer (not arbitrary +0.1)
-            const stepConfidenceAfter = await trinityAgentParityLayer.assessConfidence(executionId)
+            const stepConfidenceAfter = await (trinityAgentParityLayer as any).assessConfidence(executionId)
               .catch(() => stepConfidenceBefore + (stepResult.success ? 0.05 : 0));
             
             // Update running confidence
@@ -478,7 +478,7 @@ class GoalExecutionService {
           success = await this.verifyGoalAchieved(goal, context);
           
           // STEP 5: Use EXISTING confidence tracker
-          const confidence = await trinityAgentParityLayer.assessConfidence(executionId);
+          const confidence = await (trinityAgentParityLayer as any).assessConfidence(executionId);
           finalConfidence = confidence;
           
           await this.streamToUI(context.conversationId, {
@@ -875,7 +875,7 @@ class GoalExecutionService {
     plan: ExecutionPlan;
     impact: BusinessImpact;
   }> {
-    const plan = await planningFrameworkService.generatePlan({
+    const plan = await (planningFrameworkService as any).generatePlan({
       planId: crypto.randomUUID(),
       workspaceId: context.workspaceId,
       userId: context.userId,

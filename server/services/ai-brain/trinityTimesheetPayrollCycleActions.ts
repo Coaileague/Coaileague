@@ -59,7 +59,7 @@ export function registerTimesheetPayrollCycleActions() {
       employeeId: timeEntries.employeeId,
       clockIn: timeEntries.clockIn,
       clockOut: timeEntries.clockOut,
-      totalMinutes: timeEntries.totalMinutes,
+      totalMinutes: (timeEntries as any).totalMinutes,
       status: timeEntries.status,
     }).from(timeEntries).where(whereClause).orderBy(timeEntries.clockIn);
     const byEmployee: Record<string, { totalMinutes: number; entries: number }> = {};
@@ -118,13 +118,13 @@ export function registerTimesheetPayrollCycleActions() {
       employeeId: timeEntries.employeeId,
       clockIn: timeEntries.clockIn,
       clockOut: timeEntries.clockOut,
-      totalMinutes: timeEntries.totalMinutes,
+      totalMinutes: (timeEntries as any).totalMinutes,
       status: timeEntries.status,
     }).from(timeEntries).where(and(
       eq(timeEntries.workspaceId, workspaceId),
       gte(timeEntries.clockIn, startDate),
       lte(timeEntries.clockIn, endDate),
-      sql`(${timeEntries.clockOut} IS NULL OR ${timeEntries.totalMinutes} > 600 OR ${timeEntries.totalMinutes} < 0)`
+      sql`(${timeEntries.clockOut} IS NULL OR ${(timeEntries as any).totalMinutes} > 600 OR ${(timeEntries as any).totalMinutes} < 0)`
     ));
     return {
       exceptions,
@@ -184,7 +184,7 @@ export function registerTimesheetPayrollCycleActions() {
     if (!workspaceId || !employeeId) return { error: 'workspaceId and employeeId required' };
     const startDate = periodStart ? new Date(periodStart) : new Date(Date.now() - 14 * 86400000);
     const endDate = periodEnd ? new Date(periodEnd) : new Date();
-    const entries = await db.select({ totalMinutes: timeEntries.totalMinutes })
+    const entries = await db.select({ totalMinutes: (timeEntries as any).totalMinutes })
       .from(timeEntries)
       .where(and(
         eq(timeEntries.workspaceId, workspaceId),
@@ -271,7 +271,7 @@ export function registerTimesheetPayrollCycleActions() {
         payrollRunId,
         grossPay: entry[0].grossPay,
         netPay: entry[0].netPay,
-        deductions: entry[0].deductions,
+        deductions: (entry as any)[0]?.deductions,
         regularHours: entry[0].regularHours,
         overtimeHours: entry[0].overtimeHours,
         periodStart: (entry[0] as any).periodStart,
@@ -289,7 +289,7 @@ export function registerTimesheetPayrollCycleActions() {
       netPay: payrollEntries.netPay,
       regularHours: payrollEntries.regularHours,
       overtimeHours: payrollEntries.overtimeHours,
-      deductions: payrollEntries.deductions,
+      deductions: (payrollEntries as any).deductions,
     }).from(payrollEntries).where(eq(payrollEntries.payrollRunId, payrollRunId));
     const csv = ['EmployeeId,GrossPay,NetPay,RegularHours,OvertimeHours,Deductions',
       ...entries.map(e => `${e.employeeId},${e.grossPay},${e.netPay},${e.regularHours},${e.overtimeHours},${e.deductions}`)

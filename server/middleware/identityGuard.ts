@@ -26,9 +26,9 @@ import { WORKSPACE_ROLE_HIERARCHY, hasPlatformWideAccess, type AuthenticatedRequ
  */
 function resolveTargetUserId(req: AuthenticatedRequest, paramName: string): string | null {
   const raw: string | undefined =
-    (req.params as any)[paramName] ||
-    (req.body as any)?.[paramName] ||
-    (req.query as any)?.[paramName];
+    (req as any).params[paramName] ||
+    (req as any).body?.[paramName] ||
+    ((req as any).query)?.[paramName];
 
   if (!raw || raw === 'me') {
     return req.user?.id || null;

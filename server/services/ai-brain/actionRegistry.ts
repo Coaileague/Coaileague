@@ -365,7 +365,7 @@ class AIBrainActionRegistry {
               data: {
                 shiftId: openShift.id,
                 step: 'assigning',
-                message: `Assigning to ${assignment.employeeName} (score: ${assignment.assignment.toFixed(0)})...`,
+                message: `Assigning to ${assignment.employeeName} (score: ${(assignment as any).assignment.toFixed(0)})...`,
                 progress: 80,
                 assignedEmployee: {
                   id: assignment.employeeId,
@@ -1314,8 +1314,8 @@ class AIBrainActionRegistry {
 
         await universalNotificationEngine.sendNotification({
           type: 'compliance_alert',
-          title: `Compliance Escalation: ${alert.title}`,
-          message: alert.description,
+          title: `Compliance Escalation: ${(alert as any).title}`,
+          message: (alert as any).description,
           workspaceId: request.workspaceId!,
           severity: alert.severity === 'critical' ? 'high' : 'medium',
           source: 'trinity_compliance_escalation',
@@ -1989,7 +1989,7 @@ class AIBrainActionRegistry {
         const start = Date.now();
         const { contractPipelineService } = await import('../contracts/contractPipelineService');
         const contracts = await contractPipelineService.getContracts(request.workspaceId!, { status: 'pending_signatures' });
-        return createResult(request.actionId, true, `Found ${contracts.length} contracts awaiting signatures`, { contracts, count: contracts.length }, start);
+        return createResult(request.actionId, true, `Found ${(contracts as any).length} contracts awaiting signatures`, { contracts, count: (contracts as any).length }, start);
       },
     };
 
@@ -2005,7 +2005,7 @@ class AIBrainActionRegistry {
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         const contracts = await contractPipelineService.getContracts(request.workspaceId!, { expiresBy: thirtyDaysFromNow });
-        return createResult(request.actionId, true, `Found ${contracts.length} contracts expiring in next 30 days`, { contracts, count: contracts.length }, start);
+        return createResult(request.actionId, true, `Found ${(contracts as any).length} contracts expiring in next 30 days`, { contracts, count: (contracts as any).length }, start);
       },
     };
 
@@ -2049,7 +2049,7 @@ class AIBrainActionRegistry {
         const { contractPipelineService } = await import('../contracts/contractPipelineService');
         const searchTerm = request.payload?.query || '';
         const contracts = await contractPipelineService.getContracts(request.workspaceId!, {});
-        const filtered = contracts.filter(c => 
+        const filtered = (contracts as any).filter(c => 
           c.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           c.title?.toLowerCase().includes(searchTerm.toLowerCase())
         );
@@ -2913,7 +2913,7 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
           request.payload?.csvData || '',
           request.payload?.options
         );
-        return createResult(request.actionId, result.success, result.summary, result, start);
+        return createResult(request.actionId, result.success, (result as any).summary, result, start);
       } catch (error: any) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }

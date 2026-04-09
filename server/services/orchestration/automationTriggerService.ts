@@ -303,7 +303,7 @@ class AutomationTriggerService {
         required: ['triggerId'],
       },
       handler: async (params) => {
-        return await this.executeTrigger(params.triggerId, params.force);
+        return await this.executeTrigger(params.triggerId, (params as any).force);
       },
     });
 
@@ -320,7 +320,7 @@ class AutomationTriggerService {
         },
       },
       handler: async (params) => {
-        return this.getExecutionHistory(params.workspaceId, params.limit || 50);
+        return this.getExecutionHistory(params.workspaceId, (params as any).limit || 50);
       },
     });
 
@@ -342,7 +342,7 @@ class AutomationTriggerService {
         if (!trigger) {
           return { success: false, message: 'Trigger not found' };
         }
-        trigger.enabled = params.enabled;
+        trigger.enabled = (params as any).enabled;
         trigger.updatedAt = new Date();
         await this.persistTrigger(trigger);
         return { success: true, trigger };

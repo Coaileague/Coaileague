@@ -18,9 +18,9 @@ const router = Router();
 // Root dashboard route - alias for /metrics
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const isPlatformAdmin = hasPlatformWideAccess(user?.platformRole);
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || user?.workspaceId || req.workspaceId;
+    const workspaceId = (isPlatformAdmin && (req as any).query.workspaceId as string) || user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
     
     if (!workspaceId) {
       if (isPlatformAdmin) {
@@ -55,12 +55,12 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 // Dashboard summary — canonical KPI endpoint (expected by semantic audit)
 router.get("/summary", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const isPlatformAdmin = hasPlatformWideAccess(user?.platformRole);
     // SECURITY: query param workspaceId is only honoured for platform admins.
     // Non-admin users are always scoped to their session workspace to prevent
     // cross-tenant data leakage via query param injection.
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || user?.workspaceId || req.workspaceId;
+    const workspaceId = (isPlatformAdmin && (req as any).query.workspaceId as string) || user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
 
     if (!workspaceId) return res.status(400).json({ error: "workspaceId required" });
 
@@ -113,11 +113,11 @@ router.get("/summary", requireAuth, async (req: Request, res: Response) => {
 // Get dashboard metrics
 router.get("/metrics", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     
     // Platform admins can view any workspace via query param, or their own if set
     const isPlatformAdmin = hasPlatformWideAccess(user?.platformRole);
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || user?.workspaceId || req.workspaceId;
+    const workspaceId = (isPlatformAdmin && (req as any).query.workspaceId as string) || user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
     
     if (!workspaceId) {
       // For platform admins without a workspace context, return aggregate or empty data
@@ -273,10 +273,10 @@ const DEFAULT_WIDGETS = [
 // Get widget layout (DB-backed, falls back to defaults when no saved layout exists)
 router.get("/layout", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id) return res.status(401).json({ error: "Unauthorized" });
 
-    const workspaceId = user.currentWorkspaceId || user.workspaceId || req.workspaceId;
+    const workspaceId = user.currentWorkspaceId || (user as any).workspaceId || req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "No workspace context" });
 
     const [saved] = await db
@@ -299,10 +299,10 @@ router.get("/layout", requireAuth, async (req: Request, res: Response) => {
 // Save widget layout — upserts per (workspaceId, userId)
 router.post("/layout", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id) return res.status(401).json({ error: "Unauthorized" });
 
-    const workspaceId = user.currentWorkspaceId || user.workspaceId || req.workspaceId;
+    const workspaceId = user.currentWorkspaceId || (user as any).workspaceId || req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "No workspace context" });
 
     const { widgets } = req.body;
@@ -326,11 +326,11 @@ router.post("/layout", requireAuth, async (req: Request, res: Response) => {
 // Worker earnings summary for employee dashboard widget
 router.get("/worker-earnings", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     // currentWorkspaceId is the canonical field on the DB user object (set by real login);
     // workspaceId is set on the x-test-key dev bypass user object.
     // req.workspaceId is set by ensureWorkspaceAccess when mounted at /api/dashboard.
-    const workspaceId = user?.currentWorkspaceId || user?.workspaceId || req.workspaceId;
+    const workspaceId = user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
     const userId = user?.id;
 
     if (!userId || !workspaceId) {

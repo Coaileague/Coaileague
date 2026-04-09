@@ -391,7 +391,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
     // to suppress email addresses or manipulate delivery state.
     const outboundSignature = req.headers["svix-signature"] as string | undefined;
     const outboundTimestamp = req.headers["svix-timestamp"] as string | undefined;
-    const outboundRawBody = req.rawBody || JSON.stringify(req.body);
+    const outboundRawBody = (req as any).rawBody || JSON.stringify(req.body);
 
     if (!verifyResendSignature(outboundRawBody, outboundSignature, outboundTimestamp)) {
       log.error("[Resend Webhook] Signature verification failed — rejecting outbound event webhook");
@@ -429,7 +429,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
     switch (event.type) {
       case "email.delivered": {
         // Extract invoiceId from Resend tags set at send time
-        const tags: Array<{ name: string; value: string }> = (event.data as any).tags || [];
+        const tags: Array<{ name: string; value: string }> = (event as any).data.tags || [];
         const invoiceTag = tags.find((t) => t.name === 'invoiceId');
         if (invoiceTag?.value) {
           const invoiceId = invoiceTag.value;
@@ -461,7 +461,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
                 metadata: {
                   invoiceNumber: inv.invoiceNumber,
                   deliveredTo: event.data.to?.join(', '),
-                  resendEventAt: (event.data as any).created_at || new Date().toISOString(),
+                  resendEventAt: (event as any).data.created_at || new Date().toISOString(),
                   source: 'resend_email.delivered_webhook',
                 },
               });
@@ -482,7 +482,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
       case "email.bounced": {
         // Hard bounces signal invalid/dead addresses. Auto-suppress to protect sender reputation.
         const bouncedAddresses: string[] = event.data.to ?? [];
-        const bounceResendId: string = (event.data as any).id || '';
+        const bounceResendId: string = (event as any).data.id || '';
         log.error(`[Resend] Hard bounce for ${bouncedAddresses.join(", ")}`);
         for (const email of bouncedAddresses) {
           try {
@@ -493,7 +493,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
                 unsubscribeAll: true,
                 unsubscribeToken: crypto.randomBytes(32).toString('hex'),
                 unsubscribeSource: 'bounce',
-                unsubscribeReason: `Hard bounce reported by Resend — email ID: ${event.data.id}`,
+                unsubscribeReason: `Hard bounce reported by Resend — email ID: ${(event as any).data.id}`,
               })
               .onConflictDoNothing(); // unique constraint on (email, workspaceId) may fire
           } catch (err: unknown) {
@@ -539,7 +539,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
       case "email.complained": {
         // Spam complaints damage sender reputation. Auto-suppress immediately.
         const complainedAddresses: string[] = event.data.to ?? [];
-        const complaintResendId: string = (event.data as any).id || '';
+        const complaintResendId: string = (event as any).data.id || '';
         log.error(`[Resend] Spam complaint from ${complainedAddresses.join(", ")}`);
         for (const email of complainedAddresses) {
           try {
@@ -550,7 +550,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
                 unsubscribeAll: true,
                 unsubscribeToken: crypto.randomBytes(32).toString('hex'),
                 unsubscribeSource: 'complaint',
-                unsubscribeReason: `Spam complaint reported by Resend — email ID: ${event.data.id}`,
+                unsubscribeReason: `Spam complaint reported by Resend — email ID: ${(event as any).data.id}`,
               })
               .onConflictDoNothing();
           } catch (err: unknown) {
@@ -619,7 +619,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
     const timestamp = req.headers["svix-timestamp"] as string | undefined;
     // Use raw body captured by middleware for proper signature verification
     // (JSON.stringify(req.body) may produce different formatting than the original payload)
-    const rawBody = req.rawBody || JSON.stringify(req.body);
+    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
     
     // Fail-closed: verifyResendSignature() already rejects when no secret is configured.
     // Removing the outer `if (RESEND_WEBHOOK_SECRET &&...)` guard so we never accept

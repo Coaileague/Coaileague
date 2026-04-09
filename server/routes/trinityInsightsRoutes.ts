@@ -35,7 +35,7 @@ async function getAuthenticatedUser(req: AuthenticatedRequest): Promise<any> {
 
 async function resolveSecureWorkspaceId(user: any, _requestedId?: string): Promise<string> {
   // requireManager already resolved the workspace securely and stamped it onto
-  // req.user.workspaceId (see auth.ts). For platform staff it has already been
+  // (req as any).user?.workspaceId (see auth.ts). For platform staff it has already been
   // overridden with the admin-specified workspace. We simply reflect that value.
   return user?.workspaceId || '';
 }
@@ -50,7 +50,7 @@ router.use(requireManager);
  */
 router.get('/insights', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user || req.user?.id;
+    const userId = req.user || (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
@@ -425,11 +425,11 @@ router.get('/fixes', async (req: Request, res: Response) => {
         id: f.id,
         title: f.title,
         description: f.description,
-        endUserSummary: f.endUserSummary,
-        affectedFiles: f.affectedFiles,
+        endUserSummary: (f as any).endUserSummary,
+        affectedFiles: (f as any).affectedFiles,
         riskLevel: f.riskLevel,
         status: f.status,
-        requiredRole: f.requiredRole,
+        requiredRole: (f as any).requiredRole,
         createdAt: f.createdAt,
         expiresAt: f.expiresAt,
       })),
@@ -509,14 +509,14 @@ router.get('/fixes/:id/preview', async (req: Request, res: Response) => {
         id: approval.id,
         title: approval.title,
         description: approval.description,
-        endUserSummary: approval.endUserSummary,
-        affectedFiles: approval.affectedFiles,
-        proposedChanges: approval.proposedChanges,
-        rollbackPlan: approval.rollbackPlan,
+        endUserSummary: (approval as any).endUserSummary,
+        affectedFiles: (approval as any).affectedFiles,
+        proposedChanges: (approval as any).proposedChanges,
+        rollbackPlan: (approval as any).rollbackPlan,
         riskLevel: approval.riskLevel,
         impactScope: approval.impactScope,
         status: approval.status,
-        requiredRole: approval.requiredRole,
+        requiredRole: (approval as any).requiredRole,
         createdAt: approval.createdAt,
         expiresAt: approval.expiresAt,
       },
@@ -583,7 +583,7 @@ router.post('/fixes/:id/rollback', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Fix approval not found' });
     }
     
-    if (!approval.commitHash) {
+    if (!(approval as any).commitHash) {
       return res.status(400).json({ success: false, error: 'No commit hash available for rollback' });
     }
     
@@ -592,7 +592,7 @@ router.post('/fixes/:id/rollback', async (req: Request, res: Response) => {
     res.status(501).json({
       success: false,
       error: 'Rollback functionality is not yet implemented',
-      message: 'Manual rollback required using git revert on commit: ' + approval.commitHash,
+      message: 'Manual rollback required using git revert on commit: ' + (approval as any).commitHash,
     });
   } catch (error: unknown) {
     log.error('[Trinity Fixes API] Rollback error:', error);
@@ -714,7 +714,7 @@ router.get('/subagents/:domain', async (req: Request, res: Response) => {
       },
       recentTasks: recentTasks.map(t => ({
         id: t.id,
-        taskType: t.taskType,
+        taskType: (t as any).taskType,
         status: t.status,
         durationMs: t.durationMs,
         createdAt: t.createdAt,

@@ -412,7 +412,7 @@ router.post('/apply-insight', requireManager, async (req: any, res) => {
 
 router.get('/ai-insights', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.json({ insights: [], generatedAt: new Date().toISOString() });
     }

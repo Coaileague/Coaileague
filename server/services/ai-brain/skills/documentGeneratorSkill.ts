@@ -152,7 +152,7 @@ class DocumentGeneratorSkill extends BaseSkill {
           firstName: employees.firstName,
           lastName: employees.lastName,
           position: employees.position,
-          payRate: employees.payRate,
+          payRate: (employees as any).payRate,
           isActive: employees.isActive,
         }).from(employees).where(eq(employees.workspaceId, wsId)).limit(200);
         data.employees = empList;
@@ -173,8 +173,8 @@ class DocumentGeneratorSkill extends BaseSkill {
         const siteList = await db.select({
           id: sites.id,
           name: sites.name,
-          address: sites.address,
-          isActive: sites.isActive,
+          address: (sites as any).address,
+          isActive: (sites as any).isActive,
         }).from(sites).where(eq(sites.workspaceId, wsId)).limit(100);
         data.sites = siteList;
         logs.push(`Gathered ${siteList.length} sites for workspace`);

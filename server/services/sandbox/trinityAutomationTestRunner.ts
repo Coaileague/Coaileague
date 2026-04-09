@@ -419,7 +419,7 @@ export class TrinityAutomationTestRunner {
         },
         syncDetails: {
           connectionId: connection.id,
-          realmId: connection.partnerCompanyId,
+          realmId: (connection as any).partnerCompanyId,
           readyForSync: true,
         },
       };

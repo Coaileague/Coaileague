@@ -277,7 +277,7 @@ class TrinityFinancialIntelligenceEngine {
     // Converted to Drizzle ORM: CASE WHEN → sql fragment
     const baselineResult = await db.select({
       avgWeeklyHours: sql<number>`coalesce(sum(extract(epoch from (${timeEntries.clockOut} - ${timeEntries.clockIn})) / 3600.0), 160)`,
-      avgPayRate: sql<number>`coalesce(avg(coalesce(${employees.payRate}, 15)), 15)`,
+      avgPayRate: sql<number>`coalesce(avg(coalesce(${(employees as any).payRate}, 15)), 15)`,
       otHoursLast30: sql<number>`coalesce(sum(
         case when extract(epoch from (${timeEntries.clockOut} - ${timeEntries.clockIn})) / 3600.0 > 40
              then (extract(epoch from (${timeEntries.clockOut} - ${timeEntries.clockIn})) / 3600.0 - 40) else 0 end

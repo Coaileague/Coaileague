@@ -193,7 +193,7 @@ class TrinityDeliberationLoopService {
       const count = parseInt(row.count ?? '0');
       return {
         similarIssuesLast30Days: count,
-        lastResolutionOutcome: (row.last_outcome as any) ?? undefined,
+        lastResolutionOutcome: (row as any).last_outcome ?? undefined,
         recurringPattern: count >= 3,
       };
     } catch (_err) {

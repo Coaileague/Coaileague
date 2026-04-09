@@ -249,7 +249,7 @@ export async function scoreEmployeesForShift(
         clientLon
       );
       
-      const maxDist = requirements.maxDistance || metrics.preferredMaxDistance || 50;
+      const maxDist = requirements.maxDistance || (metrics as any).preferredMaxDistance || 50;
       if (distanceMiles > maxDist) {
         continue; // Skip - too far
       }
@@ -359,7 +359,7 @@ export async function scoreEmployeesForShift(
     // This is a soft scoring penalty — managers can still override via manual assignment.
     // =====================================================
     let disciplinaryPenalty = 0;
-    const isCriticalPost = shift.severity === 'critical';
+    const isCriticalPost = (shift as any).severity === 'critical';
     if (isCriticalPost) {
       try {
         // Only query for the two types that carry scheduling weight per Phase 35J spec

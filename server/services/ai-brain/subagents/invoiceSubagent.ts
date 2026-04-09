@@ -247,7 +247,7 @@ class InvoiceSubagentService {
 
       for (const entry of billableEntries) {
         const hours = parseFloat(entry.totalHours?.toString() || '0');
-        const rate = parseFloat(entry.hourlyRate?.toString() || clientData.defaultHourlyRate?.toString() || '100');
+        const rate = parseFloat(entry.hourlyRate?.toString() || (clientData as any).defaultHourlyRate?.toString() || '100');
         // Integer-cent arithmetic: hundredths_of_hour × cents_per_hour ÷ 100 = cents
         const amountCents = Math.round(Math.round(hours * 100) * Math.round(rate * 100) / 100);
         const amount = amountCents / 100;
@@ -268,7 +268,7 @@ class InvoiceSubagentService {
           issues.push({
             severity: 'warning',
             type: 'rate',
-            description: `Rate variance detected: $${rate}/hr vs contract rate $${clientData.defaultHourlyRate}/hr`,
+            description: `Rate variance detected: $${rate}/hr vs contract rate $${(clientData as any).defaultHourlyRate}/hr`,
             potentialRevenue: Math.abs(amount - hours * parseFloat(clientData.defaultHourlyRate?.toString() || '0')),
           });
         }
@@ -297,7 +297,7 @@ class InvoiceSubagentService {
             zeroRateEntries: zeroRateCount,
             zeroHourEntries: zeroHourCount,
             rateVariances: rateVarianceCount,
-            contractRate: clientData.defaultHourlyRate,
+            contractRate: (clientData as any).defaultHourlyRate,
             periodStart: billingPeriodStart.toISOString(),
             periodEnd: billingPeriodEnd.toISOString(),
           },
@@ -775,7 +775,7 @@ class InvoiceSubagentService {
         result,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       }).onConflictDoUpdate({
-        target: idempotencyKeys.key,
+        target: (idempotencyKeys as any).key,
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {

@@ -532,7 +532,7 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
     const [result] = await db
       .select({ logCount: sql<number>`count(*)::int` })
       .from(auditLogs)
-      .where(sql`${auditLogs.source} = 'system' AND ${auditLogs.timestamp} > NOW() - INTERVAL '24 hours'`);
+      .where(sql`${auditLogs.source} = 'system' AND ${(auditLogs as any).timestamp} > NOW() - INTERVAL '24 hours'`);
     const recentLogs = Number(result?.logCount || 0);
     return { 
       ok: true, 
@@ -753,7 +753,7 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
     const [pointsResult] = await db
       .select({ 
         count: sql<number>`count(*)::int`, 
-        total: sql<number>`coalesce(sum(${employeePoints.points}), 0)::int` 
+        total: sql<number>`coalesce(sum(${(employeePoints as any).points}), 0)::int` 
       })
       .from(employeePoints);
     // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`

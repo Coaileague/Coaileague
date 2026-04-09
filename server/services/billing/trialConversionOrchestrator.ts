@@ -288,7 +288,7 @@ class TrialConversionOrchestrator {
 
     // CLASS B FIX: Idempotency guard for trial expiry warnings
     // Check if we've already warned for this specific threshold day
-    const lastWarnedAt = workspace.metadata?.last_trial_warning_day;
+    const lastWarnedAt = (workspace as any).metadata?.last_trial_warning_day;
     if (lastWarnedAt === daysRemaining) {
       log.info(`[TrialConversionOrchestrator] Skipping duplicate ${daysRemaining}-day warning for workspace ${workspaceId}`);
       return;
@@ -377,7 +377,7 @@ class TrialConversionOrchestrator {
     // Reset credits to free-tier allowance
     try {
       const { CreditManager } = await import('./creditManager');
-      await CreditManager.getInstance().initializeCredits(workspaceId, 'free');
+      await (CreditManager as any).getInstance().initializeCredits(workspaceId, 'free');
     } catch (err) {
       log.warn('Credit reset failed during free-tier downgrade', { workspaceId, err });
     }

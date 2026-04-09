@@ -281,7 +281,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
       );
 
     const offerNotif = allNotifs.find(n => {
-      const meta = (n.metadata as any) || {};
+      const meta = (n as any).metadata || {};
       return !meta.accepted && !meta.declined && n.userId === matchedEmployee.userId;
     });
 
@@ -295,7 +295,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
     const orgName = workspace?.name || 'Your organization';
 
     if (offerNotif) {
-      const currentMeta = (offerNotif.metadata as any) || {};
+      const currentMeta = (offerNotif as any).metadata || {};
 
       if (currentMeta.accepted) {
         await replySms(from, `${orgName}: Your shift offer has already been accepted. See the app for details.`, workspaceId);
@@ -413,7 +413,7 @@ router.post('/api/webhooks/twilio/voice-interview/start', validateTwilioSignatur
       .where(eq(interviewCandidates.phone, callerPhone))
       .limit(1);
 
-    if (!candidate || !candidate.voiceSessionId) {
+    if (!candidate || !(candidate as any).voiceSessionId) {
       // No pending voice session — could be a careers inbound call
       const sessionIdFromQuery = req.query.sessionId as string | undefined;
       if (!sessionIdFromQuery) {
@@ -422,7 +422,7 @@ router.post('/api/webhooks/twilio/voice-interview/start', validateTwilioSignatur
       }
     }
 
-    const sessionId = candidate?.voiceSessionId || (req.query.sessionId as string);
+    const sessionId = (candidate as any)?.voiceSessionId || (req.query.sessionId as string);
     const workspaceId = candidate?.workspaceId || (req.query.workspaceId as string);
     const base = getWebhookBase();
 

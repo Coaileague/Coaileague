@@ -341,7 +341,7 @@ export class InboundOpportunityAgent {
                     clientEmail: processResult.senderEmail,
                     location: shift.location || '',
                     shiftDate: shift.date || '',
-                    shiftDescription: shift.description || shift.duties,
+                    shiftDescription: (shift as any).description || (shift as any).duties,
                   }).catch(err => log.warn('Claim registration failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
                 }
 
@@ -492,8 +492,8 @@ export class InboundOpportunityAgent {
             ctx.workspaceName = workspaceName;
             ctx.senderEmail = email.fromEmail;
             ctx.senderName = email.fromName;
-            ctx.tempCode = processResult.tempCode;
-            ctx.statusPortalUrl = processResult.statusPortalUrl;
+            (ctx as any).tempCode = processResult.tempCode;
+            (ctx as any).statusPortalUrl = processResult.statusPortalUrl;
           }
 
           // Contract notification to org managers
@@ -625,15 +625,15 @@ export class InboundOpportunityAgent {
     
     if (result.success) {
       // If auto-staffing is enabled and shifts were extracted, trigger Stage B
-      if (result.result?.contractor?.autoStaffingEnabled && result.result?.extractedShifts?.length > 0) {
+      if (result.result?.contractor?.autoStaffingEnabled && (result as any).result?.extractedShifts?.length > 0) {
         // Auto-trigger staffing (async, don't block)
         this.triggerAutoStaffing(workspaceId).catch((err: unknown) => log.warn('[InboundOpportunity] Auto-staffing trigger failed', err));
       }
       
       return {
         success: true,
-        message: result.result?.isShiftRequest 
-          ? `Extracted ${result.result.extractedShifts?.length || 0} shifts from email`
+        message: (result as any).result?.isShiftRequest 
+          ? `Extracted ${(result as any).result.extractedShifts?.length || 0} shifts from email`
           : 'Email routed to human inbox for review',
         data: result.result,
       };
@@ -1012,8 +1012,8 @@ Return ONLY the JSON array, no markdown, no explanations.`;
           }
 
           // Add created offers and expiration to processResult for notify step
-          processResult.createdOffers = createdOffers;
-          processResult.offerExpiresAt = offerExpiresAt;
+          (processResult as any).createdOffers = createdOffers;
+          (processResult as any).offerExpiresAt = offerExpiresAt;
 
           return { tables: ['staged_shifts', 'automated_shift_offers'], recordsChanged };
         },
@@ -1021,8 +1021,8 @@ Return ONLY the JSON array, no markdown, no explanations.`;
         // STEP 7: NOTIFY
         notify: async (ctx, processResult) => {
           const notifications: string[] = [];
-          const createdOffers = processResult.createdOffers || [];
-          const offerExpiresAt = processResult.offerExpiresAt || new Date(Date.now() + 2 * 60 * 60 * 1000);
+          const createdOffers = (processResult as any).createdOffers || [];
+          const offerExpiresAt = (processResult as any).offerExpiresAt || new Date(Date.now() + 2 * 60 * 60 * 1000);
 
           // Get employee emails for all offer recipients
           const employeeIds = createdOffers.map((o: any) => o.employeeId);
@@ -1380,28 +1380,28 @@ Consider: qualifications match, reliability history, preference match, availabil
               aiApprovalConfidence: approval.confidence.toString(),
               aiApprovalReasoning: approval.reasoning,
             })
-            .where(eq(automatedShiftOffers.id, processResult.offer.id));
+            .where(eq(automatedShiftOffers.id, (processResult as any).offer.id));
           recordsChanged++;
           
           if (approval.decision === 'APPROVE') {
             // ── RACE CONDITION GUARD ────────────────────────────────────────
             // Attempt atomic claim before assigning. If another org already
             // claimed this shift, back off gracefully.
-            const claimKey = processResult.notificationContext?.claimKey;
+            const claimKey = (processResult as any).notificationContext?.claimKey;
             let claimWon = true;
             if (claimKey) {
               const claimResult = await staffingClaimService.attemptClaim({
                 workspaceId,
                 claimKey,
               });
-              claimWon = claimResult.won;
+              claimWon = (claimResult as any).won;
               if (!claimWon) {
                 await db.update(automatedShiftOffers)
                   .set({
                     status: 'withdrawn',
                     aiApprovalReasoning: 'Lost to competing provider (race condition — claim token held by another org)',
                   })
-                  .where(eq(automatedShiftOffers.id, processResult.offer.id));
+                  .where(eq(automatedShiftOffers.id, (processResult as any).offer.id));
                 recordsChanged++;
                 log.info(`[InboundOpportunityAgent] Claim LOST for key ${claimKey} — shift not assigned to this org`);
                 return { tables: ['automated_shift_offers'], recordsChanged, claimWon: false, claimKey };
@@ -1413,17 +1413,17 @@ Consider: qualifications match, reliability history, preference match, availabil
             await db.update(stagedShifts)
               .set({
                 status: 'assigned',
-                assignedEmployeeId: processResult.employee.id,
+                assignedEmployeeId: (processResult as any).employee.id,
                 assignedAt: new Date(),
               })
-              .where(eq(stagedShifts.id, processResult.shift.id));
+              .where(eq(stagedShifts.id, (processResult as any).shift.id));
             recordsChanged++;
             
             // Withdraw other pending offers for this shift
             await db.update(automatedShiftOffers)
               .set({ status: 'withdrawn' })
               .where(and(
-                eq(automatedShiftOffers.stagedShiftId, processResult.shift.id),
+                eq(automatedShiftOffers.stagedShiftId, (processResult as any).shift.id),
                 eq(automatedShiftOffers.status, 'pending_response')
               ));
             recordsChanged++;
@@ -1443,14 +1443,14 @@ Consider: qualifications match, reliability history, preference match, availabil
           const notifications: string[] = [];
           
           if (processResult.approval.decision === 'APPROVE') {
-            notifications.push(`employee:${processResult.employee.id}:shift_confirmed`);
+            notifications.push(`employee:${(processResult as any).employee.id}:shift_confirmed`);
             notifications.push('system:trigger_contractor_notification');
             
             // Send Step 6 "confirming" status to original email sender
-            const notifyCtx = processResult.notificationContext;
+            const notifyCtx = (processResult as any).notificationContext;
             if (notifyCtx?.senderEmail) {
               try {
-                const employeeName = `${processResult.employee.firstName} ${processResult.employee.lastName}`.trim();
+                const employeeName = `${(processResult as any).employee.firstName} ${(processResult as any).employee.lastName}`.trim();
                 await emailService.sendStaffingStatusUpdate({ // email-tracked
                   workspaceId,
                   senderEmail: notifyCtx.senderEmail,
@@ -1476,7 +1476,7 @@ Consider: qualifications match, reliability history, preference match, availabil
             // (single-org path), because claimWon defaults to true.
             if (processResult.claimWon !== false && notifyCtx?.senderEmail) {
               try {
-                const shift = processResult.shift;
+                const shift = (processResult as any).shift;
                 const shiftEd = shift?.extractedData as Record<string, any> | null;
                 const confirmationNumber = `CONF-${Date.now().toString(36).toUpperCase()}`;
                 const portalUrl = `${getAppBaseUrl()}/portal`;
@@ -1501,7 +1501,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                     positionType: shiftEd?.positionType || shiftEd?.guardType || 'Security Officer',
                   },
                   assignedOfficers: [{
-                    name: `${processResult.employee.firstName} ${processResult.employee.lastName}`.trim(),
+                    name: `${(processResult as any).employee.firstName} ${(processResult as any).employee.lastName}`.trim(),
                     role: shiftEd?.positionType || 'Security Officer',
                     credentialStatus: 'Verified',
                   }],
@@ -1522,10 +1522,10 @@ Consider: qualifications match, reliability history, preference match, availabil
             // ── DROP NOTIFICATIONS for losing orgs ────────────────────────
             if (processResult.claimKey) {
               staffingClaimService.sendDropNotifications({
-                claimKey: processResult.claimKey,
+                claimKey: (processResult as any).claimKey,
                 winnerWorkspaceId: workspaceId,
               }).catch(err => log.warn('[IOA] sendDropNotifications error (non-blocking):', (err instanceof Error ? err.message : String(err))));
-              notifications.push(`system:drop_notifications_queued:${processResult.claimKey}`);
+              notifications.push(`system:drop_notifications_queued:${(processResult as any).claimKey}`);
             }
 
             // Trigger Stage D (contractor notification)
@@ -1533,7 +1533,7 @@ Consider: qualifications match, reliability history, preference match, availabil
               this.notifyContractor(workspaceId, processResult.shift.id).catch((err: unknown) => log.warn('[InboundOpportunity] Contractor notification failed', err));
             }, 1000);
           } else {
-            notifications.push(`employee:${processResult.employee.id}:acceptance_under_review`);
+            notifications.push(`employee:${(processResult as any).employee.id}:acceptance_under_review`);
             notifications.push('ops_team:acceptance_needs_review');
           }
           
@@ -1742,13 +1742,13 @@ Return JSON:
         
         // STEP 5: MUTATE
         mutate: async (ctx, processResult) => {
-          const recipientEmail = processResult.contractor?.email || processResult.shift.pocEmail;
-          const recipientName = processResult.contractor?.contactName || processResult.shift.pocName;
+          const recipientEmail = (processResult as any).contractor?.email || (processResult as any).shift.pocEmail;
+          const recipientName = (processResult as any).contractor?.contactName || (processResult as any).shift.pocName;
           
           // Create communication record
           await db.insert(contractorCommunications).values({
             workspaceId,
-            contractorId: processResult.contractor?.id,
+            contractorId: (processResult as any).contractor?.id,
             stagedShiftId,
             communicationType: 'email',
             subject: processResult.emailContent.subject,
@@ -1756,15 +1756,15 @@ Return JSON:
             recipientEmail,
             recipientName,
             employeeInfo: {
-              name: `${processResult.employee.firstName} ${processResult.employee.lastName}`,
-              phone: processResult.employee.phone || '',
-              qualifications: processResult.employee.certifications || [],
+              name: `${(processResult as any).employee.firstName} ${(processResult as any).employee.lastName}`,
+              phone: (processResult as any).employee.phone || '',
+              qualifications: (processResult as any).employee.certifications || [],
             },
             shiftDetails: {
-              location: processResult.shift.location,
-              date: processResult.shift.shiftDate,
-              startTime: processResult.shift.startTime,
-              endTime: processResult.shift.endTime,
+              location: (processResult as any).shift.location,
+              date: (processResult as any).shift.shiftDate,
+              startTime: (processResult as any).shift.startTime,
+              endTime: (processResult as any).shift.endTime,
             },
             aiGenerated: true,
             status: 'pending',
@@ -1782,7 +1782,7 @@ Return JSON:
                 totalShiftsFilled: sql`${knownContractors.totalShiftsFilled} + 1`,
                 updatedAt: new Date(),
               })
-              .where(eq(knownContractors.id, processResult.contractor.id));
+              .where(eq(knownContractors.id, (processResult as any).contractor.id));
           }
           
           return { tables: ['contractor_communications', 'staged_shifts', 'known_contractors'], recordsChanged: 3 };
@@ -1791,7 +1791,7 @@ Return JSON:
         // STEP 7: NOTIFY
         notify: async (ctx, processResult) => {
           const notifications: string[] = [];
-          const recipientEmail = processResult.contractor?.email || processResult.shift.pocEmail;
+          const recipientEmail = (processResult as any).contractor?.email || (processResult as any).shift.pocEmail;
 
           // Actually send the contractor confirmation email via Resend
           if (recipientEmail && processResult.emailContent) {
@@ -1806,11 +1806,11 @@ Return JSON:
           }
 
           // Send Step 7 "completed" status to original email sender
-          const notifyCtx = processResult.notificationContext;
+          const notifyCtx = (processResult as any).notificationContext;
           if (notifyCtx?.senderEmail) {
             try {
-              const employeeName = `${processResult.employee.firstName} ${processResult.employee.lastName}`.trim();
-              const shiftDateStr = processResult.shift.shiftDate
+              const employeeName = `${(processResult as any).employee.firstName} ${(processResult as any).employee.lastName}`.trim();
+              const shiftDateStr = (processResult as any).shift.shiftDate
                 ? new Date(processResult.shift.shiftDate).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
@@ -1832,9 +1832,9 @@ Return JSON:
                 tempCode: notifyCtx.tempCode,
                 statusPortalUrl: notifyCtx.statusPortalUrl,
                 extractedInfo: {
-                  location: processResult.shift.location,
+                  location: (processResult as any).shift.location,
                   date: shiftDateStr,
-                  time: `${processResult.shift.startTime || 'TBD'} - ${processResult.shift.endTime || 'TBD'}`,
+                  time: `${(processResult as any).shift.startTime || 'TBD'} - ${(processResult as any).shift.endTime || 'TBD'}`,
                 },
               });
               notifications.push(`sender:${notifyCtx.senderEmail}:step7_completed_sent`);

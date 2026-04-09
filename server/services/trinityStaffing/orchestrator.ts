@@ -495,7 +495,7 @@ class TrinityStaffingOrchestrator {
               startTime: req.startTime,
               endTime: req.endTime,
               positionType: req.positionType,
-              officerPayRate: emp.defaultHourlyRate,
+              officerPayRate: (emp as any).defaultHourlyRate,
             },
           });
         } catch (notifErr: any) {

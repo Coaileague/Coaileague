@@ -335,7 +335,7 @@ const router = Router();
 
       broadcastToWorkspace(workspaceId, { type: 'time_entries_updated', data: { action: 'updated' } });
 
-      const rejectorName = req.user?.fullName || 'a manager';
+      const rejectorName = (req as any).user?.fullName || 'a manager';
       notifyTimesheetRejected({
         workspaceId,
         timeEntryId: req.params.id,
@@ -783,7 +783,7 @@ const router = Router();
       }
 
       const breakEnd = new Date();
-      const breakStart = timeEntry.breakStartTime ? new Date(timeEntry.breakStartTime) : breakEnd;
+      const breakStart = (timeEntry as any).breakStartTime ? new Date(timeEntry.breakStartTime) : breakEnd;
       const breakMinutes = Math.round((breakEnd.getTime() - breakStart.getTime()) / (1000 * 60));
       const existingBreakMinutes = parseInt(String(timeEntry.totalBreakMinutes || '0'), 10);
 

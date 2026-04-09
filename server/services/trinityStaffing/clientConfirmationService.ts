@@ -199,8 +199,8 @@ SHIFT DETAILS
 Date: ${date}
 Time: ${data.startTime} - ${data.endTime}
 Position: ${positionLabel}
-Location: ${data.location.address}
-          ${data.location.city}, ${data.location.state}
+Location: ${(data as any).location.address}
+          ${(data as any).location.city}, ${(data as any).location.state}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

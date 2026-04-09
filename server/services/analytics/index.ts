@@ -67,7 +67,7 @@ export const unifiedAnalytics = {
   usage: {
     getReport: async (workspaceId: string, period: string) => {
       const { advancedUsageAnalyticsService } = await import('../advancedUsageAnalyticsService');
-      return advancedUsageAnalyticsService.getAdvancedUsageReport(workspaceId, period);
+      return (advancedUsageAnalyticsService as any).getAdvancedUsageReport(workspaceId, period);
     },
     getCreditSummary: async (workspaceId: string) => {
       const { advancedUsageAnalyticsService } = await import('../advancedUsageAnalyticsService');
@@ -79,7 +79,7 @@ export const unifiedAnalytics = {
   owner: {
     getDashboard: async (workspaceId: string, period: string) => {
       const { businessOwnerAnalyticsService } = await import('../businessOwnerAnalyticsService');
-      return businessOwnerAnalyticsService.getOwnerDashboard(workspaceId, period);
+      return (businessOwnerAnalyticsService as any).getOwnerDashboard(workspaceId, period);
     },
     getFeatureUsageReport: async (workspaceId: string, period: string) => {
       const { businessOwnerAnalyticsService } = await import('../businessOwnerAnalyticsService');

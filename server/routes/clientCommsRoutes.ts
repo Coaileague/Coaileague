@@ -306,7 +306,7 @@ router.get('/threads/:id/messages', requireAuth, async (req: AuthenticatedReques
 
     // Authorization: check if user is manager+ staff or the owning client.
     const isManager = req.workspaceRole && ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager', 'supervisor'].includes(req.workspaceRole);
-    const isPlatformStaff = !!(req as Record<string, unknown>).platformRole;
+    const isPlatformStaff = !!(req as unknown as Record<string, unknown>).platformRole;
     if (!isManager && !isPlatformStaff) {
       const resolvedId = await resolveClientId(req.user, workspaceId);
       if (!resolvedId || resolvedId !== thread.clientId) {
@@ -363,7 +363,7 @@ router.post('/threads/:id/messages', requireAuth, async (req: AuthenticatedReque
 
     // Determine role: manager+ staff, or owning client, or reject
     const isManager = req.workspaceRole && ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager', 'supervisor'].includes(req.workspaceRole);
-    const isPlatformStaff = !!(req as Record<string, unknown>).platformRole;
+    const isPlatformStaff = !!(req as unknown as Record<string, unknown>).platformRole;
     let senderType: 'staff' | 'client';
 
     if (isManager || isPlatformStaff) {

@@ -140,8 +140,8 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       const context = {
         userId: req.user!,
-        workspaceId: req.user?.activeWorkspaceId,
-        userRole: req.user?.platformRole || 'user',
+        workspaceId: (req.user)?.activeWorkspaceId,
+        userRole: (req.user)?.platformRole || 'user',
         currentPage,
         recentActions,
       };
@@ -299,8 +299,8 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       const context = {
         userId: req.user!,
-        workspaceId: req.user?.activeWorkspaceId,
-        userRole: req.user?.platformRole || 'user',
+        workspaceId: (req.user)?.activeWorkspaceId,
+        userRole: (req.user)?.platformRole || 'user',
       };
 
       const chain = knowledgeOrchestrationService.buildReasoningChain(query, context, observations);
@@ -318,8 +318,8 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       const context = {
         userId: req.user!,
-        workspaceId: req.user?.activeWorkspaceId,
-        userRole: req.user?.platformRole || 'user',
+        workspaceId: (req.user)?.activeWorkspaceId,
+        userRole: (req.user)?.platformRole || 'user',
         currentPage: '/test',
       };
 
@@ -483,7 +483,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
   router.get("/graduation-status", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
-      const workspaceId = req.workspaceId || req.user?.workspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       
       if (!workspaceId) {
         return res.status(400).json({ success: false, error: "Workspace ID required" });
@@ -509,7 +509,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
       const { domain, actionId } = req.body;
-      const workspaceId = req.workspaceId || req.user?.workspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId;
 
       if (!workspaceId || !domain) {
         return res.status(400).json({ success: false, error: "workspaceId and domain required" });
@@ -546,7 +546,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       const { getUserPlatformRole } = await import("../rbac");
       
       const userId = req.user!;
-      const workspaceId = req.workspaceId || req.user?.workspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       const { tier = 'standard', actions } = req.body;
 
       if (!workspaceId) {
@@ -596,7 +596,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
   router.get("/fast-mode/metrics", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
-      const workspaceId = req.workspaceId || req.user?.workspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ success: false, error: "workspaceId required" });
@@ -672,7 +672,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       const { emailService } = await import("../services/emailService");
       
       const { category, recipient, data } = req.body;
-      const workspaceId = req.workspaceId || req.user?.workspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       const userId = req.user!;
 
       if (!category || !recipient || !data) {
@@ -730,7 +730,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
       const { workboardJobId, tasks, options } = req.body;
-      const workspaceId = req.workspaceId || req.user?.workspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       const userId = req.user!;
       const platformRole = req.platformRole || 'employee';
 
@@ -951,7 +951,7 @@ router.post("/actions/execute", requireAuth, workspaceTrinityLimiter, async (req
       name,
       payload: { ...payload, workspaceId },
       userId,
-      userRole: req.userRole || 'employee',
+      userRole: (req as any).userRole || 'employee',
       priority: 'medium',
     });
     res.json({ success: result.success, message: result.message, data: result.data ?? result });
@@ -1037,8 +1037,8 @@ router.get("/growth-log", requireManager, async (req: AuthenticatedRequest, res)
         id: r.id,
         entryType: r.entry_type,
         subtype: r.decision_type,
-        title: `Decision: ${r.chosen_option?.substring(0, 80) || r.decision_type}`,
-        description: r.reasoning?.substring(0, 200) || `Domain: ${r.domain}`,
+        title: `Decision: ${(r as any).chosen_option?.substring(0, 80) || r.decision_type}`,
+        description: (r as any).reasoning?.substring(0, 200) || `Domain: ${r.domain}`,
         outcome: r.outcome_status,
         confidence: r.confidence_score,
         humanIntervention: r.human_override,

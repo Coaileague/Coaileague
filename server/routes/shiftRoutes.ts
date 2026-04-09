@@ -268,7 +268,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/pending', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = req.workspaceId?.id || req.workspaceId;
+      const workspaceId = (req as any).workspaceId?.id || req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const shifts = await getPendingShifts(workspaceId);
@@ -281,7 +281,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = req.workspaceId?.id || req.workspaceId;
+      const workspaceId = (req as any).workspaceId?.id || req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const stats = await getApprovalStats(workspaceId);
@@ -313,7 +313,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
       // RBAC: Managers/owners can view any shift, employees can only view their assigned shifts
       const isManager = ['org_owner', 'co_owner', 'owner', 'admin', 'manager', 'org_manager', 'department_manager', 'support_staff', 'support_manager', 'platform_admin'].includes(workspaceRole || '');
-      const isAssigned = shift.assignedEmployeeIds?.includes(req.employeeId || '') || shift.employeeId === req.employeeId;
+      const isAssigned = (shift as any).assignedEmployeeIds?.includes(req.employeeId || '') || shift.employeeId === req.employeeId;
       
       if (!isManager && !isAssigned) {
         return res.status(403).json({ error: 'Forbidden - not authorized to view this shift' });
@@ -324,7 +324,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       let client = null;
 
       const employeeIdsToFetch = Array.isArray(shift.assignedEmployeeIds) 
-        ? shift.assignedEmployeeIds 
+        ? (shift as any).assignedEmployeeIds 
         : (shift.employeeId ? [shift.employeeId] : []);
 
       if (employeeIdsToFetch.length > 0) {
@@ -376,8 +376,8 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       const rawValidated = validationResult.data;
 
       if (rawValidated.startTime && rawValidated.endTime) {
-        const start = new Date(rawValidated.startTime as any);
-        const end = new Date(rawValidated.endTime as any);
+        const start = new Date(rawValidated as any).startTime;
+        const end = new Date(rawValidated as any).endTime;
         if (businessRuleResponse(res, [
           validateShiftTimes(start, end),
           validateShiftStartPast(start),
@@ -691,7 +691,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       // Notify assigned employees about new shift
       try {
         if (shift.assignedEmployeeIds && Array.isArray(shift.assignedEmployeeIds)) {
-          for (const empId of shift.assignedEmployeeIds) {
+          for (const empId of (shift as any).assignedEmployeeIds) {
             const empUser = await db.query.users.findFirst({
               where: eq(users.id, empId),
             });
@@ -743,7 +743,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           userId,
           details: {
             date: new Date(shift.startTime).toISOString().split('T')[0],
-            positions: shift.assignedEmployeeIds?.length || 0,
+            positions: (shift as any).assignedEmployeeIds?.length || 0,
             location: validated.location,
           },
         });
@@ -888,7 +888,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
             await autonomousSchedulingDaemon.triggerManualRun(workspaceId, 'current_day');
             log.info(`[Trinity] Auto-fill triggered for uncovered shift ${shift.id} in workspace ${workspaceId}`);
           } catch (trinityErr: unknown) {
-            log.warn('[Trinity] Auto-fill trigger failed for new uncovered shift:', trinityErr?.message);
+            log.warn('[Trinity] Auto-fill trigger failed for new uncovered shift:', (trinityErr as any)?.message);
           }
         })();
       }
@@ -956,7 +956,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
               });
             }
           } catch (roomErr: unknown) {
-            log.warn('[Shifts] Shift room auto-creation failed (non-blocking):', roomErr?.message);
+            log.warn('[Shifts] Shift room auto-creation failed (non-blocking):', (roomErr as any)?.message);
           }
         })();
       }
@@ -986,8 +986,8 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       const validated = validationResult.data;
 
       if (validated.startTime && validated.endTime) {
-        const start = new Date(validated.startTime as any);
-        const end = new Date(validated.endTime as any);
+        const start = new Date(validated as any).startTime;
+        const end = new Date(validated as any).endTime;
         if (businessRuleResponse(res, [
           validateShiftTimes(start, end),
           validateShiftStartPast(start),
@@ -995,17 +995,17 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         ])) return;
       }
 
-      const newAssignees = validated.assignedEmployeeIds || (validated.employeeId ? [validated.employeeId] : []);
+      const newAssignees = (validated as any).assignedEmployeeIds || (validated.employeeId ? [validated.employeeId] : []);
       if (newAssignees.length > 0) {
         const ineligibleEmployees: string[] = [];
         const invalidEmployees: string[] = [];
         const baseCerts = (validated.requiredCertifications as string[] | undefined) || [];
         // For PATCH: check if this or the existing shift is armed, auto-require armed cert
-        let shiftIsArmed = validated.isArmed;
+        let shiftIsArmed = (validated as any).isArmed;
         let existingShiftForValidation = null;
         if (shiftIsArmed === undefined || validated.startTime === undefined || validated.endTime === undefined) {
           existingShiftForValidation = await storage.getShift(req.params.id, workspaceId);
-          if (shiftIsArmed === undefined) shiftIsArmed = existingShiftForValidation?.isArmed ?? false;
+          if (shiftIsArmed === undefined) shiftIsArmed = (existingShiftForValidation as any)?.isArmed ?? false;
         }
         
         const requiredCerts = shiftIsArmed && !baseCerts.includes('armed')
@@ -1322,7 +1322,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
               });
             }
           } catch (roomErr: unknown) {
-            log.warn('[Shifts] Shift room auto-creation failed (non-blocking):', roomErr?.message);
+            log.warn('[Shifts] Shift room auto-creation failed (non-blocking):', (roomErr as any)?.message);
           }
         })();
       }
@@ -1498,7 +1498,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       
       const scoredCandidates = await scoreEmployeesForShift(workspaceId, {
         shiftId,
-        requiredSkills: shift.requiredSkills || [],
+        requiredSkills: (shift as any).requiredSkills || [],
         requiredCertifications: shift.requiredCertifications || [],
         maxDistance: 50,
         maxPayRate: shift.payRate ? parseFloat(shift.payRate) : undefined,
@@ -1593,10 +1593,10 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
       try {
         const { trinityDecisionLogger } = await import('../services/trinityDecisionLogger');
-        const chosenEmp = employees.find(e => e.id === assignment.employeeId);
+        const chosenEmp = (employees as any).find(e => e.id === assignment.employeeId);
         const alternatives = result.assignments.length > 1
           ? result.assignments.slice(1).map((a: any) => {
-              const altEmp = employees.find(e => e.id === a.employeeId);
+              const altEmp = (employees as any).find(e => e.id === a.employeeId);
               return {
                 employeeId: a.employeeId,
                 employeeName: altEmp ? `${altEmp.firstName} ${altEmp.lastName}` : a.employeeId,
@@ -1610,7 +1610,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           shiftId,
           chosenEmployeeId: assignment.employeeId,
           chosenEmployeeName: chosenEmp ? `${chosenEmp.firstName} ${chosenEmp.lastName}` : assignment.employeeId,
-          reasoning: assignment.reason || result.summary || `Selected with ${assignment.confidence}% confidence based on availability, proximity, overtime risk, and reliability score`,
+          reasoning: (assignment as any).reason || result.summary || `Selected with ${assignment.confidence}% confidence based on availability, proximity, overtime risk, and reliability score`,
           alternatives,
           contextSnapshot: {
             totalCandidatesEvaluated: topCandidates.length,
@@ -1640,7 +1640,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       }
 
       // 🔔 NOTIFICATION: Notify assigned employee
-      const employee = employees.find(e => e.id === assignment.employeeId);
+      const employee = (employees as any).find(e => e.id === assignment.employeeId);
       if (employee?.email && updatedShift) {
         const startTime = new Date(updatedShift.startTime).toLocaleString('en-US', {
           dateStyle: 'full',
@@ -1816,7 +1816,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         workspaceId,
         shiftId,
         requestReason: fillRequestParsed.data.reason || "No qualified internal employees available",
-        requiredSkills: shift.requiredSkills || [],
+        requiredSkills: (shift as any).requiredSkills || [],
         preferredSkills: fillRequestParsed.data.preferredSkills || [],
         maxPayRate: shift.payRate || fillRequestParsed.data.maxPayRate || "0",
         maxDistance: fillRequestParsed.data.maxDistance || 50,
@@ -2472,7 +2472,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           const owner = await storage.getUser(workspace.ownerId);
           if (owner) {
             creatorInfo = {
-              name: owner.displayName || owner.email,
+              name: (owner as any).displayName || owner.email,
               email: owner.email,
               role: 'owner'
             };
@@ -3009,7 +3009,7 @@ router.get("/offers/:offerId", requireAuth, async (req: AuthenticatedRequest, re
       return res.status(404).json({ error: 'Offer not found or has expired' });
     }
 
-    const meta = (notif.metadata as any) || {};
+    const meta = (notif as any).metadata || {};
     const isAccepted = !!meta.accepted;
     const isDeclined = !!meta.declined;
 
@@ -3061,7 +3061,7 @@ router.post("/offers/:offerId/accept", requireAuth, async (req: AuthenticatedReq
       return res.status(403).json({ error: 'This offer was not sent to you' });
     }
 
-    const currentMeta = (notif.metadata as any) || {};
+    const currentMeta = (notif as any).metadata || {};
     if (currentMeta.accepted) {
       return res.json({ success: true, message: 'Already accepted' });
     }
@@ -3110,7 +3110,7 @@ router.post("/offers/:offerId/decline", requireAuth, async (req: AuthenticatedRe
       return res.status(404).json({ error: 'Offer not found' });
     }
 
-    const currentMeta = (notif.metadata as any) || {};
+    const currentMeta = (notif as any).metadata || {};
     if (currentMeta.declined) {
       return res.json({ success: true, message: 'Already declined' });
     }

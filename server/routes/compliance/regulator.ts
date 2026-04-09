@@ -89,7 +89,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
       workspaceId: complianceRegulatorAccess.workspaceId,
       regulatorName: complianceRegulatorAccess.regulatorName,
       regulatorEmail: complianceRegulatorAccess.regulatorEmail,
-      regulatorOrganization: complianceRegulatorAccess.regulatorOrganization,
+      regulatorOrganization: (complianceRegulatorAccess as any).regulatorOrganization,
       grantedBy: complianceRegulatorAccess.grantedBy,
       expiresAt: complianceRegulatorAccess.expiresAt,
       createdAt: complianceRegulatorAccess.createdAt,
@@ -226,14 +226,14 @@ router.get("/portal/:token", async (req: Request, res: Response) => {
     const accessRows = await db.select({
       id: complianceRegulatorAccess.id,
       workspaceId: complianceRegulatorAccess.workspaceId,
-      stateId: complianceRegulatorAccess.stateId,
+      stateId: (complianceRegulatorAccess as any).stateId,
       regulatorName: complianceRegulatorAccess.regulatorName,
       regulatorEmail: complianceRegulatorAccess.regulatorEmail,
-      regulatorOrganization: complianceRegulatorAccess.regulatorOrganization,
-      accessLevel: complianceRegulatorAccess.accessLevel,
+      regulatorOrganization: (complianceRegulatorAccess as any).regulatorOrganization,
+      accessLevel: (complianceRegulatorAccess as any).accessLevel,
       expiresAt: complianceRegulatorAccess.expiresAt,
-      canExportDocuments: complianceRegulatorAccess.canExportDocuments,
-      canGeneratePackets: complianceRegulatorAccess.canGeneratePackets,
+      canExportDocuments: (complianceRegulatorAccess as any).canExportDocuments,
+      canGeneratePackets: (complianceRegulatorAccess as any).canGeneratePackets,
       stateCode: complianceStates.stateCode,
       stateName: complianceStates.stateName,
       regulatoryBody: complianceStates.regulatoryBody,
@@ -301,7 +301,7 @@ router.get("/portal/:token", async (req: Request, res: Response) => {
         .where(and(
           eq(employeeComplianceRecords.workspaceId, access.workspaceId),
           eq(employeeComplianceRecords.stateId, access.stateId),
-          inArray(employeeComplianceRecords.employeeId, access.employeeIds)
+          inArray(employeeComplianceRecords.employeeId, (access as any).employeeIds)
         ));
     } else {
       employeeRecords = [];
@@ -369,7 +369,7 @@ router.get("/portal/:token/employee/:employeeId/documents", async (req: Request,
       .where(and(
         eq(employeeComplianceRecords.employeeId, employeeId),
         eq(employeeComplianceRecords.workspaceId, access.workspaceId!),
-        eq(employeeComplianceRecords.stateId, access.stateId!)
+        eq(employeeComplianceRecords.stateId, (access as any).stateId!)
       ))
       .limit(1);
     
@@ -391,7 +391,7 @@ router.get("/portal/:token/employee/:employeeId/documents", async (req: Request,
       return res.status(403).json({ success: false, error: "Employee not in authorized scope" });
     }
     
-    if (!access.canViewAllEmployees && !access.employeeIds?.includes(employeeId)) {
+    if (!(access as any).canViewAllEmployees && !(access as any).employeeIds?.includes(employeeId)) {
       return res.status(403).json({ success: false, error: "Access denied for this employee" });
     }
     

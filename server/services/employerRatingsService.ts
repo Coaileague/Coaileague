@@ -89,15 +89,15 @@ export async function calculateEmployerRatingStats(
 
   // Calculate sentiment breakdown
   const sentimentBreakdown = {
-    positive: ratings.filter(r => r.sentiment === 'positive').length,
-    neutral: ratings.filter(r => r.sentiment === 'neutral').length,
-    negative: ratings.filter(r => r.sentiment === 'negative').length,
+    positive: ratings.filter(r => (r as any).sentiment === 'positive').length,
+    neutral: ratings.filter(r => (r as any).sentiment === 'neutral').length,
+    negative: ratings.filter(r => (r as any).sentiment === 'negative').length,
   };
 
   // Extract top issues from comments
   const allComments = ratings
-    .filter(r => r.comment)
-    .map(r => r.comment?.toLowerCase() || '');
+    .filter(r => (r as any).comment)
+    .map(r => (r as any).comment?.toLowerCase() || '');
   
   const issueKeywords = [
     'communication', 'management', 'support', 'feedback', 'growth', 'benefits',
@@ -124,9 +124,9 @@ export async function calculateEmployerRatingStats(
     ...r,
     ratingDisplay: {
       rating: parseFloat(r.overallRating?.toString() || '0').toFixed(1),
-      sentiment: r.sentiment,
+      sentiment: (r as any).sentiment,
       submittedAt: r.submittedAt,
-      comment: r.comment,
+      comment: (r as any).comment,
     }
   }));
 
@@ -155,7 +155,7 @@ export async function getRatingTrends(
   let query = db
     .select({
       period: sql`DATE_TRUNC('${sql.raw(granularity)}', ${employerRatings.submittedAt})`,
-      avgRating: sql`AVG(CAST(${employerRatings.overallRating} AS FLOAT))`,
+      avgRating: sql`AVG(CAST(${(employerRatings as any).overallRating} AS FLOAT))`,
       count: sql`COUNT(*)`,
     })
     .from(employerRatings)
@@ -197,14 +197,14 @@ export async function identifyAtRiskManagers(
   const managerRatings = await db
     .select({
       managerId: employerRatings.targetId,
-      avgRating: sql`AVG(CAST(${employerRatings.overallRating} AS FLOAT))`,
+      avgRating: sql`AVG(CAST(${(employerRatings as any).overallRating} AS FLOAT))`,
       count: sql`COUNT(*)`,
     })
     .from(employerRatings)
     .where(eq(employerRatings.workspaceId, workspaceId))
     .groupBy(employerRatings.targetId)
-    .having(sql`AVG(CAST(${employerRatings.overallRating} AS FLOAT)) < ${threshold}`)
-    .orderBy(sql`AVG(CAST(${employerRatings.overallRating} AS FLOAT)) ASC`);
+    .having(sql`AVG(CAST(${(employerRatings as any).overallRating} AS FLOAT)) < ${threshold}`)
+    .orderBy(sql`AVG(CAST(${(employerRatings as any).overallRating} AS FLOAT)) ASC`);
 
   return managerRatings.map(r => ({
     managerId: r.managerId,

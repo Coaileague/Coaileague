@@ -314,7 +314,7 @@ SYNTHESIS NOTES:
 [Brief notes: what each model got right/wrong, why your synthesis is superior]`;
 
     try {
-      const result = await claudeService.analyze({
+      const result = await (claudeService as any).analyze({
         content: prompt,
         analysisType: 'synthesis',
         context: { taskType: context.taskType }
@@ -388,7 +388,7 @@ FINAL ANSWER:
 [The correct answer]`;
 
     try {
-      const result = await openaiClient.chat({
+      const result = await (openaiClient as any).chat({
         model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3
@@ -467,8 +467,8 @@ REASONING: [your analysis]`;
       const responseText = result.response?.text || '';
       
       // Parse confidence
-      const confidenceMatch = responseText.match(/CALIBRATED CONFIDENCE:\s*(\d+)/i);
-      const reasoningMatch = responseText.match(/REASONING:\s*([\s\S]*?)$/i);
+      const confidenceMatch = (responseText as any).match(/CALIBRATED CONFIDENCE:\s*(\d+)/i);
+      const reasoningMatch = (responseText as any).match(/REASONING:\s*([\s\S]*?)$/i);
 
       const calibrated = confidenceMatch 
         ? Math.min(100, Math.max(0, parseInt(confidenceMatch[1]))) / 100

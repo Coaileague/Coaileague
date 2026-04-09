@@ -83,7 +83,7 @@ export async function snapshotContract(params: {
     `SELECT * FROM client_contracts WHERE id = $1 AND workspace_id = $2`,
     [contractId, workspaceId]
   );
-  if (!result.length) return null;
+  if (!(result as any).length) return null;
 
   const contract = result[0];
   const contentHash = hashContractContent(contract);
@@ -144,7 +144,7 @@ export async function verifyContractIntegrity(contractId: string, workspaceId: s
     `SELECT * FROM client_contracts WHERE id = $1 AND workspace_id = $2`,
     [contractId, workspaceId]
   );
-  if (!result.length) {
+  if (!(result as any).length) {
     return { passed: false, contractId, clientName: "Unknown", storedHash: null, computedHash: null, tamperDetected: false, message: "Contract not found" };
   }
 

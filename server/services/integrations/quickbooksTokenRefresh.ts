@@ -128,7 +128,7 @@ class QuickBooksTokenRefreshDaemon {
       
       // Filter out connections that have exceeded max retry attempts
       return results.filter(cred => {
-        const failedAttempts = (cred.metadata as any)?.failedRefreshAttempts || 0;
+        const failedAttempts = (cred as any).metadata?.failedRefreshAttempts || 0;
         return failedAttempts < this.MAX_RETRY_ATTEMPTS;
       }) as StoredCredentials[];
     } catch (error) {
@@ -141,7 +141,7 @@ class QuickBooksTokenRefreshDaemon {
     let orchestrationId: string | null = null;
     
     try {
-      const failedAttempts = (creds.metadata as any)?.failedRefreshAttempts || 0;
+      const failedAttempts = (creds as any).metadata?.failedRefreshAttempts || 0;
       if (failedAttempts >= this.MAX_RETRY_ATTEMPTS) {
         log.warn(`[QB TokenRefresh] Connection ${creds.id} exceeded max retry attempts (${failedAttempts}/${this.MAX_RETRY_ATTEMPTS}), marking expired`);
         await this.markConnectionExpired(creds.id);
@@ -241,7 +241,7 @@ class QuickBooksTokenRefreshDaemon {
           return { success: false, error: processResult.error || 'Invalid grant - reconnection required' };
         }
 
-        const failedAttempts = ((creds.metadata as any)?.failedRefreshAttempts || 0) + 1;
+        const failedAttempts = ((creds as any).metadata?.failedRefreshAttempts || 0) + 1;
         const retryDelay = this.BASE_RETRY_DELAY_MS * Math.pow(2, failedAttempts - 1);
         await this.incrementFailedAttempts(creds.id, failedAttempts, creds.metadata);
 
@@ -300,7 +300,7 @@ class QuickBooksTokenRefreshDaemon {
     } catch (error: any) {
       log.error(`[QB TokenRefresh] Error refreshing token for workspace ${creds.workspaceId}:`, error);
       
-      const failedAttempts = ((creds.metadata as any)?.failedRefreshAttempts || 0) + 1;
+      const failedAttempts = ((creds as any).metadata?.failedRefreshAttempts || 0) + 1;
       await this.incrementFailedAttempts(creds.id, failedAttempts, creds.metadata);
       
       return {
@@ -570,7 +570,7 @@ class QuickBooksTokenRefreshDaemon {
           continue;
         }
         
-        const failedAttempts = (conn.metadata as any)?.failedRefreshAttempts || 0;
+        const failedAttempts = (conn as any).metadata?.failedRefreshAttempts || 0;
         if (failedAttempts >= this.MAX_RETRY_ATTEMPTS) {
           log.warn(`[QB TokenRefresh] Skipping workspace ${conn.workspaceId} - exceeded max retry attempts (${failedAttempts}/${this.MAX_RETRY_ATTEMPTS}). Reconnection required.`);
           skipped++;

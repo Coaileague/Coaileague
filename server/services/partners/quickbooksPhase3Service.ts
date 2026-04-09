@@ -226,7 +226,7 @@ export class QuickBooksPhase3Service {
         }
       }
       
-      await auditLogger.log({
+      await (auditLogger as any).log({
         action: 'qbo_tax_classification_sync',
         details: { workspaceId, synced, flagged },
         severity: 'info',
@@ -340,7 +340,7 @@ export class QuickBooksPhase3Service {
       }
     }
     
-    await auditLogger.log({
+    await (auditLogger as any).log({
       action: 'industry_templates_imported',
       details: { workspaceId, industryKey, imported },
       severity: 'info',
@@ -768,7 +768,7 @@ export class QuickBooksPhase3Service {
         }).catch((err) => log.warn('[quickbooksPhase3Service] Fire-and-forget failed:', err));
       }
       
-      await auditLogger.log({
+      await (auditLogger as any).log({
         action: 'financial_watchdog_scan',
         details: { workspaceId, runId, findingsCount: findings.length, criticalCount },
         severity: criticalCount > 0 ? 'warning' : 'info',

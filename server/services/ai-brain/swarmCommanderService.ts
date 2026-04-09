@@ -681,8 +681,8 @@ class SwarmCommanderService {
       const tasks = await db
         .select({
           id: aiWorkboardTasks.id,
-          category: aiWorkboardTasks.category,
-          actualTokens: aiWorkboardTasks.actualTokens,
+          category: (aiWorkboardTasks as any).category,
+          actualTokens: (aiWorkboardTasks as any).actualTokens,
           status: aiWorkboardTasks.status,
           completedAt: aiWorkboardTasks.completedAt,
           createdAt: aiWorkboardTasks.createdAt,
@@ -699,7 +699,7 @@ class SwarmCommanderService {
       try {
         const [creditSum] = await db
           .select({
-            total: sql<number>`COALESCE(SUM(ABS(${trinityCreditTransactions.amount})), 0)`,
+            total: sql<number>`COALESCE(SUM(ABS(${(trinityCreditTransactions as any).amount})), 0)`,
           })
           .from(trinityCreditTransactions)
           .where(and(

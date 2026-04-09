@@ -64,7 +64,7 @@ class AuditorService {
     const rows = await db.select({
       id: workspaces.id,
       name: workspaces.name,
-      licenseNumber: workspaces.licenseNumber,
+      licenseNumber: (workspaces as any).licenseNumber,
       isFrozen: complianceWindows.isFrozen,
       isCompliant: complianceWindows.isCompliant,
       missingDocs: complianceWindows.requiredDocTypes,

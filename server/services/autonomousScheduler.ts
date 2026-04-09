@@ -1362,8 +1362,8 @@ async function runWeeklyScheduleGeneration() {
                               siteId: s.siteId,
                               startTime: s.startTime,
                               endTime: s.endTime,
-                              assignedEmployeeIds: s.assignedEmployeeIds || [],
-                              position: s.position,
+                              assignedEmployeeIds: (s as any).assignedEmployeeIds || [],
+                              position: (s as any).position,
                             })),
                             employees: workspaceEmployees.map(e => ({
                               id: e.id,
@@ -2618,7 +2618,7 @@ export function startAutonomousScheduler() {
   // table indefinitely and blocked automation that was waiting on
   // them. Workflow audit 2026-04-08 flagged this as "approval workflows
   // / expireOldApprovals never called by cron" — this is the fix.
-  registerJobInfo('Approval Expiry Sweep', SCHEDULER_CONFIG.approvalExpiry.schedule, SCHEDULER_CONFIG.approvalExpiry.description, SCHEDULER_CONFIG.approvalExpiry.enabled);
+  registerJobInfo('Approval Expiry Sweep', (SCHEDULER_CONFIG as any).approvalExpiry.schedule, (SCHEDUL as any)(ER_CONFIG.approvalExpiry.description as any), (SCHEDULER_CONFIG as any).approvalExpiry.enabled);
   if (SCHEDULER_CONFIG.approvalExpiry.enabled) {
     cron.schedule(SCHEDULER_CONFIG.approvalExpiry.schedule, () => {
       trackJobExecution('Approval Expiry Sweep', async () => {
@@ -2645,7 +2645,7 @@ export function startAutonomousScheduler() {
         }
       });
     });
-    log.info('Approval Expiry Sweep registered', { schedule: SCHEDULER_CONFIG.approvalExpiry.schedule, description: SCHEDULER_CONFIG.approvalExpiry.description });
+    log.info('Approval Expiry Sweep registered', { schedule: (SCHEDULER_CONFIG as any).approvalExpiry.schedule, description: (SCHEDULER_CONFIG as any).approvalExpiry.description });
   }
 
   // 4. Idempotency Key Cleanup (4 AM daily)
@@ -2995,7 +2995,7 @@ export function startAutonomousScheduler() {
 
           processedDocs.add(docId);
           try {
-            const result = await documentSigningService.sendDocumentReminders(docId);
+            const result = await (documentSigningService as any).sendDocumentReminders(docId);
             remindersSent += result.sent;
           } catch (err) {
             // Skip individual failures

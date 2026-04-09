@@ -60,7 +60,7 @@ router.get('/categories', requireAuth, async (req: AuthenticatedRequest, res) =>
 
     res.json(seeded);
   } catch (error: unknown) {
-    log.error('[expenses/categories]', error?.message);
+    log.error('[expenses/categories]', (error as any)?.message);
     res.status(500).json({ message: sanitizeError(error) || 'Failed to fetch expense categories' });
   }
 });
@@ -160,7 +160,7 @@ router.get('/pending-count', requireAuth, async (req: AuthenticatedRequest, res)
 
 router.get('/pending-approval', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = (req as any).workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const pendingExpenses = await db.select().from(expenses)

@@ -226,7 +226,7 @@ async function buildFinancialSnapshot(workspaceId: string): Promise<FinancialSna
         clientId: timeEntries.clientId,
         hours: sql<number>`COALESCE(${timeEntries.totalHours}, 0)::numeric`,
         rate: sql<number>`COALESCE(${timeEntries.capturedBillRate}, 0)::numeric`,
-        date: timeEntries.date,
+        date: (timeEntries as any).date,
       })
       .from(timeEntries)
       .where(
@@ -305,7 +305,7 @@ async function buildFinancialSnapshot(workspaceId: string): Promise<FinancialSna
     } else {
       byClientMap.set(clientId, {
         clientId,
-        clientName: client?.companyName ?? 'Unknown Client',
+        clientName: (client as any)?.companyName ?? 'Unknown Client',
         hours,
         revenue,
         lastDate: entryDate,
@@ -323,7 +323,7 @@ async function buildFinancialSnapshot(workspaceId: string): Promise<FinancialSna
   let periodStart: Date | null = null;
   let periodEnd: Date | null = null;
   if (recentPayrollRun) {
-    const lastEnd = new Date(recentPayrollRun.periodEnd as any);
+    const lastEnd = new Date(recentPayrollRun as any).periodEnd;
     periodStart = new Date(lastEnd.getTime() + 86400000);
     periodEnd = new Date(periodStart.getTime() + 6 * 86400000);
   } else {

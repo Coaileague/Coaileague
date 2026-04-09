@@ -88,7 +88,7 @@ router.get('/auth/:provider', requireAuth, async (req: Request, res: Response) =
       redirectUri,
     });
 
-    req.session.hrisOAuthState = state;
+    (req as any).session.hrisOAuthState = state;
 
     res.json({ success: true, authUrl: url });
   } catch (error: unknown) {
@@ -112,12 +112,12 @@ router.get('/callback/:provider', async (req: Request, res: Response) => {
     // FIX: Validate state against the value stored in the session at OAuth
     // initiation time. Without this check an attacker can craft a callback URL
     // that links their own HRIS provider to a victim's workspace (OAuth CSRF).
-    const expectedState = (req.session as any)?.hrisOAuthState;
+    const expectedState = (req as any).session?.hrisOAuthState;
     if (!expectedState || String(state) !== expectedState) {
       return res.redirect('/integrations?error=invalid_oauth_state');
     }
     // Consume the state immediately so it cannot be replayed.
-    (req.session as any).hrisOAuthState = undefined;
+    (req as any).session.hrisOAuthState = undefined;
 
     const redirectUri = `${req.protocol + '://' + req.get('host')}/api/hris/callback/${provider}`;
 

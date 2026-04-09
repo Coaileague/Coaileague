@@ -2453,7 +2453,7 @@ export function setupWebSocket(server: Server) {
           }
 
           case 'leave_conversation': {
-            const leaveConvId = payload.conversationId || ws.conversationId;
+            const leaveConvId = (payload as any).conversationId || ws.conversationId;
             if (leaveConvId) {
               conversationClients.get(leaveConvId)?.delete(ws);
               if (ws.conversationId === leaveConvId) {
@@ -3656,7 +3656,7 @@ export function setupWebSocket(server: Server) {
                     clients.forEach((client) => {
                       // Match by userName, email prefix, or userId
                       const clientName = client.userName || '';
-                      const clientEmail = client.userEmail || '';
+                      const clientEmail = (client as any).userEmail || '';
                       const clientEmailPrefix = clientEmail.split('@')[0] || '';
                       
                       if (
@@ -5424,7 +5424,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     const { BOT_REGISTRY: rb3 } = await import('./bots/registry');
                     const { botAIService: rAI } = await import('./bots/botAIService');
                     const reportMsgs = await storage.createChatMessage(ws.conversationId, 50);
-                    const reportText = reportMsgs.filter(m => m.senderType === 'user' || m.senderType === 'customer').map(m => m.message).join('\n');
+                    const reportText = (reportMsgs as any).filter(m => m.senderType === 'user' || m.senderType === 'customer').map(m => m.message).join('\n');
                     const reportSummary = await rAI.generateReportSummary(ws.workspaceId, 'general', reportText, ws.userId);
                     const endReportMsg = await storage.createChatMessage({
                       conversationId: ws.conversationId, senderId: 'reportbot',
@@ -6131,7 +6131,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                 ircEmitter.away({
                   userId: ws.userId,
                   userName: ws.userName,
-                  awayMessage: payload.message,
+                  awayMessage: (payload as any).message,
                   roomId, // Always include roomId for room-scoped broadcast
                 });
               }

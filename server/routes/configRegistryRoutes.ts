@@ -24,7 +24,7 @@ function getUserId(req: Request): string {
 }
 
 function getWorkspaceId(req: Request): string | undefined {
-  return req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+  return req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 }
 
 router.get('/api/platform/config', requireAuth, async (req: Request, res: Response) => {

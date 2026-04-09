@@ -313,7 +313,7 @@ export class ComplianceMonitoringService {
             affectedEntity: {
               type: 'employee',
               id: currentShift.employeeId,
-              name: currentShift.employee?.name || 'Unknown',
+              name: (currentShift as any).employee?.name || 'Unknown',
             },
             regulation: 'State Labor Laws (varies by state) - Generally 8-11 hours rest required',
             detected_at: new Date(),

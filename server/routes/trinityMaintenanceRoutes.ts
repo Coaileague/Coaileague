@@ -361,8 +361,8 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
     
     const userId = user.id;
     // Only use authenticated user's role from session, not from request body
-    const userRole = user.platformRole || user.role || 'employee';
-    const workspaceId = req.workspaceId || user.currentWorkspaceId || user.workspaceId || 'default';
+    const userRole = (user as any).platformRole || user.role || 'employee';
+    const workspaceId = req.workspaceId || user.currentWorkspaceId || (user as any).workspaceId || 'default';
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ 
@@ -410,7 +410,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
       // Handle built-in commands
       const commandHandlers: Record<string, () => Promise<any>> = {
         'health': async () => {
-          const result = await helpaiOrchestrator.executeAction({
+          const result = await (helpaiOrchestrator as any).executeAction({
             actionId: 'health.self_check',
             userId,
             workspaceId,
@@ -424,7 +424,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
           };
         },
         'help': async () => {
-          const actions = helpaiOrchestrator.listActions();
+          const actions = (helpaiOrchestrator as any).listActions();
           const categories = [...new Set(actions.map(a => a.category))];
           return {
             response: `Available command categories: ${categories.join(', ')}. Try /list <category> for specific commands.`,
@@ -433,7 +433,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
           };
         },
         'list': async () => {
-          const actions = helpaiOrchestrator.listActions();
+          const actions = (helpaiOrchestrator as any).listActions();
           const category = args || 'all';
           const filtered = category === 'all' 
             ? actions 
@@ -445,7 +445,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
           };
         },
         'diagnostics': async () => {
-          const result = await helpaiOrchestrator.executeAction({
+          const result = await (helpaiOrchestrator as any).executeAction({
             actionId: 'diagnostics.full_scan',
             userId,
             workspaceId,
@@ -454,7 +454,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
           return { response: result.message, ...result };
         },
         'subagents': async () => {
-          const result = await helpaiOrchestrator.executeAction({
+          const result = await (helpaiOrchestrator as any).executeAction({
             actionId: 'diagnostics.list_subagents',
             userId,
             workspaceId,

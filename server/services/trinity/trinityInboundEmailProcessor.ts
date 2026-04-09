@@ -133,7 +133,7 @@ async function resolveSender(fromEmail: string): Promise<ResolvedSender | null> 
   const [client] = await db.select({
     id: clients.id,
     workspaceId: clients.workspaceId,
-    name: clients.name,
+    name: (clients as any).name,
   })
     .from(clients)
     .where(ilike(clients.email, fromEmail))
@@ -167,8 +167,8 @@ async function extractStructuredData(
     userInput: `${senderName}\n${subject}\n${bodyText.slice(0, 1500)}`,
   };
   const guardResult = await aiGuardRails.validateRequest(guardContext);
-  if (!guardResult.allowed) {
-    throw new Error(`Email content blocked by AI guard rails: ${guardResult.reason}`);
+  if (!(guardResult as any).allowed) {
+    throw new Error(`Email content blocked by AI guard rails: ${(guardResult as any).reason}`);
   }
 
   const prompts: Record<EmailCategory, string> = {
@@ -233,7 +233,7 @@ Body: ${bodyText.slice(0, 1500)}`,
       maxOutputTokens: 500,
     });
 
-    const text = response.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+    const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
     const parsed = JSON.parse(text);
     return { data: parsed, confidence: Number(parsed.confidence) || 0 };
   } catch (err: any) {

@@ -62,8 +62,8 @@ async function getQuickBooksClient(workspaceId: string): Promise<any | null> {
   return {
     accessToken: credentials.accessToken,
     refreshToken: credentials.refreshToken,
-    realmId: credentials.realmId || (credentials as any).companyId,
-    expiresAt: credentials.expiresAt,
+    realmId: (credentials as any).realmId || (credentials as any).companyId,
+    expiresAt: (credentials as any).expiresAt,
   };
 }
 
@@ -166,7 +166,7 @@ export async function syncInvoiceToQuickBooks(invoiceId: string): Promise<SyncRe
           ItemRef: { value: '1' },
           Qty: 1,
           UnitPrice: Number(invoice.total) || 0,
-          Description: `Security services - ${invoice.periodStart || 'Current period'}`,
+          Description: `Security services - ${(invoice as any).periodStart || 'Current period'}`,
         },
       },
     ];

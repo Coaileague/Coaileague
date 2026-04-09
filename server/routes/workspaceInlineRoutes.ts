@@ -152,7 +152,7 @@ async function applyAutomationUpdate(params: {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        const userId = req.user?.id || req.user?.claims?.sub;
+        const userId = req.user?.id || (req.user)?.claims?.sub;
         if (userId) {
           const { getUserPlatformRole, hasPlatformWideAccess } = await import('../rbac');
           const platformRole = await getUserPlatformRole(userId);
@@ -359,7 +359,7 @@ async function applyAutomationUpdate(params: {
       }
       
       const user = await storage.getUser(userId);
-      const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
       
       if (!workspaceId) {
         return res.status(404).json({ message: "No workspace found" });
@@ -489,7 +489,7 @@ async function applyAutomationUpdate(params: {
         });
       } catch (_) { /* audit is best-effort */ }
       
-      const safeWorkspace = redactSensitiveWorkspaceFields(updated, req.user?.platformRole);
+      const safeWorkspace = redactSensitiveWorkspaceFields(updated, (req.user)?.platformRole);
       
       res.json(safeWorkspace);
     } catch (error: unknown) {
@@ -1057,7 +1057,7 @@ async function applyAutomationUpdate(params: {
 
       try {
         const { emailProvisioningService } = await import('../services/email/emailProvisioningService');
-        const emailSlug = newSubOrg.emailSlug || newSubOrg.id.replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase();
+        const emailSlug = (newSubOrg as any).emailSlug || newSubOrg.id.replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase();
         await emailProvisioningService.provisionWorkspaceAddresses(newSubOrg.id, emailSlug);
         log.info(`[SubOrg] Email addresses provisioned for sub-org ${newSubOrg.id}`);
       } catch (emailError: unknown) {
@@ -1412,7 +1412,7 @@ async function applyAutomationUpdate(params: {
             workspaceId: wsId,
             workspaceName: wsName,
             success: true,
-            payrollRunId: payrollRun.id,
+            payrollRunId: (payrollRun as any).id,
           });
         } catch (err: unknown) {
           results.push({
@@ -1601,7 +1601,7 @@ router.get('/data-readiness', requireAuth, async (req: AuthenticatedRequest, res
       JOIN employees e ON e.id = epi.employee_id
       WHERE e.workspace_id = ${workspaceId} AND e.status = 'active'
     `);
-    const pr = (payrollInfoRows.rows?.[0] || {}) as any;
+    const pr = ((payrollInfoRows as any).rows?.[0] || {}) as any;
 
     // Build readiness report
     const orgChecks = [

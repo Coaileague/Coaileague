@@ -671,7 +671,7 @@ router.get("/api/workspaces/all", requireAuth, async (req: AuthenticatedRequest,
 
 router.get("/api/workspaces/current", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(404).json({ message: "No current workspace" });
     }
@@ -695,7 +695,7 @@ router.get("/api/user/role", requireAuth, async (req: AuthenticatedRequest, res)
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     res.json({
       role: user?.role || "user",
-      platformRole: user?.platformRole || null,
+      platformRole: (user as any)?.platformRole || null,
     });
   } catch (error: unknown) {
     log.error("Error fetching user role:", error);
@@ -713,7 +713,7 @@ router.get("/api/device/profile", requireAuth, async (req: AuthenticatedRequest,
     res.json({
       userId: user?.id,
       email: user?.email,
-      displayName: user?.displayName || `${user?.firstName} ${user?.lastName}`.trim(),
+      displayName: (user as any)?.displayName || `${user?.firstName} ${user?.lastName}`.trim(),
       preferences: {},
     });
   } catch (error: unknown) {
@@ -732,7 +732,7 @@ router.get("/api/identity/me", requireAuth, async (req: any, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const workspaceId = req.workspaceId || user?.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
     let employee = null;
     let workspace = null;
     if (workspaceId) {
@@ -746,9 +746,9 @@ router.get("/api/identity/me", requireAuth, async (req: any, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        displayName: user.displayName,
+        displayName: (user as any).displayName,
         role: user.role,
-        platformRole: user.platformRole,
+        platformRole: (user as any).platformRole,
         currentWorkspaceId: user.currentWorkspaceId,
         profileImageUrl: user.profileImageUrl,
       },
@@ -757,7 +757,7 @@ router.get("/api/identity/me", requireAuth, async (req: any, res) => {
             id: employee.id,
             workspaceRole: employee.workspaceRole || employee.role,
             position: employee.position,
-            department: employee.department,
+            department: (employee as any).department,
           }
         : null,
       workspace: workspace
@@ -1188,7 +1188,7 @@ router.post("/api/knowledge/ask", requireAuth, async (req: AuthenticatedRequest,
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = (req as any).workspaceId?.id;
 
     const schema = z.object({
       query: z.string().min(1, "Question is required"),
@@ -1283,7 +1283,7 @@ router.post("/api/knowledge/ask", requireAuth, async (req: AuthenticatedRequest,
 
 router.get("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = (req as any).workspaceId?.id;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const { category, search } = req.query;
 
@@ -1315,7 +1315,7 @@ router.get("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequ
 
 router.post("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = (req as any).workspaceId?.id;
     const { title, content, category, summary, tags, isPublic } = req.body;
 
     if (!title || !content) {
@@ -1387,7 +1387,7 @@ router.post("/api/search", requireAuth, async (req, res) => {
         type: "client",
         id: client.id,
         title: client.companyName,
-        subtitle: client.industry || "Client",
+        subtitle: (client as any).industry || "Client",
         relevance: 0.85,
       });
     }
@@ -1632,7 +1632,7 @@ router.post("/api/escalation/check-sla", requireAuth, readLimiter, async (req: A
 router.post("/api/migrations/employee-match", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { employeeName, workspaceId: reqWorkspaceId } = req.body;
-    const workspaceId = reqWorkspaceId || req.workspaceId?.id;
+    const workspaceId = reqWorkspaceId || (req as any).workspaceId?.id;
     if (!workspaceId || !employeeName) return res.status(400).json({ error: "Workspace and employeeName required" });
 
     const allEmployees = await db.select().from(employees).where(eq(employees.workspaceId, workspaceId));
@@ -1786,7 +1786,7 @@ router.get("/api/orchestration/dashboard", requireAuth, async (req: Authenticate
     const { orchestrationOverlays } = await import("@shared/schema");
     const { desc, and, gte, eq, inArray } = await import("drizzle-orm");
 
-    const workspaceId = req.workspaceId || req.user?.workspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) {
       return res.json({ status: "not_started" });
     }
@@ -1827,7 +1827,7 @@ router.get("/api/orchestration/dashboard", requireAuth, async (req: Authenticate
 
 router.get("/api/my-team", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -1837,7 +1837,7 @@ router.get("/api/my-team", requireAuth, async (req: AuthenticatedRequest, res) =
       return res.status(400).json({ message: "No workspace selected" });
     }
 
-    const workspaceId = req.workspaceId || user?.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
 
     const allEmployees = await storage.getEmployeesByWorkspace(workspaceId);
     const currentEmployee = allEmployees.find((e) => e.userId === userId);
@@ -2215,7 +2215,7 @@ router.post("/api/client-signup", async (req, res) => {
 
 router.get("/api/sites", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.json([]);
     }
@@ -2230,7 +2230,7 @@ router.get("/api/sites", requireAuth, async (req: AuthenticatedRequest, res) => 
 
 router.get("/api/search/suggestions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const q = (req.query.q as string) || "";
 
     if (!q || q.length < 2 || !workspaceId) {
@@ -2269,7 +2269,7 @@ router.get("/api/search/suggestions", requireAuth, async (req: AuthenticatedRequ
       .select({
         id: clients.id,
         companyName: clients.companyName,
-        industry: clients.industry,
+        industry: (clients as any).industry,
       })
       .from(clients)
       .where(and(eq(clients.workspaceId, workspaceId), ilike(clients.companyName, pattern)))
@@ -2314,7 +2314,7 @@ router.get("/api/search/suggestions", requireAuth, async (req: AuthenticatedRequ
 router.get("/api/device/settings", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!userId || !workspaceId) {
       return res.json({ notifications: true, theme: "system", fontSize: "medium", compactMode: false });
     }
@@ -2430,7 +2430,7 @@ const scheduleSmartAIRequestSchema = z.object({
 
 router.post("/api/schedule-smart-ai", requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
   const user = req.user;
-  const workspaceId = req.workspaceId || user?.workspaceId || user.currentWorkspaceId;
+  const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
 
   if (!workspaceId) {
     return res.status(400).json({ error: "No workspace selected" });
@@ -2548,7 +2548,7 @@ router.delete("/api/shift-templates/:id", requireAuth, async (req: any, res) => 
 // ─── Missing workspace / billing aliases ─────────────────────────────────────
 router.get("/api/workspace/current", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(404).json({ message: "No current workspace" });
     const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
     if (!workspace) return res.status(404).json({ message: "Workspace not found" });
@@ -2560,7 +2560,7 @@ router.get("/api/workspace/current", requireAuth, async (req: AuthenticatedReque
 
 router.get("/api/workspace/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.json({ employeeCount: 0, clientCount: 0, activeShifts: 0, timeEntryCount: 0, invoiceCount: 0, deliveredInvoiceCount: 0 });
     const [empCount] = await db.select({ count: sql<number>`count(*)::int` }).from(employees).where(eq(employees.workspaceId, workspaceId));
     const [clientCount] = await db.select({ count: sql<number>`count(*)::int` }).from(clients).where(eq(clients.workspaceId, workspaceId));
@@ -2583,7 +2583,7 @@ router.get("/api/workspace/stats", requireAuth, async (req: AuthenticatedRequest
 
 router.get("/api/workspace/health", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.json({ status: "unknown", employeeCount: 0, activeShifts: 0 });
     const [empCount] = await db.select({ count: sql<number>`count(*)` }).from(employees).where(eq(employees.workspaceId, workspaceId));
     const [shiftCount] = await db.select({ count: sql<number>`count(*)` }).from(shifts).where(and(eq(shifts.workspaceId, workspaceId), inArray(shifts.status, ['published', 'in_progress', 'scheduled'])));
@@ -2601,7 +2601,7 @@ router.get("/api/workspace/health", requireAuth, async (req: AuthenticatedReques
 
 router.get("/api/billing/subscription", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.json({ tier: "starter", status: "active", trialEndsAt: null, trialStartedAt: null, currentPeriodEnd: null });
     const [sub] = await db
       .select({ status: orgSubscriptions.status, tierId: orgSubscriptions.tierId, currentPeriodEnd: orgSubscriptions.currentPeriodEnd })

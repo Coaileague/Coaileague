@@ -682,9 +682,9 @@ router.post('/workspace-invite/register', async (req, res) => {
     });
 
     if (req.session) {
-      (req.session as any).userId = userId;
-      (req.session as any).workspaceId = invite.workspaceId;
-      (req.session as any).workspaceRole = role;
+      (req as any).session.userId = userId;
+      (req as any).session.workspaceId = invite.workspaceId;
+      (req as any).session.workspaceRole = role;
     }
 
     const landingPage = ROLE_LANDING_PAGES[role] || '/dashboard';
@@ -750,7 +750,7 @@ router.post('/workspace-invite/register', async (req, res) => {
 
 router.post('/workspace-invite/accept-existing', async (req, res) => {
   try {
-    const userId = req.user?.id || (req.session as any)?.userId;
+    const userId = req.user?.id || (req as any).session?.userId;
     if (!userId) return res.status(401).json({ message: 'Not logged in.' });
 
     const { code } = req.body;
@@ -802,8 +802,8 @@ router.post('/workspace-invite/accept-existing', async (req, res) => {
 
     // SECURITY: Regenerate the session on workspace join to prevent session fixation.
     // Preserve the authenticated identity before regeneration.
-    const preservedUserId = (req.session as any).userId || req.user?.id;
-    const preservedPassport = (req.session as any).passport;
+    const preservedUserId = (req as any).session.userId || req.user?.id;
+    const preservedPassport = (req as any).session.passport;
     await new Promise<void>((resolve) => {
       req.session.regenerate((err) => {
         if (err) {
@@ -813,13 +813,13 @@ router.post('/workspace-invite/accept-existing', async (req, res) => {
       });
     });
     if (preservedUserId) {
-      (req.session as any).userId = preservedUserId;
+      (req as any).session.userId = preservedUserId;
     }
     if (preservedPassport) {
-      (req.session as any).passport = preservedPassport;
+      (req as any).session.passport = preservedPassport;
     }
-    (req.session as any).workspaceId = invite.workspaceId;
-    (req.session as any).workspaceRole = role;
+    (req as any).session.workspaceId = invite.workspaceId;
+    (req as any).session.workspaceRole = role;
 
     // Fire-and-forget: event + audit trail + owner notification (non-blocking — must not affect response)
     const joinedFirst = user.firstName || 'New';

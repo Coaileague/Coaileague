@@ -56,7 +56,7 @@ rfpEthicsRouter.post("/ethics/report", async (req: any, res: any) => {
       const prompt = `Triage this anonymous ethics/safety report for a security company. Provide JSON with: category (harassment|discrimination|safety|fraud|policy_violation|other), severity_score (1-10), routing (hr_review|legal|executive|safety_officer|general_review), summary (1-2 sentences).\n\nReport: "${description}"`;
       // INTENTIONAL: Ethics hotline accepts anonymous reports — platform absorbs AI cost for compliance safety
       const aiResult = await meteredGemini.generate({ workspaceId: workspaceId || "system", userId: "anonymous", feature: "ethics_triage", prompt });
-      const jsonMatch = aiResult?.match(/\{[\s\S]*\}/);
+      const jsonMatch = (aiResult as any)?.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         aiCategory = parsed.category || aiCategory;

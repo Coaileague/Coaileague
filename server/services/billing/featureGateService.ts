@@ -570,7 +570,7 @@ class FeatureGateService {
     if (!workspace) return false;
 
     // Check if addons are stored in workspace metadata
-    const metadata = workspace.metadata as any;
+    const metadata = (workspace as any).metadata as any;
     if (metadata?.activeAddons?.includes(addonKey)) {
       return true;
     }

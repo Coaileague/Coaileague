@@ -1073,7 +1073,7 @@ router.post('/compliance/auditors/activate', async (req: Request, res: Response)
       } as any)
       .where(and(
         eq(auditorAccounts.inviteToken as any, token),
-        isNull(auditorAccounts.activatedAt as any),
+        isNull(auditorAccounts as any).activatedAt,
       ))
       .returning();
 

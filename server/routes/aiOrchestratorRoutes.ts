@@ -65,8 +65,8 @@ const ConfidenceScoreRequestSchema = z.object({
 
 router.post("/process", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user?.workspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -121,8 +121,8 @@ router.post("/process", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/consult", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user?.workspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -134,7 +134,7 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Task is required" });
     }
 
-    const result = await claudeService.execute({
+    const result = await (claudeService as any).execute({
       task,
       sessionId: randomUUID(),
       userId: user?.id,
@@ -170,8 +170,8 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/verify", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user?.workspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -298,8 +298,8 @@ router.post("/score-confidence", requireAuth, async (req: Request, res: Response
 
 router.get("/logs", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user?.workspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -315,7 +315,7 @@ router.get("/logs", requireAuth, async (req: Request, res: Response) => {
       endDate,
     } = req.query;
 
-    const logs = await aiActionLogger.getLogs({
+    const logs = await (aiActionLogger as any).getLogs({
       workspaceId,
       limit: Number(limit),
       offset: Number(offset),
@@ -344,8 +344,8 @@ router.get("/logs", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user?.workspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -353,7 +353,7 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
 
     const { period = '24h' } = req.query;
 
-    const stats = await aiActionLogger.getStats({
+    const stats = await (aiActionLogger as any).getStats({
       workspaceId,
       period: period as string,
     });

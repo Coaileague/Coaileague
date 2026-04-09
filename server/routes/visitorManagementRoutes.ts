@@ -73,7 +73,7 @@ visitorManagementRouter.get('/logs', requireAuth, async (req: AuthenticatedReque
     const workspaceId = wid(req);
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
-    const { siteId, visitorType, date, search, limit = 50, offset = 0 } = req.query as any;
+    const { siteId, visitorType, date, search, limit = 50, offset = 0 } = (req as any).query;
 
     const conditions = ['workspace_id = $1'];
     const params: any[] = [workspaceId];
@@ -110,7 +110,7 @@ visitorManagementRouter.get('/active', requireAuth, async (req: AuthenticatedReq
     const workspaceId = wid(req);
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
-    const { siteId } = req.query as any;
+    const { siteId } = (req as any).query;
     const conditions = ['workspace_id = $1', 'checked_out_at IS NULL'];
     const params: any[] = [workspaceId];
     if (siteId) { conditions.push(`site_id = $2`); params.push(siteId); }
@@ -348,7 +348,7 @@ visitorManagementRouter.get('/pre-registrations', requireAuth, async (req: Authe
     const workspaceId = wid(req);
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
-    const { status, clientId, siteId, limit = 50, offset = 0 } = req.query as any;
+    const { status, clientId, siteId, limit = 50, offset = 0 } = (req as any).query;
 
     const conditions = ['workspace_id = $1'];
     const params: any[] = [workspaceId];

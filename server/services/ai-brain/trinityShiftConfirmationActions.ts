@@ -191,8 +191,8 @@ export function registerShiftConfirmationActions() {
       .where(and(
         eq(shifts.workspaceId, workspaceId),
         eq(shifts.requiresAcknowledgment, true),
-        isNull(shifts.acknowledgedAt as any),
-        isNull(shifts.deniedAt as any),
+        isNull(shifts as any).acknowledgedAt,
+        isNull(shifts as any).deniedAt,
         ne(shifts.status, 'cancelled'),
         gte(shifts.startTime, now),
         lt(shifts.startTime, threshold),

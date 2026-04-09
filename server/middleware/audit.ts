@@ -68,7 +68,7 @@ export async function auditContextMiddleware(req: Request, res: Response, next: 
         workspaceId,
         userId,
         userEmail: req.user?.email || 'unknown',
-        userRole: (req as any).platformRole || req.userRole || 'employee',
+        userRole: (req as any).platformRole || (req as any).userRole || 'employee',
         ipAddress: getClientIp(req),
         userAgent: req.headers['user-agent'] || 'unknown',
         requestId: generateRequestId(),

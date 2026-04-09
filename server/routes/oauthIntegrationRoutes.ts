@@ -777,7 +777,7 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
       payrollItems,
       chartOfAccounts,
       connectionId: connection.id,
-      companyName: connection.companyName || 'QuickBooks Company',
+      companyName: (connection as any).companyName || 'QuickBooks Company',
     });
   } catch (error: unknown) {
     log.error('QuickBooks preview error:', error);
@@ -889,7 +889,7 @@ router.post('/quickbooks/push/unlock', requireAuth, requireWorkspaceMembership()
   try {
     const { workspaceId, forceReset = false } = req.body;
     const userId = req.user?.id || req.session?.userId;
-    const userRole = req.session?.platformRole;
+    const userRole = (req as any).session?.platformRole;
     
     // Check if user is support staff (can force reset any workspace)
     const isSupportStaff = ['root_admin', 'co_admin', 'sysops'].includes(userRole);
@@ -966,7 +966,7 @@ router.post('/quickbooks/push/factory-reset', requireAuth, requireWorkspaceMembe
   try {
     const { workspaceId, reason } = req.body;
     const userId = req.user?.id || req.session?.userId;
-    const userRole = req.session?.platformRole;
+    const userRole = (req as any).session?.platformRole;
     
     // Only support staff can factory reset
     const isSupportStaff = ['root_admin', 'co_admin', 'sysops'].includes(userRole);
@@ -1233,7 +1233,7 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
           // Use rate limiter from quickbooks integration
           const canProceed = await quickbooksRateLimiter.waitForSlot(
             realmId,
-            connection.environment === 'production' ? 'production' : 'sandbox',
+            (connection as any).environment === 'production' ? 'production' : 'sandbox',
             0,
             30000
           );
@@ -1262,7 +1262,7 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
           
           quickbooksRateLimiter.completeRequest(
             realmId,
-            connection.environment === 'production' ? 'production' : 'sandbox',
+            (connection as any).environment === 'production' ? 'production' : 'sandbox',
             response.ok
           );
           
@@ -1309,10 +1309,10 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
         PrimaryEmailAddr: client.email ? { Address: client.email } : undefined,
         PrimaryPhone: client.phone ? { FreeFormNumber: client.phone } : undefined,
         BillAddr: client.address ? {
-          Line1: (client.address as any).street || (client.address as any).line1,
-          City: (client.address as any).city,
-          CountrySubDivisionCode: (client.address as any).state,
-          PostalCode: (client.address as any).zip || (client.address as any).postalCode,
+          Line1: (client as any).address.street || (client as any).address.line1,
+          City: (client as any).address.city,
+          CountrySubDivisionCode: (client as any).address.state,
+          PostalCode: (client as any).address.zip || (client as any).address.postalCode,
         } : undefined,
       }),
       'lastProcessedCustomerId'
@@ -1512,8 +1512,8 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
     
     const existingByQboIdEmp = new Map(
       existingEmployees
-        .filter(e => e.partnerEmployeeId && e.partnerType === 'quickbooks')
-        .map(e => [e.partnerEmployeeId, e])
+        .filter(e => (e as any).partnerEmployeeId && (e as any).partnerType === 'quickbooks')
+        .map(e => [(e as any).partnerEmployeeId, e])
     );
     const existingByEmailEmp = new Map(
       existingEmployees
@@ -1527,8 +1527,8 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
     
     const existingByQboIdClient = new Map(
       existingClients
-        .filter(c => c.partnerCustomerId && c.partnerType === 'quickbooks')
-        .map(c => [c.partnerCustomerId, c])
+        .filter(c => (c as any).partnerCustomerId && (c as any).partnerType === 'quickbooks')
+        .map(c => [(c as any).partnerCustomerId, c])
     );
     const existingByName = new Map(
       existingClients
@@ -1997,7 +1997,7 @@ router.post('/gusto/refresh', requireAuth, requireWorkspaceMembership(), async (
 router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'), async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || (req.query.workspaceId as string);
+    const workspaceId = req.workspaceId || (req as any).user?.workspaceId || ((req as any).query.workspaceId as string);
 
     if (!workspaceId) {
       return res.status(400).json({ 
@@ -2221,9 +2221,9 @@ router.get('/connections', requireAuth, requireWorkspaceMembership('query'), asy
       partnerType: conn.partnerType,
       status: conn.status,
       companyId: conn.companyId,
-      companyName: (conn.metadata as any)?.companyName || null,
+      companyName: (conn as any).metadata?.companyName || null,
       lastSyncedAt: conn.lastSyncAt,
-      accessTokenExpiresAt: conn.accessTokenExpiresAt,
+      accessTokenExpiresAt: (conn as any).accessTokenExpiresAt,
       refreshTokenExpiresAt: conn.refreshTokenExpiresAt,
     }));
 
@@ -2508,7 +2508,7 @@ router.get('/quickbooks/compliance-telemetry', requireAuth, requirePlatformStaff
         WHERE partner_type = 'quickbooks'
         ORDER BY created_at DESC`
       );
-      credentialsHealth = (credsResult.rows || []).map((row: any) => ({
+      credentialsHealth = ((credsResult as any).rows || []).map((row: any) => ({
         realmId: row.workspaceId,
         isHealthy: !row.expiresAt || new Date(row.expiresAt) > new Date(),
         expiresAt: row.expiresAt,
@@ -2590,7 +2590,7 @@ router.get('/quickbooks/usage-logs/:realmId', requireAuth, requirePlatformStaff,
     
     return res.json({
       success: true,
-      logs: usageResult.rows || [],
+      logs: (usageResult as any).rows || [],
       realmId,
     });
   } catch (error: unknown) {
@@ -2621,9 +2621,9 @@ router.get('/quickbooks/execution-history', requireAuth, requireWorkspaceMembers
     const logs = await db.select({
       id: systemAuditLogs.id,
       action: systemAuditLogs.action,
-      details: systemAuditLogs.details,
+      details: (systemAuditLogs as any).details,
       severity: systemAuditLogs.severity,
-      timestamp: systemAuditLogs.timestamp,
+      timestamp: (systemAuditLogs as any).timestamp,
     })
       .from(systemAuditLogs)
       .where(and(...conditions))
@@ -2705,7 +2705,7 @@ router.get('/quickbooks/execution-history', requireAuth, requireWorkspaceMembers
           Object.assign(entry.metadata, details.metadata);
         }
       } catch (e) {
-        log.error('[QB ExecutionHistory] Parse error:', e);
+        (log as any).error('[QB ExecutionHistory] Parse error:', e);
       }
     }
 

@@ -977,7 +977,7 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
     if (callerNumber && callerNumber.trim().length >= 10) {
       try {
         const { sendSMS } = await import('../services/smsService');
-        const orgName = workspace?.name || 'your organization';
+        const orgName = (workspace as any)?.name || 'your organization';
         const smsBody = lang === 'es'
           ? `Hola${callerName ? ` ${callerName.split(' ')[0]}` : ''}, su caso de soporte fue creado: ${supportCase.case_number}. Un especialista de ${orgName} le dará seguimiento pronto. Responda STOP para dejar de recibir mensajes.`
           : `Hi${callerName ? ` ${callerName.split(' ')[0]}` : ''}, your support case has been created: ${supportCase.case_number}. A specialist from ${orgName} will follow up with you shortly. Reply STOP to unsubscribe.`;

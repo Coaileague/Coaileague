@@ -293,7 +293,7 @@ router.post('/group', requireAuth, async (req: AuthenticatedRequest, res) => {
 
     const participantOrgIds = allowedOrgIds || [workspaceId];
     const userRole = req.user?.role || 'employee';
-    const platformRole = req.user?.platformRole || null;
+    const platformRole = (req.user)?.platformRole || null;
 
     const groupCheck = await chatParityService.canStartGroupDM({
       initiatorId: userId,

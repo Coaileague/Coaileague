@@ -230,7 +230,7 @@ export function registerOpsActions() {
     const { workspaceId, startDate, endDate } = params;
     const entries = await db.select({
       employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
-      date: timeEntries.date,
+      date: (timeEntries as any).date,
       clockIn: timeEntries.clockIn,
       clockOut: timeEntries.clockOut,
       hours: timeEntries.totalHours,

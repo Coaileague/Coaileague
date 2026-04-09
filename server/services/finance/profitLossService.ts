@@ -528,8 +528,8 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
       const payrollData = await db
         .select({
           total: sql<string>`COALESCE(SUM(${payrollEntries.grossPay}), 0)`,
-          overtime: sql<string>`COALESCE(SUM(${payrollEntries.overtimePay}), 0)`,
-          regular: sql<string>`COALESCE(SUM(${payrollEntries.regularPay}), 0)`,
+          overtime: sql<string>`COALESCE(SUM(${(payrollEntries as any).overtimePay}), 0)`,
+          regular: sql<string>`COALESCE(SUM(${(payrollEntries as any).regularPay}), 0)`,
         })
         .from(payrollEntries)
         .innerJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))

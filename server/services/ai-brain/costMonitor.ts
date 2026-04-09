@@ -192,7 +192,7 @@ class AICostMonitorService {
       const workspace = await db.query.workspaces.findFirst({
         where: eq(workspaces.id, workspaceId),
       });
-      currentCredits = workspace?.aiCredits || 0;
+      currentCredits = (workspace as any)?.aiCredits || 0;
     } catch (error) {
       log.warn('[CostMonitor] Failed to fetch workspace credits:', error);
     }

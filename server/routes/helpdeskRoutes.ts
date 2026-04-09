@@ -298,7 +298,7 @@ router.post('/rooms', async (req: AuthenticatedRequest, res) => {
     if (!member || member.workspaceId !== workspace.id) {
       return res.status(403).json({ message: "Unauthorized - Organization membership required" });
     }
-    const memberRole = member.role as string;
+    const memberRole = (member as any).role as string;
     if (memberRole !== 'org_owner' && memberRole !== 'co_owner' && memberRole !== 'org_admin' && memberRole !== 'manager') {
       return res.status(403).json({ message: "Unauthorized - Owner or Manager role required" });
     }
@@ -389,8 +389,8 @@ router.get('/queue', async (req: AuthenticatedRequest, res) => {
         userName: entry.userName || 'User',
         position: index + 1,
         estimatedWaitMinutes: entry.estimatedWaitMinutes || 5,
-        priority: entry.priorityLevel || 'normal',
-        userType: entry.userType || 'guest',
+        priority: (entry as any).priorityLevel || 'normal',
+        userType: (entry as any).userType || 'guest',
         waitTimeMinutes,
       };
     });
@@ -534,7 +534,7 @@ router.post('/authenticate-ticket', async (req, res) => {
       }).returning();
     }
 
-    (req.session as any).userId = guestUser.id;
+    (req as any).session.userId = guestUser.id;
     await new Promise((resolve, reject) => {
       req.session.save((err: any) => {
         if (err) reject(err);
@@ -547,7 +547,7 @@ router.post('/authenticate-ticket', async (req, res) => {
       message: "Authentication successful! You can now access Live Chat.",
       user: {
         id: guestUser.id,
-        username: guestUser.username,
+        username: (guestUser as any).username,
         email: guestUser.email,
       },
       ticket: {
@@ -599,7 +599,7 @@ router.post('/authenticate-workid', async (req, res) => {
       return res.status(403).json({ message: "Unauthorized - Staff access required" });
     }
 
-    (req.session as any).userId = staffUser.id;
+    (req as any).session.userId = staffUser.id;
     await new Promise((resolve, reject) => {
       req.session.save((err: any) => {
         if (err) reject(err);
@@ -612,7 +612,7 @@ router.post('/authenticate-workid', async (req, res) => {
       message: "Staff authentication successful! You now have access to Live Chat.",
       user: {
         id: staffUser.id,
-        username: staffUser.username,
+        username: (staffUser as any).username,
         email: staffUser.email,
         role: roleRecord.role,
       },

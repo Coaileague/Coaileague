@@ -296,7 +296,7 @@ router.post(
               `SELECT id FROM shift_chatrooms WHERE id = $1 LIMIT 1`,
               [conversationId]
             ).catch(() => [] as any[]);
-            const isShiftChatroom = chatroomResult.length > 0;
+            const isShiftChatroom = (chatroomResult as any).length > 0;
 
             // If shift chatroom, insert photo messages with GPS metadata
             if (isShiftChatroom) {
@@ -409,7 +409,7 @@ router.post(
               },
             }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
           } catch (evtErr: unknown) {
-            log.warn('[ChatUploads] Image event emission failed (non-blocking):', evtErr?.message);
+            log.warn('[ChatUploads] Image event emission failed (non-blocking):', (evtErr as any)?.message);
           }
         }
       }

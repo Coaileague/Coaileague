@@ -21,7 +21,7 @@ router.get('/rooms', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
     const workspaceId = req.workspaceId;
     const userRole = req.user.role;
-    const platformRole = (req.user as any)?.platformRole;
+    const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 
     let rooms;
@@ -50,7 +50,7 @@ router.get('/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) =>
     }
     const workspaceId = req.workspaceId;
     const userRole = req.user.role;
-    const platformRole = (req.user as any)?.platformRole;
+    const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 
     let orgRooms: any[] = [];
@@ -110,7 +110,7 @@ router.get('/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) =>
           isStaff: u.isStaff,
         })),
         isJoined: connectionData.onlineUsers.some(u => u.id === userId),
-        unreadCount: connectionData.unreadCounts?.[userId] || 0,
+        unreadCount: (connectionData as any).unreadCounts?.[userId] || 0,
         lastActivity: room.updatedAt || room.createdAt,
       };
     });
@@ -161,7 +161,7 @@ router.post('/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, re
     
     const workspaceId = req.workspaceId;
     const userRole = req.user.role;
-    const platformRole = (req.user as any)?.platformRole;
+    const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
     
     if (!isSupportRoom || room.workspaceId !== null) {
@@ -207,7 +207,7 @@ router.get('/messages/search', requireAuth, async (req: AuthenticatedRequest, re
     }
     const workspaceId = req.workspaceId;
     const userRole = req.user.role;
-    const platformRole = (req.user as any)?.platformRole;
+    const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
     
     const { query, roomId, startDate, endDate, limit = 50 } = req.query;
@@ -236,7 +236,7 @@ router.get('/messages/search', requireAuth, async (req: AuthenticatedRequest, re
       if (query) {
         const searchTerm = (query as string).toLowerCase();
         filteredMessages = filteredMessages.filter(m => 
-          m.messageContent?.toLowerCase().includes(searchTerm) ||
+          (m as any).messageContent?.toLowerCase().includes(searchTerm) ||
           m.senderName?.toLowerCase().includes(searchTerm)
         );
       }
@@ -363,7 +363,7 @@ router.post('/rooms/:id/suspend', requireAuth, async (req: AuthenticatedRequest,
     const roomId = req.params.id;
     const { reason } = req.body;
     const userRole = req.user.role;
-    const platformRole = (req.user as any)?.platformRole;
+    const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 
     if (!isSupportStaff) {
@@ -415,7 +415,7 @@ router.post('/rooms/:id/lift-suspension', requireAuth, async (req: Authenticated
     }
     const roomId = req.params.id;
     const userRole = req.user.role;
-    const platformRole = (req.user as any)?.platformRole;
+    const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 
     if (!isSupportStaff) {

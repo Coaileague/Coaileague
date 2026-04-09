@@ -493,7 +493,7 @@ app.post('/api/helpos/faqs/bulk-import', requireAuth, requirePlatformStaff, asyn
         // Generate embedding
         const embeddingResponse = await openai.embeddings.create({
           model: 'text-embedding-3-small',
-          input: `${validated.question} ${validated.answer}`,
+          input: `${(validated as any).question} ${(validated as any).answer}`,
         });
 
         // Create FAQ

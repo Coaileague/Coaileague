@@ -38,7 +38,7 @@ async function getEmployeeId(userId: string, workspaceId: string): Promise<strin
 timesheetReportRouter.get('/report', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -72,7 +72,7 @@ timesheetReportRouter.get('/report', requireManager, async (req: Request, res: R
 timesheetReportRouter.get('/my-report', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -107,7 +107,7 @@ timesheetReportRouter.get('/my-report', requireAuth, async (req: Request, res: R
 timesheetReportRouter.get('/export/csv', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -143,7 +143,7 @@ timesheetReportRouter.get('/export/csv', requireManager, async (req: Request, re
 timesheetReportRouter.get('/weekly', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -179,7 +179,7 @@ timesheetReportRouter.get('/weekly', requireAuth, async (req: Request, res: Resp
 timesheetReportRouter.get('/monthly', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -213,7 +213,7 @@ timesheetReportRouter.get('/monthly', requireAuth, async (req: Request, res: Res
 timesheetReportRouter.get('/compliance', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -237,7 +237,7 @@ timesheetReportRouter.get('/compliance', requireWorkspaceRole(['org_owner', 'co_
 timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -286,9 +286,9 @@ timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, re
     doc.text(`Regular Hours: ${report.summary.regularHours.toFixed(2)}`);
     doc.text(`Overtime Hours: ${report.summary.overtimeHours.toFixed(2)}`);
     if (report.summary.breakDeductions) {
-      doc.text(`Break Deductions: ${report.summary.breakDeductions.toFixed(2)} hours`);
+      doc.text(`Break Deductions: ${(report as any).summary.breakDeductions.toFixed(2)} hours`);
     }
-    doc.text(`Status: Approved (${report.summary.statusBreakdown?.approved || 0}) | Pending (${report.summary.statusBreakdown?.pending || 0}) | Rejected (${report.summary.statusBreakdown?.rejected || 0})`);
+    doc.text(`Status: Approved (${(report as any).summary.statusBreakdown?.approved || 0}) | Pending (${(report as any).summary.statusBreakdown?.pending || 0}) | (Rejected as any) (${(report.summary as any).statusBreakdown?.rejected || 0})`);
     doc.moveDown(2);
 
     doc.fontSize(14).text('Time Entries', { underline: true });
@@ -331,8 +331,8 @@ timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, re
         doc.font('Helvetica').fontSize(8);
       }
 
-      const clockIn = entry.clockIn ? new Date(entry.clockIn) : null;
-      const clockOut = entry.clockOut ? new Date(entry.clockOut) : null;
+      const clockIn = (entry as any).clockIn ? new (Date as any)(entry.clockIn) : null;
+      const clockOut = (entry as any).clockOut ? new (Date as any)(entry.clockOut) : null;
 
       const rowData = [
         entry.employeeName || 'Unknown',

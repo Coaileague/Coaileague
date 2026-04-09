@@ -415,7 +415,7 @@ class FastModeService {
           return {
             agentId,
             agentName: this.getAgentDisplayName(agentId),
-            result: result.data,
+            result: (result as any).data,
             success: result.success,
             tokensUsed: analysisResult.estimatedTokens
           };
@@ -1101,8 +1101,8 @@ class FastModeService {
         gte(aiWorkboardTasks.createdAt, periodStart)
       ));
     
-    const fastModeTasks = tasks.filter(t => t.executionMode === 'trinity_fast');
-    const normalModeTasks = tasks.filter(t => t.executionMode !== 'trinity_fast');
+    const fastModeTasks = tasks.filter(t => (t as any).executionMode === 'trinity_fast');
+    const normalModeTasks = tasks.filter(t => (t as any).executionMode !== 'trinity_fast');
     
     // Calculate execution times
     const fastModeAvgTime = this.calculateAvgExecutionTime(fastModeTasks);
@@ -1130,7 +1130,7 @@ class FastModeService {
     // Get refunds issued via creditManager transaction history
     const allTransactions = await creditManager.getTransactionHistory(workspaceId, 200, 0);
     const refundTransactions = allTransactions.filter(
-      t => t.transactionType === 'refund' && t.createdAt && new Date(t.createdAt) >= periodStart
+      t => (t as any).transactionType === 'refund' && t.createdAt && new Date(t.createdAt) >= periodStart
     );
     const refundsIssued = refundTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
@@ -1150,7 +1150,7 @@ class FastModeService {
     const categoryCounts: Record<string, number> = {};
     fastModeTasks.forEach(t => {
       if (t.category) {
-        categoryCounts[t.category] = (categoryCounts[t.category] || 0) + 1;
+        categoryCounts[(t as any).category] = (categoryCounts[(t as any).category] || 0) + 1;
       }
     });
     const tasksByCategory = Object.entries(categoryCounts)

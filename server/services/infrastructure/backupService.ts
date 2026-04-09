@@ -331,7 +331,7 @@ class BackupService {
     try {
       const result = await db.select().from(backupRecords).where(eq(backupRecords.id, backupId));
       
-      const backup = (result.rows as any[])[0];
+      const backup = ((result as any).rows as any[])[0];
       if (!backup) {
         log.warn(`[BackupService] Backup ${backupId} not found for verification`);
         return false;

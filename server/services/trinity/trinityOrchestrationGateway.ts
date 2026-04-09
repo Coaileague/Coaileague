@@ -769,7 +769,7 @@ class TrinityOrchestrationGateway {
 
     // Check feature registry for related features
     const allFeatures = featureRegistryService.getFeature();
-    const matchedFeatures = allFeatures.filter(f => 
+    const matchedFeatures = (allFeatures as any).filter(f => 
       keywords.some(kw => 
         f.key.toLowerCase().includes(kw) || 
         f.name.toLowerCase().includes(kw) ||

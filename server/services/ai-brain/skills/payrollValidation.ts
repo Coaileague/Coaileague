@@ -184,7 +184,7 @@ export class PayrollValidationSkill extends BaseSkill {
         data: result,
         logs,
         tokensUsed: aiInsights ? 500 : 0,
-        executionTimeMs: Date.now() - context.startTime,
+        executionTimeMs: Date.now() - (context as any).startTime,
       };
 
     } catch (error: any) {
@@ -197,7 +197,7 @@ export class PayrollValidationSkill extends BaseSkill {
         },
         logs,
         tokensUsed: 0,
-        executionTimeMs: Date.now() - context.startTime,
+        executionTimeMs: Date.now() - (context as any).startTime,
       };
     }
   }

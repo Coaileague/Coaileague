@@ -178,7 +178,7 @@ export default function EmployeeEngagement() {
             </CardHeader>
             <CardContent>
               <EmployerRatingForm
-                onSubmit={(data) => submitRatingMutation.mutate(data)}
+                onSubmit={(data: any) => submitRatingMutation.mutate(data)}
                 isSubmitting={submitRatingMutation.isPending}
               />
             </CardContent>
@@ -194,7 +194,7 @@ export default function EmployeeEngagement() {
             </CardHeader>
             <CardContent>
               <SuggestionForm
-                onSubmit={(data) => submitSuggestionMutation.mutate(data)}
+                onSubmit={(data: any) => submitSuggestionMutation.mutate(data)}
                 isSubmitting={submitSuggestionMutation.isPending}
               />
             </CardContent>
@@ -210,7 +210,7 @@ export default function EmployeeEngagement() {
             </CardHeader>
             <CardContent>
               <RecognitionForm
-                onSubmit={(data) => submitRecognitionMutation.mutate(data)}
+                onSubmit={(data: any) => submitRecognitionMutation.mutate(data)}
                 isSubmitting={submitRecognitionMutation.isPending}
               />
             </CardContent>

@@ -1002,7 +1002,7 @@ class ContractPipelineService {
     try {
       await db.insert(orgDocuments).values({
         workspaceId: contract.workspaceId,
-        uploadedBy: auditContext.userId,
+        uploadedBy: (auditContext as any).userId,
         category: 'client_contract',
         fileName: `${contract.title || 'Contract'} - ${contract.clientName || 'Client'}.pdf`,
         filePath: `contracts://${contractId}`,
@@ -1108,7 +1108,7 @@ class ContractPipelineService {
       return { valid: false, error: 'Access token has expired' };
     }
     
-    if (accessToken.maxUses && accessToken.useCount! >= accessToken.maxUses) {
+    if (accessToken.maxUses && accessToken.useCount! >= (accessToken as any).maxUses) {
       return { valid: false, error: 'Access token has exceeded maximum uses' };
     }
     

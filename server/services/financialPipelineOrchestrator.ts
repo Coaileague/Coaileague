@@ -413,7 +413,7 @@ export async function onInvoiceApproved(invoiceId: string, workspaceId: string, 
       let clientName = `Invoice-${invoiceId.slice(0, 8)}`;
       if (inv?.clientId) {
         const client = await db.query.clients.findFirst({ where: eq(clients.id, inv.clientId) });
-        clientName = client?.companyName || client?.name || clientName;
+        clientName = client?.companyName || (client as any)?.name || clientName;
       }
       await quickbooksReceiptService.createInvoiceReceipt({
         workspaceId,

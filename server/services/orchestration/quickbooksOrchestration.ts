@@ -205,7 +205,7 @@ class QuickBooksOrchestrationService {
         orchestrationId,
         'VALIDATE',
         async () => {
-          const canProceed = await quickbooksRateLimiter.canMakeRequest(params.workspaceId);
+          const canProceed = await (quickbooksRateLimiter as any).canMakeRequest(params.workspaceId);
           if (!canProceed) {
             return {
               success: false,
@@ -223,7 +223,7 @@ class QuickBooksOrchestrationService {
             };
           }
 
-          if (connection.accessTokenExpiresAt && new Date() > connection.accessTokenExpiresAt) {
+          if (connection.accessTokenExpiresAt && new Date() > (connection as any).accessTokenExpiresAt) {
             try {
               await quickbooksOAuthService.refreshAccessToken(connection.id);
             } catch (refreshError: any) {
@@ -437,7 +437,7 @@ class QuickBooksOrchestrationService {
    */
   private async fetchConnectionContext(workspaceId: string): Promise<QBConnectionContext | null> {
     const connection = await this.getConnectionRecord(workspaceId);
-    if (!connection || !connection.accessToken || !connection.partnerAccountId) {
+    if (!connection || !connection.accessToken || !(connection as any).partnerAccountId) {
       return null;
     }
 
@@ -452,11 +452,11 @@ class QuickBooksOrchestrationService {
     return {
       connectionId: connection.id,
       accessToken: decryptedToken,
-      realmId: connection.partnerAccountId,
+      realmId: (connection as any).partnerAccountId,
       environment,
       apiBase: environment === 'production'
-        ? INTEGRATIONS.quickbooks.apiBaseUrl
-        : INTEGRATIONS.quickbooks.sandboxApiBaseUrl,
+        ? (INTEGRATIONS as any).quickbooks.apiBaseUrl
+        : (INTEGRATIONS as any).quickbooks.sandboxApiBaseUrl,
     };
   }
 
@@ -590,8 +590,8 @@ class QuickBooksOrchestrationService {
 
     return logs.map(log => ({
       ...log,
-      orchestrationId: (log.metadata as any)?.orchestrationId,
-      operationName: (log.metadata as any)?.operationName,
+      orchestrationId: (log as any).metadata?.orchestrationId,
+      operationName: (log as any).metadata?.operationName,
     }));
   }
 }

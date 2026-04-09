@@ -202,7 +202,7 @@ async function phase4_subscription_tiers_pricing() {
   ];
 
   for (const exp of expectedTiers) {
-    const tier = (BILLING.tiers as any)[exp.id];
+    const tier = (BILLING as any).tiers[exp.id];
     record({ name: `${exp.id} Price = $${exp.price / 100}/mo`, phase: 'PRICING', passed: tier?.monthlyPrice === exp.price, details: `Configured: $${(tier?.monthlyPrice || 0) / 100}, expected: $${exp.price / 100}`, severity: 'critical' });
     record({ name: `${exp.id} Credits = ${exp.credits}/mo`, phase: 'PRICING', passed: tier?.monthlyCredits === exp.credits, details: `Configured: ${tier?.monthlyCredits}, expected: ${exp.credits}`, severity: 'critical' });
     record({ name: `${exp.id} MaxEmployees = ${exp.maxEmp}`, phase: 'PRICING', passed: tier?.maxEmployees === exp.maxEmp, details: `Configured: ${tier?.maxEmployees}, expected: ${exp.maxEmp}`, severity: 'critical' });

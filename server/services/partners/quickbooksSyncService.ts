@@ -764,7 +764,7 @@ export class QuickBooksSyncService {
       }
       
       const workspaceName = workspace.name || 'Your Organization';
-      const inviterName = inviter?.fullName || inviter?.email || 'Your Admin';
+      const inviterName = (inviter as any)?.fullName || inviter?.email || 'Your Admin';
       
       for (const emp of employeesToInvite) {
         try {
@@ -1497,12 +1497,12 @@ export class QuickBooksSyncService {
     
     // Map the result to the expected format
     const result = {
-      created: syncResult.created.length,
-      linked: syncResult.linked.length,
-      alreadyExist: syncResult.skipped.length,
+      created: (syncResult as any).created.length,
+      linked: (syncResult as any).linked.length,
+      alreadyExist: (syncResult as any).skipped.length,
       details: [
-        ...syncResult.created.map(e => `Created employee record for ${e.role}: ${e.email} (${e.id})`),
-        ...syncResult.linked.map(e => `Linked user ${e.email} to existing employee record (${e.firstName} ${e.lastName})`),
+        ...(syncResult as any).created.map((e: any) => `Created employee record for ${e.role}: ${e.email} (${e.id})`),
+        ...(syncResult as any).linked.map((e: any) => `Linked user ${e.email} to existing employee record (${e.firstName} ${e.lastName})`),
       ]
     };
     
@@ -2155,9 +2155,9 @@ export class QuickBooksSyncService {
         partnerType: 'quickbooks',
         entityType: item.entityType,
         coaileagueEntityId: selectedCoaileagueEntityId,
-        partnerEntityId: item.partnerEntityId,
-        partnerEntityName: item.partnerEntityName,
-        matchEmail: item.partnerEmail,
+        partnerEntityId: (item as any).partnerEntityId,
+        partnerEntityName: (item as any).partnerEntityName,
+        matchEmail: (item as any).partnerEmail,
         matchConfidence: 1.0,
         syncStatus: 'synced',
         lastSyncAt: new Date(),

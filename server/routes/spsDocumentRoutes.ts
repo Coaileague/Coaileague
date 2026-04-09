@@ -78,7 +78,7 @@ function nextDocNumber(prefix: string, workspaceId: string): string {
 // POST /api/sps/documents — Create a new document record
 spsDocumentRouter.post('/', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
     const input = z.object({
@@ -124,10 +124,10 @@ spsDocumentRouter.post('/', async (req: any, res) => {
       recipientEmail: input.recipientEmail,
       // White-label: signer name + email come from the authenticated user.
       // No hardcoded tenant identity (CLAUDE.md §6).
-      orgSignerName: (req.user as any)?.firstName
-        ? `${(req.user as any).firstName} ${(req.user as any).lastName || ''}`.trim()
+      orgSignerName: (req.user)?.firstName
+        ? `${(req.user).firstName} ${(req.user).lastName || ''}`.trim()
         : 'Authorized Signer',
-      orgSignerEmail: (req.user as any)?.email || 'noreply@coaileague.com',
+      orgSignerEmail: (req.user)?.email || 'noreply@coaileague.com',
       hireDate: input.hireDate ? input.hireDate as any : null,
       position: input.position || null,
       payRate: input.payRate ? input.payRate as any : null,
@@ -142,7 +142,7 @@ spsDocumentRouter.post('/', async (req: any, res) => {
       contractTerm: input.contractTerm || null,
       officersRequired: input.officersRequired || null,
       stateCode: 'TX',
-      auditLog: [{ action: 'created', timestamp: new Date().toISOString(), by: (req.user as any)?.id }] as any,
+      auditLog: [{ action: 'created', timestamp: new Date().toISOString(), by: (req.user)?.id }] as any,
     }).returning();
 
     res.status(201).json({
@@ -159,7 +159,7 @@ spsDocumentRouter.post('/', async (req: any, res) => {
 // GET /api/sps/documents — List workspace documents
 spsDocumentRouter.get('/', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
     const { type, status, search } = req.query as Record<string, string>;
@@ -192,7 +192,7 @@ spsDocumentRouter.get('/', async (req: any, res) => {
 // GET /api/sps/documents/:id — Single document
 spsDocumentRouter.get('/:id', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const [doc] = await db.select().from(spsDocuments)
       .where(and(eq(spsDocuments.id, req.params.id), eq(spsDocuments.workspaceId, workspaceId)));
@@ -206,7 +206,7 @@ spsDocumentRouter.get('/:id', async (req: any, res) => {
 // PATCH /api/sps/documents/:id — Update form data / status
 spsDocumentRouter.patch('/:id', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const { formData, status, signatures, initials, ...rest } = req.body;
 
@@ -229,7 +229,7 @@ spsDocumentRouter.patch('/:id', async (req: any, res) => {
     if (status === 'completed') {
       updates.completedAt = new Date();
       const currentLog = (existing.auditLog as any[]) || [];
-      updates.auditLog = [...currentLog, { action: 'completed', timestamp: new Date().toISOString(), by: (req.user as any)?.id }];
+      updates.auditLog = [...currentLog, { action: 'completed', timestamp: new Date().toISOString(), by: (req.user)?.id }];
     }
 
     const [updated] = await db.update(spsDocuments)
@@ -247,7 +247,7 @@ spsDocumentRouter.patch('/:id', async (req: any, res) => {
 // POST /api/sps/documents/:id/void — Void a document
 spsDocumentRouter.post('/:id/void', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const [doc] = await db.update(spsDocuments)
       .set({ status: 'voided', updatedAt: new Date() })
@@ -263,7 +263,7 @@ spsDocumentRouter.post('/:id/void', async (req: any, res) => {
 // POST /api/sps/documents/:id/send — Mark as sent, generate portal link, and send email
 spsDocumentRouter.post('/:id/send', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const [existing] = await db.select().from(spsDocuments)
       .where(and(eq(spsDocuments.id, req.params.id), eq(spsDocuments.workspaceId, workspaceId)));
@@ -275,7 +275,7 @@ spsDocumentRouter.post('/:id/send', async (req: any, res) => {
         status: 'sent',
         sentAt: new Date(),
         updatedAt: new Date(),
-        auditLog: [...currentLog, { action: 'sent', timestamp: new Date().toISOString(), by: (req.user as any)?.id, sentTo: existing.recipientEmail }] as any,
+        auditLog: [...currentLog, { action: 'sent', timestamp: new Date().toISOString(), by: (req.user)?.id, sentTo: existing.recipientEmail }] as any,
       })
       .where(and(eq(spsDocuments.id, req.params.id), eq(spsDocuments.workspaceId, workspaceId)))
       .returning();
@@ -356,7 +356,7 @@ spsDocumentRouter.post('/:id/send', async (req: any, res) => {
 // POST /api/sps/documents/:id/id-verify — Trinity ID scan
 spsDocumentRouter.post('/:id/id-verify', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { imageBase64, documentType = 'government_id' } = req.body;
     if (!imageBase64) return res.status(400).json({ error: 'imageBase64 required' });
 
@@ -446,7 +446,7 @@ spsDocumentRouter.get('/state-requirements/:stateCode/:docType', async (req: any
 // GET /api/sps/safe — List sealed documents  
 spsDocumentRouter.get('/safe/list', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
     const files = await db.select({
@@ -474,7 +474,7 @@ spsDocumentRouter.get('/safe/list', async (req: any, res) => {
 // POST /api/sps/safe — Store a sealed document record
 spsDocumentRouter.post('/safe', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
     const input = z.object({
@@ -491,7 +491,7 @@ spsDocumentRouter.post('/safe', async (req: any, res) => {
       id: randomUUID(),
       workspaceId,
       ...input,
-      uploadedBy: (req.user as any)?.id,
+      uploadedBy: (req.user)?.id,
     } as any).returning();
 
     res.status(201).json(safe);

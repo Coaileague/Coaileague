@@ -662,7 +662,7 @@ router.get("/workers-comp", async (req: AuthenticatedRequest, res) => {
         AND clock_in <= ${endDate}
       GROUP BY employee_id
     `);
-    const hoursByEmployee = wcResult.rows as Array<{ employeeId: string; totalHours: string; regularHours: string; overtimeHours: string }>;
+    const hoursByEmployee = (wcResult as any).rows as Array<{ employeeId: string; totalHours: string; regularHours: string; overtimeHours: string }>;
 
     const rows = [];
     for (const row of hoursByEmployee) {

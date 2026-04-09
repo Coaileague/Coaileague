@@ -77,15 +77,15 @@ enterpriseRouter.post('/branding', async (req: AuthenticatedRequest, res: Respon
     const [ws] = await db.select({ blob: workspaces.brandingBlob }).from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
     const current = ((ws?.blob || {}) as Record<string, any>);
     const updated = { ...current, workspaceId: wsId, updatedAt: new Date().toISOString() };
-    if (primaryColor !== undefined) updated.primaryColor = primaryColor;
-    if (secondaryColor !== undefined) updated.secondaryColor = secondaryColor;
-    if (accentColor !== undefined) updated.accentColor = accentColor;
-    if (logoUrl !== undefined) updated.logoUrl = logoUrl;
-    if (faviconUrl !== undefined) updated.faviconUrl = faviconUrl;
-    if (companyName !== undefined) updated.companyName = companyName;
-    if (tagline !== undefined) updated.tagline = tagline;
-    if (fontFamily !== undefined) updated.fontFamily = fontFamily;
-    if (customCss !== undefined) updated.customCss = customCss;
+    if (primaryColor !== undefined) (updated as any).primaryColor = primaryColor;
+    if (secondaryColor !== undefined) (updated as any).secondaryColor = secondaryColor;
+    if (accentColor !== undefined) (updated as any).accentColor = accentColor;
+    if (logoUrl !== undefined) (updated as any).logoUrl = logoUrl;
+    if (faviconUrl !== undefined) (updated as any).faviconUrl = faviconUrl;
+    if (companyName !== undefined) (updated as any).companyName = companyName;
+    if (tagline !== undefined) (updated as any).tagline = tagline;
+    if (fontFamily !== undefined) (updated as any).fontFamily = fontFamily;
+    if (customCss !== undefined) (updated as any).customCss = customCss;
     await db.update(workspaces).set({ brandingBlob: updated }).where(eq(workspaces.id, wsId));
     res.json(updated);
   } catch (err) {

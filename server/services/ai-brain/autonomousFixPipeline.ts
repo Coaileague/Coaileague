@@ -655,7 +655,7 @@ class AutonomousFixPipelineService {
       }
 
       // Get the proposed changes
-      const proposedChanges = approval.proposedChanges as PatchOperation[] | undefined;
+      const proposedChanges = (approval as any).proposedChanges as PatchOperation[] | undefined;
       
       if (!proposedChanges || !Array.isArray(proposedChanges)) {
         return {
@@ -675,9 +675,9 @@ class AutonomousFixPipelineService {
         title: approval.title,
         approach: approval.description,
         patches: proposedChanges,
-        affectedFiles: approval.affectedFiles || [],
-        rollbackPlan: approval.rollbackPlan || 'Git revert',
-        riskLevel: (approval.riskLevel as any) || 'medium',
+        affectedFiles: (approval as any).affectedFiles || [],
+        rollbackPlan: (approval as any).rollbackPlan || 'Git revert',
+        riskLevel: (approval as any).riskLevel || 'medium',
         confidence: 1.0, // Approved = full confidence
         requiresApproval: false,
         estimatedImpact: `Approved fix for ${approval.title}`,
@@ -892,7 +892,7 @@ class AutonomousFixPipelineService {
     }
     
     // Run internal approval gate (validates code is still clean)
-    const internalApproval = await this.runInternalApprovalGate(findingId, validatedSpec.affectedFiles);
+    const internalApproval = await this.runInternalApprovalGate(findingId, (validatedSpec as any).affectedFiles);
     if (!internalApproval.approved) {
       log.info(`[AutonomousFix] Internal approval gate rejected: ${internalApproval.reason}`);
       if (lastOperationId) {
@@ -915,8 +915,8 @@ class AutonomousFixPipelineService {
     const commitResult = await trinityCodeOps.commitChanges({
       workspaceId: 'system',
       userId: 'trinity',
-      files: validatedSpec.affectedFiles,
-      message: `[Trinity AutoFix] ${validatedSpec.title}\n\nApproach: ${validatedSpec.approach.substring(0, 200)}...\nConfidence: ${(validatedSpec.confidence * 100).toFixed(0)}%\nAttempts: ${iterationResult.attempts.length}`,
+      files: (validatedSpec as any).affectedFiles,
+      message: `[Trinity AutoFix] ${(validatedSpec as any).title}\n\nApproach: ${(validatedSpec as any).approach.substring(0, 200)}...\(nConfidence as any): ${(validatedSpec.confidence * 100).toFixed(0)}%\nAttempts: ${iterationResult.attempts.length}`,
       author: this.config.commitAuthor,
     });
     

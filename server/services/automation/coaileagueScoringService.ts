@@ -481,11 +481,11 @@ export class CoAIleagueScoringService {
   ): Promise<number> {
     try {
       // Get employee personality tags
-      const employeeTags = await db.query.employeePersonalityTags.findMany({
+      const employeeTags = await (db as any).query.employeePersonalityTags.findMany({
         where: eq(employeePersonalityTags.employeeId, employeeId),
       });
 
-      const clientPrefs = await db.query.clientPersonalityPreferences.findMany({
+      const clientPrefs = await (db as any).query.clientPersonalityPreferences.findMany({
         where: eq(clientPersonalityPreferences.clientId, clientId),
       });
 

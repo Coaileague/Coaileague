@@ -184,7 +184,7 @@ router.post("/api/auth/register", async (req, res) => {
     }
 
     // Auto-login after registration - CRITICAL: Rotate session ID and explicitly save to database
-    const priorHrisState = (req.session as any).hrisOAuthState;
+    const priorHrisState = (req as any).session.hrisOAuthState;
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => {
         if (err) {
@@ -195,7 +195,7 @@ router.post("/api/auth/register", async (req, res) => {
         }
       });
     });
-    if (priorHrisState) (req.session as any).hrisOAuthState = priorHrisState;
+    if (priorHrisState) (req as any).session.hrisOAuthState = priorHrisState;
 
     req.session.userId = newUser.id;
     const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
@@ -429,7 +429,7 @@ router.post("/api/auth/login", async (req, res) => {
     // userId. Without regenerate(), an attacker who planted a pre-login session cookie
     // (via XSS or physical access) can keep the same session ID and hijack the session
     // after the victim logs in. Capture pre-auth session values so they survive rotation.
-    const priorHrisState = (req.session as any).hrisOAuthState;
+    const priorHrisState = (req as any).session.hrisOAuthState;
     const priorSessionData = { ...req.session };
     delete (priorSessionData as any).cookie; // Don't copy cookie config
 
@@ -446,7 +446,7 @@ router.post("/api/auth/login", async (req, res) => {
 
     // Restore prior session data and set userId
     Object.assign(req.session, priorSessionData);
-    if (priorHrisState) (req.session as any).hrisOAuthState = priorHrisState;
+    if (priorHrisState) (req as any).session.hrisOAuthState = priorHrisState;
     req.session.userId = user.id;
 
     // SECURITY: Ensure session is regenerated on every login
@@ -582,7 +582,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
     const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
 
     // Create session
-    const priorHrisState = (req.session as any).hrisOAuthState;
+    const priorHrisState = (req as any).session.hrisOAuthState;
     const priorSessionData = { ...req.session };
     delete (priorSessionData as any).cookie;
 
@@ -591,7 +591,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
     });
     
     Object.assign(req.session, priorSessionData);
-    if (priorHrisState) (req.session as any).hrisOAuthState = priorHrisState;
+    if (priorHrisState) (req as any).session.hrisOAuthState = priorHrisState;
     req.session.userId = user.id;
 
     log.info(`[MFA Verify] Session regenerated for user ${user.id}`);
@@ -902,7 +902,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
         email: sessionUser.email || '',
         firstName: sessionUser.firstName ?? null,
         lastName: sessionUser.lastName ?? null,
-        username: sessionUser.username ?? null,
+        username: (sessionUser as any).username ?? null,
         role: sessionUser.role ?? 'employee',
         currentWorkspaceId: wsId,
         workspaceRole: null,
@@ -1163,7 +1163,7 @@ router.patch("/api/user/preferences", requireAuth, async (req, res) => {
     const data = preferencesSchema.parse(req.body);
     
     // Get current workspace to update employee-level preference
-    const workspaceId = req.workspaceId || sessionUser.workspaceId || sessionUser.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (sessionUser as any).workspaceId || sessionUser.currentWorkspaceId;
     
     // If viewModePreference is set and we have a workspace, update employee record
     if (data.viewModePreference !== undefined && workspaceId) {
@@ -1220,7 +1220,7 @@ router.patch("/api/user/preferences", requireAuth, async (req, res) => {
 router.get("/api/user/view-mode", requireAuth, async (req, res) => {
   try {
     const sessionUser = req.user as User;
-    const workspaceId = req.workspaceId || sessionUser.workspaceId || sessionUser.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (sessionUser as any).workspaceId || sessionUser.currentWorkspaceId;
     
     let effectiveMode: 'simple' | 'pro' = sessionUser.simpleMode ? 'simple' : 'pro';
     let source = 'user_fallback';
@@ -1304,7 +1304,7 @@ router.post("/api/auth/reset-password-request", async (req, res) => {
         );
         log.info(`[Auth] Password reset email: ${emailResult?.success ? 'SENT OK' : `FAILED - ${emailResult?.error}`}`);
       } catch (emailError: unknown) {
-        log.error(`[Auth] Password reset email delivery error:`, emailError?.message || emailError);
+        log.error(`[Auth] Password reset email delivery error:`, (emailError as any)?.message || emailError);
       }
     } else {
       log.info(`[Auth] Password reset: no account found for ${data.email} - skipping email`);
@@ -1531,7 +1531,7 @@ router.patch("/api/auth/language-preference", async (req, res) => {
     }
     await db.update(users).set({ preferredLanguage, updatedAt: new Date() }).where(eq(users.id, userId));
     // Update session so downstream reads work immediately
-    (req.session as any).preferredLanguage = preferredLanguage;
+    (req as any).session.preferredLanguage = preferredLanguage;
     res.json({ preferredLanguage, message: "Language preference updated" });
   } catch (err) {
     log.error("[LanguagePref] PATCH error:", err);

@@ -52,16 +52,16 @@ export function platformStaffAuditMiddleware(req: Request, res: Response, next: 
     const status = res.statusCode;
 
     const actorId =
-      authReq.isTrinityBot ? 'trinity-bot-system' : (authReq.user?.id || 'unknown');
+      (authReq as any).isTrinityBot ? 'trinity-bot-system' : (authReq.user?.id || 'unknown');
 
     const platformRole =
-      authReq.isTrinityBot ? 'Bot' : (authReq.platformRole || 'unknown');
+      (authReq as any).isTrinityBot ? 'Bot' : (authReq.platformRole || 'unknown');
 
     const targetWorkspace =
       authReq.workspaceId ||
-      (req.params as any)?.workspaceId ||
-      (req.body as any)?.workspaceId ||
-      (req.query as any)?.workspaceId ||
+      (req as any).params?.workspaceId ||
+      (req as any).body?.workspaceId ||
+      ((req as any).query)?.workspaceId ||
       null;
 
     const metadata = {

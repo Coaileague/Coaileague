@@ -839,7 +839,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
     if (!user?.id) {
       return res.status(401).json({ error: "Authentication required" });
     }
-    const workspaceId = req.workspaceId || req.user?.workspaceId || user.currentWorkspaceId || null;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || user.currentWorkspaceId || null;
 
     const validated = sendEmailSchema.parse(req.body); // infra
 
@@ -976,7 +976,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
             'internal_external',
             workspaceId
           );
-          if (result.messageId) lastMessageId = result.messageId;
+          if (result.messageId) lastMessageId = (result as any).messageId;
         }
 
         externalResult = {
@@ -1032,7 +1032,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
             if (recipientMailbox?.userId && recipientMailbox.userId !== user.id) {
               universalNotificationEngine.sendInternalEmailNotification({
                 recipientUserId: recipientMailbox.userId,
-                workspaceId: req.workspaceId || req.user?.workspaceId || user.currentWorkspaceId || '',
+                workspaceId: req.workspaceId || (req.user)?.workspaceId || user.currentWorkspaceId || '',
                 senderName: mailbox.displayName || mailbox.emailAddress,
                 subject: validated.subject,
                 emailId: email.id,

@@ -240,7 +240,7 @@ class TrinityWorkforceProtocolService {
 
     const records = await db.select({
       id: disciplinaryRecords.id,
-      type: disciplinaryRecords.type,
+      type: (disciplinaryRecords as any).type,
       issuedAt: disciplinaryRecords.issuedAt,
     })
       .from(disciplinaryRecords)
@@ -443,8 +443,8 @@ class TrinityWorkforceProtocolService {
     // Converted to Drizzle ORM: IN subquery → inArray()
     const handbookRows = await db.select({
       documentType: employeeDocuments.documentType,
-      storagePath: employeeDocuments.storagePath,
-      fileName: employeeDocuments.fileName,
+      storagePath: (employeeDocuments as any).storagePath,
+      fileName: (employeeDocuments as any).fileName,
     })
       .from(employeeDocuments)
       .where(and(

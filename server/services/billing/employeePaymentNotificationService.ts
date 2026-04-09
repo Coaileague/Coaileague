@@ -87,7 +87,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
         let periodLabel = 'Pay Period';
         try {
           if (run.periodStart && run.periodEnd) {
-            periodLabel = `${format(new Date(run.periodStart as any), 'MMM d')} – ${format(new Date(run.periodEnd as any), 'MMM d, yyyy')}`;
+            periodLabel = `${format(new Date(run as any).periodStart, 'MMM d')} – ${format(new Date(run as any).periodEnd, 'MMM d, yyyy')}`;
           }
         } catch { periodLabel = 'Pay Period'; }
 

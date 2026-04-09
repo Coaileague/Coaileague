@@ -729,7 +729,7 @@ export class EnterpriseOnboardingOrchestrator {
             .where(eq(workspaces.id, workspaceId))
             .limit(1);
           
-          return org?.status === 'active';
+          return (org as any)?.status === 'active';
         },
         
         // STEP 7: NOTIFY
@@ -792,7 +792,7 @@ export class EnterpriseOnboardingOrchestrator {
     const setupChecklist = {
       profile_complete: !!(org.name && (org as any).licenseNumber),
       staffing_email_known: !!orgCode,
-      subscription_active: org.status === 'active',
+      subscription_active: (org as any).status === 'active',
       qb_connected: false, // populated below if needed
     };
     

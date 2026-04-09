@@ -148,7 +148,7 @@ router.get('/conversations/:id/messages', async (req: AuthenticatedRequest, res)
         return {
           ...msg,
           role: senderRole || 'guest',
-          userType: userInfo?.userType || 'guest'
+          userType: (userInfo as any)?.userType || 'guest'
         };
       }));
 
@@ -181,7 +181,7 @@ router.get('/conversations/:id/messages', async (req: AuthenticatedRequest, res)
       return {
         ...msg,
         role: senderRole || 'guest',
-        userType: userInfo?.userType || 'guest'
+        userType: (userInfo as any)?.userType || 'guest'
       };
     }));
 
@@ -308,7 +308,7 @@ router.get('/main-room/messages', async (req: AuthenticatedRequest, res) => {
       return {
         ...msg,
         role: senderRole || 'guest',
-        userType: userInfo?.userType || 'guest'
+        userType: (userInfo as any)?.userType || 'guest'
       };
     }));
 
@@ -483,7 +483,7 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    const workspaceId = req.workspaceId || req.user?.workspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) {
       return res.status(200).json({
         message: "AI features are available to workspace members only. A human support agent will assist you shortly.",
@@ -492,7 +492,7 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
 
     const response = await generateGeminiResponse({
       message,
@@ -522,10 +522,10 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
  */
 router.post('/trinity-field-query', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const workspaceId = req.workspaceId || req.user?.workspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
 
     const { question } = req.body;
@@ -856,8 +856,8 @@ router.post('/conversations/:id/typing', async (req: AuthenticatedRequest, res) 
       return res.status(404).json({ message: "Conversation not found" });
     }
 
-    const isParticipant = conversation.participantIds?.includes(userId);
-    const isCreator = conversation.creatorId === userId;
+    const isParticipant = (conversation as any).participantIds?.includes(userId);
+    const isCreator = (conversation as any).creatorId === userId;
     let isWorkspaceMember = false;
 
     if (!isParticipant && !isCreator && conversation.workspaceId) {
@@ -888,13 +888,13 @@ router.post('/conversations/:id/typing', async (req: AuthenticatedRequest, res) 
         workspaceId: workspaceId,
         conversationId,
         userId,
-        userName: user.displayName || user.username || "Anonymous",
+        userName: (user as any).displayName || (user as any).username || "Anonymous",
       })
       .onConflictDoUpdate({
         target: [typingIndicators.conversationId, typingIndicators.userId],
         set: {
           startedAt: sql`NOW()`,
-          userName: user.displayName || user.username || "Anonymous",
+          userName: (user as any).displayName || (user as any).username || "Anonymous",
         },
       });
 
@@ -920,8 +920,8 @@ router.delete('/conversations/:id/typing', async (req: AuthenticatedRequest, res
       return res.status(404).json({ message: "Conversation not found" });
     }
 
-    const isParticipant = conversation.participantIds?.includes(userId);
-    const isCreator = conversation.creatorId === userId;
+    const isParticipant = (conversation as any).participantIds?.includes(userId);
+    const isCreator = (conversation as any).creatorId === userId;
     let isWorkspaceMember = false;
 
     if (!isParticipant && !isCreator && conversation.workspaceId) {
@@ -1138,8 +1138,8 @@ router.get('/room/:roomId/motd', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: 'Room not found' });
     }
 
-    const roomModes = (conversation.metadata as any)?.modes || [RoomMode.ORG];
-    const activeBots = (conversation.metadata as any)?.activeBots || [];
+    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as any).metadata?.activeBots || [];
     const roomName = conversation.subject || 'Chat Room';
 
     const motd = generateMOTD(roomName, roomModes, activeBots);
@@ -1218,8 +1218,8 @@ router.get('/room/:roomId/bots', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: 'Room not found' });
     }
 
-    const roomModes = (conversation.metadata as any)?.modes || [RoomMode.ORG];
-    const activeBots = (conversation.metadata as any)?.activeBots || [];
+    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as any).metadata?.activeBots || [];
 
     const availableBots = new Set<string>();
     for (const mode of roomModes) {

@@ -108,7 +108,7 @@ async function getEmployeeId(userId: string, workspaceId: string): Promise<strin
 advancedSchedulingRouter.post('/recurring', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -146,7 +146,7 @@ advancedSchedulingRouter.post('/recurring', requireManager, async (req: Request,
       category: category || 'general',
       startTimeOfDay,
       endTimeOfDay,
-      daysOfWeek: daysOfWeek as DayOfWeek[],
+      daysOfWeek: daysOfWeek as unknown as DayOfWeek[],
       recurrencePattern: (recurrencePattern as RecurrencePattern) || 'weekly',
       startDate: new Date(startDate),
       endDate: endDate ? new Date(endDate) : null,
@@ -174,7 +174,7 @@ advancedSchedulingRouter.post('/recurring', requireManager, async (req: Request,
           category,
           startTimeOfDay,
           endTimeOfDay,
-          daysOfWeek: daysOfWeek as DayOfWeek[],
+          daysOfWeek: daysOfWeek as unknown as DayOfWeek[],
           recurrencePattern: (recurrencePattern as RecurrencePattern) || 'weekly',
           billableToClient,
           hourlyRateOverride: hourlyRateOverride ? Number(hourlyRateOverride) : undefined,
@@ -202,7 +202,7 @@ advancedSchedulingRouter.post('/recurring', requireManager, async (req: Request,
 advancedSchedulingRouter.get('/recurring', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -226,7 +226,7 @@ advancedSchedulingRouter.get('/recurring', requireAuth, async (req: Request, res
 advancedSchedulingRouter.get('/recurring/:patternId', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -252,7 +252,7 @@ advancedSchedulingRouter.get('/recurring/:patternId', requireAuth, async (req: R
 advancedSchedulingRouter.patch('/recurring/:patternId', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -281,7 +281,7 @@ advancedSchedulingRouter.patch('/recurring/:patternId', requireManager, async (r
 advancedSchedulingRouter.delete('/recurring/:patternId', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -307,7 +307,7 @@ advancedSchedulingRouter.delete('/recurring/:patternId', requireManager, async (
 advancedSchedulingRouter.post('/recurring/:patternId/generate', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -359,7 +359,7 @@ advancedSchedulingRouter.post('/recurring/:patternId/generate', requireManager, 
 advancedSchedulingRouter.get('/recurring/:patternId/conflicts', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -389,7 +389,7 @@ advancedSchedulingRouter.get('/recurring/:patternId/conflicts', requireAuth, asy
 advancedSchedulingRouter.post('/recurring/generate', requireOwner, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -426,7 +426,7 @@ advancedSchedulingRouter.post('/recurring/generate', requireOwner, async (req: R
         category,
         startTimeOfDay,
         endTimeOfDay,
-        daysOfWeek: daysOfWeek as DayOfWeek[],
+        daysOfWeek: daysOfWeek as unknown as DayOfWeek[],
         recurrencePattern: recurrencePattern as RecurrencePattern || 'weekly',
         billableToClient,
         hourlyRateOverride: hourlyRateOverride ? Number(hourlyRateOverride) : undefined,
@@ -453,7 +453,7 @@ advancedSchedulingRouter.post('/recurring/generate', requireOwner, async (req: R
 advancedSchedulingRouter.post('/shifts/:shiftId/swap-request', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -507,7 +507,7 @@ advancedSchedulingRouter.post('/shifts/:shiftId/swap-request', requireAuth, asyn
 advancedSchedulingRouter.get('/swap-requests', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -537,7 +537,7 @@ advancedSchedulingRouter.get('/swap-requests', requireAuth, async (req: Request,
 advancedSchedulingRouter.get('/swap-requests/:swapId', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -563,7 +563,7 @@ advancedSchedulingRouter.get('/swap-requests/:swapId', requireAuth, async (req: 
 advancedSchedulingRouter.post('/swap-requests/:swapId/approve', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -585,7 +585,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/approve', requireManager, 
     if (isGamificationEnabled('enableGamification') && swapRequest) {
       try {
         // Award points to both employees involved in the swap
-        const requesterId = swapRequest.requestingEmployeeId;
+        const requesterId = (swapRequest as any).requestingEmployeeId;
         const accepterId = swapRequest.targetEmployeeId;
         
         if (requesterId) {
@@ -626,7 +626,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/approve', requireManager, 
 advancedSchedulingRouter.post('/swap-requests/:swapId/reject', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -668,7 +668,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/reject', requireManager, a
 advancedSchedulingRouter.post('/swap-requests/:swapId/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -697,7 +697,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/cancel', requireAuth, asyn
 advancedSchedulingRouter.get('/shifts/:shiftId/available-employees', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -720,7 +720,7 @@ advancedSchedulingRouter.get('/shifts/:shiftId/available-employees', requireAuth
 advancedSchedulingRouter.get('/shifts/:shiftId/ai-suggestions', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -744,7 +744,7 @@ advancedSchedulingRouter.get('/shifts/:shiftId/ai-suggestions', requireAuth, asy
 advancedSchedulingRouter.post('/swap/request', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -783,7 +783,7 @@ advancedSchedulingRouter.post('/swap/request', requireAuth, async (req: Request,
 advancedSchedulingRouter.post('/swap/:swapId/respond', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -817,7 +817,7 @@ advancedSchedulingRouter.post('/swap/:swapId/respond', requireAuth, async (req: 
 advancedSchedulingRouter.get('/swap/requests', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -845,7 +845,7 @@ advancedSchedulingRouter.get('/swap/requests', requireAuth, async (req: Request,
 advancedSchedulingRouter.post('/swap/:swapId/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -874,7 +874,7 @@ advancedSchedulingRouter.post('/swap/:swapId/cancel', requireAuth, async (req: R
 advancedSchedulingRouter.get('/swap/:shiftId/available-employees', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -901,7 +901,7 @@ advancedSchedulingRouter.get('/swap/:shiftId/available-employees', requireAuth, 
 advancedSchedulingRouter.post('/shifts/:shiftId/duplicate', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -933,7 +933,7 @@ advancedSchedulingRouter.post('/shifts/:shiftId/duplicate', requireManager, asyn
 advancedSchedulingRouter.post('/duplicate-week', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -966,7 +966,7 @@ advancedSchedulingRouter.post('/duplicate-week', requireManager, async (req: Req
 advancedSchedulingRouter.post('/copy-week', requireOwner, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1002,7 +1002,7 @@ advancedSchedulingRouter.post('/copy-week', requireOwner, async (req: Request, r
 advancedSchedulingRouter.get('/templates', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1023,7 +1023,7 @@ advancedSchedulingRouter.get('/templates', requireAuth, async (req: Request, res
 advancedSchedulingRouter.post('/templates', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -1057,7 +1057,7 @@ advancedSchedulingRouter.post('/templates', requireManager, async (req: Request,
 advancedSchedulingRouter.get('/templates/:templateId', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1089,7 +1089,7 @@ advancedSchedulingRouter.get('/templates/:templateId', requireAuth, async (req: 
 advancedSchedulingRouter.delete('/templates/:templateId', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1121,7 +1121,7 @@ advancedSchedulingRouter.delete('/templates/:templateId', requireManager, async 
 advancedSchedulingRouter.patch('/templates/:templateId', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -1160,7 +1160,7 @@ advancedSchedulingRouter.patch('/templates/:templateId', requireManager, async (
 advancedSchedulingRouter.post('/templates/:templateId/apply', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });

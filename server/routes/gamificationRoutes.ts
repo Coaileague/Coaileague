@@ -12,7 +12,7 @@ const router = Router();
 // Get user's gamification stats
 router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -20,7 +20,7 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
     // Platform admins can view any workspace via query param, or their own if set
     const isPlatformAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
     const queryWorkspaceId = req.query.workspaceId as string;
-    const workspaceId = (isPlatformAdmin && queryWorkspaceId) || (req as any).workspaceId || user?.workspaceId;
+    const workspaceId = (isPlatformAdmin && queryWorkspaceId) || (req as any).workspaceId || (user as any)?.workspaceId;
     
     if (workspaceId && workspaceId !== (req as any).workspaceId && !isPlatformAdmin) {
       return res.status(403).json({ error: "Unauthorized workspace access" });
@@ -221,8 +221,8 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
 // Get leaderboard
 router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    if (!user?.id || !user?.workspaceId) {
+    const user = req.user;
+    if (!user?.id || !(user as any)?.workspaceId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -237,12 +237,12 @@ router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
         lastName: employees.lastName,
         userId: employees.userId,
         totalHoursSum: sql<string>`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float)), 0)`,
-        recentHours: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntries.date} >= ${thirtyDaysAgo.toISOString()} THEN CAST(${timeEntries.totalHours} AS float) ELSE 0 END), 0)`,
-        priorHours: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntries.date} >= ${sixtyDaysAgo.toISOString()} AND ${timeEntries.date} < ${thirtyDaysAgo.toISOString()} THEN CAST(${timeEntries.totalHours} AS float) ELSE 0 END), 0)`,
+        recentHours: sql<string>`COALESCE(SUM(CASE WHEN ${(timeEntries as any).date} >= ${thirtyDaysAgo.toISOString()} THEN CAST(${timeEntries.totalHours} AS float) ELSE 0 END), 0)`,
+        priorHours: sql<string>`COALESCE(SUM(CASE WHEN ${(timeEntries as any).date} >= ${sixtyDaysAgo.toISOString()} AND ${(timeEntries as any).date} < ${thirtyDaysAgo.toISOString()} THEN CAST(${timeEntries.totalHours} AS float) ELSE 0 END), 0)`,
       })
       .from(employees)
       .leftJoin(timeEntries, eq(employees.id, timeEntries.employeeId))
-      .where(eq(employees.workspaceId, user.workspaceId))
+      .where(eq((employees as any).workspaceId, (user as any).workspaceId))
       .groupBy(employees.id, employees.firstName, employees.lastName, employees.userId)
       .orderBy(sql`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float)), 0) DESC`)
       .limit(10);
@@ -275,7 +275,7 @@ router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
 // Award points to user
 router.post("/award-points", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }

@@ -115,7 +115,7 @@ router.post("/api/pto", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.patch("/api/pto/:id/approve", requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
@@ -183,7 +183,7 @@ router.patch("/api/pto/:id/approve", requireAuth, requireManager, async (req: Au
 
 router.patch("/api/pto/:id/deny", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
@@ -459,7 +459,7 @@ router.get("/api/shift-actions/pending", requireManager, async (req: Authenticat
 
     const enriched = await Promise.all(
       pendingActions.map(async (action) => {
-        const employee = await storage.getEmployee(action.employeeId, workspaceId);
+        const employee = await storage.getEmployee((action as any).employeeId, workspaceId);
         const shift = action.shiftId
           ? await db
               .select()
@@ -525,10 +525,10 @@ router.put("/api/shift-actions/:id/approve", requireManager, async (req: Authent
       .where(eq(shiftActions.id, id))
       .returning();
 
-    if (approved && action.actionType === "swap" && action.shiftId && action.targetShiftId) {
+    if (approved && action.actionType === "swap" && action.shiftId && (action as any).targetShiftId) {
       try {
         const [shift1] = await db.select().from(shifts).where(eq(shifts.id, action.shiftId));
-        const [shift2] = await db.select().from(shifts).where(eq(shifts.id, action.targetShiftId));
+        const [shift2] = await db.select().from(shifts).where(eq(shifts.id, (action as any).targetShiftId));
 
         if (shift1 && shift2) {
           await db
@@ -538,7 +538,7 @@ router.put("/api/shift-actions/:id/approve", requireManager, async (req: Authent
           await db
             .update(shifts)
             .set({ employeeId: shift1.employeeId })
-            .where(eq(shifts.id, action.targetShiftId));
+            .where(eq(shifts.id, (action as any).targetShiftId));
         }
       } catch (swapError) {
         log.error("Error executing shift swap:", swapError);
@@ -602,7 +602,7 @@ router.get("/api/timesheet-edit-requests/pending", requireManager, async (req: A
 
     const enriched = await Promise.all(
       requests.map(async (request) => {
-        const employee = await storage.getEmployee(request.employeeId, workspaceId);
+        const employee = await storage.getEmployee((request as any).employeeId, workspaceId);
         return {
           ...request,
           employeeName: employee ? `${employee.firstName} ${employee.lastName}` : "Unknown",

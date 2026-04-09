@@ -716,7 +716,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
               atRiskClients: strategicContext.summary.atRiskClients,
               totalClients: strategicContext.clients.length,
               clientTiers: strategicContext.clients.reduce((acc: Record<string, number>, c) => {
-                acc[c.tier] = (acc[c.tier] || 0) + 1;
+                acc[(c as any).tier] = (acc[(c as any).tier] || 0) + 1;
                 return acc;
               }, {}),
             };

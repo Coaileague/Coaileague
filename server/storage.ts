@@ -1284,12 +1284,12 @@ export class DatabaseStorage implements IStorage {
         SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()
       `);
       
-      if (!result.rows || result.rows.length === 0) {
+      if (!(result as any).rows || (result as any).rows.length === 0) {
         return null;
       }
       
       // The sess column contains the session data as JSON
-      const sessionData = result.rows[0].sess as {passport?: {user?: string}};
+      const sessionData = (result as any).rows[0].sess as {passport?: {user?: string}};
       return sessionData;
     } catch (error) {
       log.error('[SECURITY] Failed to fetch session:', error);
@@ -3996,7 +3996,7 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(chatConversations).where(eq(chatConversations.workspaceId, workspaceId));
     
     if (filters?.status) {
-      query = query.where(and(eq(chatConversations.workspaceId, workspaceId), eq(chatConversations.status, filters.status as any))) as any;
+      query = (query as any).where(and(eq(chatConversations.workspaceId, workspaceId), eq(chatConversations.status, filters.status as any))) as any;
     }
     
     return await query.orderBy(desc(chatConversations.lastMessageAt));
@@ -8117,10 +8117,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(aiResponses.workspaceId, workspaceId));
 
     if (filters?.sourceType) {
-      query = query.where(eq(aiResponses.sourceType, filters.sourceType));
+      query = (query as any).where(eq(aiResponses.sourceType, filters.sourceType));
     }
     if (filters?.feature) {
-      query = query.where(eq(aiResponses.feature, filters.feature));
+      query = (query as any).where(eq(aiResponses.feature, filters.feature));
     }
 
     query = query.orderBy(desc(aiResponses.createdAt));
@@ -8215,13 +8215,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(aiSuggestions.workspaceId, workspaceId));
 
     if (filters?.status) {
-      query = query.where(eq(aiSuggestions.status, filters.status));
+      query = (query as any).where(eq(aiSuggestions.status, filters.status));
     }
     if (filters?.priority) {
-      query = query.where(eq(aiSuggestions.priority, filters.priority));
+      query = (query as any).where(eq(aiSuggestions.priority, filters.priority));
     }
     if (filters?.type) {
-      query = query.where(eq(aiSuggestions.suggestionType, filters.type));
+      query = (query as any).where(eq(aiSuggestions.suggestionType, filters.type));
     }
 
     query = query.orderBy(desc(aiSuggestions.createdAt));
@@ -8776,8 +8776,8 @@ export class DatabaseStorage implements IStorage {
   async updateAiBrainActionLog(id: string, workspaceId: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined> {
     const safeData: Record<string, any> = {};
     if (data.actorType !== undefined) safeData.actionType = data.actorType;
-    if (data.actionData !== undefined) safeData.actionData = data.actionData;
-    if (data.result !== undefined) safeData.result = data.result;
+    if (data.actionData !== undefined) safeData.actionData = (data as any).actionData;
+    if (data.result !== undefined) safeData.result = (data as any).result;
     if (Object.keys(safeData).length === 0) return this.getAiBrainActionLog(id);
     const [updated] = await db
       .update(aiBrainActionLogs)
@@ -8897,12 +8897,12 @@ export class DatabaseStorage implements IStorage {
     // Redirected: support_audit_logs merged into audit_logs with metadata
     const [created] = await db.insert(auditLogs).values({
       workspaceId: log.workspaceId || 'system',
-      userId: log.adminUserId,
+      userId: (log as any).adminUserId,
       action: 'support_action' as any,
       entityType: 'support_audit',
       metadata: { ...log, logType: 'support_audit' },
     }).returning();
-    return { ...created, adminUserId: log.adminUserId, sessionId: log.sessionId, action: log.action, severity: log.severity, timestamp: created.createdAt } as any;
+    return { ...created, adminUserId: (log as any).adminUserId, sessionId: log.sessionId, action: log.action, severity: log.severity, timestamp: created.createdAt } as any;
   }
 
   async getSupportAuditLogs(filters?: {
@@ -8931,9 +8931,9 @@ export class DatabaseStorage implements IStorage {
     return rows.map(r => ({
       ...r,
       adminUserId: r.userId,
-      sessionId: (r.metadata as any)?.sessionId,
-      severity: (r.metadata as any)?.severity,
-      action: (r.metadata as any)?.action,
+      sessionId: (r as any).metadata?.sessionId,
+      severity: (r as any).metadata?.severity,
+      action: (r as any).metadata?.action,
       timestamp: r.createdAt,
     })) as any[];
   }

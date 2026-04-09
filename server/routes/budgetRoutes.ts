@@ -33,7 +33,7 @@ router.get('/', requireManager, async (req: AuthenticatedRequest, res) => {
       allBudgets = allBudgets.filter(b => b.fiscalYear === parseInt(fiscalYear as string));
     }
     if (department) {
-      allBudgets = allBudgets.filter(b => b.department === department);
+      allBudgets = allBudgets.filter(b => (b as any).department === department);
     }
     if (status) {
       allBudgets = allBudgets.filter(b => b.status === status);

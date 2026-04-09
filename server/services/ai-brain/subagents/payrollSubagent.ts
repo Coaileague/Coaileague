@@ -909,7 +909,7 @@ class PayrollSubagentService {
         result,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       }).onConflictDoUpdate({
-        target: idempotencyKeys.key,
+        target: (idempotencyKeys as any).key,
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {

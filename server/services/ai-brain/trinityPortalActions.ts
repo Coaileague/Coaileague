@@ -149,7 +149,7 @@ export function registerPortalActions(): void {
       startTime: shifts.startTime,
       endTime: shifts.endTime,
       status: shifts.status,
-      locationName: shifts.locationName,
+      locationName: (shifts as any).locationName,
     }).from(shifts)
       .where(and(
         eq(shifts.workspaceId, workspaceId),
@@ -163,7 +163,7 @@ export function registerPortalActions(): void {
     const pendingDocs = await db.select({
       id: employeeDocuments.id,
       documentType: employeeDocuments.documentType,
-      title: employeeDocuments.title,
+      title: (employeeDocuments as any).title,
       status: employeeDocuments.status,
       dueDate: (employeeDocuments as any).dueDate,
     }).from(employeeDocuments)

@@ -492,9 +492,9 @@ class SubagentBanker {
       isActive: creditsAccount ? !creditsAccount.isSuspended : true,
       lowBalanceWarning: (creditsAccount?.currentBalance || 0) < (creditsAccount?.lowBalanceAlertThreshold || 50),
       recentTransactions: recentTx.map(tx => ({
-        type: tx.transactionType,
+        type: (tx as any).transactionType,
         credits: tx.amount,
-        description: tx.description || '',
+        description: (tx as any).description || '',
         createdAt: tx.createdAt || new Date()
       }))
     };
@@ -529,14 +529,14 @@ class SubagentBanker {
     const entries: LedgerEntry[] = filteredTransactions.map(tx => ({
       id: tx.id,
       workspaceId: tx.workspaceId,
-      userId: tx.userId,
+      userId: (tx as any).userId,
       type: tx.amount >= 0 ? 'credit' : 'debit',
       amount: Math.abs(tx.amount),
       balanceAfter: tx.balanceAfter,
-      category: tx.featureKey || tx.transactionType,
-      description: tx.description || '',
-      taskId: tx.relatedEntityId || undefined,
-      metadata: tx.metadata as Record<string, any> | undefined,
+      category: (tx as any).featureKey || (tx as any).transactionType,
+      description: (tx as any).description || '',
+      taskId: (tx as any).relatedEntityId || undefined,
+      metadata: (tx as any).metadata as Record<string, any> | undefined,
       createdAt: tx.createdAt || new Date()
     }));
     

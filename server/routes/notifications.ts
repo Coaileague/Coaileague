@@ -561,7 +561,7 @@ router.get("/api/platform/diagnostics", requireAuth, async (req: AuthenticatedRe
     try {
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.user?.id;
-      const platformRole = (authReq.user as any)?.platformRole || "";
+      const platformRole = (authReq.user)?.platformRole || "";
       const domain = req.query.domain as string | undefined;
 
       // RBAC check - only platform support and above can access
@@ -590,7 +590,7 @@ router.post("/api/platform/hotpatch", requireAuth, async (req: AuthenticatedRequ
     try {
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.user?.id;
-      const platformRole = (authReq.user as any)?.platformRole || "";
+      const platformRole = (authReq.user)?.platformRole || "";
       const { hotpatch, approvalCode, secondApprovalCode } = req.body;
 
       if (!hotpatch) {
@@ -1250,7 +1250,7 @@ router.get('/api/notifications/preferences', requireAuth, async (req: Authentica
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const workspaceId = req.workspaceId || req.user.workspaceId || req.user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req as any).user?.workspaceId || (req as any).user?.currentWorkspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1275,7 +1275,7 @@ router.patch('/api/notifications/preferences', requireAuth, async (req: Authenti
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const workspaceId = req.workspaceId || req.user.workspaceId || req.user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req as any).user?.workspaceId || (req as any).user?.currentWorkspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1315,7 +1315,7 @@ router.post('/api/notifications/subscribe', requireAuth, async (req: Authenticat
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const workspaceId = req.workspaceId || req.user.workspaceId || req.user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req as any).user?.workspaceId || (req as any).user?.currentWorkspaceId;
       const {  notificationType  } = req.body;
 
       if (!workspaceId) {
@@ -1356,7 +1356,7 @@ router.post('/api/notifications/unsubscribe', requireAuth, async (req: Authentic
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const workspaceId = req.workspaceId || req.user.workspaceId || req.user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req as any).user?.workspaceId || (req as any).user?.currentWorkspaceId;
       const {  notificationType  } = req.body;
 
       if (!workspaceId) {
@@ -1436,7 +1436,7 @@ router.post('/api/notifications/test-sms', requireAuth, async (req: Authenticate
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const workspaceId = req.workspaceId || req.user.workspaceId || req.user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req as any).user?.workspaceId || (req as any).user?.currentWorkspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1495,7 +1495,7 @@ router.post('/api/notifications/verify-phone', requireAuth, async (req: Authenti
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const workspaceId = req.workspaceId || req.user.workspaceId || req.user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req as any).user?.workspaceId || (req as any).user?.currentWorkspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1529,7 +1529,7 @@ router.post('/api/notifications/verify-phone', requireAuth, async (req: Authenti
   // Trigger manual shift reminder (for testing)
 router.post('/api/notifications/send-shift-reminder', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = req.workspaceId || req.user.workspaceId || req.user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (req as any).user?.workspaceId || (req as any).user?.currentWorkspaceId;
       const {  shiftId  } = req.body;
 
       if (!workspaceId) {

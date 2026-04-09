@@ -294,7 +294,7 @@ class ApiKeyRotationService {
       // Get existing key
       const result = await db.select().from(managedApiKeys).where(eq(managedApiKeys.id, keyId));
       
-      const oldKey = (result.rows as any[])[0];
+      const oldKey = ((result as any).rows as any[])[0];
       if (!oldKey) {
         return { success: false, oldKeyId: keyId, error: 'Key not found' };
       }

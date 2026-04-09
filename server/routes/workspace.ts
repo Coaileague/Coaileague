@@ -134,8 +134,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     await db.update(users).set({ currentWorkspaceId: workspace.id }).where(eq(users.id, userId));
 
     if (req.session) {
-      (req.session as any).workspaceId = workspace.id;
-      (req.session as any).activeWorkspaceId = workspace.id;
+      (req as any).session.workspaceId = workspace.id;
+      (req as any).session.activeWorkspaceId = workspace.id;
     }
 
     try {
@@ -323,10 +323,10 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       },
     });
   } catch (error: unknown) {
-    log.error('Error creating workspace:', error?.message || error);
-    log.error('Error stack:', error?.stack);
-    log.error('Error code:', error?.code);
-    log.error('Error detail:', error?.detail);
+    log.error('Error creating workspace:', (error as any)?.message || error);
+    log.error('Error stack:', (error as any)?.stack);
+    log.error('Error code:', (error as any)?.code);
+    log.error('Error detail:', (error as any)?.detail);
     res.status(500).json({ message: 'Failed to create organization' });
   }
 });

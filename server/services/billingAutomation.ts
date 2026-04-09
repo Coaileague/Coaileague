@@ -572,7 +572,7 @@ async function createInvoiceFromBillableSummary(
       eq(clientBillingSettings.isActive, true),
     ))
     .limit(1);
-  const paymentTerms = clientSettings[0]?.paymentTerms || workspace?.defaultPaymentTerms || 'net_30';
+  const paymentTerms = clientSettings[0]?.paymentTerms || (workspace as any)?.defaultPaymentTerms || 'net_30';
   const termsDaysMap: Record<string, number> = {
     'due_on_receipt': 0,
     'net_7': 7,

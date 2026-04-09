@@ -116,8 +116,8 @@ router.get('/platform/activities', async (req, res) => {
     const liveActivities = activities.map((event) => ({
       id: event.id,
       timestamp: event.createdAt?.toISOString() || new Date().toISOString(),
-      user: event.actorName || event.actorId || 'System',
-      action: event.payload?.description || `${event.eventType}: ${event.aggregateType}`,
+      user: (event as any).actorName || (event as any).actorId || 'System',
+      action: (event as any).payload?.description || `${(event as any).eventType}: ${(event as any).aggregateType}`,
       workspace: event.workspaceId || 'Platform',
       type: mapEventTypeToActivityType(event.eventType),
     }));
@@ -552,7 +552,7 @@ router.post('/support/sessions/end', async (req: AuthenticatedRequest, res) => {
     const actionsSummary = auditLogsList.map(log => ({
       action: log.action,
       severity: log.severity,
-      timestamp: log.timestamp,
+      timestamp: (log as any).timestamp,
     }));
 
     const endedSession = await storage.endSupportSession(activeSession.id, actionsSummary);
@@ -1360,7 +1360,7 @@ router.get('/support/org/:orgId/overview', async (req: AuthenticatedRequest, res
       ipAddress: req.ip || req.socket?.remoteAddress,
     });
     res.json({
-      workspace: workspace ? { id: workspace.id, name: workspace.name, status: workspace.status, plan: workspace.subscriptionTier } : null,
+      workspace: workspace ? { id: workspace.id, name: workspace.name, status: (workspace as any).status, plan: workspace.subscriptionTier } : null,
       counts: {
         employees: employeesList.length,
         activeEmployees: employeesList.filter((e: any) => e.isActive).length,
@@ -2003,7 +2003,7 @@ router.get('/action-invocations', async (req: AuthenticatedRequest, res) => {
     res.json({
       days,
       workspaceId: workspaceId || null,
-      total: result.length,
+      total: (result as any).length,
       actions: result,
     });
   } catch (err: unknown) {

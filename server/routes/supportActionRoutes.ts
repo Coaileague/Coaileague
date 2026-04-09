@@ -45,9 +45,9 @@ async function requireSupportRole(req: AuthenticatedRequest, res: Response, next
     return res.status(403).json({ error: 'Support role required' });
   }
 
-  req.supportExecutorId = userId;
-  req.executorPlatformRole = platformRole;
-  req.executorLevel = getPlatformRoleLevel(platformRole);
+  (req as any).supportExecutorId = userId;
+  (req as any).executorPlatformRole = platformRole;
+  (req as any).executorLevel = getPlatformRoleLevel(platformRole);
   next();
 }
 
@@ -55,8 +55,8 @@ const router = Router();
 
 router.get('/api/support/actions/available', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const platformRole = req.executorPlatformRole;
-    const executorLevel = req.executorLevel || 0;
+    const platformRole = (req as any).executorPlatformRole;
+    const executorLevel = (req as any).executorLevel || 0;
 
     const actions = [
       { id: 'view_user_info', label: 'View User Info', icon: 'Eye', category: 'info', minLevel: 2 },
@@ -100,7 +100,7 @@ router.post('/api/support/actions/view-user', requireAuth, requireSupportRole, a
     const parsed = targetUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await supportActionsService.getUserInfo(executorId, parsed.data.targetUserId);
     res.json(result);
   } catch (error) {
@@ -114,7 +114,7 @@ router.post('/api/support/actions/reset-password', requireAuth, requireSupportRo
     const parsed = targetEmailSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await supportActionsService.resetPassword(executorId, parsed.data.targetEmail);
     res.json(result);
   } catch (error) {
@@ -128,7 +128,7 @@ router.post('/api/support/actions/lock-account', requireAuth, requireSupportRole
     const parsed = lockAccountSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await supportActionsService.lockAccount(executorId, parsed.data.targetUserId, parsed.data.reason);
     res.json(result);
   } catch (error) {
@@ -142,7 +142,7 @@ router.post('/api/support/actions/unlock-account', requireAuth, requireSupportRo
     const parsed = targetUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await supportActionsService.unlockAccount(executorId, parsed.data.targetUserId);
     res.json(result);
   } catch (error) {
@@ -156,7 +156,7 @@ router.post('/api/support/actions/revoke-sessions', requireAuth, requireSupportR
     const parsed = targetUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await supportActionsService.revokeSessions(executorId, parsed.data.targetUserId);
     res.json(result);
   } catch (error) {
@@ -170,7 +170,7 @@ router.post('/api/support/actions/reset-email', requireAuth, requireSupportRole,
     const parsed = resetEmailSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await supportActionsService.resetEmail(executorId, parsed.data.targetUserId, parsed.data.newEmail);
     res.json(result);
   } catch (error) {
@@ -193,8 +193,8 @@ const issueDiscountSchema = z.object({
 
 router.post('/api/support/actions/refund-credits', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const executorLevel = req.executorLevel || 0;
-    const executorRole = req.executorPlatformRole;
+    const executorLevel = (req as any).executorLevel || 0;
+    const executorRole = (req as any).executorPlatformRole;
 
     if (executorLevel < 5) {
       return res.status(403).json({ success: false, error: 'Only Root Admin and Deputy Admin can refund credits' });
@@ -203,7 +203,7 @@ router.post('/api/support/actions/refund-credits', requireAuth, requireSupportRo
     const parsed = refundCreditsSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await creditManager.refundCredits({
       workspaceId: parsed.data.workspaceId,
       amount: parsed.data.amount,
@@ -232,8 +232,8 @@ const topoffCreditsSchema = z.object({
 
 router.post('/api/support/actions/topoff-credits', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const executorLevel = req.executorLevel || 0;
-    const executorRole = req.executorPlatformRole;
+    const executorLevel = (req as any).executorLevel || 0;
+    const executorRole = (req as any).executorPlatformRole;
 
     const parsed = topoffCreditsSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
@@ -261,7 +261,7 @@ router.post('/api/support/actions/topoff-credits', requireAuth, requireSupportRo
       });
     }
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
     const result = await creditManager.refundCredits({
       workspaceId,
       amount,
@@ -284,8 +284,8 @@ router.post('/api/support/actions/topoff-credits', requireAuth, requireSupportRo
 
 router.post('/api/support/actions/issue-discount', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const executorLevel = req.executorLevel || 0;
-    const executorRole = req.executorPlatformRole;
+    const executorLevel = (req as any).executorLevel || 0;
+    const executorRole = (req as any).executorPlatformRole;
 
     const parsed = issueDiscountSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
@@ -300,7 +300,7 @@ router.post('/api/support/actions/issue-discount', requireAuth, requireSupportRo
       });
     }
 
-    const executorId = req.supportExecutorId;
+    const executorId = (req as any).supportExecutorId;
 
     res.json({
       success: true,
@@ -322,13 +322,13 @@ router.post('/api/support/actions/issue-discount', requireAuth, requireSupportRo
 
 router.get('/api/support/actions/credit-history/:workspaceId', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const executorLevel = req.executorLevel || 0;
+    const executorLevel = (req as any).executorLevel || 0;
     if (executorLevel < 5) {
       return res.status(403).json({ error: 'Insufficient permissions to view credit history' });
     }
 
     const { workspaceId } = req.params;
-    const history = await creditManager.getRefundHistory(workspaceId);
+    const history = await (creditManager as any).getRefundHistory(workspaceId);
     const balance = await creditManager.getBalance(workspaceId);
 
     res.json({ history, currentBalance: balance });
@@ -344,7 +344,7 @@ router.post('/api/support/actions/approve', requireAuth, requireSupportRole, asy
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const approverId = req.supportExecutorId;
+    const approverId = (req as any).supportExecutorId;
     const result = await supportActionsService.approveAction(parsed.data.approvalId, approverId);
     res.json(result);
   } catch (error) {
@@ -374,8 +374,8 @@ router.post('/api/support/actions/execute', requireAuth, requireSupportRole, asy
       return res.status(400).json({ error: parsed.error.errors[0].message });
     }
 
-    const actorId = req.supportExecutorId || req.userId || 'unknown';
-    const actorRole = req.executorPlatformRole || 'support_agent';
+    const actorId = (req as any).supportExecutorId || req.userId || 'unknown';
+    const actorRole = (req as any).executorPlatformRole || 'support_agent';
     const actorType = actorRole === 'system' ? 'trinity' : 'support_agent';
 
     const result = await executeSupportAction({

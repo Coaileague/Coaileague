@@ -103,7 +103,7 @@ class MeetingBotPdfService {
 
       for (const msg of rawMessages) {
         if (msg.senderType === 'system') continue;
-        const meta = (msg.metadata as any) || {};
+        const meta = (msg as any).metadata || {};
         const author = msg.senderName || 'Unknown';
         const ts = new Date(msg.createdAt);
 

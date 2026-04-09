@@ -622,7 +622,7 @@ class ShiftChatroomWorkflowService {
         uploaderName: employeeName,
         attachmentType: m.attachmentType || 'image/jpeg',
         attachmentSize: m.attachmentSize || 0,
-        gps: (m.metadata as any)?.gps || null,
+        gps: (m as any).metadata?.gps || null,
       }));
 
     // ── STEP 1: Compile raw content ─────────────────────────────────────────
@@ -859,7 +859,7 @@ class ShiftChatroomWorkflowService {
       for (const msg of officerMessages) {
         const time = format(new Date(msg.createdAt), 'HH:mm');
         if (msg.messageType === 'photo') {
-          const gps = (msg.metadata as any)?.gps;
+          const gps = (msg as any).metadata?.gps;
           const gpsNote = gps ? ` [GPS: ${gps.lat?.toFixed(5)}, ${gps.lng?.toFixed(5)}]` : '';
           lines.push(`**${time}** — [PHOTO DOCUMENTATION]${gpsNote} ${msg.content || ''}`.trim());
         } else if (msg.messageType === 'report') {

@@ -279,7 +279,7 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
     // MANDATORY SECURITY: For non-platform staff, workspace context MUST come from req.user
     // or req.session. We ignore req.body/query/params to prevent parameter pollution
     // and cross-tenant ID injection attacks.
-    const requestedWorkspaceId = req.user.currentWorkspaceId || (req as any).session?.workspaceId;
+    const requestedWorkspaceId = (req as any).user?.currentWorkspaceId || (req as any).session?.workspaceId;
     
     const { workspaceId, role, employeeId, error } = await resolveWorkspaceForUser(
       userId,
@@ -1028,7 +1028,7 @@ export const enforcePaymentStatus: RequestHandler = async (req, res, next) => {
   }
 
   // No workspace context - skip (some routes don't need workspace)
-  const workspaceId = authReq.workspaceId || authReq.user?.defaultWorkspaceId;
+  const workspaceId = authReq.workspaceId || (authReq as any).user?.defaultWorkspaceId;
   if (!workspaceId) {
     return next();
   }

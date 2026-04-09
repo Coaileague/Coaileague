@@ -342,7 +342,7 @@ const getPanicEvent = mkAction('safety.get_panic_event', async (req) => {
     if (!panicId) return createResult(req.actionId, false, 'panicId required', null, start);
     const event = await panicProtocolService.get(panicId);
     if (!event) return createResult(req.actionId, false, `Panic event ${panicId} not found`, null, start);
-    return createResult(req.actionId, true, `Panic event ${panicId}: status=${event.status}`, { event }, start);
+    return createResult(req.actionId, true, `Panic event ${panicId}: status=${(event as any).status}`, { event }, start);
   } catch (e: any) {
     return createResult(req.actionId, false, e.message, null, start);
   }

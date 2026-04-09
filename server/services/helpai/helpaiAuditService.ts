@@ -116,10 +116,10 @@ export class HelpaiAuditService {
 
     // Add optional filters
     if (options?.action) {
-      query = query.where(eq(helpaiAuditLog.action, options.action as any));
+      query = (query as any).where(eq(helpaiAuditLog.action, options.action as any));
     }
     if (options?.status) {
-      query = query.where(eq(helpaiAuditLog.status, options.status));
+      query = (query as any).where(eq(helpaiAuditLog.status, options.status));
     }
 
     // Execute query

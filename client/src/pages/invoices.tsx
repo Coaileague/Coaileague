@@ -325,7 +325,7 @@ export default function Invoices() {
   const invoicesQuery = useQuery<Invoice[]>({
     queryKey: ['/api/invoices', workspaceId],
     enabled: !!workspaceId,
-    queryFn: () => apiFetch('/api/invoices', InvoiceListResponse) as Promise<Invoice[]>,
+    queryFn: () => apiFetch('/api/invoices', InvoiceListResponse) as unknown as Promise<Invoice[]>,
   });
   const {
     data: invoicesData,
@@ -430,7 +430,7 @@ export default function Invoices() {
     createInvoiceMutation.mutate({
       clientId: values.clientId!,
       invoiceNumber: `INV-${Date.now()}`, // Backend requires invoiceNumber
-      dueDate: new Date(values.dueDate as string).toISOString(),
+      dueDate: new Date(values.dueDate as unknown as string).toISOString(),
       subtotal: subtotal.toString(),
       taxAmount: tax.toString(),
       total: total.toString(), // Backend uses 'total', not 'totalAmount'
@@ -759,7 +759,7 @@ export default function Invoices() {
       id: selectedInvoiceId,
       updates: {
         clientId: values.clientId!,
-        dueDate: new Date(values.dueDate as string).toISOString(),
+        dueDate: new Date(values.dueDate as unknown as string).toISOString(),
         subtotal: subtotal.toString(),
         taxAmount: tax.toString(),
         total: total.toString(),

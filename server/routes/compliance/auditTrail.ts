@@ -54,7 +54,7 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res: Response) =>
       [...params, Math.min(Math.max(1, Number(limit) || 100), 500)]
     );
 
-    res.json({ success: true, auditLogs, count: auditLogs.length });
+    res.json({ success: true, auditLogs, count: (auditLogs as any).length });
   } catch (error) {
     log.error("[Compliance Audit Trail] Error:", error);
     res.status(500).json({ success: false, error: "Failed to fetch audit trail" });

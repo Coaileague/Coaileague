@@ -184,7 +184,7 @@ class AgentToAgentProtocol {
             successRate: dbAgent.successCount && dbAgent.messageCount 
               ? dbAgent.successCount / Math.max(1, dbAgent.messageCount) 
               : 1.0,
-            status: (dbAgent.status as any) || 'active',
+            status: (dbAgent as any).status || 'active',
           };
           this.agents.set(agent.id, agent);
           this.messageQueues.set(agent.id, []);

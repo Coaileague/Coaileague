@@ -177,7 +177,7 @@ class AdvancedUsageAnalyticsService {
       projectedDaysRemaining,
       lowBalanceWarning: creditRecord.currentBalance < (creditRecord.lowBalanceAlertThreshold || 50),
       lastPurchaseDate: null,
-      lastUsageDate: creditRecord.lastUsedAt?.toISOString() || null
+      lastUsageDate: (creditRecord as any).lastUsedAt?.toISOString() || null
     };
   }
 
@@ -224,9 +224,9 @@ class AdvancedUsageAnalyticsService {
       totalTasks: count(),
       completedTasks: sql<number>`SUM(CASE WHEN ${aiWorkboardTasks.status} = 'completed' THEN 1 ELSE 0 END)`,
       failedTasks: sql<number>`SUM(CASE WHEN ${aiWorkboardTasks.status} = 'failed' THEN 1 ELSE 0 END)`,
-      fastModeTasks: sql<number>`SUM(CASE WHEN ${aiWorkboardTasks.executionMode} = 'trinity_fast' THEN 1 ELSE 0 END)`,
-      normalModeTasks: sql<number>`SUM(CASE WHEN ${aiWorkboardTasks.executionMode} = 'normal' OR ${aiWorkboardTasks.executionMode} IS NULL THEN 1 ELSE 0 END)`,
-      totalCreditsUsed: sql<number>`COALESCE(SUM(${aiWorkboardTasks.fastModeCredits}), 0)`
+      fastModeTasks: sql<number>`SUM(CASE WHEN ${(aiWorkboardTasks as any).executionMode} = 'trinity_fast' THEN 1 ELSE 0 END)`,
+      normalModeTasks: sql<number>`SUM(CASE WHEN ${(aiWorkboardTasks as any).executionMode} = 'normal' OR ${(aiWorkboardTasks as any).executionMode} IS NULL THEN 1 ELSE 0 END)`,
+      totalCreditsUsed: sql<number>`COALESCE(SUM(${(aiWorkboardTasks as any).fastModeCredits}), 0)`
     })
       .from(aiWorkboardTasks)
       .where(and(
@@ -238,7 +238,7 @@ class AdvancedUsageAnalyticsService {
     const topAgents = await db.select({
       agentName: aiWorkboardTasks.assignedAgentId,
       taskCount: count(),
-      creditsUsed: sql<number>`COALESCE(SUM(${aiWorkboardTasks.fastModeCredits}), 0)`
+      creditsUsed: sql<number>`COALESCE(SUM(${(aiWorkboardTasks as any).fastModeCredits}), 0)`
     })
       .from(aiWorkboardTasks)
       .where(and(
@@ -326,7 +326,7 @@ class AdvancedUsageAnalyticsService {
       credits: (t as any).amount ?? 0,
       balanceAfter: (t as any).balanceAfter ?? 0,
       description: (t as any).description || '',
-      actionType: t.featureKey,
+      actionType: (t as any).featureKey,
       createdAt: t.createdAt?.toISOString?.() || new Date().toISOString(),
     }));
   }

@@ -47,7 +47,7 @@ import { format } from "date-fns";
 import PDFDocument from "pdfkit";
 
 async function requireManagerRole(req: AuthenticatedRequest): Promise<{ allowed: boolean; error?: string; status?: number }> {
-  const userId = req.user?.id || (req.user as any)?.claims?.sub;
+  const userId = req.user?.id || (req.user)?.claims?.sub;
   if (!userId) return { allowed: false, error: 'Unauthorized', status: 401 };
 
   const platformRole = await getUserPlatformRole(userId);
@@ -816,7 +816,7 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -831,7 +831,7 @@ import { createHash } from "crypto";
       // ── WRITE-PROTECT: Closed invoices cannot be re-sent ──────────────────────
       // GAP-31 FIX: Added 'refunded' — a refunded invoice must not be re-sent to client.
       const SEND_BLOCKED_STATUSES = ['paid', 'void', 'cancelled', 'refunded', 'disputed'] as const;
-      if (SEND_BLOCKED_STATUSES.includes(invoice.status as any)) {
+      if (SEND_BLOCKED_STATUSES.includes(invoice as any).status) {
         return res.status(403).json({
           message: "This record has been closed and cannot be modified",
           code: 'RECORD_CLOSED',
@@ -1118,7 +1118,7 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1277,7 +1277,7 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1318,7 +1318,7 @@ import { createHash } from "crypto";
       // GAP-32 FIX: Added 'refunded' — a refunded invoice is a closed accounting record
       // and must not be mutated via PATCH. Issue a new credit memo to correct it.
       const CLOSED_STATUSES = ['paid', 'cancelled', 'void', 'refunded', 'disputed'] as const;
-      if (CLOSED_STATUSES.includes(frozenCheck.status as any)) {
+      if (CLOSED_STATUSES.includes(frozenCheck as any).status) {
         return res.status(409).json({
           message: `Invoice ${frozenCheck.invoiceNumber || id} has status '${frozenCheck.status}' and cannot be modified. To correct a paid invoice, issue a credit memo or adjustment.`,
           code: 'INVOICE_CLOSED',
@@ -1490,7 +1490,7 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1600,7 +1600,7 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1889,7 +1889,7 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user as any)?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -2422,7 +2422,7 @@ router.get('/tax-rates/resolve/:clientId', async (req: AuthenticatedRequest, res
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
     const { clientId } = req.params;
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2459,7 +2459,7 @@ router.post('/tax-rates/client-override', async (req: AuthenticatedRequest, res)
     const { stateTaxService } = await import('../services/billing/stateTaxService');
     stateTaxService.setClientTaxOverride(clientId, rate, note || '');
 
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (userWorkspace) {
       storage.createAuditLog({
@@ -2534,7 +2534,7 @@ router.post('/:id/partial-payment', async (req: AuthenticatedRequest, res) => {
     const { amount, paymentMethod, payerEmail, payerName, notes } = partialParsed.data;
     if (businessRuleResponse(res, [validatePartialPaymentAmount(amount, undefined, 'amount')])) return;
 
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2572,7 +2572,7 @@ router.post('/:id/partial-payment', async (req: AuthenticatedRequest, res) => {
       title: `Partial Payment Recorded`,
       description: `$${amount.toFixed(2)} partial payment recorded — $${result.remainingBalance.toFixed(2)} remaining`,
       workspaceId: userWorkspace.workspaceId,
-      userId: req.user?.id || (req.user as any)?.claims?.sub,
+      userId: req.user?.id || (req.user)?.claims?.sub,
       metadata: {
         invoiceId: id,
         amountReceived: amount,
@@ -2614,7 +2614,7 @@ router.post('/:id/dispute', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ message: 'reason is required', code: 'MISSING_REASON' });
     }
 
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2722,7 +2722,7 @@ router.post('/:id/resolve-dispute', async (req: AuthenticatedRequest, res) => {
       ? resolvedStatus
       : 'sent';
 
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2813,7 +2813,7 @@ router.post('/apply-late-fees', async (req: AuthenticatedRequest, res) => {
     const roleCheck = await requireManagerRole(req);
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2861,7 +2861,7 @@ router.post('/credit-memo', async (req: AuthenticatedRequest, res) => {
     const roleCheck = await requireManagerRole(req);
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2931,7 +2931,7 @@ router.post('/send-payment-reminders', async (req: AuthenticatedRequest, res) =>
     const roleCheck = await requireManagerRole(req);
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2970,7 +2970,7 @@ router.get('/statement/:clientId', async (req: AuthenticatedRequest, res) => {
 
     const { clientId } = req.params;
     const { month, year } = req.query;
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 

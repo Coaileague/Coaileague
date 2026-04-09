@@ -327,7 +327,7 @@ class TrinityAutonomousSchedulerService {
 
         if (preRunReasoning.decision === 'block') {
           session.status = 'completed';
-          session.endTime = new Date();
+          (session as any).endTime = new Date();
           this.activeSessions.delete(sessionId);
           broadcastToWorkspace(config.workspaceId, {
             type: 'trinity_scheduling_blocked',
@@ -1179,8 +1179,8 @@ class TrinityAutonomousSchedulerService {
     // Previously this was omitted causing 0-rate payroll rows for every AI-assigned shift.
     const assignedPayRate = (
       bestEmployee.employee.hourlyRate ||
-      (bestEmployee.employee as any).payRate ||
-      (bestEmployee.employee as any).currentHourlyRate ||
+      (bestEmployee as any).employee.payRate ||
+      (bestEmployee as any).employee.currentHourlyRate ||
       '0'
     ).toString();
 
@@ -2822,7 +2822,7 @@ Respond in JSON format:
       });
       
       // Parse AI response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = (response as any).match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         const recommendedIndex = parsed.recommendedIndex - 1;
@@ -2898,7 +2898,7 @@ Provide scheduling insights in JSON:
         featureKey: 'trinity_schedule_insights',
       });
       
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = (response as any).match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }

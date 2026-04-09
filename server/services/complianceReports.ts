@@ -227,12 +227,12 @@ export async function generateTimeEntryAuditLog(
     timestamp: log.createdAt,
     action: log.action,
     userId: log.userId,
-    userName: (log.metadata as any)?.userName || 'Unknown',
+    userName: (log as any).metadata?.userName || 'Unknown',
     entityType: log.entityType,
     entityId: log.entityId,
     changes: log.changes,
-    ipAddress: (log.metadata as any)?.ipAddress || undefined,
-    userAgent: (log.metadata as any)?.userAgent || undefined,
+    ipAddress: (log as any).metadata?.ipAddress || undefined,
+    userAgent: (log as any).metadata?.userAgent || undefined,
   }));
 
   const uniqueUsers = new Set(auditEntries.map(e => e.userId)).size;
@@ -331,9 +331,9 @@ export async function generateBreakComplianceReport(
     const mealBreaks = breaks.filter(b => b.breakType === 'meal');
     const restBreaks = breaks.filter(b => b.breakType === 'rest');
 
-    const requiredMealBreakMinutes = laborRules?.mealBreakMinutes || 30;
-    const requiredRestBreakMinutes = laborRules?.restBreakMinutes || 10;
-    const mealBreakThresholdHours = laborRules?.mealBreakAfterHours ? parseFloat(laborRules.mealBreakAfterHours) : 5;
+    const requiredMealBreakMinutes = (laborRules as any)?.mealBreakMinutes || 30;
+    const requiredRestBreakMinutes = (laborRules as any)?.restBreakMinutes || 10;
+    const mealBreakThresholdHours = (laborRules as any)?.mealBreakAfterHours ? parseFloat(laborRules.mealBreakAfterHours) : 5;
 
     if (shiftDurationHours >= mealBreakThresholdHours && mealBreaks.length === 0) {
       violations.push({

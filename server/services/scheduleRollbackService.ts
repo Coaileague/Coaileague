@@ -166,7 +166,7 @@ export async function rollbackSchedule(
       for (const employee of affectedEmployees) {
         if (employee.userId) {
           try {
-            await pushNotificationService.sendToUser(employee.userId, {
+            await (pushNotificationService as any).sendToUser(employee.userId, {
               title: 'Schedule Update',
               body: 'Your shift schedule has been updated. Please check the app for details.',
               data: { type: 'schedule_rollback', publishedScheduleId },

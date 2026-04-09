@@ -927,7 +927,7 @@ By signing below, I authorize my employer to withhold federal income tax from my
 Form W-9 - Internal Revenue Service
 
 Name: ${application.firstName} ${application.lastName}
-Business name (if different): ${application.businessName || '[Individual]'}
+Business name (if different): ${(application as any).businessName || '[Individual]'}
 Tax Classification: ☐ Individual/sole proprietor ☐ LLC ☐ Corporation
 
 Federal Tax Classification: Independent Contractor
@@ -1215,13 +1215,13 @@ router.get('/migration-capabilities', async (req, res) => {
 
 router.post('/test-workflow', async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { testWorkspaceId, testWorkspaceName, testOwnerName, dryRun = true } = req.body;
 
     const { onboardingOrchestrator } = await import('../services/ai-brain/subagents/onboardingOrchestrator');
     const result = await onboardingOrchestrator.testInvitationWorkflow({
       testUserId: user.id,
-      testWorkspaceId: testWorkspaceId || user.activeWorkspaceId,
+      testWorkspaceId: testWorkspaceId || (user as any).activeWorkspaceId,
       testWorkspaceName: testWorkspaceName || 'Test Organization',
       testOwnerName: testOwnerName || user.firstName || 'Test User',
       dryRun,
@@ -1250,12 +1250,12 @@ router.get('/diagnostics/:workspaceId', async (req, res) => {
 
 router.post('/initialize-trinity', async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { workspaceId, workspaceName, ownerName, subscriptionTier } = req.body;
 
     const { onboardingOrchestrator } = await import('../services/ai-brain/subagents/onboardingOrchestrator');
     const result = await onboardingOrchestrator.initializeWorkspaceTrinity({
-      workspaceId: workspaceId || user.activeWorkspaceId,
+      workspaceId: workspaceId || (user as any).activeWorkspaceId,
       workspaceName: workspaceName || 'My Organization',
       ownerId: user.id,
       ownerName: ownerName || user.firstName || 'User',
@@ -1271,8 +1271,8 @@ router.post('/initialize-trinity', async (req, res) => {
 
 router.get('/status', async (req, res) => {
   try {
-    const user = req.user as any;
-    const workspaceId = req.workspaceId || user.activeWorkspaceId || user.defaultWorkspaceId;
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any).activeWorkspaceId || (user as any).defaultWorkspaceId;
 
     if (!workspaceId) {
       return res.json({ status: 'not_started' });
@@ -1475,7 +1475,7 @@ router.get('/readiness', async (req: AuthenticatedRequest, res) => {
 
 router.get('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     // CATEGORY C — Raw SQL retained: LIMIT | Tables: org_creation_progress | Verified: 2026-03-23
     const result = await typedQuery(
@@ -1491,7 +1491,7 @@ router.get('/create-org/progress', async (req: AuthenticatedRequest, res) => {
 
 router.post('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     const data = req.body;
     // Converted to Drizzle ORM: ON CONFLICT
@@ -1514,7 +1514,7 @@ router.post('/create-org/progress', async (req: AuthenticatedRequest, res) => {
 
 router.delete('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     await db.delete(orgCreationProgress).where(eq(orgCreationProgress.userId, userId));
     res.json({ success: true });

@@ -1418,7 +1418,7 @@ rmsRouter.get("/reports/:id/audit-trail", requireAuth as any, ensureWorkspaceAcc
       trail = history.map(h => ({
         id: h.id,
         report_id: h.entityId,
-        report_type: (h.metadata as any)?.reportType || 'unknown',
+        report_type: (h as any).metadata?.reportType || 'unknown',
         workspace_id: h.workspaceId,
         action: h.action === AUDIT_ACTIONS.DAILY_REPORT_OPENED ? 'opened' : 'downloaded',
         actor_id: h.actorId,

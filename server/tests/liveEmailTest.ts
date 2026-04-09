@@ -34,7 +34,7 @@ async function main() {
       orgEmail: 'staffing@txpsinvestigations.com',
       jobSummary: JOB_SUMMARY,
     });
-    console.log(`   ✅ Sent — MessageId: ${r.messageId ?? 'n/a'}\n`);
+    console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
   } catch (e: any) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }
@@ -52,7 +52,7 @@ async function main() {
       orgEmail: 'staffing@tpsisecurity.com',
       jobSummary: JOB_SUMMARY,
     });
-    console.log(`   ✅ Sent — MessageId: ${r.messageId ?? 'n/a'}\n`);
+    console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
   } catch (e: any) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }
@@ -68,7 +68,7 @@ async function main() {
       shiftDescription: 'Unarmed security officer — 4500 Industrial Blvd, Houston TX 77023 — March 15, 2026 | 6:00 PM – 6:00 AM',
       referenceNumber: REF_LOSER,
     });
-    console.log(`   ✅ Sent — MessageId: ${r.messageId ?? 'n/a'}\n`);
+    console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
   } catch (e: any) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }
@@ -102,7 +102,7 @@ async function main() {
         providerDocsReady: true,
       },
     });
-    console.log(`   ✅ Sent — MessageId: ${r.messageId ?? 'n/a'}\n`);
+    console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
   } catch (e: any) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }

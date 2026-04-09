@@ -565,7 +565,7 @@ export class StripeWebhookService {
         stripeInvoiceId: invoice.id,
         invoiceNumber: invoice.number,
         amount: amountPaid,
-        subscriptionId: invoice.subscription,
+        subscriptionId: (invoice as any).subscription,
         source: 'stripe_webhook_invoice_payment_succeeded',
       },
       visibility: 'manager',
@@ -891,7 +891,7 @@ export class StripeWebhookService {
     
     if (creditPackId && workspaceId && userId) {
       const { creditPurchaseService } = await import('./creditPurchase');
-      await creditPurchaseService.handlePaymentSuccess(session);
+      await (creditPurchaseService as any).handlePaymentSuccess(session);
       return { success: true, handled: true, message: 'Credit purchase fulfilled' };
     }
 

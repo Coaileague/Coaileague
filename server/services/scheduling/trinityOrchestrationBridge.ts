@@ -55,7 +55,7 @@ export function registerSchedulingWithOrchestration() {
       const { workRequestParser } = await import('../trinityStaffing/workRequestParser');
       const parsedRequest = await workRequestParser.parseWorkRequest(data.content);
       
-      if (parsedRequest.success && parsedRequest.shift) {
+      if (parsedRequest.success && (parsedRequest as any).shift) {
         // Auto-schedule the created shift
         platformEventBus.emit('trinity_scheduling_request', {
           workspaceId: data.workspaceId,
@@ -113,7 +113,7 @@ export async function getSchedulingOrchestrationStatus(workspaceId: string): Pro
   
   return {
     daemonRunning: status.isRunning,
-    lastRun: status.lastRun,
+    lastRun: (status as any).lastRun,
     pendingShifts: pendingShifts.length,
     automationEnabled: true,
   };

@@ -1091,7 +1091,7 @@ export type ScheduleProposal = typeof scheduleProposals.$inferSelect;
 export const insertInvoiceProposalSchema = z.object({});
 
 export type InsertInvoiceProposal = z.infer<typeof insertInvoiceProposalSchema>;
-export type InvoiceProposal = z.infer<typeof insertInvoiceProposalsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type InvoiceProposal = z.infer<typeof insertInvoiceProposalSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 // Payroll Proposals - AI-generated payroll awaiting approval (Operations Automation)
 
@@ -1331,7 +1331,7 @@ export const insertWorkspaceCurrencySettingsSchema = z.object({
 export const insertEmployeeTaxFormSchema = z.object({});
 
 export type InsertEmployeeTaxForm = z.infer<typeof insertEmployeeTaxFormSchema>;
-export type EmployeeTaxForm = z.infer<typeof insertEmployeeTaxFormsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type EmployeeTaxForm = z.infer<typeof insertEmployeeTaxFormSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 // Off-Cycle Payroll Runs (Bonus/Instant Pay)
 
@@ -1992,7 +1992,7 @@ export type TypingIndicator = typeof typingIndicators.$inferSelect;
 // ============================================================================
 // SMART REPLY USAGE — Tracks Trinity smart reply suggestion acceptance
 // ============================================================================
-
+export const insertSmartReplyUsageSchema = z.object({});
 export type InsertSmartReplyUsage = z.infer<typeof insertSmartReplyUsageSchema>;
 
 // Chat Message Edit Schema - Validation for editing existing messages

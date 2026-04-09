@@ -315,7 +315,7 @@ export async function generateRecurringShifts(input: GenerateRecurringShiftsInpu
             clientId: template.clientId || null,
             title: template.title,
             description: template.description || null,
-            category: (template.category as any) || 'general',
+            category: (template as any).category || 'general',
             startTime: shiftStartTime,
             endTime: shiftEndTime,
             billableToClient: template.billableToClient ?? true,
@@ -688,7 +688,7 @@ export async function getAvailableEmployeesForSwap(
       id: e.id,
       name: `${e.firstName} ${e.lastName}`,
       isAvailable: !busyEmployeeIds.has(e.id),
-      skills: Array.isArray(e.skills) ? e.skills : [],
+      skills: Array.isArray(e.skills) ? (e as any).skills : [],
     }));
 }
 

@@ -152,7 +152,7 @@ export async function translateIncidentReport(params: {
      FROM incident_reports WHERE id = $1 AND workspace_id = $2`,
     [reportId, workspaceId]
   );
-  if (!result.length) return null;
+  if (!(result as any).length) return null;
 
   const report = result[0];
   const originalLanguage: SupportedLanguage = (report.original_language as SupportedLanguage) || "en";

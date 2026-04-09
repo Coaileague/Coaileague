@@ -197,7 +197,7 @@ class SharedKnowledgeGraph {
           id: dbRel.id,
           sourceId: dbRel.sourceId,
           targetId: dbRel.targetId,
-          type: dbRel.relationship as RelationshipType,
+          type: (dbRel as any).relationship as RelationshipType,
           strength: parseFloat(dbRel.strength || '0.5'),
           metadata: {},
           createdAt: dbRel.createdAt,
@@ -390,7 +390,7 @@ Return JSON array of indices in order of relevance (most relevant first):
 
     try {
       // Platform-level knowledge ranking - billed to PLATFORM_COST_CENTER
-      const response = await aiBrainService.processRequest({
+      const response = await (aiBrainService as any).processRequest({
         type: 'knowledge_ranking',
         userId: 'system',
         workspaceId: undefined,

@@ -559,7 +559,7 @@ class ComplianceEnforcementService {
 
     // State-specific requirements (merge over federal)
     for (const stateConfig of Object.values(STATE_COMPLIANCE_CONFIGS)) {
-      for (const doc of stateConfig.requiredDocuments) {
+      for (const doc of (stateConfig as any).requiredDocuments) {
         if (doc.expiryPeriodDays) {
           docExpiryMap[doc.id] = doc.expiryPeriodDays;
           // Also map to generic doc type if possible

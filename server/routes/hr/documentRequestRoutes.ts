@@ -326,7 +326,7 @@ router.post('/send', requireAuth, requireManager, async (req: any, res) => {
       return res.status(402).json({
         error: 'Insufficient credits',
         creditsRequired: totalCredits,
-        creditsAvailable: creditCheck.remaining ?? 0,
+        creditsAvailable: (creditCheck as any).remaining ?? 0,
         message: `Sending ${empList.length} employee(s) × ${input.documentTypes.length} document type(s) requires ${totalCredits} credits.`,
       });
     }

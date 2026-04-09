@@ -876,8 +876,8 @@ class TrinityAutomationToggleService {
           return {
             summary: `I'll process payroll for ${employeeCount} employee${employeeCount !== 1 ? 's' : ''} — $${totalGross.toLocaleString()} total gross pay${overtimeEmployees > 0 ? ` (${overtimeEmployees} with overtime)` : ''}`,
             details: {
-              periodStart: payPeriod.start.toISOString().split('T')[0],
-              periodEnd: payPeriod.end.toISOString().split('T')[0],
+              periodStart: (payPeriod as any).start.toISOString().split('T')[0],
+              periodEnd: (payPeriod as any).end.toISOString().split('T')[0],
               employeeCount,
               totalGross,
               overtimeEmployees,
@@ -888,8 +888,8 @@ class TrinityAutomationToggleService {
             previewData: {
               type: 'payroll_preview',
               summary: `${employeeCount} employee${employeeCount !== 1 ? 's' : ''} — $${totalGross.toLocaleString()} gross pay`,
-              periodStart: payPeriod.start.toISOString().split('T')[0],
-              periodEnd: payPeriod.end.toISOString().split('T')[0],
+              periodStart: (payPeriod as any).start.toISOString().split('T')[0],
+              periodEnd: (payPeriod as any).end.toISOString().split('T')[0],
               employees: employeeBreakdown,
               totalGross,
               overtimeEmployees,

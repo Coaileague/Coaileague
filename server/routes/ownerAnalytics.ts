@@ -391,7 +391,7 @@ ownerAnalyticsRouter.get('/reconciliation', requireOwnerRole, async (req: Authen
 
     const platformHoursData = await db.select({
       clientId: timeEntries.clientId,
-      totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600), 0)`,
+      totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${(timeEntries as any).endTime} - ${(timeEntries as any).startTime})) / 3600), 0)`,
     })
       .from(timeEntries)
       .where(and(
@@ -403,7 +403,7 @@ ownerAnalyticsRouter.get('/reconciliation', requireOwnerRole, async (req: Authen
 
     const invoiceData = await db.select({
       clientId: invoices.clientId,
-      totalHours: sql<number>`COALESCE(SUM(${invoices.totalHours}), 0)`,
+      totalHours: sql<number>`COALESCE(SUM(${(invoices as any).totalHours}), 0)`,
     })
       .from(invoices)
       .where(and(

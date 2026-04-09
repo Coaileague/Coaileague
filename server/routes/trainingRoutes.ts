@@ -658,10 +658,10 @@ router.get('/courses', requireAuth, async (req: AuthenticatedRequest, res) => {
       courses = courses.filter(c => c.category === category);
     }
     if (difficulty) {
-      courses = courses.filter(c => c.difficulty === difficulty);
+      courses = courses.filter(c => (c as any).difficulty === difficulty);
     }
     if (status) {
-      courses = courses.filter(c => c.status === status);
+      courses = courses.filter(c => (c as any).status === status);
     }
     if (isRequired !== undefined) {
       courses = courses.filter(c => c.isRequired === (isRequired === 'true'));
@@ -1005,7 +1005,7 @@ router.get('/certifications', requireAuth, async (req: AuthenticatedRequest, res
         courseId: trainingCertifications.courseId,
         courseTitle: trainingCourses.title,
         issuedAt: trainingCertifications.issuedDate,
-        expiresAt: trainingCertifications.expirationDate,
+        expiresAt: (trainingCertifications as any).expirationDate,
         certificateUrl: trainingCertifications.certificateUrl,
         score: trainingEnrollments.score,
         status: trainingCertifications.status

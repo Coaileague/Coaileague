@@ -247,9 +247,9 @@ class WorkflowApprovalService {
       }
 
       // Verify approver has required role
-      const hasRole = await this.verifyApproverRole(approvedBy, existing.requiredRole || 'support_manager');
+      const hasRole = await this.verifyApproverRole(approvedBy, (existing as any).requiredRole || 'support_manager');
       if (!hasRole) {
-        return { success: false, message: `Insufficient role. Requires: ${existing.requiredRole}` };
+        return { success: false, message: `Insufficient role. Requires: ${(existing as any).requiredRole}` };
       }
 
       await db
@@ -478,7 +478,7 @@ class WorkflowApprovalService {
         : 'Approval Reminder';
       
       const message = action === 'created'
-        ? `${approval.endUserSummary || approval.title}. Risk: ${approval.riskLevel}. Expires in ${this.getExpiryHours(approval.riskLevel || 'medium')} hours.`
+        ? `${(approval as any).endUserSummary || approval.title}. Risk: ${approval.riskLevel}. Expires in ${this.getExpiryHours(approval.riskLevel || 'medium')} hours.`
         : `Pending approval: ${approval.title}. Please review before expiry.`;
 
       // Filter users based on role hierarchy
@@ -512,7 +512,7 @@ class WorkflowApprovalService {
             metadata: {
               approvalId: approval.id,
               riskLevel: approval.riskLevel,
-              requiredRole: approval.requiredRole,
+              requiredRole: (approval as any).requiredRole,
               expiresAt: approval.expiresAt,
               action,
               relatedEntityType: 'workflow_approval',

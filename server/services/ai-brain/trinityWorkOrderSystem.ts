@@ -1097,7 +1097,7 @@ class ConfidentCommitProtocol {
     // Run actual tests using AI Brain Test Runner
     try {
       log.info('[CommitProtocol] Running test suite...');
-      const testResults = await aiBrainTestRunner.runAll('Commit Validation');
+      const testResults = await (aiBrainTestRunner as any).runAll('Commit Validation');
       decision.testsPass = testResults.summary.failed === 0;
       
       if (!decision.testsPass) {

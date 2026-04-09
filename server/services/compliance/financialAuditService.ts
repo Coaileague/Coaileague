@@ -324,13 +324,13 @@ class FinancialAuditService {
         .orderBy(desc(auditLogs.createdAt))
         .limit(50);
 
-      const creatorId = recentEvents.find(e => 
-        e.eventType.includes('CREATED')
-      )?.actorId;
+      const creatorId = (recentEvents.find(e =>
+        (e as any).eventType?.includes('CREATED')
+      ) as any)?.actorId;
 
-      const approverId = recentEvents.find(e => 
-        e.eventType.includes('APPROVED')
-      )?.actorId;
+      const approverId = (recentEvents.find(e =>
+        (e as any).eventType?.includes('APPROVED')
+      ) as any)?.actorId;
 
       if (actionType === 'approve' && creatorId === actorId) {
         violations.push('SOD-001: Cannot approve own creation');
@@ -340,8 +340,8 @@ class FinancialAuditService {
         violations.push('SOD-002: Processor must be different from creator and approver');
       }
 
-      if (actionType === 'approve' && recentEvents.filter(e => 
-        e.eventType.includes('APPROVED') && e.actorId === actorId
+      if (actionType === 'approve' && recentEvents.filter(e =>
+        (e as any).eventType.includes('APPROVED') && (e as any).actorId === actorId
       ).length >= 10) {
         violations.push('SOD-003: Approval concentration detected - consider rotation');
       }
@@ -374,7 +374,7 @@ class FinancialAuditService {
       .orderBy(auditLogs.createdAt);
 
     const financialEvents = events.filter(e => 
-      e.eventType.startsWith('FINANCIAL_')
+      (e as any).eventType.startsWith('FINANCIAL_')
     );
 
     let totalInvoiced = 0;
@@ -422,16 +422,16 @@ class FinancialAuditService {
       },
       details: financialEvents.map(e => ({
         id: e.id,
-        eventType: e.eventType.replace('FINANCIAL_', '') as FinancialEventType,
-        entityType: e.aggregateType as any,
-        entityId: e.aggregateId,
+        eventType: (e as any).eventType.replace('FINANCIAL_', '') as FinancialEventType,
+        entityType: (e as any).aggregateType as any,
+        entityId: (e as any).aggregateId,
         workspaceId: e.workspaceId || '',
-        actorId: e.actorId,
+        actorId: (e as any).actorId,
         actorType: e.actorType as any,
-        actorName: e.actorName || 'Unknown',
-        before: (e.changes as any)?.before || null,
+        actorName: (e as any).actorName || 'Unknown',
+        before: (e as any).changes?.before || null,
         after: e.payload as any,
-        monetaryImpact: (e.payload as any)?.monetaryImpact || { amount: 0, currency: 'USD', direction: 'neutral' },
+        monetaryImpact: (e as any).payload?.monetaryImpact || { amount: 0, currency: 'USD', direction: 'neutral' },
         approvals: [],
         checksum: e.actionHash || '',
         previousChecksum: null,

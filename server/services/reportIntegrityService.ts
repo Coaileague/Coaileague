@@ -52,7 +52,7 @@ function canonicalize(report: ReportHashInput): string {
     rawVoiceTranscript: (report.rawVoiceTranscript ?? '').trim(),
     polishedDescription: (report.polishedDescription ?? '').trim(),
     polishedSummary: (report.polishedSummary ?? '').trim(),
-    occurredAt: report.occurredAt ? new Date(report.occurredAt as any).toISOString() : '',
+    occurredAt: report.occurredAt ? new Date(report as any).occurredAt.toISOString() : '',
     locationAddress: (report.locationAddress ?? '').trim(),
     gpsLatitude: report.gpsLatitude ?? '',
     gpsLongitude: report.gpsLongitude ?? '',

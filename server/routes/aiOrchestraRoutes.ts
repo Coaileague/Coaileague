@@ -398,8 +398,8 @@ router.get('/meta-cognition/logs', requireAuth, async (req: Request, res: Respon
 
     return res.json({
       success: true,
-      logs: logs.rows,
-      total: parseInt((countResult.rows[0] as any)?.total || '0'),
+      logs: (logs as any).rows,
+      total: parseInt(((countResult as any).rows[0] as any)?.total || '0'),
       limit,
       offset,
     });
@@ -482,7 +482,7 @@ router.get('/meta-cognition/escalations', requireAuth, async (req: Request, res:
 
     return res.json({
       success: true,
-      escalations: escalations.rows,
+      escalations: (escalations as any).rows,
       description: 'Tasks where meta-cognition could not reach sufficient confidence',
     });
   } catch (error: unknown) {

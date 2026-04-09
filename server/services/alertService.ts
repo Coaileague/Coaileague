@@ -309,7 +309,7 @@ class AlertService {
     }
 
     // Create alert history entry
-    const alertSeverity = severity || (config.severity as any) || 'medium';
+    const alertSeverity = severity || (config as any).severity || 'medium';
     const channels = config.channels || ['in_app'];
     
     const [alert] = await db
@@ -523,16 +523,16 @@ class AlertService {
       .orderBy(desc(alertHistory.createdAt));
 
     if (options?.alertType) {
-      query = query.where(eq(alertHistory.alertType, options.alertType as any));
+      query = (query as any).where(eq(alertHistory.alertType, options.alertType as any));
     }
     if (options?.severity) {
-      query = query.where(eq(alertHistory.severity, options.severity as any));
+      query = (query as any).where(eq(alertHistory.severity, options.severity as any));
     }
     if (options?.acknowledged !== undefined) {
-      query = query.where(eq(alertHistory.isAcknowledged, options.acknowledged));
+      query = (query as any).where(eq(alertHistory.isAcknowledged, options.acknowledged));
     }
     if (options?.resolved !== undefined) {
-      query = query.where(eq(alertHistory.isResolved, options.resolved));
+      query = (query as any).where(eq(alertHistory.isResolved, options.resolved));
     }
     if (options?.limit) {
       query = query.limit(options.limit);

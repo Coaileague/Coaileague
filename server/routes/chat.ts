@@ -321,7 +321,7 @@ const router = Router();
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const user = req.user;
+      const user = req.user!;
       
       // Ensure room exists
       let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
@@ -493,7 +493,7 @@ const router = Router();
 
       // PUBLIC ACCESS: Guests can access chat but AI features require workspace for billing
       // Workspace users get AI assistance (billed), guests get human support only
-      const workspaceId = req.workspaceId || req.user?.workspaceId;
+      const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       if (!workspaceId) {
         // Gracefully disable AI for guests instead of blocking chat access
         return res.status(200).json({ 
@@ -503,7 +503,7 @@ const router = Router();
         });
       }
 
-      const userId = req.user?.id || req.user?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
 
       // Generate AI response with billing (workspace users only)
       const response = await generateGeminiResponse({
@@ -672,8 +672,8 @@ const router = Router();
       res.status(201).json(macro);
     } catch (error: unknown) {
       log.error("Error creating chat macro:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid macro data", errors: error.errors });
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid macro data", errors: (error as any).errors });
       }
       res.status(500).json({ message: "Failed to create chat macro" });
     }
@@ -737,7 +737,7 @@ const router = Router();
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const user = req.user;
+      const user = req.user!;
       const { id: conversationId } = req.params;
       
       // SECURITY: Verify conversation exists and user is a participant
@@ -747,8 +747,8 @@ const router = Router();
       }
       
       // SECURITY: Verify user is a participant or workspace member
-      const isParticipant = conversation.participantIds?.includes(userId);
-      const isCreator = conversation.creatorId === userId;
+      const isParticipant = (conversation as any).participantIds?.includes(userId);
+      const isCreator = (conversation as any).creatorId === userId;
       let isWorkspaceMember = false;
       
       if (!isParticipant && !isCreator && conversation.workspaceId) {
@@ -781,13 +781,13 @@ const router = Router();
           workspaceId: workspaceId,
           conversationId,
           userId,
-          userName: user.displayName || user.username || "Anonymous",
+          userName: (user as any).displayName || (user as any).username || "Anonymous",
         })
         .onConflictDoUpdate({
           target: [typingIndicators.conversationId, typingIndicators.userId],
           set: {
             startedAt: sql`NOW()`,
-            userName: user.displayName || user.username || "Anonymous",
+            userName: (user as any).displayName || (user as any).username || "Anonymous",
           },
         });
       
@@ -876,7 +876,7 @@ const router = Router();
             // For now, just track in memory
             addedParticipants.push({
               id: participant.id,
-              name: participant.displayName || participant.email,
+              name: (participant as any).displayName || participant.email,
               email: participant.email
             });
           }
@@ -904,7 +904,7 @@ const router = Router();
       }
       
       // Send welcome system message
-      const userName = user.displayName || user.email;
+      const userName = (user as any).displayName || user.email;
       const welcomeMessage = `Chat created by ${userName}. Type: ${chatType}`;
       
       await storage.createChatMessage({
@@ -938,9 +938,10 @@ const router = Router();
   // POST /api/chat-export/support-conversation/:id - Export support conversation (PDF or HTML)
   router.post('/api/chat-export/support-conversation/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      const user = req.user!;
       // Support staff authorization
-      const userRole = req.user.role;
-      const platformRole = (req.user as any)?.platformRole;
+      const userRole = user.role;
+      const platformRole = (user as any)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
@@ -961,9 +962,9 @@ const router = Router();
       // Log export action for audit compliance
       await storage.createAuditLog({
         workspaceId: data.conversation.workspaceId || 'platform',
-        userId: req.user.id,
-        userEmail: req.user.email,
-        userRole: req.user.role || 'support_staff',
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role || 'support_staff',
         action: 'export_data',
         actionDescription: `Exported support conversation ${conversationId} as ${format.toUpperCase()}`,
         targetType: 'conversation',
@@ -972,7 +973,7 @@ const router = Router();
           exportType: 'support_conversation',
           format,
           messageCount: data.messages.length,
-          exportedBy: `${req.user.firstName} ${req.user.lastName}`.trim(),
+          exportedBy: `${user.firstName} ${user.lastName}`.trim(),
         },
         ipAddress: req.ip,
       });
@@ -991,8 +992,8 @@ const router = Router();
         })),
         metadata: {
           exportedAt: new Date(),
-          exportedBy: `${req.user.firstName} ${req.user.lastName}`.trim(),
-          exportedByRole: req.user.role,
+          exportedBy: `${user.firstName} ${user.lastName}`.trim(),
+          exportedByRole: user.role,
           totalMessages: data.messages.length,
           dateRange: data.messages.length > 0 ? {
             start: new Date(data.messages[0].createdAt),
@@ -1021,9 +1022,10 @@ const router = Router();
   // POST /api/chat-export/comm-room/:id - Export AI Communications room (PDF or HTML)
   router.post('/api/chat-export/comm-room/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      const user = req.user!;
       // Support staff authorization
-      const userRole = req.user.role;
-      const platformRole = (req.user as any)?.platformRole;
+      const userRole = user.role;
+      const platformRole = (user as any)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
@@ -1044,9 +1046,9 @@ const router = Router();
       // Log export action for audit compliance
       await storage.createAuditLog({
         workspaceId: data.room.workspaceId || 'platform',
-        userId: req.user.id,
-        userEmail: req.user.email,
-        userRole: req.user.role || 'support_staff',
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role || 'support_staff',
         action: 'export_data',
         actionDescription: `Exported AI Communications room ${data.room.name || roomId} as ${format.toUpperCase()}`,
         targetType: 'comm_room',
@@ -1057,7 +1059,7 @@ const router = Router();
           format,
           messageCount: data.messages.length,
           memberCount: data.members?.length || 0,
-          exportedBy: `${req.user.firstName} ${req.user.lastName}`.trim(),
+          exportedBy: `${user.firstName} ${user.lastName}`.trim(),
         },
         ipAddress: req.ip,
       });
@@ -1076,8 +1078,8 @@ const router = Router();
         })),
         metadata: {
           exportedAt: new Date(),
-          exportedBy: `${req.user.firstName} ${req.user.lastName}`.trim(),
-          exportedByRole: req.user.role,
+          exportedBy: `${user.firstName} ${user.lastName}`.trim(),
+          exportedByRole: user.role,
           totalMessages: data.messages.length,
           dateRange: data.messages.length > 0 ? {
             start: new Date(data.messages[0].createdAt),
@@ -1106,17 +1108,17 @@ const router = Router();
   // POST /api/chat-export/private-conversation/:id - Export private DM conversation (requires audit approval)
   router.post('/api/chat-export/private-conversation/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      const user = req.user!;
       // Support staff authorization (only platform_admin or support_staff can export encrypted DMs)
-      const userRole = req.user.role;
-      const platformRole = (req.user as any)?.platformRole;
+      const userRole = user.role;
+      const platformRole = (user as any)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
       }
 
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.id;
-      
+      const userId = user.id;
+
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
@@ -1137,9 +1139,9 @@ const router = Router();
       // Log export action for audit compliance
       await storage.createAuditLog({
         workspaceId: data.conversation.workspaceId || 'platform',
-        userId: req.user.id,
-        userEmail: req.user.email,
-        userRole: req.user.role || 'support_staff',
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role || 'support_staff',
         action: 'export_data',
         actionDescription: `Exported private DM conversation ${conversationId} as ${format.toUpperCase()} (Authorized Investigation)`,
         targetType: 'conversation',
@@ -1148,7 +1150,7 @@ const router = Router();
           exportType: 'private_dm',
           format,
           messageCount: data.messages.length,
-          exportedBy: `${req.user.firstName} ${req.user.lastName}`.trim(),
+          exportedBy: `${user.firstName} ${user.lastName}`.trim(),
           auditRequestId: data.auditInfo?.auditRequestId,
           confidential: true,
         },
@@ -1171,8 +1173,8 @@ const router = Router();
         })),
         metadata: {
           exportedAt: new Date(),
-          exportedBy: `${req.user.firstName} ${req.user.lastName}`.trim() + ' (Authorized Investigation)',
-          exportedByRole: req.user.role,
+          exportedBy: `${user.firstName} ${user.lastName}`.trim() + ' (Authorized Investigation)',
+          exportedByRole: user.role,
           auditRequestId: data.auditInfo?.auditRequestId,
           auditReason: data.auditInfo?.reason,
           totalMessages: data.messages.length,
@@ -1390,8 +1392,8 @@ router.get("/api/chat/room/:roomId/motd", requireAnyAuth, async (req: Authentica
       return res.status(404).json({ message: "Room not found" });
     }
     
-    const roomModes = (conversation.metadata as any)?.modes || [RoomMode.ORG];
-    const activeBots = (conversation.metadata as any)?.activeBots || [];
+    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as any).metadata?.activeBots || [];
     const roomName = conversation.subject || "Chat Room";
     
     const motd = generateMOTD(roomName, roomModes, activeBots);
@@ -1476,8 +1478,8 @@ router.get("/api/chat/room/:roomId/bots", requireAnyAuth, async (req: Authentica
       return res.status(404).json({ message: "Room not found" });
     }
     
-    const roomModes = (conversation.metadata as any)?.modes || [RoomMode.ORG];
-    const activeBots = (conversation.metadata as any)?.activeBots || [];
+    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as any).metadata?.activeBots || [];
     
     const availableBots = new Set<string>();
     for (const mode of roomModes) {
@@ -1529,7 +1531,7 @@ router.get("/api/chat/room/:roomId/bots", requireAnyAuth, async (req: Authentica
 router.post("/api/chat/commands/execute", requireAnyAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { message, roomId, sessionId } = req.body;
-    const user = req.user;
+    const user = req.user!;
 
     if (!message || typeof message !== 'string' || !message.startsWith('/')) {
       return res.status(400).json({ message: "Message must be a slash command" });

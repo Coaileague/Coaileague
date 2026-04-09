@@ -96,7 +96,7 @@ class OnboardingQuickBooksFlow {
   }
 
   private registerActions() {
-    (helpaiOrchestrator.registerAction as any)({
+    (helpaiOrchestrator as any).registerAction({
       actionId: 'quickbooks.flow_start',
       name: 'Start QuickBooks Onboarding Flow',
       category: 'integrations',
@@ -114,7 +114,7 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    (helpaiOrchestrator.registerAction as any)({
+    (helpaiOrchestrator as any).registerAction({
       actionId: 'quickbooks.flow_status',
       name: 'Get QuickBooks Flow Status',
       category: 'integrations',
@@ -135,7 +135,7 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    (helpaiOrchestrator.registerAction as any)({
+    (helpaiOrchestrator as any).registerAction({
       actionId: 'quickbooks.flow_retry_stage',
       name: 'Retry Failed Flow Stage',
       category: 'integrations',
@@ -152,7 +152,7 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    (helpaiOrchestrator.registerAction as any)({
+    (helpaiOrchestrator as any).registerAction({
       actionId: 'quickbooks.flow_configure',
       name: 'Configure Automation Settings',
       category: 'integrations',
@@ -183,7 +183,7 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    (helpaiOrchestrator.registerAction as any)({
+    (helpaiOrchestrator as any).registerAction({
       actionId: 'quickbooks.flow_skip_stage',
       name: 'Skip Optional Stage',
       category: 'integrations',
@@ -201,7 +201,7 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    (helpaiOrchestrator.registerAction as any)({
+    (helpaiOrchestrator as any).registerAction({
       actionId: 'quickbooks.flow_stats',
       name: 'Get QuickBooks Flow Statistics',
       category: 'integrations',
@@ -215,7 +215,7 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    (helpaiOrchestrator.registerAction as any)({
+    (helpaiOrchestrator as any).registerAction({
       actionId: 'quickbooks.flow_reset',
       name: 'Reset QuickBooks Flow',
       category: 'integrations',

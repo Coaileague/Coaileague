@@ -84,7 +84,7 @@ const upsertSchema = z.object({
 router.put('/:role', ensureWorkspaceAccess, requireOwnerRole, async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId as string;
-    const userId = (req.user as any)?.id;
+    const userId = (req.user)?.id;
     const role = req.params.role;
 
     if (!(role in DEFAULT_ROLE_LABELS)) {

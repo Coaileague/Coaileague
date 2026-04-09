@@ -139,7 +139,7 @@ router.get('/automation-audit-logs', requireOwner, async (req: AuthenticatedRequ
     const logs = await query;
     
     const filteredLogs = jobType 
-      ? logs.filter(log => log.metadata?.jobType === jobType)
+      ? logs.filter(log => (log as any).metadata?.jobType === jobType)
       : logs;
     
     res.json({

@@ -175,7 +175,7 @@ router.delete("/manager-assignments/:id", requireOwner, async (req: Authenticate
 
 router.get("/organizations/managed", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user || req.user?.id;
+    const userId = req.user || (req as any).user?.id;
     
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
@@ -278,7 +278,7 @@ router.patch("/organizations/:orgId/status", requireAuth, async (req: Authentica
   try {
     const { orgId } = req.params;
     const { status, action, reason } = req.body;
-    const userId = req.user || req.user?.id;
+    const userId = req.user || (req as any).user?.id;
     
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
@@ -420,7 +420,7 @@ router.patch("/organizations/:orgId/status", requireAuth, async (req: Authentica
 router.get("/organizations/:orgId/members", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { orgId } = req.params;
-    const userId = req.user || req.user?.id;
+    const userId = req.user || (req as any).user?.id;
     const workspaceId = req.workspaceId;
     
     if (!userId) {
@@ -452,7 +452,7 @@ router.get("/organizations/:orgId/members", requireAuth, async (req: Authenticat
       email: emp.email || '',
       workspaceRole: emp.workspaceRole || 'staff',
       isActive: emp.state === 'active' || !emp.state,
-      lastActive: emp.lastLogin,
+      lastActive: (emp as any).lastLogin,
     }));
     
     res.json(members);
@@ -722,7 +722,7 @@ function generateInviteCode(): string {
 
 router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -882,7 +882,7 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
 
 router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -947,7 +947,7 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
         firstName: user.firstName || 'New',
         lastName: user.lastName || 'Employee',
         email: user.email,
-        workspaceRole: (invite.inviteeRole as any) || 'staff',
+        workspaceRole: (invite as any).inviteeRole || 'staff',
         isActive: true,
         hireDate: new Date().toISOString().split('T')[0],
       });
@@ -969,7 +969,7 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
 
 router.get("/invites", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -1012,7 +1012,7 @@ router.get("/invites", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.delete("/invites/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -1129,7 +1129,7 @@ router.get("/hr/review-reminders/upcoming", requireManager, async (req: Authenti
 router.post("/organization-onboarding/start", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const {
       organizationName,
       industry,
@@ -1262,7 +1262,7 @@ router.get("/organization-onboarding/status", requireAuth, async (req: Authentic
 router.get("/experience/notification-preferences", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!userId || !workspaceId) {
       return res.json({ email: true, push: true, sms: false, inApp: true, digest: 'daily' });
     }
@@ -1304,7 +1304,7 @@ router.get("/experience/notification-preferences", requireAuth, async (req: Auth
 router.post("/experience/notification-preferences", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!userId || !workspaceId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -1365,7 +1365,7 @@ router.post("/experience/notification-preferences", requireAuth, async (req: Aut
 router.get("/manager/command-center", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const now = new Date();
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
@@ -1381,7 +1381,7 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
       startTime: shifts.startTime,
       endTime: shifts.endTime,
       status: shifts.status,
-      siteName: shifts.siteName,
+      siteName: (shifts as any).siteName,
     }).from(shifts)
       .where(and(
         eq(shifts.workspaceId, workspaceId),

@@ -316,7 +316,7 @@ incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWor
     const polishedSummary = `${incident.incident_type} incident (${incident.severity}) reported at ${incident.location_address || "unspecified location"}. ${incident.title}`;
 
     const legalFlags: Array<{ flag: string; severity: string; recommendation: string }> = [];
-    const lowerDesc = rawText.toLowerCase();
+    const lowerDesc = (rawText as any).toLowerCase();
     if (lowerDesc.includes("injur") || lowerDesc.includes("hurt") || lowerDesc.includes("medical")) {
       legalFlags.push({ flag: "Potential Injury", severity: "high", recommendation: "Ensure medical documentation is obtained and preserved" });
     }
