@@ -1,4 +1,4 @@
-import { db } from "@db";
+import { db } from '../db';
 import { notificationRules, notifications, notificationActivity } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { UNSNotification } from "../../client/src/components/notifications-popover";

@@ -1,4 +1,4 @@
-import { db } from "@db";
+import { db } from '../db';
 import { notificationActivity, userNotificationPreferences } from "@shared/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 

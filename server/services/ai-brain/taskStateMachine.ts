@@ -28,7 +28,7 @@ import {
   isTerminalPhase,
   systemAuditLogs,
 } from '@shared/schema';
-import { platformEventBus } from '../../platformEventBus';
+import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
 
 // ============================================================================

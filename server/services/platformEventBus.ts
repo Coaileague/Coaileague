@@ -438,7 +438,7 @@ export type EventCategory =
 export type EventVisibility = 'all' | 'staff' | 'supervisor' | 'manager' | 'org_leadership' | 'platform_staff' | 'admin';
 
 export interface PlatformEvent {
-  type: PlatformEventType | string;
+  type?: PlatformEventType | string;
   category?: EventCategory | string;
   title?: string;
   description?: string;

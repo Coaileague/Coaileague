@@ -20,7 +20,7 @@ import { eq } from 'drizzle-orm';
 import { systemAuditLogs } from '@shared/schema';
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from './aiBrainAuthorizationService';
 import { toolCapabilityRegistry } from './toolCapabilityRegistry';
-import { platformEventBus } from '../../platformEventBus';
+import { platformEventBus } from '../platformEventBus';
 import type { TrinityToolCall } from '@shared/schema';
 import crypto from 'crypto';
 import { createLogger } from '../../lib/logger';

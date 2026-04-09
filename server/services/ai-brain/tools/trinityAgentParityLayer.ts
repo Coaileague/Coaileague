@@ -13,17 +13,17 @@
  * This layer makes Trinity a true autonomous coding assistant.
  */
 
-import { planningFrameworkService } from './planningFrameworkService';
-import { createLogger } from '../../lib/logger';
-import type { ExecutionPlan, PlanStep, PlanningRequest } from './planningFrameworkService';
-import { selfReflectionEngine } from './selfReflectionEngine';
-import type { ReflectionResult, ReflectionContext } from './selfReflectionEngine';
+import { planningFrameworkService } from '../planningFrameworkService';
+import { createLogger } from '../../../lib/logger';
+import type { ExecutionPlan, PlanStep, PlanningRequest } from '../planningFrameworkService';
+import { selfReflectionEngine } from '../selfReflectionEngine';
+import type { ReflectionResult, ReflectionContext } from '../selfReflectionEngine';
 import { trinityCodeOps } from './trinityCodeOps';
-import { trinityMemoryService } from './trinityMemoryService';
-import { adaptiveSupervisionRouter } from './adaptiveSupervisionRouter';
-import { aiBrainService } from './aiBrainService';
-import { platformEventBus } from '../platformEventBus';
-import { db } from '../../db';
+import { trinityMemoryService } from '../trinityMemoryService';
+import { adaptiveSupervisionRouter } from '../adaptiveSupervisionRouter';
+import { aiBrainService } from '../aiBrainService';
+import { platformEventBus } from '../../platformEventBus';
+import { db } from '../../../db';
 import { systemAuditLogs } from '@shared/schema';
 import specIndex from '../../../spec-index.json';
 import crypto from 'crypto';

@@ -16,11 +16,11 @@ import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
-import { db } from '../../db';
+import { db } from '../../../db';
 import { automationActionLedger, systemAuditLogs } from '@shared/schema';
-import { platformEventBus } from '../platformEventBus';
+import { platformEventBus } from '../../platformEventBus';
 import crypto from 'crypto';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '../../../lib/logger';
 const log = createLogger('trinityCodeOps');
 
 const execAsync = promisify(exec);

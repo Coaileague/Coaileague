@@ -7,7 +7,7 @@
  * CRITICAL for launch: Ensures Trinity's actions are reliable.
  */
 
-import { db } from '@/db';
+import { db } from '../../../db';
 import { shifts, employees, clients, timeEntries } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { createLogger } from '../../../lib/logger';

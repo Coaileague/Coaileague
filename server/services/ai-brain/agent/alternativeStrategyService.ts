@@ -8,7 +8,7 @@
  */
 
 import { trinityAgentParityLayer } from '../trinityAgentParityLayer';
-import { db } from '@/db';
+import { db } from '../../../db';
 import { employees, shifts, clients } from '@shared/schema';
 import { eq, and, gte, lte, isNull, not } from 'drizzle-orm';
 import { createLogger } from '../../../lib/logger';

@@ -16,10 +16,10 @@
 
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { db } from '../../db';
+import { db } from '../../../db';
 import { systemAuditLogs } from '@shared/schema';
-import { createLogger } from '../../lib/logger';
-import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+import { createLogger } from '../../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../../billing/billingConstants';
 const log = createLogger('aiBrainFileSystemTools');
 
 const WORKSPACE_ROOT = process.cwd();

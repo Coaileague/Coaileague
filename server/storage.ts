@@ -705,7 +705,7 @@ export interface IStorage {
   // Expense Receipts
   createExpenseReceipt(receipt: InsertExpenseReceipt): Promise<typeof expenseReceipts.$inferSelect>;
   getExpenseReceipt(id: string, workspaceId: string): Promise<typeof expenseReceipts.$inferSelect | undefined>;
-  getExpenseReceiptsByExpense(expenseId: string): Promise<(typeof expenseReceipts.$inferSelect)[]>;
+  getExpenseReceiptsByExpense(expenseId: string, workspaceId?: string): Promise<(typeof expenseReceipts.$inferSelect)[]>;
   deleteExpenseReceipt(id: string, workspaceId: string): Promise<boolean>;
   
   // ========================================================================
@@ -750,7 +750,7 @@ export interface IStorage {
   
   createBidApplication(application: any): Promise<any>;
   getBidApplication(id: string): Promise<any | undefined>;
-  getBidApplicationsByBid(bidId: string): Promise<any[]>;
+  getBidApplicationsByBid(bidId: string, workspaceId?: string): Promise<any[]>;
   getBidApplicationsByEmployee(employeeId: string, workspaceId: string): Promise<any[]>;
   updateBidApplication(id: string, data: any): Promise<any | undefined>;
   
@@ -863,7 +863,7 @@ export interface IStorage {
   // CHAT EXPORT METHODS - SUPPORT STAFF ONLY
   // ========================================================================
   // Export support conversation with messages
-  getSupportConversationForExport(conversationId: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date } | null>;
+  getSupportConversationForExport(conversationId: string, workspaceId?: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date } | null>;
   
   // Export AI Communications room with messages and members
   getCommRoomForExport(roomId: string): Promise<{ room: any; messages: ChatMessage[]; members: any[]; exportedAt: Date } | null>;
@@ -930,8 +930,8 @@ export interface IStorage {
   getAiResponse(id: string): Promise<AiResponse | undefined>;
   getAiResponsesByWorkspace(workspaceId: string, filters?: { sourceType?: string; feature?: string; limit?: number; offset?: number }): Promise<AiResponse[]>;
   getAiResponsesBySource(workspaceId: string, sourceType: string, sourceId: string): Promise<AiResponse[]>;
-  updateAiResponse(id: string, data: Partial<InsertAiResponse>): Promise<AiResponse | undefined>;
-  rateAiResponse(id: string, rating: number, feedback?: string): Promise<AiResponse | undefined>;
+  updateAiResponse(id: string, data: Partial<InsertAiResponse>, workspaceId?: string): Promise<AiResponse | undefined>;
+  rateAiResponse(id: string, rating: number, feedback?: string, workspaceId?: string): Promise<AiResponse | undefined>;
 
   // ========================================================================
   // AI SUGGESTIONS - UNIFIED AI-POWERED SUGGESTIONS
@@ -940,10 +940,10 @@ export interface IStorage {
   getAiSuggestion(id: string): Promise<AiSuggestion | undefined>;
   getAiSuggestionsByWorkspace(workspaceId: string, filters?: { status?: string; priority?: string; type?: string; limit?: number; offset?: number }): Promise<AiSuggestion[]>;
   getActiveSuggestions(workspaceId: string): Promise<AiSuggestion[]>;
-  updateAiSuggestion(id: string, data: Partial<InsertAiSuggestion>): Promise<AiSuggestion | undefined>;
-  acceptAiSuggestion(id: string, userId: string): Promise<AiSuggestion | undefined>;
+  updateAiSuggestion(id: string, data: Partial<InsertAiSuggestion>, workspaceId?: string): Promise<AiSuggestion | undefined>;
+  acceptAiSuggestion(id: string, userId: string, workspaceId?: string): Promise<AiSuggestion | undefined>;
   rejectAiSuggestion(id: string, userId: string, reason?: string): Promise<AiSuggestion | undefined>;
-  implementAiSuggestion(id: string): Promise<AiSuggestion | undefined>;
+  implementAiSuggestion(id: string, workspaceId?: string): Promise<AiSuggestion | undefined>;
 
   // ========================================================================
   // USER FEEDBACK PORTAL - Feature Requests, Bug Reports, and Suggestions
@@ -951,9 +951,9 @@ export interface IStorage {
   createFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
   getFeedback(id: string): Promise<UserFeedback | undefined>;
   getFeedbackList(filters?: { type?: string; status?: string; priority?: string; workspaceId?: string; userId?: string; sortBy?: string; sortOrder?: 'asc' | 'desc'; limit?: number; offset?: number }): Promise<UserFeedback[]>;
-  updateFeedback(id: string, data: Partial<InsertUserFeedback>): Promise<UserFeedback | undefined>;
+  updateFeedback(id: string, data: Partial<InsertUserFeedback>, workspaceId?: string): Promise<UserFeedback | undefined>;
   updateFeedbackStatus(id: string, status: string, updatedBy: string, note?: string): Promise<UserFeedback | undefined>;
-  deleteFeedback(id: string): Promise<boolean>;
+  deleteFeedback(id: string, workspaceId?: string): Promise<boolean>;
   
   createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment>;
   getFeedbackComments(feedbackId: string): Promise<FeedbackComment[]>;
@@ -970,8 +970,8 @@ export interface IStorage {
   getMascotMotionProfileByName(name: string): Promise<MascotMotionProfile | undefined>;
   getAllMascotMotionProfiles(): Promise<MascotMotionProfile[]>;
   getActiveMascotMotionProfiles(): Promise<MascotMotionProfile[]>;
-  updateMascotMotionProfile(id: string, data: Partial<InsertMascotMotionProfile>): Promise<MascotMotionProfile | undefined>;
-  deleteMascotMotionProfile(id: string): Promise<boolean>;
+  updateMascotMotionProfile(id: string, data: Partial<InsertMascotMotionProfile>, workspaceId?: string): Promise<MascotMotionProfile | undefined>;
+  deleteMascotMotionProfile(id: string, workspaceId?: string): Promise<boolean>;
 
   // ========================================================================
   // HOLIDAY MASCOT DECORATIONS - AI BRAIN ORCHESTRATED HOLIDAY VISUALS
@@ -1005,7 +1005,7 @@ export interface IStorage {
     offset?: number;
   }): Promise<AiBrainActionLog[]>;
   getAiBrainActionLogsByWorkflow(workflowId: string): Promise<AiBrainActionLog[]>;
-  updateAiBrainActionLog(id: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined>;
+  updateAiBrainActionLog(id: string, data: Partial<InsertAiBrainActionLog>, workspaceId?: string): Promise<AiBrainActionLog | undefined>;
   markAiBrainActionReviewed(id: string, reviewedBy: string, notes?: string): Promise<AiBrainActionLog | undefined>;
 
   // ========================================================================
@@ -6973,7 +6973,7 @@ export class DatabaseStorage implements IStorage {
   
   async searchUsers(workspaceId: string, query: string): Promise<any[]> {
     const searchTerm = `%${query.toLowerCase()}%`;
-    const users = await db
+    const userRows = await db
       .select({
         id: users.id,
         email: users.email,

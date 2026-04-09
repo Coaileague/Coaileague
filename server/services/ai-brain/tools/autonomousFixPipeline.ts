@@ -18,24 +18,24 @@
  */
 
 import { exec } from 'child_process';
-import { createLogger } from "../../lib/logger";
+import { createLogger } from '../../../lib/logger';
 const log = createLogger("autonomousFixPipeline");
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import cron from 'node-cron';
-import { AI } from '../../config/platformConfig';
-import { db } from '../../db';
+import { AI } from '../../../config/platformConfig';
+import { db } from '../../../db';
 import { aiGapFindings, aiWorkflowApprovals } from '@shared/schema';
 import { eq, and, desc, sql, inArray, gte } from 'drizzle-orm';
 import { trinityCodeOps, PatchOperation, PatchResult } from './trinityCodeOps';
-import { workflowApprovalService } from './workflowApprovalService';
-import { gapIntelligenceService } from './gapIntelligenceService';
-import { helpaiOrchestrator } from '../helpai/platformActionHub';
-import { platformEventBus, PlatformEvent } from '../platformEventBus';
-import { GapFinding } from './subagents/domainOpsSubagents';
-import { trinityOrchestrationGovernance, hotpatchCadenceController } from './trinityOrchestrationGovernance';
-import { trinityReflectionEngine } from './trinityReflectionEngine';
+import { workflowApprovalService } from '../workflowApprovalService';
+import { gapIntelligenceService } from '../gapIntelligenceService';
+import { helpaiOrchestrator } from '../../helpai/platformActionHub';
+import { platformEventBus, PlatformEvent } from '../../platformEventBus';
+import { GapFinding } from '../subagents/domainOpsSubagents';
+import { trinityOrchestrationGovernance, hotpatchCadenceController } from '../trinityOrchestrationGovernance';
+import { trinityReflectionEngine } from '../trinityReflectionEngine';
 
 const execAsync = promisify(exec);
 

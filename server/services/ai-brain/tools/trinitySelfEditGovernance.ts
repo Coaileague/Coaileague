@@ -20,18 +20,18 @@
  * to prevent production mutation during testing.
  */
 
-import { db } from '../../db';
+import { db } from '../../../db';
 import { eq, and, desc, gte, lte, sql, count } from 'drizzle-orm';
 import { systemAuditLogs, automationActionLedger, InsertAutomationActionLedger } from '@shared/schema';
-import { platformEventBus } from '../platformEventBus';
-import { durableJobQueue } from '../infrastructure/durableJobQueue';
+import { platformEventBus } from '../../platformEventBus';
+import { durableJobQueue } from '../../infrastructure/durableJobQueue';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import crypto from 'crypto';
 
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '../../../lib/logger';
 const log = createLogger('TrinitySelfEditGovernance');
 
 const execAsync = promisify(exec);
