@@ -342,7 +342,7 @@ class ReinforcementLearningLoop {
       },
     }).catch((err) => log.warn('[reinforcementLearningLoop] Fire-and-forget failed:', err));
 
-    log.info(`[RL Loop] Experience recorded: ${agentId}/${action} -> ${outcome} (reward: ${reward.toFixed(2)})`);
+    log.verbose(`[RL Loop] Experience recorded: ${agentId}/${action} -> ${outcome} (reward: ${reward.toFixed(2)})`);
 
     return experience;
   }
