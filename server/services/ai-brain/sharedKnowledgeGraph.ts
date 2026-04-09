@@ -456,7 +456,7 @@ Return JSON array of indices in order of relevance (most relevant first):
       },
     }).catch((err) => log.warn('[sharedKnowledgeGraph] Fire-and-forget failed:', err));
 
-    log.info(`[SharedKnowledgeGraph] Recorded learning: ${entry.agentId} - ${entry.action} - ${entry.outcome}`);
+    log.verbose(`[SharedKnowledgeGraph] Recorded learning: ${entry.agentId} - ${entry.action} - ${entry.outcome}`);
   }
 
   /**
