@@ -21,6 +21,7 @@
 
 import { db } from "../../db";
 import {
+  employeeMetrics,
   employees,
   employeeSkills,
   shifts,

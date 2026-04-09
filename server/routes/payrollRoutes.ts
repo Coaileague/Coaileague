@@ -10,7 +10,7 @@ import { hasManagerAccess, hasPlatformWideAccess } from "../rbac";
 import PDFDocument from "pdfkit";
 import { db } from "../db";
 import { storage } from "../storage";
-import { eq, and, desc, sql, gte, lte, count } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import {
   payrollRuns,
   payrollEntries,
@@ -27,6 +27,7 @@ import { encryptToken, decryptToken } from '../security/tokenEncryption';
 import * as taxCalculator from "../services/taxCalculator";
 import { calculateStateTax, calculateBonusTaxation } from "../services/taxCalculator";
 import { getWorkspaceTier, hasTierAccess, requirePlan } from "../tierGuards";
+import { payrollDeductions } from '@shared/schema';
 
 const payrollRunLocks = new Map<string, { userId: string; startedAt: number }>();
 const PAYROLL_RUN_LOCK_TTL_MS = 5 * 60 * 1000;
@@ -949,8 +950,8 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           workspaceId,
           payrollRunId: id,
           employeeCount,
-          payPeriod: run.payPeriodStart && run.payPeriodEnd
-            ? `${new Date(run.payPeriodStart).toLocaleDateString()} – ${new Date(run.payPeriodEnd).toLocaleDateString()}`
+          payPeriod: run.periodStart && run.periodEnd
+            ? `${new Date(run.periodStart).toLocaleDateString()} – ${new Date(run.periodEnd).toLocaleDateString()}`
             : undefined,
         });
         log.info(`[PayrollRoute] Middleware fee: ${feeResult.description} (success: ${feeResult.success})`);
@@ -1133,7 +1134,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         metadata: {
           payrollRunId: id,
           processedBy: userId,
-          totalGrossPay: updated.totalGross,
+          totalGrossPay: updated.totalGrossPay,
           totalNetPay: updated.totalNet,
           employeeCount,
         },
@@ -1193,7 +1194,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         action: 'delete',
         entityType: 'payroll_run',
         entityId: id,
-        changes: { before: { status: run.status, payPeriodStart: run.payPeriodStart, payPeriodEnd: run.payPeriodEnd }, after: { status: 'deleted' } },
+        changes: { before: { status: run.status, payPeriodStart: run.periodStart, payPeriodEnd: run.periodEnd }, after: { status: 'deleted' } },
         metadata: { isSensitiveData: true, complianceTag: 'soc2' },
       }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll delete', { error: err?.message }));
 
@@ -1574,7 +1575,7 @@ router.post("/calculate-taxes", async (req, res) => {
 
 router.get("/entries", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspace?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const entries = await db.select().from(payrollEntries).where(eq(payrollEntries.workspaceId, workspaceId));
@@ -1587,7 +1588,7 @@ router.get("/entries", async (req: AuthenticatedRequest, res) => {
 
 router.get("/deductions", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspace?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const payrollEntryId = req.query.payrollEntryId as string | undefined;
@@ -1605,7 +1606,7 @@ router.get("/deductions", async (req: AuthenticatedRequest, res) => {
 
 router.get("/garnishments", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspace?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const payrollEntryId = req.query.payrollEntryId as string | undefined;
@@ -1688,7 +1689,7 @@ router.post("/deductions/:payrollEntryId", async (req: AuthenticatedRequest, res
     if (!parsed.success) return res.status(400).json({ error: 'Invalid deduction data', details: parsed.error.flatten() });
     const { employeeId, deductionType, amount, isPreTax, description } = parsed.data;
     if (businessRuleResponse(res, [validateDeductionAmount(amount, undefined, 'amount')])) return;
-    const workspaceId = req.workspace?.id;
+    const workspaceId = req.workspaceId?.id;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const deduction = await addDeduction(
@@ -1713,7 +1714,7 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
     const parsed = payrollGarnishmentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid garnishment data', details: parsed.error.flatten() });
     const { employeeId, garnishmentType, amount, priority, caseNumber, description } = parsed.data;
-    const workspaceId = req.workspace?.id;
+    const workspaceId = req.workspaceId?.id;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const garnishment = await addGarnishment(

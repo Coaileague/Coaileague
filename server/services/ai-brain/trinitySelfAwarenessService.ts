@@ -797,7 +797,7 @@ class TrinitySelfAwarenessService {
    */
   async getCapabilities(domain?: string): Promise<CapabilityInfo[]> {
     try {
-      const allActions = helpaiOrchestrator.getAllActions();
+      const allActions = helpaiOrchestrator.getAction();
       
       const capabilities: CapabilityInfo[] = [];
       

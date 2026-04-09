@@ -20,6 +20,7 @@ import { eq, sql, desc, and, gte } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { getTrinityVelocityEngine, VelocityExecutionResult } from './trinityVelocityEngine';
 import { createLogger } from '../../lib/logger';
+import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('fastModeService');
 
 // WebSocket broadcaster type
@@ -1136,8 +1137,8 @@ class FastModeService {
     // Top agents used
     const agentCounts: Record<string, number> = {};
     fastModeTasks.forEach(t => {
-      if (t.assignedAgentName) {
-        agentCounts[t.assignedAgentName] = (agentCounts[t.assignedAgentName] || 0) + 1;
+      if (t.assignedAgentId) {
+        agentCounts[t.assignedAgentId] = (agentCounts[t.assignedAgentId] || 0) + 1;
       }
     });
     const topAgentsUsed = Object.entries(agentCounts)

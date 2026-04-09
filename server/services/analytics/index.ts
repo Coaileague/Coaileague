@@ -71,7 +71,7 @@ export const unifiedAnalytics = {
     },
     getCreditSummary: async (workspaceId: string) => {
       const { advancedUsageAnalyticsService } = await import('../advancedUsageAnalyticsService');
-      return advancedUsageAnalyticsService.getCreditUsageSummary(workspaceId);
+      return advancedUsageAnalyticsService.getCreditSummary(workspaceId);
     },
   },
 
@@ -107,7 +107,7 @@ export const unifiedAnalytics = {
   rooms: {
     getAnalytics: async (workspaceId: string, roomId?: string, period?: string) => {
       const { roomAnalyticsService } = await import('../roomAnalyticsService');
-      return roomAnalyticsService.getRoomAnalytics(workspaceId, roomId, period);
+      return roomAnalyticsService.getRoomsAnalytics(workspaceId, roomId, period);
     },
   },
 };

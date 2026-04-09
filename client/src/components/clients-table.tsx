@@ -624,7 +624,7 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
   const clientGroups = useMemo(() => {
     if (clientGroupBy === 'none') return [{ label: '', items: clients }];
     const groups: Record<string, ClientWithInvoiceCount[]> = {};
-    clients.forEach((c) => {
+    clients.forEach((c: any) => {
       let key = 'Unassigned';
       if (clientGroupBy === 'company') key = c.companyName || 'No Company';
       else if (clientGroupBy === 'category') {

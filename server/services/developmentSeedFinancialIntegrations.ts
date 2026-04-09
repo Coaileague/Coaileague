@@ -18,7 +18,7 @@
  */
 
 import { db } from '../db';
-import { sql, eq, and, desc } from 'drizzle-orm';
+import { and, desc, eq, or, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { clients, invoices, payrollRuns, quickbooksSyncReceipts, employees, employeePayrollInfo, payrollEntries } from '@shared/schema';
@@ -413,10 +413,10 @@ async function seedAnvilStripeMode() {
         metadata: { coaileague_client_id: c.id, coaileague_workspace_id: ANVIL, environment: 'test' },
       });
       await db.update(clients).set({ stripeCustomerId: customer.id }).where(eq(clients.id, c.id));
-      console.log(`[FinancialSeed] Anvil: Stripe customer ${customer.id} → ${c.company_name}`);
+      console.log(`[FinancialSeed] Anvil: Stripe customer ${customer.id} → ${c.companyName}`);
       stripeCustomersCreated++;
     } catch (err: any) {
-      console.warn(`[FinancialSeed] Anvil: Customer creation failed for ${c.company_name}: ${(err instanceof Error ? err.message : String(err))}`);
+      console.warn(`[FinancialSeed] Anvil: Customer creation failed for ${c.companyName}: ${(err instanceof Error ? err.message : String(err))}`);
       const simId = `cus_SIM_${c.id.slice(0, 10)}`;
       await db.update(clients).set({ stripeCustomerId: simId }).where(eq(clients.id, c.id)).catch(() => {});
     }

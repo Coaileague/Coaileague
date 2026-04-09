@@ -282,7 +282,7 @@ export async function trackTicketCreated(
 
     await db.update(roomAnalytics).set({
       ticketsCreated: sql`${roomAnalytics.ticketsCreated} + 1`,
-      unresolvedTickets: sql`${roomAnalytics.unresolvedTickets} + 1`,
+      unresolvedTickets: sql`${roomAnalytics.unresovledTickets} + 1`,
       updatedAt: new Date(),
     }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
 
@@ -330,7 +330,7 @@ export async function trackTicketResolved(
 
       await db.update(roomAnalytics).set({
         ticketsResolved: sql`${roomAnalytics.ticketsResolved} + 1`,
-        unresolvedTickets: sql`GREATEST(0, ${roomAnalytics.unresolvedTickets} - 1)`,
+        unresolvedTickets: sql`GREATEST(0, ${roomAnalytics.unresovledTickets} - 1)`,
         avgResolutionTimeHours: newAvgTime,
         updatedAt: new Date(),
       }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));

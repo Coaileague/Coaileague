@@ -27,6 +27,7 @@ import { aiGuardRails, type AIRequestContext } from '../../aiGuardRails';
 import { creditManager, CREDIT_COSTS, CREDIT_EXEMPT_FEATURES } from '../../billing/creditManager';
 import { db } from '../../../db';
 import {
+  employeeCertifications,
   helposFaqs,
   supportTickets,
   workspaces,

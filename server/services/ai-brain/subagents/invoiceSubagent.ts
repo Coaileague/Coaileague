@@ -26,6 +26,7 @@ import { broadcastToWorkspace } from '../../../websocket';
 import { trinityActionReasoner } from '../trinityActionReasoner';
 import crypto from 'crypto';
 import { createLogger } from '../../../lib/logger';
+import { invoicePayments } from '@shared/schema';
 const log = createLogger('invoiceSubagent');
 
 // ============================================================================
@@ -757,8 +758,8 @@ class InvoiceSubagentService {
         .where(eq(idempotencyKeys.key, key))
         .limit(1);
 
-      if (existing && existing.result) {
-        return existing.result as unknown as InvoiceGenerationResult;
+      if (existing && existing.resultId) {
+        return existing.resultId as unknown as InvoiceGenerationResult;
       }
     } catch (error) {
       // Continue with new generation

@@ -1,3 +1,4 @@
+import { clients, shifts, sites, timeEntries } from '@shared/schema';
 /**
  * Regulatory Auditor Portal Routes
  * ==================================
@@ -524,9 +525,9 @@ router.get('/dashboard/:workspaceId/insurance', requireAuditorPortalAuth, async 
       .where(and(
         eq(complianceDocuments.workspaceId, workspaceId),
         or(
-          ilike(complianceDocuments.documentType, '%insurance%'),
-          ilike(complianceDocuments.documentType, '%liability%'),
-          ilike(complianceDocuments.documentType, '%workers_comp%'),
+          ilike(complianceDocuments.documentTypeId, '%insurance%'),
+          ilike(complianceDocuments.documentTypeId, '%liability%'),
+          ilike(complianceDocuments.documentTypeId, '%workers_comp%'),
         ),
       ));
 
@@ -558,7 +559,7 @@ router.get('/dashboard/:workspaceId/posting', requireAuditorPortalAuth, async (r
     const [posterDoc] = await db.select().from(complianceDocuments)
       .where(and(
         eq(complianceDocuments.workspaceId, workspaceId),
-        eq(complianceDocuments.documentType, 'labor_law_posters_photo'),
+        eq(complianceDocuments.documentTypeId, 'labor_law_posters_photo'),
       )).orderBy(desc(complianceDocuments.createdAt)).limit(1);
 
     return res.json({
@@ -592,7 +593,7 @@ router.get('/dashboard/:workspaceId/uniform', requireAuditorPortalAuth, async (r
     const [uniformDoc] = await db.select().from(complianceDocuments)
       .where(and(
         eq(complianceDocuments.workspaceId, workspaceId),
-        eq(complianceDocuments.documentType, 'uniform_compliance_photo'),
+        eq(complianceDocuments.documentTypeId, 'uniform_compliance_photo'),
       )).orderBy(desc(complianceDocuments.createdAt)).limit(1);
 
     const [ws] = await db.select({ stateLicenseState: workspaces.stateLicenseState })
@@ -625,8 +626,8 @@ router.get('/dashboard/:workspaceId/vehicles', requireAuditorPortalAuth, async (
       .where(and(
         eq(complianceDocuments.workspaceId, workspaceId),
         or(
-          eq(complianceDocuments.documentType, 'patrol_vehicle_photos'),
-          eq(complianceDocuments.documentType, 'patrol_vehicle_not_applicable'),
+          eq(complianceDocuments.documentTypeId, 'patrol_vehicle_photos'),
+          eq(complianceDocuments.documentTypeId, 'patrol_vehicle_not_applicable'),
         ),
       )).orderBy(desc(complianceDocuments.createdAt));
 
@@ -634,8 +635,8 @@ router.get('/dashboard/:workspaceId/vehicles', requireAuditorPortalAuth, async (
       .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
     const stateConfig = ws?.stateLicenseState ? await getStateConfig(ws.stateLicenseState) : null;
 
-    const notApplicable = vehicleDocs.some((d) => d.documentType === 'patrol_vehicle_not_applicable');
-    const vehiclePhotos = vehicleDocs.filter((d) => d.documentType === 'patrol_vehicle_photos');
+    const notApplicable = vehicleDocs.some((d) => d.documentTypeId === 'patrol_vehicle_not_applicable');
+    const vehiclePhotos = vehicleDocs.filter((d) => d.documentTypeId === 'patrol_vehicle_photos');
 
     return res.json({
       success: true,
@@ -797,7 +798,7 @@ router.get('/dashboard/:workspaceId/incidents', requireAuditorPortalAuth, async 
 
     const incidents = await db.select().from(incidentReports)
       .where(eq(incidentReports.workspaceId, workspaceId))
-      .orderBy(desc(incidentReports.reportedAt));
+      .orderBy(desc(incidentReports.reportedBy));
 
     return res.json({ success: true, data: { incidents, total: incidents.length } });
   } catch (err: unknown) {
@@ -821,7 +822,7 @@ router.get('/dashboard/:workspaceId/documents', requireAuditorPortalAuth, async 
 
     const documents = await db.select({
       id: complianceDocuments.id,
-      documentType: complianceDocuments.documentType,
+      documentType: complianceDocuments.documentTypeId,
       documentTitle: complianceDocuments.documentTitle,
       status: complianceDocuments.status,
       fileUrl: complianceDocuments.fileUrl,

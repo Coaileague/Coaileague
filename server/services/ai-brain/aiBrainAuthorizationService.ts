@@ -7,7 +7,7 @@
 
 import { db } from '../../db';
 import { createLogger } from '../../lib/logger';
-import { systemAuditLogs, users, trinityWorkspacePauses } from '@shared/schema';
+import { governanceApprovals, systemAuditLogs, trinityWorkspacePauses, users } from '@shared/schema';
 
 const log = createLogger('AIBrainAuth');
 import { eq, and, lt, desc, sql } from 'drizzle-orm';

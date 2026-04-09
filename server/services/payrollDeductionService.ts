@@ -18,6 +18,7 @@ import {
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
 import { startOfYear, endOfYear } from "date-fns";
+import { payrollDeductions, payrollGarnishments } from '@shared/schema';
 
 /**
  * IRS 2025 Annual Contribution Limits for Pre-Tax Deductions

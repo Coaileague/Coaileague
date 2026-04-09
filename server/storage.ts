@@ -3,6 +3,7 @@
 
 import crypto from 'crypto';
 import {
+  aiBrainActionLogs,
   users,
   workspaces,
   employees,
@@ -8774,7 +8775,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateAiBrainActionLog(id: string, workspaceId: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined> {
     const safeData: Record<string, any> = {};
-    if (data.actionType !== undefined) safeData.actionType = data.actionType;
+    if (data.actorType !== undefined) safeData.actionType = data.actorType;
     if (data.actionData !== undefined) safeData.actionData = data.actionData;
     if (data.result !== undefined) safeData.result = data.result;
     if (Object.keys(safeData).length === 0) return this.getAiBrainActionLog(id);

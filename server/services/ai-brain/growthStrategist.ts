@@ -27,6 +27,7 @@ import {
 import { eq, and, gte, lte, lt, count, sql, desc, ne } from 'drizzle-orm';
 import { subDays, differenceInDays, startOfWeek, endOfWeek } from 'date-fns';
 import { createLogger } from '../../lib/logger';
+import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('growthStrategist');
 
 export interface StrategyCard {

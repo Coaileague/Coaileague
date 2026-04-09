@@ -5423,7 +5423,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   try {
                     const { BOT_REGISTRY: rb3 } = await import('./bots/registry');
                     const { botAIService: rAI } = await import('./bots/botAIService');
-                    const reportMsgs = await storage.getChatMessages(ws.conversationId, 50);
+                    const reportMsgs = await storage.createChatMessage(ws.conversationId, 50);
                     const reportText = reportMsgs.filter(m => m.senderType === 'user' || m.senderType === 'customer').map(m => m.message).join('\n');
                     const reportSummary = await rAI.generateReportSummary(ws.workspaceId, 'general', reportText, ws.userId);
                     const endReportMsg = await storage.createChatMessage({

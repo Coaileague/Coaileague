@@ -56,7 +56,7 @@ export const onboardingConfig = {
       subject: (workspaceName: string) => `Welcome to ${workspaceName}! 🚀`,
       body: (firstName: string, workspaceName: string, steps: typeof onboardingConfig.onboardingSteps) => {
         const stepsHtml = steps
-          .map((step) => `<li>${step.name}</li>`)
+          .map((step: any) => `<li>${step.name}</li>`)
           .join('');
         return `
           <h1>Welcome to ${workspaceName}</h1>

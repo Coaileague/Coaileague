@@ -6,7 +6,13 @@ import { db } from '../db';
 import { eq, and, isNull } from 'drizzle-orm';
 import { storage } from '../storage';
 import { aiNotificationService } from '../services/aiNotificationService';
-import { internalEmailRecipients, internalMailboxes } from '@shared/schema';
+import {
+  chatMessages,
+  editChatMessageSchema,
+  internalEmailRecipients,
+  internalMailboxes,
+  updateNotificationPreferencesSchema
+} from '@shared/schema';
 import { broadcastToWorkspace } from '../websocket';
 import { gapIntelligenceService } from '../services/ai-brain/gapIntelligenceService';
 import { createLogger } from '../lib/logger';

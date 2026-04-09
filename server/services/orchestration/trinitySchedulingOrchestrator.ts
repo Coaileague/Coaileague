@@ -129,7 +129,7 @@ class TrinitySchedulingOrchestratorService {
       },
     });
 
-    await automationExecutionTracker.updateExecution(executionId, {
+    await automationExecutionTracker.createExecution(executionId, {
       status: 'in_progress',
     });
 
@@ -173,7 +173,7 @@ class TrinitySchedulingOrchestratorService {
         currency: 'USD',
       };
 
-      await automationExecutionTracker.updateExecution(executionId, {
+      await automationExecutionTracker.createExecution(executionId, {
         status: 'pending_verification',
         outputPayload: {
           sessionId,
@@ -237,7 +237,7 @@ class TrinitySchedulingOrchestratorService {
     } catch (error: any) {
       log.error(`[TrinitySchedulingOrchestrator] Session ${sessionId} failed:`, error);
 
-      await automationExecutionTracker.updateExecution(executionId, {
+      await automationExecutionTracker.createExecution(executionId, {
         status: 'failed',
         failureReason: (error instanceof Error ? error.message : String(error)),
         failureCode: 'SCHEDULING_ERROR',
@@ -329,7 +329,7 @@ class TrinitySchedulingOrchestratorService {
 
     this.pendingSessions.delete(executionId);
 
-    await automationExecutionTracker.updateExecution(executionId, {
+    await automationExecutionTracker.createExecution(executionId, {
       status: 'verified',
       outputPayload: {
         applied: true,
@@ -349,7 +349,7 @@ class TrinitySchedulingOrchestratorService {
   async rejectMutations(executionId: string, reason: string): Promise<void> {
     this.pendingSessions.delete(executionId);
 
-    await automationExecutionTracker.updateExecution(executionId, {
+    await automationExecutionTracker.createExecution(executionId, {
       status: 'rejected',
       outputPayload: {
         rejected: true,

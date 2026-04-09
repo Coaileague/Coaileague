@@ -28,6 +28,7 @@ import { broadcastToWorkspace } from '../../../websocket';
 import { auditLogger } from '../../audit-logger';
 import crypto from 'crypto';
 import { typedQuery } from '../../../lib/typedSql';
+import { workspaces } from '@shared/schema';
 
 import { createLogger } from '../../../lib/logger';
 const log = createLogger('PayrollSubagent');
@@ -891,8 +892,8 @@ class PayrollSubagentService {
         .where(eq(idempotencyKeys.key, key))
         .limit(1);
 
-      if (existing && existing.result) {
-        return existing.result as unknown as PayrollExecutionResult;
+      if (existing && existing.resultId) {
+        return existing.resultId as unknown as PayrollExecutionResult;
       }
     } catch (error) {
       // Idempotency check failed, proceed with new execution

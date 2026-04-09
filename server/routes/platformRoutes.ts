@@ -5,7 +5,7 @@ import { requirePlatformStaff, requirePlatformAdmin, type AuthenticatedRequest }
 import { trinityKnowledgeService } from "../services/ai-brain/trinityKnowledgeService";
 import { db } from "../db";
 import { storage } from "../storage";
-import { eq, and, or, desc, sql, gte, isNull, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { z } from "zod";
 import {
   workspaces,

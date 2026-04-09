@@ -15,6 +15,7 @@ import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { typedQuery } from '../../lib/typedSql';
 import { createLogger } from '../../lib/logger';
+import { sql } from 'drizzle-orm';
 const log = createLogger('healthCheckAggregation');
 
 

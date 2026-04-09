@@ -6,6 +6,7 @@ import {
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
+import { employeePoints } from '@shared/schema';
 const log = createLogger('aiBrainNotifier');
 
 

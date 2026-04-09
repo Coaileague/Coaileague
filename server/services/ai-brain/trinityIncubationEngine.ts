@@ -21,6 +21,7 @@ import { typedPool, typedPoolExec } from '../../lib/typedSql';
 import { db } from '../../db';
 import { incubationQueue } from '@shared/schema/domains/trinity/extended';
 import { createLogger } from '../../lib/logger';
+import { sql } from 'drizzle-orm';
 const log = createLogger('trinityIncubationEngine');
 
 export interface IncubatingProblem {

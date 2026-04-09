@@ -558,7 +558,7 @@ function UsageBlock({ usage }: { usage: UsageData }) {
 
 // Thinking visualization component with animated Trinity mascot
 function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: ConversationMode }) {
-  // Using SVG TrinityAnimatedLogo for crisp rendering at any size
+  // Uses TrinityArrowMark (the splash arrow mark) for the thinking avatar.
   
   // Get current active step for the substage display
   const currentStep = steps.find(s => s.status === 'processing') || steps[steps.length - 1];

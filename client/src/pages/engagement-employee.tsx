@@ -149,7 +149,7 @@ export default function EmployeeEngagement() {
                     <PulseSurveyForm
                       key={survey.id}
                       survey={survey}
-                      onSubmit={(responses) => {
+                      onSubmit={(responses: any) => {
                         submitSurveyMutation.mutate({
                           surveyTemplateId: survey.id,
                           responses

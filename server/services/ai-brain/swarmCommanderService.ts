@@ -26,6 +26,7 @@ import {
 import { TTLCache } from './cacheUtils';
 import crypto from 'crypto';
 import { createLogger } from '../../lib/logger';
+import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('swarmCommanderService');
 
 // Guru-mode roles that can access Swarm Commander features

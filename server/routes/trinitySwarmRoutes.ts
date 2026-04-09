@@ -12,7 +12,7 @@ router.get("/topology", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -33,7 +33,7 @@ router.get("/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -54,7 +54,7 @@ router.get("/conflicts", requireAuth, async (req: AuthenticatedRequest, res) => 
   try {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -75,7 +75,7 @@ router.post("/conflicts/:conflictId/resolve", requireAuth, async (req: Authentic
   try {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -112,7 +112,7 @@ router.get("/roi/:workspaceId", requireAuth, async (req: AuthenticatedRequest, r
   try {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { workspaceId } = req.params;
-    const userId = req.userId!;
+    const userId = req.user!;
     const { employees, workspaces } = await import("@shared/schema");
     const [employee] = await db.select().from(employees).where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId))).limit(1);
     let hasAccess = false;
@@ -135,7 +135,7 @@ router.get("/replay/:workflowId", requireAuth, async (req: AuthenticatedRequest,
   try {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
-    const userId = req.userId!;
+    const userId = req.user!;
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {

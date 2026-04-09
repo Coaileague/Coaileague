@@ -100,7 +100,7 @@ async function requireSubagentAccess(req: AuthenticatedRequest, res: Response, n
   }
 
   req.platformRole = platformRole;
-  req.userId = userId;
+  req.user = userId;
   next();
 }
 

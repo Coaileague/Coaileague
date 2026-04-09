@@ -268,7 +268,7 @@ class SelfReflectionEngine {
     const success = corrections.every(c => c.success);
     
     // Store correction in memory for learning
-    await trinityMemoryService.storeInsight({
+    await trinityMemoryService.shareInsight({
       workspaceId: context.workspaceId,
       userId: context.userId,
       insightType: 'auto_correction',
@@ -1009,7 +1009,7 @@ class ReflectionFeedbackLoop {
         timestamp: new Date().toISOString(),
       };
 
-      await trinityMemoryService.storeInsight({
+      await trinityMemoryService.shareInsight({
         workspaceId: context.workspaceId,
         userId: context.userId,
         insightType: 'learning',

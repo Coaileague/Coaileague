@@ -4,7 +4,7 @@ import { storage } from "../storage";
 import { requireAuth, requireManager, requireOwner, type AuthenticatedRequest } from "../rbac";
 import { readLimiter } from "../middleware/rateLimiter";
 import { db } from "../db";
-import { reportAttachments } from "@shared/schema";
+import { insertReportSubmissionSchema, reportAttachments } from '@shared/schema';
 import { eq } from "drizzle-orm";
 import { sendReportDeliveryEmail } from "../services/emailCore";
 import crypto from "crypto";

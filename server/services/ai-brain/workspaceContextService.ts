@@ -18,6 +18,7 @@ import {
 } from '@shared/schema';
 
 import { createLogger } from '../../lib/logger';
+import { employeeCertifications } from '@shared/schema';
 const log = createLogger('workspaceContextService');
 
 export interface WorkspaceContext {

@@ -258,7 +258,7 @@ class PlatformMaintenanceService {
     
     // Use Universal Notification Engine for platform-wide broadcast
     try {
-      await universalNotificationEngine.createPlatformUpdate({
+      await universalNotificationEngine.sendPlatformUpdate({
         title,
         summary: message,
         type: 'announcement',
@@ -370,7 +370,7 @@ class PlatformMaintenanceService {
   ): Promise<{ success: boolean; reachedCount: number }> {
     // Create platform update
     try {
-      await universalNotificationEngine.createPlatformUpdate({
+      await universalNotificationEngine.sendPlatformUpdate({
         title,
         summary: message,
         type: 'announcement',

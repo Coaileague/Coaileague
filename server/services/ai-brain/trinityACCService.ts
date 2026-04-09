@@ -27,7 +27,7 @@
 
 import { db, pool } from '../../db';
 import { trinityAccLogs } from '@shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { broadcastToGlobalWorkspace } from './trinityConnectomeService';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
@@ -269,12 +269,12 @@ class TrinityACCService {
         lastName: (await import('@shared/schema')).employees.lastName,
         expirationDate: (await import('@shared/schema')).complianceDocuments.expirationDate,
         status: (await import('@shared/schema')).complianceDocuments.status,
-        documentType: (await import('@shared/schema')).complianceDocuments.documentType
+        documentType: (await import('@shared/schema')).complianceDocuments.documentTypeId
       })
       .from((await import('@shared/schema')).employees)
       .leftJoin((await import('@shared/schema')).complianceDocuments, and(
         eq((await import('@shared/schema')).complianceDocuments.employeeId, (await import('@shared/schema')).employees.id),
-        inArray((await import('@shared/schema')).complianceDocuments.documentType, ['armed_license', 'guard_card', 'firearms_license']),
+        inArray((await import('@shared/schema')).complianceDocuments.documentTypeId, ['armed_license', 'guard_card', 'firearms_license']),
         eq((await import('@shared/schema')).complianceDocuments.workspaceId, action.workspaceId!)
       ))
       .where(eq((await import('@shared/schema')).employees.id, officerId))
@@ -463,7 +463,7 @@ class TrinityACCService {
         .from((await import('@shared/schema')).systemAuditLogs)
         .where(and(
           eq((await import('@shared/schema')).systemAuditLogs.workspaceId, action.workspaceId),
-          eq((await import('@shared/schema')).systemAuditLogs.actionType, 'calloff_predicted'),
+          eq((await import('@shared/schema')).systemAuditLogs.actorType, 'calloff_predicted'),
           sql`${(await import('@shared/schema')).systemAuditLogs.metadata}::text ILIKE ${`%${payload.officerId}%`}`,
           sql`${(await import('@shared/schema')).systemAuditLogs.createdAt} > NOW() - INTERVAL '12 hours'`
         ))
@@ -486,7 +486,7 @@ class TrinityACCService {
         .from((await import('@shared/schema')).systemAuditLogs)
         .where(and(
           eq((await import('@shared/schema')).systemAuditLogs.workspaceId, action.workspaceId),
-          eq((await import('@shared/schema')).systemAuditLogs.actionType, 'site_risk_predicted_low'),
+          eq((await import('@shared/schema')).systemAuditLogs.actorType, 'site_risk_predicted_low'),
           sql`${(await import('@shared/schema')).systemAuditLogs.metadata}::text ILIKE ${`%${payload.siteId}%`}`,
           sql`${(await import('@shared/schema')).systemAuditLogs.createdAt} > NOW() - INTERVAL '24 hours'`
         ))

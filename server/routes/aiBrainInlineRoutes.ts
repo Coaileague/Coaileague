@@ -107,7 +107,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       const result = await autonomousWorkflowService.executeWorkflow(
         suggestionId,
-        req.userId!,
+        req.user!,
         includeRelated !== false
       );
 
@@ -121,7 +121,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
   router.post("/workflow/high-priority-fixes", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { autonomousWorkflowService } = await import("../services/ai-brain/autonomousWorkflowService");
-      const result = await autonomousWorkflowService.executeHighPriorityFixes(req.userId!);
+      const result = await autonomousWorkflowService.executeHighPriorityFixes(req.user!);
       res.json({ success: true, data: result });
     } catch (error: unknown) {
       log.error("Error executing high-priority fixes:", error);
@@ -139,7 +139,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       }
 
       const context = {
-        userId: req.userId!,
+        userId: req.user!,
         workspaceId: req.user?.activeWorkspaceId,
         userRole: req.user?.platformRole || 'user',
         currentPage,
@@ -177,7 +177,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
         wasSuccessful,
         executionTimeMs,
         userFeedback,
-        metadata: { userId: req.userId },
+        metadata: { userId: req.user },
       });
 
       res.json({ success: true });
@@ -193,7 +193,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       
       
       const report = await runFastPlatformDiagnostic({
-        userId: req.userId,
+        userId: req.user,
         workspaceId: req.workspaceId,
         sendNotifications: true,
         applySelfHealing: true,
@@ -298,7 +298,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       }
 
       const context = {
-        userId: req.userId!,
+        userId: req.user!,
         workspaceId: req.user?.activeWorkspaceId,
         userRole: req.user?.platformRole || 'user',
       };
@@ -317,7 +317,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       const { testQuery = "Show me employee schedules for next week" } = req.body;
 
       const context = {
-        userId: req.userId!,
+        userId: req.user!,
         workspaceId: req.user?.activeWorkspaceId,
         userRole: req.user?.platformRole || 'user',
         currentPage: '/test',
@@ -383,7 +383,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
         return res.status(400).json({ success: false, error: "issueType required" });
       }
 
-      const result = await autonomousWorkflowService.searchAndExecuteForIssue(issueType, req.userId!);
+      const result = await autonomousWorkflowService.searchAndExecuteForIssue(issueType, req.user!);
 
       res.json({ success: !!result, data: result });
     } catch (error: unknown) {
@@ -402,13 +402,13 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
         return res.status(400).json({ error: 'actionId and category required' });
       }
 
-      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.user!);
       if (!authCheck.valid) {
         return res.status(403).json({ error: authCheck.reason });
       }
 
       const actionAuthCheck = await aiBrainAuthorizationService.canExecuteAction(
-        { userId: req.userId!, userRole: authCheck.role! },
+        { userId: req.user!, userRole: authCheck.role! },
         category,
         actionId
       );
@@ -423,13 +423,13 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
         category: category as any,
         name: actionId,
         payload: parameters || {},
-        userId: req.userId,
+        userId: req.user,
         userRole: authCheck.role!,
         priority: parameters?.priority || 'normal'
       });
 
       await aiBrainAuthorizationService.logCommandExecution({
-        userId: req.userId!,
+        userId: req.user!,
         userRole: authCheck.role!,
         actionId: `${category}.${actionId}`,
         category,
@@ -437,7 +437,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
         result: result.success
       });
 
-      res.json({ success: result.success, message: result.message, data: result, executedBy: req.userId, authorizedRole: authCheck.role });
+      res.json({ success: result.success, message: result.message, data: result, executedBy: req.user, authorizedRole: authCheck.role });
     } catch (error: unknown) {
       log.error('[AI Brain Command]', error);
       res.status(500).json({ success: false, error: sanitizeError(error) });
@@ -454,13 +454,13 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
         return res.status(400).json({ error: 'name and steps required' });
       }
 
-      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.user!);
       if (!authCheck.valid) {
         return res.status(403).json({ error: authCheck.reason });
       }
 
-      const workflow = await aiBrainMasterOrchestrator.executeWorkflowChain(name, steps, req.userId!, authCheck.role!);
-      res.json({ success: workflow.status === 'completed', workflow, executedBy: req.userId, authorizedRole: authCheck.role });
+      const workflow = await aiBrainMasterOrchestrator.executeWorkflowChain(name, steps, req.user!, authCheck.role!);
+      res.json({ success: workflow.status === 'completed', workflow, executedBy: req.user, authorizedRole: authCheck.role });
     } catch (error: unknown) {
       res.status(500).json({ success: false, error: sanitizeError(error) });
     }
@@ -469,7 +469,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
   router.get("/permissions/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { aiBrainAuthorizationService } = await import("../services/ai-brain/aiBrainAuthorizationService");
-      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.user!);
       if (!authCheck.valid) {
         return res.status(403).json({ error: authCheck.reason, isSupported: false });
       }
@@ -545,7 +545,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       const { subagentSupervisor, FAST_MODE_CONTEXTS } = await import("../services/ai-brain/subagentSupervisor");
       const { getUserPlatformRole } = await import("../rbac");
       
-      const userId = req.userId!;
+      const userId = req.user!;
       const workspaceId = req.workspaceId || req.user?.workspaceId;
       const { tier = 'standard', actions } = req.body;
 
@@ -673,7 +673,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       
       const { category, recipient, data } = req.body;
       const workspaceId = req.workspaceId || req.user?.workspaceId;
-      const userId = req.userId!;
+      const userId = req.user!;
 
       if (!category || !recipient || !data) {
         return res.status(400).json({ success: false, error: "category, recipient, and data required" });
@@ -731,7 +731,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
       const { workboardJobId, tasks, options } = req.body;
       const workspaceId = req.workspaceId || req.user?.workspaceId;
-      const userId = req.userId!;
+      const userId = req.user!;
       const platformRole = req.platformRole || 'employee';
 
       if (!workboardJobId || !tasks || !Array.isArray(tasks) || tasks.length === 0) {
@@ -941,7 +941,7 @@ router.post("/actions/execute", requireAuth, workspaceTrinityLimiter, async (req
       return res.status(400).json({ success: false, error: 'actionId is required' });
     }
     const workspaceId = req.workspaceId!;
-    const userId = req.userId!;
+    const userId = req.user!;
     const { helpaiOrchestrator } = await import("../services/helpai/platformActionHub");
     const [category, ...nameParts] = actionId.split('.');
     const name = nameParts.join('.') || actionId;
@@ -1131,7 +1131,7 @@ router.post("/error-report", requireAuth, async (req: AuthenticatedRequest, res)
   try {
     const { errorType, errorDetails, url, timestamp, userAgent } = req.body;
     log.error('[FrontendErrorReport]', {
-      userId: req.userId,
+      userId: req.user,
       workspaceId: req.workspaceId,
       errorType,
       errorDetails,

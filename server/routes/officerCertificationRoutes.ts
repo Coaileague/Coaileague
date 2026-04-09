@@ -828,7 +828,7 @@ router.get('/verify/:certNumber', async (req, res) => {
 router.get('/my-certificates', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
-    const userId = req.userId;
+    const userId = req.user;
 
     const [emp] = await db
       .select({ id: employees.id })

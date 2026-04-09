@@ -18,6 +18,7 @@ import { requirePlatformStaff, type AuthenticatedRequest } from "../rbac";
 import { typedPool } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+import { employeeInvitations } from '@shared/schema';
 const log = createLogger('AdminRoutes');
 
 
@@ -902,7 +903,7 @@ router.post('/support/create-client', async (req: AuthenticatedRequest, res) => 
 router.post('/support/delete-client', async (req: AuthenticatedRequest, res) => {
   try {
     const { clientId, workspaceId, reason } = req.body;
-    const adminUserId = req.userId;
+    const adminUserId = req.user;
     
     const client = await storage.getClient(clientId, workspaceId);
     if (!client || client.workspaceId !== workspaceId) {
@@ -935,7 +936,7 @@ router.post('/support/delete-client', async (req: AuthenticatedRequest, res) => 
 router.post('/support/process-payment', async (req: AuthenticatedRequest, res) => {
   try {
     const { invoiceId, workspaceId, amount, method, note } = req.body;
-    const adminUserId = req.userId;
+    const adminUserId = req.user;
     
     const invoice = await storage.getInvoice(invoiceId);
     if (!invoice || invoice.workspaceId !== workspaceId) {
@@ -973,7 +974,7 @@ router.post('/support/process-payment', async (req: AuthenticatedRequest, res) =
 router.post('/support/force-clear-invoice', async (req: AuthenticatedRequest, res) => {
   try {
     const { invoiceId, workspaceId, reason } = req.body;
-    const adminUserId = req.userId;
+    const adminUserId = req.user;
     
     const invoice = await storage.getInvoice(invoiceId);
     if (!invoice || invoice.workspaceId !== workspaceId) {
@@ -1009,7 +1010,7 @@ router.post('/support/force-clear-invoice', async (req: AuthenticatedRequest, re
 router.post('/support/reset-chat', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, reason } = req.body;
-    const adminUserId = req.userId;
+    const adminUserId = req.user;
     
     const conversations = await storage.getChatConversationsByWorkspace(workspaceId);
     
@@ -1043,7 +1044,7 @@ router.post('/support/reset-chat', async (req: AuthenticatedRequest, res) => {
 router.post('/support/force-close-service', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, service, reason } = req.body;
-    const adminUserId = req.userId;
+    const adminUserId = req.user;
     
     await storage.createAuditLog({
       userId: adminUserId!,
@@ -1070,7 +1071,7 @@ router.post('/support/force-close-service', async (req: AuthenticatedRequest, re
 router.post('/support/update-subscription', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, newTier } = req.body;
-    const adminUserId = req.userId;
+    const adminUserId = req.user;
 
     const adminSupport = await import('../adminSupport');
     const result = await adminSupport.updateSubscriptionTier(workspaceId, newTier, adminUserId);
@@ -1114,7 +1115,7 @@ router.post('/bot/execute-command', async (req: AuthenticatedRequest, res) => {
 
     const result = await botCommandExecutor.executeCommand({
       botId,
-      commandedBy: req.userId!,
+      commandedBy: req.user!,
       action,
       reason,
       targetEntityType,
@@ -1192,7 +1193,7 @@ router.get('/support/org/:orgId/employees', async (req: AuthenticatedRequest, re
     const { orgId } = req.params;
     const employeesList = await storage.getEmployeesByWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1217,7 +1218,7 @@ router.get('/support/org/:orgId/shifts', async (req: AuthenticatedRequest, res) 
     const end = endDate ? new Date(endDate as string) : undefined;
     const shiftsList = await storage.getShiftsByWorkspace(orgId, start, end);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1239,7 +1240,7 @@ router.get('/support/org/:orgId/time-entries', async (req: AuthenticatedRequest,
     const { orgId } = req.params;
     const timeEntries = await storage.getTimeEntriesByWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1261,7 +1262,7 @@ router.get('/support/org/:orgId/invoices', async (req: AuthenticatedRequest, res
     const { orgId } = req.params;
     const invoices = await storage.getInvoicesByWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1283,7 +1284,7 @@ router.get('/support/org/:orgId/clients', async (req: AuthenticatedRequest, res)
     const { orgId } = req.params;
     const clientsList = await storage.getClientsByWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1305,7 +1306,7 @@ router.get('/support/org/:orgId/tickets', async (req: AuthenticatedRequest, res)
     const { orgId } = req.params;
     const orgTickets = await storage.getSupportTickets(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1348,7 +1349,7 @@ router.get('/support/org/:orgId/overview', async (req: AuthenticatedRequest, res
     ]);
     const workspace = await storage.getWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1386,7 +1387,7 @@ router.patch('/support/org/:orgId/employees/:employeeId', async (req: Authentica
     }
     const updated = await storage.updateEmployee(employeeId, orgId, updates);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1443,7 +1444,7 @@ router.get('/support/platform-search', async (req: AuthenticatedRequest, res) =>
       }
     }
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: PLATFORM_WORKSPACE_ID,
@@ -1483,7 +1484,7 @@ router.get('/support/org/:orgId/documents', async (req: AuthenticatedRequest, re
       allDocs = results.flat();
     }
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1505,7 +1506,7 @@ router.get('/support/org/:orgId/payroll', async (req: AuthenticatedRequest, res)
     const { orgId } = req.params;
     const payrollRuns = await storage.getPayrollRunsByWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1531,7 +1532,7 @@ router.get('/support/org/:orgId/expenses', async (req: AuthenticatedRequest, res
     if (employeeId) filters.employeeId = employeeId as string;
     const expenses = await storage.getExpensesByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1556,7 +1557,7 @@ router.get('/support/org/:orgId/pto', async (req: AuthenticatedRequest, res) => 
     if (status) filters.status = status as string;
     const ptoRequests = await storage.getPtoRequestsByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1582,7 +1583,7 @@ router.get('/support/org/:orgId/disputes', async (req: AuthenticatedRequest, res
     if (disputeType) filters.disputeType = disputeType as string;
     const disputes = await storage.getDisputesByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1607,7 +1608,7 @@ router.get('/support/org/:orgId/chat-history', async (req: AuthenticatedRequest,
     if (status) filters.status = status as string;
     const conversations = await storage.getChatConversationsByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1629,7 +1630,7 @@ router.get('/support/org/:orgId/performance-reviews', async (req: AuthenticatedR
     const { orgId } = req.params;
     const reviews = await storage.getPerformanceReviewsByWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1651,7 +1652,7 @@ router.get('/support/org/:orgId/benefits', async (req: AuthenticatedRequest, res
     const { orgId } = req.params;
     const benefits = await storage.getEmployeeBenefitsByWorkspace(orgId);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,
@@ -1679,7 +1680,7 @@ router.get('/support/org/:orgId/audit-logs', async (req: AuthenticatedRequest, r
       .limit(limit)
       .offset(offset);
     await storage.createAuditLog({
-      userId: req.userId!,
+      userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
       workspaceId: orgId,

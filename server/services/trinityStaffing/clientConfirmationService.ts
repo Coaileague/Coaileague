@@ -164,7 +164,7 @@ class ClientConfirmationService {
    * Generate human-like email content
    */
   private generateEmailContent(data: ConfirmationEmailData): string {
-    const date = data.shiftDate.toLocaleDateString('en-US', {
+    const date = data.shiftDate.toLocaleString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

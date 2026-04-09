@@ -24,6 +24,13 @@ import {
 import { EmployeeBehaviorScoringService } from "../services/employeeBehaviorScoring";
 import { broadcastToWorkspace } from "../websocket";
 import { createLogger } from '../lib/logger';
+import {
+  insertAnonymousSuggestionSchema,
+  insertEmployerRatingSchema,
+  insertPulseSurveyResponseSchema,
+  insertPulseSurveyTemplateSchema,
+  shifts
+} from '@shared/schema';
 const log = createLogger('EngagementRoutes');
 
 

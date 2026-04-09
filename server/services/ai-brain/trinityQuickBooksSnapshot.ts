@@ -26,6 +26,7 @@ import {
 } from '@shared/schema';
 import { TTLCache } from './cacheUtils';
 import { createLogger } from '../../lib/logger';
+import { partnerSyncLogs } from '@shared/schema';
 const log = createLogger('trinityQuickBooksSnapshot');
 
 export interface ARAgingBucket {

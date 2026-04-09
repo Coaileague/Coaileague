@@ -104,7 +104,7 @@ router.get("/client-profitability", async (req: AuthenticatedRequest, res) => {
 
       rows.push({
         clientId: client.id,
-        clientName: client.companyName || client.contactName || "Unknown",
+        clientName: client.companyName || client.apContactName || "Unknown",
         revenue: revenueStr,
         laborCost: laborCostStr,
         totalHours: Math.round(totalHours * 100) / 100,

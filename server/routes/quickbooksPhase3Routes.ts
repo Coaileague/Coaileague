@@ -266,7 +266,7 @@ router.get('/tax-classification/history', requireAuth, async (req: Request, res:
       employeeId: (await import('@shared/schema')).workerTaxClassificationHistory.employeeId,
       workspaceId: (await import('@shared/schema')).workerTaxClassificationHistory.workspaceId,
       taxYear: (await import('@shared/schema')).workerTaxClassificationHistory.taxYear,
-      oldClassification: (await import('@shared/schema')).workerTaxClassificationHistory.oldClassification,
+      oldClassification: (await import('@shared/schema')).workerTaxClassificationHistory.newClassification,
       newClassification: (await import('@shared/schema')).workerTaxClassificationHistory.newClassification,
       is1099Eligible: (await import('@shared/schema')).workerTaxClassificationHistory.is1099Eligible,
       aiConfidence: (await import('@shared/schema')).workerTaxClassificationHistory.aiConfidence,

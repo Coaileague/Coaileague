@@ -622,7 +622,7 @@ router.post("/validate-requirements", requireAuth, async (req: Request, res: Res
       errors.push(`\${type.name} MUST be a COLOR scan (not black & white)`);
     }
     
-    if (type.requiresBackSide && imageSide === 'front') {
+    if (type.requiresBackImage && imageSide === 'front') {
       errors.push(`\${type.name} requires BOTH front AND back images`);
     }
     
@@ -633,8 +633,8 @@ router.post("/validate-requirements", requireAuth, async (req: Request, res: Res
         errors,
         requirements: {
           requiresColor: type.requiresColor,
-          requiresFrontSide: type.requiresFrontSide,
-          requiresBackSide: type.requiresBackSide,
+          requiresFrontSide: type.requiresFrontImage,
+          requiresBackSide: type.requiresBackImage,
           description: type.validationRules
         }
       });

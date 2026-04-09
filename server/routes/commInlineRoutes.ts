@@ -16,7 +16,7 @@ router.get("/alerts/config", requireAuth, async (req: AuthenticatedRequest, res)
     let configs = await alertService.getAlertConfigurations(workspaceId);
     
     if (configs.length === 0) {
-      configs = await alertService.initializeDefaultConfigs(workspaceId, req.userId!);
+      configs = await alertService.initializeDefaultConfigs(workspaceId, req.user!);
     }
     res.json({ success: true, data: configs });
   } catch (error: unknown) {
@@ -62,7 +62,7 @@ router.put("/alerts/config/:alertType", requireAuth, async (req: AuthenticatedRe
     const config = await alertService.upsertAlertConfiguration(
       workspaceId,
       { ...req.body, alertType },
-      req.userId!
+      req.user!
     );
     res.json({ success: true, data: config });
   } catch (error: unknown) {
@@ -88,7 +88,7 @@ router.patch("/alerts/config/:alertType/toggle", requireAuth, async (req: Authen
     const config = await alertService.upsertAlertConfiguration(
       workspaceId,
       { alertType, isEnabled },
-      req.userId!
+      req.user!
     );
     res.json({ success: true, data: config });
   } catch (error: unknown) {
@@ -153,7 +153,7 @@ router.post("/alerts/:id/acknowledge", requireAuth, async (req: AuthenticatedReq
       return res.status(403).json({ error: "Access denied" });
     }
     
-    const alert = await alertService.acknowledgeAlert(id, req.userId!, notes);
+    const alert = await alertService.acknowledgeAlert(id, req.user!, notes);
     res.json({ success: true, data: alert });
   } catch (error: unknown) {
     log.error("Error acknowledging alert:", error);
@@ -175,7 +175,7 @@ router.post("/alerts/:id/resolve", requireAuth, async (req: AuthenticatedRequest
       return res.status(403).json({ error: "Access denied" });
     }
     
-    const alert = await alertService.resolveAlert(id, req.userId!, notes);
+    const alert = await alertService.resolveAlert(id, req.user!, notes);
     res.json({ success: true, data: alert });
   } catch (error: unknown) {
     log.error("Error resolving alert:", error);
@@ -215,7 +215,7 @@ router.post("/alerts/test", requireAuth, async (req: AuthenticatedRequest, res) 
       title: `Test Alert: ${alertType.replace(/_/g, ' ').toUpperCase()}`,
       message: `This is a test alert for the ${alertType.replace(/_/g, ' ')} alert type.`,
       severity: 'low',
-      triggerData: { isTest: true, triggeredBy: req.userId },
+      triggerData: { isTest: true, triggeredBy: req.user },
       deduplicationKey: `test:${alertType}:${Date.now()}`,
     });
     
@@ -250,7 +250,7 @@ router.post("/push/subscribe", requireAuth, async (req: AuthenticatedRequest, re
     
     const { pushNotificationService } = await import("../services/pushNotificationService");
     const result = await pushNotificationService.registerPushSubscription(
-      req.userId!,
+      req.user!,
       subscription,
       deviceInfo
     );
@@ -271,7 +271,7 @@ router.delete("/push/unsubscribe", requireAuth, async (req: AuthenticatedRequest
     const { endpoint } = req.body;
     
     const { pushNotificationService } = await import("../services/pushNotificationService");
-    const result = await pushNotificationService.unregisterPushSubscription(req.userId!, endpoint);
+    const result = await pushNotificationService.unregisterPushSubscription(req.user!, endpoint);
     
     res.json({ success: true, unsubscribed: result.unsubscribed });
   } catch (error: unknown) {
@@ -283,7 +283,7 @@ router.delete("/push/unsubscribe", requireAuth, async (req: AuthenticatedRequest
 router.get("/push/subscriptions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { pushNotificationService } = await import("../services/pushNotificationService");
-    const subscriptions = await pushNotificationService.getUserSubscriptions(req.userId!);
+    const subscriptions = await pushNotificationService.getUserSubscriptions(req.user!);
     res.json({ success: true, subscriptions });
   } catch (error: unknown) {
     log.error("Error getting subscriptions:", error);
@@ -294,7 +294,7 @@ router.get("/push/subscriptions", requireAuth, async (req: AuthenticatedRequest,
 router.post("/push/test", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { pushNotificationService } = await import("../services/pushNotificationService");
-    const result = await pushNotificationService.sendPushToUser(req.userId!, {
+    const result = await pushNotificationService.sendPushToUser(req.user!, {
       title: "Test Notification",
       body: "Push notifications are working correctly!",
       tag: "test-notification",

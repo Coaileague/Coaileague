@@ -7,6 +7,7 @@ import { trimStrings } from "../utils/sanitize";
 import { db } from "../db";
 import {
   employees,
+  users,
   workspaces,
   platformRoles,
   insertEmployeeSchema,
@@ -44,7 +45,7 @@ router.patch('/:employeeId/role', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: validation.error.issues });
     }
     const { workspaceRole: newRole, expectedVersion } = validation.data;
-    const userId = req.userId || req.user?.id;
+    const userId = req.user || req.user?.id;
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     
     if (!userId || !workspaceId) {
@@ -227,7 +228,7 @@ router.patch('/:employeeId/position', async (req: AuthenticatedRequest, res) => 
       return res.status(400).json({ error: "Validation failed", details: validation.error.issues });
     }
     const { position: newPosition, expectedVersion } = validation.data;
-    const userId = req.userId || req.user?.id;
+    const userId = req.user || req.user?.id;
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
@@ -304,7 +305,7 @@ router.patch('/:employeeId/position', async (req: AuthenticatedRequest, res) => 
         workspaceId,
         actorId: userId,
         actorType: 'user',
-        action: AUDIT_ACTIONS.EMPLOYEE_RATE_CHANGED,
+        action: AUDIT_ACTIONS.EMPLOYEE_PAY_RATE_CHANGED,
         entityType: 'employee',
         entityId: employeeId,
         changeType: 'update',
@@ -427,7 +428,7 @@ router.patch('/:employeeId/access', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: validation.error.issues });
     }
     const { isActive, workspaceId: bodyWorkspaceId, guardCardNumber, guardCardExpiryDate } = validation.data;
-    const userId = req.userId || req.user?.id;
+    const userId = req.user || req.user?.id;
     const resolvedPlatRole2 = req.platformRole || await getUserPlatformRole(userId);
     const isPlatformStaff = resolvedPlatRole2 && ['root_admin', 'sysop', 'support_manager'].includes(resolvedPlatRole2);
     const workspaceId = (isPlatformStaff && bodyWorkspaceId) ? bodyWorkspaceId : (req.workspaceId || req.user?.currentWorkspaceId);
@@ -732,7 +733,7 @@ router.post('/bulk-notify', async (req: AuthenticatedRequest, res) => {
     }
 
     const { employeeIds, title, message } = validation.data;
-    const userId = req.userId || req.user?.id;
+    const userId = req.user || req.user?.id;
     // Always use the session workspaceId — never trust workspaceId from the request body
     const workspaceId = req.workspaceId!;
 

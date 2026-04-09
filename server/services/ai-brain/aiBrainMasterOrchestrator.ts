@@ -28,6 +28,7 @@ import { aiNotificationService } from '../aiNotificationService';
 import { aiExpenseCategorizationService } from './aiExpenseCategorizationService';
 import { aiDynamicPricingService } from './aiDynamicPricingService';
 import { broadcastNotificationToUser, broadcastUserScopedNotification, broadcastToAllClients, broadcastToWorkspace } from '../../websocket';
+import { employeeCertifications } from '@shared/schema';
 import { registerUACPActions } from "../uacp/uacpOrchestrationActions";
 import { registerCoreSubagentActions } from "./subagents/coreSubagentOrchestration";
 import { registerTrinityCodeOpsActions } from "./trinityCodeOpsActions";

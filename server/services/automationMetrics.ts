@@ -24,6 +24,7 @@ import { eq, and, gte, lte, sql, count, avg, sum } from "drizzle-orm";
 import { subDays, startOfMonth, endOfMonth, differenceInHours } from "date-fns";
 import { typedCount } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { invoiceProposals } from '@shared/schema';
 const log = createLogger('automationMetrics');
 
 // Load dynamic constants from config (replaces hardcoded values)

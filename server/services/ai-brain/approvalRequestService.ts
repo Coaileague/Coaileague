@@ -5,6 +5,7 @@ import {
 } from '@shared/schema';
 import { eq, and, sql, desc, or, inArray, lt } from "drizzle-orm";
 import { createLogger } from '../../lib/logger';
+import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('approvalRequestService');
 
 export type ApprovalDecision = 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled';

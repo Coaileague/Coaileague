@@ -297,8 +297,8 @@ class TrinityScanOrchestrator {
         const category = gap.category || 'unknown';
         const current = gapCategories.get(category) || { count: 0, descriptions: [] };
         current.count++;
-        if (gap.description && current.descriptions.length < 5) {
-          current.descriptions.push(gap.description);
+        if (gap.gapDescription && current.descriptions.length < 5) {
+          current.descriptions.push(gap.gapDescription);
         }
         gapCategories.set(category, current);
       }

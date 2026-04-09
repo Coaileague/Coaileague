@@ -1910,8 +1910,8 @@ export default function QuickBooksImportPage() {
         <UniversalModalContent 
           size="lg"
           className="bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e: any) => e.preventDefault()}
+          onEscapeKeyDown={(e: any) => e.preventDefault()}
         >
           <VisuallyHidden>
             <UniversalModalTitle>Trinity Sync Progress</UniversalModalTitle>

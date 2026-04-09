@@ -12,6 +12,7 @@ import { eq, and, gte, lte, inArray, sql } from "drizzle-orm";
 import { startOfYear, endOfYear, startOfQuarter, endOfQuarter } from "date-fns";
 import { getTaxRules } from './tax/taxRulesRegistry';
 import { createLogger } from '../lib/logger';
+import { employeeTaxForms } from '@shared/schema';
 const log = createLogger('taxFormGeneratorService');
 
 

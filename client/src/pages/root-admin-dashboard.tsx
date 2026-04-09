@@ -963,7 +963,7 @@ export default function RootAdminDashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {stats?.recentActivity?.map((activity, idx) => (
+                  {stats?.recentActivity?.map((activity: any, idx: any) => (
                     <div
                       key={idx}
                       className="flex items-start gap-3 p-3 rounded-lg hover-elevate border transition-colors"

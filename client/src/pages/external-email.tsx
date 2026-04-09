@@ -213,8 +213,8 @@ export default function ExternalEmail() {
     setActiveTab("compose");
   };
 
-  const sentEmails = emails.filter(e => e.email.status !== "pending");
-  const pendingEmails = emails.filter(e => e.email.status === "pending");
+  const sentEmails = emails.filter(e => e.toEmail.status !== "pending");
+  const pendingEmails = emails.filter(e => e.toEmail.status === "pending");
 
   return (
     <div className="h-full flex flex-col">
@@ -242,7 +242,7 @@ export default function ExternalEmail() {
             <div className="flex items-center gap-2">
               <Eye className="w-5 h-5 text-purple-500" />
               <div>
-                <p className="text-2xl font-bold">{emails.filter(e => e.email.status === "opened").length}</p>
+                <p className="text-2xl font-bold">{emails.filter(e => e.toEmail.status === "opened").length}</p>
                 <p className="text-sm text-muted-foreground">Opened</p>
               </div>
             </div>
@@ -253,7 +253,7 @@ export default function ExternalEmail() {
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-500" />
               <div>
-                <p className="text-2xl font-bold">{emails.filter(e => e.email.enhancedByTrinity).length}</p>
+                <p className="text-2xl font-bold">{emails.filter(e => e.toEmail.enhancedByTrinity).length}</p>
                 <p className="text-sm text-muted-foreground">Trinity Enhanced</p>
               </div>
             </div>

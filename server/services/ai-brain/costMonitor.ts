@@ -357,7 +357,7 @@ class AICostMonitorService {
       .from(systemAuditLogs)
       .where(
         and(
-          eq(systemAuditLogs.actionType, 'ai_cost_log'),
+          eq(systemAuditLogs.actorType, 'ai_cost_log'),
           gte(systemAuditLogs.createdAt, startDate)
         )
       );
@@ -407,7 +407,7 @@ class AICostMonitorService {
       .from(systemAuditLogs)
       .where(
         and(
-          eq(systemAuditLogs.actionType, 'ai_cost_log'),
+          eq(systemAuditLogs.actorType, 'ai_cost_log'),
           gte(systemAuditLogs.createdAt, startDate)
         )
       );
@@ -549,7 +549,7 @@ class AICostMonitorService {
       .from(systemAuditLogs)
       .where(
         and(
-          eq(systemAuditLogs.actionType, 'ai_cost_log'),
+          eq(systemAuditLogs.actorType, 'ai_cost_log'),
           gte(systemAuditLogs.createdAt, monthStart)
         )
       );
@@ -614,7 +614,7 @@ class AICostMonitorService {
     const logs = await db
       .select()
       .from(systemAuditLogs)
-      .where(eq(systemAuditLogs.actionType, 'ai_cost_log'))
+      .where(eq(systemAuditLogs.actorType, 'ai_cost_log'))
       .orderBy(desc(systemAuditLogs.createdAt))
       .limit(limit * 3);
 

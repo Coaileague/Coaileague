@@ -438,10 +438,10 @@ export type EventCategory =
 export type EventVisibility = 'all' | 'staff' | 'supervisor' | 'manager' | 'org_leadership' | 'platform_staff' | 'admin';
 
 export interface PlatformEvent {
-  type: PlatformEventType;
-  category: EventCategory;
-  title: string;
-  description: string;
+  type: PlatformEventType | string;
+  category?: EventCategory | string;
+  title?: string;
+  description?: string;
   version?: string;
   workspaceId?: string; // null = global/platform-wide, set = workspace-specific
   userId?: string;
@@ -471,7 +471,7 @@ export interface PlatformEvent {
 
 export interface EventSubscriber {
   id?: string;
-  name: string;
+  name?: string;
   handler: (event: PlatformEvent) => Promise<void>;
 }
 
@@ -491,13 +491,17 @@ class PlatformEventBus {
   /**
    * Subscribe to specific event types
    */
-  subscribe(eventType: PlatformEventType | '*', subscriber: EventSubscriber) {
+  subscribe(eventType: PlatformEventType | string, subscriber: EventSubscriber | ((event: PlatformEvent) => Promise<void>)) {
     const key = eventType === '*' ? 'all' : eventType;
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, []);
     }
-    this.subscribers.get(key)!.push(subscriber);
-    log.verbose('Subscriber registered', { subscriberName: subscriber.name, eventType });
+    // Accept both EventSubscriber objects and plain handler functions
+    const sub: EventSubscriber = typeof subscriber === 'function'
+      ? { name: eventType, handler: subscriber }
+      : subscriber;
+    this.subscribers.get(key)!.push(sub);
+    log.verbose('Subscriber registered', { subscriberName: sub.name, eventType });
   }
 
   /**

@@ -316,7 +316,7 @@ router.post('/applicants/:id/assess', requireAuth, async (req: AuthenticatedRequ
     ]);
     res.json({
       success: true,
-      tasks: results.map((t) => ({ id: t.id, taskType: t.task_type, status: t.status })),
+      tasks: results.map((t) => ({ id: t.id, taskType: t.taskType, status: t.status })),
     });
   } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });

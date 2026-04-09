@@ -2435,7 +2435,7 @@ router.get(
   "/:roomId/tickets",
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.userId;
+    const userId = authReq.user;
     const { roomId } = req.params;
 
     if (!userId) {
@@ -2473,7 +2473,7 @@ router.get(
   "/:roomId/verify-role",
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.userId;
+    const userId = authReq.user;
     const workspaceId = authReq.workspaceId;
 
     if (!userId) {
@@ -2537,7 +2537,7 @@ router.get(
 
       const exportData = {
         exportedAt: new Date().toISOString(),
-        exportedBy: authReq.userId,
+        exportedBy: authReq.user,
         roomId,
         roomName: room?.name || 'Unknown Room',
         messageCount: messages.length,
@@ -2570,7 +2570,7 @@ router.post(
   async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const userId = authReq.userId;
+      const userId = authReq.user;
       const userPlatformRole = authReq.platformRole;
 
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -2625,7 +2625,7 @@ router.post(
   async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const userId = authReq.userId;
+      const userId = authReq.user;
 
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -2676,7 +2676,7 @@ router.post(
   async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const userId = authReq.userId;
+      const userId = authReq.user;
 
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 

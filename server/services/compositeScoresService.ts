@@ -49,7 +49,7 @@ export async function calculateCompositeScore(
       eq(performanceReviews.employeeId, employeeId),
       eq(performanceReviews.workspaceId, workspaceId)
     ))
-    .orderBy(desc(performanceReviews.reviewDate))
+    .orderBy(desc(performanceReviews.reviewType))
     .limit(5);
 
   if (reviews.length > 0) {
@@ -129,8 +129,8 @@ export async function calculateCompositeScore(
     .where(and(
       eq(performanceReviews.employeeId, employeeId),
       eq(performanceReviews.workspaceId, workspaceId),
-      lte(performanceReviews.reviewDate, thirtyDaysAgo),
-      gte(performanceReviews.reviewDate, sixtyDaysAgo)
+      lte(performanceReviews.reviewType, thirtyDaysAgo),
+      gte(performanceReviews.reviewType, sixtyDaysAgo)
     ));
 
   let trend: 'improving' | 'stable' | 'declining' = 'stable';

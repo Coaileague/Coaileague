@@ -45,7 +45,7 @@ function isManagerRole(role?: string | null): boolean {
 }
 
 async function resolveCallerEmployee(req: AuthenticatedRequest) {
-  const userId = req.userId;
+  const userId = req.user;
   const workspaceId = req.workspaceId;
   if (!userId || !workspaceId) return null;
   const [emp] = await db
@@ -183,7 +183,7 @@ router.post('/disciplinary', requireAuth, async (req: AuthenticatedRequest, res)
     const parsed = insertDisciplinaryRecordSchema.safeParse({
       ...req.body,
       workspaceId,
-      issuedBy: req.userId,
+      issuedBy: req.user,
     });
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
 
@@ -491,7 +491,7 @@ router.post('/reviews', requireAuth, async (req: AuthenticatedRequest, res) => {
       .values({
         workspaceId,
         employeeId,
-        reviewerId: req.userId ?? undefined,
+        reviewerId: req.user ?? undefined,
         reviewType: reviewType ?? 'annual',
         reviewPeriodStart: reviewPeriodStart ? new Date(reviewPeriodStart) : undefined,
         reviewPeriodEnd: reviewPeriodEnd ? new Date(reviewPeriodEnd) : undefined,

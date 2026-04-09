@@ -25,7 +25,7 @@ import { createNotification } from '../notificationService';
 import { trinityMilestoneDetector, type DetectedMilestone } from './trinityMilestoneDetector';
 import { platformEventBus } from '../platformEventBus';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { notifications } from '@shared/schema';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityRecognitionEngine');
@@ -181,10 +181,10 @@ class TrinityRecognitionEngine {
       .limit(1)
       .catch(() => []);
 
-    if (mgr[0]?.user_id) {
+    if (mgr[0]?.userId) {
       await createNotification({
         workspaceId,
-        userId: mgr[0].user_id,
+        userId: mgr[0].userId,
         type: 'trinity_raise_suggestion',
         title: `Performance Review Suggestion: ${e.first_name} ${e.last_name}`,
         message,

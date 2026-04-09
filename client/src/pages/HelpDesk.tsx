@@ -3020,7 +3020,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  showHomeButton={true}
  homeButtonPath="/pricing"
  isGuest={true}
- onPointerDownOutside={(e) =>{
+ onPointerDownOutside={(e: any) =>{
  // Prevent closing by clicking outside dialog if form is incomplete
  if (!isFormComplete()) {
  e.preventDefault();

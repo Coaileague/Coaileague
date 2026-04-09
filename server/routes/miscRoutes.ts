@@ -208,7 +208,7 @@ router.get("/api/feature-updates", requireAuth, async (req: AuthenticatedRequest
       .select()
       .from(featureUpdates)
       .where(eq(featureUpdates.isActive, true))
-      .orderBy(desc(featureUpdates.releaseDate));
+      .orderBy(desc(featureUpdates.releaseAt));
 
     const dismissals = await db
       .select()
@@ -1188,7 +1188,7 @@ router.post("/api/knowledge/ask", requireAuth, async (req: AuthenticatedRequest,
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const workspaceId = req.workspace?.id;
+    const workspaceId = req.workspaceId?.id;
 
     const schema = z.object({
       query: z.string().min(1, "Question is required"),
@@ -1283,7 +1283,7 @@ router.post("/api/knowledge/ask", requireAuth, async (req: AuthenticatedRequest,
 
 router.get("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspace?.id;
+    const workspaceId = req.workspaceId?.id;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const { category, search } = req.query;
 
@@ -1315,7 +1315,7 @@ router.get("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequ
 
 router.post("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspace?.id;
+    const workspaceId = req.workspaceId?.id;
     const { title, content, category, summary, tags, isPublic } = req.body;
 
     if (!title || !content) {
@@ -1632,7 +1632,7 @@ router.post("/api/escalation/check-sla", requireAuth, readLimiter, async (req: A
 router.post("/api/migrations/employee-match", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { employeeName, workspaceId: reqWorkspaceId } = req.body;
-    const workspaceId = reqWorkspaceId || req.workspace?.id;
+    const workspaceId = reqWorkspaceId || req.workspaceId?.id;
     if (!workspaceId || !employeeName) return res.status(400).json({ error: "Workspace and employeeName required" });
 
     const allEmployees = await db.select().from(employees).where(eq(employees.workspaceId, workspaceId));
@@ -1771,7 +1771,7 @@ router.post("/api/suggested-changes/:id/stage", requireAuth, async (req: Authent
   try {
     const { suggestedChangesService } = await import("../services/ai-brain/suggestedChangesService");
     const { includeRelated } = req.body;
-    const result = await suggestedChangesService.stageSuggestedChange(req.params.id, req.userId!, includeRelated);
+    const result = await suggestedChangesService.stageSuggestedChange(req.params.id, req.user!, includeRelated);
     res.json({ success: result.success, data: result });
   } catch (error: unknown) {
     log.error("Error staging suggested change:", error);

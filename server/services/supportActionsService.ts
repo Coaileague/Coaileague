@@ -747,7 +747,7 @@ class SupportActionsService {
         workspaceName: workspace?.name || 'N/A',
         createdAt: targetUser.createdAt,
         lastLoginAt: targetUser.lastLoginAt,
-        failedLoginAttempts: targetUser.failedLoginAttempts || 0,
+        failedLoginAttempts: targetUser.loginAttempts || 0,
       };
 
       return {

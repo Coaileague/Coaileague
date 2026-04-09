@@ -28,6 +28,7 @@ import { openaiClient, type OpenAIResponse } from './providers/openaiClient';
 import { geminiClient } from './providers/geminiClient';
 import { claudeService } from './dualai/claudeService';
 import { resilientAIGateway } from './providers/resilientAIGateway';
+import { AiModel, AiTaskType } from '@shared/schema';
 import { premiumFeatureGating } from '../premiumFeatureGating';
 import { metaCognitionService } from './metaCognitionService';
 import { createLogger } from '../../lib/logger';

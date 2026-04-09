@@ -109,7 +109,7 @@ class OnboardingQuickBooksFlow {
         },
         required: ['workspaceId', 'userId'],
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         return await this.initiateOAuth(params.workspaceId, params.userId);
       },
     });
@@ -126,7 +126,7 @@ class OnboardingQuickBooksFlow {
         },
         required: ['workspaceId'],
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         const flow = this.getFlowByWorkspace(params.workspaceId);
         if (!flow) {
           return { success: false, message: 'No active flow found' };
@@ -147,7 +147,7 @@ class OnboardingQuickBooksFlow {
         },
         required: ['flowId'],
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         return await this.retryFailedStage(params.flowId);
       },
     });
@@ -167,7 +167,7 @@ class OnboardingQuickBooksFlow {
         },
         required: ['flowId'],
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         const flow = this.flows.get(params.flowId);
         if (!flow) {
           return { success: false, message: 'Flow not found' };
@@ -196,7 +196,7 @@ class OnboardingQuickBooksFlow {
         },
         required: ['flowId', 'stage'],
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         return await this.skipStage(params.flowId, params.stage as FlowStage);
       },
     });
@@ -227,7 +227,7 @@ class OnboardingQuickBooksFlow {
         },
         required: ['workspaceId'],
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         return await this.resetFlow(params.workspaceId);
       },
     });

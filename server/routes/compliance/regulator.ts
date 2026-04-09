@@ -423,7 +423,7 @@ router.get("/portal/:token/employee/:employeeId/documents", async (req: Request,
       success: true, 
       documents: documents.map(d => ({
         id: d.id,
-        documentTypeName: d.documentTypeName,
+        documentTypeName: d.documentName,
         status: d.status,
         isLocked: d.isLocked,
         expirationDate: d.expirationDate,

@@ -1406,66 +1406,66 @@ function AppContent() {
                 <Route path="/" component={Dashboard} />
                 <Route path="/mobile-hub" component={MobileHubPage} />
                 <Route path="/mobile-more" component={MobileMorePage} />
-                <Route path="/dashboard">{(params) => <ErrorBoundary><Dashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/multi-company">{(params) => <ErrorBoundary><MultiCompany {...params} /></ErrorBoundary>}</Route>
-                <Route path="/gate-duty">{(params) => <ErrorBoundary><GateDuty {...params} /></ErrorBoundary>}</Route>
-                <Route path="/workspace">{(params) => <ErrorBoundary><Workspace {...params} /></ErrorBoundary>}</Route>
-                <Route path="/command-center">{(params) => <ErrorBoundary><CommandCenter {...params} /></ErrorBoundary>}</Route>
-                <Route path="/commands">{(params) => <ErrorBoundary><CommandDocumentation {...params} /></ErrorBoundary>}</Route>
-                <Route path="/worker">{(params) => <ErrorBoundary><WorkerDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/worker/incidents">{(params) => <ErrorBoundary><WorkerIncidents {...params} /></ErrorBoundary>}</Route>
-                <Route path="/schedule">{(params) => <ErrorBoundary componentName="Schedule Board"><UniversalSchedule {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shift-marketplace">{(params) => <ErrorBoundary><ShiftMarketplace {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shifts/offers/:offerId">{(params) => <ErrorBoundary><ShiftOfferPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/workflow-approvals">{(params) => <ErrorBoundary><WorkflowApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shift-approvals">{(params) => <ErrorBoundary><ShiftApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sales">{(params) => <ErrorBoundary><WorkspaceSales {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sales-crm">{(params) => <ErrorBoundary><SalesCRM {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sales-pipeline">{(params) => <ErrorBoundary><SalesPipelinePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/outreach">{(params) => <ErrorBoundary><Outreach {...params} /></ErrorBoundary>}</Route>
-                <Route path="/behavior-scoring">{(params) => <ErrorBoundary><BehaviorScoring {...params} /></ErrorBoundary>}</Route>
-                <Route path="/trinity-memory">{(params) => <ErrorBoundary><TrinityMemory {...params} /></ErrorBoundary>}</Route>
-                <Route path="/inbound-opportunities">{(params) => <ErrorBoundary><InboundOpportunities {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hris-management">{(params) => <ErrorBoundary><HRISManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/labor-law-config">{(params) => <ErrorBoundary><LaborLawConfig {...params} /></ErrorBoundary>}</Route>
-                <Route path="/document-library">{(params) => <ErrorBoundary componentName="Document Library"><DocumentLibrary {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr-documents">{(params) => <ErrorBoundary><HrDocuments {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr-document-requests">{(params) => <ErrorBoundary><HrDocumentRequests {...params} /></ErrorBoundary>}</Route>
-                <Route path="/forms">{(params) => <ErrorBoundary><FormSubmissions {...params} /></ErrorBoundary>}</Route>
-                <Route path="/pto">{(params) => <ErrorBoundary><HRPTO {...params} /></ErrorBoundary>}</Route>
-                <Route path="/flex-staffing">{(params) => <ErrorBoundary><FlexStaffing {...params} /></ErrorBoundary>}</Route>
+                <Route path="/dashboard"><ErrorBoundary><Dashboard /></ErrorBoundary></Route>
+                <Route path="/multi-company"><ErrorBoundary><MultiCompany /></ErrorBoundary></Route>
+                <Route path="/gate-duty"><ErrorBoundary><GateDuty /></ErrorBoundary></Route>
+                <Route path="/workspace"><ErrorBoundary><Workspace /></ErrorBoundary></Route>
+                <Route path="/command-center"><ErrorBoundary><CommandCenter /></ErrorBoundary></Route>
+                <Route path="/commands"><ErrorBoundary><CommandDocumentation /></ErrorBoundary></Route>
+                <Route path="/worker"><ErrorBoundary><WorkerDashboard /></ErrorBoundary></Route>
+                <Route path="/worker/incidents"><ErrorBoundary><WorkerIncidents /></ErrorBoundary></Route>
+                <Route path="/schedule"><ErrorBoundary componentName="Schedule Board"><UniversalSchedule /></ErrorBoundary></Route>
+                <Route path="/shift-marketplace"><ErrorBoundary><ShiftMarketplace /></ErrorBoundary></Route>
+                <Route path="/shifts/offers/:offerId">{(params: any) => <ErrorBoundary><ShiftOfferPage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/workflow-approvals"><ErrorBoundary><WorkflowApprovals /></ErrorBoundary></Route>
+                <Route path="/shift-approvals"><ErrorBoundary><ShiftApprovals /></ErrorBoundary></Route>
+                <Route path="/sales"><ErrorBoundary><WorkspaceSales /></ErrorBoundary></Route>
+                <Route path="/sales-crm"><ErrorBoundary><SalesCRM /></ErrorBoundary></Route>
+                <Route path="/sales-pipeline"><ErrorBoundary><SalesPipelinePage /></ErrorBoundary></Route>
+                <Route path="/outreach"><ErrorBoundary><Outreach /></ErrorBoundary></Route>
+                <Route path="/behavior-scoring"><ErrorBoundary><BehaviorScoring /></ErrorBoundary></Route>
+                <Route path="/trinity-memory"><ErrorBoundary><TrinityMemory /></ErrorBoundary></Route>
+                <Route path="/inbound-opportunities"><ErrorBoundary><InboundOpportunities /></ErrorBoundary></Route>
+                <Route path="/hris-management"><ErrorBoundary><HRISManagement /></ErrorBoundary></Route>
+                <Route path="/labor-law-config"><ErrorBoundary><LaborLawConfig /></ErrorBoundary></Route>
+                <Route path="/document-library"><ErrorBoundary componentName="Document Library"><DocumentLibrary /></ErrorBoundary></Route>
+                <Route path="/hr-documents"><ErrorBoundary><HrDocuments /></ErrorBoundary></Route>
+                <Route path="/hr-document-requests"><ErrorBoundary><HrDocumentRequests /></ErrorBoundary></Route>
+                <Route path="/forms"><ErrorBoundary><FormSubmissions /></ErrorBoundary></Route>
+                <Route path="/pto"><ErrorBoundary><HRPTO /></ErrorBoundary></Route>
+                <Route path="/flex-staffing"><ErrorBoundary><FlexStaffing /></ErrorBoundary></Route>
   
-                <Route path="/email-intelligence">{(params) => <ErrorBoundary><EmailIntelligence {...params} /></ErrorBoundary>}</Route>
-                <Route path="/time-tracking">{(params) => <ErrorBoundary><TimeTracking {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employees">{(params) => <ErrorBoundary componentName="Employee Roster"><Employees {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sps-document-safe">{(params) => <ErrorBoundary><SpsDocumentSafe {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sps-client-pipeline">{(params) => <ErrorBoundary><SpsClientPipeline {...params} /></ErrorBoundary>}</Route>
-                <Route path="/quickbooks-import">{(params) => <ErrorBoundary><QuickBooksImport {...params} /></ErrorBoundary>}</Route>
-                <Route path="/resolution-inbox">{(params) => <ErrorBoundary><ResolutionInbox {...params} /></ErrorBoundary>}</Route>
-                <Route path="/org-management">{(params) => <ErrorBoundary><OrgManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/role-management">{(params) => <ErrorBoundary><RoleManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/manager-dashboard">{(params) => <ErrorBoundary><ManagerDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/engagement/dashboard">{(params) => <ErrorBoundary><EngagementDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/engagement/employee">{(params) => <ErrorBoundary><EmployeeEngagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/analytics/reports">{(params) => <ErrorBoundary><AnalyticsReportsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/qb-reports">{(params) => <ErrorBoundary><QBReports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/clients">{(params) => <ErrorBoundary componentName="Client List"><Clients {...params} /></ErrorBoundary>}</Route>
-                <Route path="/invoices">{(params) => <ErrorBoundary componentName="Invoice Manager"><Invoices {...params} /></ErrorBoundary>}</Route>
-                <Route path="/financial-intelligence">{(params) => <ErrorBoundary componentName="Financial Intelligence"><FinancialIntelligence {...params} /></ErrorBoundary>}</Route>
-                <Route path="/org-hub">{(params) => <ErrorBoundary><OrgHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/developers">{(params) => <ErrorBoundary><DeveloperPortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/reports">{(params) => <ErrorBoundary componentName="Reports Dashboard"><Reports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/analytics">{(params) => <ErrorBoundary componentName="Analytics Dashboard"><Analytics {...params} /></ErrorBoundary>}</Route>
-                <Route path="/audit-logs">{(params) => <ErrorBoundary><AuditLogs {...params} /></ErrorBoundary>}</Route>
-                <Route path="/automation-control">{(params) => <ErrorBoundary><AutomationControl {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/command-center">{(params) => <ErrorBoundary><AICommandCenter {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/bugs">{(params) => <ErrorBoundary><SupportBugDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/queue">{(params) => <ErrorBoundary><SupportQueue {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/chatrooms">{(params) => <ErrorBoundary><SupportChatrooms {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-tickets">{(params) => <ErrorBoundary><MyTickets {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/assisted-onboarding">{(params) => <ErrorBoundary><AssistedOnboarding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/workspace-onboarding">{(params) => <ErrorBoundary><WorkspaceOnboarding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/trinity/self-edit">{(params) => <ErrorBoundary><TrinitySelfEditGovernancePage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/email-intelligence"><ErrorBoundary><EmailIntelligence /></ErrorBoundary></Route>
+                <Route path="/time-tracking"><ErrorBoundary><TimeTracking /></ErrorBoundary></Route>
+                <Route path="/employees"><ErrorBoundary componentName="Employee Roster"><Employees /></ErrorBoundary></Route>
+                <Route path="/sps-document-safe"><ErrorBoundary><SpsDocumentSafe /></ErrorBoundary></Route>
+                <Route path="/sps-client-pipeline"><ErrorBoundary><SpsClientPipeline /></ErrorBoundary></Route>
+                <Route path="/quickbooks-import"><ErrorBoundary><QuickBooksImport /></ErrorBoundary></Route>
+                <Route path="/resolution-inbox"><ErrorBoundary><ResolutionInbox /></ErrorBoundary></Route>
+                <Route path="/org-management"><ErrorBoundary><OrgManagement /></ErrorBoundary></Route>
+                <Route path="/role-management"><ErrorBoundary><RoleManagement /></ErrorBoundary></Route>
+                <Route path="/manager-dashboard"><ErrorBoundary><ManagerDashboard /></ErrorBoundary></Route>
+                <Route path="/engagement/dashboard"><ErrorBoundary><EngagementDashboard /></ErrorBoundary></Route>
+                <Route path="/engagement/employee"><ErrorBoundary><EmployeeEngagement /></ErrorBoundary></Route>
+                <Route path="/analytics/reports"><ErrorBoundary><AnalyticsReportsPage /></ErrorBoundary></Route>
+                <Route path="/qb-reports"><ErrorBoundary><QBReports /></ErrorBoundary></Route>
+                <Route path="/clients"><ErrorBoundary componentName="Client List"><Clients /></ErrorBoundary></Route>
+                <Route path="/invoices"><ErrorBoundary componentName="Invoice Manager"><Invoices /></ErrorBoundary></Route>
+                <Route path="/financial-intelligence"><ErrorBoundary componentName="Financial Intelligence"><FinancialIntelligence /></ErrorBoundary></Route>
+                <Route path="/org-hub"><ErrorBoundary><OrgHub /></ErrorBoundary></Route>
+                <Route path="/developers"><ErrorBoundary><DeveloperPortal /></ErrorBoundary></Route>
+                <Route path="/reports"><ErrorBoundary componentName="Reports Dashboard"><Reports /></ErrorBoundary></Route>
+                <Route path="/analytics"><ErrorBoundary componentName="Analytics Dashboard"><Analytics /></ErrorBoundary></Route>
+                <Route path="/audit-logs"><ErrorBoundary><AuditLogs /></ErrorBoundary></Route>
+                <Route path="/automation-control"><ErrorBoundary><AutomationControl /></ErrorBoundary></Route>
+                <Route path="/ai/command-center"><ErrorBoundary><AICommandCenter /></ErrorBoundary></Route>
+                <Route path="/support/bugs"><ErrorBoundary><SupportBugDashboard /></ErrorBoundary></Route>
+                <Route path="/support/queue"><ErrorBoundary><SupportQueue /></ErrorBoundary></Route>
+                <Route path="/support/chatrooms"><ErrorBoundary><SupportChatrooms /></ErrorBoundary></Route>
+                <Route path="/my-tickets"><ErrorBoundary><MyTickets /></ErrorBoundary></Route>
+                <Route path="/support/assisted-onboarding"><ErrorBoundary><AssistedOnboarding /></ErrorBoundary></Route>
+                <Route path="/workspace-onboarding"><ErrorBoundary><WorkspaceOnboarding /></ErrorBoundary></Route>
+                <Route path="/trinity/self-edit"><ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary></Route>
                 <Route path="/trinity">
                   <RBACRoute require={["owner", "leader"]}>
                     <ErrorBoundary componentName="Trinity AI">
@@ -1473,10 +1473,10 @@ function AppContent() {
                     </ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/insurance">{(params) => <ErrorBoundary><Insurance {...params} /></ErrorBoundary>}</Route>
-                <Route path="/billing">{(params) => <ErrorBoundary><Billing {...params} /></ErrorBoundary>}</Route>
-                <Route path="/subscription">{(params) => <ErrorBoundary><SubscriptionDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/usage">{(params) => <ErrorBoundary><UsageDashboard {...params} /></ErrorBoundary>}</Route>
+                <Route path="/insurance"><ErrorBoundary><Insurance /></ErrorBoundary></Route>
+                <Route path="/billing"><ErrorBoundary><Billing /></ErrorBoundary></Route>
+                <Route path="/subscription"><ErrorBoundary><SubscriptionDashboard /></ErrorBoundary></Route>
+                <Route path="/usage"><ErrorBoundary><UsageDashboard /></ErrorBoundary></Route>
                 <Route path="/owner-analytics">
                   <OwnerRoute>
                     <ErrorBoundary><OwnerAnalytics /></ErrorBoundary>
@@ -1494,134 +1494,134 @@ function AppContent() {
                     <ErrorBoundary><PermissionMatrix /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/integrations">{(params) => <ErrorBoundary><IntegrationsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/oversight">{(params) => <ErrorBoundary><OversightHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/expenses">{(params) => <ErrorBoundary><Expenses {...params} /></ErrorBoundary>}</Route>
-                <Route path="/mileage">{(params) => <ErrorBoundary><Mileage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/expense-approvals">{(params) => <ErrorBoundary><ExpenseApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/approvals">{(params) => <ErrorBoundary><ApprovalsHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/schedule/team">{(params) => <ErrorBoundary><TeamSchedule {...params} /></ErrorBoundary>}</Route>
-                <Route path="/field-reports">{(params) => <ErrorBoundary><FieldReports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-team">{(params) => <ErrorBoundary><MyTeam {...params} /></ErrorBoundary>}</Route>
-                <Route path="/timesheets/pending">{(params) => <ErrorBoundary><PendingTimeEntries {...params} /></ErrorBoundary>}</Route>
-                <Route path="/timesheets/approvals">{(params) => <ErrorBoundary><TimesheetApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/i9-compliance">{(params) => <ErrorBoundary><I9Compliance {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-reports">{(params) => <ErrorBoundary><ComplianceReports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance">{(params) => <ErrorBoundary><SecurityComplianceVault {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/employee/:employeeId">{(params) => <ErrorBoundary><EmployeeComplianceDetail {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/approvals">{(params) => <ErrorBoundary><ComplianceApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/expiration-alerts">{(params) => <ErrorBoundary><ExpirationAlerts {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/regulator-access">{(params) => <ErrorBoundary><RegulatorAccess {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/my-packet">{(params) => <ErrorBoundary><EmployeeOnboardingPacket {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/auditor-portal">{(params) => <ErrorBoundary><AuditorPortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/audit-readiness">{(params) => <ErrorBoundary><AuditReadiness {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance/regulatory-enrollment">{(params) => <ErrorBoundary><RegulatoryEnrollment {...params} /></ErrorBoundary>}</Route>
-                <Route path="/policies">{(params) => <ErrorBoundary><Policies {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll/pay-stubs/:id">{(params) => <ErrorBoundary componentName="Pay Stub"><PayStubDetail {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll">{(params) => <ErrorBoundary componentName="Payroll Dashboard"><PayrollDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-paychecks">{(params) => <ErrorBoundary><MyPaychecks {...params} /></ErrorBoundary>}</Route>
+                <Route path="/integrations"><ErrorBoundary><IntegrationsPage /></ErrorBoundary></Route>
+                <Route path="/oversight"><ErrorBoundary><OversightHub /></ErrorBoundary></Route>
+                <Route path="/expenses"><ErrorBoundary><Expenses /></ErrorBoundary></Route>
+                <Route path="/mileage"><ErrorBoundary><Mileage /></ErrorBoundary></Route>
+                <Route path="/expense-approvals"><ErrorBoundary><ExpenseApprovals /></ErrorBoundary></Route>
+                <Route path="/approvals"><ErrorBoundary><ApprovalsHub /></ErrorBoundary></Route>
+                <Route path="/schedule/team"><ErrorBoundary><TeamSchedule /></ErrorBoundary></Route>
+                <Route path="/field-reports"><ErrorBoundary><FieldReports /></ErrorBoundary></Route>
+                <Route path="/my-team"><ErrorBoundary><MyTeam /></ErrorBoundary></Route>
+                <Route path="/timesheets/pending"><ErrorBoundary><PendingTimeEntries /></ErrorBoundary></Route>
+                <Route path="/timesheets/approvals"><ErrorBoundary><TimesheetApprovals /></ErrorBoundary></Route>
+                <Route path="/i9-compliance"><ErrorBoundary><I9Compliance /></ErrorBoundary></Route>
+                <Route path="/compliance-reports"><ErrorBoundary><ComplianceReports /></ErrorBoundary></Route>
+                <Route path="/security-compliance"><ErrorBoundary><SecurityComplianceVault /></ErrorBoundary></Route>
+                <Route path="/security-compliance/employee/:employeeId">{(params: any) => <ErrorBoundary><EmployeeComplianceDetail {...params} /></ErrorBoundary>}</Route>
+                <Route path="/security-compliance/approvals"><ErrorBoundary><ComplianceApprovals /></ErrorBoundary></Route>
+                <Route path="/security-compliance/expiration-alerts"><ErrorBoundary><ExpirationAlerts /></ErrorBoundary></Route>
+                <Route path="/security-compliance/regulator-access"><ErrorBoundary><RegulatorAccess /></ErrorBoundary></Route>
+                <Route path="/security-compliance/my-packet"><ErrorBoundary><EmployeeOnboardingPacket /></ErrorBoundary></Route>
+                <Route path="/security-compliance/auditor-portal"><ErrorBoundary><AuditorPortal /></ErrorBoundary></Route>
+                <Route path="/security-compliance/audit-readiness"><ErrorBoundary><AuditReadiness /></ErrorBoundary></Route>
+                <Route path="/compliance/regulatory-enrollment"><ErrorBoundary><RegulatoryEnrollment /></ErrorBoundary></Route>
+                <Route path="/policies"><ErrorBoundary><Policies /></ErrorBoundary></Route>
+                <Route path="/payroll/pay-stubs/:id">{(params: any) => <ErrorBoundary componentName="Pay Stub"><PayStubDetail {...params} /></ErrorBoundary>}</Route>
+                <Route path="/payroll"><ErrorBoundary componentName="Payroll Dashboard"><PayrollDashboard /></ErrorBoundary></Route>
+                <Route path="/my-paychecks"><ErrorBoundary><MyPaychecks /></ErrorBoundary></Route>
                 <Route path="/leaders-hub">
                   <LeaderRoute>
                     <ErrorBoundary><LeadersHub /></ErrorBoundary>
                   </LeaderRoute>
                 </Route>
-                <Route path="/hr/benefits">{(params) => <ErrorBoundary><HRBenefits {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr/reviews">{(params) => <ErrorBoundary><HRReviews {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr/pto">{(params) => <ErrorBoundary><HRPTO {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr/terminations">{(params) => <ErrorBoundary><HRTerminations {...params} /></ErrorBoundary>}</Route>
-                <Route path="/performance">{(params) => <ErrorBoundary><PerformancePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/disputes">{(params) => <ErrorBoundary><Disputes {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-audit-record">{(params) => <ErrorBoundary><MyAuditRecord {...params} /></ErrorBoundary>}</Route>
-                <Route path="/file-grievance">{(params) => <ErrorBoundary><FileGrievance {...params} /></ErrorBoundary>}</Route>
-                <Route path="/review-disputes">{(params) => <ErrorBoundary><ReviewDisputes {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll/deductions">{(params) => <ErrorBoundary><PayrollDeductions {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll/garnishments">{(params) => <ErrorBoundary><PayrollGarnishments {...params} /></ErrorBoundary>}</Route>
-                <Route path="/communications/onboarding">{(params) => <ErrorBoundary><CommunicationsOnboarding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/diagnostics">{(params) => <ErrorBoundary><Diagnostics {...params} /></ErrorBoundary>}</Route>
-                <Route path="/messages">{(params) => <ErrorBoundary><PrivateMessages {...params} /></ErrorBoundary>}</Route>
-                <Route path="/private-messages">{(params) => <ErrorBoundary><PrivateMessages {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-os">{(params) => <ErrorBoundary><Training {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training">{(params) => <ErrorBoundary><TrainingPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-certification/modules/:id">{(params) => <ErrorBoundary><TrainingModuleLearning {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-certification">{(params) => <ErrorBoundary><TrainingCertification {...params} /></ErrorBoundary>}</Route>
-                <Route path="/recognition">{(params) => <ErrorBoundary><RecognitionPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/budgeting">{(params) => <ErrorBoundary><Budgeting {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai-integrations">{(params) => <ErrorBoundary><AIIntegrations {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee-recognition">{(params) => <ErrorBoundary><EmployeeRecognition {...params} /></ErrorBoundary>}</Route>
-                <Route path="/alert-configuration">{(params) => <ErrorBoundary><AlertConfiguration {...params} /></ErrorBoundary>}</Route>
-                <Route path="/accounting-integrations">{(params) => <ErrorBoundary><AccountingIntegrations {...params} /></ErrorBoundary>}</Route>
-                <Route path="/finance-hub">{(params) => <ErrorBoundary><FinanceHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/records">{(params) => <ErrorBoundary><Records {...params} /></ErrorBoundary>}</Route>
-                <Route path="/insights">{(params) => <ErrorBoundary><Insights {...params} /></ErrorBoundary>}</Route>
-                <Route path="/rms">{(params) => <ErrorBoundary><RmsHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/cad">{(params) => <ErrorBoundary><CadConsole {...params} /></ErrorBoundary>}</Route>
-                <Route path="/equipment">{(params) => <ErrorBoundary><EquipmentPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/guard-tour">{(params) => <ErrorBoundary><GuardTourPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/work-orders">{(params) => <ErrorBoundary><WorkOrdersPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/visitor-management">{(params) => <ErrorBoundary><VisitorManagementPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/dock-chat">{(params) => <ErrorBoundary><DockChatPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/voice-settings">{(params) => <ErrorBoundary><VoiceSettingsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/settings/email">{(params) => <ErrorBoundary><EmailManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/settings/dns-guide">{(params) => <ErrorBoundary><DnsSetupGuide {...params} /></ErrorBoundary>}</Route>
-                <Route path="/voice-calls">{(params) => <ErrorBoundary><VoiceCallsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client-communications">{(params) => <ErrorBoundary><ClientCommunicationsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shift-trading">{(params) => <ErrorBoundary><ShiftTradingPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/safety">{(params) => <ErrorBoundary><SafetyHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ethics">{(params) => <ErrorBoundary><EthicsHotline {...params} /></ErrorBoundary>}</Route>
-                <Route path="/post-orders">{(params) => <ErrorBoundary><PostOrdersPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/post-order-versions">{(params) => <ErrorBoundary><PostOrderVersionsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/incident-patterns">{(params) => <ErrorBoundary><IncidentPatternsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/contract-renewals">{(params) => <ErrorBoundary><ContractRenewalsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/applicant-tracking">{(params) => <ErrorBoundary><ApplicantTrackingPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hiring">{(params) => <ErrorBoundary componentName="Hiring Pipeline"><HiringPipelinePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/recruitment">{(params) => <ErrorBoundary componentName="Interview Pipeline"><RecruitmentPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/recruitment/candidates/:id">{(params) => <ErrorBoundary componentName="Candidate Profile"><CandidateProfilePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/onboarding-tasks">{(params) => <ErrorBoundary componentName="Onboarding Tasks"><OnboardingTasksPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-compliance">{(params) => <ErrorBoundary><TrainingCompliancePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/subcontractor-management">{(params) => <ErrorBoundary><SubcontractorManagementPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client-satisfaction">{(params) => <ErrorBoundary><ClientSatisfactionPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/surveys">{(params) => <ErrorBoundary><ClientSurveysPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/bid-management">{(params) => <ErrorBoundary><BidManagementPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-matrix">{(params) => <ErrorBoundary><ComplianceMatrix {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client-profitability">{(params) => <ErrorBoundary><ClientProfitability {...params} /></ErrorBoundary>}</Route>
-                <Route path="/cash-flow">{(params) => <ErrorBoundary><CashFlowDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/invoice-aging">{(params) => <ErrorBoundary><InvoiceAging {...params} /></ErrorBoundary>}</Route>
-                <Route path="/turnover-analytics">{(params) => <ErrorBoundary><TurnoverAnalytics {...params} /></ErrorBoundary>}</Route>
-                <Route path="/bi-analytics">{(params) => <ErrorBoundary><BIAnalytics {...params} /></ErrorBoundary>}</Route>
-                <Route path="/situation-board">{(params) => <ErrorBoundary><SituationBoard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/credential-wallet">{(params) => <ErrorBoundary><CredentialWallet {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-evidence">{(params) => <ErrorBoundary><ComplianceEvidence {...params} /></ErrorBoundary>}</Route>
-                <Route path="/proposals">{(params) => <ErrorBoundary><ProposalBuilder {...params} /></ErrorBoundary>}</Route>
-                <Route path="/tx-service-agreement">{(params) => <ErrorBoundary><TxServiceAgreement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/site-briefings">{(params) => <ErrorBoundary><SiteBriefing {...params} /></ErrorBoundary>}</Route>
-                <Route path="/safety-check">{(params) => <ErrorBoundary><SafetyCheck {...params} /></ErrorBoundary>}</Route>
-                <Route path="/wellness">{(params) => <ErrorBoundary><WellnessPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/site-survey">{(params) => <ErrorBoundary><SiteSurveyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/rfp">{(params) => <ErrorBoundary><RfpManager {...params} /></ErrorBoundary>}</Route>
-                <Route path="/rfp-pipeline">{(params) => <ErrorBoundary><RfpPipeline {...params} /></ErrorBoundary>}</Route>
+                <Route path="/hr/benefits"><ErrorBoundary><HRBenefits /></ErrorBoundary></Route>
+                <Route path="/hr/reviews"><ErrorBoundary><HRReviews /></ErrorBoundary></Route>
+                <Route path="/hr/pto"><ErrorBoundary><HRPTO /></ErrorBoundary></Route>
+                <Route path="/hr/terminations"><ErrorBoundary><HRTerminations /></ErrorBoundary></Route>
+                <Route path="/performance"><ErrorBoundary><PerformancePage /></ErrorBoundary></Route>
+                <Route path="/disputes"><ErrorBoundary><Disputes /></ErrorBoundary></Route>
+                <Route path="/my-audit-record"><ErrorBoundary><MyAuditRecord /></ErrorBoundary></Route>
+                <Route path="/file-grievance"><ErrorBoundary><FileGrievance /></ErrorBoundary></Route>
+                <Route path="/review-disputes"><ErrorBoundary><ReviewDisputes /></ErrorBoundary></Route>
+                <Route path="/payroll/deductions"><ErrorBoundary><PayrollDeductions /></ErrorBoundary></Route>
+                <Route path="/payroll/garnishments"><ErrorBoundary><PayrollGarnishments /></ErrorBoundary></Route>
+                <Route path="/communications/onboarding"><ErrorBoundary><CommunicationsOnboarding /></ErrorBoundary></Route>
+                <Route path="/diagnostics"><ErrorBoundary><Diagnostics /></ErrorBoundary></Route>
+                <Route path="/messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
+                <Route path="/private-messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
+                <Route path="/training-os"><ErrorBoundary><Training /></ErrorBoundary></Route>
+                <Route path="/training"><ErrorBoundary><TrainingPage /></ErrorBoundary></Route>
+                <Route path="/training-certification/modules/:id">{(params: any) => <ErrorBoundary><TrainingModuleLearning {...params} /></ErrorBoundary>}</Route>
+                <Route path="/training-certification"><ErrorBoundary><TrainingCertification /></ErrorBoundary></Route>
+                <Route path="/recognition"><ErrorBoundary><RecognitionPage /></ErrorBoundary></Route>
+                <Route path="/budgeting"><ErrorBoundary><Budgeting /></ErrorBoundary></Route>
+                <Route path="/ai-integrations"><ErrorBoundary><AIIntegrations /></ErrorBoundary></Route>
+                <Route path="/employee-recognition"><ErrorBoundary><EmployeeRecognition /></ErrorBoundary></Route>
+                <Route path="/alert-configuration"><ErrorBoundary><AlertConfiguration /></ErrorBoundary></Route>
+                <Route path="/accounting-integrations"><ErrorBoundary><AccountingIntegrations /></ErrorBoundary></Route>
+                <Route path="/finance-hub"><ErrorBoundary><FinanceHub /></ErrorBoundary></Route>
+                <Route path="/records"><ErrorBoundary><Records /></ErrorBoundary></Route>
+                <Route path="/insights"><ErrorBoundary><Insights /></ErrorBoundary></Route>
+                <Route path="/rms"><ErrorBoundary><RmsHub /></ErrorBoundary></Route>
+                <Route path="/cad"><ErrorBoundary><CadConsole /></ErrorBoundary></Route>
+                <Route path="/equipment"><ErrorBoundary><EquipmentPage /></ErrorBoundary></Route>
+                <Route path="/guard-tour"><ErrorBoundary><GuardTourPage /></ErrorBoundary></Route>
+                <Route path="/work-orders"><ErrorBoundary><WorkOrdersPage /></ErrorBoundary></Route>
+                <Route path="/visitor-management"><ErrorBoundary><VisitorManagementPage /></ErrorBoundary></Route>
+                <Route path="/dock-chat"><ErrorBoundary><DockChatPage /></ErrorBoundary></Route>
+                <Route path="/voice-settings"><ErrorBoundary><VoiceSettingsPage /></ErrorBoundary></Route>
+                <Route path="/settings/email"><ErrorBoundary><EmailManagement /></ErrorBoundary></Route>
+                <Route path="/settings/dns-guide"><ErrorBoundary><DnsSetupGuide /></ErrorBoundary></Route>
+                <Route path="/voice-calls"><ErrorBoundary><VoiceCallsPage /></ErrorBoundary></Route>
+                <Route path="/client-communications"><ErrorBoundary><ClientCommunicationsPage /></ErrorBoundary></Route>
+                <Route path="/shift-trading"><ErrorBoundary><ShiftTradingPage /></ErrorBoundary></Route>
+                <Route path="/safety"><ErrorBoundary><SafetyHub /></ErrorBoundary></Route>
+                <Route path="/ethics"><ErrorBoundary><EthicsHotline /></ErrorBoundary></Route>
+                <Route path="/post-orders"><ErrorBoundary><PostOrdersPage /></ErrorBoundary></Route>
+                <Route path="/post-order-versions"><ErrorBoundary><PostOrderVersionsPage /></ErrorBoundary></Route>
+                <Route path="/incident-patterns"><ErrorBoundary><IncidentPatternsPage /></ErrorBoundary></Route>
+                <Route path="/contract-renewals"><ErrorBoundary><ContractRenewalsPage /></ErrorBoundary></Route>
+                <Route path="/applicant-tracking"><ErrorBoundary><ApplicantTrackingPage /></ErrorBoundary></Route>
+                <Route path="/hiring"><ErrorBoundary componentName="Hiring Pipeline"><HiringPipelinePage /></ErrorBoundary></Route>
+                <Route path="/recruitment"><ErrorBoundary componentName="Interview Pipeline"><RecruitmentPage /></ErrorBoundary></Route>
+                <Route path="/recruitment/candidates/:id">{(params: any) => <ErrorBoundary componentName="Candidate Profile"><CandidateProfilePage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/onboarding-tasks"><ErrorBoundary componentName="Onboarding Tasks"><OnboardingTasksPage /></ErrorBoundary></Route>
+                <Route path="/training-compliance"><ErrorBoundary><TrainingCompliancePage /></ErrorBoundary></Route>
+                <Route path="/subcontractor-management"><ErrorBoundary><SubcontractorManagementPage /></ErrorBoundary></Route>
+                <Route path="/client-satisfaction"><ErrorBoundary><ClientSatisfactionPage /></ErrorBoundary></Route>
+                <Route path="/surveys"><ErrorBoundary><ClientSurveysPage /></ErrorBoundary></Route>
+                <Route path="/bid-management"><ErrorBoundary><BidManagementPage /></ErrorBoundary></Route>
+                <Route path="/compliance-matrix"><ErrorBoundary><ComplianceMatrix /></ErrorBoundary></Route>
+                <Route path="/client-profitability"><ErrorBoundary><ClientProfitability /></ErrorBoundary></Route>
+                <Route path="/cash-flow"><ErrorBoundary><CashFlowDashboard /></ErrorBoundary></Route>
+                <Route path="/invoice-aging"><ErrorBoundary><InvoiceAging /></ErrorBoundary></Route>
+                <Route path="/turnover-analytics"><ErrorBoundary><TurnoverAnalytics /></ErrorBoundary></Route>
+                <Route path="/bi-analytics"><ErrorBoundary><BIAnalytics /></ErrorBoundary></Route>
+                <Route path="/situation-board"><ErrorBoundary><SituationBoard /></ErrorBoundary></Route>
+                <Route path="/credential-wallet"><ErrorBoundary><CredentialWallet /></ErrorBoundary></Route>
+                <Route path="/compliance-evidence"><ErrorBoundary><ComplianceEvidence /></ErrorBoundary></Route>
+                <Route path="/proposals"><ErrorBoundary><ProposalBuilder /></ErrorBoundary></Route>
+                <Route path="/tx-service-agreement"><ErrorBoundary><TxServiceAgreement /></ErrorBoundary></Route>
+                <Route path="/site-briefings"><ErrorBoundary><SiteBriefing /></ErrorBoundary></Route>
+                <Route path="/safety-check"><ErrorBoundary><SafetyCheck /></ErrorBoundary></Route>
+                <Route path="/wellness"><ErrorBoundary><WellnessPage /></ErrorBoundary></Route>
+                <Route path="/site-survey"><ErrorBoundary><SiteSurveyPage /></ErrorBoundary></Route>
+                <Route path="/rfp"><ErrorBoundary><RfpManager /></ErrorBoundary></Route>
+                <Route path="/rfp-pipeline"><ErrorBoundary><RfpPipeline /></ErrorBoundary></Route>
                 <Route path="/coverage-marketplace"><Redirect to="/shift-marketplace" /></Route>
-                <Route path="/incident-pipeline">{(params) => <ErrorBoundary><IncidentPipeline {...params} /></ErrorBoundary>}</Route>
-                <Route path="/document-templates">{(params) => <ErrorBoundary><DocumentTemplates {...params} /></ErrorBoundary>}</Route>
-                <Route path="/document-form/:templateId">{(params) => <ErrorBoundary><DocumentFormPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/document-vault">{(params) => <ErrorBoundary><DocumentVault {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr-documents">{(params) => <ErrorBoundary><HrDocuments {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr-document-requests">{(params) => <ErrorBoundary><HrDocumentRequests {...params} /></ErrorBoundary>}</Route>
-                <Route path="/bridge-channels">{(params) => <ErrorBoundary><BridgeChannels {...params} /></ErrorBoundary>}</Route>
+                <Route path="/incident-pipeline"><ErrorBoundary><IncidentPipeline /></ErrorBoundary></Route>
+                <Route path="/document-templates"><ErrorBoundary><DocumentTemplates /></ErrorBoundary></Route>
+                <Route path="/document-form/:templateId">{(params: any) => <ErrorBoundary><DocumentFormPage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/document-vault"><ErrorBoundary><DocumentVault /></ErrorBoundary></Route>
+                <Route path="/hr-documents"><ErrorBoundary><HrDocuments /></ErrorBoundary></Route>
+                <Route path="/hr-document-requests"><ErrorBoundary><HrDocumentRequests /></ErrorBoundary></Route>
+                <Route path="/bridge-channels"><ErrorBoundary><BridgeChannels /></ErrorBoundary></Route>
   
                 {/* Feature Category Pages */}
-                <Route path="/category/communication">{(params) => <ErrorBoundary><CommunicationFamilyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/category/operations">{(params) => <ErrorBoundary><OperationsFamilyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/category/growth">{(params) => <ErrorBoundary><GrowthFamilyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/category/platform">{(params) => <ErrorBoundary><PlatformFamilyPage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/category/communication"><ErrorBoundary><CommunicationFamilyPage /></ErrorBoundary></Route>
+                <Route path="/category/operations"><ErrorBoundary><OperationsFamilyPage /></ErrorBoundary></Route>
+                <Route path="/category/growth"><ErrorBoundary><GrowthFamilyPage /></ErrorBoundary></Route>
+                <Route path="/category/platform"><ErrorBoundary><PlatformFamilyPage /></ErrorBoundary></Route>
                 
                 {/* User Menu Routes */}
-                <Route path="/profile">{(params) => <ErrorBoundary><Profile {...params} /></ErrorBoundary>}</Route>
-                <Route path="/unavailability">{(params) => <ErrorBoundary><Unavailability {...params} /></ErrorBoundary>}</Route>
-                <Route path="/availability">{(params) => <ErrorBoundary><AvailabilityPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/create-org">{(params) => <ErrorBoundary><CreateOrg {...params} /></ErrorBoundary>}</Route>
-                <Route path="/onboarding/start">{(params) => <ErrorBoundary><OnboardingStart {...params} /></ErrorBoundary>}</Route>
-                <Route path="/updates">{(params) => <ErrorBoundary><Updates {...params} /></ErrorBoundary>}</Route>
-                <Route path="/help">{(params) => <ErrorBoundary><Help {...params} /></ErrorBoundary>}</Route>
+                <Route path="/profile"><ErrorBoundary><Profile /></ErrorBoundary></Route>
+                <Route path="/unavailability"><ErrorBoundary><Unavailability /></ErrorBoundary></Route>
+                <Route path="/availability"><ErrorBoundary><AvailabilityPage /></ErrorBoundary></Route>
+                <Route path="/create-org"><ErrorBoundary><CreateOrg /></ErrorBoundary></Route>
+                <Route path="/onboarding/start"><ErrorBoundary><OnboardingStart /></ErrorBoundary></Route>
+                <Route path="/updates"><ErrorBoundary><Updates /></ErrorBoundary></Route>
+                <Route path="/help"><ErrorBoundary><Help /></ErrorBoundary></Route>
   
                 {/* Unified Root Administrator Control Center */}
                 <Route path="/root-admin-dashboard">
@@ -1666,12 +1666,12 @@ function AppContent() {
                     <ErrorBoundary><BreachResponse /></ErrorBoundary>
                   </PlatformAdminRoute>
                 </Route>
-                <Route path="/automation/audit-log">{(params) => <ErrorBoundary><AutomationAuditLog {...params} /></ErrorBoundary>}</Route>
-                <Route path="/automation/settings">{(params) => <ErrorBoundary><AutomationSettings {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/brain">{(params) => <ErrorBoundary><AIBrainDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/orchestration">{(params) => <ErrorBoundary><OrchestrationDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/audit-log-viewer">{(params) => <ErrorBoundary><AIAuditLogViewer {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/workboard">{(params) => <ErrorBoundary><WorkboardDashboard {...params} /></ErrorBoundary>}</Route>
+                <Route path="/automation/audit-log"><ErrorBoundary><AutomationAuditLog /></ErrorBoundary></Route>
+                <Route path="/automation/settings"><ErrorBoundary><AutomationSettings /></ErrorBoundary></Route>
+                <Route path="/ai/brain"><ErrorBoundary><AIBrainDashboard /></ErrorBoundary></Route>
+                <Route path="/ai/orchestration"><ErrorBoundary><OrchestrationDashboard /></ErrorBoundary></Route>
+                <Route path="/ai/audit-log-viewer"><ErrorBoundary><AIAuditLogViewer /></ErrorBoundary></Route>
+                <Route path="/ai/workboard"><ErrorBoundary><WorkboardDashboard /></ErrorBoundary></Route>
                 <Route path="/trinity-insights">
                   <RBACRoute require="platform_staff">
                     <ErrorBoundary><TrinityInsights /></ErrorBoundary>
@@ -1687,51 +1687,51 @@ function AppContent() {
                     <ErrorBoundary><Infrastructure /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/owner/hireos/workflow-builder">{(params) => <ErrorBoundary><HiringWorkflowBuilder {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employees/:employeeId/file-cabinet">{(params) => <ErrorBoundary><EmployeeFileCabinet {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employees/:employeeId/hr-record">{(params) => <ErrorBoundary><OfficerHrRecord {...params} /></ErrorBoundary>}</Route>
-                <Route path="/service-requests">{(params) => <ErrorBoundary><ServiceRequests {...params} /></ErrorBoundary>}</Route>
-                <Route path="/company-reports">{(params) => <ErrorBoundary><CompanyReports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/platform/sales">{(params) => <ErrorBoundary><WorkspaceSales {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee/portal">{(params) => <ErrorBoundary><EmployeePortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/auditor/portal">{(params) => <ErrorBoundary><AuditorPortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance/enforcement-status">{(params) => <ErrorBoundary><EnforcementStatus {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client/portal">{(params) => <ErrorBoundary><ClientPortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/settings">{(params) => <ErrorBoundary componentName="Settings"><Settings {...params} /></ErrorBoundary>}</Route>
-                <Route path="/alert-settings">{(params) => <ErrorBoundary><AlertSettings {...params} /></ErrorBoundary>}</Route>
+                <Route path="/owner/hireos/workflow-builder"><ErrorBoundary><HiringWorkflowBuilder /></ErrorBoundary></Route>
+                <Route path="/employees/:employeeId/file-cabinet">{(params: any) => <ErrorBoundary><EmployeeFileCabinet {...params} /></ErrorBoundary>}</Route>
+                <Route path="/employees/:employeeId/hr-record">{(params: any) => <ErrorBoundary><OfficerHrRecord {...params} /></ErrorBoundary>}</Route>
+                <Route path="/service-requests"><ErrorBoundary><ServiceRequests /></ErrorBoundary></Route>
+                <Route path="/company-reports"><ErrorBoundary><CompanyReports /></ErrorBoundary></Route>
+                <Route path="/platform/sales"><ErrorBoundary><WorkspaceSales /></ErrorBoundary></Route>
+                <Route path="/employee/portal"><ErrorBoundary><EmployeePortal /></ErrorBoundary></Route>
+                <Route path="/auditor/portal"><ErrorBoundary><AuditorPortal /></ErrorBoundary></Route>
+                <Route path="/compliance/enforcement-status"><ErrorBoundary><EnforcementStatus /></ErrorBoundary></Route>
+                <Route path="/client/portal"><ErrorBoundary><ClientPortal /></ErrorBoundary></Route>
+                <Route path="/settings"><ErrorBoundary componentName="Settings"><Settings /></ErrorBoundary></Route>
+                <Route path="/alert-settings"><ErrorBoundary><AlertSettings /></ErrorBoundary></Route>
                 <Route path="/notifications/log">{(params) => <ErrorBoundary componentName="Notification Log"><Suspense fallback={<PageLoader />}><NotificationLog /></Suspense></ErrorBoundary>}</Route>
-                <Route path="/employee/profile">{(params) => <ErrorBoundary componentName="Employee Profile"><EmployeeProfile {...params} /></ErrorBoundary>}</Route>
+                <Route path="/employee/profile"><ErrorBoundary componentName="Employee Profile"><EmployeeProfile /></ErrorBoundary></Route>
                 {/* Org-isolated chat rooms (internal communication) - Master-detail pattern */}
-                <Route path="/chatrooms">{(params) => <ErrorBoundary><Chatrooms {...params} /></ErrorBoundary>}</Route>
-                <Route path="/chatrooms/:roomId">{(params) => <ErrorBoundary><Chatrooms {...params} /></ErrorBoundary>}</Route>
+                <Route path="/chatrooms"><ErrorBoundary><Chatrooms /></ErrorBoundary></Route>
+                <Route path="/chatrooms/:roomId">{(params: any) => <ErrorBoundary><Chatrooms {...params} /></ErrorBoundary>}</Route>
                 <Route path="/helpdesk">{(params) => <ErrorBoundary><HelpDesk {...(params as any)} /></ErrorBoundary>}</Route>
-                <Route path="/broadcasts">{(params) => <ErrorBoundary><Broadcasts {...params} /></ErrorBoundary>}</Route>
-                <Route path="/briefing-channel">{(params) => <ErrorBoundary><BriefingChannel {...params} /></ErrorBoundary>}</Route>
+                <Route path="/broadcasts"><ErrorBoundary><Broadcasts /></ErrorBoundary></Route>
+                <Route path="/briefing-channel"><ErrorBoundary><BriefingChannel /></ErrorBoundary></Route>
                 {/* HelpDesk IRC/MSN-style chat interface with WebSocket */}
                 <Route path="/chat/:roomId">{(params: { roomId: string }) => <ErrorBoundary><HelpDesk roomId={params.roomId} forceMobileLayout={true} /></ErrorBoundary>}</Route>
-                <Route path="/inbox">{(params) => <ErrorBoundary><EmailIntelligence {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/ai-console">{(params) => <ErrorBoundary><SupportAIConsole {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee-onboarding">{(params) => <ErrorBoundary><EmployeeOnboardingDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee-packets">{(params) => <ErrorBoundary><EmployeePackets {...params} /></ErrorBoundary>}</Route>
+                <Route path="/inbox"><ErrorBoundary><EmailIntelligence /></ErrorBoundary></Route>
+                <Route path="/support/ai-console"><ErrorBoundary><SupportAIConsole /></ErrorBoundary></Route>
+                <Route path="/employee-onboarding"><ErrorBoundary><EmployeeOnboardingDashboard /></ErrorBoundary></Route>
+                <Route path="/employee-packets"><ErrorBoundary><EmployeePackets /></ErrorBoundary></Route>
                 <Route path="/onboarding-hub"><ErrorBoundary><Suspense fallback={<PageLoader />}><OnboardingHub /></Suspense></ErrorBoundary></Route>
                 <Route path="/onboarding-forms"><ErrorBoundary><Suspense fallback={<PageLoader />}><OnboardingForms /></Suspense></ErrorBoundary></Route>
-                <Route path="/enterprise/branding">{(params) => <ErrorBoundary><WhiteLabelBranding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/fleet">{(params) => <ErrorBoundary><FleetManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/armory">{(params) => <ErrorBoundary><ArmoryManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/sso">{(params) => <ErrorBoundary><SSOConfiguration {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/account-manager">{(params) => <ErrorBoundary><AccountManager {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/background-checks">{(params) => <ErrorBoundary><BackgroundChecks {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/api-access">{(params) => <ErrorBoundary><ApiAccess {...params} /></ErrorBoundary>}</Route>
+                <Route path="/enterprise/branding"><ErrorBoundary><WhiteLabelBranding /></ErrorBoundary></Route>
+                <Route path="/enterprise/fleet"><ErrorBoundary><FleetManagement /></ErrorBoundary></Route>
+                <Route path="/enterprise/armory"><ErrorBoundary><ArmoryManagement /></ErrorBoundary></Route>
+                <Route path="/enterprise/sso"><ErrorBoundary><SSOConfiguration /></ErrorBoundary></Route>
+                <Route path="/enterprise/account-manager"><ErrorBoundary><AccountManager /></ErrorBoundary></Route>
+                <Route path="/enterprise/background-checks"><ErrorBoundary><BackgroundChecks /></ErrorBoundary></Route>
+                <Route path="/enterprise/api-access"><ErrorBoundary><ApiAccess /></ErrorBoundary></Route>
                 
                 {/* Parity routes — accessible on both mobile and desktop */}
-                <Route path="/platform-feedback">{(params) => <ErrorBoundary componentName="Platform Feedback"><PlatformFeedbackPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-scenarios">{(params) => <ErrorBoundary componentName="Compliance Scenarios"><ComplianceScenariosPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/data-subject-requests">{(params) => <ErrorBoundary componentName="Data Subject Requests"><DataSubjectRequests {...params} /></ErrorBoundary>}</Route>
+                <Route path="/platform-feedback"><ErrorBoundary componentName="Platform Feedback"><PlatformFeedbackPage /></ErrorBoundary></Route>
+                <Route path="/compliance-scenarios"><ErrorBoundary componentName="Compliance Scenarios"><ComplianceScenariosPage /></ErrorBoundary></Route>
+                <Route path="/data-subject-requests"><ErrorBoundary componentName="Data Subject Requests"><DataSubjectRequests /></ErrorBoundary></Route>
 
                 {/* Error pages */}
-                <Route path="/error-403">{(params) => <ErrorBoundary><Error403 {...params} /></ErrorBoundary>}</Route>
-                <Route path="/error-404">{(params) => <ErrorBoundary><Error404 {...params} /></ErrorBoundary>}</Route>
-                <Route path="/error-500">{(params) => <ErrorBoundary><Error500 {...params} /></ErrorBoundary>}</Route>
+                <Route path="/error-403"><ErrorBoundary><Error403 /></ErrorBoundary></Route>
+                <Route path="/error-404"><ErrorBoundary><Error404 /></ErrorBoundary></Route>
+                <Route path="/error-500"><ErrorBoundary><Error500 /></ErrorBoundary></Route>
                 
                 {/* Legacy URL redirects */}
                 {LegacyRedirectRoutes()}
@@ -1892,32 +1892,32 @@ function AppContent() {
               <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
               <Switch>
-                <Route path="/">{(params) => <ErrorBoundary><Dashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/dashboard">{(params) => <ErrorBoundary><Dashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/multi-company">{(params) => <ErrorBoundary><MultiCompany {...params} /></ErrorBoundary>}</Route>
-                <Route path="/gate-duty">{(params) => <ErrorBoundary><GateDuty {...params} /></ErrorBoundary>}</Route>
-                <Route path="/workspace">{(params) => <ErrorBoundary><Workspace {...params} /></ErrorBoundary>}</Route>
-                <Route path="/command-center">{(params) => <ErrorBoundary><CommandCenter {...params} /></ErrorBoundary>}</Route>
-                <Route path="/commands">{(params) => <ErrorBoundary><CommandDocumentation {...params} /></ErrorBoundary>}</Route>
-                <Route path="/worker">{(params) => <ErrorBoundary><WorkerDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/worker/incidents">{(params) => <ErrorBoundary><WorkerIncidents {...params} /></ErrorBoundary>}</Route>
-                <Route path="/schedule">{(params) => <ErrorBoundary componentName="Schedule Board"><UniversalSchedule {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shift-marketplace">{(params) => <ErrorBoundary><ShiftMarketplace {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shifts/offers/:offerId">{(params) => <ErrorBoundary><ShiftOfferPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/workflow-approvals">{(params) => <ErrorBoundary><WorkflowApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shift-approvals">{(params) => <ErrorBoundary><ShiftApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sales">{(params) => <ErrorBoundary><WorkspaceSales {...params} /></ErrorBoundary>}</Route>
-                <Route path="/forms">{(params) => <ErrorBoundary><FormSubmissions {...params} /></ErrorBoundary>}</Route>
-                <Route path="/time-tracking">{(params) => <ErrorBoundary><TimeTracking {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employees">{(params) => <ErrorBoundary componentName="Employee Roster"><Employees {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sps-document-safe">{(params) => <ErrorBoundary><SpsDocumentSafe {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sps-client-pipeline">{(params) => <ErrorBoundary><SpsClientPipeline {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee-onboarding">{(params) => <ErrorBoundary><EmployeeOnboardingDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee-packets">{(params) => <ErrorBoundary><EmployeePackets {...params} /></ErrorBoundary>}</Route>
+                <Route path="/"><ErrorBoundary><Dashboard /></ErrorBoundary></Route>
+                <Route path="/dashboard"><ErrorBoundary><Dashboard /></ErrorBoundary></Route>
+                <Route path="/multi-company"><ErrorBoundary><MultiCompany /></ErrorBoundary></Route>
+                <Route path="/gate-duty"><ErrorBoundary><GateDuty /></ErrorBoundary></Route>
+                <Route path="/workspace"><ErrorBoundary><Workspace /></ErrorBoundary></Route>
+                <Route path="/command-center"><ErrorBoundary><CommandCenter /></ErrorBoundary></Route>
+                <Route path="/commands"><ErrorBoundary><CommandDocumentation /></ErrorBoundary></Route>
+                <Route path="/worker"><ErrorBoundary><WorkerDashboard /></ErrorBoundary></Route>
+                <Route path="/worker/incidents"><ErrorBoundary><WorkerIncidents /></ErrorBoundary></Route>
+                <Route path="/schedule"><ErrorBoundary componentName="Schedule Board"><UniversalSchedule /></ErrorBoundary></Route>
+                <Route path="/shift-marketplace"><ErrorBoundary><ShiftMarketplace /></ErrorBoundary></Route>
+                <Route path="/shifts/offers/:offerId">{(params: any) => <ErrorBoundary><ShiftOfferPage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/workflow-approvals"><ErrorBoundary><WorkflowApprovals /></ErrorBoundary></Route>
+                <Route path="/shift-approvals"><ErrorBoundary><ShiftApprovals /></ErrorBoundary></Route>
+                <Route path="/sales"><ErrorBoundary><WorkspaceSales /></ErrorBoundary></Route>
+                <Route path="/forms"><ErrorBoundary><FormSubmissions /></ErrorBoundary></Route>
+                <Route path="/time-tracking"><ErrorBoundary><TimeTracking /></ErrorBoundary></Route>
+                <Route path="/employees"><ErrorBoundary componentName="Employee Roster"><Employees /></ErrorBoundary></Route>
+                <Route path="/sps-document-safe"><ErrorBoundary><SpsDocumentSafe /></ErrorBoundary></Route>
+                <Route path="/sps-client-pipeline"><ErrorBoundary><SpsClientPipeline /></ErrorBoundary></Route>
+                <Route path="/employee-onboarding"><ErrorBoundary><EmployeeOnboardingDashboard /></ErrorBoundary></Route>
+                <Route path="/employee-packets"><ErrorBoundary><EmployeePackets /></ErrorBoundary></Route>
                 <Route path="/onboarding-hub"><Suspense fallback={<PageLoader />}><ErrorBoundary><OnboardingHub /></ErrorBoundary></Suspense></Route>
                 <Route path="/onboarding-forms"><Suspense fallback={<PageLoader />}><ErrorBoundary><OnboardingForms /></ErrorBoundary></Suspense></Route>
-                <Route path="/quickbooks-import">{(params) => <ErrorBoundary><QuickBooksImport {...params} /></ErrorBoundary>}</Route>
-                <Route path="/resolution-inbox">{(params) => <ErrorBoundary><ResolutionInbox {...params} /></ErrorBoundary>}</Route>
+                <Route path="/quickbooks-import"><ErrorBoundary><QuickBooksImport /></ErrorBoundary></Route>
+                <Route path="/resolution-inbox"><ErrorBoundary><ResolutionInbox /></ErrorBoundary></Route>
                 <Route path="/org-management">
                   <RBACRoute require="admin">
                     <ErrorBoundary><OrgManagement /></ErrorBoundary>
@@ -1938,7 +1938,7 @@ function AppContent() {
                     <ErrorBoundary><EngagementDashboard /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/engagement/employee">{(params) => <ErrorBoundary><EmployeeEngagement {...params} /></ErrorBoundary>}</Route>
+                <Route path="/engagement/employee"><ErrorBoundary><EmployeeEngagement /></ErrorBoundary></Route>
                 <Route path="/analytics/reports">
                   <RBACRoute require="leader">
                     <ErrorBoundary><AnalyticsReportsPage /></ErrorBoundary>
@@ -1964,7 +1964,7 @@ function AppContent() {
                     <ErrorBoundary><FinancialIntelligence /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/org-hub">{(params) => <ErrorBoundary><OrgHub {...params} /></ErrorBoundary>}</Route>
+                <Route path="/org-hub"><ErrorBoundary><OrgHub /></ErrorBoundary></Route>
                 <Route path="/developers">
                   <RBACRoute require="owner">
                     <ErrorBoundary><DeveloperPortal /></ErrorBoundary>
@@ -1995,23 +1995,23 @@ function AppContent() {
                     <ErrorBoundary><AICommandCenter /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/support/bugs">{(params) => <ErrorBoundary><SupportBugDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/queue">{(params) => <ErrorBoundary><SupportQueue {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/chatrooms">{(params) => <ErrorBoundary><SupportChatrooms {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-tickets">{(params) => <ErrorBoundary><MyTickets {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/assisted-onboarding">{(params) => <ErrorBoundary><AssistedOnboarding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/workspace-onboarding">{(params) => <ErrorBoundary><WorkspaceOnboarding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/trinity/self-edit">{(params) => <ErrorBoundary><TrinitySelfEditGovernancePage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/support/bugs"><ErrorBoundary><SupportBugDashboard /></ErrorBoundary></Route>
+                <Route path="/support/queue"><ErrorBoundary><SupportQueue /></ErrorBoundary></Route>
+                <Route path="/support/chatrooms"><ErrorBoundary><SupportChatrooms /></ErrorBoundary></Route>
+                <Route path="/my-tickets"><ErrorBoundary><MyTickets /></ErrorBoundary></Route>
+                <Route path="/support/assisted-onboarding"><ErrorBoundary><AssistedOnboarding /></ErrorBoundary></Route>
+                <Route path="/workspace-onboarding"><ErrorBoundary><WorkspaceOnboarding /></ErrorBoundary></Route>
+                <Route path="/trinity/self-edit"><ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary></Route>
                 <Route path="/trinity">
                   <RBACRoute require={["owner", "leader"]}>
                     <ErrorBoundary><TrinityChat /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/ai/brain">{(params) => <ErrorBoundary><AIBrainDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/orchestration">{(params) => <ErrorBoundary><OrchestrationDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/workboard">{(params) => <ErrorBoundary><WorkboardDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai/audit-log-viewer">{(params) => <ErrorBoundary><AIAuditLogViewer {...params} /></ErrorBoundary>}</Route>
-                <Route path="/support/ai-console">{(params) => <ErrorBoundary><SupportAIConsole {...params} /></ErrorBoundary>}</Route>
+                <Route path="/ai/brain"><ErrorBoundary><AIBrainDashboard /></ErrorBoundary></Route>
+                <Route path="/ai/orchestration"><ErrorBoundary><OrchestrationDashboard /></ErrorBoundary></Route>
+                <Route path="/ai/workboard"><ErrorBoundary><WorkboardDashboard /></ErrorBoundary></Route>
+                <Route path="/ai/audit-log-viewer"><ErrorBoundary><AIAuditLogViewer /></ErrorBoundary></Route>
+                <Route path="/support/ai-console"><ErrorBoundary><SupportAIConsole /></ErrorBoundary></Route>
                 <Route path="/trinity-insights">
                   <RBACRoute require="platform_staff">
                     <ErrorBoundary><TrinityInsights /></ErrorBoundary>
@@ -2027,10 +2027,10 @@ function AppContent() {
                     <ErrorBoundary><Infrastructure /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/insurance">{(params) => <ErrorBoundary><Insurance {...params} /></ErrorBoundary>}</Route>
-                <Route path="/billing">{(params) => <ErrorBoundary><Billing {...params} /></ErrorBoundary>}</Route>
-                <Route path="/subscription">{(params) => <ErrorBoundary><SubscriptionDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/usage">{(params) => <ErrorBoundary><UsageDashboard {...params} /></ErrorBoundary>}</Route>
+                <Route path="/insurance"><ErrorBoundary><Insurance /></ErrorBoundary></Route>
+                <Route path="/billing"><ErrorBoundary><Billing /></ErrorBoundary></Route>
+                <Route path="/subscription"><ErrorBoundary><SubscriptionDashboard /></ErrorBoundary></Route>
+                <Route path="/usage"><ErrorBoundary><UsageDashboard /></ErrorBoundary></Route>
                 <Route path="/owner-analytics">
                   <OwnerRoute>
                     <ErrorBoundary><OwnerAnalytics /></ErrorBoundary>
@@ -2048,99 +2048,99 @@ function AppContent() {
                     <ErrorBoundary><PermissionMatrix /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/integrations">{(params) => <ErrorBoundary><IntegrationsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/oversight">{(params) => <ErrorBoundary><OversightHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/expenses">{(params) => <ErrorBoundary><Expenses {...params} /></ErrorBoundary>}</Route>
-                <Route path="/mileage">{(params) => <ErrorBoundary><Mileage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/expense-approvals">{(params) => <ErrorBoundary><ExpenseApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/approvals">{(params) => <ErrorBoundary><ApprovalsHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/schedule/team">{(params) => <ErrorBoundary><TeamSchedule {...params} /></ErrorBoundary>}</Route>
-                <Route path="/field-reports">{(params) => <ErrorBoundary><FieldReports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-team">{(params) => <ErrorBoundary><MyTeam {...params} /></ErrorBoundary>}</Route>
-                <Route path="/timesheets/pending">{(params) => <ErrorBoundary><PendingTimeEntries {...params} /></ErrorBoundary>}</Route>
-                <Route path="/timesheets/approvals">{(params) => <ErrorBoundary><TimesheetApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/i9-compliance">{(params) => <ErrorBoundary><I9Compliance {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-reports">{(params) => <ErrorBoundary><ComplianceReports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance">{(params) => <ErrorBoundary><SecurityComplianceVault {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/employee/:employeeId">{(params) => <ErrorBoundary><EmployeeComplianceDetail {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/approvals">{(params) => <ErrorBoundary><ComplianceApprovals {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/expiration-alerts">{(params) => <ErrorBoundary><ExpirationAlerts {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/regulator-access">{(params) => <ErrorBoundary><RegulatorAccess {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/my-packet">{(params) => <ErrorBoundary><EmployeeOnboardingPacket {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/auditor-portal">{(params) => <ErrorBoundary><AuditorPortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/security-compliance/audit-readiness">{(params) => <ErrorBoundary><AuditReadiness {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance/regulatory-enrollment">{(params) => <ErrorBoundary><RegulatoryEnrollment {...params} /></ErrorBoundary>}</Route>
-                <Route path="/policies">{(params) => <ErrorBoundary><Policies {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll/pay-stubs/:id">{(params) => <ErrorBoundary componentName="Pay Stub"><PayStubDetail {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll">{(params) => <ErrorBoundary componentName="Payroll Dashboard"><PayrollDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-paychecks">{(params) => <ErrorBoundary><MyPaychecks {...params} /></ErrorBoundary>}</Route>
+                <Route path="/integrations"><ErrorBoundary><IntegrationsPage /></ErrorBoundary></Route>
+                <Route path="/oversight"><ErrorBoundary><OversightHub /></ErrorBoundary></Route>
+                <Route path="/expenses"><ErrorBoundary><Expenses /></ErrorBoundary></Route>
+                <Route path="/mileage"><ErrorBoundary><Mileage /></ErrorBoundary></Route>
+                <Route path="/expense-approvals"><ErrorBoundary><ExpenseApprovals /></ErrorBoundary></Route>
+                <Route path="/approvals"><ErrorBoundary><ApprovalsHub /></ErrorBoundary></Route>
+                <Route path="/schedule/team"><ErrorBoundary><TeamSchedule /></ErrorBoundary></Route>
+                <Route path="/field-reports"><ErrorBoundary><FieldReports /></ErrorBoundary></Route>
+                <Route path="/my-team"><ErrorBoundary><MyTeam /></ErrorBoundary></Route>
+                <Route path="/timesheets/pending"><ErrorBoundary><PendingTimeEntries /></ErrorBoundary></Route>
+                <Route path="/timesheets/approvals"><ErrorBoundary><TimesheetApprovals /></ErrorBoundary></Route>
+                <Route path="/i9-compliance"><ErrorBoundary><I9Compliance /></ErrorBoundary></Route>
+                <Route path="/compliance-reports"><ErrorBoundary><ComplianceReports /></ErrorBoundary></Route>
+                <Route path="/security-compliance"><ErrorBoundary><SecurityComplianceVault /></ErrorBoundary></Route>
+                <Route path="/security-compliance/employee/:employeeId">{(params: any) => <ErrorBoundary><EmployeeComplianceDetail {...params} /></ErrorBoundary>}</Route>
+                <Route path="/security-compliance/approvals"><ErrorBoundary><ComplianceApprovals /></ErrorBoundary></Route>
+                <Route path="/security-compliance/expiration-alerts"><ErrorBoundary><ExpirationAlerts /></ErrorBoundary></Route>
+                <Route path="/security-compliance/regulator-access"><ErrorBoundary><RegulatorAccess /></ErrorBoundary></Route>
+                <Route path="/security-compliance/my-packet"><ErrorBoundary><EmployeeOnboardingPacket /></ErrorBoundary></Route>
+                <Route path="/security-compliance/auditor-portal"><ErrorBoundary><AuditorPortal /></ErrorBoundary></Route>
+                <Route path="/security-compliance/audit-readiness"><ErrorBoundary><AuditReadiness /></ErrorBoundary></Route>
+                <Route path="/compliance/regulatory-enrollment"><ErrorBoundary><RegulatoryEnrollment /></ErrorBoundary></Route>
+                <Route path="/policies"><ErrorBoundary><Policies /></ErrorBoundary></Route>
+                <Route path="/payroll/pay-stubs/:id">{(params: any) => <ErrorBoundary componentName="Pay Stub"><PayStubDetail {...params} /></ErrorBoundary>}</Route>
+                <Route path="/payroll"><ErrorBoundary componentName="Payroll Dashboard"><PayrollDashboard /></ErrorBoundary></Route>
+                <Route path="/my-paychecks"><ErrorBoundary><MyPaychecks /></ErrorBoundary></Route>
                 <Route path="/leaders-hub">
                   <LeaderRoute>
                     <ErrorBoundary><LeadersHub /></ErrorBoundary>
                   </LeaderRoute>
                 </Route>
-                <Route path="/hr/benefits">{(params) => <ErrorBoundary><HRBenefits {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr/reviews">{(params) => <ErrorBoundary><HRReviews {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr/pto">{(params) => <ErrorBoundary><HRPTO {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr/terminations">{(params) => <ErrorBoundary><HRTerminations {...params} /></ErrorBoundary>}</Route>
-                <Route path="/performance">{(params) => <ErrorBoundary><PerformancePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/disputes">{(params) => <ErrorBoundary><Disputes {...params} /></ErrorBoundary>}</Route>
-                <Route path="/my-audit-record">{(params) => <ErrorBoundary><MyAuditRecord {...params} /></ErrorBoundary>}</Route>
-                <Route path="/file-grievance">{(params) => <ErrorBoundary><FileGrievance {...params} /></ErrorBoundary>}</Route>
-                <Route path="/review-disputes">{(params) => <ErrorBoundary><ReviewDisputes {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll/deductions">{(params) => <ErrorBoundary><PayrollDeductions {...params} /></ErrorBoundary>}</Route>
-                <Route path="/payroll/garnishments">{(params) => <ErrorBoundary><PayrollGarnishments {...params} /></ErrorBoundary>}</Route>
-                <Route path="/communications/onboarding">{(params) => <ErrorBoundary><CommunicationsOnboarding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/chatrooms">{(params) => <ErrorBoundary><Chatrooms {...params} /></ErrorBoundary>}</Route>
-                <Route path="/chatrooms/:roomId">{(params) => <ErrorBoundary><Chatrooms {...params} /></ErrorBoundary>}</Route>
+                <Route path="/hr/benefits"><ErrorBoundary><HRBenefits /></ErrorBoundary></Route>
+                <Route path="/hr/reviews"><ErrorBoundary><HRReviews /></ErrorBoundary></Route>
+                <Route path="/hr/pto"><ErrorBoundary><HRPTO /></ErrorBoundary></Route>
+                <Route path="/hr/terminations"><ErrorBoundary><HRTerminations /></ErrorBoundary></Route>
+                <Route path="/performance"><ErrorBoundary><PerformancePage /></ErrorBoundary></Route>
+                <Route path="/disputes"><ErrorBoundary><Disputes /></ErrorBoundary></Route>
+                <Route path="/my-audit-record"><ErrorBoundary><MyAuditRecord /></ErrorBoundary></Route>
+                <Route path="/file-grievance"><ErrorBoundary><FileGrievance /></ErrorBoundary></Route>
+                <Route path="/review-disputes"><ErrorBoundary><ReviewDisputes /></ErrorBoundary></Route>
+                <Route path="/payroll/deductions"><ErrorBoundary><PayrollDeductions /></ErrorBoundary></Route>
+                <Route path="/payroll/garnishments"><ErrorBoundary><PayrollGarnishments /></ErrorBoundary></Route>
+                <Route path="/communications/onboarding"><ErrorBoundary><CommunicationsOnboarding /></ErrorBoundary></Route>
+                <Route path="/chatrooms"><ErrorBoundary><Chatrooms /></ErrorBoundary></Route>
+                <Route path="/chatrooms/:roomId">{(params: any) => <ErrorBoundary><Chatrooms {...params} /></ErrorBoundary>}</Route>
                 <Route path="/helpdesk">{(params) => <ErrorBoundary><HelpDesk {...(params as any)} /></ErrorBoundary>}</Route>
-                <Route path="/broadcasts">{(params) => <ErrorBoundary><Broadcasts {...params} /></ErrorBoundary>}</Route>
-                <Route path="/briefing-channel">{(params) => <ErrorBoundary><BriefingChannel {...params} /></ErrorBoundary>}</Route>
+                <Route path="/broadcasts"><ErrorBoundary><Broadcasts /></ErrorBoundary></Route>
+                <Route path="/briefing-channel"><ErrorBoundary><BriefingChannel /></ErrorBoundary></Route>
                 <Route path="/chat/:roomId">{(params: { roomId: string }) => <ErrorBoundary><HelpDesk roomId={params.roomId} /></ErrorBoundary>}</Route>
-                <Route path="/inbox">{(params) => <ErrorBoundary><EmailIntelligence {...params} /></ErrorBoundary>}</Route>
-                <Route path="/diagnostics">{(params) => <ErrorBoundary><Diagnostics {...params} /></ErrorBoundary>}</Route>
-                <Route path="/messages">{(params) => <ErrorBoundary><PrivateMessages {...params} /></ErrorBoundary>}</Route>
-                <Route path="/private-messages">{(params) => <ErrorBoundary><PrivateMessages {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-os">{(params) => <ErrorBoundary><Training {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training">{(params) => <ErrorBoundary><TrainingPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-certification/modules/:id">{(params) => <ErrorBoundary><TrainingModuleLearning {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-certification">{(params) => <ErrorBoundary><TrainingCertification {...params} /></ErrorBoundary>}</Route>
-                <Route path="/recognition">{(params) => <ErrorBoundary><RecognitionPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/budgeting">{(params) => <ErrorBoundary><Budgeting {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ai-integrations">{(params) => <ErrorBoundary><AIIntegrations {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee-recognition">{(params) => <ErrorBoundary><EmployeeRecognition {...params} /></ErrorBoundary>}</Route>
-                <Route path="/alert-configuration">{(params) => <ErrorBoundary><AlertConfiguration {...params} /></ErrorBoundary>}</Route>
-                <Route path="/accounting-integrations">{(params) => <ErrorBoundary><AccountingIntegrations {...params} /></ErrorBoundary>}</Route>
-                <Route path="/finance-hub">{(params) => <ErrorBoundary><FinanceHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/records">{(params) => <ErrorBoundary><Records {...params} /></ErrorBoundary>}</Route>
-                <Route path="/insights">{(params) => <ErrorBoundary><Insights {...params} /></ErrorBoundary>}</Route>
-                <Route path="/behavior-scoring">{(params) => <ErrorBoundary><BehaviorScoring {...params} /></ErrorBoundary>}</Route>
-                <Route path="/trinity-memory">{(params) => <ErrorBoundary><TrinityMemory {...params} /></ErrorBoundary>}</Route>
-                <Route path="/document-library">{(params) => <ErrorBoundary componentName="Document Library"><DocumentLibrary {...params} /></ErrorBoundary>}</Route>
-                <Route path="/labor-law-config">{(params) => <ErrorBoundary><LaborLawConfig {...params} /></ErrorBoundary>}</Route>
-                <Route path="/inbound-opportunities">{(params) => <ErrorBoundary><InboundOpportunities {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hris-management">{(params) => <ErrorBoundary><HRISManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/outreach">{(params) => <ErrorBoundary><Outreach {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sales-crm">{(params) => <ErrorBoundary><SalesCRM {...params} /></ErrorBoundary>}</Route>
-                <Route path="/sales-pipeline">{(params) => <ErrorBoundary componentName="Sales Pipeline"><SalesPipelinePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/email-intelligence">{(params) => <ErrorBoundary><EmailIntelligence {...params} /></ErrorBoundary>}</Route>
-                <Route path="/pto">{(params) => <ErrorBoundary><HRPTO {...params} /></ErrorBoundary>}</Route>
-                <Route path="/flex-staffing">{(params) => <ErrorBoundary><FlexStaffing {...params} /></ErrorBoundary>}</Route>
-                <Route path="/availability">{(params) => <ErrorBoundary><AvailabilityPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/automation/settings">{(params) => <ErrorBoundary><AutomationSettings {...params} /></ErrorBoundary>}</Route>
-                <Route path="/automation/audit-log">{(params) => <ErrorBoundary><AutomationAuditLog {...params} /></ErrorBoundary>}</Route>
-                <Route path="/settings/email">{(params) => <ErrorBoundary><EmailManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/settings/dns-guide">{(params) => <ErrorBoundary><DnsSetupGuide {...params} /></ErrorBoundary>}</Route>
-                <Route path="/category/communication">{(params) => <ErrorBoundary><CommunicationFamilyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/category/operations">{(params) => <ErrorBoundary><OperationsFamilyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/category/growth">{(params) => <ErrorBoundary><GrowthFamilyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/category/platform">{(params) => <ErrorBoundary><PlatformFamilyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/profile">{(params) => <ErrorBoundary><Profile {...params} /></ErrorBoundary>}</Route>
-                <Route path="/unavailability">{(params) => <ErrorBoundary><Unavailability {...params} /></ErrorBoundary>}</Route>
-                <Route path="/create-org">{(params) => <ErrorBoundary><CreateOrg {...params} /></ErrorBoundary>}</Route>
-                <Route path="/onboarding/start">{(params) => <ErrorBoundary><OnboardingStart {...params} /></ErrorBoundary>}</Route>
-                <Route path="/updates">{(params) => <ErrorBoundary><Updates {...params} /></ErrorBoundary>}</Route>
-                <Route path="/help">{(params) => <ErrorBoundary><Help {...params} /></ErrorBoundary>}</Route>
+                <Route path="/inbox"><ErrorBoundary><EmailIntelligence /></ErrorBoundary></Route>
+                <Route path="/diagnostics"><ErrorBoundary><Diagnostics /></ErrorBoundary></Route>
+                <Route path="/messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
+                <Route path="/private-messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
+                <Route path="/training-os"><ErrorBoundary><Training /></ErrorBoundary></Route>
+                <Route path="/training"><ErrorBoundary><TrainingPage /></ErrorBoundary></Route>
+                <Route path="/training-certification/modules/:id">{(params: any) => <ErrorBoundary><TrainingModuleLearning {...params} /></ErrorBoundary>}</Route>
+                <Route path="/training-certification"><ErrorBoundary><TrainingCertification /></ErrorBoundary></Route>
+                <Route path="/recognition"><ErrorBoundary><RecognitionPage /></ErrorBoundary></Route>
+                <Route path="/budgeting"><ErrorBoundary><Budgeting /></ErrorBoundary></Route>
+                <Route path="/ai-integrations"><ErrorBoundary><AIIntegrations /></ErrorBoundary></Route>
+                <Route path="/employee-recognition"><ErrorBoundary><EmployeeRecognition /></ErrorBoundary></Route>
+                <Route path="/alert-configuration"><ErrorBoundary><AlertConfiguration /></ErrorBoundary></Route>
+                <Route path="/accounting-integrations"><ErrorBoundary><AccountingIntegrations /></ErrorBoundary></Route>
+                <Route path="/finance-hub"><ErrorBoundary><FinanceHub /></ErrorBoundary></Route>
+                <Route path="/records"><ErrorBoundary><Records /></ErrorBoundary></Route>
+                <Route path="/insights"><ErrorBoundary><Insights /></ErrorBoundary></Route>
+                <Route path="/behavior-scoring"><ErrorBoundary><BehaviorScoring /></ErrorBoundary></Route>
+                <Route path="/trinity-memory"><ErrorBoundary><TrinityMemory /></ErrorBoundary></Route>
+                <Route path="/document-library"><ErrorBoundary componentName="Document Library"><DocumentLibrary /></ErrorBoundary></Route>
+                <Route path="/labor-law-config"><ErrorBoundary><LaborLawConfig /></ErrorBoundary></Route>
+                <Route path="/inbound-opportunities"><ErrorBoundary><InboundOpportunities /></ErrorBoundary></Route>
+                <Route path="/hris-management"><ErrorBoundary><HRISManagement /></ErrorBoundary></Route>
+                <Route path="/outreach"><ErrorBoundary><Outreach /></ErrorBoundary></Route>
+                <Route path="/sales-crm"><ErrorBoundary><SalesCRM /></ErrorBoundary></Route>
+                <Route path="/sales-pipeline"><ErrorBoundary componentName="Sales Pipeline"><SalesPipelinePage /></ErrorBoundary></Route>
+                <Route path="/email-intelligence"><ErrorBoundary><EmailIntelligence /></ErrorBoundary></Route>
+                <Route path="/pto"><ErrorBoundary><HRPTO /></ErrorBoundary></Route>
+                <Route path="/flex-staffing"><ErrorBoundary><FlexStaffing /></ErrorBoundary></Route>
+                <Route path="/availability"><ErrorBoundary><AvailabilityPage /></ErrorBoundary></Route>
+                <Route path="/automation/settings"><ErrorBoundary><AutomationSettings /></ErrorBoundary></Route>
+                <Route path="/automation/audit-log"><ErrorBoundary><AutomationAuditLog /></ErrorBoundary></Route>
+                <Route path="/settings/email"><ErrorBoundary><EmailManagement /></ErrorBoundary></Route>
+                <Route path="/settings/dns-guide"><ErrorBoundary><DnsSetupGuide /></ErrorBoundary></Route>
+                <Route path="/category/communication"><ErrorBoundary><CommunicationFamilyPage /></ErrorBoundary></Route>
+                <Route path="/category/operations"><ErrorBoundary><OperationsFamilyPage /></ErrorBoundary></Route>
+                <Route path="/category/growth"><ErrorBoundary><GrowthFamilyPage /></ErrorBoundary></Route>
+                <Route path="/category/platform"><ErrorBoundary><PlatformFamilyPage /></ErrorBoundary></Route>
+                <Route path="/profile"><ErrorBoundary><Profile /></ErrorBoundary></Route>
+                <Route path="/unavailability"><ErrorBoundary><Unavailability /></ErrorBoundary></Route>
+                <Route path="/create-org"><ErrorBoundary><CreateOrg /></ErrorBoundary></Route>
+                <Route path="/onboarding/start"><ErrorBoundary><OnboardingStart /></ErrorBoundary></Route>
+                <Route path="/updates"><ErrorBoundary><Updates /></ErrorBoundary></Route>
+                <Route path="/help"><ErrorBoundary><Help /></ErrorBoundary></Route>
                 <Route path="/root-admin-dashboard">
                   <PlatformAdminRoute>
                     <ErrorBoundary><RootAdminDashboard /></ErrorBoundary>
@@ -2181,95 +2181,95 @@ function AppContent() {
                     <ErrorBoundary><BreachResponse /></ErrorBoundary>
                   </PlatformAdminRoute>
                 </Route>
-                <Route path="/owner/hireos/workflow-builder">{(params) => <ErrorBoundary><HiringWorkflowBuilder {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employees/:employeeId/file-cabinet">{(params) => <ErrorBoundary><EmployeeFileCabinet {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employees/:employeeId/hr-record">{(params) => <ErrorBoundary><OfficerHrRecord {...params} /></ErrorBoundary>}</Route>
-                <Route path="/service-requests">{(params) => <ErrorBoundary><ServiceRequests {...params} /></ErrorBoundary>}</Route>
-                <Route path="/company-reports">{(params) => <ErrorBoundary><CompanyReports {...params} /></ErrorBoundary>}</Route>
-                <Route path="/platform/sales">{(params) => <ErrorBoundary><WorkspaceSales {...params} /></ErrorBoundary>}</Route>
-                <Route path="/employee/portal">{(params) => <ErrorBoundary><EmployeePortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/auditor/portal">{(params) => <ErrorBoundary><AuditorPortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance/enforcement-status">{(params) => <ErrorBoundary><EnforcementStatus {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client/portal">{(params) => <ErrorBoundary><ClientPortal {...params} /></ErrorBoundary>}</Route>
-                <Route path="/settings">{(params) => <ErrorBoundary componentName="Settings"><Settings {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/branding">{(params) => <ErrorBoundary><WhiteLabelBranding {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/fleet">{(params) => <ErrorBoundary><FleetManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/armory">{(params) => <ErrorBoundary><ArmoryManagement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/sso">{(params) => <ErrorBoundary><SSOConfiguration {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/account-manager">{(params) => <ErrorBoundary><AccountManager {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/background-checks">{(params) => <ErrorBoundary><BackgroundChecks {...params} /></ErrorBoundary>}</Route>
-                <Route path="/enterprise/api-access">{(params) => <ErrorBoundary><ApiAccess {...params} /></ErrorBoundary>}</Route>
-                <Route path="/alert-settings">{(params) => <ErrorBoundary><AlertSettings {...params} /></ErrorBoundary>}</Route>
+                <Route path="/owner/hireos/workflow-builder"><ErrorBoundary><HiringWorkflowBuilder /></ErrorBoundary></Route>
+                <Route path="/employees/:employeeId/file-cabinet">{(params: any) => <ErrorBoundary><EmployeeFileCabinet {...params} /></ErrorBoundary>}</Route>
+                <Route path="/employees/:employeeId/hr-record">{(params: any) => <ErrorBoundary><OfficerHrRecord {...params} /></ErrorBoundary>}</Route>
+                <Route path="/service-requests"><ErrorBoundary><ServiceRequests /></ErrorBoundary></Route>
+                <Route path="/company-reports"><ErrorBoundary><CompanyReports /></ErrorBoundary></Route>
+                <Route path="/platform/sales"><ErrorBoundary><WorkspaceSales /></ErrorBoundary></Route>
+                <Route path="/employee/portal"><ErrorBoundary><EmployeePortal /></ErrorBoundary></Route>
+                <Route path="/auditor/portal"><ErrorBoundary><AuditorPortal /></ErrorBoundary></Route>
+                <Route path="/compliance/enforcement-status"><ErrorBoundary><EnforcementStatus /></ErrorBoundary></Route>
+                <Route path="/client/portal"><ErrorBoundary><ClientPortal /></ErrorBoundary></Route>
+                <Route path="/settings"><ErrorBoundary componentName="Settings"><Settings /></ErrorBoundary></Route>
+                <Route path="/enterprise/branding"><ErrorBoundary><WhiteLabelBranding /></ErrorBoundary></Route>
+                <Route path="/enterprise/fleet"><ErrorBoundary><FleetManagement /></ErrorBoundary></Route>
+                <Route path="/enterprise/armory"><ErrorBoundary><ArmoryManagement /></ErrorBoundary></Route>
+                <Route path="/enterprise/sso"><ErrorBoundary><SSOConfiguration /></ErrorBoundary></Route>
+                <Route path="/enterprise/account-manager"><ErrorBoundary><AccountManager /></ErrorBoundary></Route>
+                <Route path="/enterprise/background-checks"><ErrorBoundary><BackgroundChecks /></ErrorBoundary></Route>
+                <Route path="/enterprise/api-access"><ErrorBoundary><ApiAccess /></ErrorBoundary></Route>
+                <Route path="/alert-settings"><ErrorBoundary><AlertSettings /></ErrorBoundary></Route>
                 <Route path="/notifications/log">{(params) => <ErrorBoundary componentName="Notification Log"><Suspense fallback={<PageLoader />}><NotificationLog /></Suspense></ErrorBoundary>}</Route>
-                <Route path="/employee/profile">{(params) => <ErrorBoundary componentName="Employee Profile"><EmployeeProfile {...params} /></ErrorBoundary>}</Route>
-                <Route path="/safety-check">{(params) => <ErrorBoundary><SafetyCheck {...params} /></ErrorBoundary>}</Route>
-                <Route path="/wellness">{(params) => <ErrorBoundary><WellnessPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/site-survey">{(params) => <ErrorBoundary><SiteSurveyPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/dock-chat">{(params) => <ErrorBoundary componentName="DockChat"><DockChatPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/voice-settings">{(params) => <ErrorBoundary componentName="Voice Settings"><VoiceSettingsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/voice-calls">{(params) => <ErrorBoundary componentName="Voice Calls"><VoiceCallsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client-communications">{(params) => <ErrorBoundary componentName="Client Communications"><ClientCommunicationsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/shift-trading">{(params) => <ErrorBoundary componentName="Shift Trading"><ShiftTradingPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/post-orders">{(params) => <ErrorBoundary componentName="Post Orders"><PostOrdersPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/post-order-versions">{(params) => <ErrorBoundary componentName="Post Order Versions"><PostOrderVersionsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/incident-patterns">{(params) => <ErrorBoundary componentName="Incident Patterns"><IncidentPatternsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/contract-renewals">{(params) => <ErrorBoundary componentName="Contract Renewals"><ContractRenewalsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/applicant-tracking">{(params) => <ErrorBoundary componentName="Applicant Tracking"><ApplicantTrackingPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hiring">{(params) => <ErrorBoundary componentName="Hiring Pipeline"><HiringPipelinePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/recruitment">{(params) => <ErrorBoundary componentName="Interview Pipeline"><RecruitmentPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/recruitment/candidates/:id">{(params) => <ErrorBoundary componentName="Candidate Profile"><CandidateProfilePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/onboarding-tasks">{(params) => <ErrorBoundary componentName="Onboarding Tasks"><OnboardingTasksPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/training-compliance">{(params) => <ErrorBoundary componentName="Training Compliance"><TrainingCompliancePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/subcontractor-management">{(params) => <ErrorBoundary componentName="Subcontractor Management"><SubcontractorManagementPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client-satisfaction">{(params) => <ErrorBoundary componentName="Client Satisfaction"><ClientSatisfactionPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/surveys">{(params) => <ErrorBoundary componentName="Client Surveys"><ClientSurveysPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/bid-management">{(params) => <ErrorBoundary componentName="Bid Management"><BidManagementPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-matrix">{(params) => <ErrorBoundary componentName="Compliance Matrix"><ComplianceMatrix {...params} /></ErrorBoundary>}</Route>
-                <Route path="/client-profitability">{(params) => <ErrorBoundary componentName="Client Profitability"><ClientProfitability {...params} /></ErrorBoundary>}</Route>
-                <Route path="/cash-flow">{(params) => <ErrorBoundary componentName="Cash Flow Dashboard"><CashFlowDashboard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/invoice-aging">{(params) => <ErrorBoundary componentName="Invoice Aging"><InvoiceAging {...params} /></ErrorBoundary>}</Route>
-                <Route path="/turnover-analytics">{(params) => <ErrorBoundary componentName="Turnover Analytics"><TurnoverAnalytics {...params} /></ErrorBoundary>}</Route>
-                <Route path="/bi-analytics">{(params) => <ErrorBoundary componentName="BI Analytics"><BIAnalytics {...params} /></ErrorBoundary>}</Route>
-                <Route path="/situation-board">{(params) => <ErrorBoundary componentName="Situation Board"><SituationBoard {...params} /></ErrorBoundary>}</Route>
-                <Route path="/credential-wallet">{(params) => <ErrorBoundary componentName="Credential Wallet"><CredentialWallet {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-evidence">{(params) => <ErrorBoundary componentName="Compliance Evidence"><ComplianceEvidence {...params} /></ErrorBoundary>}</Route>
-                <Route path="/proposals">{(params) => <ErrorBoundary componentName="Proposal Builder"><ProposalBuilder {...params} /></ErrorBoundary>}</Route>
-                <Route path="/tx-service-agreement">{(params) => <ErrorBoundary componentName="Service Agreement"><TxServiceAgreement {...params} /></ErrorBoundary>}</Route>
-                <Route path="/site-briefings">{(params) => <ErrorBoundary componentName="Site Briefings"><SiteBriefing {...params} /></ErrorBoundary>}</Route>
-                <Route path="/end-user-controls">{(params) => <ErrorBoundary componentName="End User Controls"><EndUserControls {...params} /></ErrorBoundary>}</Route>
-                <Route path="/data-subject-requests">{(params) => <ErrorBoundary componentName="Data Subject Requests"><DataSubjectRequests {...params} /></ErrorBoundary>}</Route>
-                <Route path="/platform-admin">{(params) => <ErrorBoundary componentName="Platform Admin"><PlatformAdmin {...params} /></ErrorBoundary>}</Route>
-                <Route path="/platform-feedback">{(params) => <ErrorBoundary componentName="Platform Feedback"><PlatformFeedbackPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/canonical-config">{(params) => <ErrorBoundary componentName="Canonical Config"><CanonicalConfigPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/admin/support-console">{(params) => <ErrorBoundary componentName="Support Console"><SupportConsolePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/admin/support-console/tickets">{(params) => <ErrorBoundary componentName="Support Console Tickets"><SupportConsoleTicketsPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/admin/support-console/workspace">{(params) => <ErrorBoundary componentName="Support Console Workspace"><SupportConsoleWorkspacePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/schedule-mobile">{(params) => <ErrorBoundary componentName="Mobile Schedule"><ScheduleMobileFirst {...params} /></ErrorBoundary>}</Route>
-                <Route path="/go-live">{(params) => <ErrorBoundary componentName="Go Live"><GoLivePage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/compliance-scenarios">{(params) => <ErrorBoundary componentName="Compliance Scenarios"><ComplianceScenariosPage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/employee/profile"><ErrorBoundary componentName="Employee Profile"><EmployeeProfile /></ErrorBoundary></Route>
+                <Route path="/safety-check"><ErrorBoundary><SafetyCheck /></ErrorBoundary></Route>
+                <Route path="/wellness"><ErrorBoundary><WellnessPage /></ErrorBoundary></Route>
+                <Route path="/site-survey"><ErrorBoundary><SiteSurveyPage /></ErrorBoundary></Route>
+                <Route path="/dock-chat"><ErrorBoundary componentName="DockChat"><DockChatPage /></ErrorBoundary></Route>
+                <Route path="/voice-settings"><ErrorBoundary componentName="Voice Settings"><VoiceSettingsPage /></ErrorBoundary></Route>
+                <Route path="/voice-calls"><ErrorBoundary componentName="Voice Calls"><VoiceCallsPage /></ErrorBoundary></Route>
+                <Route path="/client-communications"><ErrorBoundary componentName="Client Communications"><ClientCommunicationsPage /></ErrorBoundary></Route>
+                <Route path="/shift-trading"><ErrorBoundary componentName="Shift Trading"><ShiftTradingPage /></ErrorBoundary></Route>
+                <Route path="/post-orders"><ErrorBoundary componentName="Post Orders"><PostOrdersPage /></ErrorBoundary></Route>
+                <Route path="/post-order-versions"><ErrorBoundary componentName="Post Order Versions"><PostOrderVersionsPage /></ErrorBoundary></Route>
+                <Route path="/incident-patterns"><ErrorBoundary componentName="Incident Patterns"><IncidentPatternsPage /></ErrorBoundary></Route>
+                <Route path="/contract-renewals"><ErrorBoundary componentName="Contract Renewals"><ContractRenewalsPage /></ErrorBoundary></Route>
+                <Route path="/applicant-tracking"><ErrorBoundary componentName="Applicant Tracking"><ApplicantTrackingPage /></ErrorBoundary></Route>
+                <Route path="/hiring"><ErrorBoundary componentName="Hiring Pipeline"><HiringPipelinePage /></ErrorBoundary></Route>
+                <Route path="/recruitment"><ErrorBoundary componentName="Interview Pipeline"><RecruitmentPage /></ErrorBoundary></Route>
+                <Route path="/recruitment/candidates/:id">{(params: any) => <ErrorBoundary componentName="Candidate Profile"><CandidateProfilePage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/onboarding-tasks"><ErrorBoundary componentName="Onboarding Tasks"><OnboardingTasksPage /></ErrorBoundary></Route>
+                <Route path="/training-compliance"><ErrorBoundary componentName="Training Compliance"><TrainingCompliancePage /></ErrorBoundary></Route>
+                <Route path="/subcontractor-management"><ErrorBoundary componentName="Subcontractor Management"><SubcontractorManagementPage /></ErrorBoundary></Route>
+                <Route path="/client-satisfaction"><ErrorBoundary componentName="Client Satisfaction"><ClientSatisfactionPage /></ErrorBoundary></Route>
+                <Route path="/surveys"><ErrorBoundary componentName="Client Surveys"><ClientSurveysPage /></ErrorBoundary></Route>
+                <Route path="/bid-management"><ErrorBoundary componentName="Bid Management"><BidManagementPage /></ErrorBoundary></Route>
+                <Route path="/compliance-matrix"><ErrorBoundary componentName="Compliance Matrix"><ComplianceMatrix /></ErrorBoundary></Route>
+                <Route path="/client-profitability"><ErrorBoundary componentName="Client Profitability"><ClientProfitability /></ErrorBoundary></Route>
+                <Route path="/cash-flow"><ErrorBoundary componentName="Cash Flow Dashboard"><CashFlowDashboard /></ErrorBoundary></Route>
+                <Route path="/invoice-aging"><ErrorBoundary componentName="Invoice Aging"><InvoiceAging /></ErrorBoundary></Route>
+                <Route path="/turnover-analytics"><ErrorBoundary componentName="Turnover Analytics"><TurnoverAnalytics /></ErrorBoundary></Route>
+                <Route path="/bi-analytics"><ErrorBoundary componentName="BI Analytics"><BIAnalytics /></ErrorBoundary></Route>
+                <Route path="/situation-board"><ErrorBoundary componentName="Situation Board"><SituationBoard /></ErrorBoundary></Route>
+                <Route path="/credential-wallet"><ErrorBoundary componentName="Credential Wallet"><CredentialWallet /></ErrorBoundary></Route>
+                <Route path="/compliance-evidence"><ErrorBoundary componentName="Compliance Evidence"><ComplianceEvidence /></ErrorBoundary></Route>
+                <Route path="/proposals"><ErrorBoundary componentName="Proposal Builder"><ProposalBuilder /></ErrorBoundary></Route>
+                <Route path="/tx-service-agreement"><ErrorBoundary componentName="Service Agreement"><TxServiceAgreement /></ErrorBoundary></Route>
+                <Route path="/site-briefings"><ErrorBoundary componentName="Site Briefings"><SiteBriefing /></ErrorBoundary></Route>
+                <Route path="/end-user-controls"><ErrorBoundary componentName="End User Controls"><EndUserControls /></ErrorBoundary></Route>
+                <Route path="/data-subject-requests"><ErrorBoundary componentName="Data Subject Requests"><DataSubjectRequests /></ErrorBoundary></Route>
+                <Route path="/platform-admin"><ErrorBoundary componentName="Platform Admin"><PlatformAdmin /></ErrorBoundary></Route>
+                <Route path="/platform-feedback"><ErrorBoundary componentName="Platform Feedback"><PlatformFeedbackPage /></ErrorBoundary></Route>
+                <Route path="/canonical-config"><ErrorBoundary componentName="Canonical Config"><CanonicalConfigPage /></ErrorBoundary></Route>
+                <Route path="/admin/support-console"><ErrorBoundary componentName="Support Console"><SupportConsolePage /></ErrorBoundary></Route>
+                <Route path="/admin/support-console/tickets"><ErrorBoundary componentName="Support Console Tickets"><SupportConsoleTicketsPage /></ErrorBoundary></Route>
+                <Route path="/admin/support-console/workspace"><ErrorBoundary componentName="Support Console Workspace"><SupportConsoleWorkspacePage /></ErrorBoundary></Route>
+                <Route path="/schedule-mobile"><ErrorBoundary componentName="Mobile Schedule"><ScheduleMobileFirst /></ErrorBoundary></Route>
+                <Route path="/go-live"><ErrorBoundary componentName="Go Live"><GoLivePage /></ErrorBoundary></Route>
+                <Route path="/compliance-scenarios"><ErrorBoundary componentName="Compliance Scenarios"><ComplianceScenariosPage /></ErrorBoundary></Route>
 
                 {/* Parity routes — accessible on both mobile and desktop */}
-                <Route path="/bridge-channels">{(params) => <ErrorBoundary><BridgeChannels {...params} /></ErrorBoundary>}</Route>
-                <Route path="/cad">{(params) => <ErrorBoundary><CadConsole {...params} /></ErrorBoundary>}</Route>
+                <Route path="/bridge-channels"><ErrorBoundary><BridgeChannels /></ErrorBoundary></Route>
+                <Route path="/cad"><ErrorBoundary><CadConsole /></ErrorBoundary></Route>
                 <Route path="/coverage-marketplace"><Redirect to="/shift-marketplace" /></Route>
-                <Route path="/document-form/:templateId">{(params) => <ErrorBoundary><DocumentFormPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/document-templates">{(params) => <ErrorBoundary><DocumentTemplates {...params} /></ErrorBoundary>}</Route>
-                <Route path="/document-vault">{(params) => <ErrorBoundary><DocumentVault {...params} /></ErrorBoundary>}</Route>
-                <Route path="/equipment">{(params) => <ErrorBoundary><EquipmentPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/ethics">{(params) => <ErrorBoundary><EthicsHotline {...params} /></ErrorBoundary>}</Route>
-                <Route path="/guard-tour">{(params) => <ErrorBoundary><GuardTourPage {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr-document-requests">{(params) => <ErrorBoundary><HrDocumentRequests {...params} /></ErrorBoundary>}</Route>
-                <Route path="/hr-documents">{(params) => <ErrorBoundary><HrDocuments {...params} /></ErrorBoundary>}</Route>
-                <Route path="/incident-pipeline">{(params) => <ErrorBoundary><IncidentPipeline {...params} /></ErrorBoundary>}</Route>
-                <Route path="/rfp">{(params) => <ErrorBoundary><RfpManager {...params} /></ErrorBoundary>}</Route>
-                <Route path="/rfp-pipeline">{(params) => <ErrorBoundary><RfpPipeline {...params} /></ErrorBoundary>}</Route>
-                <Route path="/rms">{(params) => <ErrorBoundary><RmsHub {...params} /></ErrorBoundary>}</Route>
-                <Route path="/safety">{(params) => <ErrorBoundary><SafetyHub {...params} /></ErrorBoundary>}</Route>
+                <Route path="/document-form/:templateId">{(params: any) => <ErrorBoundary><DocumentFormPage {...params} /></ErrorBoundary>}</Route>
+                <Route path="/document-templates"><ErrorBoundary><DocumentTemplates /></ErrorBoundary></Route>
+                <Route path="/document-vault"><ErrorBoundary><DocumentVault /></ErrorBoundary></Route>
+                <Route path="/equipment"><ErrorBoundary><EquipmentPage /></ErrorBoundary></Route>
+                <Route path="/ethics"><ErrorBoundary><EthicsHotline /></ErrorBoundary></Route>
+                <Route path="/guard-tour"><ErrorBoundary><GuardTourPage /></ErrorBoundary></Route>
+                <Route path="/hr-document-requests"><ErrorBoundary><HrDocumentRequests /></ErrorBoundary></Route>
+                <Route path="/hr-documents"><ErrorBoundary><HrDocuments /></ErrorBoundary></Route>
+                <Route path="/incident-pipeline"><ErrorBoundary><IncidentPipeline /></ErrorBoundary></Route>
+                <Route path="/rfp"><ErrorBoundary><RfpManager /></ErrorBoundary></Route>
+                <Route path="/rfp-pipeline"><ErrorBoundary><RfpPipeline /></ErrorBoundary></Route>
+                <Route path="/rms"><ErrorBoundary><RmsHub /></ErrorBoundary></Route>
+                <Route path="/safety"><ErrorBoundary><SafetyHub /></ErrorBoundary></Route>
 
                 {/* Error pages */}
-                <Route path="/error-403">{(params) => <ErrorBoundary><Error403 {...params} /></ErrorBoundary>}</Route>
-                <Route path="/error-404">{(params) => <ErrorBoundary><Error404 {...params} /></ErrorBoundary>}</Route>
-                <Route path="/error-500">{(params) => <ErrorBoundary><Error500 {...params} /></ErrorBoundary>}</Route>
+                <Route path="/error-403"><ErrorBoundary><Error403 /></ErrorBoundary></Route>
+                <Route path="/error-404"><ErrorBoundary><Error404 /></ErrorBoundary></Route>
+                <Route path="/error-500"><ErrorBoundary><Error500 /></ErrorBoundary></Route>
                 
                 {/* Legacy URL redirects */}
                 {LegacyRedirectRoutes()}

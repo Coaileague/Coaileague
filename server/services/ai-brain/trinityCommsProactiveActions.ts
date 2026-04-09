@@ -442,7 +442,7 @@ export function registerCommsProactiveActions() {
     const { sql: sqlRaw, desc, inArray, eq, and } = await import('drizzle-orm');
     // Converted to Drizzle ORM: IN subquery → inArray()
     const events = await db.select({
-      actionType: auditLogs.actionType,
+      actionType: auditLogs.actorType,
       userId: auditLogs.userId,
       ipAddress: auditLogs.ipAddress,
       userAgent: auditLogs.userAgent,
@@ -451,7 +451,7 @@ export function registerCommsProactiveActions() {
       .from(auditLogs)
       .where(and(
         eq(auditLogs.workspaceId, workspaceId),
-        inArray(auditLogs.actionType, ['login', 'logout', 'password_reset', 'mfa_enabled', 'mfa_disabled', 'invitation_sent', 'invitation_accepted'])
+        inArray(auditLogs.actorType, ['login', 'logout', 'password_reset', 'mfa_enabled', 'mfa_disabled', 'invitation_sent', 'invitation_accepted'])
       ))
       .orderBy(desc(auditLogs.createdAt))
       .limit(Number(limit))

@@ -20,7 +20,7 @@ router.get("/policy/:workspaceId", requireAuth, async (req: AuthenticatedRequest
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
     const { workspaceId } = req.params;
-    const userId = req.userId!;
+    const userId = req.user!;
     const access = await checkWorkspaceAccess(userId, workspaceId);
     if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
     const policy = await automationGovernanceService.getOrCreatePolicy(workspaceId);
@@ -34,7 +34,7 @@ router.patch("/policy/:workspaceId", requireAuth, async (req: AuthenticatedReque
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
     const { workspaceId } = req.params;
-    const userId = req.userId!;
+    const userId = req.user!;
     const access = await checkWorkspaceAccess(userId, workspaceId);
     if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
     if (!['org_owner', 'co_owner'].includes(access.role || '')) {
@@ -56,7 +56,7 @@ router.patch("/policy/:workspaceId", requireAuth, async (req: AuthenticatedReque
 router.post("/consent", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
-    const userId = req.userId!;
+    const userId = req.user!;
     const { workspaceId, consentType, sourceContext, waiverVersion } = req.body;
     if (!workspaceId || !consentType) return res.status(400).json({ success: false, error: "workspaceId and consentType required" });
     if (typeof consentType !== 'string' || consentType.length > 100) return res.status(400).json({ success: false, error: "Invalid consentType" });
@@ -73,7 +73,7 @@ router.post("/consent", requireAuth, async (req: AuthenticatedRequest, res) => {
 router.get("/consents/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
-    const userId = req.userId!;
+    const userId = req.user!;
     const { workspaceId } = req.params;
     const access = await checkWorkspaceAccess(userId, workspaceId);
     if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
@@ -87,7 +87,7 @@ router.get("/consents/:workspaceId", requireAuth, async (req: AuthenticatedReque
 router.post("/org-consent", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
-    const userId = req.userId!;
+    const userId = req.user!;
     const { workspaceId, waiverVersion } = req.body;
     if (!workspaceId) return res.status(400).json({ success: false, error: "workspaceId required" });
     const access = await checkWorkspaceAccess(userId, workspaceId);
@@ -110,7 +110,7 @@ router.get("/ledger/:workspaceId", requireAuth, async (req: AuthenticatedRequest
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
     const { workspaceId } = req.params;
-    const userId = req.userId!;
+    const userId = req.user!;
     const access = await checkWorkspaceAccess(userId, workspaceId);
     if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
     if (!['org_owner', 'co_owner', 'department_manager'].includes(access.role || '')) {
@@ -133,7 +133,7 @@ router.get("/pending-approvals/:workspaceId", requireAuth, async (req: Authentic
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
     const { workspaceId } = req.params;
-    const userId = req.userId!;
+    const userId = req.user!;
     const access = await checkWorkspaceAccess(userId, workspaceId);
     if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
     if (!['org_owner', 'co_owner', 'department_manager', 'supervisor'].includes(access.role || '')) {
@@ -149,7 +149,7 @@ router.get("/pending-approvals/:workspaceId", requireAuth, async (req: Authentic
 router.post("/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
-    const userId = req.userId!;
+    const userId = req.user!;
     const { ledgerEntryId } = req.params;
     const { notes } = req.body;
     const [entry] = await db.select().from(automationActionLedger).where(eq(automationActionLedger.id, ledgerEntryId)).limit(1);
@@ -170,7 +170,7 @@ router.post("/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedReq
 router.post("/reject/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
-    const userId = req.userId!;
+    const userId = req.user!;
     const { ledgerEntryId } = req.params;
     const { reason } = req.body;
     if (!reason || typeof reason !== 'string') return res.status(400).json({ success: false, error: "Rejection reason required" });
@@ -193,7 +193,7 @@ router.get("/metrics/:workspaceId", requireAuth, async (req: AuthenticatedReques
   try {
     const { automationGovernanceService } = await import("../services/ai-brain/automationGovernanceService");
     const { workspaceId } = req.params;
-    const userId = req.userId!;
+    const userId = req.user!;
     const access = await checkWorkspaceAccess(userId, workspaceId);
     if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
     if (!['org_owner', 'co_owner'].includes(access.role || '')) {

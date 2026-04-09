@@ -175,7 +175,7 @@ router.delete("/manager-assignments/:id", requireOwner, async (req: Authenticate
 
 router.get("/organizations/managed", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.user || req.user?.id;
     
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
@@ -278,7 +278,7 @@ router.patch("/organizations/:orgId/status", requireAuth, async (req: Authentica
   try {
     const { orgId } = req.params;
     const { status, action, reason } = req.body;
-    const userId = req.userId || req.user?.id;
+    const userId = req.user || req.user?.id;
     
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
@@ -420,7 +420,7 @@ router.patch("/organizations/:orgId/status", requireAuth, async (req: Authentica
 router.get("/organizations/:orgId/members", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { orgId } = req.params;
-    const userId = req.userId || req.user?.id;
+    const userId = req.user || req.user?.id;
     const workspaceId = req.workspaceId;
     
     if (!userId) {

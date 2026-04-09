@@ -112,7 +112,7 @@ export async function getSchedulingOrchestrationStatus(workspaceId: string): Pro
     ));
   
   return {
-    daemonRunning: status.running,
+    daemonRunning: status.isRunning,
     lastRun: status.lastRun,
     pendingShifts: pendingShifts.length,
     automationEnabled: true,

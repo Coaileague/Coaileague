@@ -50,7 +50,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     const parsed = insertPerformanceNoteSchema.safeParse({
       ...req.body,
       workspaceId,
-      notedBy: req.userId,
+      notedBy: req.user,
     });
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.errors });

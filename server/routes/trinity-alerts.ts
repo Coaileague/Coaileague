@@ -28,7 +28,7 @@ const testAlertLimiter = rateLimit({
   message: { success: false, error: 'Too many test alerts. Please wait before trying again.' },
   keyGenerator: (req: Request) => {
     const authReq = req as AuthenticatedRequest;
-    return authReq.userId || 'anonymous';
+    return authReq.user || 'anonymous';
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -134,7 +134,7 @@ router.post('/test-alert', requirePlatformStaff, testAlertLimiter, async (req: R
       severity: 'info',
       category: 'platform',
       title: 'Trinity Self-Test Alert',
-      description: `Test alert triggered by ${authReq.userId} to verify notification system is working.`,
+      description: `Test alert triggered by ${authReq.user} to verify notification system is working.`,
       suggestedAction: 'No action required - this is a test.',
       autoFixAvailable: false,
       autoFixRisk: 'low',
@@ -143,7 +143,7 @@ router.post('/test-alert', requirePlatformStaff, testAlertLimiter, async (req: R
     
     // Audit trail entry
     testAlertAuditLog.push({
-      userId: authReq.userId,
+      userId: authReq.user,
       timestamp: new Date(),
       alertId: alert.id,
       ip: req.ip || 'unknown',
@@ -154,7 +154,7 @@ router.post('/test-alert', requirePlatformStaff, testAlertLimiter, async (req: R
       testAlertAuditLog.shift();
     }
     
-    log.info(`[AUDIT] Test alert created by ${authReq.userId} - AlertID: ${alert.id}`);
+    log.info(`[AUDIT] Test alert created by ${authReq.user} - AlertID: ${alert.id}`);
     
     res.json({
       success: true,

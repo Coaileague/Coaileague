@@ -774,7 +774,7 @@ class AutonomousFixPipelineService {
       findingId,
       finding.description,
       finding.filePath ? [finding.filePath] : [],
-      async (attempt, suggestedApproach, revisedPatches) => {
+      async (attempt: any, suggestedApproach: any, revisedPatches: any) => {
         // Rollback previous attempt if it exists
         if (lastOperationId) {
           await trinityCodeOps.rollbackOperation(lastOperationId);
@@ -1264,7 +1264,7 @@ class AutonomousFixPipelineService {
         category: 'automation',
         description: action.desc,
         requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-        handler: async (request) => {
+        handler: async (request: any) => {
           const startTime = Date.now();
           const result = await action.fn(request.payload || {});
           return {
