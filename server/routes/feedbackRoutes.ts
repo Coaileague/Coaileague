@@ -24,7 +24,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     const ticket = await storage.createSupportTicket({
-      workspaceId: req.workspaceId || req.user?.workspaceId || req.user.currentWorkspaceId || '',
+      workspaceId: req.workspaceId || (req.user)?.workspaceId || (req.user).currentWorkspaceId || '',
       requestorId: userId,
       requestorEmail: req.user.email || '',
       category: type === 'bug' ? 'bug_report' : type === 'feature' ? 'feature_request' : 'feedback',

@@ -30,7 +30,7 @@ const log = createLogger('TrinityTrainingRoutes');
 const router = Router();
 
 async function resolveWorkspaceId(req: AuthenticatedRequest): Promise<string | null> {
-  const userId = req.user?.id || req.user?.claims?.sub;
+  const userId = req.user?.id || (req.user)?.claims?.sub;
   if (!userId) return null;
 
   const fromRequest = req.body?.workspaceId || req.query?.workspaceId;
@@ -42,7 +42,7 @@ async function resolveWorkspaceId(req: AuthenticatedRequest): Promise<string | n
 
 router.get('/status', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -64,12 +64,12 @@ router.get('/status', requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.post('/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (!hasManagerAccess(req.user?.workspaceRole || req.user?.role)) {
+    if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to seed training scenarios" });
     }
 
@@ -111,12 +111,12 @@ router.post('/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
  */
 router.post('/seed-org', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (!hasManagerAccess(req.user?.workspaceRole || req.user?.role)) {
+    if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to seed org training scenarios" });
     }
 
@@ -143,12 +143,12 @@ router.post('/seed-org', requireAuth, async (req: AuthenticatedRequest, res) => 
 
 router.post('/clear', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (!hasManagerAccess(req.user?.workspaceRole || req.user?.role)) {
+    if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to clear training assignments" });
     }
 
@@ -175,12 +175,12 @@ router.post('/clear', requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.post('/reset', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (!hasManagerAccess(req.user?.workspaceRole || req.user?.role)) {
+    if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to reset training" });
     }
 
@@ -207,7 +207,7 @@ router.post('/reset', requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.post('/start-run', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -237,12 +237,12 @@ router.post('/start-run', requireAuth, async (req: AuthenticatedRequest, res) =>
 
 router.post('/clear-all-schedule', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (!hasManagerAccess(req.user?.workspaceRole || req.user?.role)) {
+    if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to clear all schedule data" });
     }
 
@@ -448,7 +448,7 @@ const DIFFICULTY_PARAMS: Record<string, {
  */
 router.post('/schedule-month', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const workspaceId = await resolveWorkspaceId(req);

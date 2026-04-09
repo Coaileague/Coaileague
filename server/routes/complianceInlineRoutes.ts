@@ -119,7 +119,7 @@ router.delete("/api/acknowledgments/:id", requireManager, async (req: Authentica
       return res.status(404).json({ message: "Acknowledgment not found" });
     }
 
-    const currentWorkspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const currentWorkspaceId = req.workspaceId || (req.user)?.currentWorkspaceId;
     if (acknowledgment.workspaceId !== currentWorkspaceId) {
       return res.status(403).json({ error: "Access denied" });
     }

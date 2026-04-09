@@ -45,8 +45,8 @@ const router = Router();
  */
 router.get('/status', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
       return res.status(401).json({ error: 'Not authenticated' });
@@ -89,8 +89,8 @@ router.get('/status', requireAnyAuth, async (req: Request, res: Response) => {
  */
 router.post('/ensure', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
       return res.status(401).json({ error: 'Not authenticated' });
@@ -117,8 +117,8 @@ router.post('/ensure', requireAnyAuth, async (req: Request, res: Response) => {
  */
 router.post('/sync-role-holders', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const workspaceRole = req.workspaceRole || req.session?.workspaceRole;
 
     if (!userId || !workspaceId) {
@@ -148,8 +148,8 @@ router.post('/sync-role-holders', requireAnyAuth, async (req: Request, res: Resp
  */
 router.get('/missing-records', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const workspaceRole = req.workspaceRole || req.session?.workspaceRole;
 
     if (!userId || !workspaceId) {
@@ -178,8 +178,8 @@ router.get('/missing-records', requireAnyAuth, async (req: Request, res: Respons
  */
 router.get('/compliance', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
       return res.status(401).json({ error: 'Not authenticated' });
@@ -298,8 +298,8 @@ router.get('/certification-types', requireAnyAuth, async (req: Request, res: Res
  */
 router.post('/certification', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
       return res.status(401).json({ error: 'Not authenticated' });

@@ -38,7 +38,7 @@ export const timesheetInvoiceRouter = Router();
 timesheetInvoiceRouter.get('/', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: 'No workspace selected' });
@@ -136,7 +136,7 @@ timesheetInvoiceRouter.get('/', requireManager, async (req: Request, res: Respon
 timesheetInvoiceRouter.post('/generate', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -171,7 +171,7 @@ timesheetInvoiceRouter.post('/generate', requireWorkspaceRole(['org_owner', 'co_
 timesheetInvoiceRouter.get('/uninvoiced', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -194,7 +194,7 @@ timesheetInvoiceRouter.get('/uninvoiced', requireManager, async (req: Request, r
 timesheetInvoiceRouter.post('/:invoiceId/send', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -214,7 +214,7 @@ timesheetInvoiceRouter.post('/:invoiceId/send', requireWorkspaceRole(['org_owner
 timesheetInvoiceRouter.post('/:invoiceId/mark-paid', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -244,7 +244,7 @@ timesheetInvoiceRouter.post('/:invoiceId/mark-paid', requireWorkspaceRole(['org_
 timesheetInvoiceRouter.post('/generate-from-hours', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -296,7 +296,7 @@ timesheetInvoiceRouter.post('/generate-from-hours', requireWorkspaceRole(['org_o
 timesheetInvoiceRouter.post('/:invoiceId/send-email', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId || !user?.id) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -326,7 +326,7 @@ timesheetInvoiceRouter.post('/:invoiceId/send-email', requireWorkspaceRole(['org
 timesheetInvoiceRouter.get('/:invoiceId/pdf', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -393,7 +393,7 @@ timesheetInvoiceRouter.get('/:invoiceId/pdf', requireManager, async (req: Reques
 timesheetInvoiceRouter.get('/overdue', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -414,7 +414,7 @@ timesheetInvoiceRouter.get('/overdue', requireManager, async (req: Request, res:
 timesheetInvoiceRouter.get('/revenue-forecast', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -439,7 +439,7 @@ timesheetInvoiceRouter.get('/revenue-forecast', requireManager, async (req: Requ
 timesheetInvoiceRouter.get('/:invoiceId', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: 'No workspace selected' });

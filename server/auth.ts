@@ -720,10 +720,10 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     if (wsId) req.workspaceId = wsId;
   }
 
-  // Propagate workspaceId onto req.user so routes reading req.user.workspaceId work correctly.
-  // The user DB model has 'currentWorkspaceId' but many routes expect 'req.user.workspaceId'.
-  if (req.workspaceId && !(req.user as any).workspaceId) {
-    (req.user as any).workspaceId = req.workspaceId;
+  // Propagate workspaceId onto req.user so routes reading (req.user as any)?.workspaceId work correctly.
+  // The user DB model has 'currentWorkspaceId' but many routes expect '(req.user as any)?.workspaceId'.
+  if (req.workspaceId && !(req.user).workspaceId) {
+    (req.user).workspaceId = req.workspaceId;
   }
 
   next();

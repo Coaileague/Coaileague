@@ -48,7 +48,7 @@ async function getWorkspaceRole(userId: string, workspaceId: string): Promise<st
 router.get('/api/score/me', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? req.session?.userId;
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
@@ -84,7 +84,7 @@ router.get('/api/score/me', requireAuth, async (req, res) => {
 router.get('/api/score/employee/:employeeId', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? req.session?.userId;
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const { employeeId } = req.params;
 
@@ -128,7 +128,7 @@ const grievanceSchema = z.object({
 router.post('/api/score/grievance', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? req.session?.userId;
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
@@ -165,7 +165,7 @@ router.post('/api/score/grievance', requireAuth, async (req, res) => {
 router.get('/api/admin/score/complaints', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? req.session?.userId;
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
@@ -195,7 +195,7 @@ router.get('/api/admin/score/complaints', requireAuth, async (req, res) => {
 router.get('/api/admin/score/grievances', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? req.session?.userId;
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
@@ -233,7 +233,7 @@ const verdictSchema = z.object({
 router.put('/api/admin/score/grievances/:id/verdict', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? req.session?.userId;
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
 
     const parsed = verdictSchema.safeParse(req.body);

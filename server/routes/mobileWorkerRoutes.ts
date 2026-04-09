@@ -30,7 +30,7 @@ incidentsRouter.get('/my-reports', requireAuth, async (req: Request, res: Respon
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
-    const workspaceId = authReq.workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq.user as any)?.workspaceId || authReq.user?.currentWorkspaceId;
     
     if (!userId || !workspaceId) {
       return res.json([]);
@@ -159,7 +159,7 @@ incidentsRouter.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
-    const workspaceId = authReq.workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq.user as any)?.workspaceId || authReq.user?.currentWorkspaceId;
     let { type, description, location, latitude, longitude, shiftId, photos, manualSeverity } = req.body;
     
     if (!userId || !workspaceId) {

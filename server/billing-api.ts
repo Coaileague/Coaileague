@@ -992,7 +992,7 @@ billingRouter.get('/pricing', async (req, res) => {
  */
 billingRouter.get('/trial', async (req, res) => {
   try {
-    const workspaceId = req.user!.currentWorkspaceId;
+    const workspaceId = (req.user as any)!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -1012,7 +1012,7 @@ billingRouter.get('/trial', async (req, res) => {
  */
 billingRouter.post('/trial/start', async (req, res) => {
   try {
-    const workspaceId = req.user!.currentWorkspaceId;
+    const workspaceId = (req.user as any)!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -1036,7 +1036,7 @@ billingRouter.post('/trial/start', async (req, res) => {
  */
 billingRouter.post('/trial/extend', async (req, res) => {
   try {
-    const workspaceId = req.user!.currentWorkspaceId;
+    const workspaceId = (req.user as any)!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

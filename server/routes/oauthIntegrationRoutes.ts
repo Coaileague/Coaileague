@@ -1997,7 +1997,7 @@ router.post('/gusto/refresh', requireAuth, requireWorkspaceMembership(), async (
 router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'), async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id || req.session?.userId;
-    const workspaceId = req.workspaceId || req.user?.workspaceId || (req.query.workspaceId as string);
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.query.workspaceId as string);
 
     if (!workspaceId) {
       return res.status(400).json({ 

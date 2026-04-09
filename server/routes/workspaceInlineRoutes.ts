@@ -152,7 +152,7 @@ async function applyAutomationUpdate(params: {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        const userId = req.user?.id || req.user?.claims?.sub;
+        const userId = req.user?.id || (req.user)?.claims?.sub;
         if (userId) {
           const { getUserPlatformRole, hasPlatformWideAccess } = await import('../rbac');
           const platformRole = await getUserPlatformRole(userId);
@@ -359,7 +359,7 @@ async function applyAutomationUpdate(params: {
       }
       
       const user = await storage.getUser(userId);
-      const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
       
       if (!workspaceId) {
         return res.status(404).json({ message: "No workspace found" });
@@ -489,7 +489,7 @@ async function applyAutomationUpdate(params: {
         });
       } catch (_) { /* audit is best-effort */ }
       
-      const safeWorkspace = redactSensitiveWorkspaceFields(updated, req.user?.platformRole);
+      const safeWorkspace = redactSensitiveWorkspaceFields(updated, (req.user)?.platformRole);
       
       res.json(safeWorkspace);
     } catch (error: unknown) {

@@ -483,7 +483,7 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    const workspaceId = req.workspaceId || req.user?.workspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) {
       return res.status(200).json({
         message: "AI features are available to workspace members only. A human support agent will assist you shortly.",
@@ -492,7 +492,7 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
 
     const response = await generateGeminiResponse({
       message,
@@ -522,10 +522,10 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
  */
 router.post('/trinity-field-query', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const workspaceId = req.workspaceId || req.user?.workspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
 
     const { question } = req.body;

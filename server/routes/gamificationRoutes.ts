@@ -12,7 +12,7 @@ const router = Router();
 // Get user's gamification stats
 router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -221,7 +221,7 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
 // Get leaderboard
 router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id || !user?.workspaceId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -275,7 +275,7 @@ router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
 // Award points to user
 router.post("/award-points", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }

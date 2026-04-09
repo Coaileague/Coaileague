@@ -115,7 +115,7 @@ router.post("/api/pto", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.patch("/api/pto/:id/approve", requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
@@ -183,7 +183,7 @@ router.patch("/api/pto/:id/approve", requireAuth, requireManager, async (req: Au
 
 router.patch("/api/pto/:id/deny", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || req.user?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {

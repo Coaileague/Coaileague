@@ -40,10 +40,10 @@ router.post('/employees/:id/deactivate', async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'No workspace context' });
 
-    const workspaceRole = user.workspaceRole || 'employee';
+    const workspaceRole = (user as any).workspaceRole || 'employee';
     if (!hasManagerAccess(workspaceRole)) {
       return res.status(403).json({ message: 'Manager access required' });
     }
@@ -72,7 +72,7 @@ router.post('/employees/:id/reactivate', async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-    const workspaceRole = user.workspaceRole || 'employee';
+    const workspaceRole = (user as any).workspaceRole || 'employee';
     if (!hasManagerAccess(workspaceRole)) {
       return res.status(403).json({ message: 'Manager access required' });
     }
@@ -135,7 +135,7 @@ router.post('/workspaces/:id/deactivate', async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-    const platformRole = user.platformRole || 'user';
+    const platformRole = (user as any).platformRole || 'user';
     if (!hasPlatformSupportAccess(platformRole)) {
       return res.status(403).json({ message: 'Support staff access required' });
     }
@@ -154,7 +154,7 @@ router.post('/workspaces/:id/reactivate', async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-    const platformRole = user.platformRole || 'user';
+    const platformRole = (user as any).platformRole || 'user';
     if (!hasPlatformSupportAccess(platformRole)) {
       return res.status(403).json({ message: 'Support staff access required' });
     }

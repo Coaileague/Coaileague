@@ -134,7 +134,7 @@ app.post('/api/helpos/faqs', requirePlatformStaff, async (req: AuthenticatedRequ
     // Generate embedding for semantic search using OpenAI
     let embeddingVector: string | null = null;
     if (process.env.OPENAI_API_KEY) {
-      const wsId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || null;
+      const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
       const poolAvailable = await checkSupportPoolAvailable();
       if (!poolAvailable) {
         return res.status(503).json({ message: 'Support AI temporarily unavailable' });
@@ -184,7 +184,7 @@ app.patch('/api/helpos/faqs/:id', requirePlatformStaff, async (req: Authenticate
     // If question or answer changed, regenerate embedding
     let embeddingVector: string | null | undefined = undefined;
     if ((updateData.question || updateData.answer) && process.env.OPENAI_API_KEY) {
-      const wsId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || null;
+      const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
       const poolAvailable = await checkSupportPoolAvailable();
       if (!poolAvailable) {
         return res.status(503).json({ message: 'Support AI temporarily unavailable' });
@@ -314,7 +314,7 @@ app.post('/api/helpos/faqs/search/semantic', readLimiter, requireAuth, async (re
     // Use canonical staff detection from rbac.ts
     const canSearchUnpublished = isPlatformStaff(req.user);
 
-    const wsId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || null;
+    const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
       return res.status(503).json({ message: 'Support AI temporarily unavailable' });
@@ -415,7 +415,7 @@ app.post('/api/helpos/faqs/generate/from-ticket', requirePlatformStaff, async (r
       return res.status(400).json({ message: 'Ticket must have a resolution to generate FAQ' });
     }
 
-    const wsId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || null;
+    const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
       return res.status(503).json({ message: 'Support AI temporarily unavailable' });
@@ -485,7 +485,7 @@ app.post('/api/helpos/faqs/generate/from-conversation', requirePlatformStaff, as
       return res.status(503).json({ message: 'AI generation not available - OpenAI API key not configured' });
     }
 
-    const wsId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || null;
+    const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
       return res.status(503).json({ message: 'Support AI temporarily unavailable' });
@@ -554,7 +554,7 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
       return res.status(503).json({ message: 'Bulk import requires OpenAI API key for generating embeddings' });
     }
 
-    const wsId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || null;
+    const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
       return res.status(503).json({ message: 'Support AI temporarily unavailable' });
@@ -651,7 +651,7 @@ app.get('/api/ai/faq/search', readLimiter, requireAuth, async (req: Authenticate
     }
 
     const searchLimit = Math.min(Number(limit) || 5, 20); // Cap at 20 results
-    const wsId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const convId = (conversationId as string) || undefined;
 
     log.info(`🔍 [FAQ Search] Query: "${query}" - Limit: ${searchLimit}${convId ? ` - ConvId: ${convId}` : ''}`);

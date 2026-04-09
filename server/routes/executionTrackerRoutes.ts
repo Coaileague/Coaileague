@@ -40,7 +40,7 @@ executionTrackerRouter.get('/executions', requireAuth, async (req: Request, res:
 
     // Verify user has access to this workspace
     const userId = req.user?.id;
-    const platformRole = req.user?.platformRole as PlatformRole;
+    const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
       const { role, error } = await resolveWorkspaceForUser(userId, workspaceId);
@@ -73,7 +73,7 @@ executionTrackerRouter.get('/executions/:id', requireAuth, async (req: Request, 
 
     // Verify user has access to the execution's workspace
     const userId = req.user?.id;
-    const platformRole = req.user?.platformRole as PlatformRole;
+    const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
       const { role, error } = await resolveWorkspaceForUser(userId, execution.workspaceId);
@@ -98,7 +98,7 @@ executionTrackerRouter.get('/pending-verifications', requireAuth, async (req: Re
 
     // Verify user has access to this workspace
     const userId = req.user?.id;
-    const platformRole = req.user?.platformRole as PlatformRole;
+    const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
       const { role, error } = await resolveWorkspaceForUser(userId, workspaceId);
@@ -120,7 +120,7 @@ executionTrackerRouter.post('/executions/:id/verify', requireAuth, async (req: R
   try {
     const { notes } = req.body;
     const userId = req.user?.id || 'unknown';
-    const platformRole = req.user?.platformRole as PlatformRole;
+    const platformRole = (req.user)?.platformRole as PlatformRole;
 
     // First get the execution to verify workspace access
     const execution = await automationExecutionTracker.getExecution(req.params.id);
@@ -164,7 +164,7 @@ executionTrackerRouter.post('/executions/:id/reject', requireAuth, async (req: R
   try {
     const { reason } = req.body;
     const userId = req.user?.id || 'unknown';
-    const platformRole = req.user?.platformRole as PlatformRole;
+    const platformRole = (req.user)?.platformRole as PlatformRole;
 
     if (!reason) {
       return res.status(400).json({ error: 'Rejection reason is required' });
@@ -215,7 +215,7 @@ executionTrackerRouter.get('/stats', requireAuth, async (req: Request, res: Resp
 
     // Verify user has access to this workspace
     const userId = req.user?.id;
-    const platformRole = req.user?.platformRole as PlatformRole;
+    const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
       const { role, error } = await resolveWorkspaceForUser(userId, workspaceId);

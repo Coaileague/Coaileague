@@ -46,7 +46,7 @@ async function getUserInfo(req: AuthenticatedRequest) {
   const userId = req.user?.id || req.session?.userId || req.session?.passport?.user?.id;
   let workspaceId = req.workspaceId || req.user?.currentWorkspaceId || req.user?.workspaceId || req.session?.passport?.user?.workspaceId;
   let employeeId = req.employeeId || req.user?.employeeId || req.session?.passport?.user?.employeeId;
-  let role = req.workspaceRole || req.user?.role || (req.user as any)?.workspaceRole || (req.user as any)?.platformRole || req.session?.passport?.user?.role;
+  let role = req.workspaceRole || req.user?.role || (req.user)?.workspaceRole || (req.user)?.platformRole || req.session?.passport?.user?.role;
 
   const ambiguousRoles = ['org_admin', 'org_owner', 'support_agent'];
   if (userId && (!workspaceId || !employeeId || !role || ambiguousRoles.includes(role))) {

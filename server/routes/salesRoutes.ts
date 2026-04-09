@@ -22,7 +22,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   salesRouter.get("/invitations", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const list = await db.select().from(orgInvitations)
         .where(eq(orgInvitations.sentBy, user?.id))
         .orderBy(desc(orgInvitations.createdAt));
@@ -44,7 +44,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
         contactName,
         invitationToken: token,
         invitationTokenExpiry: new Date(Date.now() + 14*24*60*60*1000),
-        sentBy: (req.user as any)?.id,
+        sentBy: (req.user)?.id,
         status: "pending",
       }).returning();
       res.json({ success: true, invitation: result[0] });
@@ -55,7 +55,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   salesRouter.get("/proposals", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const list = await db.select().from(proposals)
         .where(and(eq(proposals.proposalType, 'sales'), eq(proposals.createdBy, user?.id)))
         .orderBy(desc(proposals.createdAt));
@@ -79,7 +79,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
         suggestedTier: suggestedTier || "starter",
         estimatedValue: estimatedValue ? String(estimatedValue) : undefined,
         status: "draft",
-        createdBy: (req.user as any)?.id || "system",
+        createdBy: (req.user)?.id || "system",
       }).returning();
       res.json({ success: true, proposal: result[0] });
     } catch (error: unknown) {
@@ -131,7 +131,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
         return res.status(400).json({ error: "candidates array is required" });
       }
 
-      const user = req.user as any;
+      const user = req.user;
       const result = await trinityOutreachService.sendOutreachInvitations(
         candidates,
         user?.id,
@@ -146,7 +146,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   salesRouter.get("/outreach/pipeline", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const summary = await trinityOutreachService.getPipelineSummary(user?.id);
       const prospects = await trinityOutreachService.getProspectsByStage(user?.id);
 
@@ -158,7 +158,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   salesRouter.get("/outreach/pipeline/:stage", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const stage = req.params.stage;
       const prospects = await trinityOutreachService.getProspectsByStage(
         user?.id,
@@ -173,7 +173,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   salesRouter.get("/activities", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const salesActivityList = await db.select().from(activities)
         .where(eq(activities.createdByUserId, user?.id))
         .orderBy(desc(activities.createdAt));
@@ -187,7 +187,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   docRouter.post("/deliver/disciplinary", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const { workspaceId, employeeId, employeeName, reportTitle, reportDate, severity, description, actionRequired } = req.body;
       if (!workspaceId || !employeeId || !employeeName || !severity) {
         return res.status(400).json({ error: "workspaceId, employeeId, employeeName, and severity are required" });
@@ -217,7 +217,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   docRouter.post("/deliver/training-report", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const { workspaceId, traineeId, traineeName, reportTitle, trainingDate, score, passed, observations, recommendations } = req.body;
       if (!workspaceId || !traineeId || !traineeName) {
         return res.status(400).json({ error: "workspaceId, traineeId, and traineeName are required" });
@@ -249,7 +249,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   docRouter.post("/deliver/promotion", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const { workspaceId, employeeId, employeeName, currentRole, proposedRole, effectiveDate, justification, salaryChange } = req.body;
       if (!workspaceId || !employeeId || !employeeName || !currentRole || !proposedRole) {
         return res.status(400).json({ error: "workspaceId, employeeId, employeeName, currentRole, and proposedRole are required" });
@@ -279,7 +279,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   docRouter.post("/deliver/contract-proposal", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const { workspaceId, clientEmail, clientName, proposalTitle, proposalSummary, portalUrl, expiresAt, value } = req.body;
       if (!clientEmail || !proposalTitle) {
         return res.status(400).json({ error: "clientEmail and proposalTitle are required" });
@@ -310,7 +310,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
 
   docRouter.post("/deliver/onboarding", requireAuth, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
+      const user = req.user;
       const { workspaceId, employeeId, employeeName, employeeEmail, startDate, position, managerName, documentsIncluded, portalUrl } = req.body;
       if (!workspaceId || !employeeId || !employeeName || !employeeEmail) {
         return res.status(400).json({ error: "workspaceId, employeeId, employeeName, and employeeEmail are required" });

@@ -101,7 +101,7 @@ router.get('/api/runtime-flags/:key', requireAuth, async (req, res) => {
 router.post('/api/runtime-flags/update', requireAuth, requireSysop, async (req, res) => {
   try {
     const data = updateFlagSchema.parse(req.body);
-    const user = req.user as any;
+    const user = req.user;
     
     const actorType = req.headers['x-trinity-actor'] === 'trinity' ? 'trinity' : 
                       user ? 'admin' : 'system';
@@ -141,7 +141,7 @@ router.post('/api/runtime-flags/update', requireAuth, requireSysop, async (req, 
 router.post('/api/runtime-flags/toggle', requireAuth, requireSysop, async (req, res) => {
   try {
     const data = toggleFlagSchema.parse(req.body);
-    const user = req.user as any;
+    const user = req.user;
     
     const actorType = req.headers['x-trinity-actor'] === 'trinity' ? 'trinity' : 
                       user ? 'admin' : 'system';
@@ -191,7 +191,7 @@ router.get('/api/runtime-flags/:key/history', requireAuth, async (req, res) => {
 
 router.post('/api/runtime-flags/:key/rollback', requireAuth, requireSysop, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     
     const actorType = req.headers['x-trinity-actor'] === 'trinity' ? 'trinity' : 
                       user ? 'admin' : 'system';

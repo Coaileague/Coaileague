@@ -11,7 +11,7 @@ const router = Router();
 
 /**
  * Resolve the active workspace from the request.
- * Priority: req.user.currentWorkspaceId (session-bound) → req.workspaceId (middleware) → resolveWorkspaceForUser
+ * Priority: (req.user as any)?.currentWorkspaceId (session-bound) → req.workspaceId (middleware) → resolveWorkspaceForUser
  * This enforces session isolation so multi-workspace users see the correct org's data.
  */
 async function resolveActiveWorkspace(req: AuthenticatedRequest): Promise<{ workspaceId: string | null; error?: string }> {
@@ -19,13 +19,13 @@ async function resolveActiveWorkspace(req: AuthenticatedRequest): Promise<{ work
   if (!userId) return { workspaceId: null, error: 'Unauthorized' };
 
   // 1. Workspace set by middleware (ensureWorkspaceAccess) — highest priority
-  const middlewareWsId = req.workspaceId || (req.user as any)?.workspaceId;
+  const middlewareWsId = req.workspaceId || (req.user)?.workspaceId;
   if (middlewareWsId) {
     return { workspaceId: middlewareWsId };
   }
 
   // 2. Session-bound active workspace
-  const sessionWsId = (req.user as any)?.currentWorkspaceId;
+  const sessionWsId = (req.user)?.currentWorkspaceId;
   if (sessionWsId) {
     return { workspaceId: sessionWsId };
   }

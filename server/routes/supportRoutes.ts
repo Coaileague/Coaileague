@@ -78,7 +78,7 @@ router.post('/create-ticket', async (req, res) => {
     }
     else if (authReq.requireAuth?.() && authReq.user?.id) {
       userId = authReq.user.id;
-      userEmail = authReq.user?.claims?.email || userEmail;
+      userEmail = (authReq.user as any)?.claims?.email || userEmail;
     }
 
     const { PLATFORM_WORKSPACE_ID } = await import('../services/billing/billingConstants');
@@ -1264,7 +1264,7 @@ router.get('/chatrooms', async (req: AuthenticatedRequest, res) => {
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required" });
     }
-    const isSupportStaff = req.user.platformRole && [
+    const isSupportStaff = (req.user).platformRole && [
       'root_admin',
       'support_manager',
       'support_agent',
@@ -1273,7 +1273,7 @@ router.get('/chatrooms', async (req: AuthenticatedRequest, res) => {
       'sysop',
       'deputy_admin',
       'deputy_assistant'
-    ].includes(req.user.platformRole);
+    ].includes((req.user).platformRole);
 
     if (!isSupportStaff) {
       return res.status(403).json({ message: "Only support staff can access this endpoint" });

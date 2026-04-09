@@ -107,9 +107,9 @@ class ContextResolverService {
     try {
       const user = await storage.getUser(input.userId);
       if (user) {
-        context.platformRole = user.platformRole || undefined;
-        context.isPlatformAdmin = PLATFORM_ADMIN_ROLES.includes(user.platformRole || '');
-        context.hasEscalationRights = ESCALATION_ROLES.includes(user.platformRole || '');
+        context.platformRole = (user as any).platformRole || undefined;
+        context.isPlatformAdmin = PLATFORM_ADMIN_ROLES.includes((user as any).platformRole || '');
+        context.hasEscalationRights = ESCALATION_ROLES.includes((user as any).platformRole || '');
         context.metadata.email = user.email;
         context.metadata.firstName = user.firstName;
       }

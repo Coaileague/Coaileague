@@ -26,7 +26,7 @@ const router = Router();
 router.get('/scan-logs', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq.user as any)?.workspaceId || authReq.user?.currentWorkspaceId;
     const userRole = authReq.workspaceRole || authReq.user?.role;
 
     // Only admin/owner can view scan logs
@@ -70,7 +70,7 @@ router.get('/scan-logs', requireAuth, async (req: Request, res: Response) => {
 router.get('/scan-stats', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq.user as any)?.workspaceId || authReq.user?.currentWorkspaceId;
     const userRole = authReq.workspaceRole || authReq.user?.role;
 
     // Only admin/owner can view stats
@@ -103,7 +103,7 @@ router.get('/scan-stats', requireAuth, async (req: Request, res: Response) => {
 router.get('/threats', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq.user as any)?.workspaceId || authReq.user?.currentWorkspaceId;
     const userRole = authReq.workspaceRole || authReq.user?.role;
 
     // Only admin/owner can view threats

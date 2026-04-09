@@ -65,7 +65,7 @@ const ConfidenceScoreRequestSchema = z.object({
 
 router.post("/process", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId;
     
     if (!workspaceId) {
@@ -121,7 +121,7 @@ router.post("/process", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/consult", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId;
     
     if (!workspaceId) {
@@ -170,7 +170,7 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/verify", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId;
     
     if (!workspaceId) {
@@ -298,7 +298,7 @@ router.post("/score-confidence", requireAuth, async (req: Request, res: Response
 
 router.get("/logs", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId;
     
     if (!workspaceId) {
@@ -344,7 +344,7 @@ router.get("/logs", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user?.workspaceId;
     
     if (!workspaceId) {

@@ -25,7 +25,7 @@ interface ScheduleSuggestion {
 // Get AI schedule optimization suggestions
 router.get("/suggestions", async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -180,7 +180,7 @@ router.get("/suggestions", async (req: Request, res: Response) => {
 // Apply an AI suggestion (advisory-only: logs the user's acknowledgment of the suggestion)
 router.post("/apply-suggestion", async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.workspaceId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -207,7 +207,7 @@ router.post("/apply-suggestion", async (req: Request, res: Response) => {
 // Get schedule optimization report based on real scheduling data
 router.get("/optimization-report", async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     if (!user?.workspaceId) {
       return res.status(401).json({ error: "Unauthorized" });
     }

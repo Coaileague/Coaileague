@@ -35,7 +35,7 @@ async function getAuthenticatedUser(req: AuthenticatedRequest): Promise<any> {
 
 async function resolveSecureWorkspaceId(user: any, _requestedId?: string): Promise<string> {
   // requireManager already resolved the workspace securely and stamped it onto
-  // req.user.workspaceId (see auth.ts). For platform staff it has already been
+  // (req.user as any)?.workspaceId (see auth.ts). For platform staff it has already been
   // overridden with the admin-specified workspace. We simply reflect that value.
   return user?.workspaceId || '';
 }

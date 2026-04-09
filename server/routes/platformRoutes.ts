@@ -105,7 +105,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const userName = (req.user as any)?.fullName || (req.user as any)?.email || 'Admin';
+      const userName = (req.user)?.fullName || (req.user)?.email || 'Admin';
 
       // Count open escalation tickets assigned to this staff member
       const [openTicketsCount] = await db
@@ -1174,7 +1174,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
       const PLATFORM_ROLE_LEVELS: Record<string, number> = {
         root_admin: 5, deputy_admin: 4, sysop: 3, support_manager: 3, compliance_officer: 3, support_agent: 2,
       };
-      const grantorRole = (req.user as any)?.platformRole as string | undefined;
+      const grantorRole = (req.user)?.platformRole as string | undefined;
       const grantorLevel = grantorRole ? (PLATFORM_ROLE_LEVELS[grantorRole] ?? 0) : 0;
       const targetLevel = PLATFORM_ROLE_LEVELS[role] ?? 0;
       if (targetLevel >= grantorLevel) {

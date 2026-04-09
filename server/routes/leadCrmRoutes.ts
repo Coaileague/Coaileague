@@ -145,7 +145,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       const workspaceId = requireWorkspace(req, res);
       if (!workspaceId) return;
 
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       
       const { 
         companyName, industry, companyWebsite, estimatedEmployees,
@@ -203,7 +203,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       if (!workspaceId) return;
 
       const { id } = req.params;
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
 
       const [existing] = await db.select()
         .from(leads)
@@ -283,7 +283,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       if (!workspaceId) return;
 
       const { id } = req.params;
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       const { activityType, description } = req.body;
 
       const [lead] = await db.select()
@@ -320,7 +320,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       const workspaceId = requireWorkspace(req, res);
       if (!workspaceId) return;
 
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       
       const { 
         dealName, companyName, leadId, rfpId, stage,

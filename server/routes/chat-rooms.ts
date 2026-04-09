@@ -295,7 +295,7 @@ router.post(
       const isReservedName = RESERVED_ROOM_NAMES.some(
         r => requestedName === r || requestedName.startsWith(r)
       );
-      const _userPlatformRole = (authReq.user as any)?.platformRole || (authReq.user as any)?.role || '';
+      const _userPlatformRole = (authReq.user)?.platformRole || (authReq.user)?.role || '';
       const isSupportExempt = SUPPORT_EXEMPT_ROLES.includes(authReq.workspaceRole || '') ||
                               SUPPORT_EXEMPT_ROLES.includes(_userPlatformRole);
       if (isReservedName && !isSupportExempt) {
@@ -563,7 +563,7 @@ router.get(
 
       const requireAuth = !!userId;
 
-      const platformRole = (authReq.user as any)?.platformRole || (authReq.user as any)?.role;
+      const platformRole = (authReq.user)?.platformRole || (authReq.user)?.role;
       const { hasPlatformWideAccess } = await import('../rbac');
       const isPlatformAdmin = platformRole && hasPlatformWideAccess(platformRole);
 
@@ -1816,7 +1816,7 @@ router.delete(
         .limit(1);
 
       const isWorkspaceAdmin = (ADMIN_ROLES as readonly string[]).includes(authReq.workspaceRole || "");
-      const user = authReq.user as any;
+      const user = authReq.user;
       const platformRole = user.platformRole || user.role;
       const { hasPlatformWideAccess } = await import('../rbac');
 
@@ -1944,7 +1944,7 @@ router.get(
     const authReq = req as AuthenticatedRequest;
     try {
       const userId = authReq.user?.id;
-      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+      const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
 
       if (!userId) {
         return res.status(403).json({ error: "Authentication required" });
@@ -2078,9 +2078,9 @@ router.post(
       const { roomId } = req.params;
       const { action, reason } = req.body;
       const userId = authReq.user?.id;
-      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
-      const userName = (authReq.user as any)?.firstName && (authReq.user as any)?.lastName
-        ? `${(authReq.user as any).firstName} ${(authReq.user as any).lastName}`
+      const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
+      const userName = (authReq.user)?.firstName && (authReq.user)?.lastName
+        ? `${(authReq.user).firstName} ${(authReq.user).lastName}`
         : authReq.user?.email || "Support Staff";
 
       if (!userId) {
@@ -2199,7 +2199,7 @@ router.post(
         return res.status(404).json({ error: "Room not found" });
       }
 
-      const user = authReq.user as any;
+      const user = authReq.user;
       const { hasManagerAccess } = await import('../rbac');
       const workspaceRole = authReq.workspaceRole || user.workspaceRole || 'employee';
       
@@ -2281,7 +2281,7 @@ router.post(
         return res.status(404).json({ error: "Room not found" });
       }
 
-      const user = authReq.user as any;
+      const user = authReq.user;
       const { hasManagerAccess } = await import('../rbac');
       const workspaceRole = authReq.workspaceRole || user.workspaceRole || 'employee';
       
@@ -2344,7 +2344,7 @@ router.get(
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     try {
-      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+      const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
 
       // Only support staff can access
       const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
@@ -2380,7 +2380,7 @@ router.get(
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     try {
-      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+      const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
       
       if (!platformRole || !supportRoles.includes(platformRole)) {
@@ -2516,7 +2516,7 @@ router.get(
     const { roomId } = req.params;
 
     try {
-      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+      const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
       
       if (!platformRole || !supportRoles.includes(platformRole)) {

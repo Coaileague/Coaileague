@@ -64,7 +64,7 @@ router.post("/upload", requireAuth, upload.array("files", 10), strictVirusScan, 
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
-    const workspaceId = authReq.user?.workspaceId;
+    const workspaceId = (authReq.user as any)?.workspaceId;
     
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });

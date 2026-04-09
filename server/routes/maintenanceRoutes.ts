@@ -102,7 +102,7 @@ router.get('/api/maintenance/window', async (req, res) => {
 
 router.post('/api/maintenance/activate', requireAuth, requirePlatformAdmin, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const data = activateSchema.parse(req.body);
 
     const result = await maintenanceModeService.activateMaintenance({
@@ -149,7 +149,7 @@ router.post('/api/maintenance/activate-trinity', requireTrinityOrAdmin, async (r
 
 router.post('/api/maintenance/deactivate', requireAuth, requirePlatformAdmin, async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const trinityHeader = req.headers['x-trinity-actor'];
 
     let deactivatedBy: { type: 'admin' | 'trinity' | 'system'; id?: string; name?: string };

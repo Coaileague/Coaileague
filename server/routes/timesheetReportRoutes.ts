@@ -38,7 +38,7 @@ async function getEmployeeId(userId: string, workspaceId: string): Promise<strin
 timesheetReportRouter.get('/report', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -72,7 +72,7 @@ timesheetReportRouter.get('/report', requireManager, async (req: Request, res: R
 timesheetReportRouter.get('/my-report', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -107,7 +107,7 @@ timesheetReportRouter.get('/my-report', requireAuth, async (req: Request, res: R
 timesheetReportRouter.get('/export/csv', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -143,7 +143,7 @@ timesheetReportRouter.get('/export/csv', requireManager, async (req: Request, re
 timesheetReportRouter.get('/weekly', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -179,7 +179,7 @@ timesheetReportRouter.get('/weekly', requireAuth, async (req: Request, res: Resp
 timesheetReportRouter.get('/monthly', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -213,7 +213,7 @@ timesheetReportRouter.get('/monthly', requireAuth, async (req: Request, res: Res
 timesheetReportRouter.get('/compliance', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -237,7 +237,7 @@ timesheetReportRouter.get('/compliance', requireWorkspaceRole(['org_owner', 'co_
 timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });

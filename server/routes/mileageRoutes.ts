@@ -178,9 +178,9 @@ router.delete("/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     const existing = await storage.getMileageLog(req.params.id, workspaceId);
     if (!existing) return res.status(404).json({ message: "Not found" });
 
-    const role = (req.user as any).workspaceRole || "";
+    const role = (req.user).workspaceRole || "";
     const isManager = ["manager", "department_manager", "org_manager", "co_owner", "org_owner"].includes(role)
-      || ["root_admin", "deputy_admin", "sysop"].includes((req.user as any).platformRole || "");
+      || ["root_admin", "deputy_admin", "sysop"].includes((req.user).platformRole || "");
 
     if (!isManager && existing.status !== "draft") {
       return res.status(403).json({ message: "Can only delete draft logs" });

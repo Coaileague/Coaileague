@@ -30,7 +30,7 @@ const router = Router();
 router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { enabled, workspaceId } = req.body;
-      const userId = req.user?.id || req.user?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       
       if (!workspaceId) {
         return res.status(400).json({ message: "workspaceId is required" });
@@ -90,7 +90,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
   router.post('/ai/trigger-session', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId, mode = 'fill_gaps' } = req.body;
-      const userId = req.user?.id || req.user?.claims?.sub;
+      const userId = req.user?.id || (req.user)?.claims?.sub;
       
       if (!workspaceId) {
         return res.status(400).json({ message: "workspaceId is required" });

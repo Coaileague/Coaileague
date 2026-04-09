@@ -75,7 +75,7 @@ router.post('/services/:serviceName/pause', requirePlatformAdmin, async (req: Re
   try {
     const { serviceName } = req.params;
     const { reason } = req.body;
-    const user = req.user as any;
+    const user = req.user;
     
     const result = await serviceControlManager.pauseService(
       serviceName as OrchestrationServiceName,
@@ -105,7 +105,7 @@ router.post('/services/:serviceName/pause', requirePlatformAdmin, async (req: Re
 router.post('/services/:serviceName/resume', requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { serviceName } = req.params;
-    const user = req.user as any;
+    const user = req.user;
     
     const result = await serviceControlManager.resumeService(
       serviceName as OrchestrationServiceName,
@@ -164,7 +164,7 @@ router.post('/workflows/:runId/cancel', requirePlatformAdmin, async (req: Reques
   try {
     const { runId } = req.params;
     const { reason } = req.body;
-    const user = req.user as any;
+    const user = req.user;
     
     await workflowLedger.cancelRun(runId, reason || `Cancelled by ${user.email || user.id}`);
     
@@ -185,7 +185,7 @@ router.post('/workflows/:runId/cancel', requirePlatformAdmin, async (req: Reques
 router.post('/workflows/:runId/retry', requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { runId } = req.params;
-    const user = req.user as any;
+    const user = req.user;
     
     const workflow = await workflowLedger.getRun(runId);
     if (!workflow) {
@@ -238,7 +238,7 @@ router.get('/commitments', requirePlatformStaff, async (req: Request, res: Respo
 router.post('/commitments/:commitmentId/approve', requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { commitmentId } = req.params;
-    const user = req.user as any;
+    const user = req.user;
     
     const result = await commitmentManager.approveCommitment(commitmentId, user.id);
     
@@ -257,7 +257,7 @@ router.post('/commitments/:commitmentId/reject', requirePlatformAdmin, async (re
   try {
     const { commitmentId } = req.params;
     const { reason } = req.body;
-    const user = req.user as any;
+    const user = req.user;
     
     if (!reason) {
       return res.status(400).json({ error: 'Reason is required for rejection' });
@@ -279,7 +279,7 @@ router.post('/commitments/:commitmentId/reject', requirePlatformAdmin, async (re
 router.post('/test-alert', requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { type = 'test', message = 'Test alert from AI Brain Control' } = req.body;
-    const user = req.user as any;
+    const user = req.user;
     
     aiBrainEvents.emit('critical_alert', {
       level: 'warning',

@@ -9,7 +9,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: any, requireMan
 
   ratingsRouter.get("/employer", requireAuth, readLimiter, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req.user as any)?.currentWorkspaceId;
+      const workspaceId = (req.user)?.currentWorkspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
       const { targetId, period = '30' } = req.query;
       const periodDays = parseInt(period as string) || 30;
@@ -29,7 +29,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: any, requireMan
 
   ratingsRouter.get("/employer/trends", requireAuth, readLimiter, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req.user as any)?.currentWorkspaceId;
+      const workspaceId = (req.user)?.currentWorkspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
       const { targetId, granularity = 'week' } = req.query;
 
@@ -48,7 +48,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: any, requireMan
 
   ratingsRouter.get("/at-risk-managers", requireAuth, requireManager, readLimiter, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req.user as any)?.currentWorkspaceId;
+      const workspaceId = (req.user)?.currentWorkspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
       const { threshold = '3.0' } = req.query;
 
@@ -66,7 +66,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: any, requireMan
 
   ratingsRouter.get("/composite-score", requireAuth, readLimiter, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req.user as any)?.currentWorkspaceId;
+      const workspaceId = (req.user)?.currentWorkspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
       const { employeeId } = req.query;
       if (!employeeId) return res.status(400).json({ error: 'employeeId required' });
@@ -89,7 +89,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: any, requireMan
 
   ratingsRouter.get("/composite-scores", requireAuth, requireManager, readLimiter, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req.user as any)?.currentWorkspaceId;
+      const workspaceId = (req.user)?.currentWorkspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
 
       const scores = await compositeScoresService.calculateWorkspaceCompositeScores(workspaceId);
@@ -111,7 +111,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: any, requireMan
 
   ratingsRouter.get("/employee-rank/:employeeId", requireAuth, readLimiter, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req.user as any)?.currentWorkspaceId;
+      const workspaceId = (req.user)?.currentWorkspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
       const { employeeId } = req.params;
 

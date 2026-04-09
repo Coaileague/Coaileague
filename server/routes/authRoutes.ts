@@ -184,15 +184,15 @@ router.get('/magic-link/verify', async (req: Request, res) => {
         },
       };
       const { resolveAndCacheWorkspaceContext, saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
-      if (result.user.currentWorkspaceId) {
-        await resolveAndCacheWorkspaceContext(req, result.user.id, result.user.currentWorkspaceId);
+      if ((result.user as any).currentWorkspaceId) {
+        await resolveAndCacheWorkspaceContext(req, result.user.id, (result.user as any).currentWorkspaceId);
       }
       await saveSessionAsync(req);
     }
 
     log.info('[Security] Magic link verified and session established', {
       userId: result.user?.id,
-      workspaceId: result.user?.currentWorkspaceId,
+      workspaceId: (result.user as any)?.currentWorkspaceId,
       ip: req.ip || req.socket?.remoteAddress,
       userAgent: req.get('user-agent'),
       event: 'magic_link_verified',

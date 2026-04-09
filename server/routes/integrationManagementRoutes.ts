@@ -291,7 +291,7 @@ router.post('/connection-request', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'integrationId and integrationName are required' });
     }
 
-    const workspaceId = req.workspaceId || user.workspaceId || user.workspace_id;
+    const workspaceId = req.workspaceId || (user as any).workspaceId || user.workspace_id;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: 'No workspace associated with this session' });
     }

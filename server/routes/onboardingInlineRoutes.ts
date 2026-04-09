@@ -1215,7 +1215,7 @@ router.get('/migration-capabilities', async (req, res) => {
 
 router.post('/test-workflow', async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { testWorkspaceId, testWorkspaceName, testOwnerName, dryRun = true } = req.body;
 
     const { onboardingOrchestrator } = await import('../services/ai-brain/subagents/onboardingOrchestrator');
@@ -1250,7 +1250,7 @@ router.get('/diagnostics/:workspaceId', async (req, res) => {
 
 router.post('/initialize-trinity', async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const { workspaceId, workspaceName, ownerName, subscriptionTier } = req.body;
 
     const { onboardingOrchestrator } = await import('../services/ai-brain/subagents/onboardingOrchestrator');
@@ -1271,7 +1271,7 @@ router.post('/initialize-trinity', async (req, res) => {
 
 router.get('/status', async (req, res) => {
   try {
-    const user = req.user as any;
+    const user = req.user;
     const workspaceId = req.workspaceId || user.activeWorkspaceId || user.defaultWorkspaceId;
 
     if (!workspaceId) {
@@ -1475,7 +1475,7 @@ router.get('/readiness', async (req: AuthenticatedRequest, res) => {
 
 router.get('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     // CATEGORY C — Raw SQL retained: LIMIT | Tables: org_creation_progress | Verified: 2026-03-23
     const result = await typedQuery(
@@ -1491,7 +1491,7 @@ router.get('/create-org/progress', async (req: AuthenticatedRequest, res) => {
 
 router.post('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     const data = req.body;
     // Converted to Drizzle ORM: ON CONFLICT
@@ -1514,7 +1514,7 @@ router.post('/create-org/progress', async (req: AuthenticatedRequest, res) => {
 
 router.delete('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     await db.delete(orgCreationProgress).where(eq(orgCreationProgress.userId, userId));
     res.json({ success: true });

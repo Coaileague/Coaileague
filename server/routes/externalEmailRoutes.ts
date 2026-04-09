@@ -45,7 +45,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any, atta
   router.get("/drafts", requireAuth, async (req: Request, res: Response) => {
     try {
       const workspaceId = req.workspaceId;
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
 
       const drafts = await db.select().from(emailDrafts)
@@ -79,7 +79,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any, atta
   router.post("/", requireAuth, async (req: Request, res: Response) => {
     try {
       const workspaceId = req.workspaceId;
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
 
       const { 
@@ -228,7 +228,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any, atta
   router.post("/drafts", requireAuth, async (req: Request, res: Response) => {
     try {
       const workspaceId = req.workspaceId;
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
 
       const { toEmail, ccEmails, subject, bodyHtml, relatedEntityType, relatedEntityId } = req.body;
@@ -253,7 +253,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any, atta
 
   router.patch("/drafts/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       const { id } = req.params;
       const { to, cc, bcc, subject: draftSubject, body: draftBody, templateId } = req.body;
 
@@ -279,7 +279,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any, atta
 
   router.delete("/drafts/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = (req.user)?.id;
       const { id } = req.params;
 
       await db.delete(emailDrafts)

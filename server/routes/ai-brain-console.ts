@@ -501,7 +501,7 @@ aiBrainConsoleRouter.get('/status', requireSupportRole, async (req: Authenticate
 aiBrainConsoleRouter.get('/self-assessment', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id || 'support';
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     
     log.info(`[AIBrainConsole] Self-assessment requested by ${userId}`);

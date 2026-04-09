@@ -1810,7 +1810,7 @@ router.delete('/:id/pii-purge', requireAuth, async (req: AuthenticatedRequest, r
     const { id } = req.params;
     const workspaceId = req.workspaceId;
     const userId = req.user?.id;
-    const userRole = req.user?.workspaceRole;
+    const userRole = (req.user)?.workspaceRole;
 
     if (!workspaceId) {
       return res.status(403).json({ message: 'Workspace context required' });
