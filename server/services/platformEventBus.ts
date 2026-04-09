@@ -471,7 +471,7 @@ export interface PlatformEvent {
 
 export interface EventSubscriber {
   id?: string;
-  name: string;
+  name?: string;
   handler: (event: PlatformEvent) => Promise<void>;
 }
 
@@ -491,13 +491,17 @@ class PlatformEventBus {
   /**
    * Subscribe to specific event types
    */
-  subscribe(eventType: PlatformEventType | '*', subscriber: EventSubscriber) {
+  subscribe(eventType: PlatformEventType | string, subscriber: EventSubscriber | ((event: PlatformEvent) => Promise<void>)) {
     const key = eventType === '*' ? 'all' : eventType;
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, []);
     }
-    this.subscribers.get(key)!.push(subscriber);
-    log.verbose('Subscriber registered', { subscriberName: subscriber.name, eventType });
+    // Accept both EventSubscriber objects and plain handler functions
+    const sub: EventSubscriber = typeof subscriber === 'function'
+      ? { name: eventType, handler: subscriber }
+      : subscriber;
+    this.subscribers.get(key)!.push(sub);
+    log.verbose('Subscriber registered', { subscriberName: sub.name, eventType });
   }
 
   /**
