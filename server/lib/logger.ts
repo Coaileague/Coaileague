@@ -1,6 +1,7 @@
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error';
 
 const LOG_LEVELS: Record<LogLevel, number> = {
+  verbose: -1,
   debug: 0,
   info: 1,
   warn: 2,
@@ -54,6 +55,7 @@ function shouldLog(level: LogLevel): boolean {
 }
 
 export interface Logger {
+  verbose: (message: string, meta?: unknown) => void;
   debug: (message: string, meta?: unknown) => void;
   info: (message: string, meta?: unknown) => void;
   warn: (message: string, meta?: unknown) => void;
@@ -63,6 +65,9 @@ export interface Logger {
 
 export function createLogger(context: string): Logger {
   return {
+    verbose: (message: string, meta?: unknown) => {
+      if (shouldLog('verbose')) console.log(formatLog('verbose', context, message, meta));
+    },
     debug: (message: string, meta?: unknown) => {
       if (shouldLog('debug')) console.log(formatLog('debug', context, message, meta));
     },

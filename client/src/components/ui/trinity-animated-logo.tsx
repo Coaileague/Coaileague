@@ -1,16 +1,26 @@
 /**
- * Trinity Animated Logo - Chat Interface Bow/Knot Icon
- * Features: Animated ribbon bow with pulse and spin states
- * Uses the authentic 5-petal interwoven ribbon knot design
- * 
- * Animation States:
- * - idle: Gentle pulse/glow (slow breathing effect)
- * - thinking: Spinning while generating response
- * - responding: Smooth fade-in as text appears
+ * TrinityAnimatedLogo — animated wrapper around the CoAIleague triquetra.
+ *
+ * STRICT BRAND RULE (2026-04-09): this component renders the canonical
+ * CoAIleagueLogoMark (triquetra) with a state-driven CSS animation class.
+ * It NEVER renders the old 5-petal ribbon knot or any "blob/flower"
+ * mascot geometry — that SVG was removed in the logo consolidation pass
+ * because it kept leaking back into chat/thinking surfaces.
+ *
+ * Animation states (applied as CSS classes):
+ *   - idle       → `animate-trinity-pulse` (slow breathing glow)
+ *   - thinking   → `animate-trinity-spin`  (spin while generating)
+ *   - responding → `animate-trinity-fade`  (fade-in as text appears)
+ *
+ * Size + mode props are preserved for backward compatibility with any
+ * existing callers. `mode` is a no-op for now; the triquetra has one
+ * canonical colour palette, so it does not fork per Trinity mode.
+ *
+ * Canonical triquetra source: `@/components/ui/coaileague-logo-mark.tsx`
  */
 
 import { cn } from "@/lib/utils";
-import { useId } from "react";
+import { CoAIleagueLogoMark } from "@/components/ui/coaileague-logo-mark";
 
 type AnimationState = "idle" | "thinking" | "responding";
 type TrinityMode = "business" | "personal" | "integrated";
@@ -18,133 +28,42 @@ type TrinityMode = "business" | "personal" | "integrated";
 interface TrinityAnimatedLogoProps {
   size?: "sm" | "md" | "lg";
   state?: AnimationState;
+  /** @deprecated kept for backward compatibility; no visual effect. */
   mode?: TrinityMode;
   className?: string;
 }
 
-const sizeMap = {
-  sm: { width: 24, height: 24 },
-  md: { width: 32, height: 32 },
-  lg: { width: 48, height: 48 },
+const sizeMap: Record<NonNullable<TrinityAnimatedLogoProps["size"]>, number> = {
+  sm: 24,
+  md: 32,
+  lg: 48,
 };
 
-const modeColors = {
-  business: { gold: "var(--ds-trinity-gold)", teal: "var(--ds-trinity-teal)", core: "var(--ds-trinity-teal)" },
-  personal: { gold: "var(--ds-success)", teal: "var(--ds-success)", core: "var(--ds-success)" },
-  integrated: { gold: "var(--ds-trinity)", teal: "var(--ds-trinity)", core: "var(--ds-trinity)" },
+const animationClassByState: Record<AnimationState, string> = {
+  idle: "animate-trinity-pulse",
+  thinking: "animate-trinity-spin",
+  responding: "animate-trinity-fade",
 };
 
-export function TrinityAnimatedLogo({ 
-  size = "md", 
+export function TrinityAnimatedLogo({
+  size = "md",
   state = "idle",
-  mode = "business",
-  className 
+  className,
 }: TrinityAnimatedLogoProps) {
-  const { width, height } = sizeMap[size];
-  const colors = modeColors[mode];
-  const reactId = useId();
-  
-  const ids = {
-    core: `trinity-core${reactId}`,
-    ribbonGold: `ribbon-gold${reactId}`,
-    ribbonTeal: `ribbon-teal${reactId}`,
-    glow: `trinity-glow${reactId}`,
-  };
-
-  const animationClass = {
-    idle: "animate-trinity-pulse",
-    thinking: "animate-trinity-spin",
-    responding: "animate-trinity-fade",
-  }[state];
-  
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn("shrink-0 transition-all", animationClass, className)}
-      aria-hidden="true"
-      focusable="false"
-      role="img"
-    >
-      <defs>
-        <radialGradient id={ids.core} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="var(--ds-trinity-core-light)" />
-          <stop offset="50%" stopColor={colors.core} />
-          <stop offset="100%" stopColor="var(--ds-trinity-core-deep)" />
-        </radialGradient>
-        <linearGradient id={ids.ribbonGold} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={colors.gold} />
-          <stop offset="100%" stopColor="var(--ds-trinity-gold-end)" />
-        </linearGradient>
-        <linearGradient id={ids.ribbonTeal} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={colors.teal} />
-          <stop offset="100%" stopColor="var(--ds-trinity-teal-end)" />
-        </linearGradient>
-        <filter id={ids.glow}>
-          <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      
-      {/* Interwoven ribbon knot - 5 curved ribbon petals */}
-      {[0, 72, 144, 216, 288].map((angle, i) => (
-        <g key={i} transform={`rotate(${angle} 50 50)`}>
-          {/* Ribbon petal with curved path for knot effect */}
-          <path
-            d="M50,50 Q42,30 50,15 Q58,30 50,50"
-            fill="none"
-            stroke={`url(#${i % 2 === 0 ? ids.ribbonGold : ids.ribbonTeal})`}
-            strokeWidth="6"
-            strokeLinecap="round"
-            filter={`url(#${ids.glow})`}
-            opacity="0.95"
-          />
-          {/* Outer ribbon arc for interwoven effect */}
-          <path
-            d="M45,45 Q35,25 50,12 Q65,25 55,45"
-            fill="none"
-            stroke={`url(#${i % 2 === 0 ? ids.ribbonTeal : ids.ribbonGold})`}
-            strokeWidth="3"
-            strokeLinecap="round"
-            opacity="0.7"
-          />
-        </g>
-      ))}
-      
-      {/* Central knot core */}
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="10" 
-        fill={`url(#${ids.core})`}
-        filter={`url(#${ids.glow})`}
-      />
-      
-      {/* Inner glow */}
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="5" 
-        fill="var(--ds-trinity-core-light)" 
-        opacity="0.9"
-      />
-    </svg>
+    <CoAIleagueLogoMark
+      size={sizeMap[size]}
+      className={cn("transition-all", animationClassByState[state], className)}
+    />
   );
 }
 
-export function TrinityThinkingIndicator({ 
-  mode = "business",
-  className 
+export function TrinityThinkingIndicator({
+  className,
 }: { mode?: TrinityMode; className?: string }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <TrinityAnimatedLogo size="sm" state="thinking" mode={mode} />
+      <TrinityAnimatedLogo size="sm" state="thinking" />
       <span className="text-sm text-muted-foreground animate-pulse">
         Trinity is thinking...
       </span>
