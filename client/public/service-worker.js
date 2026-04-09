@@ -15,11 +15,26 @@
  * - Cache versioning with automatic stale data purge on SW update
  */
 
-const CACHE_VERSION = 9;
-const CACHE_NAME = 'coaileague-v4.4';
-const STATIC_CACHE = 'coaileague-static-v4.4';
+const CACHE_VERSION = 10;
+const CACHE_NAME = 'coaileague-v4.5';
+const STATIC_CACHE = 'coaileague-static-v4.5';
 const API_CACHE = 'coaileague-api-v' + CACHE_VERSION;
 const offlineFallbackPage = '/offline.html';
+
+// Standalone public HTML assets that are NOT part of the React SPA.
+// These must always fetch from the network and NEVER be served from the
+// SW offline fallback, because external services (Twilio toll-free
+// verification, regulators, etc.) visit them directly and expect the
+// real content — not a PWA "You're Offline" screen. Added 2026-04-08
+// after Twilio reviewers saw offline.html instead of the opt-in form.
+const STANDALONE_HTML_BYPASS = new Set([
+  '/sms-opt-in.html',
+  '/offline.html', // served only as a last resort fallback, never cached-as-navigation
+  '/robots.txt',
+  '/sitemap.xml',
+  '/manifest.json',
+  '/manifest.webmanifest',
+]);
 
 const STALE_WHILE_REVALIDATE_ENDPOINTS = [
   '/api/schedule',
@@ -85,7 +100,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v4.3.0 — purging ALL old caches');
+  console.log('[SW] Activating service worker v4.5.0 — purging ALL old caches + standalone HTML bypass');
   event.waitUntil(
     Promise.all([
       // Delete ALL caches that aren't the current valid set — this purges any stale Vite module caches
@@ -98,6 +113,20 @@ self.addEventListener('activate', (event) => {
               return caches.delete(key);
             }
           })
+        );
+      }),
+      // 2026-04-08: explicitly purge any stale entries for standalone HTML
+      // paths that a prior SW version may have cached (e.g. Twilio opt-in
+      // page served offline fallback). Run across ALL remaining caches.
+      caches.keys().then((keyList) => {
+        return Promise.all(
+          keyList.map(async (cacheKey) => {
+            const cache = await caches.open(cacheKey);
+            for (const path of STANDALONE_HTML_BYPASS) {
+              try { await cache.delete(path); } catch {}
+              try { await cache.delete(new URL(path, self.location.origin).toString()); } catch {}
+            }
+          }),
         );
       }),
       self.registration.navigationPreload ? self.registration.navigationPreload.enable() : Promise.resolve()
@@ -157,15 +186,23 @@ async function handleStaleWhileRevalidate(request) {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  
+
   if (event.request.method !== 'GET') {
     if (['POST', 'PUT', 'PATCH'].includes(event.request.method) && isOfflineCapable(event.request.url)) {
       event.respondWith(handleOfflinePost(event.request));
     }
     return;
   }
-  
+
   if (url.pathname.startsWith('/ws/')) return;
+
+  // BYPASS standalone public HTML/static assets — never intercept, never
+  // serve offline fallback. External auditors (Twilio, regulators, privacy
+  // reviewers) visit these directly and must see the real content.
+  // (2026-04-08: Twilio toll-free verification was served offline.html.)
+  if (STANDALONE_HTML_BYPASS.has(url.pathname)) return;
+  if (url.pathname.endsWith('.html') && url.pathname !== '/' && url.pathname !== '/index.html') return;
+  if (url.pathname.endsWith('.txt') || url.pathname.endsWith('.xml')) return;
 
   // CRITICAL: Never cache Vite dev server module requests.
   // Paths starting with /@ are Vite internals (/@vite/client, /@react-refresh, /@fs/...).

@@ -69,6 +69,21 @@ export class UsageMeteringService {
       });
       input.workspaceId = 'PLATFORM_COST_CENTER';
     }
+    // BILLING-FK FIX (2026-04-08): ai_usage_events.user_id has a FK to
+    // users.id. Callers historically passed the sentinel string 'system'
+    // for platform-level / autonomous calls, which is NOT a real user row
+    // and produces a FK violation on every cycle. Normalize any system
+    // sentinel to NULL here — one sanitization point rather than fixing
+    // thousands of call sites. The companion DB migration makes user_id
+    // nullable (see criticalConstraintsBootstrap.ai_usage_events_user_id_nullable).
+    if (
+      input.userId === 'system' ||
+      input.userId === 'bot-system' ||
+      input.userId === 'trinity-service' ||
+      input.userId === ''
+    ) {
+      input.userId = undefined;
+    }
     // Get addon details if addonId provided
     let addon = null;
     let workspaceAddon = null;

@@ -63,9 +63,12 @@ const CRITICAL_INDEXES: IndexDefinition[] = [
   { name: 'idx_audit_log_event_type',        table: 'audit_log',        columns: 'event_type' },
 
   // ── sra_audit_log (Phase 22 — regulatory portal) ──────────────────────────
+  // Column name is `timestamp`, not `created_at`. All live queries (statusRoutes,
+  // privacyRoutes, searchRoutes) use the `timestamp` column. Railway log forensics
+  // 2026-04-08.
   { name: 'idx_sra_audit_log_workspace_id',  table: 'sra_audit_log',    columns: 'workspace_id' },
   { name: 'idx_sra_audit_log_user_id',       table: 'sra_audit_log',    columns: 'user_id' },
-  { name: 'idx_sra_audit_log_created_at',    table: 'sra_audit_log',    columns: 'created_at' },
+  { name: 'idx_sra_audit_log_timestamp',     table: 'sra_audit_log',    columns: 'timestamp' },
 
   // ── payroll_runs ───────────────────────────────────────────────────────────
   { name: 'idx_payroll_runs_workspace_id',   table: 'payroll_runs',     columns: 'workspace_id' },

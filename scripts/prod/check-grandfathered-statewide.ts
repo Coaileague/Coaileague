@@ -44,7 +44,7 @@ async function main() {
     const wsResult = await pool.query(
       `SELECT id, name, company_name, owner_id, billing_exempt, founder_exemption,
               subscription_tier, account_state, is_suspended, is_locked, is_frozen,
-              trial_ends_at, trial_expired_at, workspace_state, subscription_status
+              trial_ends_at, trial_expired_at, workspace_type, subscription_status
        FROM workspaces WHERE id = $1`,
       [tenantId]
     );
