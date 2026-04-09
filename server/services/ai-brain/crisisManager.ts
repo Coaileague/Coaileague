@@ -21,6 +21,7 @@ import {
 } from '@shared/schema';
 import { creditManager } from '../../services/billing/creditManager';
 import { createLogger } from '../../lib/logger';
+import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('crisisManager');
 
 // Guru-mode roles that can execute crisis protocols

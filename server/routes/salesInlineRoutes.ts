@@ -5,7 +5,7 @@ import type { AuthenticatedRequest } from "../rbac";
 import { requirePlatformStaff } from '../rbac';
 import { db } from "../db";
 import { storage } from "../storage";
-import { eq, and, desc, sql, or } from "drizzle-orm";
+import { and, count, desc, eq, or, sql } from 'drizzle-orm';
 import { z } from "zod";
 import {
   leads,

@@ -28,6 +28,7 @@ import { emailService } from '../emailService';
 import { ownerManagerEmployeeService, ROLE_HOLDER_ROLES } from '../ownerManagerEmployeeService';
 import { providerPreferenceService } from '../billing/providerPreferenceService';
 import { quickbooksOrchestration } from '../orchestration/quickbooksOrchestration';
+import { partnerInvoiceIdempotency, partnerManualReviewQueue, partnerSyncLogs } from '@shared/schema';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('quickbooksSyncService');
 

@@ -5,7 +5,24 @@ import { requireAuth } from "../auth";
 import { requireManager, requireManagerOrPlatformStaff, requireEmployee, attachWorkspaceId, type AuthenticatedRequest } from "../rbac";
 import { storage } from "../storage";
 import { db } from "../db";
-import { shifts, employees, insertShiftSchema, workspaces, clients, users, shiftOrders, contractorPool, stagedShifts, chatConversations, timeEntries, shiftCoverageRequests, sites, clientContracts } from "@shared/schema";
+import {
+  chatConversations,
+  clientContracts,
+  clients,
+  contractorPool,
+  employees,
+  insertShiftSchema,
+  shiftCoverageRequests,
+  shiftOffers,
+  shiftOrders,
+  shiftRequests,
+  shifts,
+  sites,
+  stagedShifts,
+  timeEntries,
+  users,
+  workspaces
+} from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, asc, or, between, inArray, ne, isNull, lt } from "drizzle-orm";
 import { getUserPlatformRole, resolveWorkspaceForUser } from "../rbac";
 import { broadcastShiftUpdate, broadcastNotificationToUser as broadcastNotification, broadcastToWorkspace } from "../websocket";

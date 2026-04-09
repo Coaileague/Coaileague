@@ -16,6 +16,7 @@ import crypto from 'crypto';
 import { BILLING, EMAIL } from '../config/platformConfig';
 import { db } from "../db";
 import { 
+  clientPortalAccess,
   invoices, 
   invoiceLineItems, 
   clientRates, 

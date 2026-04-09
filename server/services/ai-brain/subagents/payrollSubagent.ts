@@ -28,6 +28,7 @@ import { broadcastToWorkspace } from '../../../websocket';
 import { auditLogger } from '../../audit-logger';
 import crypto from 'crypto';
 import { typedQuery } from '../../../lib/typedSql';
+import { workspaces } from '@shared/schema';
 
 import { createLogger } from '../../../lib/logger';
 const log = createLogger('PayrollSubagent');

@@ -1,7 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db, pool } from "../db";
-import { sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { requireAuth } from "../auth";
 import { requireOwner, requirePlatformAdmin, type AuthenticatedRequest } from "../rbac";
 import { typedCount, typedExec, typedQuery } from '../lib/typedSql';

@@ -3,6 +3,7 @@
 
 import crypto from 'crypto';
 import {
+  aiBrainActionLogs,
   users,
   workspaces,
   employees,

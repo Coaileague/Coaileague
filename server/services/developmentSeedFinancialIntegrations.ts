@@ -18,7 +18,7 @@
  */
 
 import { db } from '../db';
-import { sql, eq, and, desc } from 'drizzle-orm';
+import { and, desc, eq, or, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { clients, invoices, payrollRuns, quickbooksSyncReceipts, employees, employeePayrollInfo, payrollEntries } from '@shared/schema';

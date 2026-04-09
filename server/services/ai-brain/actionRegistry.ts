@@ -19,6 +19,7 @@ import { CREDIT_COSTS } from '../billing/creditManager';
 import { FAST_MODE_TIERS, type FastModeTier } from './fastModeService';
 import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm';
 import {
+  clientBillingSettings,
   employees,
   shifts,
   timeEntries,

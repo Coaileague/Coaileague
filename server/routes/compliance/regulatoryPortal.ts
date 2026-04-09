@@ -1,3 +1,4 @@
+import { clients, shifts, sites, timeEntries } from '@shared/schema';
 /**
  * Regulatory Auditor Portal Routes
  * ==================================

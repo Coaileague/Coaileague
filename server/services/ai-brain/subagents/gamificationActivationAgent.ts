@@ -23,6 +23,7 @@ import {
 import { eq, and, sql } from 'drizzle-orm';
 import { GamificationService, DEFAULT_ACHIEVEMENTS } from '../../gamification/gamificationService';
 import { createLogger } from '../../../lib/logger';
+import { employeePoints } from '@shared/schema';
 const log = createLogger('gamificationActivationAgent');
 
 export interface ActivationResult {

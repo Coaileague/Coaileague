@@ -2,7 +2,7 @@ import { helpaiOrchestrator, type ActionHandler, type ActionRequest, type Action
 import { resilientAIGateway } from './providers/resilientAIGateway';
 import { modelRouter } from './providers/modelRouter';
 import { db } from '../../db';
-import { partnerConnections, invoices } from '@shared/schema';
+import { invoices, partnerConnections, payrollRuns } from '@shared/schema';
 import { eq, and, sql, desc, inArray } from 'drizzle-orm';
 import { typedPool } from '../../lib/typedSql';
 import { quickbooksSyncReceipts } from '@shared/schema/domains/billing/index';

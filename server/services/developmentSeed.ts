@@ -12,9 +12,10 @@
 
 import { isProduction } from '../lib/isProduction';
 import { db } from "../db";
-import { sql, eq, and, inArray } from "drizzle-orm";
+import { and, eq, inArray, notExists, sql } from 'drizzle-orm';
 import { typedExec, typedQuery } from '../lib/typedSql';
 import {
+  workspaceMembers,
   users, employees, clients, shifts, invoices, payStubs,
   shiftChatrooms, shiftChatroomMembers, shiftChatroomMessages, darReports, workspaces
 } from '@shared/schema';

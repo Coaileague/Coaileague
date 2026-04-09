@@ -26,6 +26,7 @@ import { broadcastToWorkspace } from '../../../websocket';
 import { trinityActionReasoner } from '../trinityActionReasoner';
 import crypto from 'crypto';
 import { createLogger } from '../../../lib/logger';
+import { invoicePayments } from '@shared/schema';
 const log = createLogger('invoiceSubagent');
 
 // ============================================================================

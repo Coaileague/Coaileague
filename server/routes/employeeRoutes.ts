@@ -7,6 +7,7 @@ import { trimStrings } from "../utils/sanitize";
 import { db } from "../db";
 import {
   employees,
+  users,
   workspaces,
   platformRoles,
   insertEmployeeSchema,

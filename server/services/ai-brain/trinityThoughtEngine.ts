@@ -24,6 +24,7 @@ import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus } from '../platformEventBus';
 import { resilientAIGateway } from './providers/resilientAIGateway';
 import { createLogger } from '../../lib/logger';
+import { WorkspaceGovernancePolicy } from '@shared/schema';
 const log = createLogger('trinityThoughtEngine');
 
 // ============================================================================

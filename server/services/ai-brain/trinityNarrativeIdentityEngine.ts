@@ -17,7 +17,7 @@
  */
 
 import { pool, db } from '../../db';
-import { sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { trinityNarrative } from '@shared/schema/domains/trinity/extended';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
 import { createLogger } from '../../lib/logger';

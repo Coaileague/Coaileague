@@ -1,6 +1,16 @@
 import { Router, Request, Response } from "express";
 import { db } from "../../db";
-import { complianceStates, employees, complianceDocuments, officerTrainingCertificates, officerTrainingAttempts, trainingModules, complianceAuditTrail, complianceAuditPackets } from '@shared/schema';
+import {
+  complianceAuditPackets,
+  complianceAuditTrail,
+  complianceDocuments,
+  complianceStates,
+  employeeComplianceRecords,
+  employees,
+  officerTrainingAttempts,
+  officerTrainingCertificates,
+  trainingModules
+} from '@shared/schema';
 import { eq, and, sql, inArray, desc } from "drizzle-orm";
 import { requireAuth } from "../../auth";
 import { mutationLimiter } from "../../middleware/rateLimiter";

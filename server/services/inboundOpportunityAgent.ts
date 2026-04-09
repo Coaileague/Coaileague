@@ -18,6 +18,7 @@ import { getAppBaseUrl } from '../utils/getAppBaseUrl';
 
 const log = createLogger('InboundOpportunity');
 import {
+  employeeBehaviorScores,
   inboundEmails,
   stagedShifts,
   automatedShiftOffers,

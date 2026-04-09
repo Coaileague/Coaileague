@@ -8,7 +8,18 @@ import { requirePlatformStaff, type AuthenticatedRequest } from "../rbac";
 import { requirePlan, type SubscriptionTier } from "../tierGuards";
 import { typedPool } from '../lib/typedSql';
 import { sql, eq, and, gte, lte, count } from 'drizzle-orm';
-import { invoices, supportTickets, automationExecutions, workspaces, employees, clients, shifts } from '@shared/schema';
+import {
+  automationExecutions,
+  clients,
+  employees,
+  incidentReports,
+  invoices,
+  shifts,
+  sites,
+  supportTickets,
+  timeEntries,
+  workspaces
+} from '@shared/schema';
 import { createLogger } from '../lib/logger';
 const log = createLogger('AnalyticsRoutes');
 

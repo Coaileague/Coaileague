@@ -25,7 +25,7 @@ import { createNotification } from '../notificationService';
 import { trinityMilestoneDetector, type DetectedMilestone } from './trinityMilestoneDetector';
 import { platformEventBus } from '../platformEventBus';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { notifications } from '@shared/schema';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityRecognitionEngine');

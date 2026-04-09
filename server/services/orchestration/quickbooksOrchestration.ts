@@ -28,6 +28,7 @@ import { quickbooksRateLimiter } from '../integrations/quickbooksRateLimiter';
 import { INTEGRATIONS } from '@shared/platformConfig';
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../../lib/logger';
+import { partnerSyncLogs } from '@shared/schema';
 const log = createLogger('quickbooksOrchestration');
 
 

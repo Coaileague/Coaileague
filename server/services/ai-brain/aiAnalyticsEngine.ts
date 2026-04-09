@@ -22,6 +22,7 @@ import { meteredGemini } from '../billing/meteredGeminiClient';
 import { db } from '../../db';
 import { eq, desc, count } from 'drizzle-orm';
 import {
+  employeeCertifications,
   employees,
   shifts,
   timeEntries,

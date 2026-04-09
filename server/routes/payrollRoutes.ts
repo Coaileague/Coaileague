@@ -10,7 +10,7 @@ import { hasManagerAccess, hasPlatformWideAccess } from "../rbac";
 import PDFDocument from "pdfkit";
 import { db } from "../db";
 import { storage } from "../storage";
-import { eq, and, desc, sql, gte, lte, count } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import {
   payrollRuns,
   payrollEntries,
@@ -27,6 +27,7 @@ import { encryptToken, decryptToken } from '../security/tokenEncryption';
 import * as taxCalculator from "../services/taxCalculator";
 import { calculateStateTax, calculateBonusTaxation } from "../services/taxCalculator";
 import { getWorkspaceTier, hasTierAccess, requirePlan } from "../tierGuards";
+import { payrollDeductions } from '@shared/schema';
 
 const payrollRunLocks = new Map<string, { userId: string; startedAt: number }>();
 const PAYROLL_RUN_LOCK_TTL_MS = 5 * 60 * 1000;

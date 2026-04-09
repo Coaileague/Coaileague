@@ -14,7 +14,7 @@
  */
 
 import { db } from '../../db';
-import { systemAuditLogs, errorOccurrences, alertRules } from '@shared/schema';
+import { alertRules, errorEvents, errorOccurrences, systemAuditLogs } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';

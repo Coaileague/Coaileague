@@ -27,7 +27,7 @@
 
 import { db, pool } from '../../db';
 import { trinityAccLogs } from '@shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { broadcastToGlobalWorkspace } from './trinityConnectomeService';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';

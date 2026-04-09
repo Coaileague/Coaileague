@@ -18,6 +18,7 @@ import { requirePlatformStaff, type AuthenticatedRequest } from "../rbac";
 import { typedPool } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+import { employeeInvitations } from '@shared/schema';
 const log = createLogger('AdminRoutes');
 
 

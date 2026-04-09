@@ -20,6 +20,7 @@ import { eq, sql, desc, and, gte } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { getTrinityVelocityEngine, VelocityExecutionResult } from './trinityVelocityEngine';
 import { createLogger } from '../../lib/logger';
+import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('fastModeService');
 
 // WebSocket broadcaster type

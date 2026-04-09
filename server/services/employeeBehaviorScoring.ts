@@ -22,6 +22,7 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import { createLogger } from '../lib/logger';
+import { employeeBehaviorScores } from '@shared/schema';
 const log = createLogger('employeeBehaviorScoring');
 
 

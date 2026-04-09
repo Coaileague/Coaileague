@@ -6,7 +6,7 @@
 
 import { platformEventBus } from '../platformEventBus';
 import { pool, db } from '../../db';
-import { eq, and, sql, notInArray, ne, exists } from 'drizzle-orm';
+import { and, eq, exists, gte, inArray, isNull, ne, notInArray, sql } from 'drizzle-orm';
 import { aiBrainActionLogs } from '@shared/schema/domains/trinity/index';
 import { cadUnits, cadCalls, geofenceDepartureLog } from '@shared/schema/domains/ops/index';
 import { incidentReports } from '@shared/schema/domains/compliance/index';

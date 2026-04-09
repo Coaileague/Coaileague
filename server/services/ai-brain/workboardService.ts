@@ -21,6 +21,7 @@ import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { publishPlatformUpdate } from '../platformEventBus';
 import { subagentBanker, type CreditQuote, type CreditReservation } from './subagentBanker';
+import { aiWorkboardTasks } from '@shared/schema';
 
 export interface WorkboardSubmission {
   workspaceId: string;

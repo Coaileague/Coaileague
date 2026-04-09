@@ -28,6 +28,7 @@ import {
 import { trinityWorkOrderIntake, type WorkOrder } from './trinityWorkOrderSystem';
 import { trinityExecutionFabric, type ExecutionManifest } from './trinityExecutionFabric';
 import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';
+import { VALID_PHASE_TRANSITIONS, getAllowedNextPhases, isValidPhaseTransition } from '@shared/schema';
 import { toolCapabilityRegistry, type ToolValidationResult } from './toolCapabilityRegistry';
 import crypto from 'crypto';
 import { createLogger } from '../../lib/logger';

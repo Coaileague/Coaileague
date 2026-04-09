@@ -18,6 +18,7 @@ import { NotificationDeliveryService } from '../notificationDeliveryService';
 import { db } from '../../db';
 import { eq, and, gte, lte, desc, sql, or, ilike } from 'drizzle-orm';
 import {
+  clientContractAccessTokens,
   clientContracts,
   clientContractAuditLog,
   clientContractPipelineUsage,

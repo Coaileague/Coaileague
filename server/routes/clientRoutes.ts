@@ -11,6 +11,8 @@ import {
   users,
   insertClientSchema,
   invoices,
+  invoicePayments,
+  documentVault,
   clientPortalReports,
   clients,
   clientCollectionsLog,

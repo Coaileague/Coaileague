@@ -19,12 +19,13 @@ import {
   editChatMessageSchema,
   insertChatMacroSchema,
 } from "@shared/schema";
-import { sql, eq, and, desc } from "drizzle-orm";
+import { and, desc, eq, or, sql } from 'drizzle-orm';
 import PDFDocument from "pdfkit";
 import { unreadMessageService } from "../services/unreadMessageService";
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 import { PLATFORM } from '../config/platformConfig';
+import { InsertChatConversation } from '@shared/schema';
 const log = createLogger('Chat');
 
 
