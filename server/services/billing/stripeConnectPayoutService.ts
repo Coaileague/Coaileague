@@ -369,11 +369,29 @@ class StripeConnectPayoutService {
         });
         if (feeResult.success && feeResult.amountCents > 0) {
           log.info(`[StripeConnect] Payout fee charged: $${(feeResult.amountCents / 100).toFixed(2)} for entry ${payrollEntryId}`);
-          // Platform revenue tracking: write to platform_revenue table (non-blocking)
-          import('../finance/middlewareFeeService').then(({ recordMiddlewareFeeCharge }) =>
-            recordMiddlewareFeeCharge(workspaceId, 'payout_processing', feeResult.amountCents, payrollEntryId)
-              .catch((err: Error) => log.warn('[StripeConnect] Payout revenue record failed (non-blocking):', err.message))
-          ).catch((err: Error) => log.warn('[StripeConnect] Payout revenue import failed:', err.message));
+
+          // Internal fee ledger: record in financialProcessingFees for reconciliation
+          try {
+            const { financialProcessingFeeService } = await import('./financialProcessingFeeService');
+            await financialProcessingFeeService.recordFee({
+              workspaceId,
+              feeType: 'payout_processing',
+              amountCents: feeResult.amountCents,
+              referenceId: payrollEntryId,
+              referenceType: 'payroll_entry',
+              description: `Stripe Connect payout fee: $${(feeResult.amountCents / 100).toFixed(2)}`,
+            });
+          } catch (ledgerErr: any) {
+            log.warn('[StripeConnect] Payout fee ledger record failed (non-fatal):', ledgerErr?.message);
+          }
+
+          // Platform revenue tracking: write to platform_revenue table
+          try {
+            const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
+            await recordMiddlewareFeeCharge(workspaceId, 'payout_processing', feeResult.amountCents, payrollEntryId);
+          } catch (revenueErr: any) {
+            log.warn('[StripeConnect] Payout revenue record failed (non-fatal):', revenueErr?.message);
+          }
         }
       } catch (feeErr) {
         log.warn('[StripeConnect] Payout middleware fee failed (non-blocking):', feeErr);

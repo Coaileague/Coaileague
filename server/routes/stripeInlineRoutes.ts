@@ -514,15 +514,18 @@ router.post('/webhook', async (req: any, res) => {
       return res.status(400).send('Webhook Error: Invalid signature');
     }
 
-    // M03: Event-ID deduplication — skip events already processed within the last 24 h.
-    // Stripe retries deliveries for up to 72 h on 5xx or timeout; without dedup,
-    // a slow handler causes double-processing of money events.
-    if (_processedStripeEvents.has(event.id)) {
-      log.info(`[Stripe Webhook] Skipping duplicate event ${event.id} (${event.type})`);
-      return res.json({ received: true, duplicate: true });
-    }
+    // M03: In-memory fast-path dedup. The authoritative dedup is the DB-backed
+    // tryClaimEvent() inside stripeWebhookService.handleEvent(). This in-memory
+    // cache is a performance optimization only — it must NOT return early with 200
+    // before the DB dedup runs, because the memory cache is lost on server restart
+    // while Stripe retries for up to 72 h.
+    const isMemoryDuplicate = _processedStripeEvents.has(event.id);
     _processedStripeEvents.set(event.id, Date.now());
     if (_processedStripeEvents.size > 2000) _pruneStripeEventCache();
+
+    if (isMemoryDuplicate) {
+      log.info(`[Stripe Webhook] Memory-cache duplicate ${event.id} (${event.type}) — still delegating to DB dedup`);
+    }
 
     const MONEY_CRITICAL_EVENTS = new Set([
       'invoice.payment_failed',

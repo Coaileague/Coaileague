@@ -167,6 +167,56 @@ billingRouter.get('/subscription', async (req: AuthenticatedRequest, res: Respon
   }
 });
 
+/**
+ * GET /api/billing/current-charges
+ * Returns line-item breakdown of current billing cycle charges for the workspace.
+ * Shows subscription, overages, processing fees — so Statewide knows exactly what
+ * they're being charged for.
+ */
+billingRouter.get('/current-charges', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.workspaceId || req.user?.workspaceId || req.currentWorkspaceId;
+    if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+
+    const { billingReconciliation } = await import('../services/billing/billingReconciliation');
+    const breakdown = await billingReconciliation.getCurrentChargesBreakdown(workspaceId);
+
+    res.json({
+      ...breakdown,
+      totalDollars: (breakdown.totalCents / 100).toFixed(2),
+      subscription: {
+        ...breakdown.subscription,
+        amountDollars: (breakdown.subscription.amountCents / 100).toFixed(2),
+      },
+      employeeOverage: {
+        ...breakdown.employeeOverage,
+        totalDollars: (breakdown.employeeOverage.totalCents / 100).toFixed(2),
+      },
+    });
+  } catch (error: unknown) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/billing/reconcile
+ * Runs internal reconciliation check: platform invoices vs Stripe status.
+ * Returns findings (discrepancies) for admin review.
+ */
+billingRouter.get('/reconcile', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.workspaceId || req.user?.workspaceId || req.currentWorkspaceId;
+    if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+
+    const { billingReconciliation } = await import('../services/billing/billingReconciliation');
+    const result = await billingReconciliation.reconcilePlatformInvoices(workspaceId);
+
+    res.json(result);
+  } catch (error: unknown) {
+    next(error);
+  }
+});
+
 billingRouter.get('/pricing', async (_req, res: Response, next: NextFunction) => {
   try {
     const tiers = await db.select({

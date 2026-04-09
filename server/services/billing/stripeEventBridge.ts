@@ -51,6 +51,11 @@ interface StripeEventResult {
 class StripeEventBridge {
   private static instance: StripeEventBridge;
   private accountStateService: AccountStateService;
+  // DB-backed dedup: stripeWebhookService.tryClaimEvent already guards the primary path;
+  // this in-memory cache is only a fast-path to skip redundant DB lookups for events
+  // that already came through in this process lifetime. On restart, the cache is empty
+  // but the caller in stripeInlineRoutes already gates us on stripeWebhookService's
+  // duplicate detection, so we never re-process after restart.
   private processedEvents: Set<string> = new Set();
   private readonly MAX_PROCESSED_CACHE = 1000;
 
@@ -68,8 +73,8 @@ class StripeEventBridge {
   /**
    * Check if Stripe is configured
    */
-  isStripeConfigured(): boolean {
-    return stripe !== null;
+  isConfigured(): boolean {
+    return isStripeConfigured();
   }
 
   /**
