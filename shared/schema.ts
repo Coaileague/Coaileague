@@ -660,9 +660,6 @@ export type {
 // ============================================================================
 // ============================================================================
 
-export type { User, UpsertUser, AuthToken, InsertAuthToken, AuthSession, InsertAuthSession };
-
-
 export const insertUserOnboardingSchema = createInsertSchema(userOnboarding).omit({
   id: true,
   createdAt: true,
@@ -690,9 +687,6 @@ export type UserMascotPreferences = typeof userMascotPreferences.$inferSelect;
 // Business category enum - determines available forms and features
 
 // ============================================================================
-
-export type { Workspace, InsertWorkspace, Employee, InsertEmployee, WorkspaceTheme, InsertWorkspaceTheme, WorkspaceInvite, InsertWorkspaceInvite };
-
 
 export const insertWorkspaceMemberSchema = createInsertSchema(workspaceMembers).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertWorkspaceMember = z.infer<typeof insertWorkspaceMemberSchema>;
@@ -1663,7 +1657,6 @@ export type SupportSession = typeof supportSessions.$inferSelect;
 export const supportAuditLogs = auditLogs;
 export type SupportAuditLog = typeof auditLogs.$inferSelect;
 export const insertSupportAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true });
-export type InsertSupportAuditLog = z.infer<typeof insertSupportAuditLogSchema>;
 export type InsertSupportAuditLog = z.infer<typeof insertSupportAuditLogSchema>;
 
 // MERGED: systemAuditLogs → auditLogs (source=system) (table dropped, Mar 2026)
@@ -5456,8 +5449,6 @@ export type AiGapFinding = typeof aiGapFindings.$inferSelect;
 export const aiWorkflowApprovals = aiApprovals;
 export type AiWorkflowApproval = typeof aiApprovals.$inferSelect;
 export type InsertAiWorkflowApproval = z.infer<typeof insertAiApprovalSchema>;
-
-export type InsertAiWorkflowApproval = z.infer<typeof insertAiWorkflowApprovalSchema>;
 
 /**
  * Trinity Self-Awareness Facts - Trinity's knowledge about herself and the platform
