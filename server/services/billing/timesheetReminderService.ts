@@ -16,7 +16,7 @@
 import { db } from '../../db';
 import { workspaces, employees, timeEntries, users, notifications } from '@shared/schema';
 import { eq, and, gte, lt, lte, isNull, not, inArray, count } from 'drizzle-orm';
-import { createNotification } from '../../notifications';
+import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns';
 

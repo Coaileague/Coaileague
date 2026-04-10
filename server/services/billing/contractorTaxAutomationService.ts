@@ -14,7 +14,7 @@
 import { db } from '../../db';
 import { employees, workspaces, payrollEntries, payrollRuns } from '@shared/schema';
 import { eq, and, gte, lte, sql, sum } from 'drizzle-orm';
-import { createNotification } from '../../notifications';
+import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
 import { startOfYear, endOfYear, format, addDays } from 'date-fns';
 

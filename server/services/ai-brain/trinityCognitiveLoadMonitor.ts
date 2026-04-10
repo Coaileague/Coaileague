@@ -17,7 +17,7 @@
 
 import { pool, db } from '../../db';
 import { platformEventBus } from '../platformEventBus';
-import { createNotification } from '../../notifications';
+import { createNotification } from '../notificationService';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
 import { trinityCognitiveState } from '@shared/schema';
 import { sql, count, and, eq, isNull } from 'drizzle-orm';

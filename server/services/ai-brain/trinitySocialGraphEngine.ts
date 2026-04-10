@@ -16,7 +16,7 @@
 
 import { db, pool } from '../../db';
 import { and, eq, sql } from 'drizzle-orm';
-import { createNotification } from '../../notifications';
+import { createNotification } from '../notificationService';
 import { typedPool } from '../../lib/typedSql';
 import { socialEntities } from '@shared/schema/domains/trinity/extended';
 
