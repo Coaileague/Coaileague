@@ -18,6 +18,7 @@ import { getUncachableResendClient, isResendConfigured, sendCanSpamCompliantEmai
 import { FEATURES, PLATFORM } from "@shared/platformConfig";
 import { automationOrchestration } from "./orchestration/automationOrchestration";
 import { getAppBaseUrl } from "../utils/getAppBaseUrl";
+import { isProduction } from "../lib/isProduction";
 
 import { createLogger } from '../lib/logger';
 const log = createLogger('emailService');
@@ -920,8 +921,7 @@ export class EmailService {
     workspaceId?: string,
     userId?: string
   ): Promise<EmailResult> {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isSimulation = !isProduction && (FEATURES.emailSimulationMode || process.env.EMAIL_SIMULATION_MODE === 'true');
+    const isSimulation = !isProduction() && (FEATURES.emailSimulationMode || process.env.EMAIL_SIMULATION_MODE === 'true');
 
     const result = await automationOrchestration.executeAutomation(
       {

@@ -8,7 +8,7 @@
  *
  * Covered tables (most frequently queried in a 300-officer deployment):
  *  employees, shifts, time_entries, notifications, audit_log,
- *  shift_assignments, payroll_runs, incidents, durable_job_queue,
+ *  shift_acceptance_records, payroll_runs, incidents, durable_job_queue,
  *  data_subject_requests, retention_policies, sra_audit_log
  */
 
