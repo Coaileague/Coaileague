@@ -13,6 +13,7 @@ export {
   schedulingComplianceService,
   clientPreferenceService,
   trinitySchedulingAI,
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   escalationChainService 
 } from './trinityAutonomousScheduler';
 export { 

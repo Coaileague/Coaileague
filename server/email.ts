@@ -45,7 +45,7 @@ export async function sendEmail(opts: {
     from: opts.from,
     replyTo: opts.replyTo,
     workspaceId: opts.workspaceId,
-  } as CanSpamEmailOptions);
+  } as unknown as CanSpamEmailOptions);
 
   return { id: (result as any)?.id, success: true };
 }

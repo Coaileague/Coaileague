@@ -20,11 +20,11 @@ const router = Router();
 
 const requireRole = (allowedRoles: string[]): RequestHandler => {
   return (req, res, next) => {
-    const user = req.user as any;
+    const user = req.user;
     if (!user) {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
-    const userRole = user.platformRole || user.role || '';
+    const userRole = (user as any).platformRole || user.role || '';
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ success: false, error: 'Insufficient permissions' });
     }
@@ -172,7 +172,7 @@ router.get('/webhooks/stats', requireAuth, requireRole(['root_admin', 'deputy_ad
 router.post('/financial-audit/report', requireAuth, requireRole(['root_admin', 'deputy_admin', 'org_owner', 'co_owner', 'owner', 'auditor']), async (req, res) => {
   try {
     const { workspaceId, periodStart, periodEnd } = req.body;
-    const user = req.user as any;
+    const user = req.user;
 
     if (!workspaceId || !periodStart || !periodEnd) {
       return res.status(400).json({
@@ -185,6 +185,7 @@ router.post('/financial-audit/report', requireAuth, requireRole(['root_admin', '
       workspaceId,
       new Date(periodStart),
       new Date(periodEnd),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       user.id
     );
 

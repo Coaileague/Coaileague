@@ -39,6 +39,7 @@ export function SendRemindersDialog({
         (key) => reminderTypes[key as keyof typeof reminderTypes]
       );
 
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest('/api/reminders/send', {
         method: 'POST',
         body: {

@@ -296,6 +296,7 @@ export class TrinityAutomationTestRunner {
       const completedRuns = runs.filter(r => r.status === 'completed');
       const totalGross = runs.reduce((sum, r) => sum + parseFloat(r.totalGrossPay || '0'), 0);
       const totalNet = runs.reduce((sum, r) => sum + parseFloat(r.totalNetPay || '0'), 0);
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const totalEmployees = runs.reduce((sum, r) => sum + (r.employeeCount || 0), 0);
 
       return {
@@ -419,7 +420,7 @@ export class TrinityAutomationTestRunner {
         },
         syncDetails: {
           connectionId: connection.id,
-          realmId: connection.partnerCompanyId,
+          realmId: (connection as any).partnerCompanyId,
           readyForSync: true,
         },
       };

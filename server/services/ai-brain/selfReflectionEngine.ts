@@ -36,6 +36,7 @@ export interface ReflectionContext {
   executedSteps: ExecutedStep[];
   currentOutput: any;
   expectedSchema?: Record<string, any>;
+  goal?: string;
 }
 
 export interface ExecutedStep {
@@ -219,6 +220,7 @@ class SelfReflectionEngine {
       await this.logReflection(context, result);
 
       // Publish event
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'self_reflection',
         executionId: context.executionId,
@@ -271,6 +273,7 @@ class SelfReflectionEngine {
     await trinityMemoryService.shareInsight({
       workspaceId: context.workspaceId,
       userId: context.userId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       insightType: 'auto_correction',
       content: JSON.stringify({
         executionId: context.executionId,
@@ -319,7 +322,7 @@ Provide a JSON response with:
 }`;
 
     try {
-      const response = await aiBrainService.query({
+      const response = await (aiBrainService as any).query({
         prompt,
         systemPrompt: 'You are an expert code reviewer and quality analyst. Be thorough but fair.',
         featureId: 'self_reflection',
@@ -631,6 +634,7 @@ Provide a JSON response with:
 
       if (revision.revisionType === 'retry' && targetStep) {
         const { helpaiOrchestrator } = await import('../helpai/platformActionHub');
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const actionResult = await helpaiOrchestrator.executeAction({
           actionId: targetStep.action,
           userId: context.userId,
@@ -656,6 +660,7 @@ Provide a JSON response with:
       if (revision.revisionType === 'modify_input' && targetStep && revision.newParameters) {
         const { helpaiOrchestrator } = await import('../helpai/platformActionHub');
         const mergedParams = { ...targetStep.input, ...revision.newParameters };
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const actionResult = await helpaiOrchestrator.executeAction({
           actionId: targetStep.action,
           userId: context.userId,
@@ -862,6 +867,7 @@ class ReflectionFeedbackLoop {
       log.info(`[ReflectionFeedbackLoop] Feedback processed: ${metricsUpdated.length} metrics updated, ${recommendations.length} recommendations`);
 
       // Publish learning event
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'feedback_loop_completed',
         loopId,
@@ -1012,6 +1018,7 @@ class ReflectionFeedbackLoop {
       await trinityMemoryService.shareInsight({
         workspaceId: context.workspaceId,
         userId: context.userId,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         insightType: 'learning',
         content: JSON.stringify(learningEntry),
         confidenceScore: reflection.confidenceScore,

@@ -48,6 +48,8 @@ export interface CanvasPageConfig {
   onBack?: () => void
   onRefresh?: () => Promise<void> | void
   className?: string
+  icon?: React.ReactNode
+  description?: string
 }
 
 const DEFAULT_CONFIG: Partial<CanvasPageConfig> = {

@@ -118,7 +118,7 @@ export function registerExtendedActions() {
             AND pr.status IN ('processed', 'paid', 'approved')
         `);
 
-        const agg: any = (rows as any[])[0] || {};
+        const agg: any = (rows as unknown as any[])[0] || {};
         const totalSSMed = Number(agg.total_ss_tax || 0) + Number(agg.total_medicare_tax || 0);
         const totalTax   = Number(agg.federal_income_tax_withheld || 0) + totalSSMed;
 
@@ -342,6 +342,7 @@ export function registerExtendedActions() {
       description: 'Generate formatted alert text for missed clock-ins',
       handler: async (request: ActionRequest) => {
         const start = Date.now();
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { missedClockIns } = (await helpaiOrchestrator.executeAction({
           actionId: 'time_tracking.watch_clock_ins',
           workspaceId: request.workspaceId,

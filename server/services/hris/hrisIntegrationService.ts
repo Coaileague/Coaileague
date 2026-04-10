@@ -33,6 +33,7 @@ import {
   workspaces,
   InsertPartnerConnection,
   InsertPartnerDataMapping,
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   InsertPartnerSyncLog,
 } from '@shared/schema';
 import { eq, and, desc, isNull, or, ilike } from 'drizzle-orm';

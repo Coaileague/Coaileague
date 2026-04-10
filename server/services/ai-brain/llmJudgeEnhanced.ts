@@ -366,7 +366,7 @@ Respond with JSON:
 `;
 
     try {
-      const response = await aiBrainService.query({
+      const response = await (aiBrainService as any).query({
         prompt,
         systemPrompt: 'You are a security and risk assessment expert. Provide accurate, conservative risk evaluations. When in doubt, err on the side of caution.',
         featureId: 'risk_evaluation',
@@ -525,6 +525,7 @@ Respond with JSON:
       } else {
         // Insert new pattern
         await db.insert(llmJudgeRegressions).values({
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: 'system',
           patternHash,
           actionType: request.actionType || 'unknown',

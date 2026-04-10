@@ -636,7 +636,7 @@ export default function RegulatoryDashboard() {
                       <div className="flex items-center gap-2">
                         <XCircle size={14} className="text-red-400" />
                         <p className="text-red-300 text-xs font-medium">
-                          {officersQuery.data.data.officers.filter((o: any) => o.complianceScore?.isHardBlocked).length} officer(s) have active hard blocks (expired license or missing qualification).
+                          {officersQuery?.data?.data?.officers.filter((o: any) => (o as any).complianceScore?.isHardBlocked).length} officer(s) have active hard blocks (expired license or missing qualification).
                           These officers cannot be legally assigned to shifts.
                         </p>
                       </div>

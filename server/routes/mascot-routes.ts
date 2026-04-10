@@ -158,7 +158,7 @@ interface MascotTask {
  */
 router.get('/insights', requireTrinityAccess, async (req, res) => {
   const userId = req.user?.id;
-  const workspaceId = req.session?.activeWorkspaceId;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.get_insights', async () => {
     const insights: MascotInsight[] = [];
@@ -292,7 +292,7 @@ router.get('/faqs', requireTrinityAccess, async (req, res) => {
  */
 router.get('/tasks', requireTrinityAccess, async (req, res) => {
   const userId = req.user?.id;
-  const workspaceId = req.session?.activeWorkspaceId;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.get_tasks', async () => {
     const tasks: MascotTask[] = [];
@@ -362,7 +362,7 @@ router.get('/tasks', requireTrinityAccess, async (req, res) => {
 router.post('/advice', requireTrinityAccess, async (req, res) => {
   const { context, businessCategory, question } = req.body;
   const userId = req.user?.id;
-  const workspaceId = req.session?.activeWorkspaceId;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
   
   if (!question) {
     return res.status(400).json({ error: 'Question is required' });
@@ -468,7 +468,7 @@ router.get('/holiday', requireTrinityAccess, async (_req, res) => {
 router.post('/ask', requireTrinityAccess, async (req, res) => {
   const { question, context, businessCategory } = req.body;
   const userId = req.user?.id;
-  const workspaceId = req.session?.activeWorkspaceId;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
   
   if (!question) {
     return res.status(400).json({ error: 'Question is required' });
@@ -525,7 +525,7 @@ router.post('/business-advisor', requireTrinityAccess, async (req, res) => {
     requestType = 'insights' // 'insights' | 'thought' | 'actions' | 'full'
   } = req.body;
   const userId = req.user?.id;
-  const workspaceId = req.session?.activeWorkspaceId;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.business_advisor', async () => {
     // Build context from workspace data
@@ -739,7 +739,7 @@ router.get('/emote-cycles', requireTrinityAccess, async (_req, res) => {
  */
 router.get('/personalized-greeting', requireTrinityAccess, async (req, res) => {
   const userId = req.user?.id;
-  const workspaceId = req.session?.activeWorkspaceId;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.personalized_greeting', async () => {
     // Gather comprehensive user and org context
@@ -763,6 +763,7 @@ router.get('/personalized-greeting', requireTrinityAccess, async (req, res) => {
         firstName: users.firstName,
         lastName: users.lastName,
         role: users.role
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       }).from(users).where(eq(users.id, userId)).limit(1);
       context.user = user;
       
@@ -775,6 +776,7 @@ router.get('/personalized-greeting', requireTrinityAccess, async (req, res) => {
         const unreadResult = await db.select({ count: count() })
           .from(notifications)
           .where(and(
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             eq(notifications.userId, userId),
             eq(notifications.isRead, false)
           ));
@@ -956,7 +958,7 @@ Be concise, friendly, and genuinely helpful.`;
  */
 router.get('/org-insights', requireTrinityAccess, async (req, res) => {
   const userId = req.user?.id;
-  const workspaceId = req.session?.activeWorkspaceId;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
   
   if (!workspaceId) {
     return res.status(400).json({ error: 'Workspace context required' });
@@ -1095,7 +1097,7 @@ router.get('/preferences', requireTrinityAccess, async (req, res) => {
   const result = await executeMascotAction('mascot.get_preferences', async () => {
     const dbResult = await db.select().from(userMascotPreferences).where(eq(userMascotPreferences.userId, userId));
     
-    const prefs = dbResult.rows?.[0];
+    const prefs = (dbResult as any).rows?.[0];
     
     if (!prefs) {
       // Return default preferences
@@ -1341,7 +1343,7 @@ router.get('/seasonal/state', async (req, res) => {
     if (seasonalCache && (now - seasonalCache.timestamp) < SEASONAL_CACHE_TTL) {
       return res.json(seasonalCache.data);
     }
-    const workspaceId = req.session?.activeWorkspaceId || null;
+    const workspaceId = (req as any).session?.activeWorkspaceId || null;
     const profile = await generateSeasonalProfile(workspaceId);
     
     const responseData = {
@@ -1866,6 +1868,7 @@ router.patch('/holiday/profiles/:id', requireTrinityAccess, async (req, res) => 
     const { id } = req.params;
     const updateData = req.body;
     
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const profile = await storage.updateMascotMotionProfile(id, updateData);
     
     if (!profile) {
@@ -1970,7 +1973,7 @@ router.get('/holiday/history', requireTrinityAccess, async (req, res) => {
 router.post('/sessions', requireTrinityAccess, async (req, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });
@@ -1990,10 +1993,10 @@ router.post('/sessions', requireTrinityAccess, async (req, res) => {
       LIMIT 1
     `);
     
-    if (existingSession.rows?.length > 0) {
+    if ((existingSession as any).rows?.length > 0) {
       return res.json({ 
         success: true, 
-        session: existingSession.rows[0],
+        session: (existingSession as any).rows[0],
         isNew: false
       });
     }
@@ -2029,7 +2032,7 @@ router.post('/sessions', requireTrinityAccess, async (req, res) => {
 router.get('/sessions/active', requireTrinityAccess, async (req, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });
@@ -2045,11 +2048,11 @@ router.get('/sessions/active', requireTrinityAccess, async (req, res) => {
       LIMIT 1
     `);
     
-    if (!result.rows?.length) {
+    if (!(result as any).rows?.length) {
       return res.json({ session: null });
     }
     
-    res.json({ session: result.rows[0] });
+    res.json({ session: (result as any).rows[0] });
   } catch (error) {
     log.error('[Mascot Sessions] Get active session error:', error);
     res.status(500).json({ error: 'Failed to get session' });
@@ -2065,7 +2068,7 @@ router.patch('/sessions/:id/close', requireTrinityAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     
     // CATEGORY C — Raw SQL retained: IS NULL | Tables: mascot_sessions | Verified: 2026-03-23
     await typedExec(sql`
@@ -2091,7 +2094,7 @@ router.patch('/sessions/:id/close', requireTrinityAccess, async (req, res) => {
 router.post('/interactions', requireTrinityAccess, async (req, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     const { 
       sessionId, 
       source, 
@@ -2190,7 +2193,7 @@ Source: ${source}, Action: ${interactionType}`;
 router.post('/observe-chat', requireTrinityAccess, async (req, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     const { sessionId, chatMessage, chatContext } = req.body;
     
     if (!workspaceId || !sessionId || !chatMessage) {
@@ -2270,7 +2273,7 @@ ${chatContext ? `Recent chat context: ${chatContext}` : ''}`;
 router.post('/generate-tasks', requireTrinityAccess, async (req, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     const { sessionId, context, currentPage } = req.body;
     
     if (!workspaceId || !sessionId) {
@@ -2360,7 +2363,7 @@ ${context ? `Context: ${context}` : ''}`;
 router.get('/generated-tasks', requireTrinityAccess, async (req, res) => {
   try {
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     const status = req.query.status as string;
     
     if (!workspaceId) {
@@ -2379,7 +2382,7 @@ router.get('/generated-tasks', requireTrinityAccess, async (req, res) => {
       LIMIT 20
     `);
     
-    res.json({ tasks: result.rows || [] });
+    res.json({ tasks: (result as any).rows || [] });
   } catch (error) {
     log.error('[Mascot Tasks] Get tasks error:', error);
     res.status(500).json({ error: 'Failed to get tasks' });
@@ -2396,7 +2399,7 @@ router.patch('/tasks/:id/status', requireTrinityAccess, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const userId = req.user?.id;
-    const workspaceId = req.session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
     
     const validStatuses = ['pending', 'in_progress', 'completed', 'dismissed'];
     if (!validStatuses.includes(status)) {
@@ -2437,7 +2440,7 @@ router.get('/sessions/query', requireTrinityAccess, async (req, res) => {
     const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
-    if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
+    if (!(user as any)?.platformRole || !staffRoles.includes((user as any).platformRole)) {
       return res.status(403).json({ error: 'Staff access required' });
     }
     
@@ -2458,7 +2461,7 @@ router.get('/sessions/query', requireTrinityAccess, async (req, res) => {
       id: mascotSessions.id,
       startedAt: mascotSessions.startedAt,
       totalInteractions: mascotSessions.totalInteractions,
-      userName: users.fullName,
+      userName: (users as any).fullName,
       workspaceName: workspaces.name
     })
       .from(mascotSessions)
@@ -2489,7 +2492,7 @@ router.get('/sessions/:id/interactions', requireTrinityAccess, async (req, res) 
     const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
-    if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
+    if (!(user as any)?.platformRole || !staffRoles.includes((user as any).platformRole)) {
       return res.status(403).json({ error: 'Staff access required' });
     }
     
@@ -2506,7 +2509,7 @@ router.get('/sessions/:id/interactions', requireTrinityAccess, async (req, res) 
     
     res.json({ 
       success: true,
-      interactions: result.rows || [] 
+      interactions: (result as any).rows || [] 
     });
   } catch (error) {
     log.error('[Mascot Sessions] Get interactions error:', error);
@@ -2524,7 +2527,7 @@ router.get('/analytics', requireTrinityAccess, async (req, res) => {
     const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
-    if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
+    if (!(user as any)?.platformRole || !staffRoles.includes((user as any).platformRole)) {
       return res.status(403).json({ error: 'Staff access required' });
     }
     

@@ -131,14 +131,14 @@ async function notifyManager(workspaceId: string, employeeId: string, message: s
     where: and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)),
   });
 
-  if (!employee?.supervisorId) {
+  if (!(employee as any)?.supervisorId) {
     log.info('[GPS] No supervisor assigned for GPS violation notification');
     return;
   }
 
   await universalNotificationEngine.sendNotification({
     workspaceId,
-    userId: employee.supervisorId,
+    userId: (employee as any).supervisorId,
     type: 'issue_detected',
     title: `GPS Location Violation Detected`,
     message: `Employee location verification failed. ${message}`,

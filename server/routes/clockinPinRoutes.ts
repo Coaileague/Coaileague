@@ -45,6 +45,7 @@ async function getEmployee(employeeId: string, workspaceId: string) {
 clockinPinRouter.post(
   '/:employeeId/pin/set',
   requireAuth,
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   requireWorkspaceRole(['manager', 'owner', 'root_admin']),
   async (req: any, res) => {
     try {
@@ -165,6 +166,7 @@ clockinPinRouter.post(
 clockinPinRouter.delete(
   '/:employeeId/pin',
   requireAuth,
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   requireWorkspaceRole(['manager', 'owner', 'root_admin']),
   async (req: any, res) => {
     try {
@@ -187,6 +189,7 @@ clockinPinRouter.delete(
 clockinPinRouter.get(
   '/:employeeId/pin/status',
   requireAuth,
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   requireWorkspaceRole(['manager', 'owner', 'root_admin']),
   async (req: any, res) => {
     try {

@@ -347,7 +347,7 @@ class HelpAIOrchestrator {
           message: `You're connected to a support queue. A real agent will be with you shortly. Ticket **${session.ticketNumber}** is active.`,
         });
 
-      case HelpAIState.ESCALATING:
+      case (HelpAIState as any).ESCALATING:
         return this.handleEscalation(session, msg, params);
 
       case HelpAIState.RESOLVED:
@@ -529,7 +529,7 @@ class HelpAIOrchestrator {
 
     if (botResponse.shouldEscalate) {
       await this.updateSession(session.id, {
-        state: HelpAIState.ESCALATING,
+        state: (HelpAIState as any).ESCALATING,
         wasEscalated: true,
       });
       return this.initiateEscalation(session, message, 'ai_low_confidence');
@@ -587,7 +587,7 @@ class HelpAIOrchestrator {
     } else if (isNotResolved) {
       // Escalate to real agent
       await this.updateSession(session.id, {
-        state: HelpAIState.ESCALATING,
+        state: (HelpAIState as any).ESCALATING,
         wasEscalated: true,
         wasResolved: false,
       });

@@ -97,7 +97,7 @@ router.get("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedRequ
     const wid = req.workspaceId;
     if (!wid) return res.status(400).json({ error: "Workspace required" });
     const { roomId } = req.params;
-    const { page = 1 } = req.query as any;
+    const { page = 1 } = (req as any).query;
     const limit = 50;
     const offset = (parseInt(page) - 1) * limit;
 

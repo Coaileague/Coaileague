@@ -65,7 +65,7 @@ export class FileStorageIsolationService {
       return { allowed: false, reason: 'File belongs to different organization' };
     }
 
-    return { allowed: true, reason: 'Access granted', filePath: upload.storagePath, workspaceId: upload.workspaceId };
+    return { allowed: true, reason: 'Access granted', filePath: (upload as any).storagePath, workspaceId: upload.workspaceId };
   }
 
   /**
@@ -232,8 +232,8 @@ export class FileStorageIsolationService {
     const violations: string[] = [];
     
     for (const upload of uploads) {
-      if (!upload.storagePath?.includes(`workspaces/${workspaceId}/`)) {
-        violations.push(`File ${upload.id} has incorrect storage path: ${upload.storagePath}`);
+      if (!(upload as any).storagePath?.includes(`workspaces/${workspaceId}/`)) {
+        violations.push(`File ${upload.id} has incorrect storage path: ${(upload as any).storagePath}`);
       }
     }
 

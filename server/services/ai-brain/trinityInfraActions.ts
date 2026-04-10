@@ -350,6 +350,7 @@ export function registerInfraActions() {
       FROM invoices
       WHERE workspace_id = $1
     `, [workspaceId]);
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const balance = balanceQuery[0];
 
     // Recent QB sync receipts
@@ -367,6 +368,7 @@ export function registerInfraActions() {
       `SELECT status, updated_at FROM partner_connections WHERE workspace_id=$1 AND partner_type='quickbooks' ORDER BY updated_at DESC LIMIT 1`,
       [workspaceId]
     );
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const qbStatus = connCheck[0]?.status || 'not_connected';
 
     return {

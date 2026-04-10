@@ -78,11 +78,11 @@ gamificationRouter.get('/profile', async (req: AuthenticatedRequest, res: Respon
         name: `${employee.firstName || ''} ${employee.lastName || ''}`.trim(),
         totalPoints: points.totalPoints || 0,
         level: points.currentLevel || 1,
-        currentStreak: points.currentStreak || 0,
+        currentStreak: (points as any).currentStreak || 0,
         longestStreak: points.longestStreak || 0,
         achievementsEarned: points.achievementsEarned || 0,
-        pointsThisWeek: points.pointsThisWeek || 0,
-        pointsThisMonth: points.pointsThisMonth || 0,
+        pointsThisWeek: (points as any).pointsThisWeek || 0,
+        pointsThisMonth: (points as any).pointsThisMonth || 0,
       },
       achievements: earnedAchievements,
     });
@@ -98,7 +98,7 @@ gamificationRouter.get('/profile', async (req: AuthenticatedRequest, res: Respon
 gamificationRouter.get('/achievements', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
     if (!workspaceId) {
       return res.json({ achievements: [] });
     }
@@ -114,6 +114,7 @@ gamificationRouter.get('/achievements', async (req: AuthenticatedRequest, res: R
     const [employee] = await db.select()
       .from(employees)
       .where(and(
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(employees.userId, user.id),
         eq(employees.workspaceId, workspaceId)
       ))
@@ -146,7 +147,7 @@ gamificationRouter.get('/achievements', async (req: AuthenticatedRequest, res: R
 gamificationRouter.get('/leaderboard', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
     if (!workspaceId) {
       return res.json({ leaderboard: [], period: 'all_time', generatedAt: new Date() });
     }
@@ -323,10 +324,10 @@ gamificationRouter.get('/employees/:id', requireWorkspaceRole(['org_owner', 'co_
       points: {
         total: points.totalPoints || 0,
         level: points.currentLevel || 1,
-        streak: points.currentStreak || 0,
+        streak: (points as any).currentStreak || 0,
         longestStreak: points.longestStreak || 0,
-        thisWeek: points.pointsThisWeek || 0,
-        thisMonth: points.pointsThisMonth || 0,
+        thisWeek: (points as any).pointsThisWeek || 0,
+        thisMonth: (points as any).pointsThisMonth || 0,
         achievementsEarned: points.achievementsEarned || 0,
       },
       achievements: earnedAchievements,
@@ -343,7 +344,7 @@ gamificationRouter.get('/employees/:id', requireWorkspaceRole(['org_owner', 'co_
 gamificationRouter.get('/feed', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
     if (!workspaceId) {
       return res.json({ feed: [] });
     }

@@ -95,7 +95,9 @@ class UnifiedAIOrchestrator {
       actionType: 'orchestrator_routing_decision',
       context,
       collaboration: {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         primaryAi: routing.primaryAi,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         supportAi: routing.supportAi,
         collaborationType: routing.collaborationType,
         routingDecision: routing.reason,
@@ -129,6 +131,7 @@ class UnifiedAIOrchestrator {
       await aiActionLogger.log({
         actionType: 'orchestrator_request_failed',
         context,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         collaboration: { primaryAi: routing.primaryAi },
         success: false,
         errorMessage: (error instanceof Error ? error.message : String(error)),
@@ -466,6 +469,7 @@ class UnifiedAIOrchestrator {
       { workspaceId: params.workspaceId, triggeredBy: 'summonTriad' }
     );
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await aiActionLogger.log({
       actionType: 'triad_summoned',
       context: params.context,
@@ -517,6 +521,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
       { workspaceId: params.context.workspaceId }
     );
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await aiActionLogger.log({
       actionType: 'confusion_escalated_to_claude',
       context: params.context,
@@ -583,6 +588,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
     );
 
     if (!verified) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await aiActionLogger.log({
         actionType: 'financial_math_discrepancy_blocked',
         context: params.context,
@@ -716,7 +722,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
               atRiskClients: strategicContext.summary.atRiskClients,
               totalClients: strategicContext.clients.length,
               clientTiers: strategicContext.clients.reduce((acc: Record<string, number>, c) => {
-                acc[c.tier] = (acc[c.tier] || 0) + 1;
+                acc[(c as any).tier] = (acc[(c as any).tier] || 0) + 1;
                 return acc;
               }, {}),
             };

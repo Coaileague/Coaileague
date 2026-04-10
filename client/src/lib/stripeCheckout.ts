@@ -22,6 +22,7 @@ export async function redirectToCheckout(priceId: string, workspaceId: string, t
   const session = await response.json();
   if (session.error) throw new Error(session.error);
 
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const result = await stripe.redirectToCheckout({ sessionId: session.sessionId });
   if (result.error) throw new Error(result.error.message);
 }

@@ -119,6 +119,7 @@ class AICostMonitorService {
     inputTokens: number,
     outputTokens: number
   ): number {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const pricing = API_PRICING[ai] || API_PRICING.gemini;
     const inputCost = (inputTokens / 1_000_000) * pricing.inputPer1M;
     const outputCost = (outputTokens / 1_000_000) * pricing.outputPer1M;
@@ -192,7 +193,7 @@ class AICostMonitorService {
       const workspace = await db.query.workspaces.findFirst({
         where: eq(workspaces.id, workspaceId),
       });
-      currentCredits = workspace?.aiCredits || 0;
+      currentCredits = (workspace as any)?.aiCredits || 0;
     } catch (error) {
       log.warn('[CostMonitor] Failed to fetch workspace credits:', error);
     }

@@ -232,24 +232,24 @@ class AutomationGovernanceService {
       const updates: Partial<InsertWorkspaceAutomationPolicy> = {};
       
       if (request.currentLevel) updates.currentLevel = request.currentLevel;
-      if (request.handHeldThreshold !== undefined) updates.handHeldThreshold = request.handHeldThreshold;
-      if (request.graduatedThreshold !== undefined) updates.graduatedThreshold = request.graduatedThreshold;
-      if (request.highRiskCategories) updates.highRiskCategories = request.highRiskCategories;
-      if (request.minConfidenceForAutoExecute !== undefined) updates.minConfidenceForAutoExecute = request.minConfidenceForAutoExecute;
+      if (request.handHeldThreshold !== undefined) (updates as any).handHeldThreshold = request.handHeldThreshold;
+      if (request.graduatedThreshold !== undefined) (updates as any).graduatedThreshold = request.graduatedThreshold;
+      if (request.highRiskCategories) (updates as any).highRiskCategories = request.highRiskCategories;
+      if (request.minConfidenceForAutoExecute !== undefined) (updates as any).minConfidenceForAutoExecute = request.minConfidenceForAutoExecute;
       
       if (request.orgOwnerConsent !== undefined) {
-        updates.orgOwnerConsent = request.orgOwnerConsent;
+        (updates as any).orgOwnerConsent = request.orgOwnerConsent;
         if (request.orgOwnerConsent) {
-          updates.orgOwnerConsentAt = new Date();
-          updates.orgOwnerConsentUserId = request.orgOwnerConsentUserId || null;
+          (updates as any).orgOwnerConsentAt = new Date();
+          (updates as any).orgOwnerConsentUserId = request.orgOwnerConsentUserId || null;
         }
       }
       
       if (request.waiverAccepted !== undefined) {
-        updates.waiverAccepted = request.waiverAccepted;
+        (updates as any).waiverAccepted = request.waiverAccepted;
         if (request.waiverAccepted) {
-          updates.waiverAcceptedAt = new Date();
-          updates.waiverVersion = request.waiverVersion || '1.0';
+          (updates as any).waiverAcceptedAt = new Date();
+          (updates as any).waiverVersion = request.waiverVersion || '1.0';
         }
       }
 
@@ -260,7 +260,7 @@ class AutomationGovernanceService {
       await db.update(workspaces)
         .set({ automationPolicyBlob: merged })
         .where(eq(workspaces.id, request.workspaceId));
-      const updated = { id: `${request.workspaceId}-policy`, workspaceId: request.workspaceId, ...merged } as WorkspaceAutomationPolicy;
+      const updated = { id: `${request.workspaceId}-policy`, workspaceId: request.workspaceId, ...merged } as unknown as WorkspaceAutomationPolicy;
       this.policyCache.set(request.workspaceId, updated);
       return updated;
     } catch (error) {
@@ -968,7 +968,7 @@ class AutomationGovernanceService {
   // Refresh tool catalog with latest metrics
   async refreshToolCatalogMetrics(): Promise<void> {
     try {
-      await trinityMemoryService.refreshToolCatalog();
+      await (trinityMemoryService as any).refreshToolCatalog();
       log.info('[AutomationGovernance] Tool catalog metrics refreshed');
     } catch (error) {
       log.error('[AutomationGovernance] Error refreshing tool catalog:', error);

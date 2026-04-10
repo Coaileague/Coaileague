@@ -44,7 +44,7 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
     // Permanently exempt from all tier checks — passes every gate unconditionally.
     // This override cannot be removed by any subscription change, cron, or downgrade.
     if (GRANDFATHERED_TENANT_ID && req.workspaceId === GRANDFATHERED_TENANT_ID) {
-      req.subscriptionTier = 'enterprise';
+      (req as any).subscriptionTier = 'enterprise';
       return next();
     }
 
@@ -89,6 +89,7 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
         },
         sourceRoute: req.path,
       }).catch((auditErr: unknown) => {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.warn('[TierGuard] Failed to write tier.violation audit log (non-blocking)', {
           workspaceId: req.workspaceId,
           currentTier,
@@ -108,7 +109,7 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
     }
 
     // Attach tier to request for downstream use
-    req.subscriptionTier = currentTier;
+    (req as any).subscriptionTier = currentTier;
     next();
   };
   

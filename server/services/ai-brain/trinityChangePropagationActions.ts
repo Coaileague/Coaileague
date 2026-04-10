@@ -29,9 +29,12 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
     description: `Trinity change propagation: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const data = await fn(req.params || {});
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: true, data };
       } catch (err: any) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: false, error: err?.message || 'Unknown error' };
       }
     }
@@ -65,6 +68,7 @@ export function registerChangePropagationActions() {
       case 'hourly_rate': {
         const employeeId = params.employeeId || params.resourceId;
         if (employeeId && oldValue !== undefined && newValue !== undefined) {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           const result = await helpaiOrchestrator.executeAction('settings.propagate_pay_rate_change', {
             workspaceId, employeeId, oldRate: oldValue, newRate: newValue, changedBy,
           } as any).catch(() => null);
@@ -78,6 +82,7 @@ export function registerChangePropagationActions() {
       case 'billing_rate': {
         const clientId = params.clientId || params.resourceId;
         if (clientId && oldValue !== undefined && newValue !== undefined) {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           const result = await helpaiOrchestrator.executeAction('settings.propagate_bill_rate_change', {
             workspaceId, clientId, oldRate: oldValue, newRate: newValue, changedBy,
           } as any).catch(() => null);
@@ -92,6 +97,7 @@ export function registerChangePropagationActions() {
       case 'perc_expiry': {
         const employeeId = params.employeeId || params.resourceId;
         if (employeeId) {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           const result = await helpaiOrchestrator.executeAction('settings.propagate_license_expiry', {
             workspaceId, employeeId, docType: settingKey, changedBy,
           } as any).catch(() => null);

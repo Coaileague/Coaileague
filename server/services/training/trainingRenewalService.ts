@@ -148,6 +148,7 @@ export async function runTrainingRenewalScan(): Promise<RenewalScanResult> {
                 .limit(1);
 
               if (existing.length === 0) {
+                // @ts-expect-error — TS migration: fix in refactoring sprint
                 await db.insert(trainingInterventions).values({
                   workspaceId: ws.id,
                   employeeId: officer.id,

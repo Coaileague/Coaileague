@@ -45,6 +45,7 @@ export default function EmployeeFormExample() {
     setIsLoading(true);
 
     // Using the utility function for automatic transition handling
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await handleFormSubmissionWithTransition(
       transition,
       () => apiRequest("POST", "/api/employees", data),
@@ -74,6 +75,7 @@ export default function EmployeeFormExample() {
       const result = await apiRequest("POST", "/api/employees", data);
 
       // Show success with custom message and redirect
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       showSuccessTransition(
         transition,
         "Employee Added!",

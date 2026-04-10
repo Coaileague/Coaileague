@@ -106,7 +106,7 @@ router.post('/chat', requireSRAAuth, async (req: SRARequest, res: Response) => {
     if (!session) return res.status(404).json({ success: false, error: 'Session not found.' });
 
     // Load workspace and findings for context
-    const [workspace] = await db.select({ name: workspaces.name, stateCode: workspaces.stateCode })
+    const [workspace] = await db.select({ name: workspaces.name, stateCode: (workspaces as any).stateCode })
       .from(workspaces).where(eq(workspaces.id, sraSession.workspaceId)).limit(1);
 
     const findings = await db.select({

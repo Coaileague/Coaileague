@@ -20,7 +20,7 @@ const router = Router();
 router.post('/simulate', async (req, res) => {
   try {
     // Require platform admin session
-    const userId = req.user?.id || (req.session as any)?.userId;
+    const userId = req.user?.id || (req as any).session?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const platformRole = await storage.getUserPlatformRole(userId).catch(() => null);

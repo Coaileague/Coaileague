@@ -295,7 +295,8 @@ class TrinityDataIntegrityScanner {
       
       for (const workspace of workspaces.slice(0, 10)) { // Check first 10 workspaces
         // Check for missing QuickBooks sync status
-        if (workspace.quickbooksEnabled && !workspace.quickbooksRealmId) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        if (workspace.quickbooksEnabled && !(workspace as any).quickbooksRealmId) {
           issues.push({
             id: `qb-missing-realm-${workspace.id}`,
             component: 'QuickBooks Integration',

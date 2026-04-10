@@ -37,7 +37,7 @@ async function persistWebhookConfig(workspaceId: string, token: string, secret: 
 async function restoreWebhookConfigFromDb(token: string): Promise<boolean> {
   try {
     const [ws] = await db.select({ id: workspaces.id, blob: workspaces.automationPolicyBlob }).from(workspaces)
-      .where(eq((workspaces.automationPolicyBlob as any)['staffingWebhookToken'], token))
+      .where(eq((workspaces as any).automationPolicyBlob['staffingWebhookToken'], token))
       .limit(1).catch(() => []);
     if (!ws) {
       // Fallback: scan all workspaces for a matching token in their blob

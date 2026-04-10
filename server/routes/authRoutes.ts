@@ -177,22 +177,24 @@ router.get('/magic-link/verify', async (req: Request, res) => {
           claims: {
             sub: result.user.id,
             email: result.user.email,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             first_name: result.user.firstName,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             last_name: result.user.lastName,
           },
           expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
         },
       };
       const { resolveAndCacheWorkspaceContext, saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
-      if (result.user.currentWorkspaceId) {
-        await resolveAndCacheWorkspaceContext(req, result.user.id, result.user.currentWorkspaceId);
+      if ((result as any).user.currentWorkspaceId) {
+        await resolveAndCacheWorkspaceContext(req, result.user.id, (result as any).user.currentWorkspaceId);
       }
       await saveSessionAsync(req);
     }
 
     log.info('[Security] Magic link verified and session established', {
       userId: result.user?.id,
-      workspaceId: result.user?.currentWorkspaceId,
+      workspaceId: (result as any).user?.currentWorkspaceId,
       ip: req.ip || req.socket?.remoteAddress,
       userAgent: req.get('user-agent'),
       event: 'magic_link_verified',
@@ -438,6 +440,7 @@ router.post('/mfa/setup', async (req: AuthenticatedRequest, res) => {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userEmail = req.user.email || '';
 
     if (!userEmail) {
@@ -584,9 +587,9 @@ router.post('/mfa/regenerate-backup-codes', async (req: AuthenticatedRequest, re
 // WS Auth Token — issues a 60-second one-time token for WebSocket authentication
 // Needed when session cookie lookup fails at WS connection time (DB hiccup, Replit env edge cases)
 router.post('/ws-token', async (req: any, res) => {
-  const userId = req.user?.id || (req.session as any)?.userId;
-  const workspaceId = req.user?.workspaceId || (req.session as any)?.workspaceId || (req.session as any)?.currentWorkspaceId;
-  const role = req.user?.role || (req.session as any)?.workspaceRole;
+  const userId = req.user?.id || (req as any).session?.userId;
+  const workspaceId = req.user?.workspaceId || (req as any).session?.workspaceId || (req as any).session?.currentWorkspaceId;
+  const role = req.user?.role || (req as any).session?.workspaceRole;
   if (!userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }

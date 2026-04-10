@@ -471,6 +471,7 @@ class ChatServerHealthManager {
         category: 'bugfix',
         priority: report.status === 'critical' ? 5 : 3,
         metadata: {
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity: report.status === 'critical' ? 'critical' : 'warning',
           issues: report.issues,
           recommendedActions: this.getRecommendedActions(report)

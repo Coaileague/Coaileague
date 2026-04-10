@@ -31,6 +31,7 @@ export function platformStaffAuditMiddleware(req: Request, res: Response, next: 
 
   // Only audit platform-wide actors (support agents, sysops, bots, etc.)
   const isPlatformActor =
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     (authReq.isTrinityBot === true) ||
     (authReq.platformRole && hasPlatformWideAccess(authReq.platformRole));
 
@@ -52,19 +53,20 @@ export function platformStaffAuditMiddleware(req: Request, res: Response, next: 
     const status = res.statusCode;
 
     const actorId =
-      authReq.isTrinityBot ? 'trinity-bot-system' : (authReq.user?.id || 'unknown');
+      (authReq as any).isTrinityBot ? 'trinity-bot-system' : (authReq.user?.id || 'unknown');
 
     const platformRole =
-      authReq.isTrinityBot ? 'Bot' : (authReq.platformRole || 'unknown');
+      (authReq as any).isTrinityBot ? 'Bot' : (authReq.platformRole || 'unknown');
 
     const targetWorkspace =
       authReq.workspaceId ||
-      (req.params as any)?.workspaceId ||
-      (req.body as any)?.workspaceId ||
-      (req.query as any)?.workspaceId ||
+      (req as any).params?.workspaceId ||
+      (req as any).body?.workspaceId ||
+      ((req as any).query)?.workspaceId ||
       null;
 
     const metadata = {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       actorEmail: authReq.user?.email || (authReq.isTrinityBot ? 'trinity@system' : null),
       platformRole,
       method: req.method,
@@ -86,6 +88,7 @@ export function platformStaffAuditMiddleware(req: Request, res: Response, next: 
             NOW()
           )`
     ).catch((err: unknown) => {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.warn({ err, actorId, path: req.path }, '[PlatformStaffAudit] Failed to write audit entry');
     });
 

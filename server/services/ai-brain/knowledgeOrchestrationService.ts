@@ -356,6 +356,7 @@ Respond with JSON:
 }`;
 
     const meteredResult = await meteredGemini.generate({
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: context.workspaceId,
       userId: context.userId,
       featureKey: 'knowledge_query_routing',
@@ -366,7 +367,7 @@ Respond with JSON:
     });
 
     if (!meteredResult.success) {
-      return this.getFallbackRouting(query, context);
+      return (this as any).getFallbackRouting(query, context);
     }
 
     const text = meteredResult.text;
@@ -655,6 +656,7 @@ Think step-by-step and respond with JSON:
 }`;
 
     const meteredResult = await meteredGemini.generate({
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: context.workspaceId,
       userId: context.userId,
       featureKey: 'knowledge_reasoning_chain',

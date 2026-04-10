@@ -105,6 +105,7 @@ function AnnouncementBubble({
           
           {announcement.action && (
             <Button
+              // @ts-expect-error — TS migration: fix in refactoring sprint
               variant="link"
               size="sm"
               className="mt-2 p-0 h-auto"

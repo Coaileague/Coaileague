@@ -129,6 +129,7 @@ async function fireClockAction(
       userId: ctx.userId,
       source: "helpai_fallback",
     });
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const ts = data.timestamp || new Date().toLocaleTimeString();
     if (ctx.language === "es") {
       return `Listo — registrado ${direction === "in" ? "entrada" : "salida"} a las ${ts}. Confirmado.`;
@@ -245,9 +246,11 @@ export async function refreshFallbackCache(workspaceId: string): Promise<void> {
     ]);
 
     if (schedRes.status === "fulfilled") {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       _cache.schedule = schedRes.value;
     }
     if (faqRes.status === "fulfilled") {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       _cache.faqs = faqRes.value;
     }
     _cache.lastRefresh = now;

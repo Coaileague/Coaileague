@@ -32,7 +32,7 @@ employeePacketRouter.post('/', async (req: any, res) => {
       notes: z.string().optional(),
     }).parse(req.body);
 
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
     const token = randomUUID();
@@ -54,7 +54,7 @@ employeePacketRouter.post('/', async (req: any, res) => {
         formData: {},
         sectionInitials: {},
         sentAt: new Date().toISOString(),
-        sentBy: (req.user as any)?.id,
+        sentBy: (req.user)?.id,
       }),
       status: 'pending',
       createdAt: new Date(),
@@ -75,7 +75,7 @@ employeePacketRouter.post('/', async (req: any, res) => {
 // GET /api/employee-packets — List all packets for workspace
 employeePacketRouter.get('/', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
     const allSigs = await db.select().from(documentSignatures)
@@ -99,7 +99,7 @@ employeePacketRouter.get('/', async (req: any, res) => {
 // GET /api/employee-packets/:id — Single packet detail
 employeePacketRouter.get('/:id', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const [packet] = await db.select().from(documentSignatures)
       .where(and(
@@ -117,7 +117,7 @@ employeePacketRouter.get('/:id', async (req: any, res) => {
 // DELETE /api/employee-packets/:id — Void a packet
 employeePacketRouter.delete('/:id', async (req: any, res) => {
   try {
-    const workspaceId = req.workspaceId || (req.user as any)?.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     await db.update(documentSignatures)
       .set({ status: 'declined', updatedAt: new Date() })

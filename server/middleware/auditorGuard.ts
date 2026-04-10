@@ -24,7 +24,7 @@ const log = createLogger('auditorGuard');
  * enforcement-route auth (auditorId).
  */
 function resolveAuditorAccountId(req: Request): string | null {
-  return req.auditorAccountId || req.auditorId || null;
+  return (req as any).auditorAccountId || (req as any).auditorId || null;
 }
 
 /**
@@ -82,7 +82,7 @@ export async function enforceAuditorSession(
     }
 
     // Attach full-account confirmation for downstream handlers
-    req.auditorAccountVerified = true;
+    (req as any).auditorAccountVerified = true;
     next();
   } catch (err) {
     log.error('[AuditorGuard] DB check failed:', err);

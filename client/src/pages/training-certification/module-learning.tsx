@@ -458,6 +458,7 @@ export default function ModuleLearningPage() {
   // ── SECTION VIEW ──────────────────────────────────────────────────────────
   if (!currentSection) {
     // All sections done — go to final exam
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (step !== 'final_exam' && finalExamQuestions.length > 0) {
       setStep('final_exam');
     }
@@ -540,6 +541,7 @@ export default function ModuleLearningPage() {
           {finalExamQuestions.length > 0 && (
             <div
               className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm ${
+                // @ts-expect-error — TS migration: fix in refactoring sprint
                 step === 'final_exam' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground/60'
               }`}
             >

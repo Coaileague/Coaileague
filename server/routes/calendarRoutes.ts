@@ -82,7 +82,7 @@ calendarRouter.get('/schedule.ics', requireAuth, async (req: AuthenticatedReques
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     if (!workspaceId || !userId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -123,7 +123,7 @@ calendarRouter.get('/my-schedule.ics', requireAuth, async (req: AuthenticatedReq
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -156,7 +156,7 @@ calendarRouter.get('/timesheets.ics', requireAuth, async (req: AuthenticatedRequ
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -225,7 +225,7 @@ calendarRouter.post('/subscriptions', requireAuth, async (req: AuthenticatedRequ
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -280,7 +280,7 @@ calendarRouter.post('/subscriptions', requireAuth, async (req: AuthenticatedRequ
 calendarRouter.get('/subscriptions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -375,7 +375,7 @@ calendarRouter.get('/subscription-urls', requireAuth, async (req: AuthenticatedR
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -415,7 +415,7 @@ calendarRouter.post('/import', requireAuth, upload.single('file'), localVirusSca
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -454,7 +454,7 @@ calendarRouter.post('/import', requireAuth, upload.single('file'), localVirusSca
 calendarRouter.get('/import/history', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -477,7 +477,7 @@ calendarRouter.get('/import/history', requireAuth, async (req: AuthenticatedRequ
 calendarRouter.get('/sync-events', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -504,7 +504,7 @@ calendarRouter.get('/sync-events', requireAuth, async (req: AuthenticatedRequest
 calendarRouter.get('/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     let subscriptionCount = 0;
@@ -537,7 +537,7 @@ calendarRouter.get('/export/ical', requireAuth, async (req: AuthenticatedRequest
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -574,7 +574,7 @@ calendarRouter.post('/import/ical', requireAuth, upload.single('file'), localVir
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -656,7 +656,7 @@ calendarRouter.get('/google/connect', requireAuth, async (req: AuthenticatedRequ
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -731,7 +731,7 @@ calendarRouter.get('/google/callback', async (req: Request, res: Response) => {
 calendarRouter.post('/google/disconnect', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -758,7 +758,7 @@ calendarRouter.post('/google/sync', requireAuth, async (req: AuthenticatedReques
     }
 
     const user = req.user;
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {

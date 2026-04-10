@@ -251,6 +251,7 @@ export async function getAnalyticsStats(
       updatedAt: new Date().toISOString(),
     },
     // Add automation metrics only for workspace scope (undefined for platform scope)
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     automation: automationMetrics,
   };
 

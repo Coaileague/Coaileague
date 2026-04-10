@@ -698,7 +698,7 @@ Only include arrays that have data. If no data found for a category, omit that a
       .where(eq(users.id, userId))
       .limit(1);
     
-    const hasPermission = user && ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'].includes(user.platformRole || '');
+    const hasPermission = user && ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'].includes((user as any).platformRole || '');
     checks.push({
       name: 'user_permission',
       passed: hasPermission,
@@ -867,7 +867,7 @@ Only include arrays that have data. If no data found for a category, omit that a
         });
       
       case 'manual':
-        return this.extractFromManualEntry({
+        return (this as any).extractFromManualEntry({
           workspaceId,
           entryType: rawData.entryType || 'employee',
           formData: rawData.manualData || {},

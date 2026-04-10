@@ -324,7 +324,7 @@ class TrinityAnalyticsService {
       .orderBy(sql`period`);
 
       return result.map(row => ({
-        period: (row.period as any)?.toISOString?.() || String(row.period),
+        period: (row as any).period?.toISOString?.() || String(row.period),
         avgConfidence: row.avgConfidence || 0,
         escalationRate: null, // humanEscalationRequired not tracked in meta_cognition_logs
         synthesisQuality: row.synthesisQuality || 0,

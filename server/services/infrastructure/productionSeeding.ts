@@ -330,6 +330,7 @@ export function registerExtendedHealthChecks(): void {
     serviceName: 'WebSocket Server',
     checkFn: async () => {
       try {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { getWebSocketStats } = await import('../../websocket');
         const stats = getWebSocketStats();
         return {

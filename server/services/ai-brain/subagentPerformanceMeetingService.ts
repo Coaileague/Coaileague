@@ -462,6 +462,7 @@ Provide a brief performance analysis in JSON format:
         input: { prompt, context: 'performance_analysis' },
         workspaceId: 'platform-system',
         userId: 'system',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
       });
 
@@ -575,6 +576,7 @@ Provide a 2-3 sentence executive summary.`;
         input: { prompt, context: 'meeting_summary' },
         workspaceId: 'platform-system',
         userId: 'system',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
       });
 

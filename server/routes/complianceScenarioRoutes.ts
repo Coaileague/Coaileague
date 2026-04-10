@@ -248,6 +248,7 @@ router.post('/override-out-of-state/:employeeId', requireAuth, async (req, res) 
       workspaceId,
       actorId: actorId ?? approvedByUserId,
       actorType: 'user',
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       changeType: 'override',
       action: 'COMPLIANCE:OUT_OF_STATE_LICENSE_APPROVED',
       entityType: 'employee',

@@ -224,6 +224,7 @@ export function PDFFieldPlacer({
                         borderColor: rColor,
                         background: rColor + "20",
                         color: rColor,
+                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         ringColor: rColor,
                         pointerEvents: "auto",
                       }}

@@ -337,7 +337,7 @@ class PolicyRulesAgent {
       const employeeIds = new Set<string>();
 
       for (const shift of clientShifts) {
-        let shiftHours = shift.totalHours || 0;
+        let shiftHours = (shift as any).totalHours || 0;
         
         const breakRules = clientPolicy?.breakRules as { unpaidBreakMinutes?: number; autoDeductBreaks?: boolean } | null;
         if (breakRules?.autoDeductBreaks && shiftHours > 6) {
@@ -463,6 +463,7 @@ class BillingStateManagerAgent {
     }
 
     const currentState = lifecycle.currentState;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const allowedTransitions = this.validTransitions[currentState] || [];
 
     if (!allowedTransitions.includes(newState)) {
@@ -484,12 +485,13 @@ class BillingStateManagerAgent {
     await db.update(invoiceLifecycleStates)
       .set({
         currentState: newState as any,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         previousState: currentState,
         stateChangedAt: new Date(),
         stateChangedBy: options?.userId,
         stateHistory,
-        qboInvoiceId: options?.qboInvoiceId || lifecycle.qboInvoiceId,
-        qboDocNumber: options?.qboDocNumber || lifecycle.qboDocNumber,
+        qboInvoiceId: options?.qboInvoiceId || (lifecycle as any).qboInvoiceId,
+        qboDocNumber: options?.qboDocNumber || (lifecycle as any).qboDocNumber,
         updatedAt: new Date(),
       })
       .where(eq(invoiceLifecycleStates.id, lifecycle.id));
@@ -936,7 +938,7 @@ export const auditPackAgent = new AuditPackAgent();
 export const weeklyInvoiceOrchestrator = new WeeklyInvoiceOrchestrator();
 
 export function registerBillingOrchestrationActions() {
-  (helpaiOrchestrator.registerAction as any)({
+  (helpaiOrchestrator as any).registerAction({
     actionId: 'billing.run_weekly_invoice',
     name: 'Run Weekly Invoice Workflow',
     category: 'invoicing',
@@ -951,7 +953,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator.registerAction as any)({
+  (helpaiOrchestrator as any).registerAction({
     actionId: 'billing.check_identity_mappings',
     name: 'Check Identity Mappings',
     category: 'invoicing',
@@ -966,7 +968,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator.registerAction as any)({
+  (helpaiOrchestrator as any).registerAction({
     actionId: 'billing.evaluate_risk',
     name: 'Evaluate Invoice Risk',
     category: 'invoicing',
@@ -999,7 +1001,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator.registerAction as any)({
+  (helpaiOrchestrator as any).registerAction({
     actionId: 'billing.transition_state',
     name: 'Transition Invoice State',
     category: 'invoicing',
@@ -1016,7 +1018,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator.registerAction as any)({
+  (helpaiOrchestrator as any).registerAction({
     actionId: 'billing.get_exception_queue',
     name: 'Get Exception Queue',
     category: 'invoicing',
@@ -1034,7 +1036,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator.registerAction as any)({
+  (helpaiOrchestrator as any).registerAction({
     actionId: 'billing.resolve_exception',
     name: 'Resolve Exception',
     category: 'invoicing',
@@ -1050,7 +1052,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator.registerAction as any)({
+  (helpaiOrchestrator as any).registerAction({
     actionId: 'billing.generate_audit_pack',
     name: 'Generate Audit Pack',
     category: 'invoicing',

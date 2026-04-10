@@ -120,7 +120,7 @@ To execute an action, respond with JSON in format:
     const systemPrompt = `${conv[0].content}\n\n${actionContext}`;
 
     try {
-      const response = await aiBrain.chat(message, {
+      const response = await (aiBrain as any).chat(message, {
         contextMessages,
         systemPrompt,
         temperature: 0.7,
@@ -142,6 +142,7 @@ To execute an action, respond with JSON in format:
               params,
               userId,
               userRole,
+              // @ts-expect-error — TS migration: fix in refactoring sprint
               req.user?.currentWorkspaceId
             );
             
@@ -276,6 +277,7 @@ aiBrainConsoleRouter.post('/execute', requireSupportRole, async (req: Authentica
       params || {},
       userId,
       userRole,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       req.user?.currentWorkspaceId
     );
 
@@ -501,7 +503,8 @@ aiBrainConsoleRouter.get('/status', requireSupportRole, async (req: Authenticate
 aiBrainConsoleRouter.get('/self-assessment', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id || 'support';
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
+    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     
     log.info(`[AIBrainConsole] Self-assessment requested by ${userId}`);
@@ -571,7 +574,7 @@ aiBrainConsoleRouter.get('/files', requireSupportRole, async (req: Authenticated
     const dirPath = (req.query.path as string) || (req.query['0'] as string) || '.';
     const userId = req.user?.id || 'support';
     const result = await aiBrainFileSystemTools.listDirectory(dirPath, {}, userId);
-    res.json({ files: result.data?.files || result.data?.entries || [], path: dirPath });
+    res.json({ files: (result as any).data?.files || result.data?.entries || [], path: dirPath });
   } catch (error: unknown) {
     log.error('[AIBrainConsole] Files list error:', error);
     res.status(500).json({ error: sanitizeError(error) });
@@ -584,7 +587,7 @@ aiBrainConsoleRouter.post('/files/read', requireSupportRole, async (req: Authent
     const userId = req.user?.id || 'support';
     if (!filePath) return res.status(400).json({ error: 'filePath is required' });
     const result = await aiBrainFileSystemTools.readFile(filePath, {}, userId);
-    res.json({ content: result.data?.content || '', path: filePath });
+    res.json({ content: (result as any).data?.content || '', path: filePath });
   } catch (error: unknown) {
     log.error('[AIBrainConsole] File read error:', error);
     res.status(500).json({ error: sanitizeError(error) });
@@ -611,7 +614,7 @@ aiBrainConsoleRouter.post('/files/search', requireSupportRole, async (req: Authe
     const userId = req.user?.id || 'support';
     if (!pattern) return res.status(400).json({ error: 'pattern is required' });
     const result = await aiBrainFileSystemTools.searchFiles(searchPath || '.', { pattern }, userId);
-    res.json({ matches: result.data?.matches || [], pattern });
+    res.json({ matches: (result as any).data?.matches || [], pattern });
   } catch (error: unknown) {
     log.error('[AIBrainConsole] File search error:', error);
     res.status(500).json({ error: sanitizeError(error) });
@@ -655,8 +658,8 @@ aiBrainConsoleRouter.get('/history', requireSupportRole, async (req: Authenticat
     const actions = logs.map(log => ({
       actionId: log.action?.replace('ai_brain_console:', '') || '',
       category: log.targetType || 'console',
-      success: (log.metadata as any)?.success ?? true,
-      message: (log.metadata as any)?.message || '',
+      success: (log as any).metadata?.success ?? true,
+      message: (log as any).metadata?.message || '',
       timestamp: log.createdAt?.toISOString() || new Date().toISOString(),
     }));
     

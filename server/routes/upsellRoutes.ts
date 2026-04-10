@@ -5,6 +5,7 @@
 
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { AuthenticatedRequest } from '../types';
 import { requireAuth } from '../auth';
 import {

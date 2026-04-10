@@ -165,7 +165,7 @@ router.get('/api/quickbooks/automation-health', requireAuth, async (req: Authent
         }
       }
 
-      autopilotEnabled = (connection.metadata as any)?.syncEnabled === true;
+      autopilotEnabled = (connection as any).metadata?.syncEnabled === true;
     }
 
     const mappingCoverage = 100;
@@ -387,7 +387,7 @@ router.get('/api/quickbooks/connection-status', requireAuth, async (req: Authent
       canRefresh,
       needsReauthorization,
       connectionId: connection.id,
-      companyName: (connection.metadata as any)?.companyName || 'Unknown Company',
+      companyName: (connection as any).metadata?.companyName || 'Unknown Company',
       lastSync: connection.lastSyncAt,
       lastError: connection.lastError,
       accessTokenExpiresAt: accessTokenExpiry?.toISOString(),
@@ -472,6 +472,7 @@ router.post('/api/quickbooks/refresh-token', requireAuth, async (req: Authentica
       log.error('[IntegrationRoutes] Token refresh failed:', refreshError);
       
       // Check if it's an invalid_grant error (needs reauthorization)
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const errorMessage = refreshError.message || '';
       if (errorMessage.includes('invalid_grant') || errorMessage.includes('token')) {
         return res.status(400).json({

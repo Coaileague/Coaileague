@@ -406,6 +406,7 @@ async function seedAnvilStripeMode() {
   for (const c of anvilClientsRows) {
     try {
       const customer = await stripe!.customers.create({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         name: c.companyName,
         email: c.email ?? `billing+${c.id}@anvilsecurity.test`,
         phone: c.phone ?? undefined,

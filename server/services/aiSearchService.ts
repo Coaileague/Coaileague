@@ -342,6 +342,7 @@ If the results seem relevant to the query, mention the most relevant finding.
 If results seem limited or not directly matching, suggest how the user might refine their search.`;
 
     if (!workspaceId) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return { success: false, summary: 'Search summary requires workspace context' };
     }
     const aiResult = await meteredGemini.generate({

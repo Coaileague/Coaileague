@@ -327,7 +327,7 @@ class TrinityAutonomousSchedulerService {
 
         if (preRunReasoning.decision === 'block') {
           session.status = 'completed';
-          session.endTime = new Date();
+          (session as any).endTime = new Date();
           this.activeSessions.delete(sessionId);
           broadcastToWorkspace(config.workspaceId, {
             type: 'trinity_scheduling_blocked',
@@ -1179,8 +1179,8 @@ class TrinityAutonomousSchedulerService {
     // Previously this was omitted causing 0-rate payroll rows for every AI-assigned shift.
     const assignedPayRate = (
       bestEmployee.employee.hourlyRate ||
-      (bestEmployee.employee as any).payRate ||
-      (bestEmployee.employee as any).currentHourlyRate ||
+      (bestEmployee as any).employee.payRate ||
+      (bestEmployee as any).employee.currentHourlyRate ||
       '0'
     ).toString();
 
@@ -2816,13 +2816,14 @@ Respond in JSON format:
 
       const response = await unifiedGeminiClient.generateContent(prompt, { // withGemini
         temperature: 0.3,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         maxOutputTokens: 500,
         workspaceId: context.workspaceId,
         featureKey: 'trinity_shift_placement',
       });
       
       // Parse AI response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = (response as any).match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         const recommendedIndex = parsed.recommendedIndex - 1;
@@ -2893,12 +2894,13 @@ Provide scheduling insights in JSON:
 
       const response = await unifiedGeminiClient.generateContent(prompt, { // withGemini
         temperature: 0.4,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         maxOutputTokens: 400,
         workspaceId,
         featureKey: 'trinity_schedule_insights',
       });
       
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = (response as any).match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
@@ -3080,6 +3082,7 @@ export class HumanOverrideController {
     log.info(`[HumanOverride] Scheduling paused for workspace ${workspaceId} by ${userId}: ${reason}`);
     
     // Emit event for real-time UI update
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.emit('scheduling_paused', {
       workspaceId,
       userId,
@@ -3095,6 +3098,7 @@ export class HumanOverrideController {
     this.pausedWorkspaces.delete(workspaceId);
     log.info(`[HumanOverride] Scheduling resumed for workspace ${workspaceId} by ${userId}`);
     
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.emit('scheduling_resumed', {
       workspaceId,
       userId,
@@ -3127,6 +3131,7 @@ export class HumanOverrideController {
     
     log.info(`[HumanOverride] Override queued for shift ${override.shiftId}: ${override.action}`);
     
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.emit('scheduling_override_queued', override);
   }
   

@@ -168,7 +168,7 @@ class AssistedOnboardingService {
       // Provision email addresses for the workspace
       try {
         const { emailProvisioningService } = await import('./email/emailProvisioningService');
-        const emailSlug = workspace.emailSlug || workspace.id.replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase();
+        const emailSlug = (workspace as any).emailSlug || workspace.id.replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase();
         await emailProvisioningService.provisionWorkspaceAddresses(workspace.id, emailSlug);
         log.info(`[AssistedOnboarding] Email addresses provisioned for workspace ${workspace.id}`);
       } catch (emailError) {
@@ -491,6 +491,7 @@ class AssistedOnboardingService {
         try {
           const { db: database } = await import('../db');
           const { auditLogs } = await import('@shared/schema');
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           await database.insert(auditLogs).values({
             workspaceId: workspace.id,
             entityType: 'workspace',

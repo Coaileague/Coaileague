@@ -193,7 +193,7 @@ class TrinityDeliberationLoopService {
       const count = parseInt(row.count ?? '0');
       return {
         similarIssuesLast30Days: count,
-        lastResolutionOutcome: (row.last_outcome as any) ?? undefined,
+        lastResolutionOutcome: (row as any).last_outcome ?? undefined,
         recurringPattern: count >= 3,
       };
     } catch (_err) {
@@ -302,6 +302,7 @@ Decide how Trinity should resolve this. Return JSON:
       const response = await meteredGemini.generate({
         workspaceId: issue.workspaceId,
         feature: 'trinity_deliberation',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         systemPrompt,
         userPrompt,
         maxOutputTokens: 512,

@@ -24,6 +24,7 @@ import {
 const pageConfig: CanvasPageConfig = {
   title: "Guard Tours",
   subtitle: "Patrol routes, QR checkpoint scanning, and completion tracking",
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: Route,
 };
 

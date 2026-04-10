@@ -172,7 +172,7 @@ router.post("/run-check", requireAuth, async (req: AuthenticatedRequest, res) =>
               type: 'contract_renewal_due',
               category: 'automation',
               title: `Contract Renewal Alert — ${contract.resolved_name}`,
-              description: `Contract expires in ${daysLeft} days. ${taskType.replace(/_/g, ' ')}.`,
+              description: `Contract expires in ${daysLeft} days. ${(taskType as any).replace(/_/g, ' ')}.`,
               workspaceId: wid,
               metadata: { contractId: contract.id, daysLeft, taskType }
             }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));

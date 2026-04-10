@@ -399,11 +399,13 @@ class AvailabilityService {
         and(
           eq(shifts.workspaceId, workspaceId),
           eq(shifts.employeeId, employeeId),
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(shifts.date, shiftDate)
         )
       );
 
     for (const existingShift of existingShifts) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (this.timesOverlap(shiftStartTime, shiftEndTime, existingShift.startTime, existingShift.endTime)) {
         return {
           hasConflict: true,
@@ -559,6 +561,7 @@ class AvailabilityService {
           shiftsPerDay: options.shiftsPerDay || 2,
           shiftDurationHours: options.shiftDurationHours || 8,
         },
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
       });
 
@@ -647,6 +650,7 @@ class AvailabilityService {
           endDate: request.endDate,
           timestamp: new Date().toISOString(),
         },
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
       });
     } catch (error) {

@@ -299,7 +299,7 @@ export async function cleanupExpiredElevations(): Promise<number> {
 }
 
 export async function isElevatedSupportSession(req: Request): Promise<ElevatedSessionContext> {
-  const userId = req.user?.id || (req.session as any)?.userId;
+  const userId = req.user?.id || (req as any).session?.userId;
   const sessionId = req.sessionID;
 
   if (!userId || !sessionId) {

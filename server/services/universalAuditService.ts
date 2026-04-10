@@ -16,6 +16,8 @@ export interface AuditEntry {
   entityType: string;
   entityId?: string | null;
   entityName?: string | null;
+  targetType?: string;
+  data?: Record<string, any>;
   changeType: 'create' | 'update' | 'delete' | 'read' | 'action';
   changes?: Record<string, { old: any; new: any }> | null;
   metadata?: Record<string, any> | null;

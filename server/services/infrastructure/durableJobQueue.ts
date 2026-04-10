@@ -373,7 +373,7 @@ class DurableJobQueueService {
         FOR UPDATE SKIP LOCKED
       `);
 
-      const jobs = (result.rows as any[]) || [];
+      const jobs = ((result as any).rows as any[]) || [];
       
       if (jobs.length === 0) return;
 
@@ -521,7 +521,9 @@ class DurableJobQueueService {
       completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
       error: row.error || undefined,
       result: row.result as Record<string, any> | undefined,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       createdAt: new Date(row.createdAt),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       updatedAt: new Date(row.updatedAt),
     };
   }

@@ -355,7 +355,7 @@ async function getTrendData(workspaceId: string, range: DateRange): Promise<Tren
     ORDER BY ds.date
   `);
 
-  return (trendQuery.rows as any[]).map(row => ({
+  return ((trendQuery as any).rows as any[]).map(row => ({
     period: row.period,
     hours: parseFloat(row.hours) || 0,
     revenue: parseFloat(row.revenue) || 0,
@@ -442,7 +442,7 @@ export async function getTimeUsageMetrics(
 
   return {
     totalHours: Math.round(totalHours * 100) / 100,
-    byEmployee: (byEmployee.rows as any[]).map(row => ({
+    byEmployee: ((byEmployee as any).rows as any[]).map(row => ({
       employeeId: row.employee_id,
       name: row.name || 'Unknown',
       totalHours: parseFloat(row.total_hours) || 0,
@@ -450,13 +450,13 @@ export async function getTimeUsageMetrics(
       overtimeHours: parseFloat(row.overtime_hours) || 0,
       efficiency: 100
     })),
-    byClient: (byClient.rows as any[]).map(row => ({
+    byClient: ((byClient as any).rows as any[]).map(row => ({
       clientId: row.client_id,
       name: row.name || 'Unknown',
       totalHours: parseFloat(row.total_hours) || 0,
       revenue: parseFloat(row.revenue) || 0
     })),
-    byDay: (byDay.rows as any[]).map(row => ({
+    byDay: ((byDay as any).rows as any[]).map(row => ({
       date: row.date,
       hours: parseFloat(row.hours) || 0,
       employeeCount: parseInt(row.employee_count) || 0
@@ -533,11 +533,11 @@ export async function getSchedulingMetrics(
     fillRate: totalShifts > 0 ? Math.round((filledShifts / totalShifts) * 100) : 0,
     coverageRate: totalShifts > 0 ? Math.round((completedShifts / totalShifts) * 100) : 0,
     averageShiftDuration: Math.round((Number(stats.avgDuration) || 0) * 10) / 10,
-    byStatus: (statusData.rows as any[]).map(row => ({
+    byStatus: ((statusData as any).rows as any[]).map(row => ({
       status: row.status,
       count: parseInt(row.count)
     })),
-    byDay: (dailyData.rows as any[]).map(row => ({
+    byDay: ((dailyData as any).rows as any[]).map(row => ({
       day: row.day?.trim() || 'Unknown',
       scheduled: parseInt(row.scheduled) || 0,
       completed: parseInt(row.completed) || 0
@@ -621,13 +621,13 @@ export async function getRevenueMetrics(
     totalOverdue: Number(stats.totalOverdue) || 0,
     averageInvoiceAmount: Number(stats.avgInvoice) || 0,
     collectionRate: invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 100) : 0,
-    byClient: (byClient.rows as any[]).map(row => ({
+    byClient: ((byClient as any).rows as any[]).map(row => ({
       clientId: row.client_id,
       name: row.name || 'Unknown',
       invoiced: parseFloat(row.invoiced) || 0,
       paid: parseFloat(row.paid) || 0
     })),
-    byMonth: (byMonth.rows as any[]).map(row => ({
+    byMonth: ((byMonth as any).rows as any[]).map(row => ({
       month: row.month,
       invoiced: parseFloat(row.invoiced) || 0,
       paid: parseFloat(row.paid) || 0
@@ -697,7 +697,7 @@ export async function getEmployeePerformanceMetrics(
     ORDER BY attendance_rate DESC, total_hours DESC
   `);
 
-  const employees: EmployeePerformance[] = (performanceData.rows as any[]).map(row => ({
+  const employees: EmployeePerformance[] = ((performanceData as any).rows as any[]).map(row => ({
     employeeId: row.employee_id,
     name: row.name || 'Unknown',
     totalShifts: parseInt(row.total_shifts) || 0,

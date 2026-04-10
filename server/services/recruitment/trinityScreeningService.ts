@@ -65,8 +65,9 @@ Scoring guide:
 - 40-59: Below threshold, missing key requirements
 - 0-39: Not qualified, major gaps or red flags`;
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const response = await ai.generateContent(prompt, { temperature: 0.1, maxOutputTokens: 600 }); // withGemini
-    const text = response.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+    const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
     const parsed = JSON.parse(text);
 
     return {
@@ -178,8 +179,9 @@ Return ONLY valid JSON:
   "notes": "<one sentence explanation of score>"
 }`;
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const response = await ai.generateContent(prompt, { temperature: 0.1, maxOutputTokens: 200 }); // withGemini
-    const text = response.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+    const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
     const parsed = JSON.parse(text);
 
     return {

@@ -337,7 +337,7 @@ class AlternativeStrategyService {
     context: AlternativeContext
   ): Promise<AlternativeStrategy[]> {
     try {
-      const reflection = await trinityAgentParityLayer.reflect({
+      const reflection = await (trinityAgentParityLayer as any).reflect({
         goal: context.goal,
         previousAttempts: [
           {

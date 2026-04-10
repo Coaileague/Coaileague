@@ -779,12 +779,12 @@ export async function ensurePhase0Seed(): Promise<void> {
 
     // ── Workspace member entry for Marcus (guard against duplicates with subquery) ──
     // Converted to Drizzle ORM: NOT EXISTS
-    await db.insert(workspaceMembers).values({
+    await (db.insert(workspaceMembers).values({
       workspaceId: DEV_WS,
       userId: 'dev-emp-marcus-r',
       role: 'employee',
       createdAt: new Date(),
-    }).where(notExists(
+    }) as any).where(notExists(
       db.select()
         .from(workspaceMembers)
         .where(and(

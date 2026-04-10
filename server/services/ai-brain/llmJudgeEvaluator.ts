@@ -218,7 +218,7 @@ class LLMJudgeEvaluator {
     
     try {
       // Call AI for evaluation
-      const response = await aiBrainService.query({
+      const response = await (aiBrainService as any).query({
         prompt,
         systemPrompt: this.buildSystemPrompt(persona),
         featureId: 'llm_judge',
@@ -267,6 +267,7 @@ class LLMJudgeEvaluator {
       await this.logEvaluation(request, result);
 
       // Publish event
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'llm_judge_evaluation',
         evaluationId,

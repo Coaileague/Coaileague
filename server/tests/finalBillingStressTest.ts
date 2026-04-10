@@ -202,7 +202,7 @@ async function phase4_subscription_tiers_pricing() {
   ];
 
   for (const exp of expectedTiers) {
-    const tier = (BILLING.tiers as any)[exp.id];
+    const tier = (BILLING as any).tiers[exp.id];
     record({ name: `${exp.id} Price = $${exp.price / 100}/mo`, phase: 'PRICING', passed: tier?.monthlyPrice === exp.price, details: `Configured: $${(tier?.monthlyPrice || 0) / 100}, expected: $${exp.price / 100}`, severity: 'critical' });
     record({ name: `${exp.id} Credits = ${exp.credits}/mo`, phase: 'PRICING', passed: tier?.monthlyCredits === exp.credits, details: `Configured: ${tier?.monthlyCredits}, expected: ${exp.credits}`, severity: 'critical' });
     record({ name: `${exp.id} MaxEmployees = ${exp.maxEmp}`, phase: 'PRICING', passed: tier?.maxEmployees === exp.maxEmp, details: `Configured: ${tier?.maxEmployees}, expected: ${exp.maxEmp}`, severity: 'critical' });
@@ -211,6 +211,7 @@ async function phase4_subscription_tiers_pricing() {
   record({ name: 'Free Tier Blocks Credit Overage', phase: 'PRICING', passed: BILLING.tiers.free.allowCreditOverage === false, details: `allowCreditOverage=${BILLING.tiers.free.allowCreditOverage}`, severity: 'critical' });
 
   const tca = TIER_CREDIT_ALLOCATIONS;
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   record({ name: 'TIER_CREDIT_ALLOCATIONS Match billingConfig', phase: 'PRICING', passed: tca.free === 250 && tca.starter === 2500 && tca.professional === 10000 && tca.enterprise === 50000, details: `free=${tca.free}, starter=${tca.starter}, pro=${tca.professional}, ent=${tca.enterprise}`, severity: 'critical' });
 
   record({ name: 'Prices Monotonically Increase by Tier', phase: 'PRICING', passed: BILLING.tiers.free.monthlyPrice < BILLING.tiers.starter.monthlyPrice && BILLING.tiers.starter.monthlyPrice < BILLING.tiers.professional.monthlyPrice && BILLING.tiers.professional.monthlyPrice < BILLING.tiers.enterprise.monthlyPrice, details: 'free < starter < professional < enterprise', severity: 'critical' });

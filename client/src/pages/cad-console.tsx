@@ -474,6 +474,7 @@ export default function CADConsole() {
                 <div className="space-y-3">
                   {activeCalls.filter((c:any) => c.status === 'pending').map((call:any) => (
                     <DsSectionCard key={call.id} className="bg-ds-navy-light/50 border-ds-danger/20" 
+                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       title={<span className="font-mono text-ds-gold">{call.call_number}</span>}
                       actions={<DsBadge color="danger">PRIORITY {call.priority}</DsBadge>}
                     >

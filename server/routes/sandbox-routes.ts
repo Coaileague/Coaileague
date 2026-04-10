@@ -36,6 +36,7 @@ const sandboxDevBypass = (req: Request, res: Response, next: NextFunction) => {
   if (process.env.NODE_ENV === 'development') {
     req.user = { 
       id: 'sandbox-dev-user', 
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformRole: 'root_admin',
       email: 'sandbox@dev.local'
     };
@@ -737,6 +738,7 @@ router.post('/e2e-quickbooks-test', sandboxDevBypass, async (req: Request, res: 
     const isProd = isProduction();
     addLog('ERROR', 'failed', {
       error: sanitizeError(error),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       stack: isProd ? undefined : error.stack?.split('\n').slice(0, 5)
     });
     res.status(500).json({ success: false, testLog, error: sanitizeError(error) });

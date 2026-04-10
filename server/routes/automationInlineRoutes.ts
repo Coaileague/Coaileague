@@ -125,7 +125,7 @@ router.get("/admin-hourly-rate", requireAuth, readLimiter, async (req: Authentic
       where: eq(workspaces.id, workspaceId),
     });
 
-    const config = workspace?.config as any;
+    const config = (workspace as any)?.config as any;
     const hourlyRate = config?.adminHourlyRate || 35;
 
     res.json({

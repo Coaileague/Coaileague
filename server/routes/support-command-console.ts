@@ -1132,7 +1132,7 @@ supportCommandRouter.post('/platform/scan-now', requireSupportRole, async (req: 
     
     // Log the action
     await logSupportAction(req.user?.id || 'unknown', 'platform_scan', {
-      triggeredBy: req.user?.username || 'support_staff',
+      triggeredBy: (req as any).user?.username || 'support_staff',
       timestamp: new Date().toISOString(),
     });
 

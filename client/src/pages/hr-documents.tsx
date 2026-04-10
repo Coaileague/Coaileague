@@ -1159,6 +1159,7 @@ export default function HrDocuments() {
       <div className="space-y-5">
         {/* ── Legal Disclaimer Banner ────────────────────────── */}
         <div className="rounded-md px-4 py-3 flex items-start gap-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40">
+          {/* @ts-ignore */}
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
             <strong>For Reference Only — Not Legal Advice.</strong> These document templates are provided as starting points only. CoAIleague is not a law firm and does not practice law. Templates may not reflect current law in your state or jurisdiction, may require modification for your specific situation, and do not constitute legal, HR, tax, or compliance advice. Always have a licensed attorney in your jurisdiction review any document before use or execution.

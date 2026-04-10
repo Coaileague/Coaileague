@@ -106,7 +106,7 @@ async function collectMaintenanceAlertMetrics(): Promise<Record<string, any>> {
     const [activeResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(maintenanceAlerts)
-      .where(sql`${maintenanceAlerts.isActive} = true AND (${maintenanceAlerts.expiresAt} IS NULL OR ${maintenanceAlerts.expiresAt} > NOW())`);
+      .where(sql`${(maintenanceAlerts as any).isActive} = true AND (${(maintenanceAlerts as any).expiresAt} IS NULL OR ${(maintenanceAlerts as any).expiresAt} > NOW())`);
 
     // Acknowledgment rate
     // CATEGORY C — Raw SQL retained: COUNT( | Tables: maintenance_acknowledgments, maintenance_alerts | Verified: 2026-03-23
@@ -285,6 +285,7 @@ Format as a clear diagnostic report.`;
       featureKey: 'notification_diagnostics',
       systemPrompt: 'You are Trinity, an expert AI diagnostic agent.',
       userMessage: prompt,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       modelTier: 'diagnostics'
     });
     

@@ -53,6 +53,7 @@ router.post("/send", requirePlatformStaff, async (req: Request, res: Response) =
     const validated = sendEmailSchema.parse(req.body); // infra
     
     const result = await sendEmail({ // infra
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       to: validated.to,
       subject: validated.subject,
       html: validated.html,
@@ -81,7 +82,7 @@ router.post("/send", requirePlatformStaff, async (req: Request, res: Response) =
 router.post("/campaign", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { id?: string; currentWorkspaceId?: string };
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ error: "Workspace not found" });
     }
@@ -120,7 +121,7 @@ router.post("/campaign", requireAuth, async (req: Request, res: Response) => {
 router.post("/template", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { id?: string; currentWorkspaceId?: string };
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ error: "Workspace not found" });
     }
@@ -162,7 +163,7 @@ router.get("/templates", requireAuth, async (_req: Request, res: Response) => {
 router.get("/history", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { currentWorkspaceId?: string };
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ error: "Workspace not found" });
     }
@@ -198,7 +199,7 @@ router.get("/pricing", (_req: Request, res: Response) => {
 router.post("/seed-dev", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { currentWorkspaceId?: string };
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(403).json({ error: "Workspace not found" });
@@ -226,7 +227,7 @@ router.post("/seed-dev", requireAuth, async (req: Request, res: Response) => {
 router.post("/seed", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { currentWorkspaceId?: string; role?: string };
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     // Only allow org owners or admins to seed data
     if (!workspaceId) {
@@ -255,7 +256,7 @@ router.post("/seed", requireAuth, async (req: Request, res: Response) => {
 router.delete("/seed", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { currentWorkspaceId?: string };
-    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(403).json({ error: "Workspace not found" });

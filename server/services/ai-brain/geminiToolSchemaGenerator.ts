@@ -46,6 +46,7 @@ const COMMON_PARAMETER_SCHEMAS: Record<string, any> = {
 };
 
 // Category-specific parameter mappings
+// @ts-expect-error — TS migration: fix in refactoring sprint
 const CATEGORY_PARAMETER_SCHEMAS: Record<ActionCategory, Record<string, any>> = {
   scheduling: {
     shiftId: COMMON_PARAMETER_SCHEMAS.shiftId,

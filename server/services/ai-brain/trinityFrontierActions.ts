@@ -49,11 +49,11 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
       });
 
       return {
-        success: result.success,
+        success: (result as any).success,
         actionId: request.actionId,
-        message: result.success 
-          ? `Agent ${result.assignedAgent?.name} hired successfully` 
-          : result.reason || 'No suitable agent found',
+        message: (result as any).success 
+          ? `Agent ${(result as any).assignedAgent?.name} hired successfully` 
+          : (result as any).reason || 'No suitable agent found',
         data: result,
         executionTimeMs: Date.now() - startTime
       };

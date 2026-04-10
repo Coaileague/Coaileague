@@ -552,6 +552,7 @@ export async function autoScheduleBreaks(
   for (const breakData of scheduledBreaksData) {
     const [inserted] = await db
       .insert(scheduledBreaks)
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values(breakData)
       .returning();
     insertedBreaks.push(inserted);

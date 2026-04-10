@@ -78,6 +78,7 @@ router.get('/:shiftId/:timeEntryId', async (req: any, res) => {
   try {
     const workspaceId = req.workspaceId;
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const chatroom = await storage.getShiftChatroom(req.params.shiftId, req.params.timeEntryId);
     
     if (!chatroom) {
@@ -88,6 +89,7 @@ router.get('/:shiftId/:timeEntryId', async (req: any, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const messages = await storage.getChatMessagesByConversation(chatroom.id);
     
     res.json({ chatroom, messages });

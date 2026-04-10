@@ -230,7 +230,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
             <div>
               <Label>Custom Form Template (ReportOS™ Integration)</Label>
               <Select
-                value={(formData.customFormTemplateId as string) || ''}
+                value={(formData.customFormTemplateId as unknown as string) || ''}
                 onValueChange={(value) => setFormData({ ...formData, customFormTemplateId: value as any })}
               >
                 <SelectTrigger data-testid="select-custom-form">

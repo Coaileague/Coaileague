@@ -106,7 +106,7 @@ class ConfigRegistry {
       throw new Error(`Invalid key format: ${key}. Expected format: 'category.toggle'`);
     }
 
-    const configCategory = (this.cache as any)[category];
+    const configCategory = (this as any).cache[category];
     if (!configCategory) {
       throw new Error(`Invalid category: ${category}. Must be one of: ${Object.keys(this.cache).join(', ')}`);
     }
@@ -128,7 +128,7 @@ class ConfigRegistry {
     this.validateChange(scope, key, value);
 
     const [category, toggle] = key.split('.');
-    (this.cache as any)[category][toggle] = value;
+    (this as any).cache[category][toggle] = value;
   }
 
   /**

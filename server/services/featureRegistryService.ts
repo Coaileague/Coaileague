@@ -590,6 +590,7 @@ class FeatureRegistryService {
    */
   getTrinityContext(): {
     features: PlatformFeature[];
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     summary: ReturnType<typeof this.getFeatureSummary>;
     recentChanges: PlatformFeature[];
     deprecatedFeatures: PlatformFeature[];

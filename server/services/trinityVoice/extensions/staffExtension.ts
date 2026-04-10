@@ -399,6 +399,7 @@ export async function processClockIn(params: {
       const { NotificationDeliveryService } = await import('../../notificationDeliveryService');
       await Promise.allSettled(managers.map(m =>
         NotificationDeliveryService.send({
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           type: 'clock_in_notification',
           workspaceId,
           recipientUserId: m.userId,

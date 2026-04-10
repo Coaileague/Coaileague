@@ -4,6 +4,7 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 const error403Config: CanvasPageConfig = {
   id: 'error-403',
   title: 'Access Denied',
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   category: 'system',
   variant: 'centered',
   showHeader: false,

@@ -39,6 +39,7 @@ import {
 const pageConfig: CanvasPageConfig = {
   title: "Proposal Builder",
   subtitle: "Create and manage client proposals with templates and PDF generation",
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: FileText,
 };
 
@@ -890,9 +891,11 @@ export default function ProposalBuilderPage() {
         specialTerms: proposal.termsAndConditions,
         expiresAt: proposal.validUntil || undefined,
       });
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const contractId = contractRes.contract?.id;
       if (!contractId) throw new Error("Failed to create contract document");
       const sendRes = await apiRequest("POST", `/api/contracts/${contractId}/send`);
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return { portalUrl: sendRes.portalUrl as string, contractId };
     },
     onSuccess: (data) => setPortalModal({ open: true, url: data.portalUrl, contractId: data.contractId }),

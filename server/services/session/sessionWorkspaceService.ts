@@ -89,7 +89,7 @@ async function cacheWorkspaceInSession(
 
   if (req.session) {
     req.session.workspaceId = context.workspaceId;
-    req.session.activeWorkspaceId = context.workspaceId;
+    (req as any).session.activeWorkspaceId = context.workspaceId;
     req.session.workspaceRole = context.workspaceRole;
     req.session.employeeId = context.employeeId || undefined;
     req.session.workspaceName = context.workspaceName;
@@ -101,7 +101,7 @@ async function cacheWorkspaceInSession(
 export async function clearWorkspaceFromSession(req: Request): Promise<void> {
   if (req.session) {
     delete req.session.workspaceId;
-    delete req.session.activeWorkspaceId;
+    delete (req as any).session.activeWorkspaceId;
     delete req.session.workspaceRole;
     delete req.session.employeeId;
     delete req.session.workspaceName;

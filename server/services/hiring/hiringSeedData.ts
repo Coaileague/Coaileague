@@ -20,6 +20,7 @@ export async function seedHiringData(): Promise<{ success: boolean; message: str
     `SELECT id FROM interview_sessions WHERE workspace_id = $1 AND id = 'isess-acme-001' LIMIT 1`,
     [WS]
   );
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (sentinel.length > 0) {
     // CATEGORY C — Raw SQL retained: IS NULL | Tables: interview_sessions | Verified: 2026-03-23
     await typedPoolExec(`

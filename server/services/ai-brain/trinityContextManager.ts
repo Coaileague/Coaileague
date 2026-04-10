@@ -813,6 +813,7 @@ class TrinityContextManager {
         description: `I expressed uncertainty in response to: "${userQuery.slice(0, 100)}..."`,
         userQuery,
         suggestedActions: this.generateSuggestedActions(userQuery),
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
       };
     }

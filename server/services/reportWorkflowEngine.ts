@@ -40,7 +40,7 @@ export async function initializeWorkflow(
   }
 
   // Update submission status to 'pending_review'
-  await storage.updateReportSubmission(submissionId, {
+  await storage.updateReportSubmission(submissionId, workspaceId, {
     status: 'pending_review',
     submittedAt: new Date(),
   });
@@ -125,7 +125,7 @@ export async function processApproval(
 
   // Update submission status
   if (action === 'reject') {
-    await storage.updateReportSubmission(submissionId, {
+    await storage.updateReportSubmission(submissionId, step.workspaceId, {
       status: 'rejected',
     });
 
@@ -141,7 +141,7 @@ export async function processApproval(
   }
 
   // Check if there are more steps
-  const allSteps = await storage.getApprovalStepsBySubmission(submissionId);
+  const allSteps = await storage.getApprovalStepsBySubmission(submissionId, step.workspaceId);
   const currentStepNumber = step.stepNumber;
   const nextStep = allSteps.find(s => s.stepNumber === currentStepNumber + 1);
 
@@ -197,7 +197,7 @@ async function finalizeWorkflow(
   switch (workflow.finalDestination) {
     case 'audit_database':
       // Set to approved and lock
-      await storage.updateReportSubmission(submissionId, {
+      await storage.updateReportSubmission(submissionId, workspaceId, {
         status: 'approved',
       });
       
@@ -210,7 +210,7 @@ async function finalizeWorkflow(
 
     case 'email_client':
       // First approve
-      await storage.updateReportSubmission(submissionId, {
+      await storage.updateReportSubmission(submissionId, workspaceId, {
         status: 'approved',
       });
       
@@ -225,7 +225,7 @@ async function finalizeWorkflow(
 
     case 'return_to_submitter':
       // Just mark as approved and return
-      await storage.updateReportSubmission(submissionId, {
+      await storage.updateReportSubmission(submissionId, workspaceId, {
         status: 'approved',
       });
       
@@ -348,7 +348,7 @@ async function notifyNextApprover(
   submissionId: string,
   workspaceId: string
 ): Promise<void> {
-  const steps = await storage.getApprovalStepsBySubmission(submissionId);
+  const steps = await storage.getApprovalStepsBySubmission(submissionId, workspaceId);
   const pendingStep = steps.find(s => s.status === 'pending');
 
   if (!pendingStep) {

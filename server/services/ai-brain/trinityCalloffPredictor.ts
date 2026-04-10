@@ -130,7 +130,7 @@ class TrinityCalloffPredictor {
         LIMIT 100
       `, [workspaceId, horizonHours]);
 
-      return (result as any[]).map(row => this.scoreCalloffRisk(row));
+      return (result as unknown as any[]).map(row => this.scoreCalloffRisk(row));
     } catch (err: any) {
       log.error(`[CalloffPredictor] Failed to compute calloff risks: ${(err instanceof Error ? err.message : String(err))}`);
       return [];
@@ -243,7 +243,7 @@ class TrinityCalloffPredictor {
         LIMIT 20
       `, [workspaceId]);
 
-      return (result as any[]).map(row => this.scoreSiteRisk(row));
+      return (result as unknown as any[]).map(row => this.scoreSiteRisk(row));
     } catch (err: any) {
       log.error(`[CalloffPredictor] Failed to compute site risks: ${(err instanceof Error ? err.message : String(err))}`);
       return [];
@@ -323,9 +323,9 @@ class TrinityCalloffPredictor {
         LIMIT 1
       `, [employeeId, workspaceId]);
 
-      if (!(result as any[]).length) return null;
+      if (!(result as unknown as any[]).length) return null;
 
-      const row = { ...(result as any[])[0], day_of_week: new Date().getDay(), shift_hour: 8 };
+      const row = { ...(result as unknown as any[])[0], day_of_week: new Date().getDay(), shift_hour: 8 };
       const scored = this.scoreCalloffRisk(row);
       return {
         riskScore: scored.riskScore,

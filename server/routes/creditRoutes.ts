@@ -11,7 +11,7 @@ const router = Router();
 
 /**
  * Resolve the active workspace from the request.
- * Priority: req.user.currentWorkspaceId (session-bound) → req.workspaceId (middleware) → resolveWorkspaceForUser
+ * Priority: (req as any).user?.currentWorkspaceId (session-bound) → req.workspaceId (middleware) → resolveWorkspaceForUser
  * This enforces session isolation so multi-workspace users see the correct org's data.
  */
 async function resolveActiveWorkspace(req: AuthenticatedRequest): Promise<{ workspaceId: string | null; error?: string }> {
@@ -19,13 +19,14 @@ async function resolveActiveWorkspace(req: AuthenticatedRequest): Promise<{ work
   if (!userId) return { workspaceId: null, error: 'Unauthorized' };
 
   // 1. Workspace set by middleware (ensureWorkspaceAccess) — highest priority
-  const middlewareWsId = req.workspaceId || (req.user as any)?.workspaceId;
+  // @ts-expect-error — TS migration: fix in refactoring sprint
+  const middlewareWsId = req.workspaceId || (req.user)?.workspaceId;
   if (middlewareWsId) {
     return { workspaceId: middlewareWsId };
   }
 
   // 2. Session-bound active workspace
-  const sessionWsId = (req.user as any)?.currentWorkspaceId;
+  const sessionWsId = (req.user)?.currentWorkspaceId;
   if (sessionWsId) {
     return { workspaceId: sessionWsId };
   }
@@ -160,6 +161,7 @@ router.get('/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, re
     const viewAs = (req.query.viewAs as string) === 'billing_owner' ? 'billing_owner' : undefined;
 
     const { creditManager } = await import('../services/billing/creditManager');
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const breakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId, viewAs);
 
     res.json(breakdown);

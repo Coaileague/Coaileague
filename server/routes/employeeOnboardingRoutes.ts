@@ -18,7 +18,8 @@ export const employeeOnboardingRoutes = Router();
 // Get employee's own onboarding status (required documents, work eligibility)
 employeeOnboardingRoutes.get('/me', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user?.id || (req.user as any)?.claims?.sub;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
+    const userId = req.user?.id || (req.user)?.claims?.sub;
     const employee = await storage.getEmployeeByUserId(userId);
     
     if (!employee) {

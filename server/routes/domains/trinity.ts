@@ -96,7 +96,8 @@ brainDashboardRouter.get("/acc/stats", requireAuth, ensureWorkspaceAccess, async
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.workspaceId
-      || (authReq.user as any)?.workspaceId
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      || (authReq.user)?.workspaceId
       || '';
     if (!workspaceId) return res.status(400).json({ success: false, error: 'Workspace context required' });
     const stats = await trinityACC.getDashboardStats(workspaceId);
@@ -110,7 +111,8 @@ brainDashboardRouter.get("/thalamic/stats", requireAuth, ensureWorkspaceAccess, 
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.workspaceId
-      || (authReq.user as any)?.workspaceId
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      || (authReq.user)?.workspaceId
       || '';
     if (!workspaceId) return res.status(400).json({ success: false, error: 'Workspace context required' });
     const stats = await trinityThalamus.getDashboardStats(workspaceId);

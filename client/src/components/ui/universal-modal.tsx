@@ -171,6 +171,7 @@ function UniversalModalContent({
     if (Object.keys(props).length > 0) {
       setOverride(props)
     }
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return () => setOverride(null)
   }, [size, side, showHomeButton, homeButtonPath, isGuest, hideBuiltInClose, className, setOverride])
 

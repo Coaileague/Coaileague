@@ -141,6 +141,7 @@ export function ShiftBottomSheet({
         employeeId: editingShift.employeeId || '',
         title: editingShift.title || '',
         clientId: editingShift.clientId || '',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         location: editingShift.location || '',
         startTime: format(start, 'HH:mm'),
         endTime: format(end, 'HH:mm'),

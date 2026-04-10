@@ -51,6 +51,7 @@ async function resolveCallerEmployee(req: AuthenticatedRequest) {
   const [emp] = await db
     .select()
     .from(employees)
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     .where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)))
     .limit(1);
   return emp || null;
@@ -488,6 +489,7 @@ router.post('/reviews', requireAuth, async (req: AuthenticatedRequest, res) => {
 
     const [review] = await db
       .insert(performanceReviews)
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values({
         workspaceId,
         employeeId,

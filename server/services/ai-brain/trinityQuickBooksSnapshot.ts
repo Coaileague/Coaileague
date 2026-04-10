@@ -267,7 +267,7 @@ class TrinityQuickBooksSnapshotService {
             .from(clients)
             .where(eq(clients.id, inv.clientId))
             .limit(1);
-          if (client) clientName = client.companyName || `${client.firstName || ""} ${client.lastName || ""}`.trim() || "Unknown";
+          if (client) clientName = (client as any).companyName || `(${(client as any).firstName || ""} as (any) as any) ${(client as any).lastName || ""}`.trim() || "Unknown";
         }
         
         const daysOverdue = inv.dueDate 

@@ -92,6 +92,7 @@ router.patch('/', requireOwnerOrPlatformStaff, async (req, res) => {
   }
 
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await upsertPermission(workspaceId, role, featureKey, enabled, authReq.user?.id ?? null);
     broadcastToWorkspace(workspaceId, {
       type: 'permission_update',
@@ -122,6 +123,7 @@ router.delete('/', requireOwnerOrPlatformStaff, async (req, res) => {
   }
 
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await deletePermission(workspaceId, role, featureKey);
     broadcastToWorkspace(workspaceId, { type: 'permission_update', role, featureKey, reset: true });
     return res.json({ ok: true, reset: true, role, featureKey });

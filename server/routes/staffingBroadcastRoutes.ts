@@ -49,7 +49,7 @@ const broadcastSchema = z.object({
 
 staffingBroadcastRouter.post('/broadcast', requireAuth, async (req: Request, res: Response) => {
   const user = req.user;
-  const workspaceId = req.workspaceId || user?.currentWorkspaceId || user?.workspaceId;
+  const workspaceId = req.workspaceId || user?.currentWorkspaceId || (user as any)?.workspaceId;
   if (!workspaceId) return res.status(400).json({ error: 'Workspace ID required' });
 
   const parsed = broadcastSchema.safeParse(req.body);
@@ -60,7 +60,7 @@ staffingBroadcastRouter.post('/broadcast', requireAuth, async (req: Request, res
   try {
     const result = await createShiftBroadcast({
       workspaceId,
-      broadcastedBy: user?.id || user?.claims?.sub || 'system',
+      broadcastedBy: user?.id || (user as any)?.claims?.sub || 'system',
       ...parsed.data,
     });
 
@@ -95,7 +95,7 @@ const calloffSchema = z.object({
 
 staffingBroadcastRouter.post('/calloff', requireAuth, async (req: Request, res: Response) => {
   const user = req.user;
-  const workspaceId = req.workspaceId || user?.currentWorkspaceId || user?.workspaceId;
+  const workspaceId = req.workspaceId || user?.currentWorkspaceId || (user as any)?.workspaceId;
   if (!workspaceId) return res.status(400).json({ error: 'Workspace ID required' });
 
   const parsed = calloffSchema.safeParse(req.body);
@@ -165,7 +165,7 @@ const assignSchema = z.object({
 
 staffingBroadcastRouter.post('/replacement/assign', requireAuth, async (req: Request, res: Response) => {
   const user = req.user;
-  const workspaceId = req.workspaceId || user?.currentWorkspaceId || user?.workspaceId;
+  const workspaceId = req.workspaceId || user?.currentWorkspaceId || (user as any)?.workspaceId;
   if (!workspaceId) return res.status(400).json({ error: 'Workspace ID required' });
 
   const parsed = assignSchema.safeParse(req.body);

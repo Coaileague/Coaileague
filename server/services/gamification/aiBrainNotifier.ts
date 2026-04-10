@@ -66,7 +66,7 @@ export class AiBrainNotifier {
         stats: {
           totalPoints: pointsRecord?.totalPoints || 0,
           level: pointsRecord?.currentLevel || 1,
-          streak: pointsRecord?.currentStreak || 0,
+          streak: (pointsRecord as any)?.currentStreak || 0,
           pointsAwarded: points || 0,
         },
         metadata: {
@@ -147,8 +147,8 @@ export class AiBrainNotifier {
       return {
         engagement_level: pointsRecord.currentLevel || 1,
         activity_score: pointsRecord.totalPoints || 0,
-        streak_status: pointsRecord.currentStreak || 0,
-        monthly_performance: pointsRecord.pointsThisMonth || 0,
+        streak_status: (pointsRecord as any).currentStreak || 0,
+        monthly_performance: (pointsRecord as any).pointsThisMonth || 0,
         achievements_count: pointsRecord.achievementsEarned || 0,
         last_active: pointsRecord.lastActivityAt,
       };

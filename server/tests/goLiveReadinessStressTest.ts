@@ -601,7 +601,7 @@ async function phase9_credit_economy_sustainability() {
   const tiers = ['starter', 'professional', 'enterprise'] as const;
   for (const tier of tiers) {
     const monthlyCredits = TIER_MONTHLY_CREDITS[tier];
-    const monthlyPrice = (BILLING.tiers as any)[tier].monthlyPrice;
+    const monthlyPrice = (BILLING as any).tiers[tier].monthlyPrice;
     const creditValue = monthlyCredits * 0.01;
     const creditPercent = (creditValue / (monthlyPrice / 100)) * 100;
 
@@ -825,7 +825,7 @@ async function phase12_data_integrity() {
   const billingTiers = ['free', 'starter', 'professional', 'enterprise'];
   let tierMismatch = false;
   for (const tier of billingTiers) {
-    const billingCredits = (BILLING.tiers as any)[tier]?.monthlyCredits;
+    const billingCredits = (BILLING as any).tiers[tier]?.monthlyCredits;
     const cmCredits = TIER_MONTHLY_CREDITS[tier];
     const allocCredits = TIER_CREDIT_ALLOCATIONS[tier as keyof typeof TIER_CREDIT_ALLOCATIONS];
     if (billingCredits !== cmCredits || cmCredits !== allocCredits) {
@@ -851,7 +851,7 @@ async function phase12_data_integrity() {
   };
   let stripeMismatch = false;
   for (const tier of billingTiers) {
-    if ((stripeAmounts as any)[tier] !== (BILLING.tiers as any)[tier].monthlyPrice) {
+    if ((stripeAmounts as any)[tier] !== (BILLING as any).tiers[tier].monthlyPrice) {
       stripeMismatch = true;
     }
   }

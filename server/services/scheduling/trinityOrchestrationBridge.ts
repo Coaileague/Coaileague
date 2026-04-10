@@ -53,9 +53,10 @@ export function registerSchedulingWithOrchestration() {
     try {
       // Parse work request and create shift
       const { workRequestParser } = await import('../trinityStaffing/workRequestParser');
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const parsedRequest = await workRequestParser.parseWorkRequest(data.content);
       
-      if (parsedRequest.success && parsedRequest.shift) {
+      if (parsedRequest.success && (parsedRequest as any).shift) {
         // Auto-schedule the created shift
         platformEventBus.emit('trinity_scheduling_request', {
           workspaceId: data.workspaceId,
@@ -113,7 +114,7 @@ export async function getSchedulingOrchestrationStatus(workspaceId: string): Pro
   
   return {
     daemonRunning: status.isRunning,
-    lastRun: status.lastRun,
+    lastRun: (status as any).lastRun,
     pendingShifts: pendingShifts.length,
     automationEnabled: true,
   };

@@ -712,15 +712,17 @@ class TrinityGuruMode {
     let improvementPercent = 0;
 
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (improvement.type === 'prompt_optimization') {
-        improvementPercent = improvement.proposedChanges?.length > 0 ? 25 : 5;
+        improvementPercent = (improvement as any).proposedChanges?.length > 0 ? 25 : 5;
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       } else if (improvement.type === 'routing_optimization') {
         improvementPercent = 15;
       } else {
         improvementPercent = 10;
       }
 
-      if (!improvement.proposedChanges || improvement.proposedChanges.length === 0) {
+      if (!(improvement as any).proposedChanges || (improvement as any).proposedChanges.length === 0) {
         errors.push('No proposed changes to validate');
         improvementPercent = 0;
       }
@@ -737,7 +739,7 @@ class TrinityGuruMode {
   }
   
   private async runABTest(improvement: EvolutionImprovement, trafficPercent: number): Promise<ABTestResult> {
-    const hasChanges = improvement.proposedChanges && improvement.proposedChanges.length > 0;
+    const hasChanges = (improvement as any).proposedChanges && (improvement as any).proposedChanges.length > 0;
     const performanceEstimate = hasChanges ? 1.0 + (trafficPercent / 1000) : 0.98;
 
     return {

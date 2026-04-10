@@ -34,7 +34,8 @@ const requireTrinityAccess = (req: Request, res: Response, next: NextFunction) =
   // Check workspaceRole from attachWorkspaceId middleware (req.workspaceRole)
   // This is properly resolved from workspace ownership or employee record
   const orgRole = authReq.workspaceRole;
-  const platformRole = authReq.platformRole || (authReq.user as any).platformRole;
+  // @ts-expect-error — TS migration: fix in refactoring sprint
+  const platformRole = (authReq as any).platformRole || (authReq.user).platformRole;
   
   // Allow if user has an allowed org role OR platform role
   const hasOrgAccess = orgRole && allowedOrgRoles.includes(orgRole);
@@ -98,7 +99,8 @@ router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Reques
     }
 
     // v2.0: Detect support mode from platform role
-    const platformRole = (authReq.user as any)?.platformRole || null;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
+    const platformRole = (authReq.user)?.platformRole || null;
     const SUPPORT_PLATFORM_ROLES = ['root_admin', 'co_admin', 'sysops', 'deputy_admin'];
     const isSupportMode = platformRole !== null && SUPPORT_PLATFORM_ROLES.includes(platformRole);
 

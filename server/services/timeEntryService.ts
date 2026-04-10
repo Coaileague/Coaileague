@@ -205,6 +205,7 @@ export async function createTimeEntry(
 
   const result = await db
     .insert(timeEntries)
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     .values(insertValues)
     .returning();
 

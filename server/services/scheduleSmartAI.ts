@@ -50,6 +50,7 @@ export interface ScheduleSmartRequest {
       considerAbsenteeismRisk?: boolean;
     };
   };
+  scoringContext?: Record<string, any>;
 }
 
 export interface ScheduleSmartResponse {

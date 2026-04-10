@@ -337,7 +337,7 @@ class ChaosTestingService {
 
     const baseResults: ExperimentResults = {
       success: true,
-      metricsCollected: experiment.config.metrics?.length || 5,
+      metricsCollected: (experiment as any).config.metrics?.length || 5,
       errorsObserved: 0,
       recoveryTimeMs: executionMs,
       systemBehavior: 'expected',

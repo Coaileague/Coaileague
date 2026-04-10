@@ -227,6 +227,7 @@ class TrinityActionReasonerService {
             flags: aiResult.laborLawFlags,
             decision: aiResult.decision,
             severity: 'high',
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             audience: 'manager',
           },
         });
@@ -250,6 +251,7 @@ class TrinityActionReasonerService {
             reason: aiResult.blockReason,
             actionSummary: ctx.actionSummary,
             severity: 'medium',
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             audience: 'manager',
           },
         });

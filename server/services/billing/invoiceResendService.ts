@@ -146,6 +146,7 @@ export async function bulkResendUndeliveredInvoices(
         .set({ resentAfterDeliveryFailure: true })
         .where(eq(invoices.id, inv.id));
 
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await universalAudit({
         workspaceId: inv.workspaceId,
         action: 'invoice.resent_after_failure' as any,
