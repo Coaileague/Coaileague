@@ -1616,6 +1616,9 @@ export const inboundEmailLog = pgTable("inbound_email_log", {
   // Failure capture
   failureReason: text("failure_reason"),
 
+  // AI-extracted structured fields from the email body (populated after Trinity processing)
+  extractedFields: jsonb("extracted_fields").$type<Record<string, unknown>>(),
+
   // Raw payload preserved for debugging and reprocessing
   rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>(),
 
