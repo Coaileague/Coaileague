@@ -12,7 +12,6 @@
  */
 
 import { useState, useRef, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
-import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
@@ -66,6 +65,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
+import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
 import { Suspense } from 'react';
 import { TrinityAgentPanel } from '@/components/trinity';
 import { TrinityActionHistoryPanel } from '@/components/trinity/TrinityActionHistoryPanel';
@@ -556,9 +556,8 @@ function UsageBlock({ usage }: { usage: UsageData }) {
   );
 }
 
-// Thinking visualization component with animated Trinity mascot
+// Thinking visualization component with animated Trinity arrow mark
 function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: ConversationMode }) {
-  // Uses TrinityArrowMark (the splash arrow mark) for the thinking avatar.
   
   // Get current active step for the substage display
   const currentStep = steps.find(s => s.status === 'processing') || steps[steps.length - 1];
@@ -571,12 +570,10 @@ function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: C
       animate={{ opacity: 1, y: 0 }}
       className="flex gap-3"
     >
-      {/* Animated Trinity Avatar - Canvas for crisp rendering */}
+      {/* Animated Trinity Avatar - spins while thinking */}
       <div className="shrink-0">
         <div className="w-10 h-10 flex items-center justify-center">
-          <Suspense fallback={<div className="w-10 h-10" />}>
-            <TrinityArrowMark size={40} />
-          </Suspense>
+          <TrinityAnimatedLogo size="md" state="thinking" />
         </div>
       </div>
       
@@ -944,6 +941,13 @@ function TrinityModal({ onClose }: TrinityModalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ID of the last assistant message — used to animate only the most-recent
+  // Trinity avatar (responding state) while older ones stay idle.
+  const lastAssistantMsgId = useMemo(
+    () => [...messages].reverse().find(m => m.role === 'assistant')?.id,
+    [messages]
+  );
 
   const agentState = useTrinityState({
     conversationId: agentModeActive ? conversationId : null,
@@ -1421,9 +1425,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                 {messages.length === 0 && !isThinking && (
                   <div className="flex flex-col items-center justify-center text-center py-6">
                     <div className="w-16 h-16 flex items-center justify-center mb-3">
-                      <Suspense fallback={<div className="w-16 h-16" />}>
-                        <TrinityArrowMark size={64} />
-                      </Suspense>
+                      <TrinityAnimatedLogo size="lg" state="idle" />
                     </div>
                     <h3 className="font-semibold text-lg mb-1">Ask Trinity Anything</h3>
                     <p className="text-sm text-muted-foreground max-w-xs mb-4">
@@ -1444,7 +1446,10 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                       {msg.role === 'assistant' && (
                         <div className="shrink-0 pt-5">
                           <div className="w-8 h-8 flex items-center justify-center">
-                            <TrinityLogo size={24} />
+                            <TrinityAnimatedLogo
+                              size="sm"
+                              state={isSpeaking && msg.id === lastAssistantMsgId ? "responding" : "idle"}
+                            />
                           </div>
                         </div>
                       )}
@@ -1621,9 +1626,10 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         data-testid="trinity-modal-minimized"
       >
         <div className="w-14 h-14 flex items-center justify-center">
-          <Suspense fallback={<div className="w-14 h-14" />}>
-            <TrinityArrowMark size={56} />
-          </Suspense>
+          <TrinityAnimatedLogo
+            size="lg"
+            state={isThinking ? "thinking" : isSpeaking ? "responding" : "idle"}
+          />
           {messages.length > 0 && (
             <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-xs flex items-center justify-center">
               {messages.length}
@@ -1706,7 +1712,10 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                     {msg.role === 'assistant' && (
                       <div className="shrink-0 pt-5">
                         <div className="w-7 h-7 flex items-center justify-center">
-                          <TrinityLogo size={24} />
+                          <TrinityAnimatedLogo
+                            size="sm"
+                            state={isSpeaking && msg.id === lastAssistantMsgId ? "responding" : "idle"}
+                          />
                         </div>
                       </div>
                     )}
