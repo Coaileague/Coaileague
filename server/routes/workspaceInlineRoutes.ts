@@ -445,6 +445,18 @@ async function applyAutomationUpdate(params: {
         'stateLicenseExpiry': 'stateLicenseExpiry',
         'businessCategory': 'businessCategory',
         'industry': 'businessCategory',
+        // Timezone & labor configuration
+        'timezone': 'timezone',
+        'primaryOperatingState': 'primaryOperatingState',
+        'operatingStates': 'operatingStates',
+        'laborLawJurisdiction': 'laborLawJurisdiction',
+        // Overtime thresholds
+        'enableDailyOvertime': 'enableDailyOvertime',
+        'dailyOvertimeThreshold': 'dailyOvertimeThreshold',
+        'weeklyOvertimeThreshold': 'weeklyOvertimeThreshold',
+        // Break compliance toggles
+        'autoBreakSchedulingEnabled': 'autoBreakSchedulingEnabled',
+        'breakComplianceAlerts': 'breakComplianceAlerts',
       };
       
       const filteredData: any = {};

@@ -440,11 +440,11 @@ function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
 
   const updateWorkspaceMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest('PATCH', `/api/workspaces/${workspace?.id}`, data);
+      const res = await apiRequest('PATCH', `/api/workspace`, data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspace?.id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
       setWorkspaceSaveSuccess(true);
       setTimeout(() => setWorkspaceSaveSuccess(false), 2000);
       toast({

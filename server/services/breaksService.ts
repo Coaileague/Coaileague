@@ -683,14 +683,22 @@ export async function checkShiftCompliance(
  */
 export async function updateWorkspaceJurisdiction(
   workspaceId: string,
-  jurisdiction: string
+  jurisdiction: string,
+  opts?: { autoBreakSchedulingEnabled?: boolean; breakComplianceAlerts?: boolean }
 ): Promise<Workspace> {
+  const updates: Record<string, unknown> = {
+    laborLawJurisdiction: jurisdiction,
+    updatedAt: new Date(),
+  };
+  if (opts?.autoBreakSchedulingEnabled !== undefined) {
+    updates.autoBreakSchedulingEnabled = opts.autoBreakSchedulingEnabled;
+  }
+  if (opts?.breakComplianceAlerts !== undefined) {
+    updates.breakComplianceAlerts = opts.breakComplianceAlerts;
+  }
   const [updated] = await db
     .update(workspaces)
-    .set({
-      laborLawJurisdiction: jurisdiction,
-      updatedAt: new Date(),
-    })
+    .set(updates as any)
     .where(eq(workspaces.id, workspaceId))
     .returning();
 

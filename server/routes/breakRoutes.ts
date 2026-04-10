@@ -266,7 +266,7 @@ router.get("/shift/:shiftId", requireAuth, readLimiter, async (req: Authenticate
 router.patch("/jurisdiction", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
-    const { jurisdiction } = req.body;
+    const { jurisdiction, autoBreakSchedulingEnabled, breakComplianceAlerts } = req.body;
 
     if (!jurisdiction) {
       return res.status(400).json({ error: 'jurisdiction is required' });
@@ -278,12 +278,17 @@ router.patch("/jurisdiction", requireManager, async (req: AuthenticatedRequest, 
       return res.status(404).json({ error: 'Invalid jurisdiction code' });
     }
 
-    const updated = await breaksService.updateWorkspaceJurisdiction(workspaceId, jurisdiction);
+    const updated = await breaksService.updateWorkspaceJurisdiction(workspaceId, jurisdiction, {
+      autoBreakSchedulingEnabled,
+      breakComplianceAlerts,
+    });
 
     res.json({ 
       success: true, 
       data: {
         laborLawJurisdiction: updated.laborLawJurisdiction,
+        autoBreakSchedulingEnabled: updated.autoBreakSchedulingEnabled,
+        breakComplianceAlerts: updated.breakComplianceAlerts,
         rules,
       },
       message: `Jurisdiction updated to ${rules.jurisdictionName}`
