@@ -16,6 +16,7 @@ import { createLogger } from '../lib/logger';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { pool } from '../db';
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
+import { isProduction } from '../lib/isProduction';
 const log = createLogger('InboundEmailRoutes');
 
 import {
@@ -39,7 +40,7 @@ const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || '';
 function verifyResendSignature(rawBody: Buffer, headers: Record<string, string | string[] | undefined>): boolean {
   if (!WEBHOOK_SECRET) {
     log.warn('[InboundEmail] RESEND_WEBHOOK_SECRET not set — skipping signature verification in dev');
-    return process.env.NODE_ENV !== 'production';
+    return !isProduction();
   }
 
   // Support both Resend-native and svix-style headers
@@ -52,7 +53,7 @@ function verifyResendSignature(rawBody: Buffer, headers: Record<string, string |
 
   if (!signature) {
     log.warn('[InboundEmail] No signature header found');
-    return process.env.NODE_ENV !== 'production';
+    return !isProduction();
   }
 
   try {
