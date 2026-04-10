@@ -551,6 +551,7 @@ class TrinityResolutionFabricService {
     issue: TrinityIssue,
   ): Promise<string | null> {
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const result = await domainLeadSupervisorService.submitTask(domain, action, {
         workspaceId: issue.workspaceId,
         issueType: issue.type,

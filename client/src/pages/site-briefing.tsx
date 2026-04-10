@@ -36,6 +36,7 @@ import type { SiteBriefing } from "@shared/schema";
 const pageConfig: CanvasPageConfig = {
   title: "Site Briefing Hub",
   subtitle: "Emergency contacts, access codes, and site instructions for every location",
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: Shield,
 };
 

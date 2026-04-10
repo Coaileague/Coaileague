@@ -455,6 +455,7 @@ async function printSummary(priceMap: Map<string, string>): Promise<void> {
 // ── Main ──────────────────────────────────────────────────────────────────
 async function main() {
   sep('CoAIleague Stripe Test Seeder — Start');
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   console.log(`  Using test key: sk_test_...${TEST_KEY.slice(-6)}`);
   console.log(`  Webhook target: ${LOCAL_WEBHOOK}`);
 

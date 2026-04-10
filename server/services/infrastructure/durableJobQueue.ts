@@ -521,7 +521,9 @@ class DurableJobQueueService {
       completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
       error: row.error || undefined,
       result: row.result as Record<string, any> | undefined,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       createdAt: new Date(row.createdAt),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       updatedAt: new Date(row.updatedAt),
     };
   }

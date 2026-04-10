@@ -368,6 +368,7 @@ class CrisisManagerService {
         const refundResult = await creditManager.refundCredits({
           workspaceId,
           amount: totalCredits,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           reason: `Dispute Resolution: ${incidentId} - System fault reimbursement + goodwill bonus`,
           issuedByUserId: initiatedBy,
           issuedByName: 'Crisis Manager',

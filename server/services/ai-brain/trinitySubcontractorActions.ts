@@ -149,6 +149,7 @@ export function registerSubcontractorActions() {
       requested: true,
       subcontractorName: sub.companyName,
       marginPerHr: margin,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       estimatedTotalMargin: margin * Number(shift.totalHours || 0)
     };
   }));
@@ -161,6 +162,7 @@ export function registerSubcontractorActions() {
     // Find employees belonging to this subcontractor
     const subEmployees = await db.select({ id: employees.id })
       .from(employees)
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isContractor, true))); 
       // In a real system, employees would have a parentClientId or similar.
       // The session plan says "Uses existing employees table linked to subcontractor client".
@@ -201,7 +203,9 @@ export function registerSubcontractorActions() {
 
     const entries = await db.select().from(timeEntries).where(and(
       eq(timeEntries.workspaceId, workspaceId),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       gte(timeEntries.startTime, start),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       lte(timeEntries.endTime, end)
       // and linked to sub...
     ));

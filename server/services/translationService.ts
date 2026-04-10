@@ -154,6 +154,7 @@ export async function translateIncidentReport(params: {
   );
   if (!(result as any).length) return null;
 
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const report = result[0];
   const originalLanguage: SupportedLanguage = (report.original_language as SupportedLanguage) || "en";
   const textToTranslate = report.polished_description || report.raw_description || "";

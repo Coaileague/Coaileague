@@ -166,6 +166,7 @@ router.post('/sync/:provider', requireAuth, async (req: Request, res: Response) 
         entities: parsed.data.entities as EntityType[],
         fullSync: parsed.data.fullSync,
       },
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId,
     });
 

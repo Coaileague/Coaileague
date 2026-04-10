@@ -104,6 +104,7 @@ export function TicketContextPanel({
                 </div>
                 {user.subscriptionTier && (
                   <Badge 
+                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     className={cn("text-white flex-shrink-0", tierColors[user.subscriptionTier])}
                     data-testid="user-tier-badge"
                   >

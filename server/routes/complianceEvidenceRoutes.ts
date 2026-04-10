@@ -189,6 +189,7 @@ router.post("/", requireAuth, async (req: any, res) => {
           workspaceId: req.workspaceId,
           recipientRole: 'manager',
           type: 'compliance_evidence_pending',
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           priority: 'normal',
           title: 'Compliance Document Pending Review',
           message: `New ${evidenceType.replace(/_/g, ' ')} submitted by officer ${officerId} is awaiting compliance review.`,

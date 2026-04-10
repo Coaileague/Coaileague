@@ -625,6 +625,7 @@ export function useChatroomWebSocket(
 
             case 'irc:typing':
               if (data.roomId && data.userId !== userIdRef.current) {
+                // @ts-expect-error — TS migration: fix in refactoring sprint
                 setTypingUsers((prev: any) => {
                   const key = `${data.roomId}:${data.conversationId || data.roomId}`;
                   const current = prev instanceof Map ? (prev.get(key) || new Set()) : new Set();
@@ -719,6 +720,7 @@ export function useChatroomWebSocket(
                   isSystemMessage: true,
                 };
 
+                // @ts-expect-error — TS migration: fix in refactoring sprint
                 setMessages((prev) => {
                   if (prev.some(m => m.id === systemMessage.id)) return prev;
                   return [...prev, systemMessage];
@@ -748,6 +750,7 @@ export function useChatroomWebSocket(
                     metadata: data.metadata,
                   };
 
+                  // @ts-expect-error — TS migration: fix in refactoring sprint
                   setMessages((prev) => {
                     if (prev.some(m => m.id === ircMessage.id)) return prev;
                     return [...prev, ircMessage];

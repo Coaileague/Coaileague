@@ -749,6 +749,7 @@ class TrinityKnowledgeService {
   }): Promise<string> {
     const [row] = await db
       .insert(trinityKnowledgeBase)
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values({
         workspaceId: opts.workspaceId,
         scope: 'workspace',

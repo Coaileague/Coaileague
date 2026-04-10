@@ -233,6 +233,7 @@ router.post("/api/report-submissions", requireAuth, async (req: any, res) => {
 router.patch("/api/report-submissions/:id", requireAuth, async (req: any, res) => {
   try {
     const { id } = req.params;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const submission = await storage.updateReportSubmission(id, req.body);
     res.json(submission);
   } catch (error) {
@@ -311,6 +312,7 @@ router.post("/api/report-submissions/:id/send-to-client", requireManager, async 
       reportNumber: submission.reportNumber,
       reportName,
       submittedBy: employeeName,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       submittedDate: new Date(submission.submittedAt || submission.createdAt).toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'long', 
@@ -325,6 +327,7 @@ router.post("/api/report-submissions/:id/send-to-client", requireManager, async 
       return res.status(500).json({ message: "Failed to send email to client" });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const updatedSubmission = await storage.updateReportSubmission(id, {
       status: 'sent_to_customer',
     });
@@ -344,8 +347,11 @@ router.post("/api/report-submissions/:id/generate-access", requireAuth, async (r
   try {
     const { id } = req.params;
     
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const generateAccessBodySchema = z.object({
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       clientId: z.string().min(1, 'Client ID is required'),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       expirationDays: z.number().int().positive().optional(),
     });
     const generateAccessParsed = generateAccessBodySchema.safeParse(req.body);

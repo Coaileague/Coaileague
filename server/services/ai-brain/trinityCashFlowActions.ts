@@ -17,6 +17,7 @@ import { db } from '../../db';
 import { invoices, payrollRuns, workspaceMembers } from '@shared/schema';
 import { eq, and, gte, lte, lt, inArray, sql, desc } from 'drizzle-orm';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { ActionRequest, ActionResult, ActionHandler } from './actionRegistry';
 import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';

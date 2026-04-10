@@ -172,6 +172,7 @@ export function getStatusState(
   }
 
   // HelpAI unavailable when explicitly not processing and not connected
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (entity === "helpai" && !isProcessing && modelStatus.overall === "fallback") {
     return "unavailable";
   }

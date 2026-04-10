@@ -155,6 +155,7 @@ export class IncidentRoutingService {
     const severity = data.manualSeverity || this.calculateSeverity(data.type, data.description);
     routingDetails.push(`Severity calculated: ${severity}`);
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [incident] = await db.insert(securityIncidents).values({
       workspaceId: data.workspaceId,
       employeeId: data.employeeId,

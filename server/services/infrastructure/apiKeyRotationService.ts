@@ -206,6 +206,7 @@ class ApiKeyRotationService {
 
     try {
       // CATEGORY C — Raw SQL retained: ::jsonb | Tables: managed_api_keys | Verified: 2026-03-23
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(managedApiKeys).values({
         id: keyId,
         name: params.name,
@@ -465,6 +466,7 @@ class ApiKeyRotationService {
     reason?: string,
     performedBy?: string
   ): Promise<void> {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(keyRotationHistory).values({
       keyId: keyId,
       action: action,

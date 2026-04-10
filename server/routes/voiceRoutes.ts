@@ -574,7 +574,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
           const baseUrl = process.env.APP_URL || '';
           // Use a typed create call; statusCallbackUrl is a valid Twilio param
           // transcriptions.create accepts optional params beyond the TS typings
-          await (twilioClient.recordings(RecordingSid).transcriptions.create as (
+          await ((twilioClient.recordings(RecordingSid) as any).transcriptions.create as (
             opts: { statusCallbackUrl?: string }
           ) => Promise<unknown>)({
             statusCallbackUrl: `${baseUrl}/api/voice/transcription-done`,

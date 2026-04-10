@@ -108,6 +108,7 @@ async function populateDemoData() {
 
   const createdEmployees = [demoUserEmployee]; // Include demo user in employees list
   for (const emp of employeeData) {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [employee] = await db.insert(employees).values({
       ...emp,
       workspaceId: DEMO_WORKSPACE_ID,

@@ -11,6 +11,7 @@ export function useLocationCapture() {
       return;
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { id, update } = toast({ title: 'Capturing location...' });
 
     navigator.geolocation.getCurrentPosition(

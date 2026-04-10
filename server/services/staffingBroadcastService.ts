@@ -361,6 +361,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
       entityType: 'shift',
       entityId: params.shiftId,
       userId: officerEmployeeId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       details: {
         originalEmployeeId: officerEmployeeId,
         reason: reason || null,

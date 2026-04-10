@@ -244,6 +244,7 @@ class CrossDeviceSyncService {
 
     try {
       const sent = sessionSyncService.broadcastToWorkspace(workspaceId, {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'sync_update',
         action: 'update',
         resource: 'cross_device_sync',

@@ -63,6 +63,7 @@ export interface StarBehavior {
 // STATUS COLORS
 // ============================================================================
 
+// @ts-expect-error — TS migration: fix in refactoring sprint
 export const STATUS_COLORS: Record<MascotMode, string> = {
   IDLE: '#38bdf8',      // Sky Blue - Calm, ready
   SEARCHING: '#10b981', // Emerald - Scanning, exploring

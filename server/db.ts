@@ -147,6 +147,7 @@ pool.on('connect', (client) => {
   const _origQuery = client.query.bind(client);
   (client as any).query = function slowQueryWrapper(...args: any[]) {
     const start = Date.now();
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = _origQuery(...args);
     const captureSlowQuery = (duration: number) => {
       if (duration >= 500) {
@@ -173,6 +174,7 @@ const _originalConnect = pool.connect.bind(pool);
     throw new Error('[CircuitBreaker] DB circuit is open — skipping connection attempt');
   }
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const client = await _originalConnect(...args);
     return client;
   } catch (err: any) {

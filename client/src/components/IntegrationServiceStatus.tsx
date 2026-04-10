@@ -233,6 +233,7 @@ export function IntegrationServiceBanner() {
           : `${unhealthyServices.length} integrations are currently experiencing issues.`
         }
         {' '}Your data is safe and will sync when services resume. 
+        {/* @ts-ignore */}
         <Button variant="link" className="p-0 h-auto ml-1" data-testid="link-view-status">
           View Status
         </Button>

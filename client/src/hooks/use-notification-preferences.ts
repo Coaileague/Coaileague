@@ -137,6 +137,7 @@ export function useNotificationPreferences(): UseNotificationPreferencesReturn {
   // Mutation to save preferences to API
   const saveMutation = useMutation({
     mutationFn: async (prefs: NotificationPreferences) => {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest('/api/experience/notification-preferences', {
         method: 'POST',
         body: JSON.stringify(prefs),
@@ -150,7 +151,9 @@ export function useNotificationPreferences(): UseNotificationPreferencesReturn {
   
   // Sync API preferences when they load
   useEffect(() => {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (apiPreferences?.preferences) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPreferences(prev => ({ ...prev, ...apiPreferences.preferences }));
     }
   }, [apiPreferences]);

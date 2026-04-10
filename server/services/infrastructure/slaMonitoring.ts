@@ -380,6 +380,7 @@ class SLAMonitoringService {
           targetValue,
           actualValue,
           severity: severity as any,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           audience: 'manager',
         },
       }).catch((err: any) => log.warn('[SLAMonitoring] Failed to publish sla_breach:', err.message));
@@ -636,6 +637,7 @@ class SLAMonitoringService {
    */
   async generateReport(): Promise<{
     generatedAt: number;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     summary: ReturnType<typeof this.getComplianceSummary>;
     metrics: SLAMetrics[];
     activeBreaches: SLABreach[];

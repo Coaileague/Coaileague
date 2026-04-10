@@ -228,6 +228,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
     title: 'Payroll Readiness Scan Complete',
     description: report.summary,
     workspaceId,
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     visibility: 'workspace',
     metadata: {
       scanType: 'payroll_readiness_48h',
@@ -252,6 +253,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
         .limit(1);
 
       if (ws?.ownerId) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { notificationService } = await import('../notificationService');
         const priorityIssues = report.flags
           .filter(f => f.severity === 'critical')

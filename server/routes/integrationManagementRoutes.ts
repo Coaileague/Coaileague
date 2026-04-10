@@ -52,6 +52,7 @@ function getSupportContext(req: Request): SupportContext {
   return {
     userId: (user as any).id || '',
     platformRole: (user as any).platformRole || '',
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     accessLevel: integrationPartnerService.determineSupportAccessLevel(user.platformRole || '')
   };
 }

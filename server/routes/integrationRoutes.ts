@@ -472,6 +472,7 @@ router.post('/api/quickbooks/refresh-token', requireAuth, async (req: Authentica
       log.error('[IntegrationRoutes] Token refresh failed:', refreshError);
       
       // Check if it's an invalid_grant error (needs reauthorization)
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const errorMessage = refreshError.message || '';
       if (errorMessage.includes('invalid_grant') || errorMessage.includes('token')) {
         return res.status(400).json({

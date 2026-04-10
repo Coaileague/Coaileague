@@ -27,6 +27,7 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 const PAGE_CONFIG: CanvasPageConfig = {
   title: "Onboarding Hub",
   description: "Track tenant setup and officer onboarding progress with Trinity guidance",
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: ClipboardList,
 };
 

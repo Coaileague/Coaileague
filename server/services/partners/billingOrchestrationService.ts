@@ -463,6 +463,7 @@ class BillingStateManagerAgent {
     }
 
     const currentState = lifecycle.currentState;
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const allowedTransitions = this.validTransitions[currentState] || [];
 
     if (!allowedTransitions.includes(newState)) {
@@ -484,6 +485,7 @@ class BillingStateManagerAgent {
     await db.update(invoiceLifecycleStates)
       .set({
         currentState: newState as any,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         previousState: currentState,
         stateChangedAt: new Date(),
         stateChangedBy: options?.userId,

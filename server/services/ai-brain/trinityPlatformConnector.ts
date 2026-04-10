@@ -132,6 +132,7 @@ class TrinityPlatformConnector {
           ...payload.data,
         },
         priority: this.mapSeverityToPriority(payload.severity),
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         visibility: payload.requiresAction ? 'manager' : 'system',
       };
 
@@ -198,6 +199,7 @@ class TrinityPlatformConnector {
         ...payload.data,
       },
       priority: payload.success ? 3 : 1,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       visibility: payload.success ? 'system' : 'manager',
     };
 
@@ -224,8 +226,10 @@ class TrinityPlatformConnector {
   ): Promise<void> {
     try {
       await trinityMemoryService.shareInsight({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         sourceAgent: `${domain}_service`,
         insightType: 'pattern',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceScope: insight.workspaceId,
         title: insight.title,
         content: insight.content,

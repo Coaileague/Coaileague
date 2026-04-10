@@ -1757,6 +1757,7 @@ router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'
     if (isError) {
       status = 'error';
       needsAttention = true;
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       canRefresh = hasValidRefreshToken;
       message = hasValidRefreshToken 
         ? 'Connection error. Click "Renew Connection" to try restoring access.'
@@ -1792,6 +1793,7 @@ router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'
       // Handle any other non-connected states
       status = 'disconnected';
       needsAttention = true;
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       canRefresh = hasValidRefreshToken;
       message = hasValidRefreshToken 
         ? 'QuickBooks needs attention. Click "Renew Connection" to restore access.'

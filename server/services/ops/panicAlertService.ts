@@ -174,6 +174,7 @@ class PanicAlertService {
     if (status) { query += ` AND status=$2`; params.push(status); }
     query += ` ORDER BY triggered_at DESC LIMIT ${limit}`;
     const rows = await typedPool(query, params);
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;
   }
 

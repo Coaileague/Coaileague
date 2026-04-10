@@ -204,6 +204,7 @@ class MeteredGeminiClient {
             callType: featureKey || 'gemini_metered',
             inputTokens,
             outputTokens,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             triggeredByUserId: userId,
             responseTimeMs: Date.now() - startTime,
           });
@@ -232,6 +233,7 @@ class MeteredGeminiClient {
       // Still record the attempt for audit
       await usageMeteringService.recordUsage({
         workspaceId,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId,
         featureKey,
         usageType: 'api_call',

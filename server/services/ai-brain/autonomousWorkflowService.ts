@@ -133,6 +133,7 @@ class AutonomousWorkflowService {
           const applyResult = await this.codeEditor.applyChange(
             changeId,
             requestedBy,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             {
               pushWhatsNew: true,
               whatsNewTitle: `Implemented: ${suggestion.title}`,

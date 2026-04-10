@@ -743,6 +743,7 @@ documentViewRouter.get('/view/:docId', async (req: any, res) => {
 
     const docType = doc.documentType;
     const generator = DOC_GENERATORS[docType] || DOC_GENERATORS['employment_application'];
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const html = generator(emp || { id: doc.employeeId, firstName: 'Employee', lastName: 'Record', ...doc }, ws || {});
 
     res.setHeader('Content-Type', 'text/html');

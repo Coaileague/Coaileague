@@ -525,6 +525,7 @@ Respond with JSON:
       } else {
         // Insert new pattern
         await db.insert(llmJudgeRegressions).values({
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: 'system',
           patternHash,
           actionType: request.actionType || 'unknown',

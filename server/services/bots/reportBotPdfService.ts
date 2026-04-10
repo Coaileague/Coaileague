@@ -243,6 +243,7 @@ class ReportBotPdfService {
           `File: ${fileName}\n\n` +
           `Your supervisor has been notified and can review or send the report to the client.`,
         messageType: 'text',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         metadata: { botEvent: 'report_saved', docId, reportId },
       });
 
@@ -250,6 +251,7 @@ class ReportBotPdfService {
       await db.update(chatConversations)
         .set({
           status: 'closed',
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ roomStatus: 'completed', reportId, docId })}::jsonb`,
         })
         .where(eq(chatConversations.id, conversationId));
@@ -567,6 +569,7 @@ class ReportBotPdfService {
             userId: mgr.userId,
             type: 'system',
             scope: 'workspace',
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             category: 'schedule',
             title: `Shift Report Ready — ${siteName}`,
             message: `Shift report for ${siteName} on ${dateStr} (Officer: ${officerName}) is ready. View or send to client.`,

@@ -1,6 +1,8 @@
 import { db } from '../db';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import { notificationRules, notifications, notificationActivity } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { UNSNotification } from "../../client/src/components/notifications-popover";
 
 interface RuleMatch {

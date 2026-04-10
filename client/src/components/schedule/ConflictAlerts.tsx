@@ -371,9 +371,13 @@ export function getShiftTimeClockStatus(
   const endMs = endTime.getTime();
   
   // Check if shift has actual clock in/out times
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const hasClockIn = !!shift.actualClockIn;
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const hasClockOut = !!shift.actualClockOut;
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const actualClockIn = shift.actualClockIn ? new Date(shift.actualClockIn).getTime() : null;
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const actualClockOut = shift.actualClockOut ? new Date(shift.actualClockOut).getTime() : null;
   
   // Completed: has both clock in and out

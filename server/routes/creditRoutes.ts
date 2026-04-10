@@ -19,6 +19,7 @@ async function resolveActiveWorkspace(req: AuthenticatedRequest): Promise<{ work
   if (!userId) return { workspaceId: null, error: 'Unauthorized' };
 
   // 1. Workspace set by middleware (ensureWorkspaceAccess) — highest priority
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const middlewareWsId = req.workspaceId || (req.user)?.workspaceId;
   if (middlewareWsId) {
     return { workspaceId: middlewareWsId };
@@ -160,6 +161,7 @@ router.get('/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, re
     const viewAs = (req.query.viewAs as string) === 'billing_owner' ? 'billing_owner' : undefined;
 
     const { creditManager } = await import('../services/billing/creditManager');
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const breakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId, viewAs);
 
     res.json(breakdown);

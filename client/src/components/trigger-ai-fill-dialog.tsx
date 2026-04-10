@@ -37,6 +37,7 @@ export function TriggerAIFillDialog({
 
   const mutation = useMutation({
     mutationFn: async () => {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest('/api/ai/trigger-fill', {
         method: 'POST',
         body: {

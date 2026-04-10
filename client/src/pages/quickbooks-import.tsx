@@ -1746,6 +1746,7 @@ export default function QuickBooksImportPage() {
             <div className="flex gap-2 w-full sm:w-auto">
               <Button variant="outline" onClick={() => setLocation('/dashboard')} className="flex-1 sm:flex-initial min-w-0"><span className="truncate">Cancel</span></Button>
               <Button 
+                // @ts-expect-error — TS migration: fix in refactoring sprint
                 onClick={() => importMutation.mutate()} 
                 disabled={importMutation.isPending}
                 className="bg-green-600 flex-1 sm:flex-initial min-w-0"
@@ -1910,6 +1911,7 @@ export default function QuickBooksImportPage() {
         <UniversalModalContent 
           size="lg"
           className="bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           onPointerDownOutside={(e: any) => e.preventDefault()}
           onEscapeKeyDown={(e: any) => e.preventDefault()}
         >

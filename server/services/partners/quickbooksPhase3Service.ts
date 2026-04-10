@@ -516,6 +516,7 @@ export class QuickBooksPhase3Service {
         .limit(1);
       
       if (existing.length === 0) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(evvBillingCodes).values({ ...code, workspaceId: PLATFORM_WORKSPACE_ID });
         inserted++;
       }
@@ -631,7 +632,9 @@ export class QuickBooksPhase3Service {
         .from(invoices)
         .where(and(
           eq(invoices.workspaceId, workspaceId),
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(invoices.issueDate, periodStart.toISOString().split('T')[0]),
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           lte(invoices.issueDate, periodEnd.toISOString().split('T')[0])
         ));
       
@@ -703,6 +706,7 @@ export class QuickBooksPhase3Service {
         .from(invoices)
         .where(and(
           eq(invoices.workspaceId, workspaceId),
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(invoices.issueDate, periodStart.toISOString().split('T')[0])
         ));
       

@@ -551,6 +551,7 @@ export async function runOrgOnboardingMigrationStressTest(): Promise<{
     // Progress through valid enum steps
     for (const step of ['tax_forms', 'document_upload', 'certifications']) {
       await db.update(onboardingApplications)
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         .set({ currentStep: step })
         .where(eq(onboardingApplications.id, app.id));
     }

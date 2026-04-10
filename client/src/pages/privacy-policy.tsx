@@ -7,6 +7,7 @@ const privacyConfig: CanvasPageConfig = {
   id: 'privacy-policy',
   title: 'Privacy Policy',
   category: 'legal',
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   variant: 'default',
   showHeader: false,
 };

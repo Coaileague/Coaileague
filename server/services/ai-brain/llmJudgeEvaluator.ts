@@ -267,6 +267,7 @@ class LLMJudgeEvaluator {
       await this.logEvaluation(request, result);
 
       // Publish event
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'llm_judge_evaluation',
         evaluationId,

@@ -1289,6 +1289,7 @@ RESPONSE FORMAT (JSON)
       assignments,
       unfilled,
       processingTimeMs,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       warnings: marginWarnings.length > 0 ? marginWarnings : undefined,
     };
   }

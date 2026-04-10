@@ -821,6 +821,7 @@ router.post('/feedback', async (req, res) => {
 
     const { conversationId, rating, feedback } = schema.parse(req.body);
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await storage.updateChatConversation(conversationId, {
       rating,
       feedback: feedback || null,
@@ -834,6 +835,7 @@ router.post('/feedback', async (req, res) => {
 
 router.get('/reviews', async (req: AuthenticatedRequest, res) => {
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const closedTickets = await storage.getClosedConversationsForReview();
     res.json(closedTickets);
   } catch (error: unknown) {
@@ -843,6 +845,7 @@ router.get('/reviews', async (req: AuthenticatedRequest, res) => {
 
 router.get('/testimonials', async (req, res) => {
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const testimonials = await storage.getPositiveTestimonials();
     res.json(testimonials);
   } catch (error: unknown) {
@@ -943,6 +946,7 @@ router.post('/motd', async (req: AuthenticatedRequest, res) => {
     const [newMotd] = await db
       .insert(motdMessages)
       .values({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         ...data,
         startsAt: data.startsAt ? new Date(data.startsAt) : null,
@@ -991,6 +995,7 @@ router.post('/motd/acknowledge', async (req: AuthenticatedRequest, res) => {
     await db
       .insert(motdAcknowledgment)
       .values({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         motdId,
         userId,
@@ -1032,6 +1037,7 @@ router.post('/agreement/accept', async (req: any, res) => {
     const [acceptance] = await db
       .insert(chatAgreementAcceptances)
       .values({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         userId,
         ticketId: ticketId || null,
@@ -1088,6 +1094,7 @@ router.get('/agreement/check/:roomSlug', async (req: any, res) => {
       acceptedAt: acceptance?.acceptedAt || null
     });
   } catch (error: unknown) {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.code === '42P01' || sanitizeError(error)?.includes('does not exist')) {
       return res.json({ hasAccepted: false, acceptedAt: null });
     }

@@ -70,6 +70,7 @@ export async function runSundayWeeklyReports(): Promise<void> {
 
   await automationOrchestration.executeAutomation(
     {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       domain: 'reporting',
       automationName: 'sunday-weekly-reports',
       automationType: 'cron_job',

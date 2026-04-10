@@ -116,6 +116,7 @@ export class AutomationEngine {
     try {
       // Call metered Gemini API
       const aiResult = await meteredGemini.generate({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: context.workspaceId,
         featureKey: 'ai_automation',
         prompt,

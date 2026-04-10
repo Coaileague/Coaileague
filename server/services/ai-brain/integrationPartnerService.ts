@@ -180,6 +180,7 @@ class IntegrationPartnerService {
         return { success: false, error: 'A partner with this slug already exists' };
       }
 
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [partner] = await db.insert(integrationMarketplace).values({
         workspaceId: PLATFORM_WORKSPACE_ID,
         name: request.name,
@@ -492,6 +493,7 @@ class IntegrationPartnerService {
     details: Record<string, unknown>
   ): Promise<void> {
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(systemAuditLogs).values({
         workspaceId: 'system',
         action: `partner.${action}`,

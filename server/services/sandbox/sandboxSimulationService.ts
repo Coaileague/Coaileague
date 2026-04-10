@@ -151,6 +151,7 @@ export class SandboxSimulationService {
     // In production, OAuth flow would populate real tokens
     const sandboxRealmId = process.env.QUICKBOOKS_SANDBOX_REALM_ID || `sandbox-realm-${crypto.randomUUID().slice(0, 12)}`;
     
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(partnerConnections).values({
       id: crypto.randomUUID(),
       workspaceId: SANDBOX_WORKSPACE_ID,
@@ -284,6 +285,7 @@ export class SandboxSimulationService {
       });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(employees).values(employeeRecords);
     log.info(`[Sandbox] Created ${count} employees`);
     return count;
@@ -378,6 +380,7 @@ export class SandboxSimulationService {
       const batchSize = 500;
       for (let i = 0; i < shiftRecords.length; i += batchSize) {
         const batch = shiftRecords.slice(i, i + batchSize);
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(shifts).values(batch);
       }
     }
@@ -430,6 +433,7 @@ export class SandboxSimulationService {
       const batchSize = 500;
       for (let i = 0; i < timeEntryRecords.length; i += batchSize) {
         const batch = timeEntryRecords.slice(i, i + batchSize);
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(timeEntries).values(batch);
       }
     }

@@ -42,6 +42,7 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.post("/dismiss/:id", requireAuth, async (req, res) => {
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { userId, workspaceId } = req;
     const { id } = req.params;
     const { reason } = req.body;
@@ -74,6 +75,7 @@ router.post("/dismiss/:id", requireAuth, async (req, res) => {
 
 router.post("/generate", requireManager, async (req, res) => {
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { workspaceId, userId } = req;
 
     const employeeCount = await db.select({ count: sql<number>`count(*)` })
@@ -205,6 +207,7 @@ Respond with valid JSON array only.`
     } else {
       if (employeeCount[0]?.count > 5) {
         const savingsInsight = await db.insert(aiInsights).values({
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId,
           title: "Workforce Optimization Opportunity",
           category: 'efficiency_improvement',

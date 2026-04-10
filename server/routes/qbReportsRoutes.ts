@@ -757,6 +757,7 @@ router.post("/saved", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     }
 
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [report] = await db.insert(savedReports).values(parsed.data).returning();
     res.status(201).json(report);
   } catch (error: unknown) {

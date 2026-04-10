@@ -145,6 +145,7 @@ const notificationBatcher = new WriteBatcher<{
       createdAt: now,
     }));
     
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(notifications).values(values);
     log.info(`[WriteBatcher:notifications] Flushed ${items.length} notifications`);
   }

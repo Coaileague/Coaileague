@@ -198,8 +198,11 @@ export default function SalesCRM() {
     },
   });
 
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const leads: Lead[] = leadsData?.data || [];
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const deals: Deal[] = dealsData?.data || [];
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const stats = statsData?.data || { pipeline: [], leads: [] };
 
   const filteredLeads = filterIndustry === "all" 

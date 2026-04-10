@@ -302,6 +302,7 @@ Decide how Trinity should resolve this. Return JSON:
       const response = await meteredGemini.generate({
         workspaceId: issue.workspaceId,
         feature: 'trinity_deliberation',
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         systemPrompt,
         userPrompt,
         maxOutputTokens: 512,

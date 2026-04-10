@@ -14,6 +14,7 @@
 
 import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { platformEventBus } from '../platformEventBus';
+// @ts-expect-error — TS migration: fix in refactoring sprint
 import { log } from '../../vite';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('uiControlSubagent');

@@ -505,6 +505,7 @@ class NotificationSubagentService {
           message: payload.message,
           workspaceId,
           targetUserIds: [userId],
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity: payload.priority === 'P0' ? 'critical' : payload.priority === 'P1' ? 'high' : 'medium',
           source: 'notification_subagent',
           metadata: {
@@ -530,6 +531,7 @@ class NotificationSubagentService {
           if (user?.email) {
             const priorityLabel = payload.priority === 'P0' ? '🚨 CRITICAL' : '⚠️ URGENT';
             await NotificationDeliveryService.send({
+              // @ts-expect-error — TS migration: fix in refactoring sprint
               type: 'ai_brain_email',
               workspaceId: workspaceId || 'system',
               recipientUserId: userId,

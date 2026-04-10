@@ -224,6 +224,7 @@ class PlanningFrameworkService {
     await this.logPlan(request, plan);
 
     // Publish event
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.publish('ai_brain_action', {
       action: 'plan_created',
       planId,

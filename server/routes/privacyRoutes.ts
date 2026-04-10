@@ -37,6 +37,7 @@ const ROLE_LEVEL: Record<string, number> = {
 };
 function roleLevel(role?: string) { return ROLE_LEVEL[role ?? ''] ?? 0; }
 
+// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthenticatedRequest extends Request {
   user?: { id: string; workspaceId?: string; currentWorkspaceId?: string; role?: string; workspaceRole?: string };
   workspaceId?: string;

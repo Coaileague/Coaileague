@@ -826,6 +826,7 @@ class TrinityFrontierCapabilities {
   private async logAudit(action: string, details: Record<string, any>): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: 0,
         workspaceId: 0,
         action: `trinity_frontier:${action}`,

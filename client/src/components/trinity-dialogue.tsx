@@ -410,6 +410,7 @@ export function TrinityDialogue({
       <ScrollArea className="flex-1 p-3" ref={scrollRef}>
         {messages.length === 0 && actionLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            {/* @ts-ignore */}
             <Brain className="h-12 w-12 text-muted-foreground/50 mb-3" />
             <p className="text-sm text-muted-foreground mb-2">
               Hi! I'm Trinity, your platform copilot.

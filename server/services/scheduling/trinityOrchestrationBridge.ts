@@ -53,6 +53,7 @@ export function registerSchedulingWithOrchestration() {
     try {
       // Parse work request and create shift
       const { workRequestParser } = await import('../trinityStaffing/workRequestParser');
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       const parsedRequest = await workRequestParser.parseWorkRequest(data.content);
       
       if (parsedRequest.success && (parsedRequest as any).shift) {

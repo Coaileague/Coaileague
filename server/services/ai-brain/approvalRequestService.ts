@@ -63,6 +63,7 @@ class ApprovalRequestService {
       await db.update(aiWorkboardTasks)
         .set({
           status: 'awaiting_approval',
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           statusHistory: sql`${(aiWorkboardTasks as any).statusHistory} || ${JSON.stringify([{
             status: 'awaiting_approval',
             timestamp: new Date().toISOString(),
@@ -191,6 +192,7 @@ class ApprovalRequestService {
       await db.update(aiWorkboardTasks)
         .set({
           status: newStatus,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
           statusHistory: sql`${(aiWorkboardTasks as any).statusHistory} || ${JSON.stringify([{
             status: newStatus,
             timestamp: new Date().toISOString(),

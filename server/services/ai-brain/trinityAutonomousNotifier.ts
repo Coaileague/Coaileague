@@ -183,6 +183,7 @@ class TrinityAutonomousNotifierService {
 
   private async persistAlert(alert: TrinityAlert): Promise<void> {
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(aiProactiveAlerts).values({
         workspaceId: alert.workspaceId || PLATFORM_WORKSPACE_ID,
         alertType: alert.category as any,

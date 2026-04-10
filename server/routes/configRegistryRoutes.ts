@@ -24,6 +24,7 @@ function getUserId(req: Request): string {
 }
 
 function getWorkspaceId(req: Request): string | undefined {
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   return req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 }
 

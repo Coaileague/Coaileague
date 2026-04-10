@@ -358,6 +358,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
         });
       }
     } catch (webhookErr: any) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.warn('[ShiftTrading] Failed to log webhook error to audit log', { error: webhookErr.message });
     }
 

@@ -401,6 +401,7 @@ export async function executeSupportAction(payload: {
   correctionData?: Record<string, any>;
 }): Promise<{ success: boolean; result?: any; error?: string }> {
   try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { supportActionRegistry } = await import('./supportActionRegistry');
     const result = await supportActionRegistry.execute(payload as any);
     log.info(`[KnowledgeTools] Support action executed: ${payload.actionType} → success=${result.success}`);

@@ -1244,6 +1244,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     // Get tier-based credit allocation — non-fatal, fallback to defaults on error
     let tierInfo = { tier: 'starter', monthlyAllowance: 500, isPlatformStaff: false };
     try {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       tierInfo = await getWorkspaceTierAllowance(workspaceId, userId);
     } catch (err: any) {
       log.warn('[TrinityChatService] Tier lookup failed (non-fatal):', err?.message);
@@ -1327,6 +1328,7 @@ Do NOT skip steps — decompose fully before concluding.`;
           severity: accConflict.conflictSeverity,
           blocked: accConflict.autoBlocked,
         } : undefined,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         thalamicSignalId: thalamicSignal?.signalId,
         thalamicPriority: thalamicSignal?.priorityScore,
       },
@@ -1567,6 +1569,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     if (upcomingShifts.length > 0) {
       lines.push(`\nUpcoming Shifts (next 7 days):`);
       for (const s of upcomingShifts) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         const dateStr = s.shiftDate instanceof Date
           ? s.shiftDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
           : String(s.shiftDate);

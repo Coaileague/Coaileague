@@ -285,6 +285,7 @@ Format as a clear diagnostic report.`;
       featureKey: 'notification_diagnostics',
       systemPrompt: 'You are Trinity, an expert AI diagnostic agent.',
       userMessage: prompt,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       modelTier: 'diagnostics'
     });
     

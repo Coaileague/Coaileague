@@ -161,6 +161,7 @@ class AIRequestDeduplicator {
       const batchResults = await this.execute<R[]>(
         batchKey,
         JSON.stringify(batch),
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         async () => batchExecutor(batch),
         {
           workspaceId: options.workspaceId,

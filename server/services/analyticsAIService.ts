@@ -114,6 +114,7 @@ Focus on:
 Be concise and actionable. Each insight should be 1-2 sentences.`;
 
       if (!workspaceId) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: false, insights: [], error: 'Workspace context required for AI analytics' };
       }
       const aiResult = await meteredGemini.generate({

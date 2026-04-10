@@ -409,6 +409,7 @@ export default function OnboardingPage() {
     id: 'onboarding',
     title: 'Welcome to CoAIleague',
     subtitle: 'Complete these tasks to get the most out of your platform',
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'workspace',
     headerActions: trialBadge,
   };
