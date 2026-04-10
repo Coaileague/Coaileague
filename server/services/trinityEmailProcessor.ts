@@ -1,6 +1,10 @@
 import { pool } from '../db';
 import { createLogger } from '../lib/logger';
 import { NotificationDeliveryService } from './notificationDeliveryService';
+import {
+  processInboundEmail,
+  type ParsedInboundEmail,
+} from './trinity/trinityInboundEmailProcessor';
 
 const log = createLogger('TrinityEmailProcessor');
 
@@ -179,22 +183,52 @@ export class TrinityEmailProcessor {
 
   private async handleVerificationEmail(email: any, workspace: any, _sender: any): Promise<void> {
     log.info(`[verify] Employment verification request from ${email.from_email} to ${workspace.company_name}`);
+    await this._delegateToFullPipeline(email);
   }
 
   private async handleSupportEmail(email: any, workspace: any, _sender: any): Promise<void> {
     log.info(`[support] Support request from ${email.from_email} to ${workspace.company_name}`);
+    await this._delegateToFullPipeline(email);
   }
 
   private async handleCalloffEmail(email: any, workspace: any, sender: any): Promise<void> {
     log.info(`[calloffs] Calloff email from ${email.from_email} to ${workspace.company_name}`);
+    await this._delegateToFullPipeline(email);
   }
 
   private async handleTrinityDirectEmail(email: any, workspace: any, sender: any): Promise<void> {
     log.info(`[trinity-direct] Direct Trinity message from ${email.from_email} to ${workspace.company_name}`);
+    await this._delegateToFullPipeline(email);
   }
 
   private async handleMainInboxEmail(email: any, workspace: any, sender: any): Promise<void> {
     log.info(`[main] Main inbox email from ${email.from_email} to ${workspace.company_name}`);
+    await this._delegateToFullPipeline(email);
+  }
+
+  /**
+   * Converts the legacy stored-email shape to ParsedInboundEmail and delegates
+   * to the full Trinity inbound pipeline (trinityInboundEmailProcessor.ts).
+   * This ensures all stub handlers produce real DB records and acknowledgments.
+   */
+  private async _delegateToFullPipeline(email: any): Promise<void> {
+    try {
+      const parsed: ParsedInboundEmail = {
+        messageId: email.message_id || undefined,
+        fromEmail: email.from_email || '',
+        fromName: email.from_name || undefined,
+        toEmail: email.to_email || '',
+        subject: email.subject || undefined,
+        bodyText: email.body_text || undefined,
+        bodyHtml: email.body_html || undefined,
+        attachments: [],
+        receivedAt: email.received_at ? new Date(email.received_at) : new Date(),
+        rawPayload: {},
+      };
+      await processInboundEmail(parsed);
+    } catch (err: any) {
+      log.warn('[trinityEmailProcessor] _delegateToFullPipeline failed (non-fatal):', err?.message);
+    }
   }
 
   async processFormSubmission(

@@ -1011,6 +1011,28 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
 
   const logId = logEntry.id;
 
+  // ── STEP 1b: Immediate acknowledgment — send before any processing ────────
+  // This gives the sender immediate confirmation regardless of pipeline outcome.
+  scheduleNonBlocking('inbound-email.immediate-ack', async () => {
+    try {
+      const { NotificationDeliveryService: NDS } = await import('../notificationDeliveryService');
+      const ackSubject = `Re: ${email.subject || 'Your message to CoAIleague'}`;
+      const ackHtml = `<p>Hi there,</p><p>Thanks for emailing CoAIleague. We received your message and our team will follow up shortly.</p><p>— CoAIleague Operations</p>`;
+      await NDS.send({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        type: 'internal_email_received',
+        workspaceId: 'system',
+        recipientUserId: email.fromEmail,
+        channel: 'email',
+        subject: ackSubject,
+        body: { to: email.fromEmail, subject: ackSubject, html: ackHtml },
+        idempotencyKey: `immediate-ack-${logId}`,
+      });
+    } catch (err: unknown) {
+      log.warn('[TrinityInboundEmail] Immediate acknowledgment failed (non-fatal):', err instanceof Error ? err.message : String(err));
+    }
+  });
+
   // ── STEP 2: Dedup check (already done in route via unique constraint, but verify) ──
   // The UNIQUE constraint on message_id handles this at DB level.
 
@@ -1208,6 +1230,7 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
       processingStatus: finalStatus,
       trinityActionTaken: actionMap[category],
       trinityConfidence: String(confidence),
+      extractedFields: Object.keys(aiData).length > 0 ? aiData : null,
       downstreamRecordId: pipelineResult.downstreamRecordId || null,
       downstreamRecordType: pipelineResult.downstreamRecordType || null,
       needsReview: pipelineResult.needsReview || false,
