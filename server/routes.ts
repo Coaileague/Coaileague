@@ -113,6 +113,7 @@ import { statusRouter, platformFlagRouter, registerBackupVerificationCron } from
 import legalConsentRouter from "./routes/legalConsentRoutes";
 import legalRouter from "./routes/legalRoutes";
 import platformFormsRouter from "./routes/platformFormsRoutes";
+import formBuilderRouter from "./routes/formBuilderRoutes";
 import interviewChatroomRouter from "./routes/interviewChatroomRoutes";
 import onboardingPipelineRouter from "./routes/onboardingPipelineRoutes";
 import { requireLegalAcceptance } from "./middleware/requireLegalAcceptance";
@@ -705,6 +706,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mega Phase: Platform forms (public token-based + manager routes)
   // Note: /api/forms/public/:token is public; rest requires auth
   app.use("/api/forms", platformFormsRouter);
+  // Custom form builder (manager-created forms with full approval workflow)
+  app.use("/api/form-builder", formBuilderRouter);
   // Mega Phase: Interview chatrooms (manager management + candidate token-based room)
   // requireLegalAcceptance enforces legal gate for authenticated users; passes through for public token routes
   app.use("/api/interview", requireLegalAcceptance, interviewChatroomRouter);

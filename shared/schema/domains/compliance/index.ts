@@ -226,6 +226,14 @@ export const customForms = pgTable("custom_forms", {
   isActive: boolean("is_active").default(true),
   accessibleBy: jsonb("accessible_by"), // ['employee', 'manager', 'admin'] - who can fill out this form
 
+  // Workflow routing: who approves, auto-escalation rules
+  // Example: { approverRole: 'supervisor', autoEscalateAfterHours: 24, requiresApproval: true }
+  routingRules: jsonb("routing_rules"),
+
+  // Trinity pre-fill rules: which fields to auto-populate from context
+  // Example: { officer_name: 'employee.fullName', client_name: 'shift.clientName', date: 'now' }
+  prefillRules: jsonb("prefill_rules"),
+
   // Metadata
   createdBy: varchar("created_by"), // Platform admin/support who created it
   createdByRole: varchar("created_by_role"), // 'platform_admin', 'support_manager', 'support_staff'
@@ -264,14 +272,46 @@ export const customFormSubmissions = pgTable("custom_form_submissions", {
   onboardingTokenId: varchar("onboarding_token_id"), // If used during onboarding (token reference)
   reportSubmissionId: varchar("report_submission_id"), // If used in RMS
 
-  // Status
-  status: varchar("status").default("completed"), // 'draft', 'completed', 'archived'
+  // Status — full lifecycle: draft → submitted → approved/rejected → archived/completed
+  status: varchar("status").default("completed"), // 'draft', 'completed', 'archived', 'submitted', 'approved', 'rejected'
+
+  // Approval workflow fields
+  approvedBy: varchar("approved_by"),       // userId of approver
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  approvalNotes: text("approval_notes"),    // Reviewer comments
+
+  // PDF generation
+  pdfUrl: varchar("pdf_url", { length: 500 }), // Object storage URL (or base64 inline path)
+
+  // Compliance / retention
+  expiryDate: timestamp("expiry_date"),     // For forms with renewal windows (e.g. guard license)
 
   // Timestamps
   submittedAt: timestamp("submitted_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// ── Form Signatures ─────────────────────────────────────────────────────────
+// Independent signature records linked to a form submission.
+// Supports multi-party signing (officer + supervisor + Trinity).
+export const formSignatures = pgTable("form_signatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  submissionId: varchar("submission_id").notNull(),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  signedBy: varchar("signed_by").notNull(),       // userId or 'trinity'
+  signatureType: varchar("signature_type").notNull(), // 'canvas', 'typed', 'docusign', 'trinity'
+  signatureData: text("signature_data"),           // Base64 PNG (canvas) or typed name
+  signedAt: timestamp("signed_at").defaultNow(),
+  ipAddress: varchar("ip_address"),               // Audit trail
+  legalAuthority: varchar("legal_authority"),     // For advanced (DocuSign) signatures
+}, (table) => [
+  index("form_signatures_submission_idx").on(table.submissionId),
+  index("form_signatures_workspace_idx").on(table.workspaceId),
+]);
 
 export const termsAcknowledgments = pgTable("terms_acknowledgments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

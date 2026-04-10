@@ -80,7 +80,7 @@ const TABLES_NEEDING_WORKSPACE_INDEX: readonly string[] = [
   "mascot_interactions", "mascot_tasks", "email_deliveries", "chat_bot_commands",
   "regulatory_rules", "employee_i9_records", "security_incidents", "document_signatures",
   "company_policies", "policy_acknowledgments", "document_access_logs", "governance_approvals",
-  "custom_forms", "custom_form_submissions", "terms_acknowledgments", "compliance_reports",
+  "custom_forms", "custom_form_submissions", "form_signatures", "terms_acknowledgments", "compliance_reports",
   "dar_reports", "compliance_documents", "compliance_approvals", "compliance_expirations",
   "compliance_alerts", "regulator_access", "compliance_scores", "officer_readiness",
   "officer_complaints", "officer_grievances", "state_license_verifications", "document_templates",

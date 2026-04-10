@@ -326,3 +326,195 @@ export async function generateAndGetPdf(opts: GenerateOptions): Promise<Buffer |
   await generateAndStorePdf(opts);
   return getFormPdfFromCache(opts.submission.id);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateCustomFormPdf
+// Generates a PDF for customForms / customFormSubmissions (Drizzle-backed).
+// Used by formBuilderRoutes.ts GET /forms/:formId/submissions/:submissionId/pdf
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CustomFormPdfOptions {
+  form: {
+    id: string;
+    name: string;
+    description?: string | null;
+    category?: string | null;
+    template: unknown;
+  };
+  submission: {
+    id: string;
+    workspaceId: string;
+    submittedBy?: string | null;
+    formData: unknown;
+    signatureData?: unknown;
+    status?: string | null;
+    approvedBy?: string | null;
+    approvedAt?: Date | null;
+    rejectedBy?: string | null;
+    rejectedAt?: Date | null;
+    approvalNotes?: string | null;
+    submittedAt?: Date | null;
+    ipAddress?: string | null;
+  };
+  signatures?: Array<{
+    signedBy: string;
+    signatureType: string;
+    signatureData?: string | null;
+    signedAt?: Date | null;
+    ipAddress?: string | null;
+  }>;
+}
+
+export async function generateCustomFormPdf(opts: CustomFormPdfOptions): Promise<Buffer> {
+  const { form, submission, signatures = [] } = opts;
+  const template = form.template as any;
+  const fields: Array<{ id?: string; label: string; type: string }> = template?.fields || [];
+  const formData = submission.formData as Record<string, any> || {};
+
+  // Look up workspace name for header
+  let workspaceName = 'CoAIleague';
+  try {
+    const wsRow = await pool.query(`SELECT name FROM workspaces WHERE id = $1`, [submission.workspaceId]);
+    workspaceName = wsRow.rows[0]?.name || 'CoAIleague';
+  } catch {
+    // non-fatal
+  }
+
+  return new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 0, size: 'LETTER', bufferPages: true });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // ── Header ─────────────────────────────────────────────────────────────
+    renderHeader(doc, form.name, form.category || 'custom_form', workspaceName);
+
+    // ── Metadata block ─────────────────────────────────────────────────────
+    const y = doc.y + 8;
+    doc.rect(50, y, 512, 52).fill(C.offWhite);
+    doc.fontSize(7).fillColor(C.gray).text('SUBMISSION ID', 62, y + 8, { characterSpacing: 0.5 });
+    doc.fontSize(9).fillColor(C.black).text(submission.id, 62, y + 18, { width: 240 });
+    doc.fontSize(7).fillColor(C.gray).text('STATUS', 320, y + 8, { characterSpacing: 0.5 });
+    doc.fontSize(9).fillColor(C.black).text((submission.status || 'completed').toUpperCase(), 320, y + 18, { width: 200 });
+    const submittedAt = submission.submittedAt ? format(new Date(submission.submittedAt), 'MMMM dd, yyyy · h:mm a') : '—';
+    doc.fontSize(7).fillColor(C.gray).text('SUBMITTED', 62, y + 34, { characterSpacing: 0.5 });
+    doc.fontSize(9).fillColor(C.black).text(submittedAt, 62, y + 44, { width: 240 });
+    doc.fontSize(7).fillColor(C.gray).text('GENERATED', 320, y + 34, { characterSpacing: 0.5 });
+    doc.fontSize(9).fillColor(C.black).text(format(new Date(), 'MMMM dd, yyyy · h:mm a'), 320, y + 44, { width: 200 });
+    doc.y = y + 62;
+
+    // ── Form fields ─────────────────────────────────────────────────────────
+    const displayFields = fields.filter(f => !['section_header', 'divider', 'esignature'].includes(f.type));
+    if (displayFields.length > 0) {
+      renderSectionTitle(doc, 'Form Responses');
+      displayFields.forEach((field, idx) => {
+        const key = field.id || field.label;
+        const raw = formData[key] ?? formData[field.label] ?? '';
+        const value = typeof raw === 'object' ? JSON.stringify(raw) : String(raw || '—');
+        if (doc.y > 680) doc.addPage();
+        renderFieldValue(doc, field.label, value, idx);
+      });
+    }
+
+    // ── Signature block ─────────────────────────────────────────────────────
+    const sigData = submission.signatureData as any;
+    const hasDrawnSig = sigData?.drawn && typeof sigData.drawn === 'string' && sigData.drawn.startsWith('data:image');
+    const typedName = sigData?.name || sigData?.typedName;
+
+    if (hasDrawnSig || typedName || signatures.length > 0) {
+      doc.addPage();
+      renderSectionTitle(doc, 'Signatures');
+      doc.moveDown(0.4);
+
+      // Submitter's own signature
+      if (hasDrawnSig || typedName) {
+        const sigY = doc.y;
+        doc.rect(50, sigY, 512, 100).fill(C.greenLight).stroke(C.greenBorder);
+        doc.fontSize(9).fillColor(C.green).text('SUBMITTER SIGNATURE', 62, sigY + 10, { characterSpacing: 0.8 });
+        if (typedName) {
+          doc.fontSize(18).fillColor(C.black).font('Helvetica-Oblique').text(typedName, 62, sigY + 28, { width: 450 });
+          doc.font('Helvetica');
+        } else if (hasDrawnSig) {
+          try {
+            const b64 = sigData.drawn.replace(/^data:image\/\w+;base64,/, '');
+            doc.image(Buffer.from(b64, 'base64'), 62, sigY + 24, { width: 180, height: 55 });
+          } catch {
+            doc.fontSize(9).fillColor(C.gray).text('[Drawn signature on file]', 62, sigY + 28);
+          }
+        }
+        doc.fontSize(7.5).fillColor(C.gray).text(
+          `Signed: ${submittedAt} · IP: ${submission.ipAddress || 'Unknown'}`,
+          62, sigY + 84, { width: 450 }
+        );
+        doc.y = sigY + 108;
+        doc.moveDown(0.4);
+      }
+
+      // Reviewer signatures
+      for (const sig of signatures) {
+        if (doc.y > 680) doc.addPage();
+        const sigY = doc.y;
+        const isCanvas = sig.signatureData && sig.signatureData.startsWith('data:image');
+        doc.rect(50, sigY, 512, 90).fill(C.offWhite);
+        doc.fontSize(8).fillColor(C.gray).text(`${sig.signatureType.toUpperCase()} SIGNATURE — ${sig.signedBy}`, 62, sigY + 8, { characterSpacing: 0.5 });
+        if (isCanvas) {
+          try {
+            const b64 = (sig.signatureData as string).replace(/^data:image\/\w+;base64,/, '');
+            doc.image(Buffer.from(b64, 'base64'), 62, sigY + 20, { width: 160, height: 50 });
+          } catch {
+            doc.fontSize(9).fillColor(C.gray).text('[Signature image on file]', 62, sigY + 24);
+          }
+        } else if (sig.signatureData) {
+          doc.fontSize(16).fillColor(C.black).font('Helvetica-Oblique').text(sig.signatureData, 62, sigY + 22, { width: 450 });
+          doc.font('Helvetica');
+        }
+        const sigTs = sig.signedAt ? format(new Date(sig.signedAt), 'MMMM dd, yyyy · h:mm a') : '—';
+        doc.fontSize(7.5).fillColor(C.gray).text(`${sigTs} · IP: ${sig.ipAddress || 'Unknown'}`, 62, sigY + 74, { width: 450 });
+        doc.y = sigY + 96;
+        doc.moveDown(0.3);
+      }
+    }
+
+    // ── Approval stamp ──────────────────────────────────────────────────────
+    if (submission.status === 'approved' || submission.status === 'rejected') {
+      if (doc.y > 640) doc.addPage();
+      renderSectionTitle(doc, submission.status === 'approved' ? 'Approval Record' : 'Rejection Record');
+      doc.moveDown(0.3);
+      const stampY = doc.y;
+      const stampColor = submission.status === 'approved' ? C.greenLight : '#fef2f2';
+      const stampBorder = submission.status === 'approved' ? C.greenBorder : '#fecaca';
+      const stampText = submission.status === 'approved' ? C.green : '#991b1b';
+      doc.rect(50, stampY, 512, 70).fill(stampColor).stroke(stampBorder);
+      doc.fontSize(11).fillColor(stampText)
+        .text(submission.status === 'approved' ? '✓ APPROVED' : '✗ REJECTED', 62, stampY + 10, { characterSpacing: 1 });
+      const byId = submission.approvedBy || submission.rejectedBy || '—';
+      const atDate = (submission.approvedAt || submission.rejectedAt)
+        ? format(new Date((submission.approvedAt || submission.rejectedAt)!), 'MMMM dd, yyyy · h:mm a')
+        : '—';
+      doc.fontSize(9).fillColor(C.black).text(`By: ${byId}`, 62, stampY + 28);
+      doc.fontSize(9).fillColor(C.black).text(`Date: ${atDate}`, 62, stampY + 41);
+      if (submission.approvalNotes) {
+        doc.fontSize(9).fillColor(C.grayDark).text(`Notes: ${submission.approvalNotes}`, 62, stampY + 54, { width: 450 });
+      }
+      doc.y = stampY + 80;
+    }
+
+    // ── Footer ──────────────────────────────────────────────────────────────
+    const hash = crypto
+      .createHash('sha256')
+      .update(`${submission.id}:${submission.submittedAt}:${form.id}`)
+      .digest('hex');
+    const pages = (doc as any)._pageBuffer?.length || 1;
+    for (let i = 0; i < pages; i++) {
+      doc.switchToPage(i);
+      const footerY = doc.page.height - 40;
+      doc.moveTo(50, footerY - 4).lineTo(562, footerY - 4).strokeColor(C.grayLight).lineWidth(0.5).stroke();
+      doc.fontSize(7).fillColor(C.gray)
+        .text(`CoAIleague · Form Record · ${form.name} · ID: ${submission.id.slice(0, 8)}`, 50, footerY, { align: 'left', width: 400 })
+        .text(`SHA-256: ${hash.slice(0, 16)}...`, 50, footerY, { align: 'right', width: 512 });
+    }
+
+    doc.end();
+  });
+}

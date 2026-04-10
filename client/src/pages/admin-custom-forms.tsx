@@ -127,6 +127,62 @@ const BUILT_IN_TEMPLATES: Record<string, { name: string; description: string; fi
       { id: "f8", type: "esignature", label: "Contractor Signature", required: true },
     ],
   },
+  incident_report: {
+    name: "Incident Report",
+    description: "Full incident report for security officers. Routes to supervisor for approval. Trinity auto-submits if not filed within 24h.",
+    fields: [
+      { id: "f1", type: "text", label: "Officer Name", placeholder: "Full name", required: true },
+      { id: "f2", type: "text", label: "Client / Site Name", placeholder: "Site or client name", required: true },
+      { id: "f3", type: "text", label: "Location", placeholder: "Address or area", required: true },
+      { id: "f4", type: "date", label: "Incident Date", required: true },
+      { id: "f5", type: "text", label: "Incident Time", placeholder: "HH:MM (24h)", required: true },
+      { id: "f6", type: "select", label: "Incident Type", options: ["Trespass", "Theft", "Vandalism", "Assault", "Medical Emergency", "Fire/Hazmat", "Suspicious Activity", "Property Damage", "Use of Force", "Other"], required: true },
+      { id: "f7", type: "textarea", label: "Description of Incident", placeholder: "Describe what happened in detail...", required: true },
+      { id: "f8", type: "textarea", label: "Witness Names & Contact Info", required: false },
+      { id: "f9", type: "textarea", label: "Action Taken", placeholder: "Describe your response and actions...", required: true },
+      { id: "f10", type: "radio", label: "Supervisor Notified?", options: ["Yes", "No", "Attempted"], required: true },
+      { id: "f11", type: "text", label: "Supervisor Name (if notified)", required: false },
+      { id: "f12", type: "radio", label: "Police / EMS Called?", options: ["Yes", "No"], required: true },
+      { id: "f13", type: "text", label: "Report / Case Number (if applicable)", required: false },
+      { id: "f14", type: "file", label: "Evidence Photos", required: false },
+      { id: "f15", type: "esignature", label: "Officer Signature", required: true },
+    ],
+  },
+  timesheet_shift_report: {
+    name: "Timesheet / Shift Report",
+    description: "End-of-shift report auto-prefilled from schedule. Requires supervisor approval.",
+    fields: [
+      { id: "f1", type: "text", label: "Officer Name", placeholder: "Auto-filled from schedule", required: true },
+      { id: "f2", type: "text", label: "Client / Site Name", placeholder: "Auto-filled from shift", required: true },
+      { id: "f3", type: "date", label: "Shift Date", required: true },
+      { id: "f4", type: "text", label: "Scheduled Start Time", placeholder: "HH:MM", required: true },
+      { id: "f5", type: "text", label: "Actual Start Time", placeholder: "HH:MM", required: true },
+      { id: "f6", type: "text", label: "Scheduled End Time", placeholder: "HH:MM", required: true },
+      { id: "f7", type: "text", label: "Actual End Time", placeholder: "HH:MM", required: true },
+      { id: "f8", type: "number", label: "Break Duration (minutes)", required: false },
+      { id: "f9", type: "select", label: "Shift Status", options: ["Completed", "Partial", "No-Show", "Emergency"], required: true },
+      { id: "f10", type: "textarea", label: "Shift Summary / Notable Events", placeholder: "Brief summary of activities...", required: false },
+      { id: "f11", type: "radio", label: "Any Incidents?", options: ["Yes — filed incident report", "Yes — verbal only", "No"], required: true },
+      { id: "f12", type: "esignature", label: "Officer Signature", required: true },
+    ],
+  },
+  guard_license_verification: {
+    name: "Guard License Verification",
+    description: "Security guard license and certification record. Compliance retention: 3 years. Expiry alerts sent automatically.",
+    fields: [
+      { id: "f1", type: "text", label: "Officer Full Name", required: true },
+      { id: "f2", type: "text", label: "License Number", placeholder: "State-issued license number", required: true },
+      { id: "f3", type: "select", label: "Issuing State", options: ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"], required: true },
+      { id: "f4", type: "date", label: "License Issue Date", required: true },
+      { id: "f5", type: "date", label: "License Expiry Date", required: true },
+      { id: "f6", type: "select", label: "License Type", options: ["Unarmed", "Armed", "Both", "Supervisor / Lead"], required: true },
+      { id: "f7", type: "file", label: "Upload License Document", required: true },
+      { id: "f8", type: "text", label: "PERC Card Number (if IL)", required: false },
+      { id: "f9", type: "radio", label: "Background Check Completed?", options: ["Yes — on file", "Yes — pending upload", "No"], required: true },
+      { id: "f10", type: "checkbox", label: "I certify the above information is accurate and my license is current and valid", required: true },
+      { id: "f11", type: "esignature", label: "Officer Signature", required: true },
+    ],
+  },
 };
 
 // ─── Field palette config ─────────────────────────────────────────────────────
@@ -422,6 +478,8 @@ function FormBuilder({
   const [description, setDescription] = useState(initial?.description || "");
   const [category, setCategory] = useState<string>((initial as any)?.category || "onboarding");
   const [fields, setFields] = useState<FormField[]>((initial?.template as any)?.fields || []);
+  const [approverRole, setApproverRole] = useState<string>((initial as any)?.routingRules?.approverRole || "supervisor");
+  const [requiresApproval, setRequiresApproval] = useState<boolean>((initial as any)?.routingRules?.requiresApproval ?? false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -502,7 +560,8 @@ function FormBuilder({
   function handleSave() {
     if (!title.trim()) { toast({ title: "Form title required", variant: "destructive" }); return; }
     if (fields.length === 0) { toast({ title: "Add at least one field", variant: "destructive" }); return; }
-    onSave({ name: title, description, category, template: { fields }, isActive: true });
+    const routingRules = requiresApproval ? { requiresApproval: true, approverRole } : null;
+    onSave({ name: title, description, category, template: { fields }, isActive: true, routingRules } as any);
   }
 
   // ─── Analytics Helpers ──────────────────────────────────────────────────
@@ -607,6 +666,39 @@ function FormBuilder({
                   </div>
                 );
               })}
+
+              {/* Workflow / Routing config */}
+              <div className="border-t pt-2">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">Workflow</p>
+                <div className="space-y-2 px-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <Label className="text-xs">Requires Approval</Label>
+                    <input
+                      type="checkbox"
+                      checked={requiresApproval}
+                      onChange={e => setRequiresApproval(e.target.checked)}
+                      className="h-3.5 w-3.5"
+                      data-testid="checkbox-requires-approval"
+                    />
+                  </div>
+                  {requiresApproval && (
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Approver Role</Label>
+                      <Select value={approverRole} onValueChange={setApproverRole}>
+                        <SelectTrigger className="h-7 text-xs" data-testid="select-approver-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="supervisor">Supervisor</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="org_admin">Org Admin</SelectItem>
+                          <SelectItem value="org_owner">Owner</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -702,6 +794,7 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
   const { toast } = useToast();
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [approvalNotes, setApprovalNotes] = useState("");
 
   const { data: submissions = [], isLoading, isError } = useQuery<any[]>({
     queryKey: ['/api/form-builder/forms', form.id, 'submissions', statusFilter],
@@ -715,6 +808,20 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
     },
   });
 
+  // Dedicated approve/reject endpoint
+  const approveMutation = useMutation({
+    mutationFn: ({ id, approved, notes }: { id: string; approved: boolean; notes?: string }) =>
+      apiRequest("POST", `/api/form-builder/forms/${form.id}/submissions/${id}/approve`, { approved, notes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', form.id, 'submissions'] });
+      toast({ title: "Decision recorded" });
+      setSelectedSubmission(null);
+      setApprovalNotes("");
+    },
+    onError: () => toast({ title: "Failed to process decision", variant: "destructive" }),
+  });
+
+  // Fallback patch for archive / other status changes
   const reviewMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       apiRequest("PATCH", `/api/form-builder/submissions/${id}`, { status }),
@@ -730,14 +837,16 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
 
   if (selectedSubmission) {
     const formData = selectedSubmission.formData || selectedSubmission.form_data || {};
+    const isAwaitingApproval = selectedSubmission.status === "submitted";
+    const isDecided = ["approved", "rejected"].includes(selectedSubmission.status);
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <Button size="default" variant="ghost" onClick={() => setSelectedSubmission(null)} data-testid="button-back-to-submissions">
+          <Button size="default" variant="ghost" onClick={() => { setSelectedSubmission(null); setApprovalNotes(""); }} data-testid="button-back-to-submissions">
             <ArrowLeft className="mr-1 h-4 w-4" />Back to Submissions
           </Button>
           <h3 className="font-semibold text-sm">Submission Detail</h3>
-          <Badge variant="outline" className="ml-auto">
+          <Badge variant={isDecided ? (selectedSubmission.status === "approved" ? "default" : "destructive") : "outline"} className="ml-auto capitalize">
             {selectedSubmission.status || "completed"}
           </Badge>
         </div>
@@ -755,7 +864,26 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
                 <span className="text-muted-foreground text-xs">Status</span>
                 <p className="capitalize">{selectedSubmission.status || "completed"}</p>
               </div>
+              {selectedSubmission.approvedAt && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Approved</span>
+                  <p>{format(new Date(selectedSubmission.approvedAt), "MMM d, yyyy h:mm a")}</p>
+                </div>
+              )}
+              {selectedSubmission.rejectedAt && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Rejected</span>
+                  <p>{format(new Date(selectedSubmission.rejectedAt), "MMM d, yyyy h:mm a")}</p>
+                </div>
+              )}
             </div>
+
+            {selectedSubmission.approvalNotes && (
+              <div className="rounded-md bg-muted/40 px-3 py-2 text-sm">
+                <span className="text-xs text-muted-foreground block mb-0.5">Review Notes</span>
+                {selectedSubmission.approvalNotes}
+              </div>
+            )}
 
             <div className="border-t pt-4 space-y-3">
               <h4 className="font-semibold text-sm">Responses</h4>
@@ -779,38 +907,66 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
           </CardContent>
         </Card>
 
-        <div className="flex gap-2">
-          {selectedSubmission.status !== "approved" && (
-            <Button
-              variant="default"
-              onClick={() => reviewMutation.mutate({ id: selectedSubmission.id, status: "approved" })}
-              disabled={reviewMutation.isPending}
-              data-testid="button-approve-submission"
-            >
-              <CheckCircle className="mr-1 h-4 w-4" />Approve
-            </Button>
-          )}
-          {selectedSubmission.status !== "rejected" && (
-            <Button
-              variant="outline"
-              onClick={() => reviewMutation.mutate({ id: selectedSubmission.id, status: "rejected" })}
-              disabled={reviewMutation.isPending}
-              data-testid="button-reject-submission"
-            >
-              <XCircle className="mr-1 h-4 w-4" />Reject
-            </Button>
-          )}
-          {selectedSubmission.status !== "archived" && (
-            <Button
-              variant="outline"
-              onClick={() => reviewMutation.mutate({ id: selectedSubmission.id, status: "archived" })}
-              disabled={reviewMutation.isPending}
-              data-testid="button-archive-submission"
-            >
-              Archive
-            </Button>
-          )}
-        </div>
+        {/* PDF download */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.open(`/api/form-builder/forms/${form.id}/submissions/${selectedSubmission.id}/pdf`, "_blank")}
+          data-testid="button-download-submission-pdf"
+        >
+          <FileText className="w-3.5 h-3.5 mr-1.5" />Download PDF
+        </Button>
+
+        {/* Approve / Reject with notes — only for submitted forms */}
+        {isAwaitingApproval && (
+          <div className="space-y-3 rounded-md border p-3">
+            <h4 className="font-semibold text-sm">Review Decision</h4>
+            <div className="space-y-1.5">
+              <Label htmlFor="approval-notes" className="text-xs">Notes <span className="text-muted-foreground">(optional)</span></Label>
+              <Textarea
+                id="approval-notes"
+                value={approvalNotes}
+                onChange={e => setApprovalNotes(e.target.value)}
+                placeholder="Add review notes visible to the submitter..."
+                rows={2}
+                data-testid="input-approval-notes"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => approveMutation.mutate({ id: selectedSubmission.id, approved: true, notes: approvalNotes })}
+                disabled={approveMutation.isPending}
+                data-testid="button-approve-submission"
+              >
+                <CheckCircle className="mr-1 h-3.5 w-3.5" />Approve
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => approveMutation.mutate({ id: selectedSubmission.id, approved: false, notes: approvalNotes })}
+                disabled={approveMutation.isPending}
+                data-testid="button-reject-submission"
+              >
+                <XCircle className="mr-1 h-3.5 w-3.5" />Reject
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Archive action for decided forms */}
+        {!isAwaitingApproval && selectedSubmission.status !== "archived" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => reviewMutation.mutate({ id: selectedSubmission.id, status: "archived" })}
+            disabled={reviewMutation.isPending}
+            data-testid="button-archive-submission"
+          >
+            Archive
+          </Button>
+        )}
       </div>
     );
   }
@@ -827,7 +983,7 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
       </div>
 
       <div className="flex gap-2">
-        {["all", "completed", "draft", "approved", "rejected", "archived"].map(s => (
+        {["all", "completed", "submitted", "draft", "approved", "rejected", "archived"].map(s => (
           <Button
             key={s}
             size="sm"

@@ -2794,6 +2794,10 @@ aiBrainActionRegistry.initialize().then(async () => {
   const { registerTaxComplianceActions } = await import('./trinityTaxComplianceActions');
   registerTaxComplianceActions();
 
+  // Form Actions (Online Forms Phase) — form.prefill, form.auto_submit, form.query_status
+  const { registerFormActions } = await import('./trinityFormActions');
+  registerFormActions();
+
   // Agent Spawning System (Phase 4)
   const { registerAgentSpawningActions } = await import('./trinityAgentSpawningActions');
   registerAgentSpawningActions();

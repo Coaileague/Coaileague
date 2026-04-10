@@ -484,6 +484,7 @@ import {
   trainingCertifications,
   backgroundCheckProviders,
   employeeBackgroundChecks,
+  formSignatures,
 } from './schema/domains/compliance';
 
 // audit tables (used in insert schema definitions below)
@@ -1913,6 +1914,15 @@ export const insertCustomFormSubmissionSchema = createInsertSchema(customFormSub
 
 export type InsertCustomFormSubmission = z.infer<typeof insertCustomFormSubmissionSchema>;
 export type CustomFormSubmission = typeof customFormSubmissions.$inferSelect;
+
+// Form Signatures — multi-party signing records linked to a submission
+export { formSignatures };
+export const insertFormSignatureSchema = createInsertSchema(formSignatures).omit({
+  id: true,
+  signedAt: true,
+});
+export type InsertFormSignature = z.infer<typeof insertFormSignatureSchema>;
+export type FormSignature = typeof formSignatures.$inferSelect;
 
 // ============================================================================
 // SECURITY & COMPLIANCE

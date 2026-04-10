@@ -1331,4 +1331,31 @@ router.get("/api/webhooks/resend/inbound/status", async (req, res) => {
   });
 });
 
+/**
+ * Health check for the Resend outbound webhook receiver.
+ * Confirms the route is reachable and the signing secret is configured.
+ * Used to verify setup before pointing the Resend dashboard webhook here.
+ */
+router.get("/api/webhooks/resend/health", (_req, res) => {
+  const secretConfigured = Boolean(RESEND_WEBHOOK_SECRET);
+  res.json({
+    ok: true,
+    route: "POST /api/webhooks/resend",
+    signingSecretConfigured: secretConfigured,
+    message: secretConfigured
+      ? "Resend webhook is ready. Signing secret is configured — all incoming events will be signature-verified."
+      : "WARNING: RESEND_WEBHOOK_SECRET is not set. All incoming webhook payloads will be rejected until the secret is configured.",
+    instructions: secretConfigured
+      ? [
+          "1. Point your Resend webhook to POST /api/webhooks/resend",
+          "2. Events supported: email.sent, email.delivered, email.bounced, email.complained, email.clicked, email.opened, email.delivery_delayed",
+        ]
+      : [
+          "1. Generate a signing secret in the Resend dashboard (Webhooks → Edit → Signing Secret)",
+          "2. Set RESEND_WEBHOOK_SECRET=whsec_<your-secret> in your environment",
+          "3. Restart the server and call this endpoint again to confirm",
+        ],
+  });
+});
+
 export default router;
