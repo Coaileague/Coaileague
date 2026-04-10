@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { db } from "./db";
+import { db } from "../db";
 import { 
   // @ts-expect-error — TS migration: fix in refactoring sprint
   offboardingCases, 
@@ -13,7 +13,7 @@ import {
   workspaces
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { requireAuth } from "./auth";
+import { requireAuth } from "../auth";
 
 const router = Router();
 
