@@ -1,22 +1,31 @@
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2dd4bf;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#14b8a6;stop-opacity:1" />
+    <!-- Blue gradient — top arrow -->
+    <linearGradient id="blueGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#60A5FA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="cyanGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#22d3ee;stop-opacity:1" />
+
+    <!-- Orange gradient — right arrow -->
+    <linearGradient id="orangeGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" style="stop-color:#FB923C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F97316;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="blueGradient" x1="100%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+
+    <!-- Purple gradient — left arrow -->
+    <linearGradient id="purpleGrad" x1="100%" y1="50%" x2="0%" y2="50%">
+      <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
     </linearGradient>
-    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+
+    <!-- Central core gradient -->
+    <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%">
       <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
-      <stop offset="60%" style="stop-color:#22d3ee;stop-opacity:0.9" />
-      <stop offset="100%" style="stop-color:#2dd4bf;stop-opacity:0.5" />
+      <stop offset="60%" style="stop-color:#E0E7FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C4B5FD;stop-opacity:0.9" />
     </radialGradient>
+
+    <!-- Glow filter -->
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="1.5" result="blur"/>
       <feMerge>
@@ -25,34 +34,31 @@
       </feMerge>
     </filter>
   </defs>
-  
-  <!-- CoAIleague Triquetra - Three interlocking circles -->
 
-  <!-- Circle 1 - Top (Teal) -->
-  <circle
-    cx="50" cy="32" r="26"
-    fill="url(#tealGradient)"
-    opacity="0.75"
+  <!-- Arrow 1 — Blue (top, 12 o'clock) -->
+  <path
+    d="M 50 5 L 59 15 L 56 15 L 56 42 L 50 50 L 44 42 L 44 15 L 41 15 Z"
+    fill="url(#blueGrad)"
     filter="url(#glow)"
   />
 
-  <!-- Circle 2 - Bottom Left (Cyan) -->
-  <circle
-    cx="32" cy="62" r="26"
-    fill="url(#cyanGradient)"
-    opacity="0.75"
+  <!-- Arrow 2 — Orange (bottom-right, 4 o'clock) -->
+  <path
+    d="M 50 5 L 59 15 L 56 15 L 56 42 L 50 50 L 44 42 L 44 15 L 41 15 Z"
+    fill="url(#orangeGrad)"
     filter="url(#glow)"
+    transform="rotate(120, 50, 50)"
   />
 
-  <!-- Circle 3 - Bottom Right (Blue) -->
-  <circle
-    cx="68" cy="62" r="26"
-    fill="url(#blueGradient)"
-    opacity="0.75"
+  <!-- Arrow 3 — Purple (bottom-left, 8 o'clock) -->
+  <path
+    d="M 50 5 L 59 15 L 56 15 L 56 42 L 50 50 L 44 42 L 44 15 L 41 15 Z"
+    fill="url(#purpleGrad)"
     filter="url(#glow)"
+    transform="rotate(240, 50, 50)"
   />
-  
-  <!-- Central nexus point -->
-  <circle cx="50" cy="50" r="10" fill="url(#coreGlow)" filter="url(#glow)"/>
+
+  <!-- Central convergence point — glowing core -->
+  <circle cx="50" cy="50" r="10" fill="url(#coreGrad)" filter="url(#glow)"/>
   <circle cx="50" cy="50" r="5" fill="#ffffff" opacity="0.95"/>
 </svg>
