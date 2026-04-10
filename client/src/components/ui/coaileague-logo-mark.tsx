@@ -101,27 +101,33 @@ export function CoAIleagueLogoMark({
         </filter>
       </defs>
 
-      {/* Loop 1 — Top (Teal) */}
-      <path
-        d="M 50 12 C 70 12, 82 30, 82 48 C 82 58, 72 70, 50 50 C 28 70, 18 58, 18 48 C 18 30, 30 12, 50 12 Z"
+      {/* Circle 1 — Top (Teal) */}
+      <circle
+        cx="50"
+        cy="32"
+        r="26"
         fill={`url(#${id.teal})`}
-        opacity="0.9"
+        opacity="0.75"
         filter={`url(#${id.glow})`}
       />
 
-      {/* Loop 2 — Bottom Left (Cyan) */}
-      <path
-        d="M 22 80 C 10 68, 10 48, 22 36 C 32 26, 48 32, 50 50 C 42 64, 30 76, 22 80 C 32 92, 48 90, 50 78 Z"
+      {/* Circle 2 — Bottom Left (Cyan) */}
+      <circle
+        cx="32"
+        cy="62"
+        r="26"
         fill={`url(#${id.cyan})`}
-        opacity="0.85"
+        opacity="0.75"
         filter={`url(#${id.glow})`}
       />
 
-      {/* Loop 3 — Bottom Right (Blue) */}
-      <path
-        d="M 78 80 C 90 68, 90 48, 78 36 C 68 26, 52 32, 50 50 C 58 64, 70 76, 78 80 C 68 92, 52 90, 50 78 Z"
+      {/* Circle 3 — Bottom Right (Blue) */}
+      <circle
+        cx="68"
+        cy="62"
+        r="26"
         fill={`url(#${id.blue})`}
-        opacity="0.85"
+        opacity="0.75"
         filter={`url(#${id.glow})`}
       />
 

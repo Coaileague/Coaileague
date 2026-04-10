@@ -1,6 +1,6 @@
 /**
  * Ask Trinity Button - Branded AI interaction button
- * Uses Trinity Mascot flower logo for consistent platform branding
+ * Uses CoAIleague triquetra mark for consistent platform branding
  * @version 3.0.2 - Cache bust fix (2026-01-24)
  */
 

@@ -10,7 +10,7 @@ interface CoAIleagueStaticLogoProps {
 
 /**
  * CoAIleague Static Logo - Non-Animated
- * Uses the Trinity Mascot (glowing flower) 
+ * Uses the CoAIleague triquetra mark (three interlocking circles)
  * Use this in forms, dialogs, modals, and places where animation doesn't fit
  */
 export function CoAIleagueStaticLogo({
