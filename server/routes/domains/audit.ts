@@ -25,7 +25,7 @@ import adminRouter from "../adminRoutes";
 import adminAiCostsRouter from "../admin/aiCosts";
 import databaseParityRouter from "../database-parity";
 import middlewareQualityRouter from "../middleware-quality";
-import platformRouter from "../platformRoutes";
+import platformRouter, { publicPlatformRouter } from "../platformRoutes";
 import auditRouter from "../auditRoutes";
 import analyticsInlineRouter from "../analyticsRoutes";
 import { ownerAnalyticsRouter } from "../ownerAnalytics";
@@ -118,6 +118,9 @@ export function mountAuditRoutes(app: Express): void {
   app.use("/api/admin/database-parity", requireAuth, requirePlatformStaff, databaseParityRouter);
   app.use("/api/admin/middleware-quality", requireAuth, requirePlatformStaff, middlewareQualityRouter);
   app.use("/api/admin", adminRouter);
+  // publicPlatformRouter must be mounted BEFORE platformRouter so routes like /announcements
+  // (requireAuth only) are reachable by all users without the requirePlatformStaff guard.
+  app.use("/api/platform", publicPlatformRouter);
   app.use("/api/platform", platformRouter);
   app.use("/api", requireAuth, ensureWorkspaceAccess, auditRouter);
   // MOUNT ORDER: specific sub-paths MUST come before the general /analytics catch-all
