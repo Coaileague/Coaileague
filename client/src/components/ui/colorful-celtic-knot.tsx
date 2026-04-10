@@ -1,26 +1,25 @@
 /**
- * Colorful Celtic Trinity Knot - 3-ribbon interwoven design
- * 
- * Features:
- * - 3 flowing interwoven ribbons forming a Celtic triquetra
- * - Vibrant gradient colors: purple, teal, gold/amber
- * - 10 distinctive emotion states with unique animations
- * - Glowing central nexus with state-specific effects
- * - SVG-based for crisp rendering at any size
- * 
- * Emotion States:
- * - idle: Gentle breathing glow (default)
- * - thinking: Rapid ribbon rotation + pulsing core
- * - success: Rainbow color shift + bounce
- * - speaking: Wave-like ribbon flow
- * - listening: Subtle attention pulse with ear-like accent
- * - warning: Orange/amber flash with shake
- * - error: Red flash with intense shake
- * - loading: Smooth continuous spin
- * - happy: Bright sparkle burst + gentle bounce
- * - focused: Intense concentrated glow
- * 
- * This is the official Trinity brand logo throughout the platform.
+ * Trinity Arrow Mark — animated 3-arrow indicator for inline Trinity surfaces.
+ *
+ * Three directional arrows radiate from a central glowing nexus:
+ *   - Blue  (#3B82F6 / #60A5FA)  — top (12 o'clock)
+ *   - Orange (#F97316 / #FB923C) — bottom-right (4 o'clock)
+ *   - Purple (#8B5CF6 / #A78BFA) — bottom-left (8 o'clock)
+ *
+ * 10 emotion states drive live animations:
+ * - idle:      Gentle breathing glow (default)
+ * - thinking:  Fast arrow spin + pulsing core
+ * - success:   Rainbow color shift + bounce
+ * - speaking:  Cascading arrow opacity wave
+ * - listening: Subtle attention pulse
+ * - warning:   Amber flash with shake
+ * - error:     Red flash with intense shake
+ * - loading:   Smooth continuous spin
+ * - happy:     Bright sparkle burst + gentle bounce
+ * - focused:   Intense concentrated glow
+ *
+ * This is the RICH animated Trinity indicator used on chat/inline surfaces.
+ * For static brand mark use `CoAIleagueLogoMark` from coaileague-logo-mark.tsx.
  */
 
 import { cn } from "@/lib/utils";
@@ -95,7 +94,7 @@ const stateConfigs: Record<TrinityEmotionState, {
     speed: "fast",
     wrapperClass: "animate-pulse",
     glowIntensity: 4,
-    coreColor: "#22d3ee",
+    coreColor: "#60a5fa",
     ribbonOpacityRange: [0.7, 1],
     enableSpin: true,
     enablePulse: true,
@@ -121,10 +120,13 @@ const stateConfigs: Record<TrinityEmotionState, {
     speed: "normal",
     wrapperClass: "",
     glowIntensity: 3,
-    coreColor: "#c084fc",
+    coreColor: "#a78bfa",
     ribbonOpacityRange: [0.6, 1],
     enableSpin: false,
-    enablePulse: true,
+    // pulse and wave both target opacity; wave takes priority here to give
+    // speaking its distinctive cascading-arrow ripple rather than a
+    // synchronised breathing effect.
+    enablePulse: false,
     enableWave: true,
     enableShake: false,
     enableBounce: false,
@@ -173,7 +175,7 @@ const stateConfigs: Record<TrinityEmotionState, {
     speed: "normal",
     wrapperClass: "",
     glowIntensity: 3,
-    coreColor: "#a855f7",
+    coreColor: "#8b5cf6",
     ribbonOpacityRange: [0.8, 1],
     enableSpin: true,
     enablePulse: false,
@@ -214,6 +216,15 @@ const stateConfigs: Record<TrinityEmotionState, {
 const randomizableStates: TrinityEmotionState[] = [
   "idle", "thinking", "listening", "speaking", "focused", "happy"
 ];
+
+/** The shared arrow shape used by all three arms. Defined once here so a
+ *  future shape update only requires a single edit. Each arm is placed by
+ *  rotating the parent group or by a per-element transform. */
+const ARROW_PATH = "M 50 5 L 59 15 L 56 15 L 56 42 L 50 50 L 44 42 L 44 15 L 41 15 Z";
+
+/** Wave-cascade delays for the three arrows (0 × interval, 1 × interval,
+ *  2 × interval). Derived from index so changing the count stays consistent. */
+const WAVE_DELAYS = [0, 1, 2].map(i => `${i * 0.5}s`) as [string, string, string];
 
 export function ColorfulCelticKnot({ 
   size = "md", 
@@ -275,59 +286,59 @@ export function ColorfulCelticKnot({
       data-state={currentState}
     >
       <defs>
-        {/* Gradient for ribbon 1 - Purple to Magenta */}
-        <linearGradient id={`ribbon1-grad-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#a855f7">
+        {/* Gradient for arrow 1 - Blue (top) */}
+        <linearGradient id={`arrow1-grad-${uniqueId}`} x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#60A5FA">
             {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#a855f7;#22d3ee;#f59e0b;#a855f7" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="stop-color" values="#60A5FA;#FB923C;#A78BFA;#60A5FA" dur="3s" repeatCount="indefinite" />
             )}
           </stop>
-          <stop offset="50%" stopColor="#c026d3">
+          <stop offset="50%" stopColor="#3B82F6">
             {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#c026d3;#14b8a6;#fbbf24;#c026d3" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="stop-color" values="#3B82F6;#F97316;#8B5CF6;#3B82F6" dur="3s" repeatCount="indefinite" />
             )}
           </stop>
-          <stop offset="100%" stopColor="#7c3aed">
+          <stop offset="100%" stopColor="#2563EB">
             {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#7c3aed;#06b6d4;#f97316;#7c3aed" dur="3s" repeatCount="indefinite" />
-            )}
-          </stop>
-        </linearGradient>
-        
-        {/* Gradient for ribbon 2 - Teal to Cyan */}
-        <linearGradient id={`ribbon2-grad-${uniqueId}`} x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#14b8a6">
-            {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#14b8a6;#f59e0b;#a855f7;#14b8a6" dur="3s" repeatCount="indefinite" />
-            )}
-          </stop>
-          <stop offset="50%" stopColor="#22d3ee">
-            {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#22d3ee;#fbbf24;#c026d3;#22d3ee" dur="3s" repeatCount="indefinite" />
-            )}
-          </stop>
-          <stop offset="100%" stopColor="#06b6d4">
-            {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#06b6d4;#f97316;#7c3aed;#06b6d4" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="stop-color" values="#2563EB;#EA580C;#7C3AED;#2563EB" dur="3s" repeatCount="indefinite" />
             )}
           </stop>
         </linearGradient>
         
-        {/* Gradient for ribbon 3 - Gold to Orange */}
-        <linearGradient id={`ribbon3-grad-${uniqueId}`} x1="100%" y1="50%" x2="0%" y2="50%">
-          <stop offset="0%" stopColor="#f59e0b">
+        {/* Gradient for arrow 2 - Orange (bottom-right) */}
+        <linearGradient id={`arrow2-grad-${uniqueId}`} x1="0%" y1="50%" x2="100%" y2="50%">
+          <stop offset="0%" stopColor="#FB923C">
             {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#f59e0b;#a855f7;#14b8a6;#f59e0b" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="stop-color" values="#FB923C;#A78BFA;#60A5FA;#FB923C" dur="3s" repeatCount="indefinite" />
             )}
           </stop>
-          <stop offset="50%" stopColor="#fbbf24">
+          <stop offset="50%" stopColor="#F97316">
             {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#fbbf24;#c026d3;#22d3ee;#fbbf24" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="stop-color" values="#F97316;#8B5CF6;#3B82F6;#F97316" dur="3s" repeatCount="indefinite" />
             )}
           </stop>
-          <stop offset="100%" stopColor="#f97316">
+          <stop offset="100%" stopColor="#EA580C">
             {animated && config.colorShift && (
-              <animate attributeName="stop-color" values="#f97316;#7c3aed;#06b6d4;#f97316" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="stop-color" values="#EA580C;#7C3AED;#2563EB;#EA580C" dur="3s" repeatCount="indefinite" />
+            )}
+          </stop>
+        </linearGradient>
+        
+        {/* Gradient for arrow 3 - Purple (bottom-left) */}
+        <linearGradient id={`arrow3-grad-${uniqueId}`} x1="100%" y1="50%" x2="0%" y2="50%">
+          <stop offset="0%" stopColor="#A78BFA">
+            {animated && config.colorShift && (
+              <animate attributeName="stop-color" values="#A78BFA;#60A5FA;#FB923C;#A78BFA" dur="3s" repeatCount="indefinite" />
+            )}
+          </stop>
+          <stop offset="50%" stopColor="#8B5CF6">
+            {animated && config.colorShift && (
+              <animate attributeName="stop-color" values="#8B5CF6;#3B82F6;#F97316;#8B5CF6" dur="3s" repeatCount="indefinite" />
+            )}
+          </stop>
+          <stop offset="100%" stopColor="#7C3AED">
+            {animated && config.colorShift && (
+              <animate attributeName="stop-color" values="#7C3AED;#2563EB;#EA580C;#7C3AED" dur="3s" repeatCount="indefinite" />
             )}
           </stop>
         </linearGradient>
@@ -335,8 +346,8 @@ export function ColorfulCelticKnot({
         {/* Center nexus gradient - state-aware */}
         <radialGradient id={`nexus-grad-${uniqueId}`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor={config.coreColor} />
-          <stop offset="40%" stopColor="#e9d5ff" />
-          <stop offset="100%" stopColor="#a855f7" />
+          <stop offset="40%" stopColor="#ddd6fe" />
+          <stop offset="100%" stopColor="#8b5cf6" />
         </radialGradient>
         
         {/* Glow filter - intensity based on state */}
@@ -348,7 +359,7 @@ export function ColorfulCelticKnot({
           </feMerge>
         </filter>
         
-        {/* Outer glow for ribbons */}
+        {/* Outer glow for arrows */}
         <filter id={`ribbon-glow-${uniqueId}`} x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="1.5" result="blur"/>
           <feMerge>
@@ -358,14 +369,8 @@ export function ColorfulCelticKnot({
         </filter>
       </defs>
       
-      {/* Main knot group - can spin for loading/thinking states */}
-      <g 
-        filter={`url(#ribbon-glow-${uniqueId})`} 
-        strokeWidth="6" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        fill="none"
-      >
+      {/* Main arrow group - spins for thinking/loading states */}
+      <g filter={`url(#ribbon-glow-${uniqueId})`}>
         {animated && config.enableSpin && (
           <animateTransform 
             attributeName="transform" 
@@ -377,14 +382,10 @@ export function ColorfulCelticKnot({
           />
         )}
         
-        {/* Loop 1 - Top loop (purple/magenta) */}
-        <path 
-          d="M 50 15 
-             C 25 15, 15 40, 25 55 
-             C 32 65, 42 60, 50 50 
-             C 58 60, 68 65, 75 55 
-             C 85 40, 75 15, 50 15"
-          stroke={`url(#ribbon1-grad-${uniqueId})`}
+        {/* Arrow 1 — Blue (top, 12 o'clock) */}
+        <path
+          d={ARROW_PATH}
+          fill={`url(#arrow1-grad-${uniqueId})`}
           opacity={maxOpacity}
         >
           {animated && config.enablePulse && (
@@ -397,23 +398,21 @@ export function ColorfulCelticKnot({
           )}
           {animated && config.enableWave && (
             <animate 
-              attributeName="stroke-width" 
-              values="5;7;5" 
+              attributeName="opacity" 
+              values={`0.4;${maxOpacity};0.4`} 
               dur={effectiveSpeed.wave} 
               repeatCount="indefinite"
+              begin={WAVE_DELAYS[0]}
             />
           )}
         </path>
         
-        {/* Loop 2 - Bottom Left loop (teal/cyan) */}
-        <path 
-          d="M 30 78 
-             C 10 65, 15 35, 35 28 
-             C 43 25, 48 35, 50 50 
-             C 42 58, 32 70, 30 78 
-             C 35 88, 50 85, 50 75"
-          stroke={`url(#ribbon2-grad-${uniqueId})`}
+        {/* Arrow 2 — Orange (bottom-right, 4 o'clock) */}
+        <path
+          d={ARROW_PATH}
+          fill={`url(#arrow2-grad-${uniqueId})`}
           opacity={maxOpacity}
+          transform="rotate(120, 50, 50)"
         >
           {animated && config.enablePulse && (
             <animate 
@@ -426,24 +425,21 @@ export function ColorfulCelticKnot({
           )}
           {animated && config.enableWave && (
             <animate 
-              attributeName="stroke-width" 
-              values="5;7;5" 
+              attributeName="opacity" 
+              values={`0.4;${maxOpacity};0.4`} 
               dur={effectiveSpeed.wave} 
               repeatCount="indefinite"
-              begin="0.2s"
+              begin={WAVE_DELAYS[1]}
             />
           )}
         </path>
         
-        {/* Loop 3 - Bottom Right loop (gold/orange) */}
-        <path 
-          d="M 70 78 
-             C 90 65, 85 35, 65 28 
-             C 57 25, 52 35, 50 50 
-             C 58 58, 68 70, 70 78 
-             C 65 88, 50 85, 50 75"
-          stroke={`url(#ribbon3-grad-${uniqueId})`}
+        {/* Arrow 3 — Purple (bottom-left, 8 o'clock) */}
+        <path
+          d={ARROW_PATH}
+          fill={`url(#arrow3-grad-${uniqueId})`}
           opacity={maxOpacity}
+          transform="rotate(240, 50, 50)"
         >
           {animated && config.enablePulse && (
             <animate 
@@ -456,11 +452,11 @@ export function ColorfulCelticKnot({
           )}
           {animated && config.enableWave && (
             <animate 
-              attributeName="stroke-width" 
-              values="5;7;5" 
+              attributeName="opacity" 
+              values={`0.4;${maxOpacity};0.4`} 
               dur={effectiveSpeed.wave} 
               repeatCount="indefinite"
-              begin="0.4s"
+              begin={WAVE_DELAYS[2]}
             />
           )}
         </path>
@@ -472,7 +468,7 @@ export function ColorfulCelticKnot({
         cy="50" 
         r="44" 
         fill="none" 
-        stroke={`url(#ribbon1-grad-${uniqueId})`}
+        stroke={`url(#arrow1-grad-${uniqueId})`}
         strokeWidth="1" 
         strokeDasharray="8 16 4 16"
         opacity="0.2"
@@ -495,7 +491,7 @@ export function ColorfulCelticKnot({
         cy="50" 
         r="40" 
         fill="none" 
-        stroke={`url(#ribbon2-grad-${uniqueId})`}
+        stroke={`url(#arrow2-grad-${uniqueId})`}
         strokeWidth="0.5" 
         strokeDasharray="4 20"
         opacity="0.15"

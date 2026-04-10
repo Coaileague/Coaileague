@@ -1,22 +1,24 @@
 /**
- * TrinityAnimatedLogo — animated wrapper around the CoAIleague triquetra.
+ * TrinityAnimatedLogo — animated wrapper around the CoAIleague Trinity arrow mark.
  *
  * STRICT BRAND RULE (2026-04-09): this component renders the canonical
- * CoAIleagueLogoMark (triquetra) with a state-driven CSS animation class.
- * It NEVER renders the old 5-petal ribbon knot or any "blob/flower"
- * mascot geometry — that SVG was removed in the logo consolidation pass
- * because it kept leaking back into chat/thinking surfaces.
+ * CoAIleagueLogoMark (3-arrow Trinity symbol) with a state-driven CSS
+ * animation class. It NEVER renders the old 5-petal ribbon knot or any
+ * "blob/flower" mascot geometry.
  *
  * Animation states (applied as CSS classes):
  *   - idle       → `animate-trinity-pulse` (slow breathing glow)
  *   - thinking   → `animate-trinity-spin`  (spin while generating)
  *   - responding → `animate-trinity-fade`  (fade-in as text appears)
  *
- * Size + mode props are preserved for backward compatibility with any
- * existing callers. `mode` is a no-op for now; the triquetra has one
- * canonical colour palette, so it does not fork per Trinity mode.
+ * For richer 10-state animation (speaking, listening, success, error, etc.)
+ * use `ColorfulCelticKnot` from `@/components/ui/colorful-celtic-knot`.
  *
- * Canonical triquetra source: `@/components/ui/coaileague-logo-mark.tsx`
+ * Size + mode props are preserved for backward compatibility with any
+ * existing callers. `mode` is a no-op; the arrow mark has one canonical
+ * colour palette and does not fork per Trinity mode.
+ *
+ * Canonical arrow mark source: `@/components/ui/coaileague-logo-mark.tsx`
  */
 
 import { cn } from "@/lib/utils";
