@@ -1845,40 +1845,43 @@ import { createHash } from "crypto";
         }
       })();
 
-      // WIRE: charge the middleware processing fee for non-manual invoice payments (non-blocking).
-      // Previously this service existed but was never called on the mark-paid path.
+      // Charge middleware processing fee for non-manual invoice payments (awaited per CLAUDE.md §B).
       // Manual payments have no processing fee (no card/ACH network involved).
+      // chargeInvoiceMiddlewareFee uses idempotencyKey `invoice_${workspaceId}_${invoiceId}`,
+      // so even if this runs twice for the same invoice, Stripe deduplicates the charge.
       if (paymentMethod !== 'manual') {
-        (async () => {
-          try {
-            const { chargeInvoiceMiddlewareFee } = await import('../services/billing/middlewareTransactionFees');
-            const invoiceAmountCents = Math.round(parseFloat(String(updated.total || '0')) * 100);
-            if (invoiceAmountCents > 0) {
-              const feeResult = await chargeInvoiceMiddlewareFee({
-                workspaceId: workspace.id,
-                invoiceId: id,
-                invoiceNumber: updated.invoiceNumber || id,
-                invoiceAmountCents,
-                paymentMethod: paymentMethod as 'card' | 'ach' | 'manual',
-              });
-              log.info(`[MarkPaid] Middleware fee: ${feeResult.description} (success: ${feeResult.success})`);
-              if (feeResult.success && feeResult.amountCents > 0) {
-                // DB ledger: write to financial_processing_fees
-                import('../services/billing/financialProcessingFeeService').then(({ financialProcessingFeeService }) =>
-                  financialProcessingFeeService.recordInvoiceFee({ workspaceId: workspace.id, referenceId: id })
-                    .catch((err: Error) => log.warn('[MarkPaid] Fee ledger record failed (non-blocking):', err.message))
-                ).catch((err: Error) => log.warn('[MarkPaid] Fee ledger import failed:', err.message));
-                // Platform revenue tracking: write to platform_revenue table
-                import('../services/finance/middlewareFeeService').then(({ recordMiddlewareFeeCharge }) =>
-                  recordMiddlewareFeeCharge(workspace.id, 'invoice_payment', feeResult.amountCents, id)
-                    .catch((err: Error) => log.warn('[MarkPaid] Platform revenue record failed (non-blocking):', err.message))
-                ).catch((err: Error) => log.warn('[MarkPaid] Platform revenue import failed:', err.message));
+        try {
+          const { chargeInvoiceMiddlewareFee } = await import('../services/billing/middlewareTransactionFees');
+          const invoiceAmountCents = Math.round(parseFloat(String(updated.total || '0')) * 100);
+          if (invoiceAmountCents > 0) {
+            const feeResult = await chargeInvoiceMiddlewareFee({
+              workspaceId: workspace.id,
+              invoiceId: id,
+              invoiceNumber: updated.invoiceNumber || id,
+              invoiceAmountCents,
+              paymentMethod: paymentMethod as 'card' | 'ach' | 'manual',
+            });
+            log.info(`[MarkPaid] Middleware fee: ${feeResult.description} (success: ${feeResult.success})`);
+            if (feeResult.success && feeResult.amountCents > 0) {
+              // DB ledger: write to financial_processing_fees
+              try {
+                const { financialProcessingFeeService } = await import('../services/billing/financialProcessingFeeService');
+                await financialProcessingFeeService.recordInvoiceFee({ workspaceId: workspace.id, referenceId: id });
+              } catch (err: any) {
+                log.warn('[MarkPaid] Fee ledger record failed (non-fatal):', err?.message);
+              }
+              // Platform revenue tracking: write to platform_revenue table
+              try {
+                const { recordMiddlewareFeeCharge } = await import('../services/finance/middlewareFeeService');
+                await recordMiddlewareFeeCharge(workspace.id, 'invoice_payment', feeResult.amountCents, id);
+              } catch (err: any) {
+                log.warn('[MarkPaid] Platform revenue record failed (non-fatal):', err?.message);
               }
             }
-          } catch (feeErr: unknown) {
-            log.warn('[MarkPaid] Middleware fee charge failed (non-blocking):', (feeErr instanceof Error ? feeErr.message : String(feeErr)));
           }
-        })();
+        } catch (feeErr: unknown) {
+          log.warn('[MarkPaid] Middleware fee charge failed (non-fatal):', (feeErr instanceof Error ? feeErr.message : String(feeErr)));
+        }
       }
 
       res.json({ ...updated, paymentRecord: paymentRow || null });

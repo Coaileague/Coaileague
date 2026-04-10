@@ -310,20 +310,23 @@ class StripeConnectPayoutService {
       } catch (err: any) {
         log.error('[StripeConnect] Could not update payroll entry disbursement fields:', err);
         // Notify org owner — payout succeeded but tracking record failed (reconciliation risk)
-        import('../notificationService').then(({ notificationService }) =>
-          import('@shared/schema').then(({ workspaces }) =>
-            import('drizzle-orm').then(({ eq: eqOp }) =>
-              db.select({ ownerId: workspaces.ownerId }).from(workspaces).where(eqOp(workspaces.id, workspaceId)).limit(1)
-                .then(([ws]) => ws?.ownerId && notificationService.createNotification({
-                  userId: ws.ownerId, workspaceId,
-                  type: 'payroll_tracking_error',
-                  title: 'Payroll Tracking Error',
-                  message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the internal tracking record failed to update. Please verify disbursement in your payroll records. Error: ${(err instanceof Error ? err.message : String(err))}`,
-                  priority: 'high',
-                }))
-            )
-          )
-        ).catch((err) => log.warn('[stripeConnectPayoutService] Fire-and-forget failed:', err));
+        try {
+          const { notificationService } = await import('../notificationService');
+          const { workspaces: wsTable } = await import('@shared/schema');
+          const { eq: eqOp } = await import('drizzle-orm');
+          const [ws] = await db.select({ ownerId: wsTable.ownerId }).from(wsTable).where(eqOp(wsTable.id, workspaceId)).limit(1);
+          if (ws?.ownerId) {
+            await notificationService.createNotification({
+              userId: ws.ownerId, workspaceId,
+              type: 'payroll_tracking_error',
+              title: 'Payroll Tracking Error',
+              message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the internal tracking record failed to update. Please verify disbursement in your payroll records. Error: ${(err instanceof Error ? err.message : String(err))}`,
+              priority: 'high',
+            });
+          }
+        } catch (notifyErr: any) {
+          log.warn('[StripeConnect] Notification for tracking error also failed (non-fatal):', notifyErr?.message);
+        }
       }
 
       try {
@@ -343,20 +346,23 @@ class StripeConnectPayoutService {
       } catch (err: any) {
         log.error('[StripeConnect] Could not insert payroll payout record:', err);
         // Notify org owner — payout succeeded but payout log insert failed (audit gap)
-        import('../notificationService').then(({ notificationService }) =>
-          import('@shared/schema').then(({ workspaces }) =>
-            import('drizzle-orm').then(({ eq: eqOp }) =>
-              db.select({ ownerId: workspaces.ownerId }).from(workspaces).where(eqOp(workspaces.id, workspaceId)).limit(1)
-                .then(([ws]) => ws?.ownerId && notificationService.createNotification({
-                  userId: ws.ownerId, workspaceId,
-                  type: 'payroll_tracking_error',
-                  title: 'Payroll Payout Log Error',
-                  message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the payout audit log failed to record. Manual reconciliation may be needed. Error: ${(err instanceof Error ? err.message : String(err))}`,
-                  priority: 'high',
-                }))
-            )
-          )
-        ).catch((err) => log.warn('[stripeConnectPayoutService] Fire-and-forget failed:', err));
+        try {
+          const { notificationService } = await import('../notificationService');
+          const { workspaces: wsTable } = await import('@shared/schema');
+          const { eq: eqOp } = await import('drizzle-orm');
+          const [ws] = await db.select({ ownerId: wsTable.ownerId }).from(wsTable).where(eqOp(wsTable.id, workspaceId)).limit(1);
+          if (ws?.ownerId) {
+            await notificationService.createNotification({
+              userId: ws.ownerId, workspaceId,
+              type: 'payroll_tracking_error',
+              title: 'Payroll Payout Log Error',
+              message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the payout audit log failed to record. Manual reconciliation may be needed. Error: ${(err instanceof Error ? err.message : String(err))}`,
+              priority: 'high',
+            });
+          }
+        } catch (notifyErr: any) {
+          log.warn('[StripeConnect] Notification for payout log error also failed (non-fatal):', notifyErr?.message);
+        }
       }
 
       try {

@@ -599,11 +599,13 @@ class WeeklyBillingRunServiceImpl {
           billingExceptions.push(`Middleware fee failed: ${feeResult.error || 'unknown'}`);
         }
         if (feeResult.success && feeResult.amountCents > 0) {
-          // Platform revenue tracking: write to platform_revenue (non-blocking)
-          import('../finance/middlewareFeeService').then(({ recordMiddlewareFeeCharge }) =>
-            recordMiddlewareFeeCharge(workspaceId, 'invoice_processing', feeResult.amountCents, invoice.id)
-              .catch((err: Error) => log.warn('[WeeklyBilling] Invoice fee revenue record failed (non-blocking):', err.message))
-          ).catch((err: Error) => log.warn('[WeeklyBilling] Invoice fee revenue import failed:', err.message));
+          // Platform revenue tracking: write to platform_revenue (awaited per CLAUDE.md §B)
+          try {
+            const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
+            await recordMiddlewareFeeCharge(workspaceId, 'invoice_processing', feeResult.amountCents, invoice.id);
+          } catch (err: any) {
+            log.warn('[WeeklyBilling] Invoice fee revenue record failed (non-fatal):', err?.message);
+          }
         }
       } catch (feeErr: any) {
         const msg = `Middleware fee charge exception: ${feeErr.message}`;
@@ -637,10 +639,12 @@ class WeeklyBillingRunServiceImpl {
             billingExceptions.push(`Seat overage failed: ${overageResult.error || 'unknown'}`);
           }
           if (overageResult.success) {
-            import('../finance/middlewareFeeService').then(({ recordMiddlewareFeeCharge }) =>
-              recordMiddlewareFeeCharge(workspaceId, 'seat_overage', overageResult.amountCents, workspaceId)
-                .catch((err: Error) => log.warn('[WeeklyBilling] Seat overage revenue record failed (non-blocking):', err.message))
-            ).catch((err: Error) => log.warn('[WeeklyBilling] Seat overage revenue import failed:', err.message));
+            try {
+              const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
+              await recordMiddlewareFeeCharge(workspaceId, 'seat_overage', overageResult.amountCents, workspaceId);
+            } catch (err: any) {
+              log.warn('[WeeklyBilling] Seat overage revenue record failed (non-fatal):', err?.message);
+            }
           }
         }
       } catch (overageErr: any) {
@@ -671,10 +675,12 @@ class WeeklyBillingRunServiceImpl {
             billingExceptions.push(`Credit overage failed: ${creditOverageResult.error || 'unknown'}`);
           }
           if (creditOverageResult.success && creditOverageResult.amountCents > 0) {
-            import('../finance/middlewareFeeService').then(({ recordMiddlewareFeeCharge }) =>
-              recordMiddlewareFeeCharge(workspaceId, 'credit_overage', creditOverageResult.amountCents, workspaceId)
-                .catch((err: Error) => log.warn('[WeeklyBilling] Credit overage revenue record failed (non-blocking):', err.message))
-            ).catch((err: Error) => log.warn('[WeeklyBilling] Credit overage revenue import failed:', err.message));
+            try {
+              const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
+              await recordMiddlewareFeeCharge(workspaceId, 'credit_overage', creditOverageResult.amountCents, workspaceId);
+            } catch (err: any) {
+              log.warn('[WeeklyBilling] Credit overage revenue record failed (non-fatal):', err?.message);
+            }
           }
         }
       } catch (creditOverageErr: any) {
@@ -692,12 +698,13 @@ class WeeklyBillingRunServiceImpl {
         const { overageChargesCents } = await aiMeteringService.calculatePeriodOverage(workspaceId, periodStart);
 
         if (overageChargesCents > 0) {
-          const stripe = (await import('stripe')).default;
-          const Stripe = new stripe(process.env.STRIPE_SECRET_KEY || '');
+          // Use canonical lazy Stripe factory (CLAUDE.md §F) — never instantiate inline.
+          const { getStripe: getLazyStripe } = await import('./stripeClient');
+          const stripeClient = getLazyStripe();
           const stripeCustomerId = workspace[0].stripeCustomerId;
 
           if (stripeCustomerId) {
-            await Stripe.invoiceItems.create({
+            await stripeClient.invoiceItems.create({
               customer: stripeCustomerId,
               amount: overageChargesCents,
               currency: 'usd',
@@ -727,10 +734,12 @@ class WeeklyBillingRunServiceImpl {
             billingExceptions.push(`Storage overage failed: ${storageOverageResult.error || 'unknown'}`);
           }
           if (storageOverageResult.success) {
-            import('../finance/middlewareFeeService').then(({ recordMiddlewareFeeCharge }) =>
-              recordMiddlewareFeeCharge(workspaceId, 'storage_overage', storageOverageResult.amountCents, workspaceId)
-                .catch((err: Error) => log.warn('[WeeklyBilling] Storage overage revenue record failed (non-blocking):', err.message))
-            ).catch((err: Error) => log.warn('[WeeklyBilling] Storage overage revenue import failed:', err.message));
+            try {
+              const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
+              await recordMiddlewareFeeCharge(workspaceId, 'storage_overage', storageOverageResult.amountCents, workspaceId);
+            } catch (err: any) {
+              log.warn('[WeeklyBilling] Storage overage revenue record failed (non-fatal):', err?.message);
+            }
           }
         }
       } catch (storageOverageErr: any) {
