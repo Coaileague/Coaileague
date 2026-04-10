@@ -220,7 +220,7 @@ export default function CustomLogin() {
       )}
 
       <CanvasHubPage config={PAGE_CONFIGS.login}>
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-5 w-full max-w-md mx-auto">
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => setLocation("/")}

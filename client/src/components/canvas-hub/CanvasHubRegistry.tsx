@@ -177,7 +177,7 @@ export function CanvasHubPage({ config, children, className }: CanvasHubPageProp
           "bg-background",
           className
         )}>
-          <div className="w-full max-w-sm mx-auto px-4 py-6">
+          <div className="w-full max-w-md mx-auto px-4 py-8">
             {children}
           </div>
         </div>
