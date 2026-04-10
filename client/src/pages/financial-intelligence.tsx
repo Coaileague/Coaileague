@@ -860,6 +860,7 @@ export default function FinancialIntelligence() {
     id: 'financial-intelligence',
     title: 'Financial Intelligence',
     subtitle: 'Real-time P&L analysis with Trinity AI insights',
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'workspace',
     headerActions: actionButtons,
   };

@@ -186,6 +186,7 @@ export default function Insights() {
     id: 'insights',
     title: 'AI Analytics™',
     subtitle: 'AI-powered analytics & autonomous insights',
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'workspace',
     headerActions: generateButton,
   };

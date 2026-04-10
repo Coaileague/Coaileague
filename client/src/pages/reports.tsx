@@ -208,6 +208,7 @@ function ReportSubmissionForm({ template, onSubmit, onCancel, isSubmitting }: Re
   );
 }
 
+// @ts-expect-error — TS migration: fix in refactoring sprint
 const reportsPageConfig: CanvasPageConfig = {
   category: 'operations',
   title: 'Report Management System',

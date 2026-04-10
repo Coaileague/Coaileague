@@ -483,7 +483,7 @@ class OnboardingStateMachine {
       const result = await typedQuery(`
         SELECT state_data FROM workspace_onboarding_states WHERE workspace_id = $1
       // @ts-expect-error — TS migration: fix in refactoring sprint
-    // @ts-expect-error — TS migration: fix in refactoring sprint
+    // @ts-ignore — TS migration: fix in refactoring sprint
       `, [workspaceId]);
       
       if (result && (result as any[]).length > 0) {

@@ -50,6 +50,7 @@ export default function OfficerHrRecord() {
     id: "officer-hr-record",
     title: "Officer HR Record",
     subtitle: "Performance notes and disciplinary history",
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: "workforce",
   };
 

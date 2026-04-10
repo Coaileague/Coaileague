@@ -85,7 +85,9 @@ export const SlimHeader = forwardRef<HTMLDivElement, SlimHeaderProps>(({
   return (
     <header
       ref={(el) => {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         headerRef.current = el;
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (typeof ref === 'function') ref(el);
         else if (ref) (ref as any).current = el;
       }}

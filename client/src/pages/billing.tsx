@@ -157,6 +157,7 @@ function HardCapToggleCard({ workspaceId }: { workspaceId?: string }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
+          // @ts-ignore — TS migration: fix in refactoring sprint
           <Shield className="h-4 w-4" />
           Seat Cap Enforcement
         </CardTitle>

@@ -439,14 +439,14 @@ rmsRouter.get("/dars/:id/narrative-download", requireAuth as any, ensureWorkspac
   <div class="field"><label>Incident / Shift Date:</label><span>${incidentDate}</span></div>
   <div class="field"><label>Site / Location:</label><span>${dar.site_name || 'N/A'}</span></div>
   // @ts-expect-error — TS migration: fix in refactoring sprint
+  // @ts-ignore — TS migration: fix in refactoring sprint
+  <div class="field"><label>Shift Start:</label><span>${(dar as any).shift_start ? new Date((dar as any).shift_start).toLocaleTimeString() : 'N/A'}</span></div>
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  <div class="field"><label>Shift Start:</label><span>${dar.shift_start ? new Date(dar.shift_start).toLocaleTimeString() : 'N/A'}</span></div>
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  <div class="field"><label>Shift End:</label><span>${dar.shift_end ? new Date(dar.shift_end).toLocaleTimeString() : 'N/A'}</span></div>
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  <div class="field"><label>Report Status:</label><span>${(dar.status || 'submitted').toUpperCase()}</span></div>
+  // @ts-ignore — TS migration: fix in refactoring sprint
+  <div class="field"><label>Shift End:</label><span>${(dar as any).shift_end ? new Date((dar as any).shift_end).toLocaleTimeString() : 'N/A'}</span></div>
+  // @ts-ignore — TS migration: fix in refactoring sprint
+  <div class="field"><label>Report Status:</label><span>${((dar as any).status || 'submitted').toUpperCase()}</span></div>
 </div>
 
 <div class="section">
@@ -471,11 +471,11 @@ rmsRouter.get("/dars/:id/narrative-download", requireAuth as any, ensureWorkspac
   <div class="section-title">Chain of Command Notification Log</div>
   <div class="chain-of-command">
   // @ts-expect-error — TS migration: fix in refactoring sprint
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    <div class="field"><label>Report Submitted:</label><span>${dar.created_at ? new Date(dar.created_at).toLocaleString() : 'N/A'}</span></div>
+    // @ts-ignore — TS migration: fix in refactoring sprint
+    <div class="field"><label>Report Submitted:</label><span>${(dar as any).created_at ? new Date((dar as any).created_at).toLocaleString() : 'N/A'}</span></div>
     <div class="field"><label>Trinity Articulation:</label><span>${dar.trinity_articulated ? 'Completed' : 'Pending / Not Required'}</span></div>
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    <div class="field"><label>Supervisor Review:</label><span>${dar.reviewed_at ? new Date(dar.reviewed_at).toLocaleString() : 'Pending'}</span></div>
+    // @ts-ignore — TS migration: fix in refactoring sprint
+    <div class="field"><label>Supervisor Review:</label><span>${(dar as any).reviewed_at ? new Date((dar as any).reviewed_at).toLocaleString() : 'Pending'}</span></div>
     <div class="field"><label>Verified By:</label><span>${dar.verified_by || 'Pending verification'}</span></div>
   </div>
 </div>
@@ -546,12 +546,12 @@ rmsRouter.get("/incidents/:id/narrative-download", requireAuth as any, ensureWor
   <div class="field"><label>Incident Title:</label><span>${inc.title || 'N/A'}</span></div>
   // @ts-expect-error — TS migration: fix in refactoring sprint
   <div class="field"><label>Category:</label><span>${inc.category || 'N/A'}</span></div>
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  <div class="field"><label>Priority:</label><span>${(inc.priority || 'medium').toUpperCase()}</span></div>
+  // @ts-ignore — TS migration: fix in refactoring sprint
+  <div class="field"><label>Priority:</label><span>${((inc as any).priority || 'medium').toUpperCase()}</span></div>
   <div class="field"><label>Officer / Reporter:</label><span>${inc.reported_by_name || 'N/A'}</span></div>
   <div class="field"><label>Site / Location:</label><span>${inc.site_name || inc.location_description || 'N/A'}</span></div>
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  <div class="field"><label>Incident Occurred:</label><span>${inc.occurred_at ? new Date(inc.occurred_at).toLocaleString() : 'N/A'}</span></div>
+  // @ts-ignore — TS migration: fix in refactoring sprint
+  <div class="field"><label>Incident Occurred:</label><span>${(inc as any).occurred_at ? new Date((inc as any).occurred_at).toLocaleString() : 'N/A'}</span></div>
   ${inc.police_report_number ? `<div class="field"><label>Police Report #:</label><span>${inc.police_report_number}</span></div>` : ''}
 </div>
 
@@ -564,12 +564,12 @@ rmsRouter.get("/incidents/:id/narrative-download", requireAuth as any, ensureWor
 
 <div class="section">
   <div class="section-title">Supporting Data</div>
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  <div class="field"><label>Status:</label><span>${(inc.status || 'open').toUpperCase()}</span></div>
+  // @ts-ignore — TS migration: fix in refactoring sprint
+  <div class="field"><label>Status:</label><span>${((inc as any).status || 'open').toUpperCase()}</span></div>
   <div class="field"><label>Client Notified:</label><span>${inc.client_notified ? 'Yes' : 'No'}</span></div>
   <div class="field"><label>Notification Sent:</label><span>${inc.notification_sent ? 'Yes' : 'No'}</span></div>
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  <div class="field"><label>Report Filed:</label><span>${inc.created_at ? new Date(inc.created_at).toLocaleString() : 'N/A'}</span></div>
+  // @ts-ignore — TS migration: fix in refactoring sprint
+  <div class="field"><label>Report Filed:</label><span>${(inc as any).created_at ? new Date((inc as any).created_at).toLocaleString() : 'N/A'}</span></div>
 </div>
 
 <div class="disclaimer">

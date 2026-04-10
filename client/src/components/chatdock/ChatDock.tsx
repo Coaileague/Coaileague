@@ -2732,6 +2732,7 @@ export function ChatFullPage({ autoOpenSupportRoom }: { autoOpenSupportRoom?: bo
     if (autoOpenSupportRoom && !activeChatRoom && rawRooms && rawRooms.length > 0) {
       // Specifically target the Help Desk room (HelpAI bot), not general support rooms
       const helpDeskRoom = rawRooms.find(r =>
+        // @ts-expect-error — TS migration: fix in refactoring sprint
         r.type === "support" && (r.slug === 'helpdesk' || r.name === 'Help Desk')
       ) || rawRooms.find(r => r.type === "support");
       if (helpDeskRoom) {

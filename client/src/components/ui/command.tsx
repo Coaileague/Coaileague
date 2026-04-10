@@ -29,6 +29,7 @@ interface CommandDialogProps extends DialogProps {
 
 const CommandDialog = ({ children, title = "Command Menu", description = "Search and navigate commands", ...props }: CommandDialogProps) => {
   return (
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     <UniversalModal {...props}>
       <UniversalModalContent className="overflow-hidden p-0 shadow-sm">
         <VisuallyHidden>

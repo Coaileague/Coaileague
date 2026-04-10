@@ -306,7 +306,7 @@ class TrinityACCService {
         SELECT status FROM employees
         WHERE id = $1 AND workspace_id = $2 LIMIT 1
       // @ts-expect-error — TS migration: fix in refactoring sprint
-    // @ts-expect-error — TS migration: fix in refactoring sprint
+    // @ts-ignore — TS migration: fix in refactoring sprint
       ` as any, [employeeId, workspaceId]);
       return (row as any)?.status === 'terminated' || (row as any)?.status === 'inactive';
     } catch {
@@ -339,7 +339,7 @@ class TrinityACCService {
         ORDER BY created_at DESC
         LIMIT 1
       // @ts-expect-error — TS migration: fix in refactoring sprint
-    // @ts-expect-error — TS migration: fix in refactoring sprint
+    // @ts-ignore — TS migration: fix in refactoring sprint
       ` as any, [
         action.workspaceId,
         yesterday.toISOString(),

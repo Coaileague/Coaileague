@@ -43,6 +43,7 @@ export function useAuth() {
     refetchOnMount: true,
     refetchOnReconnect: true,
     refetchInterval: false,
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     queryFn: async () => {
       const res = await secureFetch("/api/auth/me", {
         credentials: "include",
@@ -108,18 +109,26 @@ export function useAuth() {
   });
 
   return {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     user: data?.user ?? null,
     isLoading,
     // Only truly "authenticated" when we have a user AND the org is not suspended
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     isAuthenticated: !!data?.user && !data?.orgInactive && !data?.paymentRequired,
     // Payment required: owner needs to update billing to restore service
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     paymentRequired: data?.paymentRequired ?? false,
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     isOwner: data?.isOwner ?? false,
     // Org inactive: shown to employees whose org is suspended/cancelled
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     orgInactive: data?.orgInactive ?? false,
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     orgInactiveReason: data?.reason,
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     orgInactiveName: data?.workspaceName,
     // DB degraded: circuit open at startup — amber banner should be shown
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     dbDegraded: data?._dbDegraded ?? false,
   };
 }

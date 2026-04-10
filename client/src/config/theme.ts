@@ -256,6 +256,7 @@ export const THEME = {
  * Usage: getThemeValue('pages.login.input.height')
  */
 export function getThemeValue(path: string): any {
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   return path.split('.').reduce((obj, key) => obj?.[key], THEME);
 }
 

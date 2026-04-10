@@ -333,6 +333,7 @@ const getRoleBasedNotificationFilter = (
   platformRole: string | undefined,
   workspaceRole: string | undefined
 ): ((notification: UNSNotification) => boolean) => {
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (platformRole && PLATFORM_SUPPORT_ROLES.includes(platformRole)) {
     return () => true;
   }

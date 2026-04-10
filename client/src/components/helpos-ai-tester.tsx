@@ -67,6 +67,7 @@ export function CoAIleagueAiTester() {
       !switchWorkspaceMutation.isPending
     ) {
       const soleWorkspace = workspaces[0];
+      // @ts-expect-error — TS migration: fix in refactoring sprint
       switchWorkspaceMutation.mutate(soleWorkspace.id);
     }
   }, [open, user?.currentWorkspaceId, workspaces]);

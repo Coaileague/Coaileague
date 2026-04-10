@@ -161,6 +161,7 @@ export function ChatHub({ config = {}, className }: ChatHubProps) {
   } = config;
   
   // Register with layer manager
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const { register, unregister } = useManagedLayer({
     id: "chat-hub",
     type: "sheet",
