@@ -11,15 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2, XCircle, ArrowLeft, Check } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
-import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { SEO } from "@/components/seo";
-
-const resetPasswordPageConfig: CanvasPageConfig = {
-  id: 'reset-password',
-  title: 'Reset Password',
-  category: 'auth',
-  variant: 'centered',
-};
 
 const resetPasswordSchema = z.object({
   password: z.string()
@@ -128,7 +120,7 @@ export default function ResetPassword() {
 
   if (resetStatus === 'invalid') {
     return (
-      <CanvasHubPage config={resetPasswordPageConfig}>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-xs mx-auto">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto">
@@ -158,13 +150,13 @@ export default function ResetPassword() {
             </Link>
           </CardContent>
         </Card>
-      </CanvasHubPage>
+      </div>
     );
   }
 
   if (resetStatus === 'success') {
     return (
-      <CanvasHubPage config={resetPasswordPageConfig}>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-xs mx-auto">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto">
@@ -188,12 +180,12 @@ export default function ResetPassword() {
             </Link>
           </CardContent>
         </Card>
-      </CanvasHubPage>
+      </div>
     );
   }
 
   return (
-    <CanvasHubPage config={resetPasswordPageConfig}>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <SEO
         title="Reset Your Password"
         description="Set a new password for your CoAIleague account."
@@ -341,6 +333,6 @@ export default function ResetPassword() {
           </Form>
         </CardContent>
       </Card>
-    </CanvasHubPage>
+    </div>
   );
 }

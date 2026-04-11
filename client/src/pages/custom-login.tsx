@@ -16,7 +16,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { LoginLogo } from "@/components/unified-brand-logo";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { useTransitionLoader, startLoginTransition } from "@/components/canvas-hub";
-import { CanvasHubPage, PAGE_CONFIGS } from "@/components/canvas-hub/CanvasHubRegistry";
 import { useAuth } from "@/hooks/useAuth";
 
 const REMEMBER_ME_KEY = "coaileague_remember_me";
@@ -219,8 +218,8 @@ export default function CustomLogin() {
         />
       )}
 
-      <CanvasHubPage config={PAGE_CONFIGS.login}>
-        <div className="flex flex-col gap-5 w-full max-w-md mx-auto">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="flex flex-col gap-5 w-full max-w-sm">
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => setLocation("/")}
@@ -461,7 +460,7 @@ export default function CustomLogin() {
             )}
           </div>
         </div>
-      </CanvasHubPage>
+      </div>
     </>
   );
 }
