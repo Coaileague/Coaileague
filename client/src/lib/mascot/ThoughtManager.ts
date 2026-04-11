@@ -1911,33 +1911,28 @@ class ThoughtManager {
    */
   private triggerCriticalCreditWarning(status: CreditStatus): void {
     const displayName = this.getUserDisplayName();
-    
+    const used = status.usedThisMonth?.toLocaleString() ?? '0';
     const warnings = [
-      `${displayName}, urgent: Only ${status.currentBalance} credits left! AI features may pause soon.`,
-      `Running very low on credits (${status.currentBalance} remaining). Consider adding more!`,
-      `${displayName}, heads up - credits critically low! Add more to keep AI features running.`,
-      `Credit alert: ${status.currentBalance} left. Check Billing to purchase more credits!`,
+      `${displayName}, heads up: You've exceeded your monthly token allowance (${used} tokens used). Overages are billed at $2.00/100K tokens.`,
+      `Token overage active — ${used} tokens used this month. Automations continue; overage billed at month-end.`,
+      `${displayName}, your AI token usage is over the monthly allowance. Usage continues — review your plan for a higher allowance.`,
     ];
-    
     const text = warnings[Math.floor(Math.random() * warnings.length)];
     const thought = this.createThought(text, 'WARNING' as MascotMode, 'default', 'urgent');
     this.showThought(thought);
   }
   
   /**
-   * Trigger low credit warning (below 20%)
+   * Trigger high token usage warning (above 80%)
    */
   private triggerLowCreditWarning(status: CreditStatus): void {
     const displayName = this.getUserDisplayName();
-    const percentRemaining = Math.round((1 - status.percentUsed) * 100);
-    
+    const percentUsed = Math.round(status.percentUsed * 100);
     const warnings = [
-      `${displayName}, your credits are at ${percentRemaining}%. Consider topping up!`,
-      `Friendly reminder: ${status.currentBalance} credits remaining (${percentRemaining}%).`,
-      `${displayName}, running a bit low on AI credits. Visit Billing to add more!`,
-      `Credit check: ${percentRemaining}% remaining. Need more AI power?`,
+      `${displayName}, you've used ${percentUsed}% of your monthly token allowance. Overages are $2.00/100K tokens.`,
+      `Token usage at ${percentUsed}% of your monthly allowance. Consider upgrading your plan for a higher limit.`,
+      `${displayName}, approaching your monthly token limit (${percentUsed}% used).`,
     ];
-    
     const text = warnings[Math.floor(Math.random() * warnings.length)];
     const thought = this.createThought(text, 'ADVISING', 'default', 'normal');
     this.queueThought(thought);
@@ -2047,32 +2042,29 @@ class ThoughtManager {
   }
   
   /**
-   * Trigger credit purchase celebration
+   * Trigger plan upgrade celebration (replaces old credit purchase celebration)
    */
   triggerCreditPurchaseCelebration(amount: number): void {
     const displayName = this.getUserDisplayName();
-    
     const celebrations = [
-      `Thanks ${displayName}! ${amount.toLocaleString()} credits added. AI features are fully powered!`,
-      `Credit purchase confirmed! ${amount.toLocaleString()} credits ready to go, ${displayName}!`,
-      `${displayName}, your account has ${amount.toLocaleString()} fresh credits. Let's get to work!`,
-      `Excellent! ${amount.toLocaleString()} credits added. Your AI automation is supercharged!`,
+      `Great news, ${displayName}! Your plan has been upgraded — you have more token capacity available.`,
+      `${displayName}, plan upgrade confirmed! Your monthly token allowance has increased.`,
+      `Token allowance increased, ${displayName}! ${amount.toLocaleString()} additional tokens ready.`,
     ];
-    
     const text = celebrations[Math.floor(Math.random() * celebrations.length)];
     const thought = this.createThought(text, 'HAPPY' as MascotMode, 'default', 'high');
     this.showThought(thought);
   }
   
   /**
-   * Get credit status summary for display
+   * Get token usage summary for display
    */
   getCreditSummary(): string | null {
     const status = this.state.creditStatus;
     if (!status) return null;
-    
-    const percentRemaining = Math.round((1 - status.percentUsed) * 100);
-    return `${status.currentBalance.toLocaleString()} credits (${percentRemaining}%)`;
+    const used = status.usedThisMonth ?? status.currentBalance;
+    const pct = Math.round(status.percentUsed * 100);
+    return `${used.toLocaleString()} tokens (${pct}% of allowance)`;
   }
   
   /**

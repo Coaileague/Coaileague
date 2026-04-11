@@ -2,12 +2,10 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  Coins, Clock, ArrowDown, ArrowUp, History,
+  Cpu, History,
   Zap, Calendar, TrendingDown, ChevronLeft, ChevronRight,
-  Activity
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
@@ -24,6 +22,11 @@ interface CreditBalance {
   subscriptionTier: string;
   unlimitedCredits?: boolean;
   creditsUsedThisPeriod?: number;
+  // Token fields
+  tokensUsed?: number;
+  tokensAllowance?: number | null;
+  overageTokens?: number;
+  overageAmountCents?: number;
 }
 
 interface CreditTransaction {
@@ -48,10 +51,12 @@ interface CreditUsageBreakdown {
 }
 
 const FRIENDLY_ACTION_NAMES: Record<string, string> = {
-  'ai_scheduling': 'AI Scheduling',
+  // AI action types from token_usage_log
+  'trinity_action': 'Trinity AI',
   'trinity_chat': 'Trinity Chat',
   'trinity_thought': 'Trinity Thinking',
   'trinity_insight': 'Trinity Insight',
+  'ai_scheduling': 'AI Scheduling',
   'ai_invoicing': 'AI Invoicing',
   'ai_payroll': 'AI Payroll',
   'ai_analytics': 'AI Analytics',
@@ -65,17 +70,15 @@ const FRIENDLY_ACTION_NAMES: Record<string, string> = {
   'ai_quick_insight': 'Quick Insight',
   'ai_chat_query': 'AI Chat',
   'ai_vision': 'Vision Analysis',
-  'purchase': 'Credit Purchase',
-  'monthly_allocation': 'Monthly Allocation',
-  'monthly_reset': 'Monthly Reset',
+  'email_classification': 'Email Classification',
+  'voice': 'Voice Interaction',
+  'ai_assist': 'AI Assist',
 };
 
 function getActionName(featureKey: string | null, featureName: string | null, transactionType: string): string {
   if (featureKey && FRIENDLY_ACTION_NAMES[featureKey]) return FRIENDLY_ACTION_NAMES[featureKey];
   if (featureName) return featureName;
-  if (transactionType === 'purchase') return 'Credit Purchase';
-  if (transactionType === 'allocation') return 'Monthly Allocation';
-  if (transactionType === 'reset') return 'Monthly Reset';
+  if (featureKey) return featureKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   return transactionType.charAt(0).toUpperCase() + transactionType.slice(1);
 }
 
@@ -122,35 +125,39 @@ export default function AdminUsage() {
   }
 
   const effectiveBalance = liveBalance || balance;
-  const isUnlimitedUser = isUnlimited || effectiveBalance?.unlimitedCredits === true || 
-    (effectiveBalance?.monthlyAllocation && effectiveBalance.monthlyAllocation > 999999);
-  
-  // Derive "used this period" from the ledger field (authoritative) or fall back to balance math.
-  // Never use monthlyAllocation as the total pool denominator — purchased credits can exceed it.
-  const creditsUsedThisPeriod = effectiveBalance?.creditsUsedThisPeriod
-    ?? Math.max(0, (effectiveBalance?.monthlyAllocation ?? 0) - (effectiveBalance?.currentBalance ?? 0));
-  const totalAvailable = creditsUsedThisPeriod + (effectiveBalance?.currentBalance ?? 0);
+  const isUnlimitedUser = isUnlimited || effectiveBalance?.unlimitedCredits === true ||
+    (effectiveBalance?.monthlyAllocation && effectiveBalance.monthlyAllocation > 999_999_999);
 
-  const usagePercent = effectiveBalance && !isUnlimitedUser && totalAvailable > 0
-    ? Math.min(100, (creditsUsedThisPeriod / totalAvailable) * 100) : 0;
+  // Token-based values (authoritative) with fallback to legacy credit fields
+  const tokensUsed = effectiveBalance?.tokensUsed ?? effectiveBalance?.creditsUsedThisPeriod ?? 0;
+  const tokensAllowance = effectiveBalance?.tokensAllowance ?? (effectiveBalance?.monthlyAllocation !== -1 ? effectiveBalance?.monthlyAllocation : null) ?? null;
+
+  const usagePercent = !isUnlimitedUser && tokensAllowance
+    ? Math.min(100, (tokensUsed / tokensAllowance) * 100) : 0;
+
+  function formatTokens(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return n.toLocaleString();
+  }
 
   const pageConfig: CanvasPageConfig = {
     id: 'ai-usage-ledger',
     title: 'AI Usage',
-    subtitle: 'Track your AI feature usage and operation history included in your plan',
+    subtitle: 'Track your monthly AI token usage and history included in your plan',
     category: 'admin',
   };
 
   return (
     <CanvasHubPage config={pageConfig}>
       <div className="space-y-6" data-testid="page-credit-usage">
-        {/* Balance Overview */}
+        {/* Token Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
           <Card data-testid="card-current-balance">
             <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Coins className="h-4 w-4 shrink-0" />
-                <span className="truncate">Operations Used</span>
+                <Cpu className="h-4 w-4 shrink-0" />
+                <span className="truncate">Tokens Used</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -161,11 +168,13 @@ export default function AdminUsage() {
               ) : (
                 <>
                   <div className="text-xl sm:text-3xl font-bold truncate text-foreground" data-testid="text-balance">
-                    {creditsUsedThisPeriod.toLocaleString()}
+                    {formatTokens(tokensUsed)}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    of {totalAvailable.toLocaleString()} in current period
-                  </p>
+                  {tokensAllowance && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      of {formatTokens(tokensAllowance)} monthly allowance
+                    </p>
+                  )}
                 </>
               )}
             </CardContent>
@@ -175,7 +184,7 @@ export default function AdminUsage() {
             <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 shrink-0" />
-                <span className="truncate">Total Operations</span>
+                <span className="truncate">Overage Tokens</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
@@ -184,10 +193,12 @@ export default function AdminUsage() {
               ) : (
                 <>
                   <div className="text-xl sm:text-3xl font-bold truncate" data-testid="text-used">
-                    {effectiveBalance?.totalCreditsSpent?.toLocaleString() ?? '0'}
+                    {formatTokens(effectiveBalance?.overageTokens ?? 0)}
                   </div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-                    lifetime AI automations
+                    {(effectiveBalance?.overageAmountCents ?? 0) > 0
+                      ? `~$${((effectiveBalance?.overageAmountCents ?? 0) / 100).toFixed(2)} billed at month-end`
+                      : 'No overage this period'}
                   </p>
                 </>
               )}
@@ -198,7 +209,7 @@ export default function AdminUsage() {
             <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Calendar className="h-4 w-4 shrink-0" />
-                <span className="truncate">Reset</span>
+                <span className="truncate">Period Resets</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
@@ -206,39 +217,39 @@ export default function AdminUsage() {
                 {daysUntilReset} days
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {effectiveBalance?.nextResetAt ? formatShortDate(effectiveBalance.nextResetAt) : 'Balance resets monthly'}
+                {effectiveBalance?.nextResetAt ? formatShortDate(effectiveBalance.nextResetAt) : 'Allowance resets monthly'}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Usage Progress Bar */}
-        {!isUnlimitedUser && effectiveBalance && (
+        {/* Token Usage Progress Bar */}
+        {!isUnlimitedUser && tokensAllowance && (
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-sm font-medium">Monthly Usage</span>
+                <span className="text-sm font-medium">Monthly Token Usage</span>
                 <span className="text-sm text-muted-foreground">{Math.round(usagePercent)}% used</span>
               </div>
               <Progress value={usagePercent} className="h-2" data-testid="progress-usage" />
               <div className="flex items-center justify-between gap-1 mt-2 text-xs text-muted-foreground">
-                <span>{effectiveBalance.currentBalance.toLocaleString()} remaining</span>
-                <span>{totalAvailable.toLocaleString()} total pool</span>
+                <span>{formatTokens(tokensUsed)} used</span>
+                <span>{formatTokens(tokensAllowance)} allowance</span>
               </div>
             </CardContent>
           </Card>
         )}
 
 
-        {/* Usage Breakdown by Feature */}
+        {/* Usage Breakdown by Action Type */}
         {usage && usage.length > 0 && (
           <Card data-testid="card-usage-breakdown">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-primary" />
-                Usage Breakdown
+                Token Usage Breakdown
               </CardTitle>
-              <CardDescription>AI operations performed per feature this month</CardDescription>
+              <CardDescription>Tokens consumed per action type this month</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -253,7 +264,7 @@ export default function AdminUsage() {
                             {FRIENDLY_ACTION_NAMES[item.featureKey] || item.featureName}
                           </span>
                           <span className="text-sm text-muted-foreground ml-2 flex-shrink-0">
-                            {item.operationCount} operations
+                            {formatTokens(item.totalCredits)} tokens · {item.operationCount} calls
                           </span>
                         </div>
                         <Progress value={pct} className="h-1.5" />
@@ -266,16 +277,16 @@ export default function AdminUsage() {
           </Card>
         )}
 
-        {/* Transaction Ledger */}
+        {/* Token Usage Log */}
         <Card data-testid="card-transaction-ledger">
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <History className="h-5 w-5 text-primary" />
-                  AI Usage Ledger
+                  Token Usage Log
                 </CardTitle>
-                <CardDescription>Complete history of AI operations with usage running total</CardDescription>
+                <CardDescription>Complete history of AI token consumption</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -309,67 +320,55 @@ export default function AdminUsage() {
               </div>
             ) : !transactions || transactions.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground" data-testid="text-no-transactions">
-                <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No AI usage activity yet</p>
-                <p className="text-xs mt-1">Operations will appear here as you use AI features</p>
+                <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No token usage recorded yet</p>
+                <p className="text-xs mt-1">Token usage will appear here as AI features are used</p>
               </div>
             ) : (
               <div className="space-y-1" data-testid="list-transactions">
                 {/* Header row */}
                 <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-3 py-2 border-b">
                   <div className="col-span-3">Date</div>
-                  <div className="col-span-4">Action</div>
-                  <div className="col-span-2 text-right">Ops</div>
-                  <div className="col-span-3 text-right">Running Total</div>
+                  <div className="col-span-5">Action · Model</div>
+                  <div className="col-span-4 text-right">Tokens</div>
                 </div>
-                {transactions.map((tx) => {
-                  const isDeduction = tx.amount < 0;
-                  const isAddition = tx.amount > 0;
-                  return (
-                    <div
-                      key={tx.id}
-                      className="grid grid-cols-12 gap-2 items-center px-3 py-2.5 rounded-md hover-elevate"
-                      data-testid={`row-transaction-${tx.id}`}
-                    >
-                      <div className="col-span-3 text-sm text-muted-foreground">
-                        {formatDate(tx.createdAt)}
-                      </div>
-                      <div className="col-span-4 flex items-center gap-2">
-                        {isDeduction ? (
-                          <ArrowDown className="h-3.5 w-3.5 text-orange-500 dark:text-orange-400 flex-shrink-0" />
-                        ) : (
-                          <ArrowUp className="h-3.5 w-3.5 text-green-500 dark:text-green-400 flex-shrink-0" />
-                        )}
-                        <span className="text-sm font-medium truncate">
-                          {getActionName(tx.featureKey, tx.featureName, tx.transactionType)}
-                        </span>
-                      </div>
-                      <div className={`col-span-2 text-right text-sm font-mono font-medium ${isDeduction ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
-                        {isAddition ? '+' : ''}{tx.amount}
-                      </div>
-                      <div className="col-span-3 text-right">
-                        <Badge variant="secondary" className="font-mono text-xs">
-                          {tx.balanceAfter.toLocaleString()}
-                        </Badge>
-                      </div>
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="grid grid-cols-12 gap-2 items-center px-3 py-2.5 rounded-md hover-elevate"
+                    data-testid={`row-transaction-${tx.id}`}
+                  >
+                    <div className="col-span-3 text-sm text-muted-foreground">
+                      {formatDate(tx.createdAt)}
                     </div>
-                  );
-                })}
+                    <div className="col-span-5 min-w-0">
+                      <span className="text-sm font-medium truncate block">
+                        {getActionName(tx.featureKey, tx.featureName, tx.transactionType)}
+                      </span>
+                      {tx.description && (
+                        <span className="text-xs text-muted-foreground truncate block">{tx.description}</span>
+                      )}
+                    </div>
+                    <div className="col-span-4 text-right text-sm font-mono font-medium text-foreground">
+                      {tx.amount > 0 ? `+${tx.amount.toLocaleString()}` : tx.amount.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Flat-rate plan notice */}
+        {/* Per-seat plan notice */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Activity className="h-5 w-5 text-primary" />
+                <Zap className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium">Flat-Rate Plan — Usage Included</p>
-                <p className="text-sm text-muted-foreground">All AI operations are included in your subscription. Usage is tracked for plan reporting purposes only.</p>
+                <p className="font-medium">Per-Seat Plan — Tokens Tracked Monthly</p>
+                <p className="text-sm text-muted-foreground">You are billed per seat. Each tier includes a monthly token allowance. Usage beyond your allowance is billed at $2.00 per 100,000 tokens at month-end.</p>
               </div>
             </div>
           </CardContent>

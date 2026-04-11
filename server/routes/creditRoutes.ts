@@ -1,10 +1,63 @@
 import { Router } from "express";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { workspaces } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, type AuthenticatedRequest } from "../rbac";
 import { createLogger } from '../lib/logger';
+import { TOKEN_ALLOWANCES, TOKEN_OVERAGE_RATE_CENTS_PER_100K } from '../../shared/billingConfig';
 const log = createLogger('CreditRoutes');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS — token-based balance derived from token_usage_monthly
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getCurrentMonthYear(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function getNextMonthStart(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+}
+
+function getTokenAllowance(tier: string): number | null {
+  return (TOKEN_ALLOWANCES as Record<string, number | null>)[tier.toLowerCase()] ?? TOKEN_ALLOWANCES['trial'] ?? 5_000_000;
+}
+
+interface TokenSummary {
+  totalTokensUsed: number;
+  allowanceTokens: number | null;
+  overageTokens: number;
+  overageAmountCents: number;
+  isUnlimited: boolean;
+}
+
+async function getMonthlyTokenSummary(workspaceId: string, tier: string): Promise<TokenSummary> {
+  const monthYear = getCurrentMonthYear();
+  const allowance = getTokenAllowance(tier);
+  try {
+    const result = await pool.query(
+      `SELECT total_tokens_used, allowance_tokens, overage_tokens, overage_amount_cents
+       FROM token_usage_monthly
+       WHERE workspace_id = $1 AND month_year = $2`,
+      [workspaceId, monthYear],
+    );
+    const row = result.rows[0];
+    const totalTokensUsed = Number(row?.total_tokens_used ?? 0);
+    const overageTokens = Number(row?.overage_tokens ?? 0);
+    const overageAmountCents = Number(row?.overage_amount_cents ?? 0);
+    return {
+      totalTokensUsed,
+      allowanceTokens: allowance,
+      overageTokens,
+      overageAmountCents,
+      isUnlimited: allowance === null,
+    };
+  } catch {
+    return { totalTokensUsed: 0, allowanceTokens: allowance, overageTokens: 0, overageAmountCents: 0, isUnlimited: allowance === null };
+  }
+}
 
 
 const router = Router();
@@ -76,77 +129,75 @@ router.get('/balance', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ error: 'Workspace not found' });
     }
 
-    const { creditManager, isUnlimitedCreditUser, UNLIMITED_CREDITS_BALANCE } = await import('../services/billing/creditManager');
+    const tier = (workspace.subscriptionTier || 'free').toLowerCase();
+    const allowance = getTokenAllowance(tier);
+    const isUnlimited = allowance === null || !!(workspace as any).founderExemption;
 
-    // Short-circuit for unlimited users
-    const userId = req.user?.id!;
-    const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
-    if (hasUnlimited) {
+    const nextReset = getNextMonthStart();
+
+    // Short-circuit for unlimited tiers (strategic/grandfathered/founderExemption)
+    if (isUnlimited) {
+      const tokenSummary = await getMonthlyTokenSummary(billingWorkspaceId, tier);
       return res.json({
         id: 'unlimited',
         workspaceId: billingWorkspaceId,
-        currentBalance: UNLIMITED_CREDITS_BALANCE,
+        // Token fields (authoritative)
+        tokensUsed: tokenSummary.totalTokensUsed,
+        tokensAllowance: null,
+        overageTokens: 0,
+        overageAmountCents: 0,
+        // Legacy-compat shape (used by existing UI)
+        currentBalance: 0,
         monthlyAllocation: -1,
-        totalCreditsEarned: UNLIMITED_CREDITS_BALANCE,
-        totalCreditsSpent: 0,
+        totalCreditsEarned: 0,
+        totalCreditsSpent: tokenSummary.totalTokensUsed,
         totalCreditsPurchased: 0,
+        creditsUsedThisPeriod: tokenSummary.totalTokensUsed,
+        periodStartingBalance: 1,
         lastResetAt: new Date().toISOString(),
-        nextResetAt: new Date().toISOString(),
+        nextResetAt: nextReset.toISOString(),
         isActive: true,
         isSuspended: false,
-        subscriptionTier: workspace.subscriptionTier || 'unlimited',
+        subscriptionTier: tier,
         unlimitedCredits: true,
         isSubOrg,
         actorWorkspaceId: isSubOrg ? workspaceId : null,
       });
     }
 
-    // Fetch credit account from billing workspace
-    let credits = await creditManager.getCreditsAccount(billingWorkspaceId);
-    if (!credits) {
-      credits = await creditManager.initializeCredits(billingWorkspaceId, workspace.subscriptionTier || 'free');
-    }
-
-    const now = new Date();
-    let nextReset = credits.nextResetAt ? new Date(credits.nextResetAt) : null;
-    if (!nextReset || nextReset.getTime() <= now.getTime()) {
-      nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
-      creditManager.repairNextResetAt(billingWorkspaceId, nextReset).catch((err) => {
-        log.warn('[Credits] Failed to repair nextResetAt', { billingWorkspaceId, error: (err as any)?.message });
-      });
-    }
-
-    // periodStartingBalance = monthly plan allocation + REMAINING purchased credits this cycle.
-    // SSOT fix (Mar 2026): Previously used totalCreditsPurchased (all-time lifetime total) which
-    // inflated the denominator by including fully-consumed past purchases, making the usage
-    // progress bar appear nearly empty even at high consumption. Now we use purchasedCreditsBalance
-    // (the remaining purchased credits balance, reset independently of the monthly cycle) so the
-    // denominator correctly reflects: "how many credits are actually available to you right now".
-    const purchasedRemaining = (credits as any).purchasedCreditsBalance ?? 0;
-    const periodStartingBalance = Math.max(
-      (credits.monthlyAllocation ?? 0) + purchasedRemaining,
-      1,
-    );
-
-    // creditsUsedThisPeriod = sum of all deduction transactions since last_reset_at.
-    // This is independent of any admin correction allocations mid-cycle, so it accurately
-    // reflects actual AI feature consumption against the plan limit.
-    // credit_transactions table dropped (Phase 16)
-    let creditsUsedThisPeriod = 0;
+    // Token-based balance from token_usage_monthly
+    const tokenSummary = await getMonthlyTokenSummary(billingWorkspaceId, tier);
+    const remaining = Math.max(0, (allowance ?? 0) - tokenSummary.totalTokensUsed);
 
     res.json({
-      ...credits,
+      id: billingWorkspaceId,
       workspaceId: billingWorkspaceId,
+      // Token fields (authoritative)
+      tokensUsed: tokenSummary.totalTokensUsed,
+      tokensAllowance: allowance,
+      overageTokens: tokenSummary.overageTokens,
+      overageAmountCents: tokenSummary.overageAmountCents,
+      overageRateCentsPer100k: TOKEN_OVERAGE_RATE_CENTS_PER_100K,
+      // Legacy-compat shape (used by existing UI)
+      currentBalance: remaining,
+      monthlyAllocation: allowance ?? 0,
+      totalCreditsEarned: allowance ?? 0,
+      totalCreditsSpent: tokenSummary.totalTokensUsed,
+      totalCreditsPurchased: 0,
+      creditsUsedThisPeriod: tokenSummary.totalTokensUsed,
+      periodStartingBalance: allowance ?? 0,
+      lastResetAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString(),
       nextResetAt: nextReset.toISOString(),
-      subscriptionTier: workspace.subscriptionTier || 'free',
-      creditsUsedThisPeriod,
-      periodStartingBalance,
+      isActive: true,
+      isSuspended: false,
+      subscriptionTier: tier,
+      unlimitedCredits: false,
       isSubOrg,
       actorWorkspaceId: isSubOrg ? workspaceId : null,
     });
   } catch (error) {
-    log.error('[API] Error fetching credit balance:', error);
-    res.status(500).json({ message: 'Failed to fetch credit balance' });
+    log.error('[API] Error fetching token balance:', error);
+    res.status(500).json({ message: 'Failed to fetch token balance' });
   }
 });
 
@@ -157,16 +208,31 @@ router.get('/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, re
       return res.status(400).json({ error: error || 'No workspace found' });
     }
 
-    // viewAs param allows parent orgs to request billing_owner view explicitly
-    const viewAs = (req.query.viewAs as string) === 'billing_owner' ? 'billing_owner' : undefined;
+    const { billingWorkspaceId } = await resolveBillingWorkspace(workspaceId);
+    const monthYear = getCurrentMonthYear();
 
-    const { creditManager } = await import('../services/billing/creditManager');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const breakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId, viewAs);
+    // Return per-action token usage from token_usage_log for the current month
+    const result = await pool.query(
+      `SELECT action_type AS "featureKey",
+              action_type AS "featureName",
+              COALESCE(SUM(tokens_total), 0)::bigint AS "totalCredits",
+              COUNT(*)::int AS "operationCount"
+       FROM token_usage_log
+       WHERE workspace_id = $1
+         AND TO_CHAR(timestamp AT TIME ZONE 'UTC', 'YYYY-MM') = $2
+       GROUP BY action_type
+       ORDER BY SUM(tokens_total) DESC`,
+      [billingWorkspaceId, monthYear],
+    );
 
-    res.json(breakdown);
+    res.json(result.rows.map((r: any) => ({
+      featureKey: r.featureKey,
+      featureName: r.featureName,
+      totalCredits: Number(r.totalCredits),
+      operationCount: Number(r.operationCount),
+    })));
   } catch (error) {
-    log.error('[API] Error fetching credit usage breakdown:', error);
+    log.error('[API] Error fetching token usage breakdown:', error);
     res.status(500).json({ message: 'Failed to fetch usage breakdown' });
   }
 });
@@ -181,25 +247,51 @@ router.get('/transactions', requireAuth, async (req: AuthenticatedRequest, res) 
       return res.status(400).json({ error: error || 'No workspace found' });
     }
 
-    // Validate role — must be owner/co-owner to view full transaction history
+    // Validate role — must be owner/co-owner to view full token history
     const { resolveWorkspaceForUser } = await import('../rbac');
     const { role } = await resolveWorkspaceForUser(userId, workspaceId);
     if (role !== 'org_owner' && role !== 'co_owner') {
-      return res.status(403).json({ error: 'Insufficient permissions to view transaction history' });
+      return res.status(403).json({ error: 'Insufficient permissions to view usage history' });
     }
 
-    // Transactions are stored on the billing workspace — resolve to parent if sub-org
     const { billingWorkspaceId } = await resolveBillingWorkspace(workspaceId);
 
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
     const offset = parseInt(req.query.offset as string) || 0;
 
-    const { creditManager } = await import('../services/billing/creditManager');
-    const transactions = await creditManager.getTransactionHistory(billingWorkspaceId, limit, offset);
+    // Return token usage log entries as "transactions"
+    const result = await pool.query(
+      `SELECT id,
+              workspace_id AS "workspaceId",
+              user_id AS "userId",
+              action_type AS "transactionType",
+              tokens_total AS "amount",
+              0 AS "balanceAfter",
+              action_type AS "featureKey",
+              feature_name AS "featureName",
+              model_used AS "description",
+              timestamp AS "createdAt"
+       FROM token_usage_log
+       WHERE workspace_id = $1
+       ORDER BY timestamp DESC
+       LIMIT $2 OFFSET $3`,
+      [billingWorkspaceId, limit, offset],
+    );
 
-    res.json(transactions);
+    res.json(result.rows.map((r: any) => ({
+      id: r.id,
+      workspaceId: r.workspaceId,
+      userId: r.userId,
+      transactionType: r.transactionType,
+      amount: Number(r.amount),
+      balanceAfter: 0,
+      featureKey: r.featureKey,
+      featureName: r.featureName,
+      description: r.description,
+      createdAt: r.createdAt,
+    })));
   } catch (error) {
-    log.error('[API] Error fetching credit transactions:', error);
+    log.error('[API] Error fetching token usage history:', error);
     res.status(500).json({ message: 'Failed to fetch transactions' });
   }
 });

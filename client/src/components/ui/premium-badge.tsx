@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Crown, Star, Sparkles, Lock, Coins } from "lucide-react";
+import { Crown, Star, Sparkles, Lock, Cpu } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -76,7 +76,7 @@ export function PremiumBadge({
         <p>{config.description}</p>
         {creditCost !== undefined && creditCost > 0 && (
           <p className="text-muted-foreground text-xs">
-            Cost: {creditCost} credits per use
+            ~{creditCost.toLocaleString()} tokens/call
           </p>
         )}
       </TooltipContent>
@@ -130,7 +130,7 @@ interface CreditCostIndicatorProps {
 
 export function CreditCostIndicator({
   credits,
-  unit = "use",
+  unit = "call",
   className,
 }: CreditCostIndicatorProps) {
   return (
@@ -141,8 +141,8 @@ export function CreditCostIndicator({
       )}
       data-testid="indicator-credit-cost"
     >
-      <Coins className="h-3 w-3" />
-      {credits} credits/{unit}
+      <Cpu className="h-3 w-3" />
+      ~{credits.toLocaleString()} tokens/{unit}
     </span>
   );
 }

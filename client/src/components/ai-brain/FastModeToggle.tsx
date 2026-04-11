@@ -7,7 +7,7 @@
  * - Notification Center
  * - Voice Commands
  * 
- * Shows current credit balance and Fast Mode benefits
+ * Shows current token usage status and Fast Mode benefits
  */
 
 import { useState, useCallback } from 'react';
@@ -49,9 +49,9 @@ export function FastModeToggle({
 }: FastModeToggleProps) {
   const [showDetails, setShowDetails] = useState(false);
   
-  // Fetch credit balance if workspaceId provided
-  const { data: creditData } = useQuery<{ balance: number }>({
-    queryKey: ['/api/billing/credits', workspaceId],
+  // Fetch token status if workspaceId provided
+  const { data: tokenData } = useQuery<{ balance: number; tokensUsed?: number; isWarning?: boolean }>({
+    queryKey: ['/api/billing/trinity-credits/status'],
     enabled: !!workspaceId && showCredits,
   });
   
@@ -61,15 +61,11 @@ export function FastModeToggle({
     enabled: !!workspaceId && showBenefits,
   });
   
-  const creditBalance = creditData?.balance ?? 0;
-  const hasEnoughCredits = creditBalance >= 10;
+  const isWarning = tokenData?.isWarning ?? false;
   
   const handleToggle = useCallback((checked: boolean) => {
-    if (checked && !hasEnoughCredits) {
-      return; // Don't enable if insufficient credits
-    }
     onToggle(checked);
-  }, [hasEnoughCredits, onToggle]);
+  }, [onToggle]);
   
   if (compact) {
     return (
@@ -90,7 +86,6 @@ export function FastModeToggle({
               checked={enabled}
               onCheckedChange={handleToggle}
               className="scale-75"
-              disabled={!hasEnoughCredits && !enabled}
               data-testid="switch-fast-mode-compact"
             />
           </div>
@@ -99,10 +94,8 @@ export function FastModeToggle({
           <div className="text-xs">
             <p className="font-medium">Trinity Fast Mode</p>
             <p className="text-muted-foreground">Faster with parallel agents</p>
-            {showCredits && (
-              <p className={`mt-1 ${hasEnoughCredits ? 'text-green-500' : 'text-destructive'}`}>
-                Balance: {creditBalance} credits
-              </p>
+            {showCredits && isWarning && (
+              <p className="mt-1 text-yellow-500">Token usage at 80%+ this month</p>
             )}
           </div>
         </TooltipContent>
@@ -126,7 +119,7 @@ export function FastModeToggle({
               </Label>
               {enabled && (
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs">
-                  2x Credits
+                  2× Token Rate
                 </Badge>
               )}
             </div>
@@ -137,13 +130,13 @@ export function FastModeToggle({
         </div>
         
         <div className="flex items-center gap-2">
-          {showCredits && (
+          {showCredits && isWarning && (
             <Badge 
-              variant={hasEnoughCredits ? 'outline' : 'destructive'}
-              className="text-xs"
+              variant="outline"
+              className="text-xs border-yellow-500 text-yellow-600"
               data-testid="badge-credit-balance"
             >
-              {creditBalance} credits
+              80%+ used
             </Badge>
           )}
           

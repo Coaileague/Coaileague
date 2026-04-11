@@ -31,7 +31,7 @@ interface PremiumFeaturesResponse {
 }
 
 /**
- * Hook to fetch all premium features and credit packages
+ * Hook to fetch all premium features and tier gating
  * Uses GET /api/premium-features
  */
 export function usePremiumFeatures() {

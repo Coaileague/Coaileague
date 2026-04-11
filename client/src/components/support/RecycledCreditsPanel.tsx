@@ -36,7 +36,7 @@ export function RecycledCreditsPanel() {
     mutationFn: () => apiRequest("/api/platform/credits/recycled/trigger", { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/platform/credits/recycled"] });
-      toast({ title: "Sweep complete", description: "Recycled credits have been swept to the platform pool." });
+      toast({ title: "Sweep complete", description: "Recycled token accounting complete." });
     },
     onError: (err: any) => {
       toast({ title: "Sweep failed", description: err.message, variant: "destructive" });
@@ -59,9 +59,9 @@ export function RecycledCreditsPanel() {
     <div className="space-y-4" data-testid="panel-recycled-credits">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-base font-semibold">Recycled Credits Pipeline</h3>
+          <h3 className="text-base font-semibold">Recycled Token Accounting</h3>
           <p className="text-sm text-muted-foreground">
-            Forfeited tenant credits swept to the platform pool at each billing cycle end.
+            Legacy token accounting pipeline — tracks unused token allowances at billing cycle end.
           </p>
         </div>
         <Button
@@ -83,7 +83,7 @@ export function RecycledCreditsPanel() {
               <Coins className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Platform Pool Balance</p>
+              <p className="text-xs text-muted-foreground">Platform Token Pool</p>
               <p className="text-xl font-bold" data-testid="text-platform-balance">
                 {(s?.currentBalance ?? 0).toLocaleString()}
               </p>
@@ -102,7 +102,7 @@ export function RecycledCreditsPanel() {
               <p className="text-xl font-bold" data-testid="text-recycled-total">
                 {(s?.totalRecycledDeposited ?? 0).toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground">credits swept from tenants</p>
+              <p className="text-xs text-muted-foreground">tokens from tenant allocations</p>
             </div>
           </CardContent>
         </Card>
@@ -117,7 +117,7 @@ export function RecycledCreditsPanel() {
               <p className="text-xl font-bold" data-testid="text-pool-total-earned">
                 {(s?.totalEverEarned ?? 0).toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground">credits (lifetime)</p>
+              <p className="text-xs text-muted-foreground">tokens (lifetime)</p>
             </div>
           </CardContent>
         </Card>
@@ -130,13 +130,13 @@ export function RecycledCreditsPanel() {
             Recent Deposits
           </CardTitle>
           <CardDescription className="text-xs">
-            Last {s?.recentDeposits?.length ?? 0} recycled credit deposits from tenant workspaces
+            Last {s?.recentDeposits?.length ?? 0} recycled token deposits from tenant workspaces
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {!s?.recentDeposits?.length ? (
             <div className="px-4 pb-4 text-sm text-muted-foreground">
-              No recycled deposits yet. Credits are swept at the end of each billing cycle.
+              No recycled deposits yet. Token allocations are swept at the end of each billing cycle.
             </div>
           ) : (
             <div className="divide-y">
