@@ -24,9 +24,19 @@
  *   GRANDFATHERED_TENANT_ID=<uuid> \
  *   GRANDFATHERED_TENANT_OWNER_ID=<id> \
  *   DATABASE_URL=... npx tsx scripts/prod/bootstrap-statewide-workspace.ts
+ *
+ * Force-set a temporary login password (does NOT affect an existing password
+ * unless this env var is set — idempotent re-runs preserve the real password):
+ *   TEMP_PASSWORD='Some-Temp-Pass-123!' \
+ *   DATABASE_URL=... npx tsx scripts/prod/bootstrap-statewide-workspace.ts
+ *
+ * If TEMP_PASSWORD is omitted, a random 16-char password is generated and
+ * printed once at the end so the owner can log in immediately.
  */
 
 import { Pool } from 'pg';
+import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const DIVIDER = '═'.repeat(60);
@@ -43,9 +53,29 @@ const EMP_ID  = DEFAULT_EMP_ID;
 const EMAIL   = 'txpsinvestigations@gmail.com';
 
 // The known bcrypt hash for this account (from production-migration.sql).
-// Only inserted when creating a brand-new row — never overwrites an existing
-// password so Bryan's current password is preserved on re-runs.
+// Only inserted when creating a brand-new row AND TEMP_PASSWORD is not set —
+// preserves Bryan's current password on idempotent re-runs.
 const PW_HASH = '$2b$10$r3GT8OdoCwxosnHVWfQmFeMRnvv1BOhJIKA5BjWQ3g2eG3LQ4ko0K';
+
+// Optional temp-password override. If SET_TEMP_PASSWORD=1 (or TEMP_PASSWORD is
+// provided), the script force-updates password_hash on both INSERT and UPDATE
+// paths so the owner can log in immediately. Without these env vars, re-runs
+// preserve the owner's existing password (original idempotent behavior).
+//
+// Uses bcryptjs (same library as server/auth.ts) with cost 12 to match the
+// schema comment in shared/schema/domains/auth/index.ts.
+function generateTempPassword(): string {
+  // 12 bytes -> 16 base64 chars; strip padding and url-unsafe chars
+  return randomBytes(12)
+    .toString('base64')
+    .replace(/\+/g, 'A')
+    .replace(/\//g, 'B')
+    .replace(/=+$/, '') + '!';
+}
+const SHOULD_SET_TEMP_PASSWORD =
+  Boolean(process.env.TEMP_PASSWORD) || process.env.SET_TEMP_PASSWORD === '1';
+const TEMP_PASSWORD = process.env.TEMP_PASSWORD || generateTempPassword();
+const TEMP_PASSWORD_FROM_ENV = Boolean(process.env.TEMP_PASSWORD);
 
 async function main(): Promise<void> {
   console.log('\n' + DIVIDER);
@@ -89,6 +119,20 @@ async function main(): Promise<void> {
 
     // ── 2. Owner user ─────────────────────────────────────────────────────────
     console.log('\n[2/4] Upserting owner user...');
+
+    // On INSERT we always want a known-good hash. If a temp password is being
+    // set, hash it with bcryptjs (cost 12, matches auth schema). Otherwise
+    // fall back to the canonical PW_HASH so new-row inserts still boot.
+    const insertHash = SHOULD_SET_TEMP_PASSWORD
+      ? await bcrypt.hash(TEMP_PASSWORD, 12)
+      : PW_HASH;
+
+    // On UPDATE, only overwrite password_hash if the caller explicitly opted
+    // in. Otherwise preserve whatever password Bryan currently has.
+    const updatePasswordClause = SHOULD_SET_TEMP_PASSWORD
+      ? 'password_hash = $3,'
+      : '';
+
     const userResult = await pool.query(`
       INSERT INTO users (
         id, email, first_name, last_name, role,
@@ -107,9 +151,11 @@ async function main(): Promise<void> {
             login_attempts       = 0,
             locked_until         = NULL,
             current_workspace_id = $4,
+            ${updatePasswordClause}
             updated_at           = NOW()
-      RETURNING id, email, email_verified, login_attempts, locked_until
-    `, [USER_ID, EMAIL, PW_HASH, WS_ID]);
+      RETURNING id, email, email_verified, login_attempts, locked_until,
+                (xmax = 0) AS inserted
+    `, [USER_ID, EMAIL, insertHash, WS_ID]);
 
     const u = userResult.rows[0];
     console.log(`  ✅ User: ${u.email} | email_verified=${u.email_verified} | login_attempts=${u.login_attempts}`);
@@ -170,7 +216,15 @@ async function main(): Promise<void> {
     console.log('\n✅ Statewide Protective Services is ready.\n');
     console.log('Login credentials:');
     console.log(`  Email    : ${EMAIL}`);
-    console.log('  Password : use the current password (unchanged) or reset via /forgot-password');
+    if (SHOULD_SET_TEMP_PASSWORD) {
+      console.log(`  Password : ${TEMP_PASSWORD}`);
+      if (!TEMP_PASSWORD_FROM_ENV) {
+        console.log('             (generated — save this now, it is not stored anywhere)');
+      }
+      console.log('  ⚠️  This is a TEMP password. Change it immediately after login.');
+    } else {
+      console.log('  Password : (unchanged — re-run with SET_TEMP_PASSWORD=1 or TEMP_PASSWORD=... to reset)');
+    }
     console.log('');
     console.log('Copy-paste these env vars into Railway / Replit:');
     console.log(`GRANDFATHERED_TENANT_ID=${WS_ID}`);
