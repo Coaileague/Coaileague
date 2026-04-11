@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
-import { CanvasHubPage, PAGE_CONFIGS } from "@/components/canvas-hub";
 import { SEO } from "@/components/seo";
 
 const forgotPasswordSchema = z.object({
@@ -69,7 +68,7 @@ export default function ForgotPassword() {
 
   if (isSubmitted) {
     return (
-      <CanvasHubPage config={PAGE_CONFIGS.forgotPassword}>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-xs mx-auto">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto">
@@ -115,12 +114,12 @@ export default function ForgotPassword() {
             </Link>
           </CardContent>
         </Card>
-      </CanvasHubPage>
+      </div>
     );
   }
 
   return (
-    <CanvasHubPage config={PAGE_CONFIGS.forgotPassword}>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <SEO
         title="Reset Your Password"
         description="Reset your CoAIleague account password."
@@ -191,6 +190,6 @@ export default function ForgotPassword() {
           </Form>
         </CardContent>
       </Card>
-    </CanvasHubPage>
+    </div>
   );
 }
