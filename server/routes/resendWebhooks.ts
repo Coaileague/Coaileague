@@ -15,6 +15,7 @@ import { typedExec, typedQuery } from '../lib/typedSql';
 import { EMAIL, PLATFORM } from '../config/platformConfig';
 import { createLogger } from '../lib/logger';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
+import { isProduction } from '../lib/isProduction';
 const log = createLogger('ResendWebhooks');
 
 
@@ -82,8 +83,44 @@ function generatePreRef(): string {
 
 const router = Router();
 
-// Resend webhook signing secret for signature verification
-const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
+// Resend webhook signing secret for signature verification.
+// Trimmed to defend against accidental whitespace/newlines introduced when a
+// multiline paste lands in the Railway env-var UI — that was the single biggest
+// source of "mystery 401" reports during the signature verification investigation.
+const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET?.trim() || undefined;
+
+/**
+ * Compute the Svix expected signature for a given (id, timestamp, payload)
+ * tuple against the configured RESEND_WEBHOOK_SECRET. Exported as a helper so
+ * the diagnostic route can independently reproduce what
+ * `verifyResendSignature` is comparing against without leaking the secret.
+ *
+ * Returns the base64 HMAC-SHA256 digest, or null if the secret is unset or
+ * cannot be decoded (e.g. a non-base64 secret was pasted into Railway).
+ */
+function computeExpectedResendSignature(
+  msgId: string,
+  timestamp: string,
+  payload: string,
+): { expectedSig: string; secretByteLength: number } | null {
+  if (!RESEND_WEBHOOK_SECRET) return null;
+
+  // Strip optional Svix-standard "whsec_" prefix before base64-decoding.
+  const secretKey = RESEND_WEBHOOK_SECRET.startsWith("whsec_")
+    ? RESEND_WEBHOOK_SECRET.slice(6)
+    : RESEND_WEBHOOK_SECRET;
+
+  const secretBuffer = Buffer.from(secretKey, "base64");
+  if (secretBuffer.length === 0) return null;
+
+  const signedPayload = `${msgId}.${timestamp}.${payload}`;
+  const expectedSig = crypto
+    .createHmac("sha256", secretBuffer)
+    .update(signedPayload)
+    .digest("base64");
+
+  return { expectedSig, secretByteLength: secretBuffer.length };
+}
 
 /**
  * Verify Resend webhook signature using HMAC-SHA256 per Svix specification.
@@ -93,71 +130,102 @@ const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
  *
  * The webhook signing secret is stored as a base64-encoded string (with an
  * optional "whsec_" prefix that must be stripped before decoding).
+ *
+ * On any failure, emits structured diagnostics (secret-length, body-length,
+ * timestamp-skew, received-vs-expected first-8-chars) so the root cause is
+ * visible in Railway logs without leaking the full secret or signature.
  */
 function verifyResendSignature(
   payload: string,
   signature: string | undefined,
   timestamp: string | undefined,
-  msgId: string | undefined
+  msgId: string | undefined,
+  source: 'outbound' | 'inbound' = 'outbound',
 ): boolean {
+  const tag = source === 'inbound' ? '[Resend Inbound]' : '[Resend Webhook]';
+
   // Fail-closed: if no secret is configured, REJECT all incoming webhooks.
   // This prevents unauthenticated webhook payloads from mutating platform state.
   if (!RESEND_WEBHOOK_SECRET) {
-    log.error("[Resend Webhook] RESEND_WEBHOOK_SECRET is not set — rejecting webhook to prevent unauthenticated mutations. Configure the secret to enable webhook processing.");
+    log.error(`${tag} RESEND_WEBHOOK_SECRET is not set — rejecting webhook to prevent unauthenticated mutations. Configure the secret to enable webhook processing.`);
     return false;
   }
 
   if (!signature || !timestamp || !msgId) {
-    log.warn("[Resend Webhook] Missing svix-signature, svix-timestamp, or svix-id headers");
+    log.warn(`${tag} Missing Svix headers — svix-signature=${signature ? 'present' : 'MISSING'}, svix-timestamp=${timestamp ? 'present' : 'MISSING'}, svix-id=${msgId ? 'present' : 'MISSING'}`);
     return false;
   }
 
-  // Replay protection: reject webhooks older than 5 minutes
+  // Replay protection: reject webhooks older than 5 minutes.
   const timestampMs = parseInt(timestamp, 10) * 1000;
-  if (isNaN(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000) {
-    log.warn("[Resend Webhook] Timestamp too old or invalid — possible replay attack");
+  if (isNaN(timestampMs)) {
+    log.warn(`${tag} svix-timestamp is not a valid integer: ${JSON.stringify(timestamp)}`);
+    return false;
+  }
+  const skewSeconds = Math.round((Date.now() - timestampMs) / 1000);
+  if (Math.abs(skewSeconds) > 5 * 60) {
+    log.warn(`${tag} Timestamp skew too large: ${skewSeconds}s (allowed ±300s) — possible replay attack or clock drift`);
     return false;
   }
 
   try {
-    // Resend uses Svix format: v1,<base64-signature> (space-separated if multiple)
-    const signatures = signature.split(" ");
+    // Extract the actual secret (remove whsec_ prefix if present).
+    const secretKey = RESEND_WEBHOOK_SECRET.startsWith("whsec_")
+      ? RESEND_WEBHOOK_SECRET.slice(6)
+      : RESEND_WEBHOOK_SECRET;
+
+    // Svix stores the signing secret as base64-encoded bytes.
+    const secretBuffer = Buffer.from(secretKey, "base64");
+    if (secretBuffer.length === 0) {
+      log.error(`${tag} RESEND_WEBHOOK_SECRET base64-decoded to 0 bytes — the secret is not valid base64. Expected format: "whsec_<base64>" from the Resend dashboard.`);
+      return false;
+    }
 
     // Svix signed content: "{svix-id}.{svix-timestamp}.{rawBody}"
     const signedPayload = `${msgId}.${timestamp}.${payload}`;
-    
-    // Extract the actual secret (remove whsec_ prefix if present)
-    const secretKey = RESEND_WEBHOOK_SECRET.startsWith("whsec_") 
-      ? RESEND_WEBHOOK_SECRET.slice(6) 
-      : RESEND_WEBHOOK_SECRET;
-    
-    // Svix stores the signing secret as base64-encoded bytes
-    const secretBuffer = Buffer.from(secretKey, "base64");
-    
+
     const expectedSig = crypto
       .createHmac("sha256", secretBuffer)
       .update(signedPayload)
       .digest("base64");
-    
+
+    // Resend uses Svix format: v1,<base64-signature> (space-separated if multiple).
+    const signatures = signature.split(" ");
+    const candidatePreview: string[] = [];
+
     for (const sig of signatures) {
       const [version, sigValue] = sig.split(",");
-      
       if (version !== "v1" || !sigValue) continue;
-      
-      // Use constant-time comparison to prevent timing attacks
+      candidatePreview.push(sigValue.slice(0, 8));
+
+      // Use constant-time comparison to prevent timing attacks.
       try {
-        if (crypto.timingSafeEqual(Buffer.from(sigValue), Buffer.from(expectedSig))) {
+        const a = Buffer.from(sigValue);
+        const b = Buffer.from(expectedSig);
+        if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
           return true;
         }
-      } catch (compareError) {
-        // Buffer length mismatch — signatures don't match, try next candidate
+      } catch {
+        // Buffer length mismatch — signatures don't match, try next candidate.
       }
     }
-    
-    log.warn(`[Resend Webhook] No matching signature found`);
+
+    // Structured mismatch diagnostics. We log the first 8 chars of each
+    // signature so operators can visually confirm a mismatch without leaking
+    // enough of the signature to forge one.
+    log.warn(
+      `${tag} Signature mismatch. ` +
+      `bodyLen=${payload.length} ` +
+      `svixId=${msgId} ` +
+      `timestampSkew=${skewSeconds}s ` +
+      `secretBytes=${secretBuffer.length} ` +
+      `expected=${expectedSig.slice(0, 8)}… ` +
+      `received=[${candidatePreview.join(', ') || 'none'}] ` +
+      `(if bodyLen is 0 or signedPayload does not match, raw-body capture may be broken — hit GET /api/webhooks/resend/diagnostic)`
+    );
     return false;
   } catch (error) {
-    log.error("[Resend Webhook] Signature verification error:", error);
+    log.error(`${tag} Signature verification error:`, error);
     return false;
   }
 }
@@ -400,9 +468,18 @@ router.post("/api/webhooks/resend", async (req, res) => {
     const outboundSignature = req.headers["svix-signature"] as string | undefined;
     const outboundTimestamp = req.headers["svix-timestamp"] as string | undefined;
     const outboundMsgId = req.headers["svix-id"] as string | undefined;
-    const outboundRawBody = (req as any).rawBody || JSON.stringify(req.body);
+    const outboundRawBody = (req as any).rawBody;
+    if (typeof outboundRawBody !== 'string') {
+      // Raw-body capture failed — the express.json verify callback in
+      // server/index.ts did not run for this path. Reconstructing via
+      // JSON.stringify would silently produce a different byte sequence than
+      // what Resend signed and the 401 would be impossible to debug, so we
+      // fail loudly instead.
+      log.error(`[Resend Webhook] req.rawBody missing — check webhookPathsNeedingRawBody in server/index.ts (got ${typeof outboundRawBody}, content-type=${req.headers['content-type'] || 'none'}, content-length=${req.headers['content-length'] || 'none'})`);
+      return res.status(401).json({ error: "Raw body capture failed — signature cannot be verified" });
+    }
 
-    if (!verifyResendSignature(outboundRawBody, outboundSignature, outboundTimestamp, outboundMsgId)) {
+    if (!verifyResendSignature(outboundRawBody, outboundSignature, outboundTimestamp, outboundMsgId, 'outbound')) {
       log.error("[Resend Webhook] Signature verification failed — rejecting outbound event webhook");
       return res.status(401).json({ error: "Invalid signature" });
     }
@@ -627,18 +704,21 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
     const signature = req.headers["svix-signature"] as string | undefined;
     const timestamp = req.headers["svix-timestamp"] as string | undefined;
     const msgId = req.headers["svix-id"] as string | undefined;
-    // Use raw body captured by middleware for proper signature verification
-    // (JSON.stringify(req.body) may produce different formatting than the original payload)
-    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-    
+    // Raw body captured by middleware is REQUIRED for Svix verification.
+    // JSON.stringify(req.body) reorders keys and normalizes whitespace, which
+    // always produces a byte sequence different from what Resend signed — any
+    // fallback would silently guarantee a 401.
+    const rawBody = (req as any).rawBody;
+    if (typeof rawBody !== 'string') {
+      log.error(`[Resend Inbound] req.rawBody missing — check webhookPathsNeedingRawBody in server/index.ts (got ${typeof rawBody}, content-type=${req.headers['content-type'] || 'none'}, content-length=${req.headers['content-length'] || 'none'})`);
+      return res.status(401).json({ error: "Raw body capture failed — signature cannot be verified" });
+    }
+
     // Fail-closed: verifyResendSignature() already rejects when no secret is configured.
     // Removing the outer `if (RESEND_WEBHOOK_SECRET &&...)` guard so we never accept
     // unauthenticated inbound payloads — even when the secret env-var is missing.
-    if (!verifyResendSignature(rawBody, signature, timestamp, msgId)) {
+    if (!verifyResendSignature(rawBody, signature, timestamp, msgId, 'inbound')) {
       log.error("[Resend Inbound] Invalid webhook signature - rejecting request");
-      if (RESEND_WEBHOOK_SECRET) {
-        log.error(`[Resend Inbound] Secret starts with: ${RESEND_WEBHOOK_SECRET.substring(0, 15)}...`);
-      }
       return res.status(401).json({ error: "Invalid signature" });
     }
 
@@ -1339,6 +1419,147 @@ router.get("/api/webhooks/resend/inbound/status", async (req, res) => {
       '4. Test by sending email to: staffing-STATEWIDE@coaileague.com',
     ],
   });
+});
+
+/**
+ * Full signature-pipeline diagnostic. Non-production only.
+ *
+ * GET  /api/webhooks/resend/diagnostic
+ *   → reports env-var presence, signing-secret shape, and the raw-body capture
+ *     path registered in server/index.ts. Safe to expose — never leaks the
+ *     secret itself, only metadata.
+ *
+ * POST /api/webhooks/resend/diagnostic
+ *   → echoes back exactly what the signature verifier sees for the posted body
+ *     (rawBody length, svix-* headers, expected-vs-received signature previews,
+ *     accept/reject decision). Requires the same raw-body capture as the real
+ *     webhook path — this route's prefix matches `/api/webhooks/resend` in
+ *     `webhookPathsNeedingRawBody`, so express.json's verify callback will
+ *     populate `req.rawBody` identically to production.
+ *
+ * Gated by isProduction() per CLAUDE.md §A so we never expose this surface on
+ * customer deployments.
+ */
+router.get("/api/webhooks/resend/diagnostic", (_req, res) => {
+  if (isProduction()) {
+    return res.status(403).json({ error: "Diagnostic endpoint disabled in production" });
+  }
+
+  const secret = RESEND_WEBHOOK_SECRET;
+  const hasWhsecPrefix = Boolean(secret?.startsWith('whsec_'));
+  const strippedLen = secret ? (hasWhsecPrefix ? secret.length - 6 : secret.length) : 0;
+  let base64DecodedLen = 0;
+  if (secret) {
+    const key = hasWhsecPrefix ? secret.slice(6) : secret;
+    base64DecodedLen = Buffer.from(key, 'base64').length;
+  }
+
+  res.json({
+    ok: true,
+    environment: {
+      NODE_ENV: process.env.NODE_ENV || null,
+      RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT || null,
+      isProduction: isProduction(),
+    },
+    envVars: {
+      RESEND_WEBHOOK_SECRET: {
+        set: Boolean(secret),
+        hasWhsecPrefix,
+        rawLength: secret?.length ?? 0,
+        strippedLength: strippedLen,
+        base64DecodedLength: base64DecodedLen,
+        looksValid: base64DecodedLen >= 16, // Svix secrets are 256-bit => 32 bytes
+      },
+      RESEND_API_KEY: {
+        set: Boolean(process.env.RESEND_API_KEY),
+        hasRePrefix: Boolean(process.env.RESEND_API_KEY?.startsWith('re_')),
+      },
+      RESEND_FROM_EMAIL: {
+        set: Boolean(process.env.RESEND_FROM_EMAIL),
+        value: process.env.RESEND_FROM_EMAIL || null,
+      },
+    },
+    rawBodyCapture: {
+      note: "This route's path must be matched by webhookPathsNeedingRawBody in server/index.ts",
+      registeredPaths: [
+        '/api/webhooks/quickbooks',
+        '/api/webhooks/resend',
+        '/api/webhooks/resend/inbound',
+        '/api/stripe/webhook',
+        '/api/webhooks/twilio/voice-interview',
+        '/api/webhooks/twilio/sms',
+        '/api/webhooks/twilio/status',
+        '/api/inbound/email',
+      ],
+    },
+    nextSteps: [
+      "1. Confirm base64DecodedLength is ≥32 bytes (Svix default). If 0, the secret is not valid base64.",
+      "2. POST a JSON body to this same URL to see rawBody capture and signature diagnostics.",
+      "3. Hit POST /api/webhooks/resend — the 401 response body now explains whether raw-body or signature verification is the failure mode.",
+    ],
+  });
+});
+
+router.post("/api/webhooks/resend/diagnostic", (req, res) => {
+  if (isProduction()) {
+    return res.status(403).json({ error: "Diagnostic endpoint disabled in production" });
+  }
+
+  const rawBody = (req as any).rawBody;
+  const rawBodyCaptured = typeof rawBody === 'string';
+  const signature = req.headers['svix-signature'] as string | undefined;
+  const timestamp = req.headers['svix-timestamp'] as string | undefined;
+  const msgId = req.headers['svix-id'] as string | undefined;
+
+  const response: Record<string, unknown> = {
+    ok: true,
+    rawBody: {
+      captured: rawBodyCaptured,
+      length: rawBodyCaptured ? rawBody.length : 0,
+      first40: rawBodyCaptured ? rawBody.slice(0, 40) : null,
+      stringifiedBodyLength: JSON.stringify(req.body ?? {}).length,
+      note: rawBodyCaptured
+        ? "rawBody captured by express.json verify middleware — signature verification can run."
+        : "rawBody NOT captured — the verify middleware did not run for this request. Check webhookPathsNeedingRawBody in server/index.ts.",
+    },
+    svixHeaders: {
+      'svix-id': msgId || null,
+      'svix-timestamp': timestamp || null,
+      'svix-signature': signature ? `${signature.slice(0, 20)}…` : null,
+    },
+  };
+
+  // If the caller provided Svix headers AND raw body was captured AND secret is
+  // set, attempt to compute the expected signature for independent inspection.
+  if (rawBodyCaptured && msgId && timestamp && RESEND_WEBHOOK_SECRET) {
+    const computed = computeExpectedResendSignature(msgId, timestamp, rawBody);
+    if (!computed) {
+      response.signatureCheck = {
+        status: 'error',
+        reason: 'Secret could not be base64-decoded (computeExpectedResendSignature returned null).',
+      };
+    } else {
+      const accepted = verifyResendSignature(rawBody, signature, timestamp, msgId, 'outbound');
+      response.signatureCheck = {
+        status: accepted ? 'accept' : 'reject',
+        expectedSignaturePreview: `${computed.expectedSig.slice(0, 12)}…`,
+        receivedSignaturePreview: signature ? `${signature.slice(0, 20)}…` : null,
+        secretBytes: computed.secretByteLength,
+        signedPayloadPreview: `${msgId}.${timestamp}.${rawBody.slice(0, 20)}…`,
+      };
+    }
+  } else if (!RESEND_WEBHOOK_SECRET) {
+    response.signatureCheck = { status: 'skipped', reason: 'RESEND_WEBHOOK_SECRET not set' };
+  } else if (!rawBodyCaptured) {
+    response.signatureCheck = { status: 'skipped', reason: 'raw body not captured' };
+  } else {
+    response.signatureCheck = {
+      status: 'skipped',
+      reason: 'no svix-id/svix-timestamp/svix-signature headers provided — call with those headers to test the verifier',
+    };
+  }
+
+  res.json(response);
 });
 
 /**
