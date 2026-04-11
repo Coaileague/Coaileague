@@ -208,7 +208,6 @@ export async function runPayrollAutoClose(): Promise<{
               title: `Payroll draft ready for ${periodLabel}`,
               message: `The ${cycle} pay period ended ${format(periodEnd, 'MMM d')}. Trinity generated a payroll draft covering ${approvedEntries.length} time entr${approvedEntries.length === 1 ? 'y' : 'ies'}. Review and approve to begin processing.`,
               actionUrl: `/payroll/${result.payrollRunId}`,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               relatedEntityType: 'payroll_run',
               relatedEntityId: result.payrollRunId,
               metadata: { periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), entryCount: approvedEntries.length },
@@ -288,7 +287,6 @@ export async function detectOrphanedPayrollRuns(): Promise<void> {
             title: 'Payroll run requires attention',
             message: `A payroll run (${run.id}) is in processed status but has no pay stubs. This may indicate a partial failure during stub generation. Please review and regenerate stubs if needed.`,
             actionUrl: `/payroll/${run.id}`,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             relatedEntityType: 'payroll_run',
             relatedEntityId: run.id,
             metadata: { issue: 'orphaned_processed_run_no_stubs' },

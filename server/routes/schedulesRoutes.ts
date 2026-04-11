@@ -183,7 +183,6 @@ router.post('/publish', requireManager, async (req: any, res) => {
       .filter(emp => emp.userId) // Only notify employees with a linked user account
       .map(emp =>
         notificationHelpers.createSchedulePublishedNotification(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           { storage, broadcastNotification },
           {
             workspaceId: workspace.id,

@@ -915,7 +915,6 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         });
         
         await notificationHelpers.createShiftAssignedNotification(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           { storage, broadcastNotification },
           {
             workspaceId,
@@ -1306,7 +1305,6 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           : 'details updated';
         
         await notificationHelpers.createShiftChangedNotification(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           { storage, broadcastNotification },
           {
             workspaceId,
@@ -1479,7 +1477,6 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         });
         
         await notificationHelpers.createShiftCancelledNotification(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           { storage, broadcastNotification },
           {
             workspaceId,
@@ -1693,7 +1690,6 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         });
 
         await notificationHelpers.createShiftAssignedNotification(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           { storage, broadcastNotification },
           {
             workspaceId,

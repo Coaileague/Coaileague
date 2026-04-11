@@ -177,7 +177,7 @@ billingRouter.get('/subscription', async (req: AuthenticatedRequest, res: Respon
  */
 billingRouter.get('/current-charges', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.currentWorkspaceId;
+    const workspaceId = req.workspaceId || req.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
     const { billingReconciliation } = await import('../services/billing/billingReconciliation');
@@ -207,7 +207,7 @@ billingRouter.get('/current-charges', async (req: AuthenticatedRequest, res: Res
  */
 billingRouter.get('/reconcile', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const workspaceId = req.workspaceId || req.user?.workspaceId || req.currentWorkspaceId;
+    const workspaceId = req.workspaceId || req.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
     const { billingReconciliation } = await import('../services/billing/billingReconciliation');

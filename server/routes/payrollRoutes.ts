@@ -655,7 +655,6 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       const periodStartStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const periodEndStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       notificationHelpers.createPayrollRunCreatedNotification(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         { storage, broadcastNotification },
         {
           workspaceId,

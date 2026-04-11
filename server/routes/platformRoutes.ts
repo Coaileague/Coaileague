@@ -1418,13 +1418,11 @@ Keep answers under 200 words unless detail is critical. Today is ${new Date().to
     const fullPrompt = `${systemPrompt}\n\nQuestion: ${question}`;
     const result = await geminiClient.generateContent(fullPrompt, { // withGemini
       featureKey: 'ai_general',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: PLATFORM_WORKSPACE_ID,
     });
     const answer = result.text || 'No response generated.';
 
     await db.insert(helpaiActionLog).values({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: PLATFORM_WORKSPACE_ID,
       userId: req.user!.id,
       actionType: 'query',
@@ -1607,7 +1605,6 @@ router.post('/team/bots', async (req: AuthenticatedRequest, res) => {
       description: data.description,
       missionObjective: data.missionObjective,
       entityType: 'bot',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: PLATFORM_WORKSPACE_ID,
       isGlobal: true,
       status: 'active',

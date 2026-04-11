@@ -311,12 +311,12 @@ class StripeConnectPayoutService {
         log.error('[StripeConnect] Could not update payroll entry disbursement fields:', err);
         // Notify org owner — payout succeeded but tracking record failed (reconciliation risk)
         try {
-          const { notificationService } = await import('../notificationService');
+          const { createNotification } = await import('../notificationService');
           const { workspaces: wsTable } = await import('@shared/schema');
           const { eq: eqOp } = await import('drizzle-orm');
           const [ws] = await db.select({ ownerId: wsTable.ownerId }).from(wsTable).where(eqOp(wsTable.id, workspaceId)).limit(1);
           if (ws?.ownerId) {
-            await notificationService.createNotification({
+            await createNotification({
               userId: ws.ownerId, workspaceId,
               type: 'payroll_tracking_error',
               title: 'Payroll Tracking Error',
@@ -348,12 +348,12 @@ class StripeConnectPayoutService {
         log.error('[StripeConnect] Could not insert payroll payout record:', err);
         // Notify org owner — payout succeeded but payout log insert failed (audit gap)
         try {
-          const { notificationService } = await import('../notificationService');
+          const { createNotification } = await import('../notificationService');
           const { workspaces: wsTable } = await import('@shared/schema');
           const { eq: eqOp } = await import('drizzle-orm');
           const [ws] = await db.select({ ownerId: wsTable.ownerId }).from(wsTable).where(eqOp(wsTable.id, workspaceId)).limit(1);
           if (ws?.ownerId) {
-            await notificationService.createNotification({
+            await createNotification({
               userId: ws.ownerId, workspaceId,
               type: 'payroll_tracking_error',
               title: 'Payroll Payout Log Error',

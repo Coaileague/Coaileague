@@ -168,7 +168,7 @@ router.post(
     try {
       const conversationId = await resolveConversationId(req.params.id);
       const userId = authReq.user?.id;
-      const workspaceId = authReq.workspaceId || null;
+      const workspaceId = authReq.workspaceId ?? '';
 
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
@@ -311,7 +311,7 @@ router.post(
     try {
       const conversationId = await resolveConversationId(req.params.id);
       const userId = authReq.user?.id;
-      const workspaceId = authReq.workspaceId || null;
+      const workspaceId = authReq.workspaceId ?? '';
 
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
@@ -358,7 +358,7 @@ router.post(
     try {
       const conversationId = await resolveConversationId(req.params.id);
       const userId = authReq.user?.id;
-      const workspaceId = authReq.workspaceId || null;
+      const workspaceId = authReq.workspaceId ?? '';
 
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
