@@ -44,7 +44,7 @@ export default function SmsConsent() {
       <SEO
         title="SMS Opt-In | CoAIleague Workforce Alerts"
         description="Opt in to receive recurring automated CoAIleague Workforce Alert text messages — shift reminders, schedule changes, safety alerts, and account notifications for security staff. Reply STOP to opt out at any time."
-        canonical="https://coaileague.com/sms-consent"
+        canonical="https://www.coaileague.com/sms-consent"
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />

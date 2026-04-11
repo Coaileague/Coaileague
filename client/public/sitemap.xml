@@ -102,13 +102,13 @@
 
   <!-- SMS compliance pages — required for Twilio toll-free verification review -->
   <url>
-    <loc>https://coaileague.com/sms-terms</loc>
+    <loc>https://www.coaileague.com/sms-terms</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://coaileague.com/sms-consent</loc>
+    <loc>https://www.coaileague.com/sms-consent</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
