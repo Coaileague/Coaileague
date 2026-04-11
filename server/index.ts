@@ -173,6 +173,10 @@ const log = createLogger('server');
 
 const app = express();
 
+// Trust proxy MUST be set before any middleware reads req.ip (rate limiting, CORS origin logging).
+// CLAUDE.md §A: use isProductionEnv() from lib/isProduction — not process.env.REPLIT_DEPLOYMENT.
+app.set('trust proxy', 1);
+
 // Phase 97 security: remove framework fingerprint and add critical headers for ALL routes
 // (must be placed before /health so even that route gets proper security headers)
 app.disable('x-powered-by');
@@ -287,9 +291,54 @@ app.get('/api/platform/readiness', rateLimitMiddleware(
   });
 });
 
+// ============================================================================
+// CORS — must run before body parsers so preflight OPTIONS requests are handled
+// before any unnecessary request body is read.
+// ============================================================================
+const isProdDeployment = isProductionEnv();
+const explicitAllowedOrigins: string[] = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : [];
+
+if (isProdDeployment && explicitAllowedOrigins.length === 0) {
+  log.warn('[CORS] WARNING: No ALLOWED_ORIGINS set in production — falling back to coaileague.com patterns. Set ALLOWED_ORIGINS to your production domain(s) for proper lockdown.');
+}
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) {
+      if (isProdDeployment && explicitAllowedOrigins.length > 0) {
+        return callback(null, false);
+      }
+      return callback(null, true);
+    }
+
+    if (explicitAllowedOrigins.length > 0) {
+      const isAllowed = explicitAllowedOrigins.includes(origin);
+      return callback(null, isAllowed);
+    }
+
+    // CORS allowlist (CLAUDE.md §6 platform identity): only coaileague.com
+    // and dev-host loopbacks. Replit domains removed.
+    const allowedPatterns = [
+      /^https?:\/\/(www\.)?coaileague\.com$/,
+      /\.coaileague\.com$/,
+      /^https?:\/\/localhost/,
+      /^https?:\/\/127\.0\.0\.1/,
+      /^https?:\/\/0\.0\.0\.0/,
+    ];
+    const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+    callback(null, isAllowed);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With', 'Accept', 'Origin'],
+}));
+
 // Paths that need raw body capture for webhook signature verification
 const webhookPathsNeedingRawBody = [
   '/api/webhooks/quickbooks',
+  '/api/webhooks/resend',
   '/api/webhooks/resend/inbound',
   '/api/stripe/webhook',
   '/api/webhooks/twilio/voice-interview',
@@ -401,7 +450,6 @@ app.use('/api', (_req, res, next) => {
 
 // Security headers with helmet - protects against XSS, clickjacking, MIME sniffing
 // Configure to work with Vite in development and production
-const isProduction = process.env.NODE_ENV === 'production';
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -471,49 +519,6 @@ app.use((req, res, next) => {
   res.removeHeader('X-Frame-Options');
   next();
 });
-
-const isProdDeployment = isProductionEnv();
-const explicitAllowedOrigins: string[] = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
-  : [];
-
-if (isProdDeployment && explicitAllowedOrigins.length === 0) {
-  log.warn('[CORS] WARNING: No ALLOWED_ORIGINS set in production — falling back to coaileague.com patterns. Set ALLOWED_ORIGINS to your production domain(s) for proper lockdown.');
-}
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) {
-      if (isProdDeployment && explicitAllowedOrigins.length > 0) {
-        return callback(null, false);
-      }
-      return callback(null, true);
-    }
-
-    if (explicitAllowedOrigins.length > 0) {
-      const isAllowed = explicitAllowedOrigins.includes(origin);
-      return callback(null, isAllowed);
-    }
-
-    // CORS allowlist (CLAUDE.md §6 platform identity): only coaileague.com
-    // and dev-host loopbacks. Replit domains removed.
-    const allowedPatterns = [
-      /^https?:\/\/(www\.)?coaileague\.com$/,
-      /\.coaileague\.com$/,
-      /^https?:\/\/localhost/,
-      /^https?:\/\/127\.0\.0\.1/,
-      /^https?:\/\/0\.0\.0\.0/,
-    ];
-    const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
-    callback(null, isAllowed);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With', 'Accept', 'Origin'],
-}));
-
-// Trust proxy for accurate IP detection behind load balancers
-app.set('trust proxy', 1);
 
 // Startup configuration validation — catch misconfigs before they cause runtime failures
 const configValid = validateAndLogConfiguration();
@@ -1707,75 +1712,6 @@ process.on('unhandledRejection', (reason: any, promise) => {
 
   // NOTE: Phase 1 (critical services) is now deferred to post-listen for Cloud Run compatibility.
   // The server must bind to its port within seconds of startup for Cloud Run health checks.
-
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    const userId = req.session?.userId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req as any).session?.currentWorkspaceId;
-    const requestId = (req as any).id;
-    
-    monitoringService.logError(err, {
-      userId,
-      workspaceId,
-      requestId,
-      additionalData: {
-        method: req.method,
-        path: req.path,
-        statusCode: status,
-      }
-    });
-
-    if (res.headersSent) return;
-
-    const isApiRequest = req.path.startsWith('/api/') || 
-      (req.headers.accept && req.headers.accept.includes('application/json'));
-
-    if (isApiRequest) {
-      res.status(status).json({ 
-        success: false,
-        error: status >= 500 ? 'Internal Server Error' : message,
-        message: status >= 500 ? 'An unexpected error occurred' : message,
-      });
-    } else {
-      const safeMessage = isProduction ? 'An unexpected error occurred.' : message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      res.status(status).send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Error ${status} | CoAIleague</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;background:#f9fafb;color:#111827;padding:1rem}
-    .card{max-width:28rem;width:100%;text-align:center;padding:2.5rem 2rem;background:#fff;border:1px solid #e5e7eb;border-radius:0.5rem}
-    .icon{width:3.5rem;height:3.5rem;margin:0 auto 1.25rem;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:#dc2626}
-    h1{font-size:1.375rem;font-weight:700;margin-bottom:0.5rem}
-    p{font-size:0.875rem;color:#6b7280;margin-bottom:1.5rem}
-    .actions{display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap}
-    .btn{padding:0.5rem 1.25rem;border:none;border-radius:0.375rem;font-size:0.875rem;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block}
-    .btn-primary{background:#3b82f6;color:#fff}
-    .btn-secondary{background:#e5e7eb;color:#374151}
-    .footer{margin-top:1.25rem;font-size:0.75rem;color:#9ca3af}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon" data-testid="icon-error">!</div>
-    <h1 data-testid="text-error-title">${status >= 500 ? 'Something Went Wrong' : 'Page Not Available'}</h1>
-    <p data-testid="text-error-message">${status >= 500 ? 'We encountered an unexpected error. Please try again.' : safeMessage}</p>
-    <div class="actions">
-      <a href="/" class="btn btn-primary" data-testid="link-error-home">Go Home</a>
-      <button onclick="location.reload()" class="btn btn-secondary" data-testid="button-error-retry">Retry</button>
-    </div>
-    <p class="footer">CoAIleague &mdash; Autonomous Workforce Management</p>
-  </div>
-</body>
-</html>`);
-    }
-  });
 
   // ========================================================================
   // BIND TO PORT FIRST — before Vite setup to minimize unreachable window

@@ -22,6 +22,7 @@ import { createLogger } from '../lib/logger';
 import crypto from 'crypto';
 import { universalAudit, AUDIT_ACTIONS } from './universalAuditService';
 import { EMAIL, PLATFORM } from '../config/platformConfig';
+import { sendEmail } from '../email';
 
 const log = createLogger('MessageBridge');
 
@@ -81,31 +82,16 @@ class MessageBridgeService {
       async send(params) {
         log.info('Email provider: send requested', { to: params.to });
         try {
-          const resendApiKey = process.env.RESEND_API_KEY;
-          if (!resendApiKey) {
-            log.warn('RESEND_API_KEY not configured, email send stubbed');
-            return {
-              externalMessageId: `email-stub-${Date.now()}`,
-              providerResponse: { status: 'stubbed', reason: 'no_api_key' },
-            };
-          }
-          const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${resendApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: params.from || EMAIL.senders.noreply,
-              to: params.to,
-              subject: `New message from ${PLATFORM.name}`,
-              text: params.message,
-            }),
+          const result = await sendEmail({
+            to: params.to,
+            subject: `New message from ${PLATFORM.name}`,
+            html: params.message,
+            text: params.message,
+            from: params.from || EMAIL.senders.noreply,
           });
-          const data = await response.json() as any;
           return {
-            externalMessageId: data.id || `email-${Date.now()}`,
-            providerResponse: data,
+            externalMessageId: result.id || `email-${Date.now()}`,
+            providerResponse: result,
           };
         } catch (error: any) {
           log.error('Email send failed', { error: (error instanceof Error ? error.message : String(error)) });
@@ -400,25 +386,29 @@ class MessageBridgeService {
       chatMessageId: chatMsg.id,
     });
 
-    universalAudit.log({
-      workspaceId: bridge.workspaceId,
-      actorId: contact?.userId || null,
-      actorType: 'system',
-      action: AUDIT_ACTIONS.MESSAGE_BRIDGE_INBOUND,
-      entityType: 'bridge_messages',
-      entityId: bridgeMsg.id,
-      entityName: `${channelType} from ${senderDisplayName || senderIdentity}`,
-      changeType: 'create',
-      metadata: {
-        channelType,
-        senderIdentity,
-        bridgeId,
-        bridgeConversationId: bridgeConv.id,
-        chatMessageId: chatMsg.id,
-        externalMessageId,
-      },
-      sourceRoute: `/api/bridges/webhook/${channelType}/${bridgeId}`,
-    }).catch((err) => log.warn('[MessageBridgeService] Fire-and-forget failed:', err));
+    try {
+      await universalAudit.log({
+        workspaceId: bridge.workspaceId,
+        actorId: contact?.userId || null,
+        actorType: 'system',
+        action: AUDIT_ACTIONS.MESSAGE_BRIDGE_INBOUND,
+        entityType: 'bridge_messages',
+        entityId: bridgeMsg.id,
+        entityName: `${channelType} from ${senderDisplayName || senderIdentity}`,
+        changeType: 'create',
+        metadata: {
+          channelType,
+          senderIdentity,
+          bridgeId,
+          bridgeConversationId: bridgeConv.id,
+          chatMessageId: chatMsg.id,
+          externalMessageId,
+        },
+        sourceRoute: `/api/bridges/webhook/${channelType}/${bridgeId}`,
+      });
+    } catch (err) {
+      log.warn('[MessageBridgeService] Audit log failed (inbound):', err);
+    }
 
     return {
       bridgeConversation: bridgeConv,
@@ -574,24 +564,28 @@ class MessageBridgeService {
       bridgeMessageId: bridgeMsg.id,
     });
 
-    universalAudit.log({
-      workspaceId: bridgeConv.workspaceId,
-      actorId: senderId || null,
-      actorType: senderId ? 'user' : 'system',
-      action: AUDIT_ACTIONS.MESSAGE_BRIDGE_OUTBOUND,
-      entityType: 'bridge_messages',
-      entityId: bridgeMsg.id,
-      entityName: `${channelType} to ${bridgeConv.externalIdentifier}`,
-      changeType: 'create',
-      metadata: {
-        channelType,
-        bridgeConversationId: bridgeConv.id,
-        deliveryStatus,
-        externalMessageId,
-        chatMessageId: chatMsg.id,
-      },
-      sourceRoute: 'POST /api/bridges/send',
-    }).catch((err) => log.warn('[MessageBridgeService] Fire-and-forget failed:', err));
+    try {
+      await universalAudit.log({
+        workspaceId: bridgeConv.workspaceId,
+        actorId: senderId || null,
+        actorType: senderId ? 'user' : 'system',
+        action: AUDIT_ACTIONS.MESSAGE_BRIDGE_OUTBOUND,
+        entityType: 'bridge_messages',
+        entityId: bridgeMsg.id,
+        entityName: `${channelType} to ${bridgeConv.externalIdentifier}`,
+        changeType: 'create',
+        metadata: {
+          channelType,
+          bridgeConversationId: bridgeConv.id,
+          deliveryStatus,
+          externalMessageId,
+          chatMessageId: chatMsg.id,
+        },
+        sourceRoute: 'POST /api/bridges/send',
+      });
+    } catch (err) {
+      log.warn('[MessageBridgeService] Audit log failed (outbound):', err);
+    }
 
     return {
       bridgeMessage: bridgeMsg,

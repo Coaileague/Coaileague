@@ -144,7 +144,7 @@ router.patch('/:employeeId/role', async (req: AuthenticatedRequest, res) => {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.updateEmployee(employeeId, { workspaceRole: newRole } as any);
     if (updated) {
-      await db.update(employees).set({ version: newVersion, updatedAt: new Date() }).where(eq(employees.id, employeeId));
+      await db.update(employees).set({ version: newVersion, updatedAt: new Date() }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
     }
     
     await storage.createAuditLog({
@@ -297,7 +297,7 @@ router.patch('/:employeeId/position', async (req: AuthenticatedRequest, res) => 
       workspaceRole: newWorkspaceRole as any,
       version: newVersion,
       updatedAt: new Date(),
-    }).where(eq(employees.id, employeeId));
+    }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.getEmployee(employeeId);
@@ -1917,7 +1917,7 @@ router.delete('/:id/pii-purge', requireAuth, async (req: AuthenticatedRequest, r
         ssn: null,
         emergencyContactName: null,
         emergencyContactPhone: null,
-        emergencyContactRelationship: null,
+        emergencyContactRelation: null,
         licenseNumber: null,
         licenseExpiry: null,
         updatedAt: new Date(),

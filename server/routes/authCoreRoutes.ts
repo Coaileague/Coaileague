@@ -474,11 +474,23 @@ router.post("/api/auth/login", async (req, res) => {
       log.info('[Login] Remember Me enabled - session extended to 30 days');
     }
 
+    // Resolve workspace for this user (needed for session context + response)
+    let workspaceId = user.currentWorkspaceId;
+    if (!workspaceId) {
+      const [emp] = await db.select().from(employees).where(eq(employees.userId, user.id)).limit(1);
+      if (emp) {
+        workspaceId = emp.workspaceId;
+        await db.update(users).set({ currentWorkspaceId: workspaceId, updatedAt: new Date() }).where(eq(users.id, user.id));
+      }
+    }
+
+    // Resolve platform role for response (needed for frontend routing)
+    const userPlatformRoles = await db.select().from(platformRoles).where(eq(platformRoles.userId, user.id));
+    const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
+
     // Cache workspace/org context in session to avoid redundant DB lookups
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (workspaceId) {
       const { resolveAndCacheWorkspaceContext } = await import('../services/session/sessionWorkspaceService');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await resolveAndCacheWorkspaceContext(req, user.id, workspaceId);
     }
 
@@ -505,9 +517,7 @@ router.post("/api/auth/login", async (req, res) => {
         role: user.role,
         emailVerified: user.emailVerified,
         mfaEnabled: user.mfaEnabled ?? false,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformRole: activePlatformRole?.role || null, // GATEKEEPER: Include platform role for routing
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         currentWorkspaceId: workspaceId, // Include assigned workspace for proper redirect
       },
     });

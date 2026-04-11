@@ -1,3 +1,6 @@
+// CLAUDE.md §A: always use canonical production helper, never check NODE_ENV directly
+import { isProduction } from '../lib/isProduction';
+
 const CRITICAL_VARS = [
   'DATABASE_URL',
   'SESSION_SECRET',          // express-session secret (auth.ts asserts at startup)
@@ -67,7 +70,7 @@ export function validateEnvironment(): void {
   if (missing.length > 0) {
     console.error('FATAL: Missing critical environment variables:');
     missing.forEach((v) => console.error(`  MISSING: ${v}`));
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction()) {
       process.exit(1);
     } else {
       console.warn(
