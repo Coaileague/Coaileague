@@ -72,9 +72,14 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res) 
     }
 
     const { authService } = await import('../services/authService');
-    await authService.requestPasswordReset(email);
+    const result = await authService.requestPasswordReset(email);
 
-    res.json({ success: true, message: 'If an account exists, a reset link has been sent' });
+    if (!result.success) {
+      const statusCode = result.code === 'email_failed' ? 500 : 400;
+      return res.status(statusCode).json({ success: false, error: result.code, message: result.error });
+    }
+
+    res.json({ success: true, message: 'Reset link sent to your email' });
   } catch (error: unknown) {
     log.error('[Auth] Forgot password error:', error);
     res.status(500).json({ message: 'Failed to process request' });

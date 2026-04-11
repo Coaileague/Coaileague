@@ -45,7 +45,19 @@ export default function ForgotPassword() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to send reset email");
+        const errorTitles: Record<string, string> = {
+          no_account: "Account Not Found",
+          email_unverified: "Email Not Verified",
+          account_locked: "Account Locked",
+          email_failed: "Email Delivery Failed",
+        };
+        const title = (result.error && errorTitles[result.error]) || "Error";
+        toast({
+          title,
+          description: result.message || "Failed to send reset email",
+          variant: "destructive",
+        });
+        return;
       }
 
       setSubmittedEmail(data.email);

@@ -1309,6 +1309,11 @@ router.post("/api/auth/reset-password-request", async (req, res) => {
 
     const result = await createPasswordResetToken(data.email);
 
+    if (!result.success) {
+      log.warn(`[Auth] Password reset rejected for ${data.email}: ${result.code}`);
+      return res.status(400).json({ success: false, error: result.code, message: result.message });
+    }
+
     if (result.token && result.user) {
       log.info(`[Auth] Password reset: user found for ${data.email}, attempting email delivery`);
       try {
@@ -1318,18 +1323,20 @@ router.post("/api/auth/reset-password-request", async (req, res) => {
           result.token,
           result.user.firstName || undefined
         );
-        log.info(`[Auth] Password reset email: ${emailResult?.success ? 'SENT OK' : `FAILED - ${emailResult?.error}`}`);
+        if (!emailResult?.success) {
+          log.error(`[Auth] Password reset email delivery failed for ${data.email}: ${emailResult?.error}`);
+          return res.status(500).json({ success: false, error: "email_failed", message: "Could not send reset email. Try again later." });
+        }
+        log.info(`[Auth] Password reset email sent OK for ${data.email}`);
       } catch (emailError: unknown) {
         log.error(`[Auth] Password reset email delivery error:`, (emailError as any)?.message || emailError);
+        return res.status(500).json({ success: false, error: "email_failed", message: "Could not send reset email. Try again later." });
       }
-    } else {
-      log.info(`[Auth] Password reset: no account found for ${data.email} - skipping email`);
     }
 
-    // Always return success to prevent email enumeration
     res.json({
-      message:
-        "If an account exists with that email, a reset link has been sent",
+      success: true,
+      message: "Reset link sent to your email",
     });
   } catch (error) {
     log.error("Reset request error:", error);

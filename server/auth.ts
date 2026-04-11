@@ -951,7 +951,7 @@ export async function verifyEmailToken(
 
 export async function createPasswordResetToken(
   email: string
-): Promise<{ success: boolean; token?: string; user?: typeof users.$inferSelect; message?: string }> {
+): Promise<{ success: boolean; token?: string; user?: typeof users.$inferSelect; message?: string; code?: string }> {
   const [user] = await db
     .select()
     .from(users)
@@ -959,8 +959,15 @@ export async function createPasswordResetToken(
     .limit(1);
 
   if (!user) {
-    // Don't reveal if email exists
-    return { success: true, message: "If email exists, reset link sent" };
+    return { success: false, code: "no_account", message: "No account with this email" };
+  }
+
+  if (!user.emailVerified) {
+    return { success: false, code: "email_unverified", message: "Please verify your email first" };
+  }
+
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    return { success: false, code: "account_locked", message: "Account is locked. Contact support." };
   }
 
   const token = generateSecureToken();

@@ -37,6 +37,7 @@ export interface TokenResult {
   success: boolean;
   token?: string;
   error?: string;
+  code?: string;
 }
 
 export class AuthService {
@@ -433,13 +434,21 @@ export class AuthService {
       const normalizedEmail = email.toLowerCase().trim();
 
       const [user] = await db
-        .select({ id: users.id, email: users.email, firstName: users.firstName })
+        .select({ id: users.id, email: users.email, firstName: users.firstName, emailVerified: users.emailVerified, lockedUntil: users.lockedUntil })
         .from(users)
         .where(eq(users.email, normalizedEmail))
         .limit(1);
 
       if (!user) {
-        return { success: true };
+        return { success: false, error: "No account with this email", code: "no_account" };
+      }
+
+      if (!user.emailVerified) {
+        return { success: false, error: "Please verify your email first", code: "email_unverified" };
+      }
+
+      if (user.lockedUntil && user.lockedUntil > new Date()) {
+        return { success: false, error: "Account is locked. Contact support.", code: "account_locked" };
       }
 
       const token = this.generateSecureToken();
@@ -454,12 +463,17 @@ export class AuthService {
       });
 
       const { emailService } = await import('./emailService');
-      await emailService.sendPasswordResetEmail(user.id, user.email, token, user.firstName ?? undefined);
+      const emailResult = await emailService.sendPasswordResetEmail(user.id, user.email, token, user.firstName ?? undefined);
+
+      if (!emailResult?.success) {
+        log.error("[AuthService] Password reset email failed for", user.email, emailResult?.error);
+        return { success: false, error: "Could not send reset email. Try again later.", code: "email_failed" };
+      }
 
       return { success: true };
     } catch (error: unknown) {
       log.error("[AuthService] Password reset request error:", error);
-      return { success: false, error: "Failed to send reset email" };
+      return { success: false, error: "Failed to send reset email", code: "email_failed" };
     }
   }
 
