@@ -3467,6 +3467,19 @@ class AIBrainMasterOrchestrator {
       }
     });
 
+    // GLOBAL WORKSPACE INTERNAL LISTENER — Brain Region Broadcast Integration
+    // Listens to lightweight internal brain broadcasts emitted via platformEventBus.emit()
+    // by broadcastToGlobalWorkspace(). These are NOT full platform events (no DB persist)
+    // but need to be surfaced here for cross-region observability and knowledge graph updates.
+    platformEventBus.on('brain.global_workspace', (message: any) => {
+      try {
+        const { fromRegion, eventType: evtType, confidence = 0.8, workspaceId: wsId } = message;
+        log.info(`[Global Workspace] Internal broadcast received: ${fromRegion} → ${evtType} (ws=${wsId ?? 'global'}, conf=${confidence.toFixed(2)})`);
+        // Future: feed high-confidence activations into the knowledge graph HIPPOCAMPUS
+        // for consolidation: if (confidence > 0.7) sharedKnowledgeGraph.recordActivation(...)
+      } catch { /* never block on internal listener errors */ }
+    });
+
     log.info('[AI Brain Master Orchestrator] Event subscriptions active');
   }
 

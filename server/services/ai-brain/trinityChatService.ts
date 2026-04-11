@@ -43,9 +43,10 @@ import { trinityMemoryService } from './trinityMemoryService';
 import { trinitySelfAwarenessService } from './trinitySelfAwarenessService';
 import { trinityThoughtEngine } from './trinityThoughtEngine';
 import { trinityEQEngine } from './trinityEQEngine';
-import { broadcastToGlobalWorkspace } from './trinityConnectomeService';
+import { broadcastToGlobalWorkspace, buildSelfModelBlock } from './trinityConnectomeService';
 import { trinityThalamus } from './trinityThalamusService';
 import { trinityACC } from './trinityACCService';
+import { reinforcementLearningLoop } from './reinforcementLearningLoop';
 import { trinityUncertaintyService } from './trinityUncertaintyService';
 import { trinityClarificationService } from './trinityClarificationService';
 import { trinityHypothesisEngine } from './trinityHypothesisEngine';
@@ -76,7 +77,15 @@ import { employeeBehaviorScoring } from '../employeeBehaviorScoring';
 import { typedExec, typedPool, typedPoolExec, typedQuery } from '../../lib/typedSql';
 import { trinityPeripheralSurfaced } from '@shared/schema/domains/trinity/extended';
 import { createLogger } from '../../lib/logger';
+import type { KnowledgeDomain } from './sharedKnowledgeGraph';
+import { trinityDeliberationLoop } from './trinityDeliberationLoop';
 const log = createLogger('TrinityChatService');
+
+// === MODULE-SCOPE CONSTANTS ===
+// Compiled once at module load — not on every chat interaction.
+// HIGH_STAKES_KEYWORDS triggers the deliberation loop auto-trigger for manager-level
+// chats that reference financial/legal/compliance-critical topics.
+const HIGH_STAKES_KEYWORDS = /\b(terminate|termination|lawsuit|legal|sue|compliance\s+violation|audit|penalty|fine|breach|payroll\s+error|overpayment|underpayment|discrimination|harassment|injury|accident|incident\s+report|license\s+suspended|contract\s+breach)\b/i;
 
 // ============================================================================
 // TYPES
@@ -791,11 +800,10 @@ class TrinityChatService {
     }
 
     // === SELF-MODEL INJECTION (Cognitive Brain — Self-Awareness Layer) ===
-    // Query trinity_self_awareness table and inject a compact self-model
-    // narrative so Trinity has dynamic awareness of her own capabilities,
-    // confidence levels, and current platform state before generating a response.
-    // The trinitySelfAwarenessService.buildSelfAwarePrompt() method was previously
-    // imported but never called — wired here as per cognitive architecture spec.
+    // Two complementary injections:
+    // 1. buildSelfAwarePrompt() — general service-level awareness (identity, capabilities, platform)
+    // 2. buildSelfModelBlock(workspaceId) — workspace-specific connectome self-model (confidence
+    //    scores, knowledge facts, connectome health) sourced live from trinity_self_awareness
     if (workspaceId) {
       try {
         const selfAwareBlock = await trinitySelfAwarenessService.buildSelfAwarePrompt();
@@ -804,6 +812,17 @@ class TrinityChatService {
         }
       } catch (err: any) {
         log.warn('[TrinityChatService] Self-model injection failed (non-fatal):', err?.message);
+      }
+      // CONNECTOME SELF-MODEL — workspace-specific live state from trinity_self_awareness table
+      // Provides Trinity with calibrated confidence, active knowledge facts, and connectome health
+      // scoped to this organization. Injected per spec: trinityConnectomeService.buildSelfModelBlock()
+      try {
+        const connectomeSelfModel = await buildSelfModelBlock(workspaceId);
+        if (connectomeSelfModel) {
+          systemPrompt += `\n\n${connectomeSelfModel}`;
+        }
+      } catch (err: any) {
+        log.warn('[TrinityChatService] Connectome self-model injection failed (non-fatal):', err?.message);
       }
     }
 
@@ -1053,6 +1072,36 @@ class TrinityChatService {
       log.warn('[TrinityChatService] Thought decision failed (non-fatal):', err?.message);
     }
 
+    // === DELIBERATION LOOP — PREFRONTAL CORTEX AUTO-TRIGGER ===
+    // For high-stakes or high-complexity scenarios, escalate to the full deliberation
+    // loop (PFC synthesis) rather than relying solely on the LLM.  Criteria:
+    //   • Manager/owner making a strategic decision (isStrategic + isManagerLevel)
+    //   • Message explicitly references financial, compliance, or legal risk keywords
+    //   • Somatic marker fired (indicates Trinity detected a risk pattern)
+    // Non-blocking: if deliberation fails the response still proceeds normally.
+    const isHighStakes = isManagerLevel && (isStrategic || HIGH_STAKES_KEYWORDS.test(message) || somaticFlag.fired);
+    if (mode === 'business' && isHighStakes && workspaceId) {
+      try {
+        const deliberationResult = await trinityDeliberationLoop.deliberate({
+          type: 'workspace_health_degraded',
+          workspaceId,
+          description: message.substring(0, 500),
+          priority: somaticFlag.fired ? 'high' : 'normal',
+          sourceSystem: 'trinity_chat',
+          context: { mode, isStrategic, hasHighStakesKeywords: HIGH_STAKES_KEYWORDS.test(message) },
+        });
+        if (deliberationResult?.reasoning) {
+          systemPrompt += `\n\nPREFRONTAL DELIBERATION RESULT:\nBased on a full org-state analysis for this high-stakes scenario, here is the PFC synthesis to factor into your response:\n${deliberationResult.reasoning}`;
+          if (deliberationResult.specificActions?.length > 0) {
+            systemPrompt += `\n\nSuggested specific actions from deliberation: ${deliberationResult.specificActions.join('; ')}`;
+          }
+          log.info(`[DeliberationLoop] PFC auto-triggered for high-stakes chat — riskLevel=${deliberationResult.riskLevel}`);
+        }
+      } catch {
+        // Deliberation is non-fatal — chat proceeds even if PFC loop fails
+      }
+    }
+
     // === CLARIFICATION ENGINE — Pre-flight ambiguity check ===
     // If the request is ambiguous AND high-stakes, ask ONE clarifying question
     // instead of making the expensive AI call. Never asks more than 1 question.
@@ -1240,6 +1289,35 @@ Do NOT skip steps — decompose fully before concluding.`;
     ).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
 
     this.analyzeForInsights(userId, workspaceId, session.id, message, aiResponse.text, mode).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
+
+    // === REINFORCEMENT LEARNING — BASAL GANGLIA FEEDBACK LOOP ===
+    // Record this chat interaction as an experience in the RL loop.
+    // Outcome is always 'success' for a completed chat (no exception thrown).
+    // The RL loop tracks success rates per domain/action to adapt Trinity's strategy
+    // and calibrate confidence over time. Non-blocking — never affects response delivery.
+    try {
+      const chatDomain: KnowledgeDomain = isStrategic ? 'analytics' : hasActions ? 'scheduling' : 'general';
+      reinforcementLearningLoop.recordExperience({
+        agentId: 'trinity_chat',
+        workspaceId,
+        domain: chatDomain,
+        action: isStrategic ? 'strategic_analysis' : hasActions ? 'action_execution' : 'conversational_response',
+        outcome: 'success',
+        humanIntervention: false,
+        executionTimeMs: timeMs,
+        contextWindow: {
+          mode,
+          messageLength: message.length,
+          responseLength: aiResponse.text.length,
+          tokensUsed: aiResponse.tokensUsed,
+          isManagerLevel,
+          hasActions,
+          isStrategic,
+        },
+      });
+    } catch {
+      // RL recording is non-fatal — never block response delivery
+    }
 
     // Get tier-based credit allocation — non-fatal, fallback to defaults on error
     let tierInfo = { tier: 'starter', monthlyAllowance: 500, isPlatformStaff: false };

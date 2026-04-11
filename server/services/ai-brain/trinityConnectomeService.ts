@@ -35,6 +35,7 @@ import { db } from '../../db';
 import { sql } from 'drizzle-orm';
 import { getConnectomeStats } from './hebbianLearningService';
 import { typedQuery } from '../../lib/typedSql';
+import { platformEventBus } from '../platformEventBus';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityConnectomeService');
 
@@ -160,9 +161,14 @@ export function broadcastToGlobalWorkspace(
     timestamp: new Date(),
   };
 
-  // Log the broadcast — the orchestrator's '*' subscription will pick this up
-  // via its brain.* prefix handler once we integrate event-bus broadcasting.
-  // For now, activation tracking in BRAIN_REGION_MAP is the mechanism.
+  // Propagate via lightweight internal event bus so all subscribed brain regions
+  // receive the broadcast synchronously without DB persistence or notification overhead.
+  // Use platformEventBus.emit() (not publish()) — these are service-to-service
+  // internal signals, NOT user-facing platform events.
+  platformEventBus.emit(`brain.${fromRegion.toLowerCase()}.${eventType}`, message);
+  // Also emit on the wildcard channel so any subscriber watching all brain events can react
+  platformEventBus.emit('brain.global_workspace', message);
+
   if (process.env.NODE_ENV !== 'production') {
     log.info(`[Global Workspace] ${fromRegion} → ${eventType} (confidence: ${confidence.toFixed(2)})`);
   }

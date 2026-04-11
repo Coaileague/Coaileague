@@ -19,6 +19,7 @@
 import { pool, db } from '../../db';
 import { createLogger } from '../../lib/logger';
 import { runDecayCycle as hebbianRunDecayCycle, getConnectomeStats as hebbianGetConnectomeStats } from './hebbianLearningService';
+import { invalidateSelfModelCache } from './trinityConnectomeService';
 import { platformEventBus } from '../platformEventBus';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
 import { cronRunLog, aiLearningEvents, employees, employeeProfiles, shifts, incidentReports, complianceDocuments, workspaces, trinitySelfAwareness } from '@shared/schema';
@@ -695,6 +696,9 @@ class TrinityDreamState {
         target: [trinitySelfAwareness.category, trinitySelfAwareness.factKey],
         set: { factValue, updatedAt: sql`now()` },
       });
+      // Invalidate the connectome self-model cache for this workspace so the next
+      // chat interaction picks up the freshly consolidated overnight facts
+      invalidateSelfModelCache(workspaceId);
     } catch (err: any) {
       log.warn(`[DreamState] Could not store morning brief: ${(err instanceof Error ? err.message : String(err))}`);
     }
