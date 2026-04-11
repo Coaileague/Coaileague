@@ -44,7 +44,163 @@ export async function runDataCorrections(): Promise<void> {
     console.log('🔧 Data Correction: root admin email fix skipped:', (err as any)?.message);
   }
 
+  // Ensure the Statewide Protective Services workspace and its owner exist
+  await runStatewideWorkspaceBootstrap();
+
   console.log('🔧 Data Corrections Service: Complete');
+}
+
+/**
+ * Idempotent bootstrap for the Statewide Protective Services production workspace.
+ *
+ * Runs at every production startup (called by runDataCorrections).  Safe to
+ * call repeatedly — every statement uses ON CONFLICT DO NOTHING / DO UPDATE so
+ * no duplicate rows are ever created.
+ *
+ * What it does:
+ *  1. Creates the Statewide workspace if it does not exist, or upgrades it to
+ *     enterprise/active + billing_exempt if it does.
+ *  2. Creates the owner user (txpsinvestigations@gmail.com) if they do not
+ *     exist; either way sets email_verified=TRUE and clears any login lockout.
+ *  3. Creates the workspace_members row (org_owner) if it does not exist.
+ *  4. Creates the employee record if it does not exist.
+ *
+ * IDs are read from env vars first (GRANDFATHERED_TENANT_ID /
+ * GRANDFATHERED_TENANT_OWNER_ID), falling back to the well-known production
+ * values that were established in production-migration.sql.
+ */
+export async function runStatewideWorkspaceBootstrap(): Promise<void> {
+  const { isProduction } = await import('../lib/isProduction');
+  if (!isProduction()) return;
+
+  // Canonical production IDs (established in production-migration.sql).
+  // Env vars take precedence if set so the values can be rotated without a deploy.
+  const WS_ID   = process.env.GRANDFATHERED_TENANT_ID     || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+  const USER_ID  = process.env.GRANDFATHERED_TENANT_OWNER_ID || '48003611';
+  const EMP_ID   = '3fd50980-85f8-4f18-8b7a-5906ba8ccfe0';
+  const EMAIL    = 'txpsinvestigations@gmail.com';
+  // Known bcrypt hash for Statewide owner (from production-migration.sql).
+  // Only used when creating a brand-new user row; existing password hashes are
+  // never overwritten here — use the password-reset flow to change a password.
+  const PW_HASH  = '$2b$10$r3GT8OdoCwxosnHVWfQmFeMRnvv1BOhJIKA5BjWQ3g2eG3LQ4ko0K';
+
+  console.log(`🏢 [StatewideBootstrap] Starting — workspace=${WS_ID}, owner=${USER_ID}`);
+
+  // ── 1. Workspace ─────────────────────────────────────────────────────────
+  try {
+    // CATEGORY C — Raw SQL retained: Statewide bootstrap | Tables: workspaces | Verified: 2026-04-11
+    await typedExec(sql`
+      INSERT INTO workspaces (
+        id, name, owner_id,
+        subscription_tier, subscription_status,
+        billing_exempt, founder_exemption,
+        created_at, updated_at
+      )
+      VALUES (
+        ${WS_ID}, 'Statewide Protective Services', ${USER_ID},
+        'enterprise', 'active',
+        TRUE, TRUE,
+        NOW(), NOW()
+      )
+      ON CONFLICT (id) DO UPDATE
+        SET subscription_tier   = 'enterprise',
+            subscription_status = 'active',
+            billing_exempt      = TRUE,
+            founder_exemption   = TRUE,
+            trial_ends_at       = NULL,
+            updated_at          = NOW()
+        WHERE workspaces.subscription_tier   != 'enterprise'
+           OR workspaces.subscription_status != 'active'
+           OR workspaces.billing_exempt       IS NOT TRUE
+           OR workspaces.founder_exemption    IS NOT TRUE
+    `);
+    console.log('🏢 [StatewideBootstrap] Workspace upserted (enterprise/active/billing_exempt)');
+  } catch (err) {
+    console.error('🏢 [StatewideBootstrap] Workspace upsert failed:', (err as any)?.message);
+  }
+
+  // ── 2. Owner user ─────────────────────────────────────────────────────────
+  try {
+    // CATEGORY C — Raw SQL retained: Statewide bootstrap | Tables: users | Verified: 2026-04-11
+    await typedExec(sql`
+      INSERT INTO users (
+        id, email, first_name, last_name, role,
+        password_hash, email_verified, current_workspace_id,
+        login_attempts, mfa_enabled,
+        created_at, updated_at
+      )
+      VALUES (
+        ${USER_ID}, ${EMAIL}, 'Brigido', 'Guillen', 'user',
+        ${PW_HASH}, TRUE, ${WS_ID},
+        0, FALSE,
+        NOW(), NOW()
+      )
+      ON CONFLICT (id) DO UPDATE
+        SET email_verified       = TRUE,
+            login_attempts       = 0,
+            locked_until         = NULL,
+            current_workspace_id = ${WS_ID},
+            updated_at           = NOW()
+        WHERE users.email_verified   IS NOT TRUE
+           OR users.login_attempts   > 0
+           OR users.locked_until     IS NOT NULL
+    `);
+    console.log(`🏢 [StatewideBootstrap] Owner user upserted (email_verified=TRUE)`);
+  } catch (err) {
+    console.error('🏢 [StatewideBootstrap] Owner user upsert failed:', (err as any)?.message);
+  }
+
+  // ── 3. Workspace member ───────────────────────────────────────────────────
+  try {
+    // CATEGORY C — Raw SQL retained: Statewide bootstrap | Tables: workspace_members | Verified: 2026-04-11
+    await typedExec(sql`
+      INSERT INTO workspace_members (user_id, workspace_id, role, status, joined_at, created_at, updated_at)
+      VALUES (${USER_ID}, ${WS_ID}, 'org_owner', 'active', NOW(), NOW(), NOW())
+      ON CONFLICT (user_id, workspace_id) DO NOTHING
+    `);
+    console.log('🏢 [StatewideBootstrap] Workspace member record verified');
+  } catch (err) {
+    // Constraint may not be (user_id, workspace_id) — fall back to a SELECT guard
+    try {
+      // CATEGORY C — Raw SQL retained: Statewide bootstrap fallback | Tables: workspace_members | Verified: 2026-04-11
+      await typedExec(sql`
+        INSERT INTO workspace_members (user_id, workspace_id, role, status, joined_at, created_at, updated_at)
+        SELECT ${USER_ID}, ${WS_ID}, 'org_owner', 'active', NOW(), NOW(), NOW()
+        WHERE NOT EXISTS (
+          SELECT 1 FROM workspace_members
+          WHERE user_id = ${USER_ID} AND workspace_id = ${WS_ID}
+        )
+      `);
+      console.log('🏢 [StatewideBootstrap] Workspace member record verified (via SELECT guard)');
+    } catch (err2) {
+      console.error('🏢 [StatewideBootstrap] Workspace member upsert failed:', (err2 as any)?.message);
+    }
+  }
+
+  // ── 4. Employee record ────────────────────────────────────────────────────
+  try {
+    // CATEGORY C — Raw SQL retained: Statewide bootstrap | Tables: employees | Verified: 2026-04-11
+    await typedExec(sql`
+      INSERT INTO employees (
+        id, user_id, workspace_id,
+        first_name, last_name, email,
+        role, workspace_role, employee_number,
+        created_at, updated_at
+      )
+      VALUES (
+        ${EMP_ID}, ${USER_ID}, ${WS_ID},
+        'Brigido', 'Guillen', ${EMAIL},
+        'Owner', 'org_owner', 'EMP-SPS-00001',
+        NOW(), NOW()
+      )
+      ON CONFLICT (id) DO NOTHING
+    `);
+    console.log('🏢 [StatewideBootstrap] Employee record verified');
+  } catch (err) {
+    console.error('🏢 [StatewideBootstrap] Employee record upsert failed:', (err as any)?.message);
+  }
+
+  console.log('🏢 [StatewideBootstrap] Complete — Statewide Protective Services is ready');
 }
 
 /**
