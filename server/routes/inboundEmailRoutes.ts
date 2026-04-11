@@ -33,10 +33,14 @@ export const inboundEmailRouter = Router();
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || '';
 
 /**
- * Verify Resend inbound webhook signature.
- * Resend delivers inbound webhooks via Svix; the signed content is
- * "{svix-timestamp}.{rawBody}" and the secret is UTF-8 (with an
- * optional "whsec_" prefix).  The header is svix-signature: v1,<base64-sig>.
+ * Verify Resend inbound webhook signature per Svix specification.
+ *
+ * Svix signed-content format (required):
+ *   "{svix-id}.{svix-timestamp}.{rawBody}"
+ *
+ * The webhook signing secret is stored as a base64-encoded string (with an
+ * optional "whsec_" prefix that must be stripped before decoding).
+ * The header is svix-signature: v1,<base64-sig> (space-separated for multiple).
  */
 function verifyResendSignature(rawBody: Buffer | string, headers: Record<string, string | string[] | undefined>): boolean {
   if (!WEBHOOK_SECRET) {
@@ -49,9 +53,11 @@ function verifyResendSignature(rawBody: Buffer | string, headers: Record<string,
   const signature = Array.isArray(sigHeader) ? sigHeader[0] : String(sigHeader);
   const tsHeader = headers['svix-timestamp'] || '';
   const timestamp = Array.isArray(tsHeader) ? tsHeader[0] : String(tsHeader);
+  const idHeader = headers['svix-id'] || '';
+  const msgId = Array.isArray(idHeader) ? idHeader[0] : String(idHeader);
 
-  if (!signature || !timestamp) {
-    log.warn('[InboundEmail] Missing svix-signature or svix-timestamp header');
+  if (!signature || !timestamp || !msgId) {
+    log.warn('[InboundEmail] Missing svix-signature, svix-timestamp, or svix-id header');
     return !isProduction();
   }
 
@@ -63,15 +69,16 @@ function verifyResendSignature(rawBody: Buffer | string, headers: Record<string,
   }
 
   try {
-    // Svix signed content: "{timestamp}.{rawBody}"
+    // Svix signed content: "{svix-id}.{svix-timestamp}.{rawBody}"
     const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : rawBody;
-    const signedContent = `${timestamp}.${bodyStr}`;
+    const signedContent = `${msgId}.${timestamp}.${bodyStr}`;
 
-    // Strip optional "whsec_" prefix; secret is plain UTF-8, not base64
+    // Strip optional "whsec_" prefix; Svix stores the secret as base64-encoded bytes
     const secretKey = WEBHOOK_SECRET.startsWith('whsec_')
       ? WEBHOOK_SECRET.slice(6)
       : WEBHOOK_SECRET;
-    const secretBuffer = Buffer.from(secretKey, 'utf8');
+    // Base64-decode the secret to get raw HMAC key bytes
+    const secretBuffer = Buffer.from(secretKey, 'base64');
 
     const expectedSig = createHmac('sha256', secretBuffer)
       .update(signedContent)

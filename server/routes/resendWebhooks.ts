@@ -86,13 +86,19 @@ const router = Router();
 const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
 
 /**
- * Verify Resend webhook signature using HMAC-SHA256
- * Resend signs webhooks with svix-signature header
+ * Verify Resend webhook signature using HMAC-SHA256 per Svix specification.
+ *
+ * Svix signed-content format (required):
+ *   "{svix-id}.{svix-timestamp}.{rawBody}"
+ *
+ * The webhook signing secret is stored as a base64-encoded string (with an
+ * optional "whsec_" prefix that must be stripped before decoding).
  */
 function verifyResendSignature(
   payload: string,
   signature: string | undefined,
-  timestamp: string | undefined
+  timestamp: string | undefined,
+  msgId: string | undefined
 ): boolean {
   // Fail-closed: if no secret is configured, REJECT all incoming webhooks.
   // This prevents unauthenticated webhook payloads from mutating platform state.
@@ -101,8 +107,8 @@ function verifyResendSignature(
     return false;
   }
 
-  if (!signature || !timestamp) {
-    log.warn("[Resend Webhook] Missing signature or timestamp headers");
+  if (!signature || !timestamp || !msgId) {
+    log.warn("[Resend Webhook] Missing svix-signature, svix-timestamp, or svix-id headers");
     return false;
   }
 
@@ -116,33 +122,35 @@ function verifyResendSignature(
   try {
     // Resend uses Svix format: v1,<base64-signature> (space-separated if multiple)
     const signatures = signature.split(" ");
-    const signedPayload = `${timestamp}.${payload}`;
+
+    // Svix signed content: "{svix-id}.{svix-timestamp}.{rawBody}"
+    const signedPayload = `${msgId}.${timestamp}.${payload}`;
     
     // Extract the actual secret (remove whsec_ prefix if present)
     const secretKey = RESEND_WEBHOOK_SECRET.startsWith("whsec_") 
       ? RESEND_WEBHOOK_SECRET.slice(6) 
       : RESEND_WEBHOOK_SECRET;
     
+    // Svix stores the signing secret as base64-encoded bytes
+    const secretBuffer = Buffer.from(secretKey, "base64");
+    
+    const expectedSig = crypto
+      .createHmac("sha256", secretBuffer)
+      .update(signedPayload)
+      .digest("base64");
+    
     for (const sig of signatures) {
       const [version, sigValue] = sig.split(",");
       
-      if (version !== "v1") continue;
+      if (version !== "v1" || !sigValue) continue;
       
-      // Try decoding secret as base64
-      const secretBuffer = Buffer.from(secretKey, "base64");
-      
-      const expectedSig = crypto
-        .createHmac("sha256", secretBuffer)
-        .update(signedPayload)
-        .digest("base64");
-      
-      // Use constant-time comparison
+      // Use constant-time comparison to prevent timing attacks
       try {
-        if (sigValue && crypto.timingSafeEqual(Buffer.from(sigValue), Buffer.from(expectedSig))) {
+        if (crypto.timingSafeEqual(Buffer.from(sigValue), Buffer.from(expectedSig))) {
           return true;
         }
       } catch (compareError) {
-        // Buffer length mismatch - signatures don't match, continue to next signature
+        // Buffer length mismatch — signatures don't match, try next candidate
       }
     }
     
@@ -391,9 +399,10 @@ router.post("/api/webhooks/resend", async (req, res) => {
     // to suppress email addresses or manipulate delivery state.
     const outboundSignature = req.headers["svix-signature"] as string | undefined;
     const outboundTimestamp = req.headers["svix-timestamp"] as string | undefined;
+    const outboundMsgId = req.headers["svix-id"] as string | undefined;
     const outboundRawBody = (req as any).rawBody || JSON.stringify(req.body);
 
-    if (!verifyResendSignature(outboundRawBody, outboundSignature, outboundTimestamp)) {
+    if (!verifyResendSignature(outboundRawBody, outboundSignature, outboundTimestamp, outboundMsgId)) {
       log.error("[Resend Webhook] Signature verification failed — rejecting outbound event webhook");
       return res.status(401).json({ error: "Invalid signature" });
     }
@@ -617,6 +626,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
     // Verify webhook signature (Resend uses Svix)
     const signature = req.headers["svix-signature"] as string | undefined;
     const timestamp = req.headers["svix-timestamp"] as string | undefined;
+    const msgId = req.headers["svix-id"] as string | undefined;
     // Use raw body captured by middleware for proper signature verification
     // (JSON.stringify(req.body) may produce different formatting than the original payload)
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
@@ -624,7 +634,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
     // Fail-closed: verifyResendSignature() already rejects when no secret is configured.
     // Removing the outer `if (RESEND_WEBHOOK_SECRET &&...)` guard so we never accept
     // unauthenticated inbound payloads — even when the secret env-var is missing.
-    if (!verifyResendSignature(rawBody, signature, timestamp)) {
+    if (!verifyResendSignature(rawBody, signature, timestamp, msgId)) {
       log.error("[Resend Inbound] Invalid webhook signature - rejecting request");
       if (RESEND_WEBHOOK_SECRET) {
         log.error(`[Resend Inbound] Secret starts with: ${RESEND_WEBHOOK_SECRET.substring(0, 15)}...`);
