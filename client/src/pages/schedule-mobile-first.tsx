@@ -368,12 +368,20 @@ export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMo
 
   const handleDeleteShift = async (shift: Shift) => {
     if (confirm('Delete this shift?')) {
-      await deleteShiftMutation.mutateAsync(shift.id);
+      try {
+        await deleteShiftMutation.mutateAsync(shift.id);
+      } catch {
+        // Error is handled by mutation's onError callback
+      }
     }
   };
 
   const handleSubmitShift = async (data: any) => {
-    await createShiftMutation.mutateAsync(data);
+    try {
+      await createShiftMutation.mutateAsync(data);
+    } catch {
+      // Error is already handled by the mutation's onError callback
+    }
   };
   
   const handleClaimShift = async (shift: Shift) => {

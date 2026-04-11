@@ -39,13 +39,20 @@ export default function InterviewChatroomPage() {
   const [polling, setPolling] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Use a ref to track room status inside the polling interval to avoid stale closure
+  const roomStatusRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    roomStatusRef.current = room?.status;
+  }, [room?.status]);
 
   useEffect(() => {
     if (!token) return;
     loadRoom();
-    // Poll every 3 seconds for new messages when room is active
+    // Poll every 3 seconds for new messages when room is active.
+    // Read status from ref to avoid a stale closure over the initial `room` value.
     pollIntervalRef.current = setInterval(() => {
-      if (room?.status === 'active') pollMessages();
+      if (roomStatusRef.current === 'active') pollMessages();
     }, 3000);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);

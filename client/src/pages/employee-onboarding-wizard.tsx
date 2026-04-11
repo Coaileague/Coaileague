@@ -290,6 +290,7 @@ export default function EmployeeOnboardingWizard() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
       return res.json();
     },
+    onError: (e: any) => toast({ title: 'Save failed', description: e.message || 'Failed to save your progress. Please try again.', variant: 'destructive' }),
   });
 
   const fetchContracts = useCallback(async () => {
@@ -355,52 +356,57 @@ export default function EmployeeOnboardingWizard() {
       return;
     }
 
-    if (step === 1) {
-      if (!form.firstName.trim() || !form.lastName.trim()) {
-        toast({ title: 'Required fields missing', description: 'First and last name are required.', variant: 'destructive' });
-        return;
+    try {
+      if (step === 1) {
+        if (!form.firstName.trim() || !form.lastName.trim()) {
+          toast({ title: 'Required fields missing', description: 'First and last name are required.', variant: 'destructive' });
+          return;
+        }
+        if (!applicationId) {
+          await createAppMutation.mutateAsync();
+        } else {
+          await updateAppMutation.mutateAsync({ ...form } as any);
+        }
+      } else if (step === 2) {
+        await updateAppMutation.mutateAsync({
+          emergencyContactName: form.emergencyContactName,
+          emergencyContactPhone: form.emergencyContactPhone,
+          emergencyContactRelation: form.emergencyContactRelation,
+        } as any);
+      } else if (step === 3) {
+        await updateAppMutation.mutateAsync({
+          taxClassification: form.taxClassification as any,
+          filingStatus: form.filingStatus,
+          multipleJobs: form.multipleJobs,
+          dependentsAmount: form.dependentsAmount,
+          otherIncome: form.otherIncome,
+          extraWithholding: form.extraWithholding,
+        } as any);
+      } else if (step === 4) {
+        await updateAppMutation.mutateAsync({
+          bankName: form.bankName,
+          routingNumber: form.routingNumber,
+          accountNumber: form.accountNumber,
+          accountType: form.accountType,
+        } as any);
+      } else if (step === 5) {
+        await updateAppMutation.mutateAsync({
+          availableMonday: form.availableMonday,
+          availableTuesday: form.availableTuesday,
+          availableWednesday: form.availableWednesday,
+          availableThursday: form.availableThursday,
+          availableFriday: form.availableFriday,
+          availableSaturday: form.availableSaturday,
+          availableSunday: form.availableSunday,
+          preferredShiftTime: form.preferredShiftTime,
+          maxHoursPerWeek: form.maxHoursPerWeek ? parseInt(form.maxHoursPerWeek) : undefined,
+          availabilityNotes: form.availabilityNotes,
+          currentStep: 'work_availability',
+        } as any);
       }
-      if (!applicationId) {
-        await createAppMutation.mutateAsync();
-      } else {
-        await updateAppMutation.mutateAsync({ ...form } as any);
-      }
-    } else if (step === 2) {
-      await updateAppMutation.mutateAsync({
-        emergencyContactName: form.emergencyContactName,
-        emergencyContactPhone: form.emergencyContactPhone,
-        emergencyContactRelation: form.emergencyContactRelation,
-      } as any);
-    } else if (step === 3) {
-      await updateAppMutation.mutateAsync({
-        taxClassification: form.taxClassification as any,
-        filingStatus: form.filingStatus,
-        multipleJobs: form.multipleJobs,
-        dependentsAmount: form.dependentsAmount,
-        otherIncome: form.otherIncome,
-        extraWithholding: form.extraWithholding,
-      } as any);
-    } else if (step === 4) {
-      await updateAppMutation.mutateAsync({
-        bankName: form.bankName,
-        routingNumber: form.routingNumber,
-        accountNumber: form.accountNumber,
-        accountType: form.accountType,
-      } as any);
-    } else if (step === 5) {
-      await updateAppMutation.mutateAsync({
-        availableMonday: form.availableMonday,
-        availableTuesday: form.availableTuesday,
-        availableWednesday: form.availableWednesday,
-        availableThursday: form.availableThursday,
-        availableFriday: form.availableFriday,
-        availableSaturday: form.availableSaturday,
-        availableSunday: form.availableSunday,
-        preferredShiftTime: form.preferredShiftTime,
-        maxHoursPerWeek: form.maxHoursPerWeek ? parseInt(form.maxHoursPerWeek) : undefined,
-        availabilityNotes: form.availabilityNotes,
-        currentStep: 'work_availability',
-      } as any);
+    } catch {
+      // Error is displayed by mutation's onError callback; do not advance the step
+      return;
     }
 
     setStep(s => s + 1);

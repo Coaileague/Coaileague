@@ -172,13 +172,17 @@ export class TrinityEmailProcessor {
 
   private async handleCareersEmail(email: any, workspace: any, sender: any): Promise<void> {
     log.info(`[careers] New career inquiry from ${email.from_email} to ${workspace.company_name}`);
-    await pool.query(
-      `INSERT INTO inbound_email_log
-       (workspace_id, category, from_email, to_email, subject, message_id, processing_status)
-       VALUES ($1, 'careers', $2, $3, $4, $5, 'received')
-       ON CONFLICT (message_id) DO NOTHING`,
-      [workspace.id, email.from_email, email.to_email, email.subject, email.message_id]
-    ).catch((err) => log.warn('[trinityEmailProcessor] Fire-and-forget failed:', err));
+    try {
+      await pool.query(
+        `INSERT INTO inbound_email_log
+         (workspace_id, category, from_email, to_email, subject, message_id, processing_status)
+         VALUES ($1, 'careers', $2, $3, $4, $5, 'received')
+         ON CONFLICT (message_id) DO NOTHING`,
+        [workspace.id, email.from_email, email.to_email, email.subject, email.message_id]
+      );
+    } catch (err) {
+      log.warn('[trinityEmailProcessor] Careers email log insert failed:', err);
+    }
   }
 
   private async handleVerificationEmail(email: any, workspace: any, _sender: any): Promise<void> {
@@ -241,34 +245,46 @@ export class TrinityEmailProcessor {
     const data = submission.data || {};
 
     if (submitAction === 'create_candidate' && data.email) {
-      await pool.query(
-        `INSERT INTO interview_candidates
-         (workspace_id, full_name, email, phone, position_applied, stage, source, created_at)
-         VALUES ($1, $2, $3, $4, $5, 'applied', 'job_application_form', NOW())
-         ON CONFLICT (workspace_id, email) DO NOTHING`,
-        [
-          submission.workspace_id,
-          data.full_name || 'Unknown',
-          data.email,
-          data.phone || null,
-          data.position || 'Security Officer',
-        ]
-      ).catch((e: any) => log.warn('create_candidate insert failed:', e.message));
+      try {
+        await pool.query(
+          `INSERT INTO interview_candidates
+           (workspace_id, full_name, email, phone, position_applied, stage, source, created_at)
+           VALUES ($1, $2, $3, $4, $5, 'applied', 'job_application_form', NOW())
+           ON CONFLICT (workspace_id, email) DO NOTHING`,
+          [
+            submission.workspace_id,
+            data.full_name || 'Unknown',
+            data.email,
+            data.phone || null,
+            data.position || 'Security Officer',
+          ]
+        );
+      } catch (e: any) {
+        log.warn('create_candidate insert failed:', e.message);
+      }
     }
 
     if (submitAction === 'complete_onboarding_task' && contextId) {
-      await pool.query(
-        `UPDATE onboarding_tasks SET status = 'completed', completed_at = NOW()
-         WHERE id = $1`,
-        [contextId]
-      ).catch((err) => log.warn('[trinityEmailProcessor] Fire-and-forget failed:', err));
+      try {
+        await pool.query(
+          `UPDATE onboarding_tasks SET status = 'completed', completed_at = NOW()
+           WHERE id = $1`,
+          [contextId]
+        );
+      } catch (err) {
+        log.warn('[trinityEmailProcessor] complete_onboarding_task update failed:', err);
+      }
     }
 
-    await pool.query(
-      `UPDATE form_submissions SET processed_at = NOW(), processed_by = 'trinity_auto', trinity_action_taken = $1
-       WHERE id = $2`,
-      [submitAction, submission.id]
-    ).catch((err) => log.warn('[trinityEmailProcessor] Fire-and-forget failed:', err));
+    try {
+      await pool.query(
+        `UPDATE form_submissions SET processed_at = NOW(), processed_by = 'trinity_auto', trinity_action_taken = $1
+         WHERE id = $2`,
+        [submitAction, submission.id]
+      );
+    } catch (err) {
+      log.warn('[trinityEmailProcessor] form_submissions update failed:', err);
+    }
   }
 }
 

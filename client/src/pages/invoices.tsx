@@ -224,7 +224,11 @@ const invoicesPageConfig: CanvasPageConfig = {
                 <DropdownMenuItem
                   disabled={isAnyMutationPending}
                   onClick={async () => {
-                     await markPaidMutation.mutateAsync(invoice.id);
+                    try {
+                      await markPaidMutation.mutateAsync(invoice.id);
+                    } catch {
+                      // Error is handled by mutation's onError callback
+                    }
                   }}
                   data-testid={`button-mark-paid-${invoice.id}`}
                 >

@@ -807,9 +807,11 @@ export class AuthService {
       // SECURITY: Alert the old email address so the account owner knows a
       // change was requested. Non-fatal — do not block the initiation.
       if (oldEmail && oldEmail !== normalised) {
-        this.sendEmailChangeSecurityNotice(oldEmail, normalised).catch((err) =>
-          log.warn('[AuthService] Failed to send email-change security notice to old address:', err)
-        );
+        try {
+          await this.sendEmailChangeSecurityNotice(oldEmail, normalised);
+        } catch (err) {
+          log.warn('[AuthService] Failed to send email-change security notice to old address:', err);
+        }
       }
 
       return { success: true };

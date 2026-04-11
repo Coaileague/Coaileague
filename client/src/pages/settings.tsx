@@ -452,6 +452,13 @@ function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
         description: "Your workspace settings have been saved successfully.",
       });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to save settings",
+        description: error?.message || "An error occurred while saving your settings.",
+        variant: "destructive",
+      });
+    },
   });
 
   const onSubmit = (values: WorkspaceFormValues) => {
@@ -2107,91 +2114,127 @@ export default function Settings() {
 
   const handleCategoryChange = async (category: string) => {
     setSelectedCategory(category);
-    await updateWorkspaceMutation.mutateAsync({ businessCategory: category });
+    try {
+      await updateWorkspaceMutation.mutateAsync({ businessCategory: category });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSeedTemplates = async () => {
-    await seedTemplatesMutation.mutateAsync();
+    try {
+      await seedTemplatesMutation.mutateAsync();
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSaveWorkspace = async () => {
-    await updateWorkspaceMutation.mutateAsync({
-      name: workspaceName,
-      companyName,
-      taxId,
-      phone,
-      address,
-      website,
-      companyCity: companyCity || null,
-      companyState: companyState || null,
-      companyZip: companyZip || null,
-      // State license fields
-      stateLicenseNumber: stateLicenseNumber || null,
-      stateLicenseState: stateLicenseState || null,
-      stateLicenseExpiry: stateLicenseExpiry ? new Date(stateLicenseExpiry) : null,
-      logoUrl: logoUrl || null,
-      brandColor: brandColor || null,
-    });
+    try {
+      await updateWorkspaceMutation.mutateAsync({
+        name: workspaceName,
+        companyName,
+        taxId,
+        phone,
+        address,
+        website,
+        companyCity: companyCity || null,
+        companyState: companyState || null,
+        companyZip: companyZip || null,
+        // State license fields
+        stateLicenseNumber: stateLicenseNumber || null,
+        stateLicenseState: stateLicenseState || null,
+        stateLicenseExpiry: stateLicenseExpiry ? new Date(stateLicenseExpiry) : null,
+        logoUrl: logoUrl || null,
+        brandColor: brandColor || null,
+      });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSaveInvoiceFinancials = async () => {
-    await updateWorkspaceMutation.mutateAsync({
-      invoicePrefix: invoicePrefix || "INV",
-      invoiceNextNumber: invoiceNextNumber || 1000,
-      lateFeePercentage: lateFeePercentage,
-      lateFeeDays: lateFeeDays || 30,
-      billingEmail: billingEmail || null,
-      paymentTermsDays: paymentTermsDays || 30,
-      defaultTaxRate: defaultTaxRate / 100,
-    });
+    try {
+      await updateWorkspaceMutation.mutateAsync({
+        invoicePrefix: invoicePrefix || "INV",
+        invoiceNextNumber: invoiceNextNumber || 1000,
+        lateFeePercentage: lateFeePercentage,
+        lateFeeDays: lateFeeDays || 30,
+        billingEmail: billingEmail || null,
+        paymentTermsDays: paymentTermsDays || 30,
+        defaultTaxRate: defaultTaxRate / 100,
+      });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSavePayrollFinancials = async () => {
-    await updateWorkspaceMutation.mutateAsync({
-      stateUnemploymentRate: stateUnemploymentRate / 100,
-      workerCompRate: workerCompRate / 100,
-      payrollBankName: payrollBankName || null,
-      payrollBankRouting: payrollBankRouting || null,
-      payrollBankAccount: payrollBankAccount || null,
-      payrollMemo: payrollMemo || null,
-    });
+    try {
+      await updateWorkspaceMutation.mutateAsync({
+        stateUnemploymentRate: stateUnemploymentRate / 100,
+        workerCompRate: workerCompRate / 100,
+        payrollBankName: payrollBankName || null,
+        payrollBankRouting: payrollBankRouting || null,
+        payrollBankAccount: payrollBankAccount || null,
+        payrollMemo: payrollMemo || null,
+      });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSaveInvoicing = async () => {
-    await updateInvoicingMutation.mutateAsync({
-      autoInvoicingEnabled,
-      invoiceSchedule,
-      invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : undefined,
-      invoiceGenerationDay,
-    });
+    try {
+      await updateInvoicingMutation.mutateAsync({
+        autoInvoicingEnabled,
+        invoiceSchedule,
+        invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : undefined,
+        invoiceGenerationDay,
+      });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSavePayroll = async () => {
-    await updatePayrollMutation.mutateAsync({
-      autoPayrollEnabled,
-      payrollSchedule,
-      payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : undefined,
-      payrollProcessDay,
-      payrollCutoffDay,
-    });
+    try {
+      await updatePayrollMutation.mutateAsync({
+        autoPayrollEnabled,
+        payrollSchedule,
+        payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : undefined,
+        payrollProcessDay,
+        payrollCutoffDay,
+      });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSaveScheduling = async () => {
-    await updateSchedulingMutation.mutateAsync({
-      autoSchedulingEnabled,
-      scheduleGenerationInterval,
-      scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : undefined,
-      scheduleAdvanceNoticeDays,
-      scheduleGenerationDay,
-    });
+    try {
+      await updateSchedulingMutation.mutateAsync({
+        autoSchedulingEnabled,
+        scheduleGenerationInterval,
+        scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : undefined,
+        scheduleAdvanceNoticeDays,
+        scheduleGenerationDay,
+      });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   const handleSaveBreakCompliance = async () => {
-    await updateBreakComplianceMutation.mutateAsync({
-      laborLawJurisdiction,
-      autoBreakSchedulingEnabled,
-      breakComplianceAlerts,
-    });
+    try {
+      await updateBreakComplianceMutation.mutateAsync({
+        laborLawJurisdiction,
+        autoBreakSchedulingEnabled,
+        breakComplianceAlerts,
+      });
+    } catch {
+      // Error is handled by mutation's onError callback
+    }
   };
 
   // Status indicators for hero summary

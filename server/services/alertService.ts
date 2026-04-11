@@ -468,7 +468,11 @@ class AlertService {
               </div>
             `;
 
-          NotificationDeliveryService.send({ type: 'alert_notification', workspaceId: alert.workspaceId || 'system', recipientUserId: user.id || user.email, channel: 'email', body: { to: user.email, subject: `[${alert.severity.toUpperCase()}] ${alert.title}`, html } }).catch((err: Error) => log.warn('[AlertService] Email delivery failed (non-blocking):', err.message));
+          try {
+            await NotificationDeliveryService.send({ type: 'alert_notification', workspaceId: alert.workspaceId || 'system', recipientUserId: user.id || user.email, channel: 'email', body: { to: user.email, subject: `[${alert.severity.toUpperCase()}] ${alert.title}`, html } });
+          } catch (err: unknown) {
+            log.warn('[AlertService] Email delivery failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
+          }
         }
       }
     } catch (error) {

@@ -14,9 +14,17 @@ export default function SmsConsent() {
   const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Basic US phone validation
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 11 || (digits.length === 11 && !digits.startsWith("1"))) {
+      setPhoneError("Please enter a valid U.S. mobile phone number.");
+      return;
+    }
+    setPhoneError("");
     if (agreed && phone) {
       setSubmitted(true);
     }
@@ -91,10 +99,14 @@ export default function SmsConsent() {
                       type="tel"
                       placeholder="+1 (555) 000-0000"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
                       data-testid="input-sms-phone"
                       required
+                      className={phoneError ? "border-destructive" : ""}
                     />
+                    {phoneError && (
+                      <p className="text-xs text-destructive mt-1">{phoneError}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       U.S. mobile numbers only.
                     </p>
