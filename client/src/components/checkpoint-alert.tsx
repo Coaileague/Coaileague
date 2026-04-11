@@ -1,6 +1,6 @@
 /**
  * CheckpointAlert Component
- * Displays alert when Trinity™ automation is paused due to insufficient credits
+ * Displays alert when Trinity™ automation is paused (checkpoint saved)
  * Shows resume point, credits needed, and purchase/resume options
  */
 
@@ -130,7 +130,7 @@ export function CheckpointAlert({ workspaceId, variant = 'detailed' }: Checkpoin
                     {getAutomationLabel(checkpoint.automationType)} Paused
                   </h3>
                   <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
-                    Trinity™ saved your progress when credits ran low. Resume to continue.
+                    Trinity™ saved your progress. Resume to continue — token usage will be billed at overage rate if allowance is exceeded.
                   </p>
                 </div>
               </div>
@@ -139,7 +139,7 @@ export function CheckpointAlert({ workspaceId, variant = 'detailed' }: Checkpoin
                 <div className="flex items-center gap-1.5">
                   <CreditCard className="h-4 w-4 text-amber-600" />
                   <span className="text-amber-900 dark:text-amber-100">
-                    <strong>{checkpoint.creditsNeeded}</strong> credits needed
+                    ~<strong>{checkpoint.creditsNeeded.toLocaleString()}</strong> tokens estimated
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -172,7 +172,7 @@ export function CheckpointAlert({ workspaceId, variant = 'detailed' }: Checkpoin
                 <Play className="h-4 w-4 mr-1" />
                 {resumeMutation.isPending ? 'Resuming...' : 'Resume'}
               </Button>
-              <Link href="/billing">
+              <Link href="/settings/billing">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -180,7 +180,7 @@ export function CheckpointAlert({ workspaceId, variant = 'detailed' }: Checkpoin
                   data-testid="button-purchase-credits"
                 >
                   <CreditCard className="h-4 w-4 mr-1" />
-                  Buy Credits
+                  View Plan
                 </Button>
               </Link>
             </div>

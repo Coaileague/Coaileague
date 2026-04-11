@@ -388,15 +388,15 @@ export default function AutomationControl() {
   return (
     <CanvasHubPage config={pageConfig}>
       <div className="space-y-6">
-          {/* Credit Balance Alert */}
+          {/* Token Usage Alert */}
           {credits && credits.balance < 50 && (
             <Alert className="mb-6 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 dark:text-amber-200">
-                <strong>AI Usage Notice:</strong> Your automation usage is elevated this period.
+                <strong>Token Usage Notice:</strong> Your AI token usage is elevated this period. Overages are billed automatically at $2.00/100K tokens.
                 <button
                   className="text-amber-800 dark:text-amber-200 underline ml-2 cursor-pointer hover:text-amber-900 dark:hover:text-amber-100"
-                  onClick={() => setLocation('/billing')}
+                  onClick={() => setLocation('/settings/billing')}
                   data-testid="button-upgrade-plan"
                 >
                   Manage plan

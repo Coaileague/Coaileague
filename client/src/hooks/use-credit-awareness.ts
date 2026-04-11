@@ -3,24 +3,22 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import thoughtManager, { type CreditStatus } from '@/lib/mascot/ThoughtManager';
 
-interface CreditsBalanceResponse {
-  currentBalance: number;
-  monthlyAllocation: number;
-  totalCreditsEarned: number;
-  totalCreditsSpent: number;
-  totalCreditsPurchased: number;
-  lastResetAt: string | null;
-  nextResetAt: string | null;
-  isActive: boolean;
-  isSuspended: boolean;
-  tier: string;
+interface TokenBalanceResponse {
+  tokensUsed?: number;
+  tokensAllowance?: number | null;
+  currentBalance?: number;
+  monthlyAllocation?: number;
+  creditsUsedThisPeriod?: number;
+  isActive?: boolean;
+  unlimitedCredits?: boolean;
+  subscriptionTier?: string;
 }
 
 export function useCreditAwareness() {
   const { user } = useAuth();
-  const lastBalanceRef = useRef<number | null>(null);
+  const lastUsedRef = useRef<number | null>(null);
 
-  const { data: creditsData } = useQuery<CreditsBalanceResponse>({
+  const { data: balanceData } = useQuery<TokenBalanceResponse>({
     queryKey: ['/api/credits/balance'],
     enabled: !!user,
     refetchInterval: 60000,
@@ -29,36 +27,30 @@ export function useCreditAwareness() {
   });
 
   useEffect(() => {
-    if (!creditsData || !user) return;
+    if (!balanceData || !user) return;
 
-    const usedThisMonth = creditsData.totalCreditsSpent || 0;
-    const allocation = creditsData.monthlyAllocation || 100;
-    const balance = creditsData.currentBalance;
-    const percentUsed = allocation > 0 ? (usedThisMonth / allocation) : 0;
-    
+    const tokensUsed = balanceData.tokensUsed ?? balanceData.creditsUsedThisPeriod ?? 0;
+    const allowance = balanceData.tokensAllowance ?? (balanceData.monthlyAllocation !== -1 ? balanceData.monthlyAllocation : null) ?? 5_000_000;
+    const isUnlimited = balanceData.unlimitedCredits === true || balanceData.monthlyAllocation === -1 || !allowance;
+
+    const percentUsed = allowance && !isUnlimited ? Math.min(1, tokensUsed / allowance) : 0;
+
     const status: CreditStatus = {
-      currentBalance: balance,
-      monthlyAllocation: allocation,
-      usedThisMonth,
-      percentUsed: Math.min(1, percentUsed),
-      isLow: balance < (allocation * 0.2),
-      isCritical: balance < (allocation * 0.05),
-      tier: creditsData.tier || 'free',
+      currentBalance: isUnlimited ? 999_999_999 : Math.max(0, (allowance ?? 0) - tokensUsed),
+      monthlyAllocation: allowance ?? 0,
+      usedThisMonth: tokensUsed,
+      percentUsed,
+      isLow: !isUnlimited && percentUsed >= 0.8,
+      isCritical: !isUnlimited && percentUsed >= 1.0,
+      tier: balanceData.subscriptionTier || 'free',
     };
 
     thoughtManager.updateCreditStatus(status);
-
-    if (lastBalanceRef.current !== null && balance > lastBalanceRef.current) {
-      const addedCredits = balance - lastBalanceRef.current;
-      if (addedCredits >= 50) {
-        thoughtManager.triggerCreditPurchaseCelebration(addedCredits);
-      }
-    }
-    lastBalanceRef.current = balance;
-  }, [creditsData, user]);
+    lastUsedRef.current = tokensUsed;
+  }, [balanceData, user]);
 
   return {
-    creditsData,
+    creditsData: balanceData,
     creditSummary: thoughtManager.getCreditSummary(),
   };
 }

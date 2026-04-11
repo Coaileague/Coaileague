@@ -11,7 +11,8 @@ import {
 } from '../services/billing';
 import { creditManager } from '../services/billing/creditManager';
 import { featureGateService } from '../services/billing/featureGateService';
-import { db } from '../db';
+import { db, pool } from '../db';
+import { TOKEN_ALLOWANCES, TOKEN_OVERAGE_RATE_CENTS_PER_100K } from '../../shared/billingConfig';
 import {
   billingAddons,
   workspaceAddons,
@@ -1535,7 +1536,7 @@ billingRouter.post('/webhooks/stripe', (_req, res) => {
 // ============================================================================
 
 /**
- * Get Trinity credits status for workspace
+ * Get Trinity AI token usage status for workspace
  */
 billingRouter.get('/trinity-credits/status', async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -1545,43 +1546,64 @@ billingRouter.get('/trinity-credits/status', async (req: AuthenticatedRequest, r
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const balance = await creditManager.getBalance(workspaceId);
-    res.json({ 
-      success: true, 
+    // Fetch workspace tier
+    const [ws] = await db.select({ subscriptionTier: workspaces.subscriptionTier, founderExemption: workspaces.founderExemption })
+      .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const tier = (ws?.subscriptionTier || 'free').toLowerCase();
+    const allowance = (TOKEN_ALLOWANCES as Record<string, number | null>)[tier] ?? 5_000_000;
+    const isUnlimited = allowance === null || !!(ws as any)?.founderExemption;
+
+    // Read current-month token usage
+    const now = new Date();
+    const monthYear = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    let tokensUsed = 0, overageTokens = 0, overageAmountCents = 0;
+    try {
+      const result = await pool.query(
+        `SELECT total_tokens_used, overage_tokens, overage_amount_cents
+         FROM token_usage_monthly WHERE workspace_id = $1 AND month_year = $2`,
+        [workspaceId, monthYear],
+      );
+      if (result.rows[0]) {
+        tokensUsed = Number(result.rows[0].total_tokens_used ?? 0);
+        overageTokens = Number(result.rows[0].overage_tokens ?? 0);
+        overageAmountCents = Number(result.rows[0].overage_amount_cents ?? 0);
+      }
+    } catch { /* non-fatal */ }
+
+    const percentUsed = isUnlimited || !allowance ? 0 : Math.min(200, (tokensUsed / allowance) * 100);
+    const isWarning = !isUnlimited && percentUsed >= 80;
+    const isOverage = !isUnlimited && tokensUsed > (allowance ?? 0);
+
+    res.json({
+      success: true,
       workspaceId,
-      balance,
+      // Token fields
+      tokensUsed,
+      tokensAllowance: isUnlimited ? null : allowance,
+      overageTokens,
+      overageAmountCents,
+      overageRateCentsPer100k: TOKEN_OVERAGE_RATE_CENTS_PER_100K,
+      percentUsed,
+      isWarning,
+      isOverage,
+      isUnlimited,
+      tier,
+      // Legacy compat
+      balance: isUnlimited ? 999999 : Math.max(0, (allowance ?? 0) - tokensUsed),
       isActive: true,
-      lowBalance: balance < BILLING.lowBalanceThreshold
+      lowBalance: isWarning,
     });
   } catch (error: unknown) {
-    log.error('Failed to get credit status:', error);
+    log.error('Failed to get token usage status:', error);
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 /**
- * Get available credit packages
+ * Token packages — credit packs no longer exist; billing is per seat + token overage
  */
-billingRouter.get('/trinity-credits/packages', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const [workspace] = await db.select().from(workspaces)
-      .where(eq(workspaces.id, workspaceId))
-      .limit(1);
-
-    const packages = await (creditManager as any).getAvailablePackages(
-      workspace?.subscriptionTier || 'free'
-    );
-    res.json({ success: true, packages });
-  } catch (error: unknown) {
-    log.error('Failed to get credit packages:', error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
+billingRouter.get('/trinity-credits/packages', async (_req: AuthenticatedRequest, res: Response) => {
+  res.json({ success: true, packages: [] });
 });
 
 /**
@@ -1611,34 +1633,10 @@ billingRouter.get('/trinity-credits/transactions', async (req: AuthenticatedRequ
 });
 
 /**
- * Purchase credits with Stripe
+ * Credit purchase no-op — platform uses per-seat billing; token overages are billed automatically at month-end
  */
-billingRouter.post('/trinity-credits/purchase', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    const userId = req.user?.id || req.session?.userId;
-    if (!workspaceId || !userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const input = z.object({
-      packageId: z.string(),
-      stripePaymentIntentId: z.string().optional(),
-    }).parse(req.body);
-
-    const result = await (creditManager as any).purchaseCreditsFromPackage(
-      workspaceId,
-      input.packageId,
-      userId,
-      input.stripePaymentIntentId || 'direct_purchase'
-    );
-
-    res.json(result);
-  } catch (error: unknown) {
-    log.error('Failed to purchase credits:', error);
-    res.status(400).json({ error: sanitizeError(error) });
-  }
+billingRouter.post('/trinity-credits/purchase', async (_req: AuthenticatedRequest, res: Response) => {
+  res.status(410).json({ error: 'Credit packs are no longer available. Token overages are billed automatically at end of billing period.' });
 });
 
 /**

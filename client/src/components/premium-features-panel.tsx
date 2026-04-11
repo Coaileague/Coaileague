@@ -132,31 +132,7 @@ export function PremiumFeaturesPanel({ className, onActivateFeature }: PremiumFe
         ))}
       </div>
       
-      {creditPackages.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Credit Packages</CardTitle>
-            <CardDescription className="text-xs">
-              Purchase credits to use premium features
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {creditPackages.map((pkg) => (
-                <Button
-                  key={pkg.id}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  data-testid={`button-credit-package-${pkg.id}`}
-                >
-                  {pkg.credits} credits - ${pkg.price}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Credit packages removed — platform uses per-seat billing with token allowances */}
     </div>
   );
 }

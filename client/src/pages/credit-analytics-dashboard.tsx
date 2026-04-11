@@ -128,7 +128,7 @@ export default function CreditAnalyticsDashboard() {
   const report = reportData?.data;
 
   if (authLoading || !isAuthenticated || accessLoading) {
-    return <ResponsiveLoading message="Loading Credit Analytics..." />;
+    return <ResponsiveLoading message="Loading Token Analytics..." />;
   }
 
   if (workspaceRole !== 'org_owner' && workspaceRole !== 'org_admin') {
@@ -139,7 +139,7 @@ export default function CreditAnalyticsDashboard() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Access Denied</AlertTitle>
             <AlertDescription>
-              Only organization owners and administrators can view credit analytics.
+              Only organization owners and administrators can view token analytics.
             </AlertDescription>
           </Alert>
         </div>
@@ -148,6 +148,8 @@ export default function CreditAnalyticsDashboard() {
   }
 
   const formatNumber = (num: number) => {
+    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+    if (num >= 1_000) return `${(num / 1_000).toFixed(0)}K`;
     return new Intl.NumberFormat('en-US').format(num);
   };
 
@@ -173,11 +175,11 @@ export default function CreditAnalyticsDashboard() {
             <h1 className="text-3xl font-bold" data-testid="text-page-title">
               <span className="flex items-center gap-2">
                 <Sparkles className="h-7 w-7 text-primary" />
-                Trinity Credit Analytics
+                AI Token Analytics
               </span>
             </h1>
             <p className="text-muted-foreground mt-1" data-testid="text-page-description">
-              Track AI credit usage, ROI metrics, and automation insights
+              Track AI token usage, automation ROI, and workspace insights
             </p>
           </div>
           
@@ -203,7 +205,7 @@ export default function CreditAnalyticsDashboard() {
             <CardContent className="py-12">
               <div className="flex flex-col items-center justify-center gap-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-sm text-muted-foreground">Loading credit analytics...</p>
+                <p className="text-sm text-muted-foreground">Loading token analytics...</p>
               </div>
             </CardContent>
           </Card>
@@ -214,7 +216,7 @@ export default function CreditAnalyticsDashboard() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Failed to Load Analytics</AlertTitle>
             <AlertDescription>
-              {error instanceof Error ? error.message : 'Unable to fetch credit analytics.'}
+              {error instanceof Error ? error.message : 'Unable to fetch token analytics.'}
             </AlertDescription>
           </Alert>
         )}
@@ -225,7 +227,7 @@ export default function CreditAnalyticsDashboard() {
               <Card data-testid="card-credit-balance">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Credit Balance
+                    Tokens Used
                   </CardTitle>
                   <Coins className="h-4 w-4 text-primary" />
                 </CardHeader>
@@ -234,8 +236,8 @@ export default function CreditAnalyticsDashboard() {
                     {formatNumber(report.creditSummary.currentBalance)}
                   </div>
                   {report.creditSummary.lowBalanceWarning && (
-                    <Badge variant="destructive" className="mt-2" data-testid="badge-low-balance">
-                      Low Balance
+                    <Badge variant="outline" className="mt-2 border-yellow-500 text-yellow-600" data-testid="badge-low-balance">
+                      80%+ Used
                     </Badge>
                   )}
                   {!report.creditSummary.lowBalanceWarning && (
@@ -249,16 +251,16 @@ export default function CreditAnalyticsDashboard() {
               <Card data-testid="card-daily-usage">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Avg Daily Usage
+                    Avg Daily Token Usage
                   </CardTitle>
                   <Activity className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold" data-testid="text-daily-usage">
-                    {report.creditSummary.averageDailyUsage.toFixed(1)}
+                    {formatNumber(Math.round(report.creditSummary.averageDailyUsage))}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    credits per day
+                    tokens per day
                   </p>
                 </CardContent>
               </Card>
@@ -318,7 +320,7 @@ export default function CreditAnalyticsDashboard() {
                 </TabsTrigger>
                 <TabsTrigger value="transactions" data-testid="tab-transactions">
                   <Coins className="h-4 w-4 mr-2" />
-                  Transactions
+                  Token Log
                 </TabsTrigger>
               </TabsList>
 
@@ -328,9 +330,9 @@ export default function CreditAnalyticsDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Activity className="h-5 w-5 text-primary" />
-                        Daily Credit Usage
+                        Daily Token Usage
                       </CardTitle>
-                      <CardDescription>Credits consumed per day</CardDescription>
+                      <CardDescription>Tokens consumed per day</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="h-[300px]">
@@ -342,9 +344,9 @@ export default function CreditAnalyticsDashboard() {
                               tickFormatter={formatDate}
                               tick={{ fontSize: 12 }}
                             />
-                            <YAxis tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatNumber(v)} />
                             <Tooltip 
-                              formatter={(value: number) => [formatNumber(value), 'Credits']}
+                              formatter={(value: number) => [formatNumber(value), 'Tokens']}
                               labelFormatter={formatDate}
                             />
                             <Bar 
@@ -364,7 +366,7 @@ export default function CreditAnalyticsDashboard() {
                         <PieChart className="h-5 w-5 text-primary" />
                         Usage by Category
                       </CardTitle>
-                      <CardDescription>Credit distribution by action type</CardDescription>
+                      <CardDescription>Token distribution by action type</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="h-[300px]">
@@ -386,7 +388,7 @@ export default function CreditAnalyticsDashboard() {
                                   <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                                 ))}
                               </Pie>
-                              <Tooltip formatter={(value: number) => [formatNumber(value), 'Credits']} />
+                              <Tooltip formatter={(value: number) => [formatNumber(value), 'Tokens']} />
                             </RePieChart>
                           </ResponsiveContainer>
                         ) : (
@@ -484,7 +486,7 @@ export default function CreditAnalyticsDashboard() {
                         ${report.roiMetrics.costPerHourSaved.toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        credit cost efficiency
+                        token cost per hour saved
                       </p>
                     </CardContent>
                   </Card>
@@ -529,7 +531,7 @@ export default function CreditAnalyticsDashboard() {
                   <CheckCircle2 className="h-4 w-4" />
                   <AlertTitle>ROI Calculation Method</AlertTitle>
                   <AlertDescription>
-                    ROI is calculated by comparing credit costs ($0.01/credit) against estimated labor savings
+                    ROI is calculated by comparing token costs against estimated labor savings
                     (assuming 15 minutes per automated task at $50/hour). Actual savings may vary based on task complexity.
                   </AlertDescription>
                 </Alert>
@@ -571,7 +573,7 @@ export default function CreditAnalyticsDashboard() {
                   <Card data-testid="card-avg-credits">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Avg Credits/Task
+                        Avg Tokens/Task
                       </CardTitle>
                       <Coins className="h-4 w-4 text-primary" />
                     </CardHeader>
@@ -594,7 +596,7 @@ export default function CreditAnalyticsDashboard() {
                         {formatNumber(report.aiTaskAnalytics.failedTasks)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        refunds applied
+                        tasks failed
                       </p>
                     </CardContent>
                   </Card>
@@ -624,7 +626,7 @@ export default function CreditAnalyticsDashboard() {
                               />
                             </div>
                             <Badge variant="secondary" className="ml-2">
-                              {formatNumber(agent.creditsUsed)} credits
+                              {formatNumber(agent.creditsUsed)} tokens
                             </Badge>
                           </div>
                         ))}
@@ -721,9 +723,9 @@ export default function CreditAnalyticsDashboard() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Coins className="h-5 w-5 text-primary" />
-                      Recent Credit Transactions
+                      Recent Token Usage
                     </CardTitle>
-                    <CardDescription>Latest credit movements in your account</CardDescription>
+                    <CardDescription>Latest AI token consumption events</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {report.recentTransactions.length > 0 ? (
@@ -735,11 +737,7 @@ export default function CreditAnalyticsDashboard() {
                             data-testid={`row-transaction-${index}`}
                           >
                             <div className="flex items-center gap-3">
-                              {tx.credits > 0 ? (
-                                <ArrowUpRight className="h-5 w-5 text-green-500" />
-                              ) : (
-                                <ArrowDownRight className="h-5 w-5 text-red-500" />
-                              )}
+                              <ArrowDownRight className="h-5 w-5 text-primary" />
                               <div>
                                 <p className="font-medium text-sm">{tx.description || tx.type}</p>
                                 <p className="text-xs text-muted-foreground">
@@ -748,18 +746,16 @@ export default function CreditAnalyticsDashboard() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={`font-bold ${tx.credits > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {tx.credits > 0 ? '+' : ''}{formatNumber(tx.credits)}
+                              <p className="font-bold text-foreground">
+                                +{formatNumber(Math.abs(tx.credits))}
                               </p>
-                              <p className="text-xs text-muted-foreground">
-                                Balance: {formatNumber(tx.balanceAfter)}
-                              </p>
+                              <p className="text-xs text-muted-foreground">tokens</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-muted-foreground text-center py-6">No recent transactions</p>
+                      <p className="text-muted-foreground text-center py-6">No token usage recorded yet</p>
                     )}
                   </CardContent>
                 </Card>
@@ -768,16 +764,16 @@ export default function CreditAnalyticsDashboard() {
                   <Card data-testid="card-lifetime-purchased">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Lifetime Purchased
+                        Lifetime Tokens
                       </CardTitle>
-                      <ArrowUpRight className="h-4 w-4 text-green-500" />
+                      <ArrowUpRight className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-green-500" data-testid="text-lifetime-purchased">
+                      <div className="text-2xl font-bold" data-testid="text-lifetime-purchased">
                         {formatNumber(report.creditSummary.lifetimePurchased)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        total credits bought
+                        total tokens (lifetime)
                       </p>
                     </CardContent>
                   </Card>
@@ -794,7 +790,7 @@ export default function CreditAnalyticsDashboard() {
                         {formatNumber(report.creditSummary.lifetimeUsed)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        total credits consumed
+                        total tokens consumed
                       </p>
                     </CardContent>
                   </Card>

@@ -365,25 +365,6 @@ export default function UniversalMarketing() {
                   </CardContent>
                 </Card>
 
-                {/* Additional AI Credits */}
-                <Card>
-                  <CardHeader className="p-2.5 sm:p-4 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-base leading-tight">AI Credits Pack</CardTitle>
-                    <div className="flex items-baseline gap-0.5 sm:gap-1">
-                      <span className="text-base sm:text-2xl font-bold whitespace-nowrap shrink-0">$59</span>
-                      <span className="text-[10px] sm:text-sm text-muted-foreground">/pack</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-2.5 sm:p-4 pt-0 sm:pt-2">
-                    <p className="text-xs text-muted-foreground mb-2 hidden sm:block">5,000 credits per pack</p>
-                    <ul className="space-y-0.5 text-[9px] sm:text-xs">
-                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Credits added instantly</span></li>
-                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">One-time purchase</span></li>
-                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">No expiration</span></li>
-                    </ul>
-                  </CardContent>
-                </Card>
-
                 {/* Additional Location */}
                 <Card>
                   <CardHeader className="p-2.5 sm:p-4 sm:pb-2">
@@ -427,10 +408,10 @@ export default function UniversalMarketing() {
                 </Card>
                 <Card>
                   <CardHeader className="pb-2 px-3 sm:px-6">
-                    <CardTitle className="text-sm sm:text-base">Do unused AI credits roll over?</CardTitle>
+                    <CardTitle className="text-sm sm:text-base">How does AI token usage work?</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 px-3 sm:px-6">
-                    <p className="text-xs sm:text-sm text-muted-foreground">No, credits reset each billing cycle. Consider purchasing credit packs if you anticipate needing more credits in a given month.</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Each plan includes a monthly token allowance for AI features (Trinity, scheduling AI, payroll analysis, etc.). Tokens reset each billing cycle. If you exceed your allowance, usage continues automatically at $2.00 per 100,000 tokens, billed at month-end — no service interruption.</p>
                   </CardContent>
                 </Card>
                 <Card>

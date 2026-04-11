@@ -23,7 +23,7 @@
  *  Data Table        → client/src/components/universal/UniversalTable.tsx
  *  Page Layout       → client/src/components/workspace-layout.tsx
  *  Canvas Hub Page   → client/src/components/canvas-hub/index.ts
- *  Credit Balance    → client/src/components/credit-balance.tsx
+ *  Plan Status      → client/src/components/credit-balance.tsx (exports CreditBalanceBadge, CreditBalanceCard)
  *  Card              → client/src/components/universal/UniversalCard.tsx
  *  Button            → client/src/components/universal/UniversalButton.tsx
  *  Badge             → client/src/components/universal/UniversalBadge.tsx
