@@ -1438,7 +1438,8 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       // officers can no longer access the shift, but the room persists consuming
       // storage and causing confusing "ghost" conversations in the chat UI.
       try {
-        await db.delete(chatConversations)
+        await db.update(chatConversations)
+          .set({ status: 'closed', closedAt: new Date(), updatedAt: new Date() })
           .where(and(
             eq(chatConversations.workspaceId, workspaceId),
             eq(chatConversations.shiftId, req.params.id),
@@ -1744,13 +1745,9 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         return res.status(400).json({ message: 'No workspace selected' });
       }
 
-      const [shift] = await db.select().from(shifts).where(eq(shifts.id, shiftId)).limit(1);
+      const [shift] = await db.select().from(shifts).where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
       if (!shift) {
         return res.status(404).json({ message: 'Shift not found' });
-      }
-
-      if (shift.workspaceId !== workspaceId) {
-        return res.status(403).json({ message: 'Shift does not belong to your workspace' });
       }
 
       if (shift.employeeId) {
@@ -1796,7 +1793,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         const [updated] = await tx
           .update(shifts)
           .set({ employeeId: employee.id, updatedAt: new Date() })
-          .where(eq(shifts.id, shiftId))
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
           .returning();
         return updated;
       });
@@ -1871,7 +1868,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       if (contractors.length === 0) {
         await db.update(shiftRequests)
           .set({ status: "no_matches", completedAt: new Date() })
-          .where(eq(shiftRequests.id, shiftRequest[0].id));
+          .where(and(eq(shiftRequests.id, shiftRequest[0].id), eq(shiftRequests.workspaceId, workspaceId)));
 
         return res.status(404).json({
           message: "No contractors found matching criteria",
@@ -1961,7 +1958,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           status: "offers_sent",
           offersCount: offers.length
         })
-        .where(eq(shiftRequests.id, shiftRequest[0].id));
+        .where(and(eq(shiftRequests.id, shiftRequest[0].id), eq(shiftRequests.workspaceId, workspaceId)));
 
       res.json({
         success: true,
@@ -3121,7 +3118,7 @@ router.post("/offers/:offerId/accept", requireAuth, async (req: AuthenticatedReq
         readAt: new Date(),
         metadata: { ...currentMeta, accepted: true, acceptedAt: new Date().toISOString(), acceptedByUserId: userId },
       })
-      .where(eq(notifications.id, notif.id));
+      .where(and(eq(notifications.id, notif.id), eq(notifications.workspaceId, workspaceId)));
 
     log.info(`[ShiftOffer] Officer ${userId} accepted offer ${offerId} in workspace ${workspaceId}`);
     return res.json({ success: true, message: 'Shift offer accepted. You will receive confirmation details shortly.' });
@@ -3147,6 +3144,7 @@ router.post("/offers/:offerId/decline", requireAuth, async (req: AuthenticatedRe
         and(
           eq(notifications.workspaceId, workspaceId),
           eq(notifications.relatedEntityId, offerId),
+          eq(notifications.userId, userId!),
         ),
       )
       .limit(1);
@@ -3167,7 +3165,7 @@ router.post("/offers/:offerId/decline", requireAuth, async (req: AuthenticatedRe
         readAt: new Date(),
         metadata: { ...currentMeta, declined: true, declinedAt: new Date().toISOString(), declinedByUserId: userId },
       })
-      .where(eq(notifications.id, notif.id));
+      .where(and(eq(notifications.id, notif.id), eq(notifications.workspaceId, workspaceId)));
 
     log.info(`[ShiftOffer] Officer ${userId} declined offer ${offerId}`);
     return res.json({ success: true, message: 'Offer declined.' });

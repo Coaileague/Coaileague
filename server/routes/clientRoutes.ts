@@ -253,7 +253,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
         // next-best safeguard — but must itself succeed for the system to stay consistent.
         log.error('[Client Creation] Rate creation failed, removing orphaned client:', rateErr);
         try {
-          await db.delete(clients).where(eq(clients.id, client.id));
+          await db.delete(clients).where(and(eq(clients.id, client.id), eq(clients.workspaceId, workspaceId)));
         } catch (cleanupErr) {
           // Cleanup failed — the client record is now orphaned. Log for manual remediation.
           log.error('[Client Creation] CRITICAL: Orphaned client cleanup failed — client.id=%s workspaceId=%s needs manual deletion', client.id, workspaceId, cleanupErr);
@@ -545,7 +545,10 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
 
           await db.update(timeEntries as any)
             .set({ invoiceId: finalInvoiceId } as any)
-            .where(inArray((timeEntries as any).id, unbilledEntries.map(e => e.id)));
+            .where(and(
+              inArray((timeEntries as any).id, unbilledEntries.map(e => e.id)),
+              eq((timeEntries as any).workspaceId, workspaceId),
+            ));
 
           // Register in Document Vault for compliance/integrity
           const { createHash } = await import('crypto');
