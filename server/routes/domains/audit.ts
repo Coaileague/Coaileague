@@ -41,6 +41,7 @@ import resilienceRouter from "../resilience-api";
 import deletionProtectionRouter from "../deletionProtectionRoutes";
 import adminPermissionRouter from "../adminPermissionRoutes";
 import alertConfigRouter from "../alertConfigRoutes";
+import adminDevExecuteRouter from "../adminDevExecuteRoute";
 
 export function mountAuditRoutes(app: Express): void {
   registerHealthRoutes(app, requireAuth);
@@ -117,6 +118,8 @@ export function mountAuditRoutes(app: Express): void {
   app.use("/api/admin/ai-costs", requirePlatformStaff, adminAiCostsRouter);
   app.use("/api/admin/database-parity", requireAuth, requirePlatformStaff, databaseParityRouter);
   app.use("/api/admin/middleware-quality", requireAuth, requirePlatformStaff, middlewareQualityRouter);
+  // dev-execute must be mounted before adminRouter (which gates everything with requirePlatformStaff)
+  app.use("/api/admin", adminDevExecuteRouter);
   app.use("/api/admin", adminRouter);
   // publicPlatformRouter must be mounted BEFORE platformRouter so routes like /announcements
   // (requireAuth only) are reachable by all users without the requirePlatformStaff guard.
