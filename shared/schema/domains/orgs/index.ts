@@ -1030,6 +1030,15 @@ export const workspaces = pgTable("workspaces", {
   staffingEmailClaimedAt: timestamp("staffing_email_claimed_at"),
   staffingEmailClaimedBy: varchar("staffing_email_claimed_by"), // User ID who claimed it
 
+  // ============================================================================
+  // INBOUND EMAIL FORWARDING
+  // When set, every inbound email received by this workspace is forwarded
+  // to the specified external address (e.g. an owner's personal Gmail inbox).
+  // This allows tenant owners to monitor inbound platform emails without
+  // logging into the dashboard.
+  // ============================================================================
+  inboundEmailForwardTo: varchar("inbound_email_forward_to", { length: 255 }), // External address to forward inbound emails to
+
   
   // Trinity Diagnostic & Recovery Tools Access
   trinityDiagnosticsEnabled: boolean("trinity_diagnostics_enabled").default(true), // Allow org owners to enable/disable Trinity AI recovery tools
