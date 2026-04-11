@@ -9,7 +9,7 @@ export default function SmsTerms() {
       <SEO
         title="SMS Terms of Service | CoAIleague Workforce Alerts"
         description="CoAIleague SMS Workforce Alerts program terms — opt-in, opt-out, message frequency, and privacy information for security workforce SMS notifications."
-        canonical="https://coaileague.com/sms-terms"
+        canonical="https://www.coaileague.com/sms-terms"
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />
@@ -56,7 +56,7 @@ export default function SmsTerms() {
               <p className="text-foreground/90 mb-4">
                 SMS consent is obtained through an explicit opt-in checkbox presented to the employee on the
                 CoAIleague SMS opt-in page at{" "}
-                <Link href="/sms-consent" className="text-primary underline">coaileague.com/sms-consent</Link>{" "}
+                <Link href="/sms-consent" className="text-primary underline">www.coaileague.com/sms-consent</Link>{" "}
                 and within the CoAIleague workforce platform during profile setup.
                 The exact opt-in language displayed at the time of consent is:
               </p>
