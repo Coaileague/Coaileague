@@ -168,9 +168,9 @@ router.post(
     try {
       const conversationId = await resolveConversationId(req.params.id);
       const userId = authReq.user?.id;
-      const workspaceId = authReq.workspaceId;
+      const workspaceId = authReq.workspaceId || null;
 
-      if (!userId || !workspaceId) {
+      if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
 
@@ -311,9 +311,9 @@ router.post(
     try {
       const conversationId = await resolveConversationId(req.params.id);
       const userId = authReq.user?.id;
-      const workspaceId = authReq.workspaceId;
+      const workspaceId = authReq.workspaceId || null;
 
-      if (!userId || !workspaceId) {
+      if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
 
@@ -358,9 +358,9 @@ router.post(
     try {
       const conversationId = await resolveConversationId(req.params.id);
       const userId = authReq.user?.id;
-      const workspaceId = authReq.workspaceId;
+      const workspaceId = authReq.workspaceId || null;
 
-      if (!userId || !workspaceId) {
+      if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
 
@@ -434,8 +434,11 @@ router.post(
       const workspaceId = authReq.workspaceId;
       const { blockedUserId, reason } = req.body;
 
-      if (!userId || !workspaceId) {
+      if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
+      }
+      if (!workspaceId) {
+        return res.status(400).json({ error: "Workspace context required" });
       }
 
       if (!blockedUserId) {
@@ -670,8 +673,11 @@ router.post(
       const workspaceId = authReq.workspaceId;
       const userName = `${authReq.user?.firstName || ""} ${authReq.user?.lastName || ""}`.trim() || "User";
 
-      if (!userId || !workspaceId) {
+      if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
+      }
+      if (!workspaceId) {
+        return res.status(400).json({ error: "Workspace context required" });
       }
 
       if (!newOwnerId) {
@@ -760,8 +766,11 @@ router.post(
       const workspaceId = authReq.workspaceId;
       const userName = `${authReq.user?.firstName || ""} ${authReq.user?.lastName || ""}`.trim() || "User";
 
-      if (!userId || !workspaceId) {
+      if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
+      }
+      if (!workspaceId) {
+        return res.status(400).json({ error: "Workspace context required" });
       }
 
       if (!participantId || !role) {

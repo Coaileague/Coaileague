@@ -338,6 +338,7 @@ app.use(cors({
 // Paths that need raw body capture for webhook signature verification
 const webhookPathsNeedingRawBody = [
   '/api/webhooks/quickbooks',
+  '/api/webhooks/resend',
   '/api/webhooks/resend/inbound',
   '/api/stripe/webhook',
   '/api/webhooks/twilio/voice-interview',
