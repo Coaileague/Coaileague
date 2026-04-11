@@ -98,7 +98,7 @@ export default function SmsOptOut() {
             <p className="text-foreground/90 mb-4">
               CoAIleague<br />
               Email: <a href="mailto:support@coaileague.com">support@coaileague.com</a><br />
-              Web: <a href="https://coaileague.com">https://coaileague.com</a>
+              Web: <a href="https://www.coaileague.com">https://www.coaileague.com</a>
             </p>
           </section>
         </div>

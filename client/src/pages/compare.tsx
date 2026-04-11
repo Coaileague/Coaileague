@@ -139,7 +139,7 @@ export default function ComparePage() {
         <SEO
           title={PAGE_SEO.compare.title}
           description={PAGE_SEO.compare.description}
-          canonical="https://coaileague.com/compare"
+          canonical="https://www.coaileague.com/compare"
         />
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16">
         <div className="container mx-auto px-4">
@@ -210,7 +210,7 @@ export default function ComparePage() {
       <SEO
         title={`CoAIleague vs ${competitor.name} — Security Guard Software Comparison`}
         description={`Compare CoAIleague with ${competitor.name} for security guard company workforce management. See feature-by-feature comparison of scheduling, payroll, and compliance tools.`}
-        canonical={`https://coaileague.com/compare/${competitorSlug}`}
+        canonical={`https://www.coaileague.com/compare/${competitorSlug}`}
       />
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="container mx-auto px-4 py-12">

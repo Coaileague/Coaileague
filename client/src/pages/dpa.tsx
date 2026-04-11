@@ -10,7 +10,7 @@ export default function DataProcessingAgreement() {
       <SEO
         title="Data Processing Agreement (DPA) | CoAIleague"
         description="CoAIleague Data Processing Agreement — GDPR Article 28 compliant DPA for enterprise customers."
-        canonical="https://coaileague.com/dpa"
+        canonical="https://www.coaileague.com/dpa"
       />
       <UniversalHeader variant="public" />
       <main className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">

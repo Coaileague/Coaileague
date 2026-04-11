@@ -18,7 +18,7 @@ export default function TermsOfService() {
       <SEO
         title={PAGE_SEO.terms.title}
         description={PAGE_SEO.terms.description}
-        canonical="https://coaileague.com/terms"
+        canonical="https://www.coaileague.com/terms"
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />

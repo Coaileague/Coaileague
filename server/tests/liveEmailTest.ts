@@ -83,8 +83,8 @@ async function main() {
       workspaceName: WORKSPACE_NAME,
       referenceNumber: REF_WINNER,
       confirmationNumber: CONF_NUMBER,
-      portalUrl: 'https://coaileague.com/portal',
-      signupUrl: 'https://coaileague.com/signup',
+      portalUrl: 'https://www.coaileague.com/portal',
+      signupUrl: 'https://www.coaileague.com/signup',
       shiftDetails: {
         location: '4500 Industrial Blvd, Houston, TX 77023',
         date: 'Saturday, March 15, 2026',

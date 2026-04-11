@@ -273,7 +273,7 @@ export const CONFIG: ConfigRegistry = {
       version: "2.0.0",
       copyright: `© ${new Date().getFullYear()} CoAIleague. All rights reserved.`,
       supportEmail: "support@coaileague.com",
-      website: "https://coaileague.com",
+      website: "https://www.coaileague.com",
     },
     colors: {
       primary: "#3b82f6",

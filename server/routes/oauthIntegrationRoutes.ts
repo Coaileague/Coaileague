@@ -211,7 +211,7 @@ router.get('/quickbooks/diagnostic', async (req: Request, res: Response) => {
       
       // Instructions
       instructions: qbEnvironment === 'sandbox'
-        ? 'Access this app from your production URL (https://coaileague.com) to switch to production mode'
+        ? 'Access this app from your production URL (https://www.coaileague.com) to switch to production mode'
         : 'Production mode active - ensure Intuit Developer Portal has this redirect URI registered',
     });
   } catch (error: unknown) {

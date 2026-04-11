@@ -328,7 +328,7 @@ export async function processEmailReply(
         // Build absolute URL for email delivery (candidates open from external email client)
         const baseUrl = process.env.APP_BASE_URL
 
-          || 'https://coaileague.com';
+          || 'https://www.coaileague.com';
         const chatRoomUrl = `${baseUrl}/recruitment/candidates/${candidate.id}`;
         await sendChatInvitation(candidate, session.workspaceId, chatRoomId, chatRoomUrl);
       }

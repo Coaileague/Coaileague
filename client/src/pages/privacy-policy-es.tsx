@@ -8,7 +8,7 @@ export default function PrivacyPolicyEs() {
       <SEO
         title="Política de Privacidad | CoAIleague"
         description="Política de privacidad de CoAIleague — sus derechos de privacidad y cómo manejamos sus datos."
-        canonical="https://coaileague.com/privacy-es"
+        canonical="https://www.coaileague.com/privacy-es"
       />
       <UniversalHeader variant="public" />
       <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">

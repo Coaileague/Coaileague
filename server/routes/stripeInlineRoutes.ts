@@ -617,7 +617,7 @@ router.post('/billing-portal', requireAuth, async (req: any, res) => {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: returnUrl || `${process.env.BASE_URL || 'https://coaileague.com'}/org-management`,
+      return_url: returnUrl || `${process.env.BASE_URL || 'https://www.coaileague.com'}/org-management`,
     });
 
     return res.json({ url: session.url });
@@ -662,7 +662,7 @@ router.post('/create-subscription-checkout', requireAuth, async (req: any, res) 
       return res.status(400).json({ message: `Invalid tier: ${tier}` });
     }
 
-    const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+    const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
 
     let customerId = workspace.stripeCustomerId;
     if (!customerId) {

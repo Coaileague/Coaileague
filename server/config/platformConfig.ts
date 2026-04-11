@@ -12,9 +12,9 @@
 // ============================================================================
 export const PLATFORM = {
   name: process.env.PLATFORM_DISPLAY_NAME || 'CoAIleague',
-  domain: process.env.PLATFORM_DOMAIN || 'coaileague.com',
-  appUrl: process.env.APP_URL || 'https://coaileague.com',
-  supportUrl: process.env.SUPPORT_URL || process.env.APP_URL || 'https://coaileague.com',
+  domain: process.env.PLATFORM_DOMAIN || 'www.coaileague.com',
+  appUrl: process.env.APP_URL || 'https://www.coaileague.com',
+  supportUrl: process.env.SUPPORT_URL || process.env.APP_URL || 'https://www.coaileague.com',
 };
 
 // ============================================================================

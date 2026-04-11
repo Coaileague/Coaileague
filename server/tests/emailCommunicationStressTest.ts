@@ -240,9 +240,9 @@ async function suiteEmailTemplates() {
     { name: 'shiftAssignment', fn: () => emailTemplates.shiftAssignment({ employeeName: 'John Smith', shiftTitle: 'Main Gate Security', startTime: '8:00 AM', endTime: '4:00 PM', clientName: 'Acme Corp' }) },
     { name: 'shiftReminder', fn: () => emailTemplates.shiftReminder({ employeeName: 'John Smith', shiftTitle: 'Main Gate Security', startTime: '8:00 AM', clientName: 'Acme Corp' }) },
     { name: 'invoiceGenerated', fn: () => emailTemplates.invoiceGenerated({ clientName: 'Acme Corp', invoiceNumber: 'INV-001', total: '1500.00', dueDate: '2026-03-25' }) },
-    { name: 'invoiceOverdueReminder', fn: () => emailTemplates.invoiceOverdueReminder({ clientName: 'Acme Corp', invoiceNumber: 'INV-001', total: '1500.00', dueDate: '2026-03-01', daysOverdue: 30, paymentUrl: 'https://coaileague.com/pay' }) },
+    { name: 'invoiceOverdueReminder', fn: () => emailTemplates.invoiceOverdueReminder({ clientName: 'Acme Corp', invoiceNumber: 'INV-001', total: '1500.00', dueDate: '2026-03-01', daysOverdue: 30, paymentUrl: 'https://www.coaileague.com/pay' }) },
     { name: 'employeeOnboarding', fn: () => emailTemplates.employeeOnboarding({ employeeName: 'Jane Doe', workspaceName: 'TXPS Investigations', role: 'Security Officer' }) },
-    { name: 'onboardingInvite', fn: () => emailTemplates.onboardingInvite({ employeeName: 'Jane Doe', workspaceName: 'TXPS Investigations', onboardingUrl: 'https://coaileague.com/onboard/abc123', expiresIn: '7 days' }) },
+    { name: 'onboardingInvite', fn: () => emailTemplates.onboardingInvite({ employeeName: 'Jane Doe', workspaceName: 'TXPS Investigations', onboardingUrl: 'https://www.coaileague.com/onboard/abc123', expiresIn: '7 days' }) },
     { name: 'ptoApproved', fn: () => emailTemplates.ptoApproved({ employeeName: 'John Smith', startDate: '2026-03-10', endDate: '2026-03-14', ptoType: 'Vacation', days: 5 }) },
     { name: 'ptoDenied', fn: () => emailTemplates.ptoDenied({ employeeName: 'John Smith', startDate: '2026-03-10', endDate: '2026-03-14', ptoType: 'Vacation', denialReason: 'Minimum staffing required' }) },
     { name: 'shiftActionApproved', fn: () => emailTemplates.shiftActionApproved({ employeeName: 'John Smith', actionType: 'Swap', shiftTitle: 'Night Patrol', shiftDate: '2026-03-05' }) },
@@ -253,8 +253,8 @@ async function suiteEmailTemplates() {
     { name: 'benefitEnrollment', fn: () => emailTemplates.benefitEnrollment({ employeeName: 'Jane Doe', benefitType: 'Health Insurance', startDate: '2026-04-01', monthlyContribution: '150.00' }) },
     { name: 'terminationNotice', fn: () => emailTemplates.terminationNotice({ employeeName: 'John Smith', terminationDate: '2026-03-31', terminationType: 'Resignation', hrContactEmail: 'hr@coaileague.com' }) },
     { name: 'reportDelivery', fn: () => emailTemplates.reportDelivery({ clientName: 'Acme Corp', reportNumber: 'RPT-2026-001', reportName: 'Incident Report', submittedBy: 'John Smith', submittedDate: '2026-02-25', reportData: { incidents: 2 }, attachmentCount: 3 }) },
-    { name: 'verification', fn: () => emailTemplates.verification({ firstName: 'Jane', verificationUrl: 'https://coaileague.com/verify?token=abc123' }) },
-    { name: 'passwordReset', fn: () => emailTemplates.passwordReset({ firstName: 'Jane', resetUrl: 'https://coaileague.com/reset?token=xyz789' }) },
+    { name: 'verification', fn: () => emailTemplates.verification({ firstName: 'Jane', verificationUrl: 'https://www.coaileague.com/verify?token=abc123' }) },
+    { name: 'passwordReset', fn: () => emailTemplates.passwordReset({ firstName: 'Jane', resetUrl: 'https://www.coaileague.com/reset?token=xyz789' }) },
     { name: 'supportTicketConfirmation', fn: () => emailTemplates.supportTicketConfirmation({ name: 'John Smith', ticketNumber: 'TKT-001', subject: 'Login issue' }) },
     { name: 'reviewDeleted', fn: () => emailTemplates.reviewDeleted({ employeeName: 'John Smith', reviewType: 'Performance', reviewDate: '2026-01-15' }) },
     { name: 'reviewEdited', fn: () => emailTemplates.reviewEdited({ employeeName: 'John Smith', reviewType: 'Annual', changedBy: 'HR Admin' }) },
@@ -330,7 +330,7 @@ async function suiteResendConnectivity() {
     const resend = new Resend(key);
     const template = emailTemplates.passwordReset({
       firstName: 'Test User',
-      resetUrl: 'https://coaileague.com/reset?token=stress-test-token-abc123',
+      resetUrl: 'https://www.coaileague.com/reset?token=stress-test-token-abc123',
     });
     const result = await resend.emails.send({ // nds
       from,
@@ -354,7 +354,7 @@ async function suiteResendConnectivity() {
       total: '2500.00',
       dueDate: '2026-02-01',
       daysOverdue: 24,
-      paymentUrl: 'https://coaileague.com/pay/INV-STRESS-001',
+      paymentUrl: 'https://www.coaileague.com/pay/INV-STRESS-001',
     });
     const result = await resend.emails.send({ // nds
       from,
@@ -375,7 +375,7 @@ async function suiteResendConnectivity() {
     const template = emailTemplates.onboardingInvite({
       employeeName: 'New Guard Test',
       workspaceName: 'TXPS Investigations',
-      onboardingUrl: 'https://coaileague.com/onboard?token=stress-test-123',
+      onboardingUrl: 'https://www.coaileague.com/onboard?token=stress-test-123',
       expiresIn: '7 days',
     });
     const result = await resend.emails.send({ // nds
@@ -468,7 +468,7 @@ async function suiteEmailCompliance() {
   });
 
   await test('CAN-SPAM: unsubscribe link present in marketing email HTML', async () => {
-    const marketingHtml = '<div>Great news! <a href="https://coaileague.com/unsubscribe?token=abc123">Unsubscribe</a></div>';
+    const marketingHtml = '<div>Great news! <a href="https://www.coaileague.com/unsubscribe?token=abc123">Unsubscribe</a></div>';
     if (!marketingHtml.toLowerCase().includes('unsubscribe')) throw new Error('No unsubscribe link in marketing email');
     pass('CAN-SPAM: unsubscribe link present in marketing email HTML');
   });
@@ -808,7 +808,7 @@ async function suiteE2EWorkflows() {
     const template = emailTemplates.onboardingInvite({
       employeeName: 'Maria Santos',
       workspaceName: 'TXPS Investigations',
-      onboardingUrl: 'https://coaileague.com/onboard?token=e2e-test-001',
+      onboardingUrl: 'https://www.coaileague.com/onboard?token=e2e-test-001',
       expiresIn: '7 days',
     });
     if (!template.subject.includes('TXPS Investigations')) throw new Error('Subject missing org name');
@@ -875,7 +875,7 @@ async function suiteE2EWorkflows() {
 
   await test('Workflow: Forgot Password → Password Reset Email', async () => {
     const token = crypto.randomBytes(32).toString('hex');
-    const resetUrl = `https://coaileague.com/reset-password?token=${token}`;
+    const resetUrl = `https://www.coaileague.com/reset-password?token=${token}`;
     const emailTpl = emailTemplates.passwordReset({ firstName: 'John', resetUrl });
     if (!emailTpl.subject.includes('Password')) throw new Error('Subject missing "Password"');
     if (!emailTpl.html.includes(token)) throw new Error('Reset token missing from HTML');

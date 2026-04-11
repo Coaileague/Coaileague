@@ -40,7 +40,7 @@ const TO = 'txpsinvestigations@gmail.com';
 const FROM = process.env.RESEND_FROM_EMAIL || 'noreply@coaileague.com';
 const TRINITY_FROM = 'trinity@coaileague.com';
 const SUPPORT_FROM = 'support@coaileague.com';
-const APP_URL = 'https://coaileague.com';
+const APP_URL = 'https://www.coaileague.com';
 
 const FIRST_NAME = 'Sarah';
 const FULL_NAME = 'Sarah Johnson';

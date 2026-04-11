@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
       <SEO
         title={PAGE_SEO.privacy.title}
         description={PAGE_SEO.privacy.description}
-        canonical="https://coaileague.com/privacy"
+        canonical="https://www.coaileague.com/privacy"
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />

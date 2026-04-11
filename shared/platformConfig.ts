@@ -16,7 +16,7 @@ export const PLATFORM = {
   version: "2.0.0",
   copyright: `© ${new Date().getFullYear()} CoAIleague. All rights reserved.`,
   supportEmail: "support@coaileague.com",
-  website: "https://coaileague.com",
+  website: "https://www.coaileague.com",
 } as const;
 
 // ============================================================================

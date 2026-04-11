@@ -58,7 +58,7 @@ export default function StatusPage() {
       <SEO
         title={PAGE_SEO.status.title}
         description={PAGE_SEO.status.description}
-        canonical="https://coaileague.com/status"
+        canonical="https://www.coaileague.com/status"
       />
 
       <CanvasHubPage config={pageConfig}>
