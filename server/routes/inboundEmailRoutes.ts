@@ -17,6 +17,7 @@ import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { pool } from '../db';
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 import { isProduction } from '../lib/isProduction';
+import { sendCanSpamCompliantEmail } from '../services/emailCore';
 const log = createLogger('InboundEmailRoutes');
 
 import {
@@ -384,6 +385,47 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
           body: { from: fromEmail, subject, emailId },
           idempotencyKey: emailId ? `new_email_received-${emailId}` : undefined,
         });
+      });
+    }
+
+    // Step 10: Inbound email forwarding — if workspace has inbound_email_forward_to set,
+    // forward a copy of this email to that external address (tenant owner's personal inbox).
+    if (workspaceId) {
+      scheduleNonBlocking('inbound-email.forward', async () => {
+        try {
+          const wsResult = await pool.query(
+            `SELECT inbound_email_forward_to FROM workspaces WHERE id = $1 LIMIT 1`,
+            [workspaceId]
+          );
+          const forwardTo: string | null = wsResult.rows[0]?.inbound_email_forward_to || null;
+          if (!forwardTo) return;
+
+          const fwdSubject = `Fwd: ${subject}`;
+          const originalDate = new Date().toUTCString();
+          const fwdHtml = `
+<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
+  <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
+    -------- Forwarded Message --------<br>
+    <strong>From:</strong> ${fromName ? `${fromName} &lt;${fromEmail}&gt;` : fromEmail}<br>
+    <strong>To:</strong> ${toEmail}<br>
+    <strong>Date:</strong> ${originalDate}<br>
+    <strong>Subject:</strong> ${subject}
+  </p>
+  ${bodyHtml || `<pre style="white-space:pre-wrap;font-size:13px;">${(bodyText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`}
+</div>`;
+
+          await sendCanSpamCompliantEmail({
+            to: forwardTo,
+            subject: fwdSubject,
+            html: fwdHtml,
+            emailType: 'inbound_forward',
+            workspaceId,
+            skipUnsubscribeCheck: true,
+          });
+          log.info(`[InboundEmail/forward] Forwarded email to ${forwardTo} for workspace ${workspaceId}`);
+        } catch (fwdErr: any) {
+          log.warn(`[InboundEmail/forward] Forward failed for workspace ${workspaceId}: ${fwdErr?.message}`);
+        }
       });
     }
 

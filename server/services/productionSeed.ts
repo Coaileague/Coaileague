@@ -102,27 +102,31 @@ export async function runStatewideWorkspaceBootstrap(): Promise<void> {
         id, name, owner_id,
         subscription_tier, subscription_status,
         billing_exempt, founder_exemption,
+        inbound_email_forward_to,
         created_at, updated_at
       )
       VALUES (
         ${WS_ID}, 'Statewide Protective Services', ${USER_ID},
         'enterprise', 'active',
         TRUE, TRUE,
+        'saraybebo@gmail.com',
         NOW(), NOW()
       )
       ON CONFLICT (id) DO UPDATE
-        SET subscription_tier   = 'enterprise',
-            subscription_status = 'active',
-            billing_exempt      = TRUE,
-            founder_exemption   = TRUE,
-            trial_ends_at       = NULL,
-            updated_at          = NOW()
+        SET subscription_tier         = 'enterprise',
+            subscription_status       = 'active',
+            billing_exempt            = TRUE,
+            founder_exemption         = TRUE,
+            trial_ends_at             = NULL,
+            inbound_email_forward_to  = 'saraybebo@gmail.com',
+            updated_at                = NOW()
         WHERE workspaces.subscription_tier   != 'enterprise'
            OR workspaces.subscription_status != 'active'
            OR workspaces.billing_exempt       IS NOT TRUE
            OR workspaces.founder_exemption    IS NOT TRUE
+           OR workspaces.inbound_email_forward_to IS DISTINCT FROM 'saraybebo@gmail.com'
     `);
-    console.log('🏢 [StatewideBootstrap] Workspace upserted (enterprise/active/billing_exempt)');
+    console.log('🏢 [StatewideBootstrap] Workspace upserted (enterprise/active/billing_exempt, forward→saraybebo@gmail.com)');
   } catch (err) {
     console.error('🏢 [StatewideBootstrap] Workspace upsert failed:', (err as any)?.message);
   }
@@ -618,15 +622,15 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
       // =========================================================================
       console.log('🌱 Seeding workspaces...');
       
-      const workspacesData = [
+      for (const ws of [
         { id: PLATFORM_WORKSPACE_ID, name: 'CoAIleague Platform', ownerId: 'root-user-00000000', subscriptionTier: 'enterprise', subscriptionStatus: 'active' },
-      ];
-      
-      for (const ws of workspacesData) {
+      ]) {
         await tx.execute(sql`
-          INSERT INTO workspaces (id, name, owner_id, subscription_tier, subscription_status, created_at, updated_at)
-          VALUES (${ws.id}, ${ws.name}, ${ws.ownerId}, ${ws.subscriptionTier}, ${ws.subscriptionStatus}, NOW(), NOW())
-          ON CONFLICT (id) DO NOTHING
+          INSERT INTO workspaces (id, name, owner_id, subscription_tier, subscription_status, inbound_email_forward_to, created_at, updated_at)
+          VALUES (${ws.id}, ${ws.name}, ${ws.ownerId}, ${ws.subscriptionTier}, ${ws.subscriptionStatus}, 'txpsinvestigations@gmail.com', NOW(), NOW())
+          ON CONFLICT (id) DO UPDATE
+            SET inbound_email_forward_to = 'txpsinvestigations@gmail.com'
+            WHERE workspaces.inbound_email_forward_to IS DISTINCT FROM 'txpsinvestigations@gmail.com'
         `);
       }
       

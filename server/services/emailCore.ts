@@ -271,6 +271,8 @@ const TRANSACTIONAL_EMAIL_TYPES = [
   // Scheduling approval/denial emails — employee cannot unsubscribe from shift approvals
   'shift_action',
   'timesheet',
+  // Inbound email forwarding — system-generated copies sent to workspace owners
+  'inbound_forward',
 ];
 
 /**
