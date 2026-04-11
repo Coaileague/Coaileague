@@ -285,7 +285,7 @@ export async function notifyHumanAgents(params: {
   const errors: string[] = [];
 
   const orgName = workspaceName || 'CoAIleague';
-  const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+  const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
   const caseUrl = `${baseUrl}/voice-settings?tab=cases&case=${encodeURIComponent(supportCase.case_number)}`;
 
   const emailHtml = buildAgentEmailHtml({ supportCase, orgName, caseUrl });

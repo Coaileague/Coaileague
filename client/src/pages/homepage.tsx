@@ -56,7 +56,7 @@ export default function Homepage() {
       <SEO
         title={PAGE_SEO.landing.title}
         description={PAGE_SEO.landing.description}
-        canonical="https://coaileague.com/"
+        canonical="https://www.coaileague.com/"
         structuredData={[STRUCTURED_DATA.organization, STRUCTURED_DATA.softwareApp]}
       />
       <div className="min-h-screen bg-background overflow-x-hidden w-full">

@@ -1046,7 +1046,7 @@ export default function FeaturesShowcasePage() {
       <SEO
         title={PAGE_SEO.features.title}
         description={PAGE_SEO.features.description}
-        canonical="https://coaileague.com/features"
+        canonical="https://www.coaileague.com/features"
       />
       <div className="min-h-screen bg-background overflow-x-hidden w-full">
         <UniversalHeader variant="public" />

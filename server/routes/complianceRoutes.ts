@@ -1004,7 +1004,7 @@ router.post('/compliance/auditors/invite', async (req: AuthenticatedRequest, res
       issuedBy: req.user?.id ?? null,
     } as any).returning();
 
-    const activationUrl = `${process.env.BASE_URL ?? 'https://coaileague.com'}/auditor/activate?token=${token}`;
+    const activationUrl = `${process.env.BASE_URL ?? 'https://www.coaileague.com'}/auditor/activate?token=${token}`;
 
     // Send email invite if method is email
     if (inviteMethod === 'email' && email) {

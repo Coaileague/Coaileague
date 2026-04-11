@@ -14,7 +14,7 @@ interface SEOProps {
   canonical?: string;
 }
 
-const BASE_URL = import.meta.env.VITE_PUBLIC_URL || 'https://coaileague.com';
+const BASE_URL = import.meta.env.VITE_PUBLIC_URL || 'https://www.coaileague.com';
 const DEFAULT_TITLE = `${PLATFORM_NAME} — AI-Powered Security Guard Workforce Management`;
 const DEFAULT_DESCRIPTION = 'The AI workforce management platform built for security guard companies. Automate scheduling, payroll, compliance, and guard management with Trinity AI. Serving security companies across Texas and nationwide.';
 const DEFAULT_IMAGE = `${BASE_URL}/og-image.png`;

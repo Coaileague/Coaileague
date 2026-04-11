@@ -54,7 +54,7 @@ export default function UniversalMarketing() {
       <SEO
         title={PAGE_SEO.pricing.title}
         description={PAGE_SEO.pricing.description}
-        canonical="https://coaileague.com/pricing"
+        canonical="https://www.coaileague.com/pricing"
       />
       <UniversalHeader variant="public" />
 

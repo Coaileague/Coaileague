@@ -8,7 +8,7 @@ export default function CookiePolicy() {
       <SEO
         title="Cookie Policy | CoAIleague"
         description="Learn how CoAIleague uses cookies and similar technologies to improve your experience."
-        canonical="https://coaileague.com/cookie-policy"
+        canonical="https://www.coaileague.com/cookie-policy"
       />
       <UniversalHeader variant="public" />
       <main className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">

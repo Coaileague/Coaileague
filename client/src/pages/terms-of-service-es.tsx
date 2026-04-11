@@ -8,7 +8,7 @@ export default function TermsOfServiceEs() {
       <SEO
         title="Términos de Servicio | CoAIleague"
         description="Términos de Servicio de CoAIleague — las condiciones de uso de la plataforma de gestión de la fuerza laboral."
-        canonical="https://coaileague.com/terms-es"
+        canonical="https://www.coaileague.com/terms-es"
       />
       <UniversalHeader variant="public" />
       <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">

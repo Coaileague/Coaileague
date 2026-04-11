@@ -63,7 +63,7 @@ export class TrinityOutreachService {
 
       const response = await fetch(url, {
         signal: controller.signal,
-        headers: { 'User-Agent': 'CoAIleagueBot/1.0 (+https://coaileague.com/bot)' },
+        headers: { 'User-Agent': 'CoAIleagueBot/1.0 (+https://www.coaileague.com/bot)' },
       });
       clearTimeout(timeout);
 
@@ -152,7 +152,7 @@ export class TrinityOutreachService {
       const response = await fetch(url.startsWith('http') ? url : `https://${url}`, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'CoAIleagueBot/1.0 (+https://coaileague.com/bot)',
+          'User-Agent': 'CoAIleagueBot/1.0 (+https://www.coaileague.com/bot)',
           'Accept': 'text/html',
         },
       });

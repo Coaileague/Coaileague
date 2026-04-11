@@ -1688,7 +1688,7 @@ router.post('/test/email', requireAuth, requirePlatformAdmin, async (req: Authen
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;"/>
         <p style="color:#9ca3af;font-size:12px;">
           CoAIleague · 123 Platform St · San Antonio, TX 78201 ·
-          <a href="https://coaileague.com/unsubscribe" style="color:#9ca3af;">Unsubscribe</a>
+          <a href="https://www.coaileague.com/unsubscribe" style="color:#9ca3af;">Unsubscribe</a>
         </p>
       </div>
     `;

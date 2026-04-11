@@ -87,7 +87,7 @@ export async function createChatInterviewRoom(
   // who are authenticated workspace members (recruiter side).
   const baseUrl = process.env.APP_BASE_URL
 
-    || 'https://coaileague.com';
+    || 'https://www.coaileague.com';
   const chatRoomUrl = `${baseUrl}/dock-chat?interview=${encodeURIComponent(room.id)}&candidate=${encodeURIComponent(candidate.id)}`;
 
   await db.update(interviewCandidates)

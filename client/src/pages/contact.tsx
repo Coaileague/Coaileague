@@ -105,7 +105,7 @@ export default function Contact() {
       <SEO
         title={PAGE_SEO.contact.title}
         description={PAGE_SEO.contact.description}
-        canonical="https://coaileague.com/contact"
+        canonical="https://www.coaileague.com/contact"
       />
       {/* Universal Header */}
       <UniversalHeader variant="public" />

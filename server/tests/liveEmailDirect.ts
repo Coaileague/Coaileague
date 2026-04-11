@@ -256,7 +256,7 @@ async function main() {
       workspaceName: WIN_ORG,
       referenceNumber: WIN_REF,
       confirmationNumber: CONF,
-      portalUrl: 'https://coaileague.com/portal',
+      portalUrl: 'https://www.coaileague.com/portal',
     }),
     `[4/4] Onboarding Invitation → ${WIN_ORG}`
   );

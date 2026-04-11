@@ -290,7 +290,7 @@ export function registerPortalActions(): void {
         } as any).returning();
       }
 
-      const appBase = process.env.APP_BASE_URL || 'https://coaileague.com';
+      const appBase = process.env.APP_BASE_URL || 'https://www.coaileague.com';
       const portalUrl = `${appBase}/portal/client/${portalAccess.accessToken}`;
 
       return {

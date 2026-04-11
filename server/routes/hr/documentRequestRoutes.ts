@@ -146,7 +146,7 @@ function buildDocumentRequestEmail(params: {
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
     <div style="background:#0f172a;border-radius:8px 8px 0 0;padding:28px 32px;">
-      <img src="https://coaileague.com/logo-gold.png" alt="${params.orgName}" style="height:40px;" onerror="this.style.display='none'">
+      <img src="https://www.coaileague.com/logo-gold.png" alt="${params.orgName}" style="height:40px;" onerror="this.style.display='none'">
       <h1 style="color:#ffc83c;font-size:22px;margin:16px 0 4px;">Document Required</h1>
       <p style="color:#94a3b8;font-size:14px;margin:0;">${doc.label}</p>
     </div>

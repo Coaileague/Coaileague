@@ -258,7 +258,7 @@ export default function Support() {
         <SEO
           title={PAGE_SEO.support.title}
           description={PAGE_SEO.support.description}
-          canonical="https://coaileague.com/support"
+          canonical="https://www.coaileague.com/support"
         />
         <UniversalHeader variant="public" />
 

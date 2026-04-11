@@ -335,6 +335,21 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With', 'Accept', 'Origin'],
 }));
 
+// ============================================================================
+// WWW-REDIRECT — redirect bare coaileague.com → www.coaileague.com
+// Temporary fallback: www.coaileague.com is the canonical domain while
+// DNS ownership of the root domain transfers. Once nameserver changes are
+// complete this middleware will still work safely as a permanent redirect.
+// ============================================================================
+app.use((req, res, next) => {
+  const host = req.hostname;
+  if (host === 'coaileague.com') {
+    const wwwUrl = `https://www.coaileague.com${req.originalUrl}`;
+    return res.redirect(301, wwwUrl);
+  }
+  next();
+});
+
 // Paths that need raw body capture for webhook signature verification
 const webhookPathsNeedingRawBody = [
   '/api/webhooks/quickbooks',
@@ -466,6 +481,7 @@ app.use(helmet({
         "'self'",
         "wss:",
         "https://coaileague.com",
+        "https://www.coaileague.com",
         "https://*.coaileague.com",
         "https://api.anthropic.com",
         "https://api.openai.com",

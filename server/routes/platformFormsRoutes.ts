@@ -84,7 +84,7 @@ router.post('/:invId/reminder', requireAuth, async (req: Request, res: Response)
       [row.id, user.workspaceId]
     );
 
-    const formUrl = `${process.env.BASE_URL || 'https://coaileague.com'}/forms/${row.token}`;
+    const formUrl = `${process.env.BASE_URL || 'https://www.coaileague.com'}/forms/${row.token}`;
     log.info(`Reminder for invitation ${row.id} → ${row.sent_to_email} url=${formUrl}`);
 
     res.json({ success: true, message: `Reminder logged for ${row.sent_to_email || row.sent_to_name}`, formUrl });
@@ -311,7 +311,7 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
 
           // 4. Send confirmation email to submitter via Resend
           if (isResendConfigured() && submissionRow.submitted_by_email) {
-            const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+            const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
             const pdfLink = pdfUrl ? `${baseUrl}${pdfUrl}` : null;
             await sendCanSpamCompliantEmail({
               to: submissionRow.submitted_by_email,
@@ -358,7 +358,7 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
           );
           const ws = wsRow.rows[0];
           if (ws?.owner_email && isResendConfigured()) {
-            const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+            const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
             await sendCanSpamCompliantEmail({
               to: ws.owner_email,
               subject: `New Form Submission: ${formDef.title}`,
@@ -511,7 +511,7 @@ router.post('/signing/sequences', requireAuth, async (req: Request, res: Respons
       tokens.push(tok.rows[0]);
     }
 
-    const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+    const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
     const tokenLinks = tokens.map(t => ({
       signerName: t.signer_name,
       signerEmail: t.signer_email,
@@ -670,7 +670,7 @@ router.post('/sign/:token', async (req: Request, res: Response) => {
       if (nextSigner.email && isResendConfigured()) {
         const nextSigningToken = nextTokResult.rows[0]?.token;
         if (nextSigningToken) {
-          const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+          const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
           const nextSigningUrl = `${baseUrl}/sign/${nextSigningToken}`;
           scheduleNonBlocking('platform-forms.next-signer-email', async () => {
             await sendCanSpamCompliantEmail({
@@ -779,7 +779,7 @@ router.post('/proposals', requireAuth, async (req: Request, res: Response) => {
       ]
     );
     const proposal = result.rows[0];
-    const proposalUrl = `${process.env.BASE_URL || 'https://coaileague.com'}/proposals/${proposal.token}`;
+    const proposalUrl = `${process.env.BASE_URL || 'https://www.coaileague.com'}/proposals/${proposal.token}`;
     res.status(201).json({ proposal, proposalUrl });
   } catch (err: any) {
     log.error('Failed to create proposal:', err?.message);
@@ -978,7 +978,7 @@ router.post('/:formId/invite', requireAuth, async (req: Request, res: Response) 
     );
 
     const invitation = inv.rows[0];
-    const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+    const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
     const formUrl = `${baseUrl}/forms/${invitation.token}`;
     log.info(`Form invitation created token=${invitation.token} to=${email || phone} form=${form.title}`);
 
@@ -1101,7 +1101,7 @@ router.post('/submissions/:id/forward', requireAuth, async (req: Request, res: R
       return res.status(503).json({ error: 'Email service not configured' });
     }
 
-    const baseUrl = process.env.BASE_URL || 'https://coaileague.com';
+    const baseUrl = process.env.BASE_URL || 'https://www.coaileague.com';
     const pdfUrl = row.generated_document_url ? `${baseUrl}${row.generated_document_url}` : null;
 
     const fields = Array.isArray(row.fields) ? row.fields :
