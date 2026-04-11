@@ -433,7 +433,7 @@ export class AuthService {
       const normalizedEmail = email.toLowerCase().trim();
 
       const [user] = await db
-        .select({ id: users.id, email: users.email })
+        .select({ id: users.id, email: users.email, firstName: users.firstName })
         .from(users)
         .where(eq(users.email, normalizedEmail))
         .limit(1);
@@ -453,7 +453,8 @@ export class AuthService {
         expiresAt,
       });
 
-      await this.sendPasswordResetEmail(user.email, token);
+      const { emailService } = await import('./emailService');
+      await emailService.sendPasswordResetEmail(user.id, user.email, token, user.firstName ?? undefined);
 
       return { success: true };
     } catch (error: unknown) {
@@ -739,33 +740,6 @@ export class AuthService {
       log.info(`[AuthService] Magic link email sent to ${email}`);
     } catch (error) {
       log.error("[AuthService] Failed to send magic link email:", error);
-    }
-  }
-
-  private async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const resetUrl = `${this.getBaseUrl()}/auth/reset-password?token=${token}`;
-
-    try {
-      const { client, fromEmail } = await getUncachableResendClient();
-      await client.emails.send({
-        from: `${PLATFORM.name} <${fromEmail}>`,
-        to: [email],
-        subject: `Reset your password - ${PLATFORM.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Reset Your Password</h2>
-            <p>Click the button below to reset your password:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a>
-            </div>
-            <p style="color: #6b7280; font-size: 14px;">This link expires in 1 hour.</p>
-            <p style="color: #6b7280; font-size: 14px;">If you didn't request this, ignore this email.</p>
-          </div>
-        `,
-      });
-      log.info(`[AuthService] Password reset email sent to ${email}`);
-    } catch (error) {
-      log.error("[AuthService] Failed to send password reset email:", error);
     }
   }
 
