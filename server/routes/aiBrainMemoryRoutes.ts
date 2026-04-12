@@ -28,7 +28,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
     try {
       const profile = await trinityMemoryService.getUserMemoryProfile(
         req.userId!,
-        req.query.workspaceId as string | undefined
+        req.workspaceId || (req.query.workspaceId as string | undefined)
       );
       res.json({ success: true, profile });
     } catch (error: any) {
@@ -45,7 +45,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
     try {
       const context = await trinityMemoryService.buildMemoryContext(
         req.userId!,
-        req.query.workspaceId as string | undefined,
+        req.workspaceId || (req.query.workspaceId as string | undefined),
         req.query.topic as string | undefined
       );
       res.json({ success: true, context });
@@ -62,7 +62,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
    */
   app.get("/api/ai-brain/tools/catalog", requireAuth, async (req: any, res: any) => {
     try {
-      const workspaceId = req.query.workspaceId as string | undefined;
+      const workspaceId = req.workspaceId || (req.query.workspaceId as string | undefined);
       
       // Require workspaceId for tenant isolation
       if (!workspaceId) {
@@ -91,7 +91,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
    */
   app.get("/api/ai-brain/tools/recommended", requireAuth, async (req: any, res: any) => {
     try {
-      const workspaceId = req.query.workspaceId as string | undefined;
+      const workspaceId = req.workspaceId || (req.query.workspaceId as string | undefined);
       
       // Require workspaceId for tenant isolation
       if (!workspaceId) {
@@ -133,7 +133,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
    */
   app.post("/api/ai-brain/tools/catalog/refresh", requireAuth, async (req: any, res: any) => {
     try {
-      const workspaceId = req.body.workspaceId || req.query.workspaceId;
+      const workspaceId = req.workspaceId || (req.query.workspaceId as string | undefined);
       
       // Require workspaceId for tenant isolation
       if (!workspaceId) {
@@ -162,7 +162,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
    */
   app.get("/api/ai-brain/insights/relevant", requireAuth, async (req: any, res: any) => {
     try {
-      const workspaceId = req.query.workspaceId as string | undefined;
+      const workspaceId = req.workspaceId || (req.query.workspaceId as string | undefined);
       
       // Require workspaceId for tenant isolation
       if (!workspaceId) {

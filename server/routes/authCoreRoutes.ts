@@ -755,7 +755,7 @@ const DEV_ACCOUNTS = {
 } as const;
 
 async function devLoginById(userId: string, targetWorkspaceId: string, label: string, req: any, res: any) {
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction()) {
     return res.status(404).json({ message: "Not found" });
   }
 
@@ -1451,7 +1451,7 @@ router.post("/api/auth/change-password", requireAuth, mutationLimiter, async (re
 
 router.get("/api/demo-login", async (req, res) => {
   // Demo login is disabled in production to prevent unauthorized access
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction()) {
     return res.status(404).json({ message: 'Not found' });
   }
   try {
@@ -1483,7 +1483,7 @@ router.get("/api/demo-login", async (req, res) => {
 
     res.cookie('auth_token', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction(),
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
@@ -1573,7 +1573,7 @@ router.patch("/api/auth/language-preference", async (req, res) => {
 // ============================================================================
 
 router.get("/api/auth/capabilities", (_req, res) => {
-  const devLoginEnabled = process.env.NODE_ENV !== 'production';
+  const devLoginEnabled = !isProduction();
   res.json({ devLoginEnabled });
 });
 

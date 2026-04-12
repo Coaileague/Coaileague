@@ -653,12 +653,13 @@ export const INTEGRATIONS = {
     },
     
     // Get environment (server-side only)
-    // IMPORTANT: Uses REPLIT_DEPLOYMENT as primary signal, then NODE_ENV, then explicit override
-    // This prevents shared secrets from forcing production mode in development
+    // Uses NODE_ENV and RAILWAY_ENVIRONMENT as production signals (canonical per isProduction.ts).
+    // This prevents shared secrets from forcing production mode in development.
     getEnvironment(): 'sandbox' | 'production' {
-      const isDeployment = getEnv('REPLIT_DEPLOYMENT', '') === '1';
       const nodeEnv = getEnv('NODE_ENV', 'development');
-      const isProductionRuntime = isDeployment || nodeEnv === 'production';
+      const railwayEnv = getEnv('RAILWAY_ENVIRONMENT', '');
+      const isProductionRuntime = nodeEnv === 'production' || railwayEnv === 'production' ||
+        !!getEnv('K_SERVICE', '') || !!getEnv('K_REVISION', '');
 
       // In development runtime, ALWAYS use sandbox regardless of QUICKBOOKS_ENVIRONMENT
       if (!isProductionRuntime) {
@@ -755,11 +756,12 @@ export const INTEGRATIONS = {
 
     // Dynamic environment detection based on request domain
     // Use this when you need per-request environment detection
-    // IMPORTANT: REPLIT_DEPLOYMENT is the primary signal to prevent dev/prod mixing
+    // Uses NODE_ENV and RAILWAY_ENVIRONMENT as production signals (canonical per isProduction.ts).
     getEnvironmentForDomain(domain?: string): 'sandbox' | 'production' {
-      const isDeployment = getEnv('REPLIT_DEPLOYMENT', '') === '1';
       const nodeEnv = getEnv('NODE_ENV', 'development');
-      const isProductionRuntime = isDeployment || nodeEnv === 'production';
+      const railwayEnv = getEnv('RAILWAY_ENVIRONMENT', '');
+      const isProductionRuntime = nodeEnv === 'production' || railwayEnv === 'production' ||
+        !!getEnv('K_SERVICE', '') || !!getEnv('K_REVISION', '');
 
       // In development runtime, ALWAYS use sandbox - no domain override
       if (!isProductionRuntime) {
