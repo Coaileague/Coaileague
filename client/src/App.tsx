@@ -267,6 +267,7 @@ const AccountingIntegrations = lazy(() => import("@/pages/accounting-integration
 const FinanceHub = lazy(() => import("@/pages/finance-hub"));
 const QuickBooksImport = lazy(() => import("@/pages/quickbooks-import"));
 const FinancialIntelligence = lazy(() => import("@/pages/financial-intelligence"));
+const PLDashboard = lazy(() => import("@/pages/financial/pl-dashboard"));
 const OrgHub = lazy(() => import("@/pages/org-hub"));
 const ResolutionInbox = lazy(() => import("@/pages/resolution-inbox"));
 const Records = lazy(() => import("@/pages/records"));
@@ -1459,6 +1460,7 @@ function AppContent() {
                 <Route path="/clients"><ErrorBoundary componentName="Client List"><Clients /></ErrorBoundary></Route>
                 <Route path="/invoices"><ErrorBoundary componentName="Invoice Manager"><Invoices /></ErrorBoundary></Route>
                 <Route path="/financial-intelligence"><ErrorBoundary componentName="Financial Intelligence"><FinancialIntelligence /></ErrorBoundary></Route>
+                <Route path="/pl-dashboard"><ErrorBoundary componentName="P&L Dashboard"><PLDashboard /></ErrorBoundary></Route>
                 <Route path="/org-hub"><ErrorBoundary><OrgHub /></ErrorBoundary></Route>
                 <Route path="/developers"><ErrorBoundary><DeveloperPortal /></ErrorBoundary></Route>
                 <Route path="/reports"><ErrorBoundary componentName="Reports Dashboard"><Reports /></ErrorBoundary></Route>
@@ -1969,6 +1971,11 @@ function AppContent() {
                 <Route path="/financial-intelligence">
                   <RBACRoute require="admin">
                     <ErrorBoundary><FinancialIntelligence /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
+                <Route path="/pl-dashboard">
+                  <RBACRoute require="admin">
+                    <ErrorBoundary><PLDashboard /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
                 <Route path="/org-hub"><ErrorBoundary><OrgHub /></ErrorBoundary></Route>

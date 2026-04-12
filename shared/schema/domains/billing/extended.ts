@@ -3,6 +3,140 @@ import { sql } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
+// ============================================================================
+// REVENUE RECOGNITION SCHEDULE — ASC 606 / IFRS 15 accrual tracking
+// ============================================================================
+export const revenueRecognitionSchedule = pgTable("revenue_recognition_schedule", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  invoiceId: varchar("invoice_id").notNull(),
+  clientId: varchar("client_id").notNull(),
+  contractId: varchar("contract_id"), // optional link to client_contracts
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  recognizedAmount: decimal("recognized_amount", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  remainingAmount: decimal("remaining_amount", { precision: 12, scale: 2 }).notNull(),
+  // 'accrual' = spread over months; 'cash' = recognize on payment
+  recognitionMethod: varchar("recognition_method", { length: 20 }).notNull().default("cash"),
+  // JSON array of { date: ISO8601, amount: string } objects for monthly schedule
+  scheduledDates: jsonb("scheduled_dates").notNull().default('[]'),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | in_progress | recognized | deferred | cancelled
+  recognizedAt: timestamp("recognized_at", { withTimezone: true }),
+  lastProcessedAt: timestamp("last_processed_at", { withTimezone: true }),
+  auditLog: jsonb("audit_log").notNull().default('[]'), // array of { timestamp, userId, action, amount, note }
+  periodStart: date("period_start"),
+  periodEnd: date("period_end"),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("rev_recog_workspace_idx").on(table.workspaceId),
+  index("rev_recog_invoice_idx").on(table.invoiceId),
+  index("rev_recog_status_idx").on(table.status),
+  index("rev_recog_client_idx").on(table.clientId),
+  index("rev_recog_method_idx").on(table.recognitionMethod),
+]);
+
+export const insertRevenueRecognitionScheduleSchema = createInsertSchema(revenueRecognitionSchedule).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertRevenueRecognitionSchedule = z.infer<typeof insertRevenueRecognitionScheduleSchema>;
+export type RevenueRecognitionSchedule = typeof revenueRecognitionSchedule.$inferSelect;
+
+// ============================================================================
+// DEFERRED REVENUE — Revenue collected but not yet earned
+// ============================================================================
+export const deferredRevenue = pgTable("deferred_revenue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  invoiceId: varchar("invoice_id").notNull(),
+  scheduleId: varchar("schedule_id"), // link to revenueRecognitionSchedule
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  deferralReason: varchar("deferral_reason", { length: 200 }),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  recognizedAmount: decimal("recognized_amount", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  status: varchar("status", { length: 20 }).notNull().default("deferred"), // deferred | partially_recognized | recognized
+  recognizedAt: timestamp("recognized_at", { withTimezone: true }),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("deferred_rev_workspace_idx").on(table.workspaceId),
+  index("deferred_rev_invoice_idx").on(table.invoiceId),
+  index("deferred_rev_status_idx").on(table.status),
+  index("deferred_rev_start_idx").on(table.startDate),
+]);
+
+export const insertDeferredRevenueSchema = createInsertSchema(deferredRevenue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertDeferredRevenue = z.infer<typeof insertDeferredRevenueSchema>;
+export type DeferredRevenue = typeof deferredRevenue.$inferSelect;
+
+// ============================================================================
+// PROCESSED REVENUE EVENTS — Idempotency for monthly recognition job
+// ============================================================================
+export const processedRevenueEvents = pgTable("processed_revenue_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  idempotencyKey: varchar("idempotency_key").notNull().unique(), // e.g. "revenue-<workspaceId>-2026-04"
+  workspaceId: varchar("workspace_id").notNull(),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  schedulesProcessed: integer("schedules_processed").default(0),
+  amountRecognized: decimal("amount_recognized", { precision: 14, scale: 2 }).default("0.00"),
+  processedAt: timestamp("processed_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("proc_rev_workspace_idx").on(table.workspaceId),
+  index("proc_rev_key_idx").on(table.idempotencyKey),
+  index("proc_rev_period_idx").on(table.workspaceId, table.year, table.month),
+]);
+
+export const insertProcessedRevenueEventSchema = createInsertSchema(processedRevenueEvents).omit({
+  id: true,
+  processedAt: true,
+});
+export type InsertProcessedRevenueEvent = z.infer<typeof insertProcessedRevenueEventSchema>;
+export type ProcessedRevenueEvent = typeof processedRevenueEvents.$inferSelect;
+
+// ============================================================================
+// CONTRACT REVENUE MAPPING — Map client contracts to invoice revenue
+// ============================================================================
+export const contractRevenueMapping = pgTable("contract_revenue_mapping", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  contractId: varchar("contract_id").notNull(),
+  invoiceId: varchar("invoice_id"),
+  scheduleId: varchar("schedule_id"), // link to revenueRecognitionSchedule
+  contractValue: decimal("contract_value", { precision: 12, scale: 2 }),
+  monthlyValue: decimal("monthly_value", { precision: 12, scale: 2 }), // contract_value / term_months
+  recognitionStartDate: date("recognition_start_date"),
+  recognitionEndDate: date("recognition_end_date"),
+  termMonths: integer("term_months"),
+  recognitionMethod: varchar("recognition_method", { length: 20 }).default("accrual"),
+  status: varchar("status", { length: 20 }).default("active"), // active | completed | cancelled
+  recognizedToDate: decimal("recognized_to_date", { precision: 12, scale: 2 }).default("0.00"),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("contract_rev_workspace_idx").on(table.workspaceId),
+  index("contract_rev_contract_idx").on(table.contractId),
+  index("contract_rev_invoice_idx").on(table.invoiceId),
+  index("contract_rev_status_idx").on(table.status),
+]);
+
+export const insertContractRevenueMappingSchema = createInsertSchema(contractRevenueMapping).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertContractRevenueMapping = z.infer<typeof insertContractRevenueMappingSchema>;
+export type ContractRevenueMapping = typeof contractRevenueMapping.$inferSelect;
+
 export const externalCostLog = pgTable("external_cost_log", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),
