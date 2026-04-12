@@ -456,13 +456,22 @@ export class ClientPortalHelpAIService {
     let aiResponse: string;
     let tokensUsed = 0;
 
+    const AI_TIMEOUT_MS = 30_000;
+
     try {
-      const result = await costOptimizedRouter.execute({
-        task,
-        context: systemPrompt,
-        workspaceId: session.orgWorkspaceId,
-        featureKey: 'client_portal_helpai_message',
-      });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AI call timed out after 30s')), AI_TIMEOUT_MS)
+      );
+
+      const result = await Promise.race([
+        costOptimizedRouter.execute({
+          task,
+          context: systemPrompt,
+          workspaceId: session.orgWorkspaceId,
+          featureKey: 'client_portal_helpai_message',
+        }),
+        timeoutPromise,
+      ]);
 
       aiResponse = result.content;
       tokensUsed = result.tokensUsed || 0;
@@ -559,12 +568,17 @@ export class ClientPortalHelpAIService {
         `Write a 3-5 sentence summary covering: what the client reported, their emotional state, key facts, and what action is recommended. Be factual and professional.`,
       ].filter(Boolean).join('\n');
 
-      const summaryResult = await costOptimizedRouter.execute({
-        task: summaryTask,
-        context: 'You write concise professional client support escalation summaries for security company managers.',
-        workspaceId: session.orgWorkspaceId,
-        featureKey: 'client_portal_helpai_summary',
-      });
+      const summaryResult = await Promise.race([
+        costOptimizedRouter.execute({
+          task: summaryTask,
+          context: 'You write concise professional client support escalation summaries for security company managers.',
+          workspaceId: session.orgWorkspaceId,
+          featureKey: 'client_portal_helpai_summary',
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Summary AI call timed out after 30s')), 30_000)
+        ),
+      ]);
       aiSummary = summaryResult.content;
       session.totalTokensUsed += summaryResult.tokensUsed || 0;
     } catch (summaryErr: unknown) {
