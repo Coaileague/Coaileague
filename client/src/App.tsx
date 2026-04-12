@@ -207,6 +207,7 @@ const SupportConsoleTicketsPage = lazy(() => import("@/pages/admin/support-conso
 const SupportConsoleWorkspacePage = lazy(() => import("@/pages/admin/support-console-workspace"));
 const EmployeePortal = lazy(() => import("@/pages/employee-portal"));
 const ClientPortal = lazy(() => import("@/pages/client-portal"));
+const ClientPortalSetup = lazy(() => import("@/pages/client-portal/setup"));
 const ProspectPortal = lazy(() => import("@/pages/prospect-portal"));
 const ClientSignup = lazy(() => import("@/pages/client-signup"));
 const ContractSigningPortal = lazy(() => import("@/pages/contract-signing-portal"));
@@ -1342,6 +1343,8 @@ function AppContent() {
               <Route path="/accept-handoff/:token" component={AcceptHandoff} />
               <Route path="/accept-offer/:offerId" component={AcceptOffer} />
               <Route path="/accept-invite" component={AcceptInvite} />
+              {/* Client portal setup — invite acceptance (must come BEFORE /:tempCode wildcard) */}
+              <Route path="/client-portal/setup"><ErrorBoundary><Suspense fallback={<PageLoader />}><ClientPortalSetup /></Suspense></ErrorBoundary></Route>
               <Route path="/client-portal/:tempCode">{(params: { tempCode: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><ProspectPortal tempCode={params.tempCode} /></Suspense></ErrorBoundary>}</Route>
               <Route path="/contract-portal/:token">{(params: { token: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><ContractSigningPortal token={params.token} /></Suspense></ErrorBoundary>}</Route>
               <Route path="/sign/:token">{(params: { token: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><DocumentSigningPortal token={params.token} /></Suspense></ErrorBoundary>}</Route>

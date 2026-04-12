@@ -23,7 +23,7 @@ import {
   CreditCard, Download, ClipboardCheck, AlertTriangle, Shield, Eye, Loader2,
   FileSignature, ScrollText, MessageSquare, Building2, RefreshCw, ExternalLink,
   ShieldCheck, FilePlus, SendHorizonal, ChevronRight, CheckCheck, XCircle, Users2,
-  Paperclip, CalendarPlus, UserCheck, Lock,
+  Paperclip, CalendarPlus, UserCheck, Lock, Settings, Key, Wrench, PlusCircle, ListTodo,
 } from "lucide-react";
 import type { Invoice, Client } from "@shared/schema";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
@@ -604,6 +604,18 @@ export default function ClientPortal() {
   const [renewalDialog, setRenewalDialog] = useState<{ open: boolean; title: string }>({ open: false, title: "" });
   const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null);
 
+  // Service Request state
+  const [svcReqForm, setSvcReqForm] = useState({
+    requestType: "", description: "", urgency: "normal", requestedDate: "",
+  });
+
+  // Settings state
+  const [settingsFirstName, setSettingsFirstName] = useState("");
+  const [settingsLastName, setSettingsLastName] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
   const { data: invoices = [] } = useQuery<Invoice[]>({ queryKey: ["/api/invoices"] });
   const { data: clients = [] } = useClientLookup();
   const currentClient = clients.find(c => c.email === user?.email);
@@ -703,9 +715,62 @@ export default function ClientPortal() {
   });
   const portalAccessToken = portalTokenData?.accessToken;
 
+  // ── Service Requests ─────────────────────────────────────────────────────────
+  interface ServiceRequest { id: string; requestType: string; description: string; urgency: string; status: string; requestedDate?: string; createdAt: string; }
+  const { data: serviceRequests = [], isLoading: svcReqLoading } = useQuery<ServiceRequest[]>({
+    queryKey: ["/api/service-requests"],
+    enabled: activeTab === "service-requests" && !!currentClient,
+  });
+  const submitSvcReqMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/service-requests", {
+      ...svcReqForm,
+      clientId: currentClient?.id,
+      submittedBy: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+      submittedByEmail: user?.email,
+    }),
+    onSuccess: () => {
+      toast({ title: "Request Submitted", description: "Your service request has been sent to your security provider." });
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      setSvcReqForm({ requestType: "", description: "", urgency: "normal", requestedDate: "" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  // ── Settings ─────────────────────────────────────────────────────────────────
+  const updateProfileMutation = useMutation({
+    mutationFn: () => apiRequest("PATCH", "/api/auth/profile", {
+      firstName: settingsFirstName.trim(),
+      lastName: settingsLastName.trim(),
+    }),
+    onSuccess: () => {
+      toast({ title: "Profile Updated", description: "Your name has been updated successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+  const changePasswordMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/change-password", {
+      currentPassword,
+      newPassword,
+    }),
+    onSuccess: () => {
+      toast({ title: "Password Changed", description: "Your password has been updated. Please log in again." });
+      setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword("");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const downloadPdf = (invoiceId: number) => {
     window.open(`/api/invoices/${invoiceId}/pdf`, "_blank");
   };
+
+  // Sync user name to settings state when user data loads
+  useEffect(() => {
+    if (user) {
+      setSettingsFirstName((user as any).firstName || "");
+      setSettingsLastName((user as any).lastName || "");
+    }
+  }, [(user as any)?.firstName, (user as any)?.lastName]);
 
   if (!currentClient) {
     const notFoundConfig: CanvasPageConfig = { id: "client-portal-not-found", title: "Client Dashboard", subtitle: "Client Account Not Found", category: "dashboard" };
@@ -790,6 +855,14 @@ export default function ClientPortal() {
               <TabsTrigger value="visitor-log" data-testid="tab-visitor-log">
                 <Users2 className="h-3.5 w-3.5 mr-1.5" />
                 Visitor Log
+              </TabsTrigger>
+              <TabsTrigger value="service-requests" data-testid="tab-service-requests">
+                <Wrench className="h-3.5 w-3.5 mr-1.5" />
+                Service Requests
+              </TabsTrigger>
+              <TabsTrigger value="settings" data-testid="tab-settings">
+                <Settings className="h-3.5 w-3.5 mr-1.5" />
+                Settings
               </TabsTrigger>
             </TabsList>
           </ScrollArea>
@@ -1519,6 +1592,257 @@ export default function ClientPortal() {
                 </UniversalModalFooter>
               </UniversalModalContent>
             </UniversalModal>
+          </TabsContent>
+
+          {/* ── SERVICE REQUESTS ─────────────────────────────────────────── */}
+          <TabsContent value="service-requests" className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Submit new request */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <PlusCircle className="h-4 w-4 text-blue-500" />
+                    Submit a Service Request
+                  </CardTitle>
+                  <CardDescription>Request extra coverage, a site walk, billing inquiry, or other services.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Request Type</Label>
+                    <Select value={svcReqForm.requestType} onValueChange={v => setSvcReqForm(p => ({ ...p, requestType: v }))}>
+                      <SelectTrigger data-testid="select-svc-req-type">
+                        <SelectValue placeholder="Select type…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="extra_coverage">Extra Coverage</SelectItem>
+                        <SelectItem value="site_walk">Site Walk</SelectItem>
+                        <SelectItem value="service_change">Service Change</SelectItem>
+                        <SelectItem value="emergency_coverage">Emergency Coverage</SelectItem>
+                        <SelectItem value="billing_inquiry">Billing Inquiry</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Urgency</Label>
+                    <Select value={svcReqForm.urgency} onValueChange={v => setSvcReqForm(p => ({ ...p, urgency: v }))}>
+                      <SelectTrigger data-testid="select-svc-req-urgency">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Requested Date (optional)</Label>
+                    <Input
+                      type="date"
+                      data-testid="input-svc-req-date"
+                      value={svcReqForm.requestedDate}
+                      onChange={e => setSvcReqForm(p => ({ ...p, requestedDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Description</Label>
+                    <Textarea
+                      data-testid="textarea-svc-req-desc"
+                      placeholder="Describe your request in detail…"
+                      value={svcReqForm.description}
+                      onChange={e => setSvcReqForm(p => ({ ...p, description: e.target.value }))}
+                      rows={4}
+                    />
+                  </div>
+                  <Button
+                    className="w-full"
+                    data-testid="button-submit-svc-req"
+                    onClick={() => submitSvcReqMutation.mutate()}
+                    disabled={submitSvcReqMutation.isPending || !svcReqForm.requestType || !svcReqForm.description}
+                  >
+                    {submitSvcReqMutation.isPending ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</>
+                    ) : (
+                      <><SendHorizonal className="h-4 w-4 mr-2" />Submit Request</>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Existing requests */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ListTodo className="h-4 w-4 text-indigo-500" />
+                    My Requests
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {svcReqLoading ? (
+                    <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  ) : serviceRequests.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">No service requests yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {serviceRequests.map(r => (
+                        <div key={r.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-card">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="font-medium text-sm capitalize">{r.requestType.replace(/_/g, " ")}</span>
+                              {statusBadge(r.status)}
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{r.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{formatDate(r.createdAt)}</p>
+                          </div>
+                          <Badge variant="outline" className="text-xs shrink-0 capitalize">{r.urgency}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── SETTINGS ─────────────────────────────────────────────────── */}
+          <TabsContent value="settings" className="mt-6 space-y-6 max-w-xl">
+            {/* Profile */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Settings className="h-4 w-4 text-blue-500" />
+                  Profile Information
+                </CardTitle>
+                <CardDescription>Update your display name.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>First Name</Label>
+                    <Input
+                      data-testid="input-settings-first-name"
+                      value={settingsFirstName}
+                      onChange={e => setSettingsFirstName(e.target.value)}
+                      autoComplete="given-name"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Last Name</Label>
+                    <Input
+                      data-testid="input-settings-last-name"
+                      value={settingsLastName}
+                      onChange={e => setSettingsLastName(e.target.value)}
+                      autoComplete="family-name"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Email</Label>
+                  <Input value={user?.email || ""} disabled className="bg-muted" />
+                  <p className="text-xs text-muted-foreground">Contact your security provider to change your email.</p>
+                </div>
+                <Button
+                  data-testid="button-save-profile"
+                  onClick={() => updateProfileMutation.mutate()}
+                  disabled={updateProfileMutation.isPending || !settingsFirstName || !settingsLastName}
+                >
+                  {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Save Profile
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Password */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Key className="h-4 w-4 text-amber-500" />
+                  Change Password
+                </CardTitle>
+                <CardDescription>Use a strong password of at least 8 characters.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Current Password</Label>
+                  <Input
+                    data-testid="input-current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>New Password</Label>
+                  <Input
+                    data-testid="input-new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Confirm New Password</Label>
+                  <Input
+                    data-testid="input-confirm-new-password"
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={e => setConfirmNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <Button
+                  data-testid="button-change-password"
+                  onClick={() => {
+                    if (newPassword !== confirmNewPassword) {
+                      toast({ title: "Error", description: "New passwords do not match.", variant: "destructive" });
+                      return;
+                    }
+                    if (newPassword.length < 8) {
+                      toast({ title: "Error", description: "Password must be at least 8 characters.", variant: "destructive" });
+                      return;
+                    }
+                    changePasswordMutation.mutate();
+                  }}
+                  disabled={changePasswordMutation.isPending || !currentPassword || !newPassword || !confirmNewPassword}
+                >
+                  {changePasswordMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
+                  Change Password
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Account Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Building2 className="h-4 w-4 text-indigo-500" />
+                  Account Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Company</span>
+                  <span className="font-medium">{currentClient.companyName || "—"}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Contact Email</span>
+                  <span className="font-medium">{currentClient.email || user?.email || "—"}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Phone</span>
+                  <span className="font-medium">{currentClient.phone || "—"}</span>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

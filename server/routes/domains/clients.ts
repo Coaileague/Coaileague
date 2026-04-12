@@ -46,29 +46,29 @@ export function mountClientRoutes(app: Express): void {
       const workspaceId = req.workspaceId;
       const { pool } = await import("../../db");
       // CATEGORY C — Raw SQL retained: FILTER (WHERE | Tables: clients | Verified: 2026-03-23
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const [clientRow] = (await typedPool(
+      const clientResult = await pool.query(
         `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_active = true) AS active
          FROM clients WHERE workspace_id = $1`,
         [workspaceId]
-      )).rows;
+      );
+      const clientRow = clientResult.rows[0];
       // CATEGORY C — Raw SQL retained: FILTER (WHERE | Tables: client_contracts | Verified: 2026-03-23
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const [contractRow] = (await typedPool(
+      const contractResult = await pool.query(
         `SELECT COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE status = 'executed') AS active,
                 COUNT(*) FILTER (WHERE status = 'expired')  AS expiring
          FROM client_contracts WHERE workspace_id = $1`,
         [workspaceId]
-      )).rows;
+      );
+      const contractRow = contractResult.rows[0];
       // CATEGORY C — Raw SQL retained: FILTER (WHERE | Tables: invoices | Verified: 2026-03-23
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const [invoiceRow] = (await typedPool(
+      const invoiceResult = await pool.query(
         `SELECT COUNT(*) FILTER (WHERE status = 'pending') AS pending,
                 COALESCE(SUM(total) FILTER (WHERE status = 'pending'), 0) AS pending_amount
          FROM invoices WHERE workspace_id = $1`,
         [workspaceId]
-      )).rows;
+      );
+      const invoiceRow = invoiceResult.rows[0];
       res.json({
         clients:   { total: parseInt(clientRow?.total || '0'), active: parseInt(clientRow?.active || '0') },
         contracts: { total: parseInt(contractRow?.total || '0'), active: parseInt(contractRow?.active || '0'), expiringSoon: parseInt(contractRow?.expiring || '0') },

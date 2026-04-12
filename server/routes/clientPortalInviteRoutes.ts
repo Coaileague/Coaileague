@@ -15,12 +15,18 @@ const router = Router();
 /**
  * GET /api/clients/portal/setup/:token
  * Validates a client portal invite token.
+ * Accepts an optional `workspace` query param for defense-in-depth scoping.
  */
 router.get('/portal/setup/:token', async (req, res) => {
   try {
     const { token } = req.params;
+    const workspaceIdParam = typeof req.query.workspace === 'string' ? req.query.workspace : null;
+
     const [invite] = await db.select().from(clientPortalInviteTokens)
-      .where(eq(clientPortalInviteTokens.token, token))
+      .where(and(
+        eq(clientPortalInviteTokens.token, token),
+        ...(workspaceIdParam ? [eq(clientPortalInviteTokens.workspaceId, workspaceIdParam)] : [])
+      ))
       .limit(1);
 
     if (!invite) return res.status(404).json({ message: 'Invitation not found.' });
@@ -51,7 +57,7 @@ router.get('/portal/setup/:token', async (req, res) => {
 router.post('/portal/setup/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    const { password, firstName, lastName } = req.body;
+    const { password, firstName, lastName, workspaceId: bodyWorkspaceId } = req.body;
 
     if (!password || !firstName || !lastName) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -65,6 +71,12 @@ router.post('/portal/setup/:token', async (req, res) => {
     if (new Date() > new Date(invite.expiresAt)) return res.status(410).json({ message: 'Invitation expired.' });
     // @ts-expect-error — TS migration: fix in refactoring sprint
     if (invite.status !== 'pending') return res.status(409).json({ message: 'Invitation already used.' });
+
+    // Issue #3: Validate that the workspace in the request body matches the invite (if provided)
+    if (bodyWorkspaceId && bodyWorkspaceId !== invite.workspaceId) {
+      log.warn('[PortalInvite] Workspace mismatch on setup attempt — token workspace: %s, body workspace: %s', invite.workspaceId, bodyWorkspaceId);
+      return res.status(403).json({ message: 'Workspace mismatch. This invitation does not belong to the specified workspace.' });
+    }
 
     const normalizedEmail = invite.email.toLowerCase().trim();
     const existingUser = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
@@ -115,6 +127,23 @@ router.post('/portal/setup/:token', async (req, res) => {
       req.session.userId = userId;
     }
 
+    // Issue #12: Audit log — portal account creation (login event)
+    try {
+      await db.insert(auditLogs).values({
+        workspaceId: invite.workspaceId,
+        userId,
+        userEmail: normalizedEmail,
+        action: 'portal_account_created' as any,
+        entityType: 'client_portal',
+        entityId: invite.clientId,
+        changes: { firstName, lastName, email: normalizedEmail },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || null,
+      } as any);
+    } catch (auditErr) {
+      log.warn('[PortalInvite] Audit log failed (non-fatal):', auditErr);
+    }
+
     res.json({ success: true, message: 'Portal account created successfully' });
   } catch (error) {
     log.error('Error accepting portal invite:', error);
@@ -155,7 +184,7 @@ router.post('/:id/invite', requireManagerOrPlatformStaff, async (req: Authentica
       expiresAt,
     });
 
-    const inviteUrl = `${req.protocol}://${req.get('host')}/client-portal/setup?token=${token}`;
+    const inviteUrl = `${req.protocol}://${req.get('host')}/client-portal/setup?token=${token}&workspace=${workspaceId}`;
 
     await NotificationDeliveryService.send({
       type: 'client_portal_invite',
