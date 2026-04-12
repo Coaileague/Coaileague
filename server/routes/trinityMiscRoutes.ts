@@ -1,13 +1,14 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
-import type { AuthenticatedRequest } from "../rbac";
+import { requirePlatformStaff, type AuthenticatedRequest } from "../rbac";
+import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
 const log = createLogger('TrinityMiscRoutes');
 
 
 const router = Router();
 
-router.get("/editable-registry", async (_req, res) => {
+router.get("/editable-registry", requireAuth, requirePlatformStaff, async (_req, res) => {
     try {
       const { getEditableModulesForTrinity, getProtectedModules } = await import("../../shared/config/trinityEditableRegistry");
       res.json({
@@ -22,7 +23,7 @@ router.get("/editable-registry", async (_req, res) => {
     }
   });
 
-router.get("/memory-health", async (_req: AuthenticatedRequest, res) => {
+router.get("/memory-health", requireAuth, requirePlatformStaff, async (_req: AuthenticatedRequest, res) => {
     try {
       const { trinityMemoryOptimizer } = await import('../services/ai-brain/trinityMemoryOptimizer');
       const health = await trinityMemoryOptimizer.getMemoryHealth();
@@ -33,7 +34,7 @@ router.get("/memory-health", async (_req: AuthenticatedRequest, res) => {
     }
   });
 
-router.get("/route-health", async (_req, res) => {
+router.get("/route-health", requireAuth, requirePlatformStaff, async (_req, res) => {
     try {
       const { getRouteHealthSummary, CRITICAL_ROUTES, CRITICAL_API_ENDPOINTS } = await import("../services/routeHealthService");
       const summary = getRouteHealthSummary();

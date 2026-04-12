@@ -12,7 +12,7 @@
  */
 
 import { db } from '../../db';
-import { employees, invoices, clients, payrollRuns } from '@shared/schema';
+import { employees, invoices, clients, payrollRuns, aiBrainActionLogs } from '@shared/schema';
 import { and, eq, gte, lte, sql, desc } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('preExecutionValidator');
@@ -34,6 +34,30 @@ function fail(reason: string, checkName: string): ValidationResult {
 
 function confirm(confirmationPrompt: string, checkName: string): ValidationResult {
   return { approved: true, requiresConfirmation: true, confirmationPrompt, checkName };
+}
+
+/** Persist every validation decision to aiBrainActionLogs for audit trail */
+async function logValidationDecision(
+  actionId: string,
+  workspaceId: string,
+  result: ValidationResult,
+): Promise<void> {
+  try {
+    await db.insert(aiBrainActionLogs).values({
+      workspaceId,
+      actionType: 'pre_execution_validation',
+      result: result.approved ? (result.requiresConfirmation ? 'confirmation_required' : 'approved') : 'denied',
+      actionData: {
+        actionId,
+        checkName: result.checkName ?? null,
+        approved: result.approved,
+        reason: result.reason ?? result.confirmationPrompt ?? null,
+      },
+      createdAt: new Date(),
+    });
+  } catch (err: any) {
+    log.warn('[PreExecutionValidator] Audit log write failed (non-blocking):', err?.message);
+  }
 }
 
 const INVOICE_SEND_ACTIONS = new Set([
@@ -61,6 +85,12 @@ export async function validateBeforeExecution(
   payload: any,
   workspaceId: string,
 ): Promise<ValidationResult> {
+  /** Log and return in one step */
+  async function logAndReturn(result: ValidationResult): Promise<ValidationResult> {
+    await logValidationDecision(actionId, workspaceId, result);
+    return result;
+  }
+
   try {
     // ─────────────────────────────────────────────────────────────────
     // CHECK 1 — Employment status (Section 1 #2 — was FAIL)
@@ -75,11 +105,11 @@ export async function validateBeforeExecution(
         .limit(1);
 
       if (!emp) {
-        return fail(`Employee ${employeeId} not found in this workspace`, 'employment_status');
+        return logAndReturn(fail(`Employee ${employeeId} not found in this workspace`, 'employment_status'));
       }
       if (emp.isActive === false) {
         const name = `${emp.firstName ?? ''} ${emp.lastName ?? ''}`.trim() || employeeId;
-        return fail(`Cannot assign ${name} — employee is not active`, 'employment_status');
+        return logAndReturn(fail(`Cannot assign ${name} — employee is not active`, 'employment_status'));
       }
     }
 
@@ -92,10 +122,10 @@ export async function validateBeforeExecution(
       if (field in (payload ?? {})) {
         const val = payload[field];
         if (val !== undefined && val !== null && Number(val) === 0) {
-          return fail(
+          return logAndReturn(fail(
             `${field} cannot be zero — this is likely a data entry error. Update the value before proceeding.`,
             'zero_amount',
-          );
+          ));
         }
       }
     }
@@ -137,10 +167,10 @@ export async function validateBeforeExecution(
               const avg = historical.reduce((s, r) => s + Number(r.total ?? 0), 0) / historical.length;
               if (avg > 0 && currentTotal > avg * 3) {
                 const multiplier = (currentTotal / avg).toFixed(1);
-                return confirm(
+                return logAndReturn(confirm(
                   `This invoice ($${currentTotal.toFixed(2)}) is ${multiplier}× higher than the 90-day average for this client ($${avg.toFixed(2)}). Confirm to send.`,
                   'financial_bounds',
-                );
+                ));
               }
             }
           }
@@ -167,10 +197,10 @@ export async function validateBeforeExecution(
           const current = Number(amount);
           if (avg > 0 && current > avg * 3) {
             const multiplier = (current / avg).toFixed(1);
-            return confirm(
+            return logAndReturn(confirm(
               `This payroll run ($${current.toFixed(2)}) is ${multiplier}× higher than recent average ($${avg.toFixed(2)}). Confirm to proceed.`,
               'financial_bounds',
-            );
+            ));
           }
         }
       }
@@ -193,10 +223,10 @@ export async function validateBeforeExecution(
           const hasEmail = !!(client.billingEmail || client.email);
           if (!hasEmail) {
             const name = client.companyName ?? clientId;
-            return fail(
+            return logAndReturn(fail(
               `${name} has no billing email on file. Add a contact email before sending invoices.`,
               'missing_client_email',
-            );
+            ));
           }
         }
       }
@@ -236,18 +266,21 @@ export async function validateBeforeExecution(
           const [minDays, maxDays] = cycleExpectedDays[cycle] ?? [0, 999];
           if (periodDays < minDays || periodDays > maxDays) {
             const name = client.companyName ?? clientId;
-            return confirm(
+            return logAndReturn(confirm(
               `${name} is configured for ${cycle} billing, but this invoice covers ${periodDays} days. This may be a cycle mismatch. Confirm to proceed anyway.`,
               'billing_cycle_conflict',
-            );
+            ));
           }
         }
       }
     }
 
+    await logValidationDecision(actionId, workspaceId, PASSED);
     return PASSED;
   } catch (err: any) {
     log.warn('[PreExecutionValidator] Check failed (non-blocking):', err?.message);
-    return PASSED;
+    const fallthrough = PASSED;
+    await logValidationDecision(actionId, workspaceId, { ...fallthrough, checkName: 'error_fallthrough' }).catch(() => {});
+    return fallthrough;
   }
 }

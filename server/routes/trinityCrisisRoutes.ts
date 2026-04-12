@@ -3,8 +3,12 @@ import { Router } from "express";
 import { crisisManager } from "../services/ai-brain/crisisManager";
 import { getUserPlatformRole } from "../rbac";
 import type { AuthenticatedRequest } from "../rbac";
+import { requireAuth } from '../auth';
 
 const router = Router();
+
+// All crisis routes require authentication
+router.use(requireAuth);
 
 router.get("/summary", async (req: AuthenticatedRequest, res) => {
   try {

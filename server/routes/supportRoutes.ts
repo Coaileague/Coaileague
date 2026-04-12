@@ -414,7 +414,16 @@ router.patch('/tickets/:id', async (req: AuthenticatedRequest, res) => {
     const existing = await storage.getSupportTicket(id, user.currentWorkspaceId);
     if (!existing) return res.status(404).json({ message: 'Ticket not found in this workspace' });
 
-    const ticket = await storage.updateSupportTicket(id, req.body, user.currentWorkspaceId);
+    // Optimistic locking on status changes to prevent concurrent overwrites
+    if (req.body.status && req.body.expectedStatus && existing.status !== req.body.expectedStatus) {
+      return res.status(409).json({
+        message: `Conflict: ticket status is now '${existing.status}', expected '${req.body.expectedStatus}'`,
+        currentStatus: existing.status,
+      });
+    }
+
+    const { expectedStatus: _ignored, ...updateData } = req.body;
+    const ticket = await storage.updateSupportTicket(id, updateData, user.currentWorkspaceId);
     res.json(ticket);
   } catch (error) {
     log.error("Error updating support ticket:", error);
@@ -886,6 +895,15 @@ router.patch('/tickets/:id/status', async (req: AuthenticatedRequest, res) => {
     const ticket = await storage.getSupportTicket(id, user.currentWorkspaceId);
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
+    }
+
+    // Optimistic locking: accept optional expectedStatus to prevent concurrent overwrites
+    const { expectedStatus } = req.body;
+    if (expectedStatus && ticket.status !== expectedStatus) {
+      return res.status(409).json({
+        message: `Conflict: ticket status is now '${ticket.status}', expected '${expectedStatus}'`,
+        currentStatus: ticket.status,
+      });
     }
 
     const updatedTicket = await storage.updateSupportTicket(id, {

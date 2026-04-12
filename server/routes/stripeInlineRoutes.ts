@@ -540,6 +540,7 @@ router.post('/webhook', async (req: any, res) => {
       'customer.subscription.deleted',
       'customer.subscription.updated',
       'checkout.session.completed',
+      'charge.succeeded',
       'charge.refunded',
       'charge.succeeded',
     ]);

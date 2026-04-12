@@ -2,7 +2,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db } from "../db";
 import { sql, eq, and, desc, gte, inArray } from "drizzle-orm";
-import { workspaces, employees, shifts, trinityEmailConversations, staffingClaimTokens, clients, invoices, emailUnsubscribes, emailEvents, resendWebhookEvents, notificationDeliveries } from "@shared/schema";
+import { workspaces, employees, shifts, trinityEmailConversations, staffingClaimTokens, clients, invoices, emailUnsubscribes, emailEvents, resendWebhookEvents, notificationDeliveries, supportTickets } from "@shared/schema";
 import { universalAudit } from "../services/universalAuditService";
 import { trinityStaffingOrchestrator } from "../services/trinityStaffing/orchestrator";
 import { inboundOpportunityAgent } from "../services/inboundOpportunityAgent";
@@ -845,6 +845,31 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
         ]);
       } catch (storeErr: any) {
         log.warn('[Resend Inbound] Failed to store platform email:', storeErr.message);
+      }
+
+      // [PHASE-9-1] Create a support ticket for support/info/billing emails
+      if (routeType === 'support_ticket' || routeType === 'billing_inquiry' || routeType === 'general_inquiry') {
+        try {
+          const PLATFORM_WORKSPACE_ID = process.env.PLATFORM_WORKSPACE_ID ?? 'PLATFORM';
+          const ticketNumber = `TKT-EM-${Date.now().toString(36).toUpperCase()}`;
+          const emailPriority = routeType === 'billing_inquiry' ? 'high' : 'normal';
+          await db.insert(supportTickets).values({
+            workspaceId: PLATFORM_WORKSPACE_ID,
+            ticketNumber,
+            type: routeType === 'billing_inquiry' ? 'billing' : 'support',
+            priority: emailPriority,
+            requestedBy: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
+            subject: subject,
+            description: emailBody.slice(0, 10000),
+            status: 'open',
+            submissionMethod: 'email',
+            emailCategory: routeType,
+            inboundEmailLogId: (inboundEmail as any).id || null,
+          });
+          log.info(`[Email→Ticket] Created ticket ${ticketNumber} from ${fromEmail} to ${platformAddr}`);
+        } catch (ticketErr: any) {
+          log.error('[Email→Ticket] Failed to create support ticket (non-fatal):', ticketErr?.message);
+        }
       }
 
       // Async processing per platform address type — non-blocking

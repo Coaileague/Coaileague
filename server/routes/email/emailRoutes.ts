@@ -140,10 +140,10 @@ emailRouter.get('/:emailId', async (req: any, res) => {
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Email not found' });
 
-    // Mark as read
+    // Mark as read — scoped by workspace_id to prevent cross-tenant mutation
     await pool.query(
-      `UPDATE platform_emails SET is_read = true WHERE id = $1`,
-      [emailId]
+      `UPDATE platform_emails SET is_read = true WHERE id = $1 AND workspace_id = $2`,
+      [emailId, workspaceId]
     );
 
     return res.json(result.rows[0]);
