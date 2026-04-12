@@ -25,6 +25,7 @@ import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { isTrinityAccessAllowed } from "@/config/trinity";
 import { useFABPosition } from "@/hooks/useFABPosition";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
 // ── Routes where the FAB is suppressed entirely ───────────────────────────────
 const HIDDEN_ROUTES = ["/", "/dashboard", "/landing"];
@@ -335,7 +336,7 @@ export function TrinityAmbientFAB() {
           {isPanelOpen ? (
             <X className="w-5 h-5 text-white" />
           ) : (
-            <Sparkles className="w-5 h-5 text-white" />
+            <TrinityLogo size={28} />
           )}
         </div>
       </button>

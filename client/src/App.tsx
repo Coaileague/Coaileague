@@ -1753,8 +1753,6 @@ function AppContent() {
             {/* Universal FAB - Trinity + Messages + Quick Actions (hidden during active chat) */}
             {/* This is the ONE FAB for mobile per SPEC */}
             {!isChatRoute && <UniversalFAB />}
-            {/* TrinityAmbientFAB is for Desktop only. It has its own internal isMobile check returning null. */}
-            <TrinityAmbientFAB />
             {/* PWA Install Prompt - Shows once for mobile users */}
             <PWAInstallPrompt />
           </div>
@@ -2292,6 +2290,8 @@ function AppContent() {
         open={isAuthenticated && !consentAcknowledged && !isPublicRoute}
         onAccepted={() => setConsentAcknowledged(true)}
       />
+      {/* TrinityAmbientFAB — desktop only (returns null on mobile internally) */}
+      <TrinityAmbientFAB />
     </ProtectedRoute>
   );
 }
@@ -2390,11 +2390,6 @@ export default function App() {
                         </ErrorBoundary>
                         {/* DISABLED: Trinity floating mascot body - removed from screen */}
                         {/* <MascotRenderer /> */}
-                        {/* Universal FAB - unified Trinity + Chat trigger on every page */}
-                        {/* ONLY RENDER ON MOBILE - Desktop uses TrinityAmbientFAB (imported in AppContent) */}
-                        <div className="md:hidden">
-                          <UniversalFAB />
-                        </div>
                         </ChatDockProvider>
                         </TrinityModalProvider>
                         </TransitionLoaderProvider>
