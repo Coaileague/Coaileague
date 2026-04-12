@@ -10,6 +10,7 @@ import payStubRouter from "../payStubRoutes";
 import plaidRouter from "../plaidRoutes";
 import plaidWebhookHandler from "../plaidWebhookRoute";
 import { blockFinancialData } from "../../middleware/auditorGuard";
+import payrollTimesheetRouter from "../payrollTimesheetRoutes";
 
 export function mountPayrollRoutes(app: Express): void {
   // Property 3: Block auditor sessions from payroll and expense data automatically.
@@ -19,6 +20,7 @@ export function mountPayrollRoutes(app: Express): void {
   app.use("/api/plaid/webhook", plaidWebhookHandler);
 
   app.use("/api/payroll", requireAuth, ensureWorkspaceAccess, payrollRouter);
+  app.use("/api/timesheets", requireAuth, ensureWorkspaceAccess, payrollTimesheetRouter);
   app.use("/api/expenses", requireAuth, ensureWorkspaceAccess, expenseRouter);
   app.use("/api", requireAuth, ensureWorkspaceAccess, payStubRouter);
   app.use("/api/plaid", requireAuth, ensureWorkspaceAccess, plaidRouter);
