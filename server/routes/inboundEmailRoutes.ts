@@ -66,6 +66,10 @@ registerLegacyBootstrap('email-tables', async (p) => {
       ON platform_email_addresses(address);
     CREATE INDEX IF NOT EXISTS idx_email_addresses_workspace
       ON platform_email_addresses(workspace_id);
+    -- Composite index for "all active addresses for a user in a workspace" query
+    -- (powers GET /api/email/addresses/mine)
+    CREATE INDEX IF NOT EXISTS idx_email_addresses_user_workspace
+      ON platform_email_addresses(user_id, workspace_id) WHERE is_active = true;
     -- Phase 6: add forwarding/signature columns to existing tables idempotently
     ALTER TABLE platform_email_addresses
       ADD COLUMN IF NOT EXISTS forwarding_address VARCHAR(320),

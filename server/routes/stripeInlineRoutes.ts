@@ -541,6 +541,7 @@ router.post('/webhook', async (req: any, res) => {
       'customer.subscription.updated',
       'checkout.session.completed',
       'charge.refunded',
+      'charge.succeeded',
     ]);
 
     // GAP-10 FIX: Hoist result so we can gate the AI Brain bridge on duplicate detection.
