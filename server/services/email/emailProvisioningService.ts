@@ -17,7 +17,7 @@ export const PLATFORM_PROTECTED_ADDRESSES: ReadonlyArray<{
   isOutboundOnly: boolean;
   trinityType?: string;
 }> = [
-  { address: 'root@coaileague.com',     displayName: 'CoAIleague Root',     isOutboundOnly: true },
+  { address: 'root@coaileague.com',     displayName: 'CoAIleague Root',     isOutboundOnly: false, trinityType: 'root_forward' },
   { address: 'noreply@coaileague.com',  displayName: 'CoAIleague No-Reply', isOutboundOnly: true },
   { address: 'trinity@coaileague.com',  displayName: 'Trinity AI',          isOutboundOnly: true  }, // Reserved for outbound marketing + reply classification via trinityMarketingReplyProcessor
   { address: 'support@coaileague.com',  displayName: 'CoAIleague Support',  isOutboundOnly: false, trinityType: 'support_ticket' },

@@ -743,7 +743,12 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
       }
     }
     
-    const inboundEmail: ResendInboundEmail = req.body;
+    // Unwrap Resend event envelope if present — Resend sends email.received
+    // events as { type: "email.received", data: { from, to, ... } }.
+    const rawPayload = req.body;
+    const inboundEmail: ResendInboundEmail = rawPayload?.data && rawPayload?.type === 'email.received'
+      ? rawPayload.data
+      : rawPayload;
 
     // ─── STEP 1: Platform protected address routing ───────────────────────────
     // Check FIRST if this is addressed to a protected CoAIleague platform address.
@@ -755,7 +760,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
       'info@coaileague.com':     'support_ticket',
       'billing@coaileague.com':  'billing_inquiry',
       'hello@coaileague.com':    'general_inquiry',
-      'root@coaileague.com':     'internal_only',
+      'root@coaileague.com':     'root_forward',
       'noreply@coaileague.com':  'discard',
     };
 
@@ -765,10 +770,49 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
     if (platformAddr) {
       const routeType = PLATFORM_ROOT_ADDRESSES[platformAddr];
 
-      // Silently discard noreply@ and internal-only addresses
-      if (routeType === 'discard' || routeType === 'internal_only') {
+      // Silently discard noreply@ addresses
+      if (routeType === 'discard') {
         log.info(`[Resend Inbound] Discarding email to ${platformAddr} (${routeType})`);
         return res.status(200).json({ received: true, processed: false, reason: routeType });
+      }
+
+      // root@ — forward to platform owner's personal email
+      if (routeType === 'root_forward') {
+        const rootForwardTo = process.env.ROOT_EMAIL_FORWARD_TO || 'saraybebo@gmail.com';
+        log.info(`[Resend Inbound] Forwarding root@ email to ${rootForwardTo}`);
+        res.status(200).json({ received: true, processed: true, reason: 'root_forward' });
+        const { sendCanSpamCompliantEmail } = await import('../services/emailCore');
+        const rootFromRaw = inboundEmail.from || '';
+        const rootFromEmail = rootFromRaw.match(/<([^>]+)>/)?.[1]?.trim() || rootFromRaw.trim();
+        const rootFromName = rootFromRaw.split('<')[0].trim() || undefined;
+        const rootSubject = inboundEmail.subject || '(no subject)';
+        const rootBody = inboundEmail.html || inboundEmail.text || '';
+        const rootBodyText = inboundEmail.text || '';
+        scheduleNonBlocking('resend-inbound.root-forward', async () => {
+          try {
+            const fwdHtml = `
+<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
+  <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
+    -------- Forwarded from root@coaileague.com --------<br>
+    <strong>From:</strong> ${rootFromName ? `${rootFromName} &lt;${rootFromEmail}&gt;` : rootFromEmail}<br>
+    <strong>Date:</strong> ${new Date().toUTCString()}<br>
+    <strong>Subject:</strong> ${rootSubject}
+  </p>
+  ${rootBody || `<pre style="white-space:pre-wrap;font-size:13px;">${rootBodyText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`}
+</div>`;
+            await sendCanSpamCompliantEmail({
+              to: rootForwardTo,
+              subject: `Fwd: ${rootSubject}`,
+              html: fwdHtml,
+              emailType: 'inbound_forward',
+              skipUnsubscribeCheck: true,
+            });
+            log.info(`[Resend Inbound] Forwarded root@ email to ${rootForwardTo}`);
+          } catch (err: any) {
+            log.warn(`[Resend Inbound] root@ forward failed: ${err?.message}`);
+          }
+        });
+        return;
       }
 
       const fromRaw = inboundEmail.from || '';
