@@ -365,6 +365,10 @@ router.post('/request/:id/dispute', requireAuth, async (req: Request, res: Respo
 
     if (!request) return res.status(404).json({ success: false, error: 'Request not found' });
 
+    if (request.accessExpiresAt && new Date() > new Date(request.accessExpiresAt)) {
+      return res.status(410).json({ success: false, error: 'Verification request has expired' });
+    }
+
     await db.update(auditorVerificationRequests).set({
       ownerDisputedAt: new Date(),
       ownerDisputeReason: reason || 'No reason provided',
@@ -1152,12 +1156,21 @@ router.post('/complete-report', async (req: Request, res: Response) => {
       workspaceId: auditorVerificationRequests.workspaceId,
       auditorEmail: auditorVerificationRequests.auditorEmail,
       status: auditorVerificationRequests.status,
+      accessExpiresAt: auditorVerificationRequests.accessExpiresAt,
     }).from(auditorVerificationRequests)
       .where(eq(auditorVerificationRequests.id, requestId))
       .limit(1);
 
     if (!request) {
       return res.status(404).json({ success: false, error: 'Verification request not found' });
+    }
+
+    if (request.status !== 'access_granted') {
+      return res.status(403).json({ success: false, error: 'Access not granted for this request' });
+    }
+
+    if (request.accessExpiresAt && new Date() > new Date(request.accessExpiresAt)) {
+      return res.status(410).json({ success: false, error: 'Audit access has expired' });
     }
 
     await db.update(auditorVerificationRequests).set({

@@ -265,28 +265,32 @@ class ComplianceEnforcementService {
     const approved = (window.approvedDocTypes as string[]) || [];
     const missingDocTypes = required.filter(d => !approved.includes(d));
 
-    // Create freeze record
-    const [freeze] = await db.insert(accountFreezes).values({
-      entityType,
-      entityId,
-      workspaceId: window.workspaceId,
-      complianceWindowId: windowId,
-      phase: 'auto_14day',
-      status: 'active',
-      reason: `14-day compliance window expired. Missing documents: ${missingDocTypes.join(', ')}`,
-      missingDocTypes,
-      frozenAt: new Date(),
-      frozenBySystem: true,
-    } as any).returning();
-
-    // Update window
-    await db.update(complianceWindows)
-      .set({
-        isFrozen: true,
+    // Atomically create the freeze record and mark the window as frozen so the two
+    // rows are never out of sync if the second write would otherwise fail.
+    const freeze = await db.transaction(async (tx) => {
+      const [newFreeze] = await tx.insert(accountFreezes).values({
+        entityType,
+        entityId,
+        workspaceId: window.workspaceId,
+        complianceWindowId: windowId,
+        phase: 'auto_14day',
+        status: 'active',
+        reason: `14-day compliance window expired. Missing documents: ${missingDocTypes.join(', ')}`,
+        missingDocTypes,
         frozenAt: new Date(),
-        updatedAt: new Date(),
-      } as any)
-      .where(eq(complianceWindows.id, windowId));
+        frozenBySystem: true,
+      } as any).returning();
+
+      await tx.update(complianceWindows)
+        .set({
+          isFrozen: true,
+          frozenAt: new Date(),
+          updatedAt: new Date(),
+        } as any)
+        .where(eq(complianceWindows.id, windowId));
+
+      return newFreeze;
+    });
 
     log.info(`[ComplianceEnforcement] AUTO-FROZEN ${entityType} ${entityId} — missing: ${missingDocTypes.join(', ')}`);
     return { success: true, freezeId: freeze.id, message: `Account frozen. Missing: ${missingDocTypes.join(', ')}` };
@@ -330,49 +334,54 @@ class ComplianceEnforcementService {
     const now = new Date();
     const extensionDeadline = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); // last ms of current month
 
-    // Get active freeze record
-    const [activeFreeze] = await db.select()
-      .from(accountFreezes)
-      .where(and(
-        eq(accountFreezes.entityType, entityType as any),
-        eq(accountFreezes.entityId, entityId),
-        eq(accountFreezes.status, 'active'),
-      ))
-      .limit(1);
+    // Atomically: create appeal record, unfreeze window, and update freeze status so
+    // all three rows are always consistent even if the process crashes mid-write.
+    const appeal = await db.transaction(async (tx) => {
+      // Get active freeze record inside the transaction for consistency
+      const [activeFreeze] = await tx.select()
+        .from(accountFreezes)
+        .where(and(
+          eq(accountFreezes.entityType, entityType as any),
+          eq(accountFreezes.entityId, entityId),
+          eq(accountFreezes.status, 'active'),
+        ))
+        .limit(1);
 
-    // Create appeal record
-    const [appeal] = await db.insert(freezeAppeals).values({
-      entityType,
-      entityId,
-      workspaceId: workspaceId ?? window.workspaceId,
-      freezeId: activeFreeze?.id ?? null,
-      complianceWindowId: window.id,
-      submittedBy,
-      appealReason,
-      status: 'approved', // Auto-approved on submission (one-time grace)
-      extensionDeadline,
-      decidedAt: new Date(),
-      decisionNotes: 'Automatically approved — one-time end-of-month extension granted',
-    } as any).returning();
-
-    // Update compliance window: mark appeal used, grant extension, unfreeze
-    await db.update(complianceWindows)
-      .set({
-        appealUsed: true,
-        appealSubmittedAt: now,
-        appealGrantedAt: now,
+      const [newAppeal] = await tx.insert(freezeAppeals).values({
+        entityType,
+        entityId,
+        workspaceId: workspaceId ?? window.workspaceId,
+        freezeId: activeFreeze?.id ?? null,
+        complianceWindowId: window.id,
+        submittedBy,
+        appealReason,
+        status: 'approved', // Auto-approved on submission (one-time grace)
         extensionDeadline,
-        isFrozen: false, // Unfreezes account until extension deadline
-        updatedAt: new Date(),
-      } as any)
-      .where(eq(complianceWindows.id, window.id));
+        decidedAt: new Date(),
+        decisionNotes: 'Automatically approved — one-time end-of-month extension granted',
+      } as any).returning();
 
-    // Update freeze to pending_appeal status
-    if (activeFreeze) {
-      await db.update(accountFreezes)
-        .set({ status: 'pending_appeal' } as any)
-        .where(eq(accountFreezes.id, activeFreeze.id));
-    }
+      // Update compliance window: mark appeal used, grant extension, unfreeze
+      await tx.update(complianceWindows)
+        .set({
+          appealUsed: true,
+          appealSubmittedAt: now,
+          appealGrantedAt: now,
+          extensionDeadline,
+          isFrozen: false, // Unfreezes account until extension deadline
+          updatedAt: new Date(),
+        } as any)
+        .where(eq(complianceWindows.id, window.id));
+
+      // Update freeze to pending_appeal status
+      if (activeFreeze) {
+        await tx.update(accountFreezes)
+          .set({ status: 'pending_appeal' } as any)
+          .where(eq(accountFreezes.id, activeFreeze.id));
+      }
+
+      return newAppeal;
+    });
 
     log.info(`[ComplianceEnforcement] Appeal GRANTED for ${entityType} ${entityId} — extension to ${extensionDeadline.toISOString()}`);
 
@@ -403,33 +412,39 @@ class ComplianceEnforcementService {
       };
     }
 
-    // Update active freeze record
-    const [updated] = await db.update(accountFreezes)
-      .set({
-        status: 'lifted',
-        liftedAt: new Date(),
-        liftedBy,
-        liftReason,
-        relatedTicketId,
-      } as any)
-      .where(and(
-        eq(accountFreezes.entityType, entityType as any),
-        eq(accountFreezes.entityId, entityId),
-        eq(accountFreezes.status, 'active'),
-      ))
-      .returning();
+    // Atomically update the freeze record and unfreeze the compliance window so
+    // neither row can exist in a partially-lifted state.
+    const result = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(accountFreezes)
+        .set({
+          status: 'lifted',
+          liftedAt: new Date(),
+          liftedBy,
+          liftReason,
+          relatedTicketId,
+        } as any)
+        .where(and(
+          eq(accountFreezes.entityType, entityType as any),
+          eq(accountFreezes.entityId, entityId),
+          eq(accountFreezes.status, 'active'),
+        ))
+        .returning();
 
-    if (!updated) {
+      if (!updated) return null;
+
+      await tx.update(complianceWindows)
+        .set({ isFrozen: false, updatedAt: new Date() } as any)
+        .where(and(
+          eq(complianceWindows.entityType, entityType as any),
+          eq(complianceWindows.entityId, entityId),
+        ));
+
+      return updated;
+    });
+
+    if (!result) {
       return { success: false, message: 'No active freeze found for this entity' };
     }
-
-    // Unfreeze the compliance window
-    await db.update(complianceWindows)
-      .set({ isFrozen: false, updatedAt: new Date() } as any)
-      .where(and(
-        eq(complianceWindows.entityType, entityType as any),
-        eq(complianceWindows.entityId, entityId),
-      ));
 
     log.info(`[ComplianceEnforcement] FREEZE LIFTED for ${entityType} ${entityId} by support staff ${liftedBy} (ticket: ${relatedTicketId})`);
     return { success: true, message: 'Compliance freeze lifted successfully' };
