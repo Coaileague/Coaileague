@@ -18,6 +18,7 @@ import { pool } from '../db';
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 import { isProduction } from '../lib/isProduction';
 import { sendCanSpamCompliantEmail } from '../services/emailCore';
+import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 const log = createLogger('InboundEmailRoutes');
 
 import {
@@ -26,6 +27,123 @@ import {
   type ParsedInboundEmail,
 } from '../services/trinity/trinityInboundEmailProcessor';
 import { trinityEmailProcessor, type InboundEmailData } from '../services/trinityEmailProcessor';
+
+// ─── Email Tables Bootstrap ──────────────────────────────────────────────────
+// These tables were specified but never wired into the bootstrap pipeline.
+// They must exist before any inbound email processing can work.
+registerLegacyBootstrap('email-tables', async (p) => {
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS platform_email_addresses (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id VARCHAR,
+      user_id VARCHAR,
+      client_id VARCHAR,
+      address VARCHAR(320) NOT NULL UNIQUE,
+      local_part VARCHAR(255) NOT NULL,
+      subdomain VARCHAR(100),
+      display_name VARCHAR(255),
+      address_type VARCHAR(50) NOT NULL,
+      is_active BOOLEAN DEFAULT false,
+      is_protected BOOLEAN DEFAULT false,
+      is_outbound_only BOOLEAN DEFAULT false,
+      activated_at TIMESTAMPTZ,
+      activated_by VARCHAR,
+      deactivated_at TIMESTAMPTZ,
+      billing_seat_id VARCHAR(255),
+      fair_use_monthly_limit INTEGER DEFAULT 500,
+      emails_sent_this_period INTEGER DEFAULT 0,
+      emails_received_this_period INTEGER DEFAULT 0,
+      auto_trinity_process BOOLEAN DEFAULT false,
+      trinity_calltype VARCHAR(100),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_addresses_address
+      ON platform_email_addresses(address);
+    CREATE INDEX IF NOT EXISTS idx_email_addresses_workspace
+      ON platform_email_addresses(workspace_id);
+
+    CREATE TABLE IF NOT EXISTS email_routing (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      address VARCHAR(320) NOT NULL UNIQUE,
+      email_address_id UUID,
+      route_type VARCHAR(50) NOT NULL,
+      target_workspace_id VARCHAR,
+      target_user_id VARCHAR,
+      target_inbox_type VARCHAR(100),
+      auto_process BOOLEAN DEFAULT false,
+      process_as VARCHAR(100),
+      forward_to VARCHAR(320),
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_routing_address
+      ON email_routing(address);
+
+    CREATE TABLE IF NOT EXISTS platform_emails (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id VARCHAR,
+      resend_email_id VARCHAR(255) UNIQUE,
+      message_id VARCHAR(500),
+      in_reply_to VARCHAR(500),
+      references_header TEXT,
+      direction VARCHAR(20) NOT NULL,
+      from_address VARCHAR(320) NOT NULL,
+      from_name VARCHAR(255),
+      to_addresses TEXT[] NOT NULL,
+      cc_addresses TEXT[] DEFAULT '{}',
+      bcc_addresses TEXT[] DEFAULT '{}',
+      reply_to VARCHAR(320),
+      subject TEXT,
+      body_html TEXT,
+      body_text TEXT,
+      snippet TEXT,
+      owner_user_id VARCHAR,
+      owner_client_id VARCHAR,
+      folder VARCHAR(50) DEFAULT 'inbox',
+      is_read BOOLEAN DEFAULT false,
+      is_starred BOOLEAN DEFAULT false,
+      is_archived BOOLEAN DEFAULT false,
+      is_deleted BOOLEAN DEFAULT false,
+      trinity_processed BOOLEAN DEFAULT false,
+      trinity_processed_at TIMESTAMPTZ,
+      trinity_category VARCHAR(100),
+      trinity_summary TEXT,
+      trinity_action_taken VARCHAR(100),
+      trinity_action_record_id UUID,
+      trinity_draft_reply TEXT,
+      trinity_priority VARCHAR(20) DEFAULT 'normal',
+      received_at TIMESTAMPTZ,
+      sent_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_platform_emails_workspace
+      ON platform_emails(workspace_id, folder, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_platform_emails_owner
+      ON platform_emails(owner_user_id, folder, is_read);
+    CREATE INDEX IF NOT EXISTS idx_platform_emails_thread
+      ON platform_emails(message_id, in_reply_to);
+
+    CREATE TABLE IF NOT EXISTS email_attachments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email_id UUID NOT NULL REFERENCES platform_emails(id) ON DELETE CASCADE,
+      filename VARCHAR(500) NOT NULL,
+      content_type VARCHAR(200),
+      size_bytes INTEGER,
+      storage_url TEXT,
+      sha256_hash VARCHAR(64),
+      is_inline BOOLEAN DEFAULT false,
+      content_id VARCHAR(255),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_attachments_email
+      ON email_attachments(email_id);
+  `);
+});
+
+// ─── Platform Root Address Forwarding ────────────────────────────────────────
+// root@coaileague.com forwards to the platform owner's personal email.
+const ROOT_EMAIL_FORWARD_TO = process.env.ROOT_EMAIL_FORWARD_TO || 'saraybebo@gmail.com';
 
 export const inboundEmailRouter = Router();
 
@@ -187,15 +305,20 @@ async function handleInboundWebhook(
     return;
   }
 
-  let payload: ResendInboundPayload;
+  let rawParsed: any;
   try {
-    payload = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
+    rawParsed = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
   } catch (parseErr: any) {
     // Check 10: Malformed payload — log and return 200 (never 5xx)
     log.error(`[InboundEmail] Malformed payload for ${targetAddress}:`, parseErr.message);
     res.status(200).json({ received: true, warning: 'Malformed payload — flagged for admin review' });
     return;
   }
+
+  // Unwrap Resend event envelope if present
+  const payload: ResendInboundPayload = rawParsed.data && rawParsed.type === 'email.received'
+    ? rawParsed.data
+    : rawParsed;
 
   // Parse into our normalized format
   const parsed = parseResendPayload(payload, targetAddress);
@@ -233,17 +356,24 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
     return;
   }
 
-  let payload: ResendInboundPayload;
+  let rawPayload: any;
   try {
-    payload = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
+    rawPayload = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
   } catch {
     log.warn('[InboundEmail/root] Malformed payload — accepted silently');
     res.status(200).json({ received: true });
     return;
   }
 
-  // Step 2: Parse fields
-  const resendEmailId = (payload as any).id as string | undefined;
+  // Step 2: Unwrap Resend event envelope — Resend sends email.received events
+  // as { type: "email.received", created_at: "...", data: { from, to, ... } }.
+  // The actual email fields are inside `data`, not at the top level.
+  const payload: ResendInboundPayload = rawPayload.data && rawPayload.type === 'email.received'
+    ? rawPayload.data
+    : rawPayload;
+
+  // Step 3: Parse fields
+  const resendEmailId = (payload as any).email_id || (rawPayload as any).id || undefined;
   const toRaw = Array.isArray(payload.to) ? payload.to[0] : (payload.to || '');
   const toMatch = toRaw.match(/<?([^>]+)>?$/);
   const toEmail = (toMatch?.[1]?.trim() || toRaw).toLowerCase();
@@ -253,7 +383,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
   const fromEmail = fromMatch?.[2]?.trim() || fromRaw.trim();
   const fromName  = fromMatch?.[1]?.trim() || undefined;
 
-  const messageId   = payload.headers?.['message-id'] || payload.headers?.['Message-ID'] || undefined;
+  const messageId   = (payload as any).message_id || payload.headers?.['message-id'] || payload.headers?.['Message-ID'] || undefined;
   const inReplyTo   = payload.headers?.['in-reply-to'] || undefined;
   const references  = payload.headers?.['references'] || undefined;
   const subject     = payload.subject || '(no subject)';
@@ -263,7 +393,50 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
   const attachments = payload.attachments || [];
 
   try {
-    // Step 3: Deduplication — if resend_email_id seen already, ack and exit
+    // Step 3a: Platform root address forwarding — root@coaileague.com
+    // Forward to configured personal email before DB lookup (tables may not route it)
+    if (toEmail === 'root@coaileague.com' || toEmail === 'noreply@coaileague.com') {
+      if (toEmail === 'noreply@coaileague.com') {
+        log.info(`[InboundEmail/root] Discarding email to noreply@`);
+        res.status(200).json({ received: true, routed: false, reason: 'noreply_discard' });
+        return;
+      }
+      // root@ — accept and forward
+      log.info(`[InboundEmail/root] root@ email from ${fromEmail} — forwarding to ${ROOT_EMAIL_FORWARD_TO}`);
+      res.status(200).json({ received: true, routed: true, routeType: 'root_forward' });
+
+      scheduleNonBlocking('inbound-email.root-forward', async () => {
+        try {
+          const fwdSubject = `Fwd: ${subject}`;
+          const originalDate = new Date().toUTCString();
+          const fwdHtml = `
+<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
+  <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
+    -------- Forwarded from root@coaileague.com --------<br>
+    <strong>From:</strong> ${fromName ? `${fromName} &lt;${fromEmail}&gt;` : fromEmail}<br>
+    <strong>To:</strong> ${toEmail}<br>
+    <strong>Date:</strong> ${originalDate}<br>
+    <strong>Subject:</strong> ${subject}
+  </p>
+  ${bodyHtml || `<pre style="white-space:pre-wrap;font-size:13px;">${(bodyText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`}
+</div>`;
+
+          await sendCanSpamCompliantEmail({
+            to: ROOT_EMAIL_FORWARD_TO,
+            subject: fwdSubject,
+            html: fwdHtml,
+            emailType: 'inbound_forward',
+            skipUnsubscribeCheck: true,
+          });
+          log.info(`[InboundEmail/root] Forwarded root@ email to ${ROOT_EMAIL_FORWARD_TO}`);
+        } catch (fwdErr: any) {
+          log.warn(`[InboundEmail/root] root@ forward failed: ${fwdErr?.message}`);
+        }
+      });
+      return;
+    }
+
+    // Step 4: Deduplication — if resend_email_id seen already, ack and exit
     if (resendEmailId) {
       const dup = await pool.query(
         `SELECT id FROM platform_emails WHERE resend_email_id = $1 LIMIT 1`,
@@ -479,13 +652,18 @@ inboundEmailRouter.post('/per-org', async (req: Request, res: Response) => {
     return;
   }
 
-  let payload: ResendInboundPayload;
+  let rawPerOrg: any;
   try {
-    payload = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
+    rawPerOrg = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
   } catch {
     res.status(200).json({ received: true, warning: 'Malformed payload' });
     return;
   }
+
+  // Unwrap Resend event envelope if present
+  const payload: ResendInboundPayload = rawPerOrg.data && rawPerOrg.type === 'email.received'
+    ? rawPerOrg.data
+    : rawPerOrg;
 
   // Resolve `to` address — Resend sends it as a string or string[]
   const toRaw = Array.isArray(payload.to) ? payload.to[0] : (payload.to || '');

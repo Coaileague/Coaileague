@@ -865,6 +865,42 @@ export class StripeWebhookService {
         log.warn('WebSocket broadcast failed on payment_intent.succeeded', { error: wsErr.message });
       }
 
+      // ISSUE-2 FIX: Charge middleware processing fee for online Stripe payments.
+      // The mark-paid path charges this fee for manual/offline payments; this is the
+      // corresponding charge for the create-payment → PaymentIntent → webhook path.
+      // chargeInvoiceMiddlewareFee uses idempotencyKey `invoice_${workspaceId}_${invoiceId}`,
+      // so even if this webhook fires more than once for the same intent, Stripe deduplicates.
+      try {
+        const { chargeInvoiceMiddlewareFee } = await import('./middlewareTransactionFees');
+        const invoiceAmountCents = Math.round(parseFloat(paidInvoice.total || '0') * 100);
+        if (invoiceAmountCents > 0) {
+          const feeResult = await chargeInvoiceMiddlewareFee({
+            workspaceId,
+            invoiceId: paidInvoice.id,
+            invoiceNumber: paidInvoice.invoiceNumber || paidInvoice.id,
+            invoiceAmountCents,
+            paymentMethod: 'card',
+          });
+          log.info(`[Webhook] Middleware fee: ${feeResult.description} (success: ${feeResult.success})`);
+          if (feeResult.success && feeResult.amountCents > 0) {
+            try {
+              const { financialProcessingFeeService } = await import('./financialProcessingFeeService');
+              await financialProcessingFeeService.recordInvoiceFee({ workspaceId, referenceId: paidInvoice.id });
+            } catch (err: any) {
+              log.warn('[Webhook] Fee ledger record failed (non-fatal):', err?.message);
+            }
+            try {
+              const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
+              await recordMiddlewareFeeCharge(workspaceId, 'invoice_payment', feeResult.amountCents, paidInvoice.id);
+            } catch (err: any) {
+              log.warn('[Webhook] Platform revenue record failed (non-fatal):', err?.message);
+            }
+          }
+        }
+      } catch (feeErr: any) {
+        log.warn('Middleware fee charge failed on payment_intent.succeeded (non-fatal):', feeErr?.message);
+      }
+
       // Send payment receipt to client
       try {
         const { clients: clientsTable } = await import('@shared/schema');

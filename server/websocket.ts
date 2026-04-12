@@ -310,6 +310,8 @@ interface ChatMessagePayload {
   isPrivateMessage?: boolean;
   recipientId?: string;
   threadId?: string;
+  // Client-generated ID for delivery confirmation (deduplication)
+  clientId?: string;
 }
 
 interface JoinConversationPayload {
@@ -5754,6 +5756,17 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             }
 
             const savedMessage = await storage.createChatMessage(messageData);
+
+            // ACK: Confirm delivery to sender with server-assigned messageId and echoed clientId
+            if (payload.clientId) {
+              ws.send(JSON.stringify({
+                type: 'message_ack',
+                clientId: payload.clientId,
+                messageId: savedMessage.id,
+                status: 'delivered',
+                timestamp: savedMessage.createdAt,
+              }));
+            }
 
             // 🤖 SHIFT ROOM BOT ORCHESTRATOR: Route to autonomous bot handlers
             // Fires after message is saved — bots respond asynchronously (non-blocking)

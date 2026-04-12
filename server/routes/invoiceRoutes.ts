@@ -2101,7 +2101,16 @@ import { createHash } from "crypto";
       const { id } = req.params;
       const { payerEmail, payerName, returnUrl } = req.body;
 
-      const invoice = await storage.getInvoiceById(id);
+      // ISSUE-5 FIX: Resolve authenticated user's workspace and enforce tenant isolation.
+      // Without this check, any authenticated user could create a PaymentIntent for an
+      // invoice belonging to a different workspace by guessing its UUID.
+      const userId = (req as any).user?.id || (req as any).user?.claims?.sub;
+      const userWorkspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
+      if (!userWorkspace) {
+        return res.status(403).json({ message: 'Workspace not found' });
+      }
+
+      const invoice = await storage.getInvoiceById(id, userWorkspace.id);
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
       }
@@ -2113,6 +2122,41 @@ import { createHash } from "crypto";
 
       if (invoice.status === 'paid') {
         return res.status(422).json({ message: 'Invoice already paid' });
+      }
+
+      // ISSUE-7 FIX: Return the existing pending PaymentIntent if one already exists for this
+      // invoice in this workspace, so that double-clicks or network retries are idempotent.
+      // If the existing intent is no longer actionable (cancelled/expired) we fall through to
+      // create a fresh one — Stripe will deduplicate same-key requests within its own 24h window.
+      const [existingPayment] = await db
+        .select()
+        .from(invoicePayments)
+        .where(and(
+          eq(invoicePayments.invoiceId, id),
+          eq(invoicePayments.workspaceId, invoice.workspaceId),
+        ))
+        .orderBy(desc(invoicePayments.createdAt))
+        .limit(1);
+
+      if (existingPayment?.status === 'succeeded') {
+        return res.status(409).json({ message: 'Invoice already paid via Stripe' });
+      }
+
+      if (existingPayment?.stripePaymentIntentId && existingPayment.status === 'pending') {
+        try {
+          const existingPI = await stripe.paymentIntents.retrieve(existingPayment.stripePaymentIntentId);
+          const reusableStatuses = ['requires_payment_method', 'requires_confirmation', 'requires_action'];
+          if (reusableStatuses.includes(existingPI.status)) {
+            return res.json({
+              clientSecret: existingPI.client_secret,
+              paymentIntentId: existingPI.id,
+              amount: invoice.total,
+              currency: 'usd',
+            });
+          }
+        } catch (piErr: unknown) {
+          log.warn('[CreatePayment] Failed to retrieve existing PaymentIntent (will create new one):', (piErr instanceof Error ? piErr.message : String(piErr)));
+        }
       }
 
       const client = await storage.getClient(invoice.clientId, invoice.workspaceId);
