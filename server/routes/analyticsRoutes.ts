@@ -52,6 +52,24 @@ router.get("/stats", async (req: any, res) => {
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const isPlatformStaff = req.user?.platformRole === "support" || req.user?.platformRole === "admin";
 
+    // Each query is wrapped individually so a single failing query (e.g. a
+    // table or column not yet present in the live DB) does not crash the entire
+    // dashboard stats response.  Failed queries fall back to safe zero-value
+    // defaults and are logged at warn level.
+    const safe = async <T>(label: string, query: Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await query;
+      } catch (err: unknown) {
+        log.warn(`[analytics/stats] ${label} query failed (using fallback)`, { err: sanitizeError(err) });
+        return fallback;
+      }
+    };
+
+    const ZERO_COUNT = [{ count: 0 }];
+    const ZERO_TICKETS = { rows: [{ open_tickets: '0', escalations: '0' }] };
+    const ZERO_REVENUE = [{ currentMonth: 0, prevMonth: 0 }];
+    const ZERO_AUTOMATION = { rows: [{ total_runs: '0', successes: '0' }] };
+
     // Converted to Drizzle ORM: CASE WHEN → sql fragment
     const [
       workspacesResult,
@@ -63,80 +81,96 @@ router.get("/stats", async (req: any, res) => {
       automationResult,
     ] = await Promise.all([
       // Converted to Drizzle ORM: Simple COUNT → count()
-      db.select({ count: sql<number>`count(*)::int` })
-        .from(workspaces)
-        .where(eq(workspaces.subscriptionStatus, 'active')),
-      workspaceId
-        // Converted to Drizzle ORM: Simple COUNT → count()
-        ? db.select({ count: sql<number>`count(*)::int` })
-            .from(employees)
-            .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)))
-        // Converted to Drizzle ORM: Simple COUNT → count()
-        : db.select({ count: sql<number>`count(*)::int` })
-            .from(employees)
-            .where(eq(employees.isActive, true)),
-      workspaceId
-        // Converted to Drizzle ORM: Simple COUNT → count()
-        ? db.select({ count: sql<number>`count(*)::int` })
-            .from(clients)
-            .where(and(eq(clients.workspaceId, workspaceId), eq(clients.isActive, true)))
-        // Converted to Drizzle ORM: Simple COUNT → count()
-        : db.select({ count: sql<number>`count(*)::int` })
-            .from(clients)
-            .where(eq(clients.isActive, true)),
-      workspaceId
-        ? db.select({
-            count: sql<number>`count(*)::int`
-          })
-          .from(shifts)
-          .where(and(
-            eq(shifts.workspaceId, workspaceId),
-            sql`${shifts.startTime} > NOW()`,
-            sql`${shifts.startTime} < NOW() + INTERVAL '7 days'`
-          ))
-        : Promise.resolve([{ count: 0 }]),
+      safe('workspaces',
+        db.select({ count: sql<number>`count(*)::int` })
+          .from(workspaces)
+          .where(eq(workspaces.subscriptionStatus, 'active')),
+        ZERO_COUNT),
+      safe('employees',
+        workspaceId
+          // Converted to Drizzle ORM: Simple COUNT → count()
+          ? db.select({ count: sql<number>`count(*)::int` })
+              .from(employees)
+              .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)))
+          // Converted to Drizzle ORM: Simple COUNT → count()
+          : db.select({ count: sql<number>`count(*)::int` })
+              .from(employees)
+              .where(eq(employees.isActive, true)),
+        ZERO_COUNT),
+      safe('clients',
+        workspaceId
+          // Converted to Drizzle ORM: Simple COUNT → count()
+          ? db.select({ count: sql<number>`count(*)::int` })
+              .from(clients)
+              .where(and(eq(clients.workspaceId, workspaceId), eq(clients.isActive, true)))
+          // Converted to Drizzle ORM: Simple COUNT → count()
+          : db.select({ count: sql<number>`count(*)::int` })
+              .from(clients)
+              .where(eq(clients.isActive, true)),
+        ZERO_COUNT),
+      safe('shifts',
+        workspaceId
+          ? db.select({
+              count: sql<number>`count(*)::int`
+            })
+            .from(shifts)
+            .where(and(
+              eq(shifts.workspaceId, workspaceId),
+              sql`${shifts.startTime} > NOW()`,
+              sql`${shifts.startTime} < NOW() + INTERVAL '7 days'`
+            ))
+          : Promise.resolve([{ count: 0 }]),
+        ZERO_COUNT),
       // CATEGORY C — Raw SQL retained: FILTER (WHERE) on aggregate not supported natively in Drizzle | Tables: support_tickets | Verified: 2026-03-23
-      typedPool(
-        `SELECT 
-          COUNT(*) FILTER (WHERE status NOT IN ('resolved','closed')) AS open_tickets,
-          COUNT(*) FILTER (WHERE status = 'escalated') AS escalations
-         FROM support_tickets ${workspaceId && !isPlatformStaff ? "WHERE workspace_id = $1" : ""}`,
-        workspaceId && !isPlatformStaff ? [workspaceId] : []
-      ),
-      workspaceId
-        ? db.select({
-            currentMonth: sql<number>`coalesce(sum(${invoices.total}), 0)`,
-            prevMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now() - interval '1 month') 
-                                               and ${invoices.createdAt} < date_trunc('month', now()) 
-                                          then ${invoices.total} else 0 end), 0)`
-          })
-          .from(invoices)
-          .where(and(
-            eq(invoices.workspaceId, workspaceId),
-            gte(invoices.createdAt, sql`date_trunc('month', now())`),
-            sql`${invoices.status} in ('paid', 'sent', 'pending', 'draft')`
-          ))
-        : db.select({
-            currentMonth: sql<number>`coalesce(sum(${invoices.total}), 0)`,
-            prevMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now() - interval '1 month') 
-                                               and ${invoices.createdAt} < date_trunc('month', now()) 
-                                          then ${invoices.total} else 0 end), 0)`
-          })
-          .from(invoices)
-          .where(and(
-            gte(invoices.createdAt, sql`date_trunc('month', now())`),
-            sql`${invoices.status} in ('paid', 'sent', 'pending', 'draft')`
-          )),
+      safe('tickets',
+        typedPool(
+          `SELECT 
+            COUNT(*) FILTER (WHERE status NOT IN ('resolved','closed')) AS open_tickets,
+            COUNT(*) FILTER (WHERE status = 'escalated') AS escalations
+           FROM support_tickets ${workspaceId && !isPlatformStaff ? "WHERE workspace_id = $1" : ""}`,
+          workspaceId && !isPlatformStaff ? [workspaceId] : []
+        ),
+        ZERO_TICKETS),
+      safe('revenue',
+        workspaceId
+          ? db.select({
+              currentMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now())
+                                                    then ${invoices.total} else 0 end), 0)`,
+              prevMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now() - interval '1 month') 
+                                                 and ${invoices.createdAt} < date_trunc('month', now()) 
+                                            then ${invoices.total} else 0 end), 0)`
+            })
+            .from(invoices)
+            .where(and(
+              eq(invoices.workspaceId, workspaceId),
+              gte(invoices.createdAt, sql`date_trunc('month', now() - interval '1 month')`),
+              sql`${invoices.status} in ('paid', 'sent', 'pending', 'draft')`
+            ))
+          : db.select({
+              currentMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now())
+                                                    then ${invoices.total} else 0 end), 0)`,
+              prevMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now() - interval '1 month') 
+                                                 and ${invoices.createdAt} < date_trunc('month', now()) 
+                                            then ${invoices.total} else 0 end), 0)`
+            })
+            .from(invoices)
+            .where(and(
+              gte(invoices.createdAt, sql`date_trunc('month', now() - interval '1 month')`),
+              sql`${invoices.status} in ('paid', 'sent', 'pending', 'draft')`
+            )),
+        ZERO_REVENUE),
       // CATEGORY C — Raw SQL retained: FILTER (WHERE) on aggregate not supported natively in Drizzle | Tables: automation_executions | Verified: 2026-03-23
-      typedPool(
-        `SELECT 
-          COUNT(*) AS total_runs,
-          COUNT(*) FILTER (WHERE status = 'completed') AS successes
-         FROM automation_executions
-         WHERE queued_at >= date_trunc('month', NOW())
-           ${workspaceId ? "AND workspace_id = $1" : ""}`,
-        workspaceId ? [workspaceId] : []
-      ),
+      safe('automation',
+        typedPool(
+          `SELECT 
+            COUNT(*) AS total_runs,
+            COUNT(*) FILTER (WHERE status = 'completed') AS successes
+           FROM automation_executions
+           WHERE queued_at >= date_trunc('month', NOW())
+             ${workspaceId ? "AND workspace_id = $1" : ""}`,
+          workspaceId ? [workspaceId] : []
+        ),
+        ZERO_AUTOMATION),
     ]);
 
     const totalWorkspaces = parseInt(String((workspacesResult as any)?.[0]?.count ?? "0"));

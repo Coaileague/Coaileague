@@ -16,7 +16,7 @@ import { db } from '../db';
 import { workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-import { GRANDFATHERED_TENANT_ID } from '../services/billing/billingConstants';
+import { GRANDFATHERED_TENANT_ID, PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 
 // Routes that are always allowed even in read-only mode (payment recovery paths)
 const BILLING_EXEMPT_PREFIXES = [
@@ -76,6 +76,8 @@ export function subscriptionReadOnlyGuard(
 
   // Grandfathered founder exemption — always passes
   if (GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID) return next();
+  // Platform support org exemption — always passes
+  if (workspaceId === PLATFORM_WORKSPACE_ID) return next();
 
   // Async check — must not await synchronously; kick off and handle in callback
   db.select({ subscriptionStatus: workspaces.subscriptionStatus })
@@ -128,6 +130,7 @@ export function cancelledWorkspaceGuard(
 
   if (!workspaceId) return next();
   if (GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID) return next();
+  if (workspaceId === PLATFORM_WORKSPACE_ID) return next();
 
   db.select({ subscriptionStatus: workspaces.subscriptionStatus })
     .from(workspaces)

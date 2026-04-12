@@ -4,6 +4,7 @@ import { cacheManager } from './services/platform/cacheManager';
 import { universalAudit } from './services/universalAuditService';
 import { GRANDFATHERED_TENANT_ID } from './lib/tiers/tierDefinitions';
 import { getUpgradeUrl } from './lib/tiers/tierDefinitions';
+import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
 
 export type SubscriptionTier = 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
 
@@ -44,6 +45,13 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
     // Permanently exempt from all tier checks — passes every gate unconditionally.
     // This override cannot be removed by any subscription change, cron, or downgrade.
     if (GRANDFATHERED_TENANT_ID && req.workspaceId === GRANDFATHERED_TENANT_ID) {
+      (req as any).subscriptionTier = 'enterprise';
+      return next();
+    }
+
+    // ── PLATFORM WORKSPACE EXEMPTION — CoAIleague internal support org ────────
+    // The platform's own support/ops workspace is always treated as enterprise.
+    if (PLATFORM_WORKSPACE_ID && req.workspaceId === PLATFORM_WORKSPACE_ID) {
       (req as any).subscriptionTier = 'enterprise';
       return next();
     }
@@ -147,6 +155,8 @@ export function hasTierAccess(
 export async function getWorkspaceTier(workspaceId: string): Promise<SubscriptionTier> {
   // Grandfathered founding tenant always has enterprise access
   if (GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID) return 'enterprise';
+  // Platform support org always has enterprise access
+  if (PLATFORM_WORKSPACE_ID && workspaceId === PLATFORM_WORKSPACE_ID) return 'enterprise';
   const tier = await cacheManager.getWorkspaceTier(workspaceId);
   return tier as SubscriptionTier;
 }
