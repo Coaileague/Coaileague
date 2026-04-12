@@ -135,8 +135,8 @@ export class EmailProvisioningService {
     const expectedCount = WORKSPACE_SYSTEM_TYPES.length;
 
     await pool.query(
-      `UPDATE workspaces SET email_domain = $1 WHERE id = $2`,
-      [ROOT_DOMAIN, workspaceId]
+      `UPDATE workspaces SET email_domain = $1, email_slug = $2 WHERE id = $3`,
+      [ROOT_DOMAIN, emailSlug, workspaceId]
     );
 
     for (const def of WORKSPACE_SYSTEM_TYPES) {
