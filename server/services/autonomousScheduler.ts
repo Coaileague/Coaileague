@@ -714,6 +714,11 @@ const SCHEDULER_CONFIG = {
     schedule: '*/15 * * * *', // Every 15 minutes
     description: 'Mark pending AI approvals as expired once they pass their expiresAt timestamp. Prevents stale approvals from accumulating indefinitely and blocking automation — ai_approval_requests.expiresAt was never being enforced before this job was wired in (workflow audit 2026-04-08).'
   },
+  revenueRecognition: {
+    enabled: true,
+    schedule: '0 1 1 * *', // 1 AM on the 1st of every month (after creditReset at midnight)
+    description: 'Monthly ASC 606 accrual revenue recognition: process scheduled entries, update deferred revenue, write org ledger'
+  },
 };
 
 // ============================================================================
@@ -2782,6 +2787,40 @@ export function startAutonomousScheduler() {
     });
   });
   log.info('Monthly Platform Infrastructure Billing registered', { schedule: '0 1 1 * *', description: 'Cost recovery for email, domain, and infrastructure' });
+
+  // 7c. Monthly ASC 606 Revenue Recognition (1st of month at 1:30 AM)
+  registerJobInfo('Monthly Revenue Recognition', SCHEDULER_CONFIG.revenueRecognition.schedule, SCHEDULER_CONFIG.revenueRecognition.description, SCHEDULER_CONFIG.revenueRecognition.enabled);
+  if (SCHEDULER_CONFIG.revenueRecognition.enabled) {
+    cron.schedule(SCHEDULER_CONFIG.revenueRecognition.schedule, () => {
+      trackJobExecution('Monthly Revenue Recognition', async () => {
+        log.info('Monthly revenue recognition triggered', { timestamp: new Date().toISOString() });
+        try {
+          const { runMonthlyRecognitionAllWorkspaces } = await import('./billing/revenueRecognitionService');
+          const results = await runMonthlyRecognitionAllWorkspaces();
+          const processed = results.reduce((s, r) => s + r.schedulesProcessed, 0);
+          const amount = results.reduce((s, r) => s + r.amountRecognized, 0);
+          log.info('Monthly revenue recognition complete', { workspaces: results.length, schedulesProcessed: processed, totalAmount: amount.toFixed(2) });
+          emitAutomationEvent({
+            jobName: 'Monthly Revenue Recognition',
+            category: 'billing',
+            success: true,
+            recordsProcessed: processed,
+            details: { workspacesProcessed: results.length, totalAmount: amount.toFixed(2) },
+          });
+        } catch (error: any) {
+          log.error('Monthly revenue recognition error', { error: (error instanceof Error ? error.message : String(error)) });
+          emitAutomationEvent({
+            jobName: 'Monthly Revenue Recognition',
+            category: 'billing',
+            success: false,
+            details: { error: (error instanceof Error ? error.message : String(error)) },
+          });
+          throw error;
+        }
+      });
+    });
+    log.info('Monthly Revenue Recognition registered', { schedule: SCHEDULER_CONFIG.revenueRecognition.schedule });
+  }
   // Trial Expiry & Conversion Job - Daily at 6 AM (process expiring trials with 7/3/1 day warnings)
   registerJobInfo('Trial Conversion Processing', CRON.trialExpiry, 'Processes trial conversions, warnings, and suspensions', true);
   cron.schedule(CRON.trialExpiry, () => {
