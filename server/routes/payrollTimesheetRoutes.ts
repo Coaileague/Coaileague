@@ -173,7 +173,7 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
         employeeLastName: employees.lastName,
       })
       .from(payrollTimesheets)
-      .leftJoin(employees, eq(payrollTimesheets.employeeId, employees.id))
+      .leftJoin(employees, and(eq(payrollTimesheets.employeeId, employees.id), eq(employees.workspaceId, workspaceId)))
       .where(conditions)
       .orderBy(desc(payrollTimesheets.createdAt));
 
@@ -282,7 +282,7 @@ router.get("/:id", async (req: AuthenticatedRequest, res) => {
     const entries = await db
       .select()
       .from(payrollTimesheetEntries)
-      .where(eq(payrollTimesheetEntries.timesheetId, id))
+      .where(and(eq(payrollTimesheetEntries.timesheetId, id), eq(payrollTimesheetEntries.workspaceId, workspaceId)))
       .orderBy(payrollTimesheetEntries.entryDate);
 
     // Denormalize employee name
@@ -399,13 +399,13 @@ router.put("/:id/entries", async (req: AuthenticatedRequest, res) => {
     const updatedEntries = await db
       .select()
       .from(payrollTimesheetEntries)
-      .where(eq(payrollTimesheetEntries.timesheetId, id))
+      .where(and(eq(payrollTimesheetEntries.timesheetId, id), eq(payrollTimesheetEntries.workspaceId, workspaceId)))
       .orderBy(payrollTimesheetEntries.entryDate);
 
     const [updated] = await db
       .select()
       .from(payrollTimesheets)
-      .where(eq(payrollTimesheets.id, id));
+      .where(and(eq(payrollTimesheets.id, id), eq(payrollTimesheets.workspaceId, workspaceId)));
 
     return res.json({ timesheet: updated, entries: updatedEntries });
   } catch (err: any) {
@@ -454,26 +454,21 @@ router.post("/:id/submit", async (req: AuthenticatedRequest, res) => {
     await writeAudit(workspaceId, userId, "submit_timesheet", id,
       `Submitted timesheet ${id} for approval`, req);
 
-    // Notify managers in the workspace
+    // Notify managers in the workspace — filter by role in a single query
     try {
-      const managers = await db
-        .select({ userId: employees.userId })
+      const managersWithRoles = await db
+        .select({ userId: employees.userId, workspaceRole: employees.workspaceRole })
         .from(employees)
-        .where(and(eq(employees.workspaceId, workspaceId)))
-        .then((rows) =>
-          rows.filter((r) => r.userId && r.userId !== userId),
-        );
+        .where(and(eq(employees.workspaceId, workspaceId)));
 
       const submitter = await storage.getEmployeeById(timesheet.employeeId, workspaceId);
       const submitterName = submitter
         ? `${submitter.firstName} ${submitter.lastName}`
         : "An employee";
 
-      for (const mgr of managers) {
-        if (!mgr.userId) continue;
-        // Only notify manager-role employees
-        const mgrEmployee = await storage.getEmployeeByUserId(mgr.userId, workspaceId);
-        if (!mgrEmployee || !hasManagerAccess(mgrEmployee.workspaceRole as string)) continue;
+      for (const mgr of managersWithRoles) {
+        if (!mgr.userId || mgr.userId === userId) continue;
+        if (!hasManagerAccess(mgr.workspaceRole as string)) continue;
 
         await universalNotificationEngine.sendNotification({
           workspaceId,

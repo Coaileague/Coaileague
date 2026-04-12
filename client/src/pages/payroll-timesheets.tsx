@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -118,6 +118,11 @@ export default function PayrollTimesheets() {
   const employeesQuery = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ["/api/employees"],
     enabled: canManage,
+    queryFn: async () => {
+      const res = await fetch("/api/employees", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load employees");
+      return res.json();
+    },
     select: (r) => r?.data ?? [],
   });
 
@@ -542,7 +547,7 @@ function TimesheetDetailView({
   const [isDirty, setIsDirty] = useState(false);
 
   // Initialise hour map when detail loads
-  useMemo(() => {
+  useEffect(() => {
     if (!detail) return;
     const hm: Record<string, string> = {};
     const nm: Record<string, string> = {};
