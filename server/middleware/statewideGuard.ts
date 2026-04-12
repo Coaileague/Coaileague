@@ -10,20 +10,45 @@ const log = createLogger('grandfatheredTenantGuard');
  * workspaces.  These are internal automation / workflow / pipeline / scheduling
  * operations that must continue running regardless of the tenant-protection
  * flag (e.g. Trinity auto-fill, autonomous scheduler, onboarding pipelines).
+ *
+ * Covers:
+ *  - automation engine (Trinity OS, governance, events)
+ *  - all schedule-adjacent paths (shifts, scheduleOS, scheduling, approvals,
+ *    shift-trading, coverage, time-entries, AI scheduling, Trinity scheduling)
+ *  - workflow and pipeline systems
+ *  - notifications
  */
 const AUTOMATION_EXEMPT_PREFIXES = [
+  // ── Automation engine ────────────────────────────────────────────────────
   '/api/automation',
   '/api/automation-events',
   '/api/automation-governance',
-  '/api/scheduleos',
-  '/api/scheduler',
-  '/api/orchestrated-schedule',
-  '/api/schedules',
+
+  // ── Scheduling & shift management ────────────────────────────────────────
+  '/api/shifts',            // shift CRUD (create, edit, delete, assign, ai-fill)
+  '/api/scheduleos',        // Trinity schedule OS toggle / proposals
+  '/api/scheduler',         // autonomous scheduler service
+  '/api/orchestrated-schedule', // orchestrated schedule sessions
+  '/api/schedules',         // publish/unpublish schedule
+  '/api/scheduling',        // duplicate-week, recurring, swap-request, etc.
+  '/api/approvals',         // shift approval workflows
+  '/api/shift-trading',     // shift trade requests / availability
+  '/api/coverage',          // coverage marketplace / open shift coverage
+  '/api/ai/scheduling',     // AI-driven scheduling
+  '/api/trinity/scheduling',// Trinity scheduling integration
+  '/api/trinity-staffing',  // Trinity staffing recommendations
+
+  // ── Time tracking ────────────────────────────────────────────────────────
+  '/api/time-entries',      // clock in/out, time entry approvals, breaks
+
+  // ── Workflow & pipeline systems ───────────────────────────────────────────
   '/api/workflows',
   '/api/workflow-configs',
   '/api/onboarding-pipeline',
   '/api/incident-reports',
   '/api/incident-patterns',
+
+  // ── Notifications ─────────────────────────────────────────────────────────
   '/api/notifications',
 ];
 
