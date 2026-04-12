@@ -134,7 +134,7 @@ export async function getWorkspacePatterns(
   const allEmployees = await db
     .select()
     .from(employees)
-    .where(eq(employees.workspaceId, workspaceId));
+    .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
 
   const patterns: EmployeePattern[] = [];
   for (const emp of allEmployees) {

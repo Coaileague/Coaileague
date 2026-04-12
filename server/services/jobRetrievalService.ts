@@ -4,7 +4,7 @@
 
 import { db } from "../db";
 import { employees } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export interface JobInfo {
   jobId: string;
@@ -25,7 +25,7 @@ export async function getJobByRole(
   const employeesWithRole = await db
     .select()
     .from(employees)
-    .where(eq(employees.workspaceId, workspaceId));
+    .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
 
   const matchingEmployees = employeesWithRole.filter(e => e.role === role);
   
@@ -56,7 +56,7 @@ export async function getWorkspaceJobs(workspaceId: string): Promise<JobInfo[]> 
   const allEmployees = await db
     .select()
     .from(employees)
-    .where(eq(employees.workspaceId, workspaceId));
+    .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
 
   const rolesArray = allEmployees.map(e => e.role).filter((r): r is string => Boolean(r));
   const uniqueRoles = Array.from(new Set(rolesArray));
@@ -80,7 +80,7 @@ export async function getEmployeesForJob(
   const matchingEmployees = await db
     .select()
     .from(employees)
-    .where(eq(employees.workspaceId, workspaceId));
+    .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
 
   return matchingEmployees
     .filter(e => e.role === jobTitle && e.role)
