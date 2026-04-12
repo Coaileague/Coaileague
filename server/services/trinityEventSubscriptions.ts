@@ -523,23 +523,119 @@ async function onWorkspaceCreated(event: PlatformEvent): Promise<void> {
     log.error(`[TrinityEvents] Failed to bootstrap triggers for workspace ${workspaceId}:`, err);
   }
 
-  // Provision system email mailboxes for the new workspace (if not already done via onboarding)
+  // Provision system email mailboxes and persist email_slug for the new workspace
+  let computedSlug: string | null = null;
   try {
     const { db } = await import('../db');
     const { workspaces } = await import('../../shared/schema');
     const { eq } = await import('drizzle-orm');
-    const [ws] = await db.select({ id: workspaces.id, orgCode: workspaces.orgCode }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const [ws] = await db.select({ id: workspaces.id, name: workspaces.name, orgCode: workspaces.orgCode }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
     if (ws) {
-      const emailSlug = ws.orgCode
+      // Derive slug: orgCode (lowercased) → company name initials → workspace ID prefix
+      computedSlug = ws.orgCode
         ? ws.orgCode.toLowerCase().replace(/[^a-z0-9]/g, '')
-        : workspaceId.replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase();
+        : generateSlugFromName(ws.name || '');
+      // Ensure uniqueness — if slug conflicts, append digits
+      const { pool: slugPool } = await import('../db');
+      computedSlug = await ensureUniqueSlug(slugPool, computedSlug, String(workspaceId));
       const { emailProvisioningService } = await import('./email/emailProvisioningService');
-      await emailProvisioningService.provisionWorkspaceAddresses(workspaceId, emailSlug);
-      log.info(`[TrinityEvents] System email mailboxes provisioned for workspace: ${workspaceId} (slug: ${emailSlug})`);
+      // provisionWorkspaceAddresses also persists email_slug and email_domain on the workspace row
+      await emailProvisioningService.provisionWorkspaceAddresses(workspaceId, computedSlug);
+      log.info(`[TrinityEvents] System email mailboxes provisioned for workspace: ${workspaceId} (slug: ${computedSlug})`);
     }
   } catch (emailErr: any) {
     log.warn(`[TrinityEvents] Email provisioning failed for workspace ${workspaceId} (non-fatal):`, emailErr?.message);
   }
+
+  // Reserve personal email address for workspace owner and send Trinity welcome
+  try {
+    const { ownerId, name: wsName } = event.metadata || {};
+    if (ownerId) {
+      const { db: ownerDb } = await import('../db');
+      const { users: usersTable } = await import('../../shared/schema');
+      const { eq: eqOp } = await import('drizzle-orm');
+      const [owner] = await ownerDb.select().from(usersTable).where(eqOp(usersTable.id, String(ownerId))).limit(1);
+      if (owner) {
+        // Reserve owner's personal @slug.coaileague.com email address using the slug we just computed
+        if (owner.firstName && owner.lastName && computedSlug) {
+          try {
+            const { emailProvisioningService } = await import('./email/emailProvisioningService');
+            await emailProvisioningService.reserveUserEmailAddress(
+              String(workspaceId), String(ownerId),
+              owner.firstName, owner.lastName, computedSlug,
+            );
+            log.info(`[TrinityEvents] Reserved personal email for workspace owner: ${ownerId} (${owner.firstName}.${owner.lastName}@${computedSlug}.coaileague.com)`);
+          } catch (ownerEmailErr: any) {
+            log.warn(`[TrinityEvents] Owner email reservation failed (non-fatal):`, ownerEmailErr?.message);
+          }
+        }
+
+        // Send Trinity welcome email
+        if (owner.email) {
+          const { sendTrinityWelcomeEmail } = await import('./trinityWelcomeService');
+          await sendTrinityWelcomeEmail({
+            workspaceId: String(workspaceId),
+            userId: String(ownerId),
+            userEmail: owner.email,
+            userType: 'tenant_owner',
+            workspaceName: String(wsName || 'Your Workspace'),
+            userName: owner.firstName || 'there',
+          });
+          log.info(`[TrinityEvents] Trinity welcome email sent to workspace owner: ${ownerId}`);
+        }
+      }
+    }
+  } catch (welcomeErr: any) {
+    log.warn(`[TrinityEvents] Trinity welcome email failed for workspace ${workspaceId} (non-fatal):`, welcomeErr?.message);
+  }
+}
+
+/**
+ * Generate a short email slug from a company name using initials.
+ * e.g., "Statewide Protective Services" → "sps"
+ *        "Acme Security" → "acmesec"
+ *        "Bob's Guards" → "bobsguards"
+ * Falls back to first 12 chars lowercased if name is a single word.
+ */
+function generateSlugFromName(name: string): string {
+  if (!name || !name.trim()) return 'org';
+  const cleaned = name.trim().replace(/[^a-zA-Z0-9\s]/g, '');
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'org';
+
+  // Multi-word: use initials (e.g., "Statewide Protective Services" → "sps")
+  if (words.length >= 2) {
+    const initials = words.map(w => w[0]).join('').toLowerCase();
+    // If initials are too short (< 3), use first word + initials of rest
+    if (initials.length >= 3) return initials.slice(0, 12);
+    return (words[0].toLowerCase().slice(0, 6) + initials.slice(1)).slice(0, 12);
+  }
+
+  // Single word: use full word lowercased, truncated
+  return words[0].toLowerCase().slice(0, 12);
+}
+
+/**
+ * Ensure a slug is unique across all workspaces.
+ * If taken, appends incrementing digits (e.g., "sps" → "sps2" → "sps3").
+ */
+async function ensureUniqueSlug(pool: any, baseSlug: string, currentWorkspaceId: string): Promise<string> {
+  let candidate = baseSlug;
+  let suffix = 2;
+  const maxAttempts = 20;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const { rows } = await pool.query(
+      `SELECT id FROM workspaces WHERE email_slug = $1 AND id != $2 LIMIT 1`,
+      [candidate, currentWorkspaceId]
+    );
+    if (rows.length === 0) return candidate;
+    candidate = `${baseSlug}${suffix}`;
+    suffix++;
+  }
+
+  // Exhausted attempts — fall back to workspace ID prefix
+  return currentWorkspaceId.replace(/[^a-z0-9]/gi, '').slice(0, 12).toLowerCase();
 }
 
 /**

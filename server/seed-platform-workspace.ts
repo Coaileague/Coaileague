@@ -25,20 +25,27 @@ export async function seedPlatformWorkspace() {
       id: PLATFORM_WORKSPACE_ID,
       name: `${PLATFORM_NAME} Support`,
       ownerId: ROOT_USER_ID,
-      companyName: `${PLATFORM_NAME} Support`,
+      companyName: `${PLATFORM_NAME} Support Operations`,
       subscriptionTier: 'enterprise',
       subscriptionStatus: 'active',
       maxEmployees: 99999,
       maxClients: 99999,
       platformFeePercentage: '0.00', // Platform workspace doesn't pay fees
+      workspaceType: 'platform_support',
+      isPlatformSupport: true,
     });
     console.log(`✅ ${PLATFORM_NAME} Support workspace created (ID:`, PLATFORM_WORKSPACE_ID, ')');
   } else {
-    // Idempotently correct the workspace name if it was created with the old generic name
+    // Idempotently correct the workspace name and support flags
     await db.update(workspaces)
-      .set({ name: `${PLATFORM_NAME} Support`, companyName: `${PLATFORM_NAME} Support` })
+      .set({
+        name: `${PLATFORM_NAME} Support`,
+        companyName: `${PLATFORM_NAME} Support Operations`,
+        workspaceType: 'platform_support',
+        isPlatformSupport: true,
+      })
       .where(eq(workspaces.id, PLATFORM_WORKSPACE_ID));
-    console.log(`${PLATFORM_NAME} Support workspace already exists — name updated if needed`);
+    console.log(`${PLATFORM_NAME} Support workspace already exists — name and flags updated`);
   }
 
   // Ensure root user is a workspace member (org_owner) — idempotent

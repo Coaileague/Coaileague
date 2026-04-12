@@ -98,7 +98,8 @@ export type NotificationDeliveryType =
   | 'email_seat_deactivated'
   | 'email_fair_use_warning'
   | 'client_portal_report'
-  | 'client_portal_dispute';
+  | 'client_portal_dispute'
+  | 'trinity_welcome_email';
 
 export type NotificationDeliveryChannel = 'email' | 'sms' | 'websocket' | 'in_app' | 'push';
 

@@ -361,6 +361,7 @@ const SupportAIConsole = lazy(() => import("@/pages/support-ai-console"));
 const AssistedOnboarding = lazy(() => import("@/pages/assisted-onboarding"));
 const WorkspaceOnboarding = lazy(() => import("@/pages/workspace-onboarding"));
 const OnboardingHub = lazy(() => import("@/pages/onboarding-hub"));
+const OnboardingEmailIntro = lazy(() => import("@/pages/onboarding-email-intro"));
 const AcceptHandoff = lazy(() => import("@/pages/accept-handoff"));
 const AcceptOffer = lazy(() => import("@/pages/accept-offer"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
@@ -1333,6 +1334,7 @@ function AppContent() {
               <Route path="/chat/:roomId">{(params: { roomId: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><HelpDesk roomId={params.roomId} /></Suspense></ErrorBoundary>}</Route>
 
               <Route path="/onboarding/start" component={OnboardingStart} />
+              <Route path="/onboarding/email-intro"><ErrorBoundary><Suspense fallback={<PageLoader />}><OnboardingEmailIntro /></Suspense></ErrorBoundary></Route>
               <Route path="/onboarding/:token">{(params: { token: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><EmployeeOnboardingWizard /></Suspense></ErrorBoundary>}</Route>
               <Route path="/create-org" component={CreateOrg} />
               <Route path="/pay-invoice/:id" component={PayInvoice} />
@@ -1624,9 +1626,10 @@ function AppContent() {
                 <Route path="/availability"><ErrorBoundary><AvailabilityPage /></ErrorBoundary></Route>
                 <Route path="/create-org"><ErrorBoundary><CreateOrg /></ErrorBoundary></Route>
                 <Route path="/onboarding/start"><ErrorBoundary><OnboardingStart /></ErrorBoundary></Route>
+                <Route path="/onboarding/email-intro"><ErrorBoundary><Suspense fallback={<PageLoader />}><OnboardingEmailIntro /></Suspense></ErrorBoundary></Route>
                 <Route path="/updates"><ErrorBoundary><Updates /></ErrorBoundary></Route>
                 <Route path="/help"><ErrorBoundary><Help /></ErrorBoundary></Route>
-  
+
                 {/* Unified Root Administrator Control Center */}
                 <Route path="/root-admin-dashboard">
                   <PlatformAdminRoute>
@@ -2141,6 +2144,7 @@ function AppContent() {
                 <Route path="/unavailability"><ErrorBoundary><Unavailability /></ErrorBoundary></Route>
                 <Route path="/create-org"><ErrorBoundary><CreateOrg /></ErrorBoundary></Route>
                 <Route path="/onboarding/start"><ErrorBoundary><OnboardingStart /></ErrorBoundary></Route>
+                <Route path="/onboarding/email-intro"><ErrorBoundary><Suspense fallback={<PageLoader />}><OnboardingEmailIntro /></Suspense></ErrorBoundary></Route>
                 <Route path="/updates"><ErrorBoundary><Updates /></ErrorBoundary></Route>
                 <Route path="/help"><ErrorBoundary><Help /></ErrorBoundary></Route>
                 <Route path="/root-admin-dashboard">

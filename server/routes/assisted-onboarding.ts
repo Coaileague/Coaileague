@@ -339,6 +339,7 @@ acceptHandoffRouter.post(
         workspaceId: result.workspaceId,
         workspaceName: result.workspaceName,
         message: 'Handoff complete - you are now the owner of this workspace',
+        redirectTo: '/onboarding/email-intro',
       });
     } catch (error: unknown) {
       log.error('[AssistedOnboarding] Complete handoff error:', error);

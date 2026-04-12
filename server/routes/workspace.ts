@@ -124,6 +124,31 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       trialEndsAt,
     });
 
+    // Persist email_slug on the workspace row so email provisioning can find it.
+    // Slug is derived from orgCode (lowercased) or auto-generated from company name initials.
+    try {
+      const { pool: slugPool } = await import('../db');
+      const baseSlug = validatedOrgCode
+        ? validatedOrgCode.toLowerCase().replace(/[^a-z0-9]/g, '')
+        : generateEmailSlug(name.trim());
+      // Ensure uniqueness
+      let emailSlug = baseSlug;
+      let suffix = 2;
+      for (let i = 0; i < 20; i++) {
+        const { rows } = await slugPool.query(
+          `SELECT id FROM workspaces WHERE email_slug = $1 AND id != $2 LIMIT 1`,
+          [emailSlug, workspace.id]
+        );
+        if (rows.length === 0) break;
+        emailSlug = `${baseSlug}${suffix}`;
+        suffix++;
+      }
+      await slugPool.query(`UPDATE workspaces SET email_slug = $1 WHERE id = $2`, [emailSlug, workspace.id]);
+      log.info(`[Workspace Create] Email slug set: ${emailSlug} for workspace ${workspace.id}`);
+    } catch (slugErr: unknown) {
+      log.warn(`[Workspace Create] Email slug setup failed (non-blocking):`, (slugErr as any)?.message);
+    }
+
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const employee = await storage.createEmployee({
       userId: userId,
@@ -752,5 +777,27 @@ router.get('/staffing-email-config', requireAuth, async (req: AuthenticatedReque
     res.status(500).json({ message: sanitizeError(error) || "Failed to fetch staffing email config" });
   }
 });
+
+/**
+ * Generate a short email slug from a company name using initials.
+ * e.g., "Statewide Protective Services" → "sps"
+ *        "Acme Security" → "acmesec"
+ *        "Guard Force" → "gf"  (padded to 3 → "gfo")
+ */
+function generateEmailSlug(name: string): string {
+  if (!name || !name.trim()) return 'org';
+  const cleaned = name.trim().replace(/[^a-zA-Z0-9\s]/g, '');
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'org';
+
+  if (words.length >= 2) {
+    const initials = words.map(w => w[0]).join('').toLowerCase();
+    if (initials.length >= 3) return initials.slice(0, 12);
+    // Pad short initials with chars from first word
+    return (words[0].toLowerCase().slice(0, 6) + initials.slice(1)).slice(0, 12);
+  }
+
+  return words[0].toLowerCase().slice(0, 12);
+}
 
 export default router;

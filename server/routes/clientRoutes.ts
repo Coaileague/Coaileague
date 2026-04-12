@@ -268,6 +268,22 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
       const _clientWelcomeEmail = emailService.buildClientWelcomeEmail(client.id, validated.email, (validated as any).name || 'Valued Client', validated.companyName || '', workspace.name || '');
       NotificationDeliveryService.send({ type: 'client_welcome', workspaceId: workspaceId || 'system', recipientUserId: client.id, channel: 'email', body: _clientWelcomeEmail })
         .catch(err => log.error('[Client Creation] Failed to queue welcome email:', err));
+
+      // Send Trinity-branded welcome email to client
+      try {
+        const { sendTrinityWelcomeEmail } = await import('../services/trinityWelcomeService');
+        await sendTrinityWelcomeEmail({
+          workspaceId: workspaceId || 'system',
+          userId: client.id,
+          userEmail: validated.email,
+          userType: 'client',
+          workspaceName: workspace.name || 'Your Organization',
+          userName: (validated as any).name || validated.companyName || 'Valued Client',
+          customContext: { tenantName: workspace.name || 'Your Organization' },
+        });
+      } catch (trinityEmailErr) {
+        log.warn('[Client Creation] Trinity welcome email failed (non-blocking):', trinityEmailErr);
+      }
     }
 
     const { entityCreationNotifier } = await import('../services/entityCreationNotifier');
@@ -279,6 +295,29 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
       address: validated.address,
       createdBy: userId || 'system',
     }).catch(err => log.error('[Client Creation] Failed to notify Trinity:', err));
+
+    // Reserve email address for client portal — non-blocking
+    try {
+      const { pool: pgPool } = await import('../db');
+      const wsRow = await pgPool.query(
+        `SELECT email_slug FROM workspaces WHERE id = $1`,
+        [workspaceId]
+      );
+      const emailSlug = wsRow.rows[0]?.email_slug;
+      if (emailSlug) {
+        const { emailProvisioningService } = await import('../services/email/emailProvisioningService');
+        const clientName = validated.companyName || (validated as any).name || `client-${client.id.slice(0, 8)}`;
+        await emailProvisioningService.reserveClientEmailAddress(
+          workspaceId,
+          client.id,
+          clientName,
+          emailSlug,
+        );
+        log.info(`[EmailProvisioning] Reserved @coaileague.com seat for client ${client.id}`);
+      }
+    } catch (emailProvErr) {
+      log.warn('[Client Creation] Email seat provisioning failed (non-blocking):', (emailProvErr as Error).message);
+    }
     
     const { broadcastToWorkspace } = await import('../websocket');
     broadcastToWorkspace(workspaceId, { type: 'clients_updated', action: 'created' });

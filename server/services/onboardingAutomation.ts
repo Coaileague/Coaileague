@@ -55,6 +55,23 @@ export async function initiateEmployeeOnboarding(
       NotificationDeliveryService.send({ type: 'onboarding_notification', workspaceId: workspaceId || 'system', recipientUserId: employeeId, channel: 'email', body: { to: employee.email, subject: onboardingConfig.emailTemplates.welcome.subject(workspace.name), html: onboardingConfig.emailTemplates.welcome.body(employee.firstName || 'there', workspace.name, onboardingConfig.onboardingSteps) } }).catch((err: Error) => log.warn('[OnboardingAutomation] Welcome email failed (non-blocking):', err.message));
     }
 
+    // Send Trinity-branded welcome email to employee
+    if (employee.email) {
+      try {
+        const { sendTrinityWelcomeEmail } = await import('./trinityWelcomeService');
+        await sendTrinityWelcomeEmail({
+          workspaceId,
+          userId: employeeId,
+          userEmail: employee.email,
+          userType: 'employee',
+          workspaceName: workspace.name || 'Your Organization',
+          userName: employee.firstName || 'there',
+        });
+      } catch (trinityErr) {
+        log.warn('[OnboardingAutomation] Trinity welcome email failed (non-blocking):', (trinityErr as Error).message);
+      }
+    }
+
     // Notify manager if assigned (if enabled)
     if (managerId && onboardingConfig.notifications.notifyManagerOnboarding) {
       const manager = await db
