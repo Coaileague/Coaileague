@@ -5,7 +5,7 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('orgLedgerService');
 
 
-export type LedgerEntryType = 'invoice_created' | 'payment_received' | 'payroll_processed' | 'payroll_disbursed' | 'adjustment' | 'refund' | 'subscription_payment' | 'invoice_voided' | 'invoice_cancelled' | 'invoice_overdue';
+export type LedgerEntryType = 'invoice_created' | 'payment_received' | 'payroll_processed' | 'payroll_disbursed' | 'adjustment' | 'refund' | 'subscription_payment' | 'invoice_voided' | 'invoice_cancelled' | 'invoice_overdue' | 'transaction_fee';
 export type LedgerDirection = 'debit' | 'credit';
 
 interface LedgerWriteParams {

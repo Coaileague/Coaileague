@@ -3624,6 +3624,7 @@ router.post('/portal/:accessToken/invoice/:invoiceId/create-payment-intent', asy
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountCents,
       currency: 'usd',
+      automatic_payment_methods: { enabled: true },
       description: clientDescription,
       metadata: {
         invoiceId,
