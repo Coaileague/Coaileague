@@ -557,6 +557,41 @@ export function workspaceTrinityLimiter(req: Request, res: Response, next: Funct
 }
 
 /**
+ * Safety code verify rate limiter — prevents brute force of 6-character helpdesk identity codes.
+ *
+ * SECURITY: A 6-digit numeric code has only 1,000,000 combinations; even an
+ * alphanumeric code is enumerable with enough attempts. Without this guard an
+ * attacker who intercepts a session ID can replay requests at machine speed
+ * to recover the code within seconds.
+ *
+ * Key combines IP + sessionId so that per-session lockouts are granular and
+ * targeting a different session ID does not reset the counter.
+ *
+ * Limits: 5 attempts per 15 minutes per IP+session combination.
+ */
+export const safetyCodeVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const ip = getClientIp(req);
+    const sessionId = (req.body?.sessionId || '').toString().slice(0, 128);
+    return `safety-code-verify:${ip}:${sessionId}`;
+  },
+  handler: (req: Request, res: Response) => {
+    setRetryAfterHeader(res, 900);
+    logRateLimitViolation(req, 'safety_code_verify');
+    res.status(429).json({
+      error: 'Too many verification attempts',
+      message: 'Too many failed safety code attempts. Please try again in 15 minutes.',
+      retryAfter: '15 minutes',
+      success: false,
+    });
+  },
+});
+
+/**
  * Clock-in PIN verify rate limiter — prevents brute force of 4-8 digit kiosk PINs.
  *
  * SECURITY: PIN space is 10,000–100,000,000 combinations (4–8 digits).

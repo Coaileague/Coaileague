@@ -6,6 +6,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import express, { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../auth';
+import { safetyCodeVerifyLimiter } from '../middleware/rateLimiter';
 import { type AuthenticatedRequest } from '../rbac';
 import { helpaiRegistryService } from '../services/helpai/helpaiRegistryService';
 import { helpaiIntegrationService } from '../services/helpai/helpaiIntegrationService';
@@ -916,7 +917,7 @@ helpaiRouter.post('/safety-code/generate', requireAuth, async (req: Authenticate
  * POST /api/helpai/safety-code/verify
  * Verify a safety code in a session
  */
-helpaiRouter.post('/safety-code/verify', async (req: AuthenticatedRequest, res: Response) => {
+helpaiRouter.post('/safety-code/verify', safetyCodeVerifyLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId, code } = req.body;
     if (!sessionId || !code) {

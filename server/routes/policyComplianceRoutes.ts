@@ -124,7 +124,11 @@ router.post("/policies/:id/acknowledge", requireAuth, async (req: AuthenticatedR
       return res.status(404).json({ message: "Policy not found" });
     }
 
-    const { signatureUrl, ipAddress, userAgent } = req.body;
+    const { signatureUrl, userAgent } = req.body;
+
+    // Derive IP server-side — never trust client-provided ipAddress from req.body
+    // req.ip is populated by Express using the trusted proxy chain (trust proxy: 1)
+    const ipAddress = req.ip || req.socket?.remoteAddress || null;
 
     const acknowledgment = await storage.createPolicyAcknowledgment({
       workspaceId,
