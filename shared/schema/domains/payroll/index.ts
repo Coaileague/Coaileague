@@ -604,3 +604,62 @@ export const insertEmployeeTaxFormSchema = createInsertSchema(employeeTaxForms).
 });
 export type InsertEmployeeTaxForm = z.infer<typeof insertEmployeeTaxFormSchema>;
 export type EmployeeTaxForm = typeof employeeTaxForms.$inferSelect;
+
+// ============================================================================
+// PAYROLL TIMESHEETS — manual weekly hour entry with submit/approve lifecycle
+// draft → submitted → approved | rejected
+// ============================================================================
+export const payrollTimesheets = pgTable("payroll_timesheets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  employeeId: varchar("employee_id").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  totalHours: decimal("total_hours", { precision: 6, scale: 2 }).notNull().default("0"),
+  status: varchar("status", { length: 20 }).notNull().default("draft"), // draft | submitted | approved | rejected
+  createdBy: varchar("created_by").notNull(),
+  approvedBy: varchar("approved_by"),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  rejectedBy: varchar("rejected_by"),
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("payroll_timesheets_workspace_idx").on(table.workspaceId),
+  index("payroll_timesheets_employee_idx").on(table.employeeId),
+  index("payroll_timesheets_status_idx").on(table.status),
+]);
+
+export const insertPayrollTimesheetSchema = createInsertSchema(payrollTimesheets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPayrollTimesheet = z.infer<typeof insertPayrollTimesheetSchema>;
+export type PayrollTimesheet = typeof payrollTimesheets.$inferSelect;
+
+export const payrollTimesheetEntries = pgTable("payroll_timesheet_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timesheetId: varchar("timesheet_id").notNull(),
+  workspaceId: varchar("workspace_id").notNull(),
+  employeeId: varchar("employee_id").notNull(),
+  entryDate: date("entry_date").notNull(),
+  hoursWorked: decimal("hours_worked", { precision: 5, scale: 2 }).notNull().default("0"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("payroll_timesheet_entries_timesheet_idx").on(table.timesheetId),
+  index("payroll_timesheet_entries_workspace_idx").on(table.workspaceId),
+  unique("payroll_timesheet_entries_unique").on(table.timesheetId, table.entryDate),
+]);
+
+export const insertPayrollTimesheetEntrySchema = createInsertSchema(payrollTimesheetEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPayrollTimesheetEntry = z.infer<typeof insertPayrollTimesheetEntrySchema>;
+export type PayrollTimesheetEntry = typeof payrollTimesheetEntries.$inferSelect;

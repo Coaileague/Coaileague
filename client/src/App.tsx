@@ -230,6 +230,7 @@ const HRTerminations = lazy(() => import("@/pages/hr-terminations"));
 const Chatrooms = lazy(() => import("@/pages/chatrooms"));
 const Broadcasts = lazy(() => import("@/pages/broadcasts"));
 const PayrollDashboard = lazy(() => import("@/pages/payroll-dashboard"));
+const PayrollTimesheets = lazy(() => import("@/pages/payroll-timesheets"));
 const OrchestrationDashboard = lazy(() => import("@/pages/orchestration-dashboard"));
 const MyPaychecks = lazy(() => import("@/pages/my-paychecks"));
 const PayStubDetail = lazy(() => import("@/pages/pay-stub-detail"));
@@ -1524,6 +1525,7 @@ function AppContent() {
                 <Route path="/compliance/regulatory-enrollment"><ErrorBoundary><RegulatoryEnrollment /></ErrorBoundary></Route>
                 <Route path="/policies"><ErrorBoundary><Policies /></ErrorBoundary></Route>
                 <Route path="/payroll/pay-stubs/:id">{(params: any) => <ErrorBoundary componentName="Pay Stub"><PayStubDetail {...params} /></ErrorBoundary>}</Route>
+                <Route path="/payroll/timesheets"><ErrorBoundary componentName="Payroll Timesheets"><PayrollTimesheets /></ErrorBoundary></Route>
                 <Route path="/payroll"><ErrorBoundary componentName="Payroll Dashboard"><PayrollDashboard /></ErrorBoundary></Route>
                 <Route path="/my-paychecks"><ErrorBoundary><MyPaychecks /></ErrorBoundary></Route>
                 <Route path="/leaders-hub">
@@ -2077,6 +2079,7 @@ function AppContent() {
                 <Route path="/compliance/regulatory-enrollment"><ErrorBoundary><RegulatoryEnrollment /></ErrorBoundary></Route>
                 <Route path="/policies"><ErrorBoundary><Policies /></ErrorBoundary></Route>
                 <Route path="/payroll/pay-stubs/:id">{(params: any) => <ErrorBoundary componentName="Pay Stub"><PayStubDetail {...params} /></ErrorBoundary>}</Route>
+                <Route path="/payroll/timesheets"><ErrorBoundary componentName="Payroll Timesheets"><PayrollTimesheets /></ErrorBoundary></Route>
                 <Route path="/payroll"><ErrorBoundary componentName="Payroll Dashboard"><PayrollDashboard /></ErrorBoundary></Route>
                 <Route path="/my-paychecks"><ErrorBoundary><MyPaychecks /></ErrorBoundary></Route>
                 <Route path="/leaders-hub">
