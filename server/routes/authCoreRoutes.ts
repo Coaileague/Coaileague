@@ -1146,6 +1146,9 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
       organizationalTitle: organizationalTitle,
       simpleMode: freshUser.simpleMode ?? false,
       preferredLanguage: freshUser.preferredLanguage ?? "en",
+      profileImageUrl: freshUser.profileImageUrl ?? null,
+      userNumber: freshUser.userNumber ?? null,
+      phone: freshUser.phone ?? null,
       sessionContext: {
         workspaceId: req.session?.workspaceId || effectiveWorkspaceId || null,
         workspaceRole: req.session?.workspaceRole || workspaceRole || null,

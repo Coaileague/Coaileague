@@ -131,7 +131,7 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
           aria-label="Settings"
         >
           <Avatar className="h-8 w-8">
-            <AvatarImage src={(user as any)?.profilePhotoUrl || (user as any)?.avatarUrl || ''} alt={userDisplayName} />
+            <AvatarImage src={(user as any)?.profileImageUrl || ''} alt={userDisplayName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-bold tracking-wider">
               {userInitials}
             </AvatarFallback>
@@ -142,7 +142,7 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar>
-                <AvatarImage src={(user as any)?.profilePhotoUrl || (user as any)?.avatarUrl || ''} alt={userDisplayName} />
+                <AvatarImage src={(user as any)?.profileImageUrl || ''} alt={userDisplayName} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold tracking-wider">
                   {userInitials}
                 </AvatarFallback>

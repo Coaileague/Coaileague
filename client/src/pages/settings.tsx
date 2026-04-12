@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -190,10 +191,12 @@ type SettingsSection = typeof SETTINGS_SECTIONS[number]['id'];
 function ProfileTabContent() {
   const { toast } = useToast();
 
-  const { data: session, isLoading: sessionLoading, isError: sessionError, error: sessionErrorDetail } = useQuery<{ user?: any }>({
+  const { data: session, isLoading: sessionLoading } = useQuery<{ user?: any }>({
     queryKey: ['/api/auth/me'],
     staleTime: 5 * 60 * 1000,
   });
+
+  const currentUser = (session as any)?.user || session;
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -206,18 +209,19 @@ function ProfileTabContent() {
   });
 
   useEffect(() => {
-    if (session) {
-      const u = session?.user || session;
+    if (currentUser) {
       form.reset({
-        firstName: u?.firstName || '',
-        lastName: u?.lastName || '',
-        email: u?.email || '',
-        phone: u?.phone || '',
+        firstName: currentUser?.firstName || '',
+        lastName: currentUser?.lastName || '',
+        email: currentUser?.email || '',
+        phone: currentUser?.phone || '',
       });
     }
   }, [session, form]);
 
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [newEmailInput, setNewEmailInput] = useState('');
 
   const { isDirty } = form.formState;
 
@@ -235,9 +239,10 @@ function ProfileTabContent() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
+      // Email is intentionally excluded — changes are handled via the verified email-change flow
       const res = await apiRequest('PATCH', '/api/auth/profile', {
-        ...data,
-        email: data.email || undefined,
+        firstName: data.firstName,
+        lastName: data.lastName,
         phone: data.phone || undefined,
       });
       return res.json();
@@ -260,87 +265,233 @@ function ProfileTabContent() {
     },
   });
 
+  const requestEmailChangeMutation = useMutation({
+    mutationFn: async (newEmail: string) => {
+      return await apiRequest('POST', '/api/auth/request-email-change', { newEmail });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      setShowEmailDialog(false);
+      setNewEmailInput('');
+      toast({
+        title: "Verification Email Sent",
+        description: "Check your new inbox and click the link to confirm the change.",
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        variant: "destructive",
+        title: "Request Failed",
+        description: err?.message || "Unable to request email change. Please try again.",
+      });
+    },
+  });
+
+  const cancelEmailChangeMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/auth/cancel-email-change', {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      toast({ title: "Email Change Cancelled", description: "Your email address remains unchanged." });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Could not cancel the email change. Please try again." });
+    },
+  });
+
   const onSubmit = (values: ProfileFormValues) => {
     updateProfileMutation.mutate(values);
+  };
+
+  const handleRequestEmailChange = () => {
+    const trimmed = newEmailInput.trim();
+    if (!trimmed) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      toast({ variant: "destructive", title: "Invalid Email", description: "Please enter a valid email address." });
+      return;
+    }
+    requestEmailChangeMutation.mutate(trimmed);
   };
 
   if (sessionLoading) {
     return <SettingsCardSkeleton />;
   }
 
+  const firstName = currentUser?.firstName || '';
+  const lastName = currentUser?.lastName || '';
+  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || '?';
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || currentUser?.email || 'User';
+  const pendingEmail = currentUser?.pendingEmail || null;
+  const emailVerified = currentUser?.emailVerified ?? false;
+  const workspaceRole = currentUser?.workspaceRole || currentUser?.role || null;
+  const organizationalTitle = currentUser?.organizationalTitle || null;
+  const userNumber = currentUser?.userNumber || null;
+
+  const roleLabel = organizationalTitle
+    ? organizationalTitle.charAt(0).toUpperCase() + organizationalTitle.slice(1)
+    : workspaceRole
+      ? workspaceRole.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+      : null;
+
   return (
-    <Card>
-      <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-          <div className="min-w-0">
-            <CardTitle className="text-base sm:text-lg">Personal Information</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Update your name, email, and phone number</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs sm:text-sm">First Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="First name"
-                        data-testid="input-profile-first-name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+    <div className="space-y-4 sm:space-y-6">
+      {/* ── Profile Identity Card ───────────────────────────────────────────── */}
+      <Card data-testid="card-profile-identity">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-start gap-4">
+            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-2 ring-primary/20 shrink-0">
+              <AvatarImage
+                src={currentUser?.profileImageUrl || ''}
+                alt={displayName}
+                data-testid="avatar-profile-image"
               />
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs sm:text-sm">Last Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Last name"
-                        data-testid="input-profile-last-name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <AvatarFallback
+                className="bg-primary/15 text-primary text-xl sm:text-2xl font-bold"
+                data-testid="avatar-profile-fallback"
+              >
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <h2
+                className="text-base sm:text-lg font-bold leading-tight truncate"
+                data-testid="text-profile-display-name"
+              >
+                {displayName}
+              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="text-xs sm:text-sm text-muted-foreground truncate"
+                  data-testid="text-profile-email"
+                >
+                  {currentUser?.email}
+                </span>
+                {emailVerified ? (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] sm:text-xs text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 shrink-0"
+                    data-testid="badge-email-verified"
+                  >
+                    <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
+                    Verified
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 shrink-0"
+                    data-testid="badge-email-unverified"
+                  >
+                    <AlertCircle className="h-2.5 w-2.5 mr-1" />
+                    Unverified
+                  </Badge>
                 )}
-              />
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {roleLabel && (
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] sm:text-xs"
+                    data-testid="badge-profile-role"
+                  >
+                    {roleLabel}
+                  </Badge>
+                )}
+                {userNumber && (
+                  <span
+                    className="text-[10px] sm:text-xs text-muted-foreground font-mono"
+                    data-testid="text-profile-user-number"
+                  >
+                    {userNumber}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs sm:text-sm">Email</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+
+          {/* Pending email change notice */}
+          {pendingEmail && (
+            <div
+              className="mt-4 p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
+              data-testid="alert-pending-email"
+            >
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    Email change pending — verify{' '}
+                    <strong className="font-semibold">{pendingEmail}</strong> to complete
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                      onClick={() => cancelEmailChangeMutation.mutate()}
+                      disabled={cancelEmailChangeMutation.isPending}
+                      data-testid="button-cancel-email-change"
+                    >
+                      Cancel Change
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Personal Information Form ─────────────────────────────────────────── */}
+      <Card data-testid="card-personal-info">
+        <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Personal Information</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Update your name and phone number</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs sm:text-sm">First Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
+                      <FormControl>
                         <Input
-                          type="email"
-                          placeholder="Email address"
-                          className="pl-9"
-                          data-testid="input-profile-email"
+                          placeholder="First name"
+                          data-testid="input-profile-first-name"
                           {...field}
                         />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs sm:text-sm">Last Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Last name"
+                          data-testid="input-profile-last-name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="phone"
@@ -363,37 +514,119 @@ function ProfileTabContent() {
                   </FormItem>
                 )}
               />
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={updateProfileMutation.isPending || saveSuccess}
+                  data-testid="button-save-profile"
+                  variant={saveSuccess ? "outline" : "default"}
+                  className={saveSuccess ? "border-green-500 text-green-600 dark:text-green-400" : ""}
+                >
+                  {updateProfileMutation.isPending ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : saveSuccess ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Saved
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {/* ── Email Address Card ───────────────────────────────────────────────── */}
+      <Card data-testid="card-email-address">
+        <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base sm:text-lg">Email Address</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Email changes require verification</CardDescription>
             </div>
-            <div className="flex justify-end pt-2">
-              <Button
-                type="submit"
-                disabled={updateProfileMutation.isPending || saveSuccess}
-                data-testid="button-save-profile"
-                variant={saveSuccess ? "outline" : "default"}
-                className={saveSuccess ? "border-green-500 text-green-600 dark:text-green-400" : ""}
-              >
-                {updateProfileMutation.isPending ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : saveSuccess ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Saved
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    Save Profile
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-3">
+          <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border">
+            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium flex-1 truncate" data-testid="text-current-email">{currentUser?.email}</span>
+            {emailVerified ? (
+              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" aria-label="Email verified" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" aria-label="Email not verified" />
+            )}
+          </div>
+          {!pendingEmail && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs sm:text-sm"
+              onClick={() => setShowEmailDialog(true)}
+              data-testid="button-change-email"
+            >
+              <Mail className="h-3.5 w-3.5 mr-2" />
+              Change Email
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Email Change Dialog ──────────────────────────────────────────────── */}
+      <UniversalModal open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <UniversalModalHeader>
+          <UniversalModalTitle>Change Email Address</UniversalModalTitle>
+          <UniversalModalDescription>
+            A verification link will be sent to your new email. You must click it to confirm the change.
+          </UniversalModalDescription>
+        </UniversalModalHeader>
+        <div className="p-4 sm:p-6 space-y-4">
+          <div>
+            <Label className="text-xs mb-1.5 block">New Email Address</Label>
+            <Input
+              type="email"
+              placeholder="new@example.com"
+              value={newEmailInput}
+              onChange={(e) => setNewEmailInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleRequestEmailChange(); }}
+              data-testid="input-new-email"
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setShowEmailDialog(false); setNewEmailInput(''); }}
+              data-testid="button-cancel-email-dialog"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleRequestEmailChange}
+              disabled={requestEmailChangeMutation.isPending || !newEmailInput.trim()}
+              data-testid="button-send-email-verification"
+            >
+              {requestEmailChangeMutation.isPending ? (
+                <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />Sending...</>
+              ) : (
+                <><Send className="h-3.5 w-3.5 mr-1.5" />Send Verification</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </UniversalModal>
+    </div>
   );
 }
 
