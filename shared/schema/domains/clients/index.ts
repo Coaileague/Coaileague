@@ -1021,6 +1021,8 @@ export const clientServiceRequests = pgTable("client_service_requests", {
   assignedTo: varchar("assigned_to"), // workspace manager user_id
   internalNotes: text("internal_notes"),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  // Phase 9 — back-link to the support ticket auto-created on submission
+  supportTicketId: varchar("support_ticket_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 }, (table) => [
