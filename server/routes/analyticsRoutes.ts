@@ -134,7 +134,8 @@ router.get("/stats", async (req: any, res) => {
       safe('revenue',
         workspaceId
           ? db.select({
-              currentMonth: sql<number>`coalesce(sum(${invoices.total}), 0)`,
+              currentMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now())
+                                                    then ${invoices.total} else 0 end), 0)`,
               prevMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now() - interval '1 month') 
                                                  and ${invoices.createdAt} < date_trunc('month', now()) 
                                             then ${invoices.total} else 0 end), 0)`
@@ -146,7 +147,8 @@ router.get("/stats", async (req: any, res) => {
               sql`${invoices.status} in ('paid', 'sent', 'pending', 'draft')`
             ))
           : db.select({
-              currentMonth: sql<number>`coalesce(sum(${invoices.total}), 0)`,
+              currentMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now())
+                                                    then ${invoices.total} else 0 end), 0)`,
               prevMonth: sql<number>`coalesce(sum(case when ${invoices.createdAt} >= date_trunc('month', now() - interval '1 month') 
                                                  and ${invoices.createdAt} < date_trunc('month', now()) 
                                             then ${invoices.total} else 0 end), 0)`
