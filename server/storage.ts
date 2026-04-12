@@ -4111,7 +4111,8 @@ export class DatabaseStorage implements IStorage {
   async getChatMessagesByConversation(conversationId: string, workspaceId: string, since?: Date): Promise<ChatMessage[]> {
     const conditions: any[] = [
       eq(chatMessages.conversationId, conversationId),
-      eq(chatMessages.workspaceId, workspaceId)
+      eq(chatMessages.workspaceId, workspaceId),
+      eq(chatMessages.isDeletedForEveryone, false),
     ];
     if (since) {
       conditions.push(gte(chatMessages.createdAt, since));

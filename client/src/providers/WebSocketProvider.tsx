@@ -7,6 +7,7 @@ export interface WebSocketBus {
   subscribe: (type: string, handler: MessageHandler) => () => void;
   subscribeAll: (handler: MessageHandler) => () => void;
   send: (message: any) => void;
+  sendChatMessage: (message: Omit<any, 'clientId'>) => string;
   isConnected: () => boolean;
   getSocket: () => WebSocket | null;
 }
@@ -212,6 +213,14 @@ class WebSocketBusImpl implements WebSocketBus {
     }
   }
 
+  // Send a chat_message with an auto-generated clientId for delivery confirmation.
+  // Returns the clientId so the caller can track ack status.
+  sendChatMessage(message: Omit<any, 'clientId'>): string {
+    const clientId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    this.send({ ...message, clientId });
+    return clientId;
+  }
+
   // Returns true only after auth has completed — prevents join_conversation from
   // racing ahead of ws_authenticate when a component mounts mid-auth-handshake.
   isConnected(): boolean {
@@ -281,6 +290,7 @@ export function useWebSocketBus(): WebSocketBus {
       subscribe: () => () => {},
       subscribeAll: () => () => {},
       send: () => {},
+      sendChatMessage: () => '',
       isConnected: () => false,
       getSocket: () => null,
     };

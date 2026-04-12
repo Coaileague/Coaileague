@@ -1671,6 +1671,7 @@ router.get(
         .where(
           and(
             eq(chatMessages.conversationId, conversationId),
+            eq(chatMessages.isDeletedForEveryone, false),
             sql`${chatMessages.message} ILIKE ${'%' + q.trim() + '%'}`
           )
         )
