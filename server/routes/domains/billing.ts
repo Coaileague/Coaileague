@@ -24,6 +24,7 @@ import financialIntelligenceRouter from "../financialIntelligence";
 import financeNewRouter, { icalPublicRouter } from "../financeRoutes";
 import stripeInlineRouter from "../stripeInlineRoutes";
 import creditRouter from "../creditRoutes";
+import revenueRecognitionRouter from "../financialReporting/revenueRecognitionRoutes";
 import { billingReconciliation } from "../../services/billing/billingReconciliation";
 import { orgBillingService } from "../../services/billing/orgBillingService";
 import { blockFinancialData } from "../../middleware/auditorGuard";
@@ -166,5 +167,6 @@ export function mountBillingRoutes(app: Express): void {
   app.use("/api/quickbooks/phase3", requireAuth, ensureWorkspaceAccess, quickbooksPhase3Router);
   app.use("/api/finance", requireAuth, ensureWorkspaceAccess, financialIntelligenceRouter);
   app.use("/api/finance", requireAuth, ensureWorkspaceAccess, financeNewRouter);
+  app.use("/api/finance", requireAuth, ensureWorkspaceAccess, revenueRecognitionRouter);
   app.use(icalPublicRouter);
 }

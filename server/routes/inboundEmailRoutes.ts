@@ -55,6 +55,10 @@ registerLegacyBootstrap('email-tables', async (p) => {
       emails_received_this_period INTEGER DEFAULT 0,
       auto_trinity_process BOOLEAN DEFAULT false,
       trinity_calltype VARCHAR(100),
+      forwarding_address VARCHAR(320),
+      forwarding_enabled BOOLEAN DEFAULT false,
+      signature_text TEXT,
+      signature_html TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -62,6 +66,16 @@ registerLegacyBootstrap('email-tables', async (p) => {
       ON platform_email_addresses(address);
     CREATE INDEX IF NOT EXISTS idx_email_addresses_workspace
       ON platform_email_addresses(workspace_id);
+    -- Composite index for "all active addresses for a user in a workspace" query
+    -- (powers GET /api/email/addresses/mine)
+    CREATE INDEX IF NOT EXISTS idx_email_addresses_user_workspace
+      ON platform_email_addresses(user_id, workspace_id) WHERE is_active = true;
+    -- Phase 6: add forwarding/signature columns to existing tables idempotently
+    ALTER TABLE platform_email_addresses
+      ADD COLUMN IF NOT EXISTS forwarding_address VARCHAR(320),
+      ADD COLUMN IF NOT EXISTS forwarding_enabled BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS signature_text TEXT,
+      ADD COLUMN IF NOT EXISTS signature_html TEXT;
 
     CREATE TABLE IF NOT EXISTS email_routing (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -561,16 +575,35 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // Step 10: Inbound email forwarding — if workspace has inbound_email_forward_to set,
-    // forward a copy of this email to that external address (tenant owner's personal inbox).
+    // Step 10: Inbound email forwarding.
+    // Phase 6: Check per-address forwarding first; fall back to workspace-level forwarding.
     if (workspaceId) {
       scheduleNonBlocking('inbound-email.forward', async () => {
         try {
-          const wsResult = await pool.query(
-            `SELECT inbound_email_forward_to FROM workspaces WHERE id = $1 LIMIT 1`,
-            [workspaceId]
-          );
-          const forwardTo: string | null = wsResult.rows[0]?.inbound_email_forward_to || null;
+          // Phase 6: per-address forwarding (forwarding_address + forwarding_enabled on platform_email_addresses)
+          let forwardTo: string | null = null;
+          if (toEmail) {
+            const addrResult = await pool.query(
+              `SELECT forwarding_address, forwarding_enabled
+               FROM platform_email_addresses
+               WHERE address = $1 AND workspace_id = $2 AND is_active = true LIMIT 1`,
+              [toEmail, workspaceId]
+            );
+            const addrRow = addrResult.rows[0];
+            if (addrRow?.forwarding_enabled && addrRow.forwarding_address) {
+              forwardTo = addrRow.forwarding_address;
+            }
+          }
+
+          // Workspace-level fallback
+          if (!forwardTo) {
+            const wsResult = await pool.query(
+              `SELECT inbound_email_forward_to FROM workspaces WHERE id = $1 LIMIT 1`,
+              [workspaceId]
+            );
+            forwardTo = wsResult.rows[0]?.inbound_email_forward_to || null;
+          }
+
           if (!forwardTo) return;
 
           const fwdSubject = `Fwd: ${subject}`;

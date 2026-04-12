@@ -1213,6 +1213,27 @@ import { createHash } from "crypto";
           tx,
         });
 
+        // Create revenue recognition schedule (Issue #5: invoice-to-revenue linking)
+        const recognitionMethod = (createdInvoice as any).recognitionMethod ?? 'cash';
+        const invoiceTotal = parseFloat(String(createdInvoice.total || validated.totalAmount || 0));
+        if (invoiceTotal > 0 && createdInvoice.clientId) {
+          try {
+            const { createScheduleForInvoice } = await import('../services/billing/revenueRecognitionService');
+            await createScheduleForInvoice(tx, {
+              workspaceId: workspace.id,
+              invoiceId: createdInvoice.id,
+              clientId: createdInvoice.clientId,
+              totalAmount: invoiceTotal,
+              recognitionMethod: recognitionMethod === 'accrual' ? 'accrual' : 'cash',
+              periodMonths: req.body?.recognitionPeriodMonths ?? 1,
+              startDate: createdInvoice.issueDate ? new Date(createdInvoice.issueDate) : new Date(),
+              createdBy: userId,
+            });
+          } catch (revErr: any) {
+            log.warn('[InvoiceRoutes] Revenue schedule creation failed (non-fatal)', { error: revErr?.message });
+          }
+        }
+
         return createdInvoice;
       });
 
@@ -1718,6 +1739,19 @@ import { createHash } from "crypto";
         });
       } catch (ledgerErr: unknown) {
         log.warn('[FinancialLedger] Payment ledger write failed:', (ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr)));
+      }
+
+      // Recognize cash-method revenue on payment (Issue #5: invoice-to-revenue linking)
+      try {
+        const { recognizeCashRevenueOnPayment } = await import('../services/billing/revenueRecognitionService');
+        await recognizeCashRevenueOnPayment(
+          workspace.id,
+          id,
+          parseFloat(String(updated.total || 0)),
+          userId,
+        );
+      } catch (revErr: any) {
+        log.warn('[InvoiceRoutes] Cash revenue recognition failed (non-fatal)', { error: revErr?.message });
       }
 
       storage.createAuditLog({

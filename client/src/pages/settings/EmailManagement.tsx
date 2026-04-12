@@ -5,9 +5,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Mail, Users, Building2, BarChart3, CircleDollarSign, AlertTriangle, CheckCircle } from "lucide-react";
+import { Mail, Users, Building2, BarChart3, CircleDollarSign, AlertTriangle, CheckCircle, Settings2, Forward, Pen } from "lucide-react";
 
 interface EmailAddress {
   id: string;
@@ -26,6 +38,17 @@ interface EmailAddress {
   client_name?: string;
 }
 
+interface AddressSettings {
+  id: string;
+  address: string;
+  display_name: string | null;
+  address_type: string;
+  forwarding_address: string | null;
+  forwarding_enabled: boolean;
+  signature_text: string | null;
+  signature_html: string | null;
+}
+
 interface ManagementData {
   addresses: EmailAddress[];
   summary: {
@@ -37,10 +60,207 @@ interface ManagementData {
   };
 }
 
+// ─── Per-Address Settings Dialog ─────────────────────────────────────────────
+function AddressSettingsDialog({
+  addressId,
+  onClose,
+}: {
+  addressId: string;
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: settings, isLoading } = useQuery<AddressSettings>({
+    queryKey: [`/api/email/addresses/${addressId}/settings`],
+    enabled: !!addressId,
+  });
+
+  const [forwardingEnabled, setForwardingEnabled] = useState(false);
+  const [forwardingAddress, setForwardingAddress] = useState("");
+  const [signatureText, setSignatureText] = useState("");
+  const [signatureHtml, setSignatureHtml] = useState("");
+  const [displayName, setDisplayName] = useState("");
+
+  // Sync local state when settings load — runs once when data arrives
+  const [initialized, setInitialized] = useState(false);
+  // Hook law: all hooks unconditionally above this line — conditional logic below
+  if (settings && !initialized) {
+    setForwardingEnabled(settings.forwarding_enabled ?? false);
+    setForwardingAddress(settings.forwarding_address ?? "");
+    setSignatureText(settings.signature_text ?? "");
+    setSignatureHtml(settings.signature_html ?? "");
+    setDisplayName(settings.display_name ?? "");
+    setInitialized(true);
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PUT", `/api/email/addresses/${addressId}/settings`, {
+        forwarding_address: forwardingAddress || null,
+        forwarding_enabled: forwardingEnabled,
+        signature_text: signatureText || null,
+        signature_html: signatureHtml || null,
+        display_name: displayName || null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/email/management"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/email/addresses/${addressId}/settings`] });
+      toast({ title: "Settings saved", description: "Email address settings updated." });
+      onClose();
+    },
+    onError: () => {
+      toast({ title: "Failed to save settings", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4" />
+            Email Address Settings
+          </DialogTitle>
+          {settings?.address && (
+            <DialogDescription className="font-mono text-xs">
+              {settings.address}
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="space-y-3 py-4">
+            {[1, 2, 3].map(i => <div key={i} className="h-8 bg-muted animate-pulse rounded" />)}
+          </div>
+        ) : (
+          <Tabs defaultValue="forwarding" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="forwarding" className="flex-1 gap-1.5">
+                <Forward className="w-3.5 h-3.5" />
+                Forwarding
+              </TabsTrigger>
+              <TabsTrigger value="signature" className="flex-1 gap-1.5">
+                <Pen className="w-3.5 h-3.5" />
+                Signature
+              </TabsTrigger>
+            </TabsList>
+
+            {/* ─── Forwarding Tab ─── */}
+            <TabsContent value="forwarding" className="space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Enable Forwarding</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Forward a copy of all inbound emails to an external address
+                  </p>
+                </div>
+                <Switch
+                  checked={forwardingEnabled}
+                  onCheckedChange={setForwardingEnabled}
+                  data-testid="switch-forwarding-enabled"
+                />
+              </div>
+
+              {forwardingEnabled && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="fwd-address" className="text-sm">Forward to address</Label>
+                  <Input
+                    id="fwd-address"
+                    type="email"
+                    placeholder="personal@gmail.com"
+                    value={forwardingAddress}
+                    onChange={(e) => setForwardingAddress(e.target.value)}
+                    data-testid="input-forwarding-address"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Emails will be forwarded as inline HTML so you can read and interact with them.
+                    A copy is always kept in your CoAIleague inbox.
+                  </p>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="space-y-1.5">
+                <Label htmlFor="display-name" className="text-sm">Display Name</Label>
+                <Input
+                  id="display-name"
+                  placeholder="John Smith — VP Sales"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  data-testid="input-display-name"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown as the sender name when you send emails from this address
+                </p>
+              </div>
+            </TabsContent>
+
+            {/* ─── Signature Tab ─── */}
+            <TabsContent value="signature" className="space-y-4 mt-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="sig-text" className="text-sm">Plain Text Signature</Label>
+                <Textarea
+                  id="sig-text"
+                  placeholder={"John Smith\nVP Sales\nAcme Corp\njohn@slug.coaileague.com\n(555) 123-4567"}
+                  className="font-mono text-xs resize-none"
+                  rows={5}
+                  value={signatureText}
+                  onChange={(e) => setSignatureText(e.target.value)}
+                  data-testid="textarea-signature-text"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="sig-html" className="text-sm">HTML Signature (optional)</Label>
+                <Textarea
+                  id="sig-html"
+                  placeholder={"<p><strong>John Smith</strong></p>\n<p>VP Sales · Acme Corp</p>"}
+                  className="font-mono text-xs resize-none"
+                  rows={5}
+                  value={signatureHtml}
+                  onChange={(e) => setSignatureHtml(e.target.value)}
+                  data-testid="textarea-signature-html"
+                />
+                <p className="text-xs text-muted-foreground">
+                  When provided, the HTML signature is appended to outbound emails. Plain text is
+                  used for text-only email clients.
+                </p>
+              </div>
+
+              {(signatureText || signatureHtml) && (
+                <div className="rounded-md border p-3 bg-muted/30">
+                  <p className="text-xs text-muted-foreground mb-1 font-medium">Preview (text):</p>
+                  <pre className="text-xs whitespace-pre-wrap text-foreground">
+                    {signatureText || "(HTML only — no plain-text preview)"}
+                  </pre>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending || isLoading}
+            data-testid="button-save-address-settings"
+          >
+            {saveMutation.isPending ? "Saving…" : "Save Settings"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function EmailManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activating, setActivating] = useState<string | null>(null);
+  const [settingsAddressId, setSettingsAddressId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<ManagementData>({
     queryKey: ["/api/email/management"],
@@ -274,6 +494,15 @@ export default function EmailManagement() {
                   <Badge variant={addr.is_active ? "default" : "outline"} className="text-xs">
                     {addr.is_active ? "Active" : "Inactive"}
                   </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    data-testid={`button-officer-settings-${addr.id}`}
+                    onClick={() => setSettingsAddressId(addr.id)}
+                  >
+                    <Settings2 className="w-3.5 h-3.5" />
+                  </Button>
                   <Switch
                     data-testid={`switch-officer-email-${addr.id}`}
                     checked={addr.is_active}
@@ -328,6 +557,15 @@ export default function EmailManagement() {
                   <Badge variant={addr.is_active ? "default" : "outline"} className="text-xs">
                     {addr.is_active ? "Active" : "Inactive"}
                   </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    data-testid={`button-client-settings-${addr.id}`}
+                    onClick={() => setSettingsAddressId(addr.id)}
+                  >
+                    <Settings2 className="w-3.5 h-3.5" />
+                  </Button>
                   <Switch
                     data-testid={`switch-client-email-${addr.id}`}
                     checked={addr.is_active}
@@ -383,6 +621,14 @@ export default function EmailManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Per-address settings dialog */}
+      {settingsAddressId && (
+        <AddressSettingsDialog
+          addressId={settingsAddressId}
+          onClose={() => setSettingsAddressId(null)}
+        />
+      )}
     </div>
   );
 }

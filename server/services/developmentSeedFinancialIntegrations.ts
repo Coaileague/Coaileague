@@ -671,6 +671,10 @@ async function seedAnvilStripeFallback() {
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function runFinancialIntegrationsSeed(): Promise<{ message: string }> {
+  // Production guard — dev seeds must NEVER run in production (CLAUDE.md §A)
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return { message: 'Skipped — production environment' };
+
   try {
     if (await alreadySeeded()) {
       return { message: '[FinancialSeed] Already seeded — skipping' };

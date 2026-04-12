@@ -11,6 +11,10 @@ const DEMO_WORKSPACE_ID = "demo-workspace-00000000";
 export { DEMO_USER_ID, DEMO_WORKSPACE_ID };
 
 export async function refreshDemoData() {
+  // Production guard — demo data must NEVER be seeded in production (CLAUDE.md §A)
+  const { isProduction } = await import('./lib/isProduction');
+  if (isProduction()) { console.log('🔄 Demo refresh skipped — production environment'); return; }
+
   console.log("🔄 Refreshing demo workspace data...");
 
   // Delete dependent data in correct FK order (transaction-safe)
@@ -33,6 +37,10 @@ export async function refreshDemoData() {
 }
 
 export async function seedDemoWorkspace() {
+  // Production guard — demo data must NEVER be seeded in production (CLAUDE.md §A)
+  const { isProduction } = await import('./lib/isProduction');
+  if (isProduction()) { console.log('🌱 Demo seed skipped — production environment'); return; }
+
   console.log("🌱 Seeding demo workspace...");
 
   // Check if demo user already exists

@@ -141,6 +141,7 @@ import { platformConfigValuesRouter } from './routes/platformConfigValuesRoutes'
 import { ensureWorkspaceAccess } from './middleware/workspaceScope';
 import { createLogger } from './lib/logger';
 import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
+import internalResetRouter from './routes/internalResetRoutes';
 const log = createLogger('routes');
 
 
@@ -739,6 +740,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // All route logic lives in server/routes/domains/*.ts
   // ============================================================================
   mountAuthRoutes(app);       // /api/auth/*, /api/tos/*, /api/dev
+  // Emergency one-time operator password reset (disabled unless INTERNAL_RESET_TOKEN env var is set)
+  app.use('/api/auth', internalResetRouter);
   mountSupportRoutes(app);    // /api/platform, /api/support/*, /api/help
   mountBillingRoutes(app);    // /api/billing, /api/invoices, /api/stripe
   mountClientRoutes(app);     // /api/clients, /api/contracts, /api/contract-renewals

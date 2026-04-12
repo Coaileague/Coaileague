@@ -245,7 +245,7 @@ export async function runProductionDataCleanup(): Promise<void> {
   const SYSTEM_WS = 'system';                           // system automation workspace
 
   // Financial record protection — refuse to run if grandfathered tenant financial data exists
-  // CATEGORY C — Raw SQL retained: COUNT( | Tables: invoices, payroll_entries, org_ledger | Verified: 2026-03-23
+  // CATEGORY C — Raw SQL retained: COUNT( | Tables: invoices, payroll_entries, org_ledger | Verified: 2026-04-12
   const protectedWs = GRANDFATHERED_WS;
   if (protectedWs) {
     const [sentInvoices, payrollEntriesCount, ledgerEntries] = await Promise.all([
@@ -272,24 +272,49 @@ export async function runProductionDataCleanup(): Promise<void> {
   // ALL others are contamination — dev/test/sandbox/demo workspaces that bled into production
   const KEEP_WORKSPACES = [...(protectedWs ? [protectedWs] : []), PLATFORM_WS, SYSTEM_WS];
 
-  const WORKSPACE_SCOPED_TABLES = [
-    'employees', 'clients', 'shifts', 'time_entries', 'schedules',
-    'invoices', 'notifications', 'chat_messages', 'chatrooms',
-    'incidents', 'visitor_logs', 'daily_activity_reports',
-    'pay_stubs', 'payroll_runs', 'compliance_documents',
-    'availability', 'break_records', 'contracts', 'documents',
-    'form_templates', 'form_submissions', 'automation_executions',
-    'workspace_configs', 'geofences', 'bolo_alerts',
-    'shift_swap_requests', 'recurring_shifts', 'tax_forms',
-  ];
+  // ── Dynamic table discovery ───────────────────────────────────────────────
+  // Query information_schema for ALL tables with a workspace_id column.
+  // This is self-maintaining — new tables are automatically included without
+  // needing to update a static list. The old static list of ~30 tables missed
+  // hundreds of workspace-scoped tables.
+  // CATEGORY C — Raw SQL retained: information_schema discovery | Tables: information_schema | Verified: 2026-04-12
+  let allWorkspaceScopedTables: string[];
+  try {
+    const tableRows = await typedQuery<{ table_name: string }>(sql`
+      SELECT DISTINCT c.table_name
+      FROM information_schema.columns c
+      JOIN information_schema.tables t
+        ON t.table_name = c.table_name AND t.table_schema = c.table_schema
+      WHERE c.column_name = 'workspace_id'
+        AND c.table_schema = 'public'
+        AND t.table_type = 'BASE TABLE'
+        AND c.table_name != 'workspaces'
+      ORDER BY c.table_name
+    `);
+    allWorkspaceScopedTables = tableRows.map(r => r.table_name);
+    console.log(`🧹 Discovered ${allWorkspaceScopedTables.length} workspace-scoped tables`);
+  } catch (err) {
+    console.error('🧹 Failed to discover workspace-scoped tables — falling back to static list');
+    // Fallback: the original static list (covers most critical tables)
+    allWorkspaceScopedTables = [
+      'employees', 'clients', 'shifts', 'time_entries', 'schedules',
+      'invoices', 'notifications', 'chat_messages', 'chatrooms',
+      'incidents', 'visitor_logs', 'daily_activity_reports',
+      'pay_stubs', 'payroll_runs', 'compliance_documents',
+      'availability', 'break_records', 'contracts', 'documents',
+      'form_templates', 'form_submissions', 'automation_executions',
+      'workspace_configs', 'geofences', 'bolo_alerts',
+      'shift_swap_requests', 'recurring_shifts', 'tax_forms',
+    ];
+  }
 
   try {
-    // Converted to Drizzle ORM: NOT IN → notInArray()
-    const devWorkspaces = await db.select({ id: workspaces.id, name: workspaces.name })
-      .from(workspaces)
-      .where(notInArray(workspaces.id, KEEP_WORKSPACES));
+    // ── Pre-cleanup snapshot ──────────────────────────────────────────────
+    const allWorkspaces = await db.select({ id: workspaces.id, name: workspaces.name })
+      .from(workspaces);
+    const devWorkspaces = allWorkspaces.filter(ws => !KEEP_WORKSPACES.includes(ws.id));
 
-    // CATEGORY C — Raw SQL retained: Count( | Tables: employees | Verified: 2026-03-23
+    // CATEGORY C — Raw SQL retained: Count( | Tables: employees | Verified: 2026-04-12
     const protectedEmp = protectedWs ? await db.select({ count: sql`COUNT(*)` })
       .from(employees)
       .where(and(
@@ -298,7 +323,32 @@ export async function runProductionDataCleanup(): Promise<void> {
       )) : [{ count: '0' }];
     const sandboxEmpCount = parseInt(String((protectedEmp[0] as any)?.count || '0'));
 
-    if (devWorkspaces.length === 0 && sandboxEmpCount === 0) {
+    // Count phantom users
+    const phantomUserRows = await typedQuery<{ cnt: string }>(sql`
+      SELECT COUNT(*) AS cnt FROM users
+      WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
+         OR id LIKE 'demo-%' OR id LIKE 'anvil-%' OR id = 'root-admin-workfos'
+    `);
+    const phantomUserCount = parseInt(phantomUserRows[0]?.cnt || '0');
+
+    // Count test emails
+    const testEmailRows = await typedQuery<{ cnt: string }>(sql`
+      SELECT COUNT(*) AS cnt FROM users
+      WHERE email LIKE '%.test' OR email LIKE '%@acme%' OR email LIKE '%@frostbank%'
+         OR email LIKE '%@anvilsecurity%' OR email LIKE '%@metroplex%'
+    `);
+    const testEmailCount = parseInt(testEmailRows[0]?.cnt || '0');
+
+    console.log('🧹 ── Pre-cleanup snapshot ──────────────────');
+    console.log(`🧹   Total workspaces: ${allWorkspaces.length}`);
+    console.log(`🧹   Contaminated workspaces: ${devWorkspaces.length}`);
+    console.log(`🧹   Sandbox employees in protected ws: ${sandboxEmpCount}`);
+    console.log(`🧹   Phantom users (dev/test IDs): ${phantomUserCount}`);
+    console.log(`🧹   Users with test emails: ${testEmailCount}`);
+    console.log(`🧹   Tables to scan: ${allWorkspaceScopedTables.length}`);
+    console.log('🧹 ────────────────────────────────────────────');
+
+    if (devWorkspaces.length === 0 && sandboxEmpCount === 0 && phantomUserCount === 0 && testEmailCount === 0) {
       console.log('🧹 Production Data Cleanup: Already clean — nothing to do');
       return;
     }
@@ -306,27 +356,22 @@ export async function runProductionDataCleanup(): Promise<void> {
     // 25P02 fix: every cleanup statement is wrapped in its own savepoint
     // (a Drizzle nested transaction). When any statement fails, only that
     // savepoint is rolled back — the outer transaction stays alive and
-    // subsequent statements can still run. The previous try/catch pattern
-    // silently swallowed the JS error but did NOT clear PostgreSQL's
-    // aborted-transaction state, so every later tx.execute() failed with
-    // 25P02 ("current transaction is aborted, commands ignored until end
-    // of transaction block"). Savepoints are the correct way to do
-    // partial-failure-tolerant cleanup inside a single transaction.
+    // subsequent statements can still run.
     const savepoint = async (label: string, fn: (sp: any) => Promise<void>): Promise<void> => {
       try {
         await db.transaction(async (sp) => {
           await fn(sp);
         });
       } catch (err: any) {
-        // Don't log the entire txn abort cascade — just the original
-        // failure. Most failures here are missing tables in dev or
-        // foreign-key constraints during cascade cleanup, both expected.
+        // Don't log the entire txn abort cascade — just the original failure.
+        // 25P02 = aborted transaction state, 42P01 = missing table — both expected.
         if (err?.code !== '25P02' && err?.code !== '42P01') {
           console.log(`🧹 [${label}] failed (non-fatal): ${err?.message}`);
         }
       }
     };
 
+    // ── Step 1: Remove ALL contaminated workspaces and their data ────────
     if (devWorkspaces.length > 0) {
       console.log(`🧹 Step 1: Removing ${devWorkspaces.length} non-production workspaces:`);
       for (const ws of devWorkspaces) {
@@ -334,92 +379,197 @@ export async function runProductionDataCleanup(): Promise<void> {
       }
 
       for (const ws of devWorkspaces) {
-        for (const table of WORKSPACE_SCOPED_TABLES) {
-          await savepoint(`step1.delete.${table}`, async (sp) => {
-            await sp.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${ws.id}'`));
+        let tablesDeleted = 0;
+        for (const table of allWorkspaceScopedTables) {
+          await savepoint(`step1.${table}.${ws.id}`, async (sp) => {
+            // CATEGORY C — Raw SQL retained: dynamic table cleanup | Tables: dynamic | Verified: 2026-04-12
+            const result = await sp.execute(sql.raw(
+              `DELETE FROM "${table}" WHERE workspace_id = '${ws.id.replace(/'/g, "''")}'`
+            ));
+            if (result.rowCount > 0) tablesDeleted++;
           });
         }
-        await savepoint(`step1.delete.workspace.${ws.id}`, async (sp) => {
-          await sp.execute(sql.raw(`DELETE FROM workspaces WHERE id = '${ws.id}'`));
+        // Delete workspace_members separately (FK to workspaces)
+        await savepoint(`step1.workspace_members.${ws.id}`, async (sp) => {
+          await sp.execute(sql.raw(
+            `DELETE FROM workspace_members WHERE workspace_id = '${ws.id.replace(/'/g, "''")}'`
+          ));
         });
+        // Delete the workspace itself last
+        await savepoint(`step1.workspace.${ws.id}`, async (sp) => {
+          await sp.execute(sql.raw(`DELETE FROM workspaces WHERE id = '${ws.id.replace(/'/g, "''")}'`));
+        });
+        console.log(`🧹   Cleaned workspace ${ws.id} (${ws.name}) — touched ${tablesDeleted} tables`);
       }
       console.log('🧹 Step 1: Complete');
     }
 
-    console.log('🧹 Step 2: Cleaning Statewide workspace — removing all non-owner data...');
-    // Skip step 2 entirely if either the protected workspace or its
-    // owner ID isn't configured. Without both, we cannot safely identify
-    // which rows to keep vs. delete and the previous code crashed with
-    // "REAL_OWNER_USER_ID is not defined" because that variable never
-    // existed — the env var is GRANDFATHERED_TENANT_OWNER_ID.
+    // ── Step 2: Clean grandfathered workspace of seeded sandbox data ─────
+    console.log('🧹 Step 2: Cleaning grandfathered workspace of sandbox contamination...');
     if (protectedWs && GRANDFATHERED_OWNER) {
-      await savepoint('step2.delete.employees', async (sp) => {
+      // Remove sandbox employees (keep only the real owner)
+      await savepoint('step2.employees', async (sp) => {
         const deleted = await sp.execute(sql`
           DELETE FROM employees
           WHERE workspace_id = ${protectedWs}
           AND user_id IS DISTINCT FROM ${GRANDFATHERED_OWNER}
         `);
-        console.log(`🧹 Step 2a: Removed ${deleted.rowCount || 0} sandbox employees`);
+        console.log(`🧹   Removed ${deleted.rowCount || 0} sandbox employees from protected workspace`);
       });
+
+      // Remove all other workspace-scoped data (clients, shifts, invoices, etc.)
+      // that was seeded by dev code bleeding into production
+      let protectedTablesDeleted = 0;
+      for (const table of allWorkspaceScopedTables) {
+        if (table === 'employees') continue; // handled above with owner filter
+        await savepoint(`step2.${table}`, async (sp) => {
+          const result = await sp.execute(sql.raw(
+            `DELETE FROM "${table}" WHERE workspace_id = '${protectedWs.replace(/'/g, "''")}'`
+          ));
+          if (result.rowCount > 0) protectedTablesDeleted++;
+        });
+      }
+      console.log(`🧹   Cleaned ${protectedTablesDeleted} tables in protected workspace`);
     } else {
-      console.log('🧹 Step 2: Skipped — protected workspace or owner ID not configured');
+      console.log('🧹   Skipped — protected workspace or owner ID not configured');
     }
+    console.log('🧹 Step 2: Complete');
 
-    for (const table of WORKSPACE_SCOPED_TABLES) {
-      if (table === 'employees') continue;
-      await savepoint(`step2.delete.${table}`, async (sp) => {
-        await sp.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${protectedWs || ""}'`));
-      });
-    }
-    console.log('🧹 Step 2b: All sandbox clients, shifts, invoices, etc. removed');
-
-    console.log('🧹 Step 3: Removing phantom users (dev/test/tenant IDs)...');
-    await savepoint('step3.delete.platform_roles', async (sp) => {
+    // ── Step 3: Remove phantom users (dev/test/tenant/demo IDs) ─────────
+    console.log('🧹 Step 3: Removing phantom users...');
+    // Delete from dependent tables first (platform_roles, employees, workspace_members)
+    await savepoint('step3.platform_roles', async (sp) => {
       await sp.execute(sql`
         DELETE FROM platform_roles
         WHERE user_id IN (
           SELECT id FROM users
           WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
-          OR id LIKE 'demo-%' OR id = 'root-admin-workfos'
+          OR id LIKE 'demo-%' OR id LIKE 'anvil-%' OR id = 'root-admin-workfos'
         )
       `);
     });
-    await savepoint('step3.delete.employees', async (sp) => {
+    await savepoint('step3.workspace_members', async (sp) => {
+      await sp.execute(sql`
+        DELETE FROM workspace_members
+        WHERE user_id IN (
+          SELECT id FROM users
+          WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
+          OR id LIKE 'demo-%' OR id LIKE 'anvil-%' OR id = 'root-admin-workfos'
+        )
+      `);
+    });
+    await savepoint('step3.employees', async (sp) => {
       await sp.execute(sql`
         DELETE FROM employees
         WHERE user_id IN (
           SELECT id FROM users
           WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
-          OR id LIKE 'demo-%'
+          OR id LIKE 'demo-%' OR id LIKE 'anvil-%'
         )
       `);
     });
-    await savepoint('step3.delete.users', async (sp) => {
-      await sp.execute(sql`
+    await savepoint('step3.users', async (sp) => {
+      const deleted = await sp.execute(sql`
         DELETE FROM users
         WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
-        OR id LIKE 'demo-%' OR id = 'root-admin-workfos'
+        OR id LIKE 'demo-%' OR id LIKE 'anvil-%' OR id = 'root-admin-workfos'
+      `);
+      console.log(`🧹   Removed ${deleted.rowCount || 0} phantom users`);
+    });
+
+    // Also remove users with test email domains that slipped through
+    await savepoint('step3.test_email_employees', async (sp) => {
+      await sp.execute(sql`
+        DELETE FROM employees
+        WHERE user_id IN (
+          SELECT id FROM users
+          WHERE email LIKE '%.test' OR email LIKE '%@acme%'
+             OR email LIKE '%@frostbank%' OR email LIKE '%@anvilsecurity%'
+             OR email LIKE '%@metroplex%'
+        )
       `);
     });
-    console.log('🧹 Step 3: Phantom users removed');
+    await savepoint('step3.test_email_users', async (sp) => {
+      const deleted = await sp.execute(sql`
+        DELETE FROM users
+        WHERE email LIKE '%.test' OR email LIKE '%@acme%'
+           OR email LIKE '%@frostbank%' OR email LIKE '%@anvilsecurity%'
+           OR email LIKE '%@metroplex%'
+      `);
+      console.log(`🧹   Removed ${deleted.rowCount || 0} users with test email domains`);
+    });
+    console.log('🧹 Step 3: Complete');
 
-    console.log('🧹 Step 4: Cleaning platform workspace of non-system employees...');
-    await savepoint('step4.delete.platform_employees', async (sp) => {
-      await sp.execute(sql`
+    // ── Step 4: Clean platform workspace of non-system employees ─────────
+    console.log('🧹 Step 4: Cleaning platform workspace...');
+    await savepoint('step4.platform_employees', async (sp) => {
+      const deleted = await sp.execute(sql`
         DELETE FROM employees
         WHERE workspace_id = ${PLATFORM_WS}
         AND id NOT IN ('8d31a497-e9fe-48d9-b819-9c6869948c39', 'helpai-employee', 'trinity-employee')
       `);
+      console.log(`🧹   Removed ${deleted.rowCount || 0} non-system employees from platform workspace`);
     });
-    console.log('🧹 Step 4: Platform workspace cleaned');
+    console.log('🧹 Step 4: Complete');
 
-    console.log('🧹 ========================================');
+    // ── Step 5: Clean platform-level test data (emails, notifications) ───
+    console.log('🧹 Step 5: Cleaning platform-level test data...');
+    // Remove platform emails with test domains
+    await savepoint('step5.platform_emails', async (sp) => {
+      const deleted = await sp.execute(sql`
+        DELETE FROM platform_emails
+        WHERE to_addr LIKE '%.test' OR to_addr LIKE '%@frostbank%'
+           OR to_addr LIKE '%@acme%' OR to_addr LIKE '%@anvilsecurity%'
+           OR to_addr LIKE '%@metroplex%'
+           OR from_addr LIKE '%.test' OR from_addr LIKE '%@frostbank%'
+      `);
+      console.log(`🧹   Removed ${deleted.rowCount || 0} test platform emails`);
+    });
+    // Remove SMS attempts to test numbers
+    await savepoint('step5.sms_attempt_log', async (sp) => {
+      const deleted = await sp.execute(sql`
+        DELETE FROM sms_attempt_log
+        WHERE to_number LIKE '555-%' OR to_number LIKE '%555-0%'
+      `);
+      console.log(`🧹   Removed ${deleted.rowCount || 0} test SMS attempts`);
+    });
+    // Remove seed sentinel markers from key-value style tables
+    await savepoint('step5.seed_sentinels', async (sp) => {
+      await sp.execute(sql`
+        DELETE FROM idempotency_keys
+        WHERE key LIKE 'dev-%' OR key LIKE 'seed-%' OR key LIKE 'demo-%'
+      `);
+    });
+    console.log('🧹 Step 5: Complete');
+
+    // ── Post-cleanup verification ────────────────────────────────────────
+    const remainingWorkspaces = await db.select({ id: workspaces.id, name: workspaces.name })
+      .from(workspaces);
+    const remainingUsers = await typedQuery<{ cnt: string }>(sql`SELECT COUNT(*) AS cnt FROM users`);
+    const remainingEmployees = await typedQuery<{ cnt: string }>(sql`SELECT COUNT(*) AS cnt FROM employees`);
+    const remainingPhantoms = await typedQuery<{ cnt: string }>(sql`
+      SELECT COUNT(*) AS cnt FROM users
+      WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%'
+         OR id LIKE 'demo-%' OR id LIKE 'anvil-%' OR id = 'root-admin-workfos'
+    `);
+    const remainingTestEmails = await typedQuery<{ cnt: string }>(sql`
+      SELECT COUNT(*) AS cnt FROM users
+      WHERE email LIKE '%.test' OR email LIKE '%@acme%' OR email LIKE '%@frostbank%'
+         OR email LIKE '%@anvilsecurity%' OR email LIKE '%@metroplex%'
+    `);
+
+    console.log('🧹 ═══════════════════════════════════════════');
     console.log('🧹 Production Data Cleanup: COMPLETE');
-    console.log('🧹 Remaining workspaces:');
-    console.log('🧹   1. CoAIleague Platform (support/root org)');
-    console.log('🧹   2. Grandfathered tenant (owner only — ready for QB import)');
-    console.log('🧹   3. System Automation (internal)');
-    console.log('🧹 ========================================');
+    console.log('🧹 ── Post-cleanup verification ─────────────');
+    console.log(`🧹   Workspaces remaining: ${remainingWorkspaces.length}`);
+    for (const ws of remainingWorkspaces) {
+      console.log(`🧹     - ${ws.id} (${ws.name})`);
+    }
+    console.log(`🧹   Total users: ${remainingUsers[0]?.cnt || 0}`);
+    console.log(`🧹   Total employees: ${remainingEmployees[0]?.cnt || 0}`);
+    console.log(`🧹   Phantom users remaining: ${remainingPhantoms[0]?.cnt || 0}`);
+    console.log(`🧹   Test email users remaining: ${remainingTestEmails[0]?.cnt || 0}`);
+    console.log('🧹 ═══════════════════════════════════════════');
   } catch (err) {
     console.error('🧹 Production Data Cleanup: ERROR', (err as any)?.message);
     console.error('🧹 Full error:', err);

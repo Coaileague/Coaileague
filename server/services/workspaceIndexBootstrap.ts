@@ -160,6 +160,8 @@ const TABLES_NEEDING_WORKSPACE_INDEX: readonly string[] = [
   "training_scenarios", "training_runs", "training_courses", "training_enrollments",
   "employee_recognition", "employee_behavior_scores", "employee_certifications", "employee_bank_accounts",
   "hiring_pipeline", "performance_notes", "disciplinary_records",
+  // Phase 8: P&L Revenue Recognition tables (2026-04)
+  "revenue_recognition_schedule", "deferred_revenue", "processed_revenue_events", "contract_revenue_mapping",
 ];
 
 export async function ensureWorkspaceIndexes(): Promise<void> {

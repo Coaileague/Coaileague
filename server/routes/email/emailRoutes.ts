@@ -6,11 +6,39 @@
  *
  * Step 5 — Outbound Email API
  * Step 6 — Email Management API for Org Owners
+ *
+ * ─── EMAIL IDENTITY MODEL ────────────────────────────────────────────────────
+ * There are TWO completely separate email concepts in this system:
+ *
+ *   1. LOGIN EMAIL  (users.email)
+ *      The address a user registered with and uses to log in.
+ *      It is a credential — it never appears as a "From:" address in outbound
+ *      mail and is never visible in any inbox UI.
+ *
+ *   2. PLATFORM INBOX ADDRESS  (platform_email_addresses, users.platform_email)
+ *      The @{slug}.coaileague.com address provisioned for this user by
+ *      emailProvisioningService.  This is the address that appears in the
+ *      compose "From:" dropdown, receives inbound messages, and is shown in
+ *      the inbox.  It is entirely independent of the login credential.
+ *
+ * SUPPORT AGENTS follow this same rule:
+ *   - They log in with their personal email (users.email).
+ *   - They each have their own platform_email_addresses row for personal mail.
+ *   - They ALSO share access to support@coaileague.com via their platform_roles
+ *     entry (role IN support_agent | support_manager | sysop | deputy_admin |
+ *     root_admin).  The shared inbox is available at GET /api/email/support-inbox
+ *     and replies are always sent FROM support@coaileague.com, with the
+ *     individual agent's personal signature appended so replies are attributable.
+ *
+ * TENANTS and END USERS are identical in this respect — their login email is
+ * never used as a sending address; they communicate through their provisioned
+ * @{slug}.coaileague.com addresses only.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { Router } from 'express';
 import { pool } from '../../db';
-import { requireAuth } from '../../rbac';
+import { requireAuth, getUserPlatformRole } from '../../rbac';
 import { getUncachableResendClient } from '../../services/emailCore';
 import { emailProvisioningService } from '../../services/email/emailProvisioningService';
 import { EMAIL_PRICING } from '@shared/billingConfig';
@@ -188,6 +216,20 @@ emailRouter.post('/send', async (req: any, res) => {
       inReplyTo = parent.rows[0]?.message_id || null;
     }
 
+    // Auto-append email signature if configured
+    let finalBodyHtml = bodyHtml || '';
+    let finalBodyText = bodyText || '';
+    if (addr.signature_html) {
+      finalBodyHtml = finalBodyHtml
+        ? `${finalBodyHtml}\n<br/><div class="email-signature" style="margin-top:16px;padding-top:8px;border-top:1px solid #e5e7eb;">${addr.signature_html}</div>`
+        : `<div class="email-signature">${addr.signature_html}</div>`;
+    }
+    if (addr.signature_text) {
+      finalBodyText = finalBodyText
+        ? `${finalBodyText}\n\n--\n${addr.signature_text}`
+        : `--\n${addr.signature_text}`;
+    }
+
     // Send via Resend
     const { client, fromEmail } = await getUncachableResendClient();
     const sentFrom = addr.display_name ? `${addr.display_name} <${from}>` : from;
@@ -199,8 +241,8 @@ emailRouter.post('/send', async (req: any, res) => {
         to: Array.isArray(to) ? to : [to],
         cc: cc || [],
         subject,
-        html: bodyHtml,
-        text: bodyText,
+        html: finalBodyHtml || undefined,
+        text: finalBodyText || undefined,
         ...(inReplyTo && { replyTo: inReplyTo }),
       });
     } catch (sendErr: any) {
@@ -228,9 +270,9 @@ emailRouter.post('/send', async (req: any, res) => {
       Array.isArray(to) ? to : [to],
       Array.isArray(cc) ? cc : [],
       subject,
-      bodyHtml,
-      bodyText,
-      (bodyText || '').slice(0, 200),
+      finalBodyHtml,
+      finalBodyText,
+      (finalBodyText || '').slice(0, 200),
       userId,
     ]);
 
@@ -470,5 +512,275 @@ emailRouter.post('/activate-all', async (req: any, res) => {
     return res.json({ success: true, activated });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to bulk activate' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PER-ADDRESS SETTINGS (forwarding + signature)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── GET /api/email/addresses/:id/settings ────────────────────────────────────
+emailRouter.get('/addresses/:id/settings', async (req: any, res) => {
+  try {
+    const { workspaceId } = req.user;
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      SELECT
+        id, address, display_name, address_type,
+        forwarding_address, forwarding_enabled,
+        signature_text, signature_html
+      FROM platform_email_addresses
+      WHERE id = $1 AND workspace_id = $2
+    `, [id, workspaceId]);
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Address not found' });
+
+    return res.json(result.rows[0]);
+  } catch (err: any) {
+    log.error('[EmailRoutes] get settings error:', err);
+    return res.status(500).json({ error: 'Failed to fetch address settings' });
+  }
+});
+
+// ─── PUT /api/email/addresses/:id/settings ────────────────────────────────────
+emailRouter.put('/addresses/:id/settings', async (req: any, res) => {
+  try {
+    const { workspaceId, id: userId } = req.user;
+    const { id } = req.params;
+    const {
+      forwarding_address,
+      forwarding_enabled,
+      signature_text,
+      signature_html,
+      display_name,
+    } = req.body;
+
+    // Verify address belongs to workspace
+    const check = await pool.query(
+      `SELECT id FROM platform_email_addresses WHERE id = $1 AND workspace_id = $2`,
+      [id, workspaceId]
+    );
+    if (!check.rows[0]) return res.status(404).json({ error: 'Address not found' });
+
+    const updates: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (forwarding_address !== undefined) { updates.push(`forwarding_address = $${idx++}`); values.push(forwarding_address || null); }
+    if (forwarding_enabled !== undefined) { updates.push(`forwarding_enabled = $${idx++}`); values.push(!!forwarding_enabled); }
+    if (signature_text !== undefined)     { updates.push(`signature_text = $${idx++}`);     values.push(signature_text || null); }
+    if (signature_html !== undefined)     { updates.push(`signature_html = $${idx++}`);     values.push(signature_html || null); }
+    if (display_name !== undefined)       { updates.push(`display_name = $${idx++}`);       values.push(display_name || null); }
+
+    if (!updates.length) return res.status(400).json({ error: 'No settings provided' });
+
+    updates.push(`updated_at = NOW()`);
+    values.push(id, workspaceId);
+
+    await pool.query(
+      `UPDATE platform_email_addresses SET ${updates.join(', ')} WHERE id = $${idx} AND workspace_id = $${idx + 1}`,
+      values
+    );
+
+    await pool.query(`
+      INSERT INTO universal_audit_log (workspace_id, entity_type, entity_id, action_type, actor_id, new_value)
+      VALUES ($1, 'email_address', $2, 'email_settings_updated', $3, $4)
+    `, [workspaceId, id, userId, JSON.stringify({ forwarding_enabled, has_signature: !!(signature_text || signature_html) })]);
+
+    return res.json({ success: true });
+  } catch (err: any) {
+    log.error('[EmailRoutes] put settings error:', err);
+    return res.status(500).json({ error: 'Failed to update address settings' });
+  }
+});
+
+// ─── GET /api/email/addresses/mine ───────────────────────────────────────────
+// Returns the platform_email_addresses rows assigned to the calling user within
+// their current workspace.  Used to populate the "From:" dropdown in compose.
+// Never returns the user's login email (users.email) — that is never a sender.
+emailRouter.get('/addresses/mine', async (req: any, res) => {
+  try {
+    const { workspaceId, id: userId } = req.user;
+    const result = await pool.query(`
+      SELECT
+        id, address, local_part, subdomain, display_name,
+        address_type, is_active, is_outbound_only,
+        signature_text, signature_html
+      FROM platform_email_addresses
+      WHERE user_id = $1
+        AND workspace_id = $2
+        AND is_active = true
+      ORDER BY address_type, address
+    `, [userId, workspaceId]);
+
+    return res.json({ addresses: result.rows });
+  } catch (err: any) {
+    log.error('[EmailRoutes] addresses/mine error:', err);
+    return res.status(500).json({ error: 'Failed to fetch your email addresses' });
+  }
+});
+
+// ─── Support agent shared inbox ───────────────────────────────────────────────
+// Platform support staff (support_agent, support_manager, sysop, deputy_admin,
+// root_admin) share the support@coaileague.com inbox.  They authenticate with
+// their personal login credentials but all see the same incoming tickets.
+//
+// The separation is:
+//   users.email            = personal login credential (never used here)
+//   platform_email_addresses.address = the shared support@ address (what's below)
+
+const SUPPORT_INBOX_ROLES = new Set([
+  'root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent',
+]);
+const SUPPORT_EMAIL_ADDRESS = 'support@coaileague.com';
+
+// GET /api/email/support-inbox
+emailRouter.get('/support-inbox', async (req: any, res) => {
+  try {
+    const userId: string = req.user.id;
+    const platformRole = await getUserPlatformRole(userId);
+    if (!SUPPORT_INBOX_ROLES.has(platformRole)) {
+      return res.status(403).json({ error: 'Support inbox requires a platform support role' });
+    }
+
+    const folder = (req.query.folder as string) || 'inbox';
+    const page  = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 50);
+    const offset = (page - 1) * limit;
+
+    // Emails addressed to support@ are stored at platform level (workspace_id IS NULL
+    // and workspace_id = platform workspace) — match on to_addresses array.
+    const result = await pool.query(`
+      SELECT
+        id, direction, from_address, from_name, to_addresses,
+        subject, snippet, folder, is_read, is_starred,
+        owner_user_id,
+        trinity_processed, trinity_summary, trinity_priority, trinity_category,
+        received_at, sent_at, created_at
+      FROM platform_emails
+      WHERE $1 = ANY(to_addresses)
+        AND folder = $2
+        AND is_deleted = false
+      ORDER BY COALESCE(received_at, sent_at, created_at) DESC
+      LIMIT $3 OFFSET $4
+    `, [SUPPORT_EMAIL_ADDRESS, folder, limit, offset]);
+
+    const countRow = await pool.query(`
+      SELECT COUNT(*) FROM platform_emails
+      WHERE $1 = ANY(to_addresses) AND folder = $2 AND is_deleted = false
+    `, [SUPPORT_EMAIL_ADDRESS, folder]);
+
+    return res.json({
+      emails: result.rows,
+      total: parseInt(countRow.rows[0].count),
+      page,
+      limit,
+      agentPlatformRole: platformRole,
+    });
+  } catch (err: any) {
+    log.error('[EmailRoutes] support-inbox GET error:', err);
+    return res.status(500).json({ error: 'Failed to fetch support inbox' });
+  }
+});
+
+// POST /api/email/support-inbox/:emailId/reply
+// Sends a reply FROM support@coaileague.com.
+// The individual agent's personal signature is appended so replies are
+// attributable even though the From: address is shared.
+emailRouter.post('/support-inbox/:emailId/reply', async (req: any, res) => {
+  try {
+    const userId: string = req.user.id;
+    const platformRole = await getUserPlatformRole(userId);
+    if (!SUPPORT_INBOX_ROLES.has(platformRole)) {
+      return res.status(403).json({ error: 'Support inbox requires a platform support role' });
+    }
+
+    const { emailId } = req.params;
+    const { body, subject: subjectOverride } = req.body as { body?: string; subject?: string };
+    if (!body?.trim()) return res.status(400).json({ error: 'Reply body is required' });
+
+    // Fetch the original email to get the reply-to address
+    const orig = await pool.query(`
+      SELECT id, from_address, from_name, subject, message_id
+      FROM platform_emails
+      WHERE id = $1 AND $2 = ANY(to_addresses) AND is_deleted = false
+      LIMIT 1
+    `, [emailId, SUPPORT_EMAIL_ADDRESS]);
+    if (!orig.rows[0]) return res.status(404).json({ error: 'Original email not found in support inbox' });
+    const original = orig.rows[0];
+
+    // Fetch the agent's personal signature (if any)
+    const sigRow = await pool.query(`
+      SELECT signature_text, signature_html, display_name
+      FROM platform_email_addresses
+      WHERE user_id = $1 AND is_active = true
+      ORDER BY created_at LIMIT 1
+    `, [userId]);
+    const agentSig = sigRow.rows[0];
+    const agentDisplayName = agentSig?.display_name
+      || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim()
+      || 'Support Team';
+
+    // Build the outbound subject
+    const replySubject = subjectOverride
+      || (original.subject?.startsWith('Re: ') ? original.subject : `Re: ${original.subject || ''}`);
+
+    // Compose final body — plain text
+    let finalText = body;
+    if (agentSig?.signature_text) {
+      finalText += `\n\n--\n${agentSig.signature_text}`;
+    }
+
+    // Compose HTML body
+    let finalHtml = body.replace(/\n/g, '<br>');
+    if (agentSig?.signature_html) {
+      finalHtml += `<div style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px;">${agentSig.signature_html}</div>`;
+    } else if (agentSig?.signature_text) {
+      finalHtml += `<div style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px;color:#6b7280;">${agentSig.signature_text.replace(/\n/g, '<br>')}</div>`;
+    }
+
+    // Send via Resend
+    const { client: resendClient } = await getUncachableResendClient();
+    const headers: Record<string, string> = {};
+    if (original.message_id) {
+      headers['In-Reply-To'] = original.message_id;
+      headers['References'] = original.message_id;
+    }
+
+    const sent = await resendClient.emails.send({
+      from: `${agentDisplayName} via CoAIleague Support <${SUPPORT_EMAIL_ADDRESS}>`,
+      to: [original.from_address],
+      subject: replySubject,
+      text: finalText,
+      html: finalHtml,
+      headers,
+    });
+
+    // Persist to platform_emails so the reply is auditable (owner_user_id = agent)
+    await pool.query(`
+      INSERT INTO platform_emails (
+        direction, from_address, from_name, to_addresses,
+        subject, body_text, body_html, folder, owner_user_id,
+        sent_at, created_at
+      ) VALUES (
+        'outbound', $1, $2, $3,
+        $4, $5, $6, 'sent', $7,
+        NOW(), NOW()
+      )
+    `, [
+      SUPPORT_EMAIL_ADDRESS,
+      `${agentDisplayName} via CoAIleague Support`,
+      JSON.stringify([original.from_address]),
+      replySubject,
+      finalText,
+      finalHtml,
+      userId,
+    ]);
+
+    return res.json({ success: true, resendId: (sent as any).data?.id });
+  } catch (err: any) {
+    log.error('[EmailRoutes] support-inbox reply error:', err);
+    return res.status(500).json({ error: 'Failed to send support reply' });
   }
 });

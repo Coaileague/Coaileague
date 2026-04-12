@@ -169,6 +169,45 @@ export const supportTickets = pgTable("support_tickets", {
   faqCandidate: boolean("faq_candidate").default(false),
   // When the ticket was flagged as a FAQ candidate
   faqCandidateFlaggedAt: timestamp("faq_candidate_flagged_at"),
+
+  // Phase 9 — Race-condition protection (optimistic locking)
+  // Incremented on every mutation. Callers must echo back the current value;
+  // if it has changed the update is rejected with HTTP 409.
+  lockVersion: integer("lock_version").default(0).notNull(),
+
+  // Phase 9 — Cross-resource linking (service_request, inbound_email, etc.)
+  relatedResourceId: varchar("related_resource_id"),
+  relatedResourceType: varchar("related_resource_type", { length: 50 }),
+  // 'service_request' | 'inbound_email' | 'incident_report' | 'document_vault'
+
+  // Phase 9 — Assignment history (JSONB array of {assignedTo, assignedBy, assignedAt})
+  assignmentHistory: jsonb("assignment_history").default(sql`'[]'::jsonb`),
+
+  // Phase 9 — Trinity AI cost tracking
+  trinityTokensUsed: integer("trinity_tokens_used").default(0),
+  trinityApiCost: decimal("trinity_api_cost", { precision: 10, scale: 6 }).default('0'),
+
+  // Phase 9 — Escalation level (0=normal, 1=escalated, 2=critical)
+  escalationLevel: integer("escalation_level").default(0).notNull(),
+  // When the ticket was last auto-escalated
+  lastAutoEscalatedAt: timestamp("last_auto_escalated_at"),
+
+  // Phase 9 — SLA enforcement
+  // 'on_track' | 'warning' | 'breached' — updated by the SLA monitor job
+  slaStatus: varchar("sla_status", { length: 20 }).default('on_track'),
+  // Calculated on create from priority: when we must first respond
+  responseTimeTarget: timestamp("response_time_target"),
+  // Calculated on create from priority: deadline for full resolution
+  resolutionTimeTarget: timestamp("resolution_time_target"),
+  // Set by SLA monitor when first response occurs
+  firstResponseAt: timestamp("first_response_at"),
+  // Set by SLA monitor when the resolution deadline is breached
+  slaBreachedAt: timestamp("sla_breached_at"),
+
+  // Phase 9 — CSAT: set when the satisfaction survey is sent
+  csatSentAt: timestamp("csat_sent_at"),
+  // Customer satisfaction score (1–5) when survey response comes back
+  csatScore: integer("csat_score"),
 }, (table) => [
   // Performance indexes for ticket filtering and routing
   index("support_tickets_workspace_status_idx").on(table.workspaceId, table.status),
@@ -177,6 +216,9 @@ export const supportTickets = pgTable("support_tickets", {
   index("support_tickets_workspace_created_idx").on(table.workspaceId, table.createdAt),
   index("support_tickets_assigned_idx").on(table.assignedTo),
   index("support_tickets_platform_assigned_idx").on(table.platformAssignedTo),
+  index("support_tickets_sla_status_idx").on(table.slaStatus),
+  index("support_tickets_escalation_idx").on(table.escalationLevel),
+  index("support_tickets_related_resource_idx").on(table.relatedResourceId, table.relatedResourceType),
 ]);
 
 export const helposFaqs = pgTable("helpos_faqs", {

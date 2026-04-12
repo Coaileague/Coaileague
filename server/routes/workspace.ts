@@ -145,6 +145,13 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       }
       await slugPool.query(`UPDATE workspaces SET email_slug = $1 WHERE id = $2`, [emailSlug, workspace.id]);
       log.info(`[Workspace Create] Email slug set: ${emailSlug} for workspace ${workspace.id}`);
+
+      // Phase 6A: Provision workspace system email addresses immediately (non-blocking)
+      import('../services/email/emailProvisioningService').then(({ emailProvisioningService }) =>
+        emailProvisioningService.provisionWorkspaceAddresses(workspace.id, emailSlug)
+          .then(() => log.info(`[Workspace Create] Email addresses provisioned for workspace ${workspace.id}`))
+          .catch((err: unknown) => log.warn(`[Workspace Create] Email provisioning failed (non-blocking):`, (err as any)?.message))
+      ).catch((err: unknown) => log.warn(`[Workspace Create] Email provisioning import failed:`, (err as any)?.message));
     } catch (slugErr: unknown) {
       log.warn(`[Workspace Create] Email slug setup failed (non-blocking):`, (slugErr as any)?.message);
     }

@@ -53,6 +53,11 @@ const WEBHOOK_PREFIXES = [
   '/api/resend/',
   '/api/twilio/',
   '/api/message-bridge/',
+  // Inbound email webhook (Resend POSTs here with arbitrary email body content).
+  // Bodies contain real emails which may include SQL keywords, HTML, script tags, etc.
+  // Signature-verified in inboundEmailRouter — body scanning here would cause false-positive
+  // IP blocks on Resend's delivery IPs, silently breaking all future inbound mail.
+  '/api/inbound/',
 ];
 
 // Routes that carry long-form user-generated text — skip body scanning to avoid false positives

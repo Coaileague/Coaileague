@@ -54,6 +54,10 @@ async function seedTable(name: string, fn: () => Promise<void>): Promise<void> {
 }
 
 export async function runAcmeOperationalSeed(): Promise<{ success: boolean; message: string }> {
+  // Production guard — dev seeds must NEVER run in production (CLAUDE.md §A)
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return { success: true, message: 'Skipped — production environment' };
+
   // CATEGORY C — Raw SQL retained: LIMIT | Tables: guard_tours | Verified: 2026-03-23
   const check = await typedQuery(sql`
     SELECT id FROM guard_tours WHERE id = 'dev-tour-001' LIMIT 1
@@ -828,6 +832,10 @@ Photo 2 — 12:00: Food court incident location — post-incident clear [GPS: 29
  * Trinity's scheduling daemon will generate new shifts when the pool is low.
  */
 export async function ensureFutureOpenShifts(): Promise<void> {
+  // Production guard — dev seeds must NEVER run in production (CLAUDE.md §A)
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return;
+
   try {
     // CATEGORY C — Raw SQL retained: Count( | Tables: shifts | Verified: 2026-03-23
     const count = await typedCount(sql`

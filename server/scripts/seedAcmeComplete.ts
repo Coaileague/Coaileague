@@ -77,8 +77,9 @@ async function seedSection(name: string, fn: () => Promise<void>): Promise<void>
 // MAIN ENTRY POINT
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function seedAcmeComplete(): Promise<{ success: boolean; message: string; counts: Record<string, number> }> {
-  const isProduction = process.env.NODE_ENV === 'production';
-  if (isProduction) {
+  // Production guard — use canonical isProduction() helper (CLAUDE.md §A)
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) {
     return { success: false, message: 'Refused — production environment', counts: {} };
   }
 

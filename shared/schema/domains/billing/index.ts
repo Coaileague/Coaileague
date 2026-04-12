@@ -103,6 +103,8 @@ export const invoices = pgTable("invoices", {
   voidReason: text("void_reason"),
   voidedAt: timestamp("voided_at"),
   voidedBy: varchar("voided_by"),
+  // Revenue recognition method for ASC 606 / IFRS 15 compliance
+  recognitionMethod: varchar("recognition_method", { length: 20 }).default("cash"), // 'accrual' | 'cash'
 }, (table) => [
   index("invoices_workspace_idx").on(table.workspaceId),
   index("invoices_client_idx").on(table.clientId),
