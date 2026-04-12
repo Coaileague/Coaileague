@@ -158,6 +158,8 @@ export const shifts = pgTable("shifts", {
   // Format: SHF-YYYYMMDD-NNNNN  e.g. SHF-20260329-00612
   shiftNumber: varchar("shift_number"), // Human-readable shift reference
 
+  deletedAt: timestamp("deleted_at"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

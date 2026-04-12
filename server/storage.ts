@@ -1851,13 +1851,14 @@ export class DatabaseStorage implements IStorage {
       .from(shifts)
       .where(and(
         eq(shifts.id, id),
-        eq(shifts.workspaceId, workspaceId)
+        eq(shifts.workspaceId, workspaceId),
+        isNull(shifts.deletedAt)
       ));
     return shift;
   }
 
   async getShiftsByWorkspace(workspaceId: string, startDate?: Date, endDate?: Date, limit: number = 25, offset: number = 0): Promise<Shift[]> {
-    const conditions = [eq(shifts.workspaceId, workspaceId)];
+    const conditions = [eq(shifts.workspaceId, workspaceId), isNull(shifts.deletedAt)];
     
     if (startDate) {
       conditions.push(gte(shifts.startTime, startDate));
@@ -1890,10 +1891,12 @@ export class DatabaseStorage implements IStorage {
 
   async deleteShift(id: string, workspaceId: string): Promise<boolean> {
     const result = await db
-      .delete(shifts)
+      .update(shifts)
+      .set({ deletedAt: new Date(), updatedAt: new Date() } as any)
       .where(and(
         eq(shifts.id, id),
-        eq(shifts.workspaceId, workspaceId)
+        eq(shifts.workspaceId, workspaceId),
+        isNull(shifts.deletedAt)
       ));
     return result.rowCount ? result.rowCount > 0 : false;
   }
@@ -6174,6 +6177,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(shifts.workspaceId, workspaceId),
         eq(shifts.employeeId, employeeId),
+        isNull(shifts.deletedAt),
         sql`${shifts.startTime} >= ${startDate}`,
         sql`${shifts.startTime} <= ${endDate}`
       ))
