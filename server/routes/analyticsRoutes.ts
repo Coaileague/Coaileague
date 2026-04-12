@@ -231,7 +231,14 @@ router.get("/stats", async (req: any, res) => {
       },
     });
   } catch (error: unknown) {
-    log.error("[analytics/stats] error:", sanitizeError(error));
+    const err = error as any;
+    log.error("[analytics/stats] error:", {
+      message: err?.message,
+      code: err?.code,
+      detail: err?.detail,
+      query: err?.query,
+      stack: err?.stack?.split('\n').slice(0, 5).join('\n'),
+    });
     res.status(500).json({ error: "Failed to load stats" });
   }
 });

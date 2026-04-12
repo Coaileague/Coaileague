@@ -191,11 +191,22 @@ async function applyAutomationUpdate(params: {
         .limit(1);
 
       const billingActive = workspace.subscriptionStatus === 'active';
-      const hasIntegrations = qboConnection.length > 0 || gustoConnection.length > 0;
-      
+      const hasExternalIntegrations = qboConnection.length > 0 || gustoConnection.length > 0;
+
+      // Check if the workspace is using internal workforce management (active employees
+      // indicate that internal payroll/scheduling is already in use, so we should not
+      // prompt to connect external integrations like QuickBooks or Gusto).
+      const [activeEmployeeCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(employees)
+        .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
+      const hasInternalSystems = (activeEmployeeCount?.count ?? 0) > 0;
+
+      const hasIntegrations = hasExternalIntegrations || hasInternalSystems;
+
       let overallStatus: 'green' | 'yellow' | 'red' = 'green';
       let statusMessage = 'Your workspace is running smoothly';
-      
+
       if (!billingActive) {
         overallStatus = 'red';
         statusMessage = 'Billing issue - please update payment method';
@@ -217,9 +228,14 @@ async function applyAutomationUpdate(params: {
           gusto: gustoConnection.length > 0 ? 'connected' : 'not_connected',
         },
         automations: {
-          invoicing: qboConnection.length > 0,
-          payroll: gustoConnection.length > 0,
+          invoicing: qboConnection.length > 0 || hasInternalSystems,
+          payroll: gustoConnection.length > 0 || hasInternalSystems,
           scheduling: true,
+        },
+        internalSystems: {
+          hasInternalPayroll: hasInternalSystems,
+          hasInternalInvoicing: hasInternalSystems,
+          hasInternalScheduling: hasInternalSystems,
         },
         safeToRun: billingActive && hasIntegrations,
       });

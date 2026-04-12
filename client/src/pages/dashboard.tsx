@@ -140,6 +140,7 @@ interface WorkspaceHealth {
   billing: { status: string; active: boolean };
   integrations: { quickbooks: string; quickbooksRealmId: string | null; gusto: string };
   automations: { invoicing: boolean; payroll: boolean; scheduling: boolean };
+  internalSystems?: { hasInternalPayroll: boolean; hasInternalInvoicing: boolean; hasInternalScheduling: boolean };
   safeToRun: boolean;
 }
 
