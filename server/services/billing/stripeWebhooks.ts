@@ -185,6 +185,9 @@ export class StripeWebhookService {
         case 'charge.refunded':
           result = await this.handleChargeRefunded(event);
           break;
+        case 'charge.succeeded':
+          result = await this.handleChargeSucceeded(event);
+          break;
         case 'charge.dispute.created':
           result = await this.handleChargeDisputeCreated(event);
           break;
@@ -801,6 +804,32 @@ export class StripeWebhookService {
         log.error('Revenue ledger write failed on payment_intent.succeeded', { error: ledgerErr.message });
       }
 
+      // Write transaction fee to orgLedger so it appears in the finance dashboard
+      try {
+        const paymentMethodTypes = paymentIntent.payment_method_types ?? [];
+        const isAch = paymentMethodTypes.includes('us_bank_account');
+        // ACH: 1.0% capped at $10; Card: 2.9% + $0.25
+        const feeAmount = isAch
+          ? parseFloat(Math.min(amountPaid * 0.01, 10.00).toFixed(2))
+          : parseFloat((amountPaid * 0.029 + 0.25).toFixed(2));
+        if (feeAmount > 0) {
+          await writeLedgerEntry({
+            workspaceId,
+            entryType: 'transaction_fee',
+            direction: 'debit',
+            amount: feeAmount,
+            referenceNumber: paymentIntent.id,
+            relatedEntityType: 'invoice',
+            relatedEntityId: paidInvoice.id,
+            invoiceId: paidInvoice.id,
+            description: `${isAch ? 'ACH' : 'Card'} processing fee for ${paidInvoice.invoiceNumber} — $${feeAmount.toFixed(2)}`,
+            metadata: { paymentMethod: isAch ? 'ach' : 'card', stripePaymentIntentId: paymentIntent.id, source: 'stripe_webhook' },
+          });
+        }
+      } catch (feeErr: any) {
+        log.warn('Transaction fee ledger write failed on payment_intent.succeeded', { error: feeErr.message });
+      }
+
       // Notify org_owner in-platform
       try {
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
@@ -835,9 +864,204 @@ export class StripeWebhookService {
       } catch (wsErr: any) {
         log.warn('WebSocket broadcast failed on payment_intent.succeeded', { error: wsErr.message });
       }
+
+      // Send payment receipt to client
+      try {
+        const { clients: clientsTable } = await import('@shared/schema');
+        const { sendPaymentReceiptToClientEmail } = await import('../emailCore');
+        if (paidInvoice.clientId) {
+          const [clientRow] = await db.select({
+            email: clientsTable.email,
+            companyName: clientsTable.companyName,
+            firstName: clientsTable.firstName,
+            lastName: clientsTable.lastName,
+          }).from(clientsTable).where(eq(clientsTable.id, paidInvoice.clientId)).limit(1);
+          if (clientRow?.email) {
+            const clientName = clientRow.companyName
+              || [clientRow.firstName, clientRow.lastName].filter(Boolean).join(' ')
+              || 'Valued Client';
+            const paymentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            await sendPaymentReceiptToClientEmail(clientRow.email, {
+              clientName,
+              invoiceNumber: paidInvoice.invoiceNumber || paidInvoice.id.substring(0, 8),
+              amountPaid: amountPaid.toFixed(2),
+              paymentDate,
+              paymentMethod: 'online',
+              referenceNumber: paymentIntent.id,
+            }, workspaceId);
+          }
+        }
+      } catch (emailErr: any) {
+        log.warn('Client payment receipt email failed on payment_intent.succeeded', { error: emailErr.message });
+      }
     }
 
     return { success: true, handled: true, message: 'Payment intent succeeded' };
+  }
+
+  /**
+   * Handle successful Stripe charge — fires for both card captures and ACH debit confirmations.
+   * Stores the charge ID on the payment record and, if the invoice was not already marked paid
+   * by payment_intent.succeeded, marks it paid now and writes the revenue ledger entry.
+   */
+  private async handleChargeSucceeded(event: Stripe.Event): Promise<WebhookResult> {
+    const charge = event.data.object as Stripe.Charge;
+
+    // Charges not attached to a PaymentIntent don't correspond to invoice payments — skip.
+    const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : null;
+    if (!paymentIntentId) {
+      log.info('charge.succeeded has no payment_intent — skipping invoice processing', { chargeId: charge.id });
+      return { success: true, handled: true, message: 'charge.succeeded — no payment intent, nothing to do' };
+    }
+
+    log.info('Charge succeeded', { chargeId: charge.id, paymentIntentId });
+
+    let paidInvoice: any = null;
+    let workspaceId: string | null = null;
+    let wasAlreadyPaid = false;
+
+    await db.transaction(async (tx) => {
+      // Record the Stripe charge ID on the payment record.
+      await tx.update(invoicePayments)
+        .set({
+          stripeChargeId: charge.id,
+          status: 'succeeded',
+          paidAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(invoicePayments.stripePaymentIntentId, paymentIntentId));
+
+      const [payment] = await tx.select()
+        .from(invoicePayments)
+        .where(eq(invoicePayments.stripePaymentIntentId, paymentIntentId))
+        .limit(1);
+
+      if (!payment?.invoiceId) return;
+
+      workspaceId = payment.workspaceId;
+      const amountPaid = String(charge.amount / 100);
+
+      // Idempotent mark-paid: only update if NOT already paid.
+      const [updated] = await tx.update(invoices)
+        .set({
+          status: 'paid',
+          paidAt: new Date(),
+          amountPaid,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(invoices.id, payment.invoiceId), not(eq(invoices.status, 'paid'))))
+        .returning();
+
+      if (updated) {
+        paidInvoice = updated;
+      } else {
+        // Invoice was already paid (payment_intent.succeeded ran first) — just record chargeId.
+        wasAlreadyPaid = true;
+      }
+    });
+
+    if (!workspaceId) {
+      log.warn('charge.succeeded — no matching invoicePayments record', { paymentIntentId, chargeId: charge.id });
+      return { success: true, handled: true, message: 'charge.succeeded — no matching invoice payment record' };
+    }
+
+    if (wasAlreadyPaid) {
+      log.info('charge.succeeded — invoice already paid, stripeChargeId recorded', { chargeId: charge.id, paymentIntentId });
+      return { success: true, handled: true, message: 'charge.succeeded — invoice already paid, chargeId recorded' };
+    }
+
+    if (paidInvoice) {
+      const amountPaid = parseFloat(paidInvoice.total || '0');
+
+      // Write revenue ledger entry.
+      try {
+        await writeLedgerEntry({
+          workspaceId,
+          entryType: 'payment_received',
+          direction: 'credit',
+          amount: amountPaid,
+          referenceNumber: charge.id,
+          relatedEntityType: 'invoice',
+          relatedEntityId: paidInvoice.id,
+          invoiceId: paidInvoice.id,
+          description: `Payment received for ${paidInvoice.invoiceNumber} via Stripe — $${amountPaid.toFixed(2)} (charge ${charge.id})`,
+          metadata: { stripeChargeId: charge.id, paymentIntentId, source: 'stripe_webhook_charge_succeeded' },
+        });
+      } catch (ledgerErr: any) {
+        log.error('Revenue ledger write failed on charge.succeeded', { error: ledgerErr.message });
+      }
+
+      // Write transaction fee to orgLedger.
+      try {
+        const paymentMethodTypes: string[] = (charge.payment_method_details?.type === 'us_bank_account') ? ['us_bank_account'] : [];
+        const isAch = paymentMethodTypes.includes('us_bank_account');
+        const feeAmount = isAch
+          ? parseFloat(Math.min(amountPaid * 0.01, 10.00).toFixed(2))
+          : parseFloat((amountPaid * 0.029 + 0.25).toFixed(2));
+        if (feeAmount > 0) {
+          await writeLedgerEntry({
+            workspaceId,
+            entryType: 'transaction_fee',
+            direction: 'debit',
+            amount: feeAmount,
+            referenceNumber: charge.id,
+            relatedEntityType: 'invoice',
+            relatedEntityId: paidInvoice.id,
+            invoiceId: paidInvoice.id,
+            description: `${isAch ? 'ACH' : 'Card'} processing fee for ${paidInvoice.invoiceNumber} — $${feeAmount.toFixed(2)}`,
+            metadata: { paymentMethod: isAch ? 'ach' : 'card', stripeChargeId: charge.id, source: 'stripe_webhook_charge_succeeded' },
+          });
+        }
+      } catch (feeErr: any) {
+        log.warn('Transaction fee ledger write failed on charge.succeeded', { error: feeErr.message });
+      }
+
+      // Notify org_owner in-platform.
+      try {
+        const [ws] = await db.select({ ownerId: workspaces.ownerId })
+          .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        if (ws?.ownerId) {
+          await createNotification({
+            userId: ws.ownerId,
+            workspaceId,
+            type: 'invoice_paid',
+            title: 'Invoice Paid',
+            message: `Invoice ${paidInvoice.invoiceNumber} has been paid — $${amountPaid.toFixed(2)}.`,
+            relatedEntityType: 'invoice',
+            relatedEntityId: paidInvoice.id,
+          });
+        }
+      } catch (notifErr: any) {
+        log.warn('Org owner notification failed on charge.succeeded', { error: notifErr.message });
+      }
+
+      // Broadcast dashboard update.
+      try {
+        broadcastToWorkspace(workspaceId, {
+          type: 'invoices_updated',
+          action: 'paid',
+          invoiceId: paidInvoice.id,
+          invoiceNumber: paidInvoice.invoiceNumber,
+          amount: paidInvoice.total,
+          paymentMethod: 'stripe',
+          stripeChargeId: charge.id,
+          paidAt: new Date().toISOString(),
+        });
+      } catch (wsErr: any) {
+        log.warn('WebSocket broadcast failed on charge.succeeded', { error: wsErr.message });
+      }
+
+      platformEventBus.publish({
+        type: 'invoice_paid',
+        category: 'billing',
+        title: `Invoice Paid — ${paidInvoice.invoiceNumber}`,
+        description: `Invoice ${paidInvoice.invoiceNumber} paid — $${amountPaid.toFixed(2)}`,
+        workspaceId,
+        metadata: { chargeId: charge.id, invoiceId: paidInvoice.id, invoiceNumber: paidInvoice.invoiceNumber, amountPaid },
+      }).catch((err: any) => log.warn('[stripeWebhooks] publish invoice_paid failed on charge.succeeded:', err.message));
+    }
+
+    return { success: true, handled: true, message: 'charge.succeeded — invoice marked paid, ledger updated' };
   }
 
   /**
