@@ -971,7 +971,7 @@ export class StripeWebhookService {
     }
 
     if (paidInvoice) {
-      const amountPaid = parseFloat(paidInvoice.total || '0');
+      const amountPaid = charge.amount / 100;
 
       // Write revenue ledger entry.
       try {
@@ -993,8 +993,7 @@ export class StripeWebhookService {
 
       // Write transaction fee to orgLedger.
       try {
-        const paymentMethodTypes: string[] = (charge.payment_method_details?.type === 'us_bank_account') ? ['us_bank_account'] : [];
-        const isAch = paymentMethodTypes.includes('us_bank_account');
+        const isAch = charge.payment_method_details?.type === 'us_bank_account';
         const feeAmount = isAch
           ? parseFloat(Math.min(amountPaid * 0.01, 10.00).toFixed(2))
           : parseFloat((amountPaid * 0.029 + 0.25).toFixed(2));
