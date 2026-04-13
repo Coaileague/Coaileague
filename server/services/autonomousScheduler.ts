@@ -2375,6 +2375,7 @@ export function startAutonomousScheduler() {
     notificationCleanupTasks: { enabled: true, schedule: '0 2 * * *', description: 'Daily notification cleanup tasks' },
     tokenCleanup: { enabled: true, schedule: '0 3 * * *', description: 'Daily token cleanup' },
     sundayWeeklyReports: { enabled: true, schedule: '0 8 * * 0', description: 'Sunday weekly reports generation' },
+    revenueRecognition: { enabled: true, schedule: '0 1 1 * *', description: 'Monthly ASC 606 accrual revenue recognition: process scheduled entries, update deferred revenue, write org ledger' },
   };
 
   log.info('CoAIleague autonomous scheduler starting');

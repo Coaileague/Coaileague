@@ -212,8 +212,7 @@ router.post('/recognition/schedules', async (req: any, res: any) => {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
     const workspaceId = ctx.workspaceId!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId = req.user?.id || (req.user as any)?.claims?.sub;
 
     const body = createScheduleBodySchema.parse(req.body);
 
@@ -262,8 +261,7 @@ router.post('/recognition/run', async (req: any, res: any) => {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
     const workspaceId = ctx.workspaceId!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId = req.user?.id || (req.user as any)?.claims?.sub;
 
     const now = new Date();
     const year = req.body?.year ?? now.getFullYear();
@@ -458,8 +456,8 @@ router.get('/pl/detail', async (req: any, res: any) => {
             id: e.id,
             description: e.description,
             amount: parseFloat(String(e.amount ?? 0)),
-            category: e.categoryId ?? e.category ?? 'operating',
-            date: e.expenseDate ?? e.date,
+            category: e.categoryId ?? 'operating',
+            date: e.expenseDate,
             status: e.status,
           })),
         },
@@ -568,8 +566,7 @@ router.post('/contracts/:contractId/map-revenue', async (req: any, res: any) => 
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
     const workspaceId = ctx.workspaceId!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId = req.user?.id || (req.user as any)?.claims?.sub;
     const { contractId } = req.params;
     const { invoiceId } = req.body;
 

@@ -1892,7 +1892,6 @@ export class DatabaseStorage implements IStorage {
   async deleteShift(id: string, workspaceId: string): Promise<boolean> {
     const result = await db
       .update(shifts)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(and(
         eq(shifts.id, id),

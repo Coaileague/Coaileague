@@ -542,7 +542,7 @@ router.post("/:id/approve", async (req: AuthenticatedRequest, res) => {
           type: "timesheet_approved",
           title: "Timesheet Approved",
           message: `Your timesheet for ${timesheet.periodStart} – ${timesheet.periodEnd} (${timesheet.totalHours} hours) has been approved.`,
-          severity: "success",
+          severity: "info",
           metadata: {
             alertType: "timesheet_approved",
             timesheetId: id,

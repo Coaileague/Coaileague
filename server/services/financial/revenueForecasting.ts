@@ -63,7 +63,7 @@ async function getHistoricalMonthlyRevenue(
     .where(
       and(
         eq(invoices.workspaceId, workspaceId),
-        inArray(invoices.status, ['paid', 'partially_paid']),
+        inArray(invoices.status, ['paid', 'partial']),
         gte(invoices.paidAt, startDate),
       ),
     );
