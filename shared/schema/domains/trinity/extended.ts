@@ -443,3 +443,35 @@ export const insertTrinityExecutionCostsSchema = createInsertSchema(trinityExecu
 export type InsertTrinityExecutionCosts = z.infer<typeof insertTrinityExecutionCostsSchema>;
 export type TrinityExecutionCosts = typeof trinityExecutionCosts.$inferSelect;
 
+// ── Phase 16: Trinity Limbic System — Emotional Memory ───────────────────────
+export const trinityEmotionalMemory = pgTable("trinity_emotional_memory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  // Entity being tracked
+  entityType: varchar("entity_type").notNull(),  // 'client' | 'officer' | 'ticket'
+  entityId: varchar("entity_id").notNull(),
+
+  // Emotional state captured
+  emotion: varchar("emotion").notNull(),          // 'urgent' | 'frustrated' | 'satisfied' | 'concerned' | 'compassionate' | 'escalated' | 'neutral'
+  intensity: decimal("intensity", { precision: 4, scale: 3 }).notNull().default('0'),  // 0.000–1.000
+  trigger: text("trigger").notNull(),             // human-readable reason for the signal
+  trinityResponse: text("trinity_response").notNull(),
+
+  // Source of the signal
+  source: varchar("source").notNull().default('ticket'),  // 'email' | 'ticket' | 'interaction' | 'pattern'
+
+  // Optional outcome of how Trinity's response played out
+  outcome: text("outcome"),
+
+  // Whether this entry has been incorporated into pattern learning
+  learned: boolean("learned").notNull().default(false),
+
+  detectedAt: timestamp("detected_at").notNull().default(sql`now()`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertTrinityEmotionalMemorySchema = createInsertSchema(trinityEmotionalMemory).omit({ id: true });
+export type InsertTrinityEmotionalMemory = z.infer<typeof insertTrinityEmotionalMemorySchema>;
+export type TrinityEmotionalMemory = typeof trinityEmotionalMemory.$inferSelect;
+

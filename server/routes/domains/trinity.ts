@@ -63,6 +63,7 @@ import { runDomainHealthCheck } from "../../services/trinity/domainHealthValidat
 import { trinityACC } from "../../services/ai-brain/trinityACCService";
 import { trinityThalamus } from "../../services/ai-brain/trinityThalamusService";
 import agentActivityRouter from "../agentActivityRoutes";
+import trinityLimbicRouter from "../trinityLimbicRoutes";
 
 const domainHealthRouter = Router();
 domainHealthRouter.get("/domain-health", requireAuth, requireTrinityAccess, (_req, res) => {
@@ -176,6 +177,9 @@ export function mountTrinityRoutes(app: Express): void {
 
   // ── Trinity SLA Escalation (Phase 10-5) ─────────────────────────────────
   app.use("/api/trinity/escalation", requireAuth, ensureWorkspaceAccess, trinityEscalationRouter);
+
+  // ── Trinity Limbic System (Phase 16) — Emotional Intelligence ────────────
+  app.use("/api/trinity/limbic", requireAuth, ensureWorkspaceAccess, trinityLimbicRouter);
 
   // General /api/trinity — empire & bluedot first (requireAuth inside router), then broader catches
   app.use("/api/trinity", empireRouter);
