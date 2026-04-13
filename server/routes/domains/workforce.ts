@@ -2,7 +2,8 @@
 // THE LAW: No new routes without Bryan's approval.
 // Canonical prefixes: /api/employees, /api/engagement, /api/training, /api/feedback, /api/availability,
 //   /api/benefits, /api/owner-employee, /api/gamification, /api/hris, /api (hr inline, termination, leader, deactivate),
-//   /api/role-labels, /api/hr/*, /api/onboarding-forms, /api/smart-onboarding, /api/ats
+//   /api/role-labels, /api/hr/*, /api/onboarding-forms, /api/smart-onboarding, /api/ats,
+//   /api/officers (intelligence dashboard — Phase 11)
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
@@ -14,6 +15,7 @@ import terminationRouter from "../terminationRoutes";
 import leaderRouter from "../leaderRoutes";
 import ownerEmployeeRouter from "../owner-employee";
 import officerScoreRouter from "../officerScoreRoutes";
+import officerIntelligenceRouter from "../officerIntelligenceRoutes";
 import employeeRouter from "../employeeRoutes";
 import engagementRouter from "../engagementRoutes";
 import gamificationEnhancedRoutes from "../gamificationRoutes";
@@ -50,6 +52,8 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api", requireAuth, ensureWorkspaceAccess, leaderRouter);
   app.use("/api/owner-employee", requireAuth, ensureWorkspaceAccess, ownerEmployeeRouter);
   app.use(officerScoreRouter);
+  // Phase 11: Officer Intelligence Dashboard — AI-driven insights and recommendations
+  app.use(requireAuth, ensureWorkspaceAccess, officerIntelligenceRouter);
   app.use("/api/employees", requireAuth, ensureWorkspaceAccess, employeeRouter);
   app.use("/api/engagement", requireAuth, ensureWorkspaceAccess, engagementRouter);
   app.use("/api/gamification/enhanced", requireAuth, ensureWorkspaceAccess, gamificationEnhancedRoutes);
