@@ -406,3 +406,40 @@ export const insertTrinityThinkingSessionsSchema = createInsertSchema(trinityThi
 export type InsertTrinityThinkingSessions = z.infer<typeof insertTrinityThinkingSessionsSchema>;
 export type TrinityThinkingSessions = typeof trinityThinkingSessions.$inferSelect;
 
+// ── Phase 10-4: Trinity API Execution Cost Tracking ─────────────────────────
+export const trinityExecutionCosts = pgTable("trinity_execution_costs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  // Execution context
+  skillKey: varchar("skill_key").notNull(),
+  taskId: varchar("task_id"),
+  sessionId: varchar("session_id"),
+
+  // Model / provider
+  provider: varchar("provider").notNull(),
+  modelId: varchar("model_id").notNull(),
+
+  // Token usage
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+
+  // Cost (USD)
+  inputCostUsd: decimal("input_cost_usd", { precision: 12, scale: 8 }).notNull().default('0'),
+  outputCostUsd: decimal("output_cost_usd", { precision: 12, scale: 8 }).notNull().default('0'),
+  apiCallCostUsd: decimal("api_call_cost_usd", { precision: 12, scale: 8 }).notNull().default('0.01'),
+  totalCostUsd: decimal("total_cost_usd", { precision: 12, scale: 8 }).notNull().default('0'),
+
+  // Response metrics
+  responseTimeMs: integer("response_time_ms").default(0),
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+
+  executedAt: timestamp("executed_at").notNull().default(sql`now()`),
+});
+
+export const insertTrinityExecutionCostsSchema = createInsertSchema(trinityExecutionCosts).omit({ id: true });
+export type InsertTrinityExecutionCosts = z.infer<typeof insertTrinityExecutionCostsSchema>;
+export type TrinityExecutionCosts = typeof trinityExecutionCosts.$inferSelect;
+

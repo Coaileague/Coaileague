@@ -273,8 +273,10 @@ class AICostMonitorService {
         userId: 'system',
         action: 'ai_cost_log',
         createdAt: new Date(),
-        metadata: { resourceType: 'ai_operation', resourceId: String(actionLogId), severity: cost.isProfitable ? 'info' : 'error',
         metadata: {
+          resourceType: 'ai_operation',
+          resourceId: String(actionLogId),
+          severity: cost.isProfitable ? 'info' : 'error',
           ai,
           operationType,
           inputTokens,
@@ -286,27 +288,27 @@ class AICostMonitorService {
           isProfitable: cost.isProfitable,
           isLowMargin: cost.isLowMargin,
           timestamp: new Date().toISOString(),
-        } },
+        },
       });
     } catch (error) {
       log.error('[CostMonitor] Failed to log cost:', error);
     }
 
     if (!cost.isProfitable) {
-      this.alertUnprofitableOperation(workspaceId, operationType, cost, inputTokens + outputTokens);
+      await this.alertUnprofitableOperation(workspaceId, operationType, cost, inputTokens + outputTokens);
     } else if (cost.isLowMargin) {
-      this.alertLowMargin(workspaceId, operationType, cost);
+      await this.alertLowMargin(workspaceId, operationType, cost);
     }
 
     return cost;
   }
 
-  alertUnprofitableOperation(
+  async alertUnprofitableOperation(
     workspaceId: string,
     operationType: string,
     cost: CostCalculation,
     totalTokens: number
-  ): void {
+  ): Promise<void> {
     const loss = (cost.actualUsdCost - (cost.creditsCharged * CREDIT_TO_USD)).toFixed(4);
     log.error(`🚨 [CostMonitor] UNPROFITABLE OPERATION DETECTED!`);
     log.error(`   Workspace: ${workspaceId}`);
@@ -317,36 +319,44 @@ class AICostMonitorService {
     log.error(`   LOSS: $${loss}`);
     log.error(`   Margin: ${cost.profitMarginPct.toFixed(2)}%`);
 
-    platformEventBus.publish({
-      type: 'ai_cost_alert',
-      workspaceId,
-      title: 'Unprofitable AI Operation Detected',
-      description: `Operation "${operationType}" cost $${cost.actualUsdCost.toFixed(4)} but only charged ${cost.creditsCharged} credits — loss: $${loss} (margin: ${cost.profitMarginPct.toFixed(2)}%)`,
-      category: 'system',
-      priority: 8,
-      metadata: { alertType: 'unprofitable', operationType, loss: parseFloat(loss), margin: cost.profitMarginPct },
-    }).catch(() => null);
+    try {
+      await platformEventBus.publish({
+        type: 'ai_cost_alert',
+        workspaceId,
+        title: 'Unprofitable AI Operation Detected',
+        description: `Operation "${operationType}" cost $${cost.actualUsdCost.toFixed(4)} but only charged ${cost.creditsCharged} credits — loss: $${loss} (margin: ${cost.profitMarginPct.toFixed(2)}%)`,
+        category: 'system',
+        priority: 8,
+        metadata: { alertType: 'unprofitable', operationType, loss: parseFloat(loss), margin: cost.profitMarginPct },
+      });
+    } catch (err) {
+      log.warn('[CostMonitor] Failed to publish unprofitable alert (non-fatal):', err);
+    }
   }
 
-  alertLowMargin(
+  async alertLowMargin(
     workspaceId: string,
     operationType: string,
     cost: CostCalculation
-  ): void {
+  ): Promise<void> {
     log.warn(`⚠️ [CostMonitor] Low margin operation`);
     log.warn(`   Workspace: ${workspaceId}`);
     log.warn(`   Operation: ${operationType}`);
     log.warn(`   Margin: ${cost.profitMarginPct.toFixed(2)}% (target: ${TARGET_MARGIN * 100}%)`);
 
-    platformEventBus.publish({
-      type: 'ai_cost_alert',
-      workspaceId,
-      title: 'Low-Margin AI Operation Warning',
-      description: `Operation "${operationType}" returned only ${cost.profitMarginPct.toFixed(2)}% margin (target: ${(100 * 0.3).toFixed(0)}%). Monitor credit pricing for this operation type.`,
-      category: 'system',
-      priority: 5,
-      metadata: { alertType: 'low_margin', operationType, margin: cost.profitMarginPct },
-    }).catch(() => null);
+    try {
+      await platformEventBus.publish({
+        type: 'ai_cost_alert',
+        workspaceId,
+        title: 'Low-Margin AI Operation Warning',
+        description: `Operation "${operationType}" returned only ${cost.profitMarginPct.toFixed(2)}% margin (target: ${(TARGET_MARGIN * 100).toFixed(0)}%). Monitor credit pricing for this operation type.`,
+        category: 'system',
+        priority: 5,
+        metadata: { alertType: 'low_margin', operationType, margin: cost.profitMarginPct },
+      });
+    } catch (err) {
+      log.warn('[CostMonitor] Failed to publish low-margin alert (non-fatal):', err);
+    }
   }
 
   async getOperationStats(days: number = 7): Promise<OperationStats[]> {
@@ -358,7 +368,7 @@ class AICostMonitorService {
       .from(systemAuditLogs)
       .where(
         and(
-          eq(systemAuditLogs.actorType, 'ai_cost_log'),
+          eq(systemAuditLogs.action, 'ai_cost_log'),
           gte(systemAuditLogs.createdAt, startDate)
         )
       );
@@ -408,7 +418,7 @@ class AICostMonitorService {
       .from(systemAuditLogs)
       .where(
         and(
-          eq(systemAuditLogs.actorType, 'ai_cost_log'),
+          eq(systemAuditLogs.action, 'ai_cost_log'),
           gte(systemAuditLogs.createdAt, startDate)
         )
       );
@@ -550,7 +560,7 @@ class AICostMonitorService {
       .from(systemAuditLogs)
       .where(
         and(
-          eq(systemAuditLogs.actorType, 'ai_cost_log'),
+          eq(systemAuditLogs.action, 'ai_cost_log'),
           gte(systemAuditLogs.createdAt, monthStart)
         )
       );
@@ -615,7 +625,7 @@ class AICostMonitorService {
     const logs = await db
       .select()
       .from(systemAuditLogs)
-      .where(eq(systemAuditLogs.actorType, 'ai_cost_log'))
+      .where(eq(systemAuditLogs.action, 'ai_cost_log'))
       .orderBy(desc(systemAuditLogs.createdAt))
       .limit(limit * 3);
 
