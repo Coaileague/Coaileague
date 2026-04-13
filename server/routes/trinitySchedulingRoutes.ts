@@ -1,10 +1,11 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db } from "../db";
-import { shifts, employees, clients } from "@shared/schema";
+import { shifts, employees, clients, supportTickets } from "@shared/schema";
 import { storage } from "../storage";
-import { eq, and, gte, lte, isNull, sql } from "drizzle-orm";
+import { eq, and, gte, lte, isNull, sql, inArray } from "drizzle-orm";
 import { aiCreditGateway } from "../services/billing/aiCreditGateway";
+import { trinitySchedulerWithSLA } from "../services/trinity/trinitySchedulerWithSLA";
 import { createLogger } from '../lib/logger';
 const log = createLogger('TrinitySchedulingRoutes');
 
@@ -256,5 +257,73 @@ router.post('/ask', async (req: any, res) => {
       res.status(500).json({ message: sanitizeError(error) || "Failed to process question" });
     }
   });
+
+/**
+ * POST /schedule-shift — Trinity SLA-aware shift scheduling
+ *
+ * Checks open support tickets for SLA risk before allowing a shift to be
+ * created. Returns 409 with conflict details + recommended alternative times
+ * when the proposed shift falls within an SLA blackout window.
+ */
+router.post('/schedule-shift', async (req: any, res) => {
+  try {
+    const userId: string | undefined = req.user?.id || req.user?.claims?.sub || req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
+    if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    const { startTime, endTime, employeeId } = req.body;
+    if (!startTime || !endTime || !employeeId) {
+      return res.status(400).json({ message: 'startTime, endTime, and employeeId are required' });
+    }
+
+    const workspaceId = userWorkspace.workspaceId;
+
+    // Fetch open/in-progress support tickets for this workspace
+    const openTickets = await db.query.supportTickets.findMany({
+      where: and(
+        eq(supportTickets.workspaceId, workspaceId),
+        inArray(supportTickets.status, ['open', 'in_progress']),
+      ),
+    });
+
+    // Map to the gate's expected shape
+    const ticketsForGate = openTickets.map((t) => ({
+      id: t.id,
+      priority: t.priority ?? 'normal',
+      createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+      firstResponseAt: t.firstResponseAt ? new Date(t.firstResponseAt) : null,
+    }));
+
+    // Evaluate via the SLA gate
+    const result = trinitySchedulerWithSLA.evaluateShift(
+      workspaceId,
+      { startTime: new Date(startTime), endTime: new Date(endTime), employeeId },
+      ticketsForGate,
+    );
+
+    if (!result.success) {
+      return res.status(409).json(result);
+    }
+
+    // SLA gate passed — create the shift
+    const [newShift] = await db.insert(shifts).values({
+      workspaceId,
+      employeeId,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      status: 'scheduled',
+      aiGenerated: true,
+    }).returning();
+
+    res.json({ success: true, shift: newShift });
+  } catch (error: unknown) {
+    log.error('Error in Trinity SLA schedule-shift:', error);
+    res.status(500).json({ message: sanitizeError(error) || 'Scheduling failed' });
+  }
+});
 
 export default router;
