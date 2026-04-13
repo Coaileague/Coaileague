@@ -2938,4 +2938,49 @@ export const trinityAccLogs = pgTable("trinity_acc_log", {
 export type ThalamicLog = typeof thalamiclogs.$inferSelect;
 export type TrinityAccLog = typeof trinityAccLogs.$inferSelect;
 
+// ── trinity_audit_logs ───────────────────────────────────────────────────────
+// Append-only audit trail for all Trinity autonomous skill executions.
+// Logs permission checks, execution decisions, results, and errors for
+// regulatory compliance and workspace-scoped querying.
+export const trinityAuditLogs = pgTable("trinity_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Core fields
+  type: text("type").notNull(),              // 'skill_execution' | 'permission_check' | 'skill_result' | 'skill_error'
+  workspaceId: varchar("workspace_id").notNull(),
+  skillName: text("skill_name").notNull(),
+  executionId: text("execution_id").notNull(),
+
+  // For skill_execution
+  status: text("status"),                    // 'approved' | 'denied'
+  reason: text("reason"),
+
+  // For permission_check
+  permissionGranted: boolean("permission_granted"),
+  riskLevel: text("risk_level"),             // 'low' | 'medium' | 'high' | 'critical'
+
+  // For skill_result
+  success: boolean("success"),
+  resultData: jsonb("result_data"),
+  durationMs: integer("duration_ms"),
+
+  // For skill_error
+  errorMessage: text("error_message"),
+  errorCode: text("error_code"),
+  stackTrace: text("stack_trace"),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("idx_trinity_audit_workspace").on(table.workspaceId),
+  index("idx_trinity_audit_skill").on(table.skillName),
+  index("idx_trinity_audit_created").on(table.createdAt),
+  index("idx_trinity_audit_type").on(table.type),
+  index("idx_trinity_audit_execution").on(table.executionId),
+]);
+
+export type TrinityAuditLog = typeof trinityAuditLogs.$inferSelect;
+export type InsertTrinityAuditLog = typeof trinityAuditLogs.$inferInsert;
+
 export * from './extended';

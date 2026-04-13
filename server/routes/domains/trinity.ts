@@ -46,6 +46,7 @@ import trinitySelfEditRouter from "../trinitySelfEditRoutes";
 import trinitySessionRouter from "../trinitySessionRoutes";
 import trinitySwarmRouter from "../trinitySwarmRoutes";
 import trinityCrisisRouter from "../trinityCrisisRoutes";
+import trinityAuditRouter from "../trinityAuditRoutes";
 import trinityMiscRouter from "../trinityMiscRoutes";
 import trinityTrainingRouter from "../trinityTrainingRoutes";
 import { trinityThoughtStatusRouter } from "../trinityThoughtStatusRoutes";
@@ -168,6 +169,9 @@ export function mountTrinityRoutes(app: Express): void {
   app.use("/api/trinity/crisis", requireAuth, ensureWorkspaceAccess, trinityCrisisRouter);
   // ── ACC + Thalamic Brain Dashboard ───────────────────────────────────────────
   app.use("/api/trinity", brainDashboardRouter);
+
+  // ── Trinity Audit Trail ──────────────────────────────────────────────────
+  app.use("/api/trinity", requireAuth, ensureWorkspaceAccess, trinityAuditRouter);
 
   // General /api/trinity — empire & bluedot first (requireAuth inside router), then broader catches
   app.use("/api/trinity", empireRouter);

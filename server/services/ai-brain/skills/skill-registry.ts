@@ -1,6 +1,7 @@
 import type { BaseSkill } from './base-skill';
 import type { SkillManifest, SkillContext, SkillResult, SkillEvent } from './types';
 import { createLogger } from '../../../lib/logger';
+import { trinityAuditService } from '../../trinity/trinityAuditService';
 
 const log = createLogger('SkillRegistry');
 
@@ -101,13 +102,15 @@ export class SkillRegistry {
   }
 
   /**
-   * Execute a skill with RBAC checks
+   * Execute a skill with RBAC checks and audit logging.
    */
   async executeSkill(
     skillId: string,
     context: SkillContext,
     params: any
   ): Promise<SkillResult> {
+    const executionId = `skill-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const startTime = Date.now();
     const skill = this.skills.get(skillId);
 
     if (!skill) {
@@ -119,8 +122,42 @@ export class SkillRegistry {
 
     // Check if user can execute this skill
     const canExecute = await skill.canExecute(context);
+
+    // Audit: log the permission check
+    if (context.workspaceId) {
+      try {
+        await trinityAuditService.logPermissionCheck({
+          type: 'permission_check',
+          workspaceId: context.workspaceId,
+          skillName: skillId,
+          executionId,
+          permissionGranted: canExecute,
+          riskLevel: 'low',
+        });
+      } catch (auditErr) {
+        log.warn('[SkillRegistry] Non-fatal: audit permission log failed', auditErr);
+      }
+    }
+
     if (!canExecute) {
       const manifest = skill.getManifest();
+
+      // Audit: log denied execution
+      if (context.workspaceId) {
+        try {
+          await trinityAuditService.logSkillExecution({
+            type: 'skill_execution',
+            workspaceId: context.workspaceId,
+            skillName: skillId,
+            executionId,
+            status: 'denied',
+            reason: `Requires ${manifest.requiredTier || 'higher'} tier or specific roles`,
+          });
+        } catch (auditErr) {
+          log.warn('[SkillRegistry] Non-fatal: audit denied log failed', auditErr);
+        }
+      }
+
       return {
         success: false,
         error: `Access denied. Skill requires ${manifest.requiredTier || 'higher'} tier or specific roles.`,
@@ -131,12 +168,65 @@ export class SkillRegistry {
       };
     }
 
+    // Audit: log approved execution
+    if (context.workspaceId) {
+      try {
+        await trinityAuditService.logSkillExecution({
+          type: 'skill_execution',
+          workspaceId: context.workspaceId,
+          skillName: skillId,
+          executionId,
+          status: 'approved',
+        });
+      } catch (auditErr) {
+        log.warn('[SkillRegistry] Non-fatal: audit approved log failed', auditErr);
+      }
+    }
+
     // Execute skill
     try {
       const result = await skill.execute(context, params);
+      const durationMs = Date.now() - startTime;
+
+      // Audit: log result
+      if (context.workspaceId) {
+        try {
+          await trinityAuditService.logSkillResult({
+            type: 'skill_result',
+            workspaceId: context.workspaceId,
+            skillName: skillId,
+            executionId,
+            success: result.success,
+            resultData: result.metadata,
+            durationMs,
+          });
+        } catch (auditErr) {
+          log.warn('[SkillRegistry] Non-fatal: audit result log failed', auditErr);
+        }
+      }
+
       return result;
     } catch (error: any) {
+      const durationMs = Date.now() - startTime;
       log.error(`[SkillRegistry] Error executing ${skillId}:`, error);
+
+      // Audit: log error
+      if (context.workspaceId) {
+        try {
+          await trinityAuditService.logSkillError({
+            type: 'skill_error',
+            workspaceId: context.workspaceId,
+            skillName: skillId,
+            executionId,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorCode: 'EXECUTION_ERROR',
+            stackTrace: error instanceof Error ? error.stack : undefined,
+          });
+        } catch (auditErr) {
+          log.warn('[SkillRegistry] Non-fatal: audit error log failed', auditErr);
+        }
+      }
+
       return {
         success: false,
         error: (error instanceof Error ? error.message : String(error)) || 'Skill execution failed',
