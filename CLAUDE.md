@@ -326,6 +326,70 @@ if (workspaceId === GRANDFATHERED_TENANT_ID && isMutation) {
 
 ---
 
+## Section K — Trinity Service Registry & Integration Map (Phase 16)
+
+**The law:** Every Trinity service must be registered in
+`server/services/trinity/trinityServiceRegistry.ts` with its domain category,
+authority level, platform phase integrations, and integration status. No new
+Trinity service is considered production-ready until it appears in the registry.
+
+**The bug it prevents:** 160+ Trinity services existed with no canonical
+inventory. Platform phases had no documented Trinity integration points, making
+it impossible to audit coverage, authority, or duplication without reading all
+157 service files individually. This created silent regression risk — a new
+service could duplicate an existing one, use the wrong authority level, or
+bypass governance entirely.
+
+**The canonical files:**
+- `server/services/trinity/trinityServiceRegistry.ts` — The single source of
+  truth for all Trinity services. Exports `TRINITY_SERVICE_REGISTRY`,
+  `getServicesForPhase()`, `getServicesByDomain()`, and
+  `getPlatformIntegrationSummary()`.
+- `server/routes/trinityTransparencyRoutes.ts` — Tenant-owner dashboard API:
+  `/api/trinity/transparency/overview|actions|decisions|cost-breakdown|audit-trail|service-registry`
+- `server/routes/trinityAgentDashboardRoutes.ts` — Support-agent command API:
+  `/api/trinity/agent-dashboard/queue|reasoning/:id|approve|override|escalations|activity-feed`
+
+**Client surfaces:**
+- `client/src/pages/trinity-transparency-dashboard.tsx` — Org owner view of
+  all autonomous actions, costs, decision reasoning, and platform integration
+  status. Route: `/trinity/transparency`.
+- `client/src/pages/trinity-agent-dashboard.tsx` — Support agent command
+  center: approval queue, override gateway, escalation triage, reasoning
+  viewer. Route: `/trinity/agent-dashboard`.
+
+**Authority matrix (Phase 16 enforcement):**
+```
+support_agent      → can approve/deny CLASS 1 & 2 (confidence >= 0.41)
+support_manager    → can approve/deny CLASS 1, 2, 3 (confidence >= 0.00)
+sysop/deputy/root  → full override authority (all classes)
+```
+
+**Required pattern for new Trinity services:**
+```ts
+// ✅ required — register in trinityServiceRegistry.ts
+{
+  id: 'myNewService',
+  name: 'My New Service',
+  path: 'server/services/ai-brain/myNewService.ts',
+  domain: 'support_escalation',        // pick from TrinityServiceDomain
+  description: 'One sentence describing what this does.',
+  authorityLevel: 'write_monitored',   // read_only | write_monitored | write_auto | platform_admin
+  platformPhases: ['phase_9_support'], // which platform phases use this
+  integrationStatus: 'partial',        // verified | partial | unmapped
+  exports: ['myNewService'],
+}
+```
+
+**Forbidden pattern:**
+```ts
+// 🔴 forbidden — shipping a Trinity service not in the registry
+// (Cannot be audited, authority level unknown, coverage unknown)
+export const myNewService = { ... }; // no registry entry
+```
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When Claude Code (or any future debug session) discovers a new architectural
@@ -360,6 +424,9 @@ valid.
 | Notification delivery | `server/services/notificationDeliveryService.ts` | — |
 | Env validation | `server/startup/validateEnvironment.ts` | runs at startServer() |
 | Mobile scroll guarantee | `client/src/index.css` (Phase Q block) | CSS load |
+| Trinity service inventory | `server/services/trinity/trinityServiceRegistry.ts` | — |
+| Trinity transparency API | `server/routes/trinityTransparencyRoutes.ts` | `/api/trinity/transparency/*` |
+| Trinity agent dashboard API | `server/routes/trinityAgentDashboardRoutes.ts` | `/api/trinity/agent-dashboard/*` |
 
 ## Audit History
 
@@ -380,3 +447,4 @@ valid.
 | Q | `e61b53a` | mobile scroll + footer + splash |
 | R | (prev commit) | CLAUDE.md verified-laws encoding |
 | T | (this commit) | remove statewideWriteGuard — protected = billing-only |
+| 16 | (phase-16 branch) | Trinity service registry + transparency + agent dashboard |

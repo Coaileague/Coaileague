@@ -297,6 +297,8 @@ const DocumentLibrary = lazy(() => import("@/pages/document-library"));
 const Outreach = lazy(() => import("@/pages/outreach"));
 const BehaviorScoring = lazy(() => import("@/pages/behavior-scoring"));
 const TrinityMemory = lazy(() => import("@/pages/trinity-memory"));
+const TrinityTransparencyDashboard = lazy(() => import("@/pages/trinity-transparency-dashboard"));
+const TrinityAgentDashboard = lazy(() => import("@/pages/trinity-agent-dashboard"));
 const InboundOpportunities = lazy(() => import("@/pages/inbound-opportunities"));
 const HRISManagement = lazy(() => import("@/pages/hris-management"));
 const LaborLawConfig = lazy(() => import("@/pages/labor-law-config"));
@@ -1436,6 +1438,8 @@ function AppContent() {
                 <Route path="/outreach"><ErrorBoundary><Outreach /></ErrorBoundary></Route>
                 <Route path="/behavior-scoring"><ErrorBoundary><BehaviorScoring /></ErrorBoundary></Route>
                 <Route path="/trinity-memory"><ErrorBoundary><TrinityMemory /></ErrorBoundary></Route>
+                <Route path="/trinity/transparency"><ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary></Route>
+                <Route path="/trinity/agent-dashboard"><ErrorBoundary><TrinityAgentDashboard /></ErrorBoundary></Route>
                 <Route path="/inbound-opportunities"><ErrorBoundary><InboundOpportunities /></ErrorBoundary></Route>
                 <Route path="/hris-management"><ErrorBoundary><HRISManagement /></ErrorBoundary></Route>
                 <Route path="/labor-law-config"><ErrorBoundary><LaborLawConfig /></ErrorBoundary></Route>
@@ -2134,6 +2138,8 @@ function AppContent() {
                 <Route path="/insights"><ErrorBoundary><Insights /></ErrorBoundary></Route>
                 <Route path="/behavior-scoring"><ErrorBoundary><BehaviorScoring /></ErrorBoundary></Route>
                 <Route path="/trinity-memory"><ErrorBoundary><TrinityMemory /></ErrorBoundary></Route>
+                <Route path="/trinity/transparency"><ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary></Route>
+                <Route path="/trinity/agent-dashboard"><ErrorBoundary><TrinityAgentDashboard /></ErrorBoundary></Route>
                 <Route path="/document-library"><ErrorBoundary componentName="Document Library"><DocumentLibrary /></ErrorBoundary></Route>
                 <Route path="/labor-law-config"><ErrorBoundary><LaborLawConfig /></ErrorBoundary></Route>
                 <Route path="/inbound-opportunities"><ErrorBoundary><InboundOpportunities /></ErrorBoundary></Route>

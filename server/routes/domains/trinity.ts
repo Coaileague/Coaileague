@@ -64,6 +64,8 @@ import { trinityACC } from "../../services/ai-brain/trinityACCService";
 import { trinityThalamus } from "../../services/ai-brain/trinityThalamusService";
 import agentActivityRouter from "../agentActivityRoutes";
 import trinityLimbicRouter from "../trinityLimbicRoutes";
+import trinityTransparencyRouter from "../trinityTransparencyRoutes";
+import trinityAgentDashboardRouter from "../trinityAgentDashboardRoutes";
 
 const domainHealthRouter = Router();
 domainHealthRouter.get("/domain-health", requireAuth, requireTrinityAccess, (_req, res) => {
@@ -180,6 +182,12 @@ export function mountTrinityRoutes(app: Express): void {
 
   // ── Trinity Limbic System (Phase 16) — Emotional Intelligence ────────────
   app.use("/api/trinity/limbic", requireAuth, ensureWorkspaceAccess, trinityLimbicRouter);
+
+  // ── Phase 16: Tenant Owner Transparency Dashboard ────────────────────────
+  app.use("/api/trinity/transparency", requireAuth, ensureWorkspaceAccess, trinityTransparencyRouter);
+
+  // ── Phase 16: Support Agent Command Dashboard ────────────────────────────
+  app.use("/api/trinity/agent-dashboard", trinityAgentDashboardRouter);
 
   // General /api/trinity — empire & bluedot first (requireAuth inside router), then broader catches
   app.use("/api/trinity", empireRouter);
