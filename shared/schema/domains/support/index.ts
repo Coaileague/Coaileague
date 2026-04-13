@@ -1298,4 +1298,26 @@ export const trinityHelpaiCommandBus = pgTable("trinity_helpai_command_bus", {
   index("trinity_cmd_bus_created_idx").on(table.createdAt),
 ]);
 
+// ── Phase 10-5: SLA Escalation Tracking ───────────────────────────────────────
+export const slaEscalations = pgTable("sla_escalations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  ticketId: varchar("ticket_id").notNull(),
+  escalationLevel: varchar("escalation_level", { length: 30 }).notNull(),
+  action: varchar("action", { length: 50 }).notNull(),
+  percentElapsed: integer("percent_elapsed").notNull(),
+  slaMinutes: integer("sla_minutes").notNull(),
+  ageMinutes: integer("age_minutes").notNull(),
+  executionId: varchar("execution_id"),
+  executedSuccessfully: boolean("executed_successfully"),
+  triggeredAt: timestamp("triggered_at").notNull(),
+  executedAt: timestamp("executed_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("sla_escalations_workspace_idx").on(table.workspaceId),
+  index("sla_escalations_ticket_idx").on(table.ticketId),
+  index("sla_escalations_level_idx").on(table.escalationLevel),
+  index("sla_escalations_triggered_idx").on(table.triggeredAt),
+]);
+
 export * from './extended';
