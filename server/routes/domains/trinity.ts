@@ -47,6 +47,7 @@ import trinitySessionRouter from "../trinitySessionRoutes";
 import trinitySwarmRouter from "../trinitySwarmRoutes";
 import trinityCrisisRouter from "../trinityCrisisRoutes";
 import trinityAuditRouter from "../trinityAuditRoutes";
+import trinityEscalationRouter from "../trinityEscalationRoutes";
 import trinityMiscRouter from "../trinityMiscRoutes";
 import trinityTrainingRouter from "../trinityTrainingRoutes";
 import { trinityThoughtStatusRouter } from "../trinityThoughtStatusRoutes";
@@ -172,6 +173,9 @@ export function mountTrinityRoutes(app: Express): void {
 
   // ── Trinity Audit Trail ──────────────────────────────────────────────────
   app.use("/api/trinity", requireAuth, ensureWorkspaceAccess, trinityAuditRouter);
+
+  // ── Trinity SLA Escalation (Phase 10-5) ─────────────────────────────────
+  app.use("/api/trinity/escalation", requireAuth, ensureWorkspaceAccess, trinityEscalationRouter);
 
   // General /api/trinity — empire & bluedot first (requireAuth inside router), then broader catches
   app.use("/api/trinity", empireRouter);
