@@ -38,7 +38,11 @@ const MANAGER_OVERRIDE_ROLES = new Set([
 ]);
 
 function getActorRole(req: AuthenticatedRequest): string {
-  return (req as any).platformRole || (req as any).workspaceRole || 'none';
+  // Platform role only — workspace roles never grant cross-tenant support
+  // access. Falling back to workspaceRole would let a tenant user whose
+  // role string coincidentally matched 'support_agent' read any
+  // workspace's reasoning data.
+  return (req as any).platformRole || 'none';
 }
 
 function requireSupportAccess(req: AuthenticatedRequest, res: Response): boolean {
@@ -46,7 +50,7 @@ function requireSupportAccess(req: AuthenticatedRequest, res: Response): boolean
   if (!AGENT_ROLES.has(role)) {
     res.status(403).json({
       success: false,
-      error: 'Support agent or higher role required',
+      error: 'Support agent or higher platform role required',
       requiredRoles: Array.from(AGENT_ROLES),
     });
     return false;

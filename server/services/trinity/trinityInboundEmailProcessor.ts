@@ -25,7 +25,7 @@ import {
   workspaces,
 } from '@shared/schema';
 import { getWorkspaceTier, hasTierAccess } from '../../tierGuards';
-import { eq, and, gte, lte, ilike, or, desc } from 'drizzle-orm';
+import { eq, and, gte, lte, ilike, or, desc, sql } from 'drizzle-orm';
 import { createHash } from 'crypto';
 import { storage } from '../../storage';
 import { platformEventBus } from '../platformEventBus';
@@ -958,18 +958,26 @@ async function resolveWorkspaceFromCareersAlias(toEmail: string): Promise<string
 
   try {
     if (orgSlug) {
-      // Try to match workspace by company name (case-insensitive prefix or contains)
-      const allWorkspaces = await db.select({
+      // Database-side match so we never pull more than the candidate set
+      // across the page. Matching global workspaces table without a WHERE
+      // is a cross-tenant enumeration risk (CLAUDE.md §G).
+      const slug = orgSlug.toLowerCase().replace(/[-_]/g, '');
+      if (!slug || slug.length < 2) return null;
+
+      const candidates = await db.select({
         id: workspaces.id,
         companyName: workspaces.companyName,
-      }).from(workspaces).limit(100);
+      })
+        .from(workspaces)
+        .where(sql`regexp_replace(lower(coalesce(${workspaces.companyName}, '')), '[\\s\\-_]', '', 'g') LIKE ${`%${slug}%`}`)
+        .limit(5);
 
-      const slug = orgSlug.toLowerCase().replace(/[-_]/g, '');
-      const matched = allWorkspaces.find(ws => {
-        const name = (ws.companyName || '').toLowerCase().replace(/[\s-_]/g, '');
-        return name.startsWith(slug) || name.includes(slug);
+      const exact = candidates.find(ws => {
+        const name = (ws.companyName || '').toLowerCase().replace(/[\s\-_]/g, '');
+        return name.startsWith(slug);
       });
-      if (matched) return matched.id;
+      if (exact) return exact.id;
+      if (candidates.length === 1) return candidates[0].id;
     }
 
     // Fallback: for generic careers@ or when orgSlug doesn't match, return null

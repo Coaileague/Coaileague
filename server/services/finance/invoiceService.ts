@@ -19,9 +19,19 @@ export const invoiceService = {
         return { success: false, message: 'Invoice not found or access denied' };
       }
 
+      // Only draft invoices are sendable. Already-sent/paid/voided invoices
+      // must not be re-dispatched (duplicate client emails, audit drift).
+      if (invoice.status !== 'draft') {
+        return {
+          success: false,
+          message: `Invoice ${invoice.invoiceNumber ?? invoiceId} cannot be sent from status '${invoice.status}'. Only drafts can be sent.`,
+        };
+      }
+
+      // Atomically workspace-scoped FK lookup (CLAUDE.md §G).
       const [client] = await db.select()
         .from(clients)
-        .where(eq(clients.id, invoice.clientId))
+        .where(and(eq(clients.id, invoice.clientId), eq(clients.workspaceId, workspaceId)))
         .limit(1);
 
       if (!client?.email) {

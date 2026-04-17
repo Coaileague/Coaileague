@@ -37,6 +37,7 @@ import { NotificationDeliveryService } from '../notificationDeliveryService';
 import { registerTrainingSessionActions } from './trinityTrainingSessionActions';
 import { createLogger } from '../../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+import { logActionAudit } from './actionAuditLogger';
 const log = createLogger('actionRegistry');
 
 // ============================================================================
@@ -223,16 +224,45 @@ class AIBrainActionRegistry {
       requiredRoles: ['manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
-        const [shift] = await db.insert(shifts).values({
-          workspaceId: request.workspaceId!,
-          employeeId: request.payload?.employeeId,
-          startTime: new Date(request.payload?.startTime),
-          endTime: new Date(request.payload?.endTime),
-          title: request.payload?.title,
-          description: request.payload?.description,
-          status: 'scheduled',
-        }).returning();
-        return createResult(request.actionId, true, `Shift created`, shift, start);
+        try {
+          const [shift] = await db.insert(shifts).values({
+            workspaceId: request.workspaceId!,
+            employeeId: request.payload?.employeeId,
+            startTime: new Date(request.payload?.startTime),
+            endTime: new Date(request.payload?.endTime),
+            title: request.payload?.title,
+            description: request.payload?.description,
+            status: 'scheduled',
+          }).returning();
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'shift',
+            entityId: (shift as any)?.id ?? null,
+            success: true,
+            message: 'Shift created',
+            changesAfter: shift as any,
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, true, `Shift created`, shift, start);
+        } catch (err: any) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'shift',
+            success: false,
+            errorMessage: err?.message ?? 'Shift create failed',
+            payload: request.payload,
+            durationMs: Date.now() - start,
+          });
+          throw err;
+        }
       },
     };
 
@@ -565,11 +595,42 @@ class AIBrainActionRegistry {
           if (updates[key] !== undefined) safeFields[key] = updates[key];
         }
         if (Object.keys(safeFields).length === 0) return createResult(request.actionId, false, 'No valid fields to update', null, start);
+        const [before] = await db.select().from(employees)
+          .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, request.workspaceId!)))
+          .limit(1);
         const [updated] = await db.update(employees)
           .set(safeFields)
           .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, request.workspaceId!)))
           .returning();
-        if (!updated) return createResult(request.actionId, false, 'Employee not found', null, start);
+        if (!updated) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'employee',
+            entityId: employeeId,
+            success: false,
+            errorMessage: 'Employee not found',
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Employee not found', null, start);
+        }
+        await logActionAudit({
+          actionId: request.actionId,
+          workspaceId: request.workspaceId,
+          userId: request.userId,
+          userRole: request.userRole,
+          platformRole: request.platformRole,
+          entityType: 'employee',
+          entityId: employeeId,
+          success: true,
+          message: 'Employee updated',
+          changesBefore: before as any,
+          changesAfter: updated as any,
+          durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, `Employee ${updated.firstName} ${updated.lastName} updated`, updated, start);
       },
     };
@@ -602,17 +663,49 @@ class AIBrainActionRegistry {
           isActive: true,
         } as any).returning();
 
-        if (!created) return createResult(request.actionId, false, 'Failed to create employee', null, start);
+        if (!created) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'employee',
+            success: false,
+            errorMessage: 'Failed to create employee',
+            payload: { firstName, lastName, email },
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Failed to create employee', null, start);
+        }
 
         // Publish employee_hired event
-        const { platformEventBus } = await import('../platformEventBus');
-        await platformEventBus.publish({
-          type: 'employee_hired',
+        try {
+          const { platformEventBus } = await import('../platformEventBus');
+          await platformEventBus.publish({
+            type: 'employee_hired',
+            workspaceId: request.workspaceId,
+            title: 'Employee Created',
+            description: `New employee ${firstName} ${lastName} added`,
+            metadata: { employeeId: (created as any).id, createdBy: request.userId },
+          } as any);
+        } catch (err) {
+          log.warn('[employees.create] event publish failed (non-fatal):', err);
+        }
+
+        await logActionAudit({
+          actionId: request.actionId,
           workspaceId: request.workspaceId,
-          title: 'Employee Created',
-          description: `New employee ${firstName} ${lastName} added`,
-          metadata: { employeeId: (created as any).id, createdBy: request.userId },
-        } as any).catch(() => null);
+          userId: request.userId,
+          userRole: request.userRole,
+          platformRole: request.platformRole,
+          entityType: 'employee',
+          entityId: (created as any).id,
+          success: true,
+          message: 'Employee created',
+          changesAfter: created as any,
+          durationMs: Date.now() - start,
+        });
 
         return createResult(request.actionId, true, `Employee ${firstName} ${lastName} created`, created, start);
       },
@@ -1228,17 +1321,49 @@ class AIBrainActionRegistry {
           updatedAt: new Date(),
         } as any).returning();
 
-        if (!created) return createResult(request.actionId, false, 'Failed to create invoice', null, start);
+        if (!created) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'invoice',
+            success: false,
+            errorMessage: 'Failed to create invoice',
+            payload: { clientId },
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Failed to create invoice', null, start);
+        }
 
         // Publish invoice_created event
-        const { platformEventBus } = await import('../platformEventBus');
-        await platformEventBus.publish({
-          type: 'invoice_created',
+        try {
+          const { platformEventBus } = await import('../platformEventBus');
+          await platformEventBus.publish({
+            type: 'invoice_created',
+            workspaceId: request.workspaceId,
+            title: 'Invoice Created',
+            description: `New invoice created for client ${clientId}`,
+            metadata: { invoiceId: (created as any).id, clientId, createdBy: request.userId },
+          } as any);
+        } catch (err) {
+          log.warn('[billing.invoice_create] event publish failed (non-fatal):', err);
+        }
+
+        await logActionAudit({
+          actionId: request.actionId,
           workspaceId: request.workspaceId,
-          title: 'Invoice Created',
-          description: `New invoice created for client ${clientId}`,
-          metadata: { invoiceId: (created as any).id, clientId, createdBy: request.userId },
-        } as any).catch(() => null);
+          userId: request.userId,
+          userRole: request.userRole,
+          platformRole: request.platformRole,
+          entityType: 'invoice',
+          entityId: (created as any).id,
+          success: true,
+          message: 'Invoice created',
+          changesAfter: created as any,
+          durationMs: Date.now() - start,
+        });
 
         return createResult(request.actionId, true, `Invoice created`, created, start);
       },
@@ -1259,7 +1384,21 @@ class AIBrainActionRegistry {
 
         const { invoiceService } = await import('../finance/invoiceService');
         const result = await invoiceService.sendInvoice(invoiceId, request.workspaceId!);
-        
+
+        await logActionAudit({
+          actionId: request.actionId,
+          workspaceId: request.workspaceId,
+          userId: request.userId,
+          userRole: request.userRole,
+          platformRole: request.platformRole,
+          entityType: 'invoice',
+          entityId: invoiceId,
+          success: result.success,
+          message: result.message,
+          errorMessage: result.success ? null : result.message,
+          durationMs: Date.now() - start,
+        });
+
         return createResult(request.actionId, result.success, result.message, result.data, start);
       },
     };

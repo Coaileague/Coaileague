@@ -390,6 +390,149 @@ export const myNewService = { ... }; // no registry entry
 
 ---
 
+## Section L — Trinity Action Audit Trail (Phase 17A/B)
+
+**The law:** Every mutating handler registered in
+`server/services/ai-brain/actionRegistry.ts` must write an audit-log row
+(success **and** failure paths) via the shared helper
+`server/services/ai-brain/actionAuditLogger.ts → logActionAudit(...)`.
+Direct `db.insert(auditLogs)` from a handler is allowed only if the helper
+cannot express the required metadata.
+
+**The bug it prevents:** The Phase 17A audit found **zero**
+`db.insert(auditLogs)` / `systemAuditLogs` writes across 88 registered
+actions. Autonomous Trinity actions (shift creation, invoice creation,
+invoice send, employee create/update) persisted mutations with no audit
+trail — "who did what when" was unreplayable. Phase 17B extended this to
+find 144 total actions (not the claimed 403 or 190) with the same gap.
+
+**The canonical files:**
+- `server/services/ai-brain/actionAuditLogger.ts` — shared
+  `logActionAudit({ actionId, workspaceId, userId, userRole, platformRole,
+  entityType, entityId, success, message, payload?, changesBefore?,
+  changesAfter?, errorMessage?, durationMs? })`. Sanitizes sensitive keys
+  (password/token/secret/key/auth/credit_card/ssn) before insert. Non-fatal
+  on failure — audit-log errors are warned, not thrown.
+- `shared/schema/domains/audit/index.ts:69` — `audit_logs` table is the
+  canonical sink. `systemAuditLogs` in `shared/schema.ts:1664` is an alias.
+
+**Required pattern for every mutating action handler:**
+```ts
+handler: async (request: ActionRequest): Promise<ActionResult> => {
+  const start = Date.now();
+  try {
+    const [row] = await db.insert(things).values({ ... }).returning();
+    await logActionAudit({
+      actionId: request.actionId,
+      workspaceId: request.workspaceId,
+      userId: request.userId,
+      userRole: request.userRole,
+      platformRole: request.platformRole,
+      entityType: 'thing',
+      entityId: row?.id ?? null,
+      success: true,
+      changesAfter: row as any,
+      durationMs: Date.now() - start,
+    });
+    return createResult(request.actionId, true, 'ok', row, start);
+  } catch (err: any) {
+    await logActionAudit({
+      actionId: request.actionId,
+      workspaceId: request.workspaceId,
+      userId: request.userId,
+      entityType: 'thing',
+      success: false,
+      errorMessage: err?.message,
+      payload: request.payload,
+      durationMs: Date.now() - start,
+    });
+    throw err;
+  }
+},
+```
+
+**Forbidden patterns:**
+```ts
+// 🔴 forbidden — mutation without audit log
+const [row] = await db.insert(things).values({ ... }).returning();
+return createResult(request.actionId, true, 'ok', row, start);
+
+// 🔴 forbidden — fire-and-forget event publish treated as audit log
+await platformEventBus.publish({ ... }).catch(() => null);
+// (event-bus publish is not persistent audit; use logActionAudit instead)
+```
+
+**Wired in Phase 17 (verified):**
+- `scheduling.create_shift` — `actionRegistry.ts:224-267`
+- `billing.invoice_create` — `actionRegistry.ts:~1232-1275`
+- `billing.invoice_send` — `actionRegistry.ts:~1283-1310`
+- `employees.create` — `actionRegistry.ts:~584-660`
+- `employees.update` — `actionRegistry.ts:~558-605`
+
+Remaining handlers in `actionRegistry.ts` (≈83) are Phase 18 scope — migrate
+using the same helper.
+
+---
+
+## Section M — Agent Dashboard Platform-Role Enforcement (Phase 17A)
+
+**The law:** `server/routes/trinityAgentDashboardRoutes.ts` is a
+**platform-staff-only** surface. `getActorRole(req)` must read
+`req.platformRole` exclusively. Falling back to `req.workspaceRole`
+would let a tenant-level role string that happens to match
+`support_agent`/`support_manager` grant cross-tenant access.
+
+**The bug it prevents:** Phase 17A found the fallback `req.platformRole ||
+req.workspaceRole` accepted tenant roles when the workspace schema never
+declared those names. A drift in `WorkspaceRole` values could silently
+bridge tenants to the platform support console.
+
+**Required pattern** (`trinityAgentDashboardRoutes.ts:40-44`):
+```ts
+function getActorRole(req: AuthenticatedRequest): string {
+  return (req as any).platformRole || 'none';
+}
+```
+
+**Forbidden:**
+```ts
+// 🔴 forbidden
+return (req as any).platformRole || (req as any).workspaceRole || 'none';
+```
+
+---
+
+## Section N — Workspace Enumeration Must Be WHERE-scoped (Phase 17A)
+
+**The law:** `SELECT ... FROM workspaces` without a `WHERE` clause — even
+with `LIMIT n` — is a cross-tenant enumeration vector. Any slug/name
+lookup across the `workspaces` table must filter at the database, not
+in-memory.
+
+**The bug it prevents:**
+`server/services/trinity/trinityInboundEmailProcessor.ts:962` previously
+ran `db.select({...}).from(workspaces).limit(100)` and then matched a slug
+client-side. An attacker who owned any inbound-email alias could
+enumerate the first 100 workspace IDs + company names.
+
+**Required pattern** — database-side filter via `regexp_replace` +
+parameterized `LIKE`:
+```ts
+const candidates = await db.select({...})
+  .from(workspaces)
+  .where(sql`regexp_replace(lower(coalesce(${workspaces.companyName}, '')), '[\\s\\-_]', '', 'g') LIKE ${'%' + slug + '%'}`)
+  .limit(5);
+```
+
+**Forbidden:**
+```ts
+// 🔴 forbidden — unbounded cross-tenant enumeration
+const all = await db.select().from(workspaces).limit(100);
+const match = all.find(ws => ws.name.toLowerCase().includes(slug));
+```
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When Claude Code (or any future debug session) discovers a new architectural
@@ -448,3 +591,4 @@ valid.
 | R | (prev commit) | CLAUDE.md verified-laws encoding |
 | T | (this commit) | remove statewideWriteGuard — protected = billing-only |
 | 16 | (phase-16 branch) | Trinity service registry + transparency + agent dashboard |
+| 17A/B | (this commit) | Trinity audit trail helper, platform-role tightening, workspace-enumeration fix |
