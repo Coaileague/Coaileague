@@ -27,6 +27,7 @@ import { trinityActionReasoner } from '../trinityActionReasoner';
 import crypto from 'crypto';
 import { createLogger } from '../../../lib/logger';
 import { invoicePayments } from '@shared/schema';
+import { logActionAudit } from '../actionAuditLogger';
 const log = createLogger('invoiceSubagent');
 
 // ============================================================================
@@ -898,6 +899,24 @@ Provide 2-3 sentences of executive-level recommendations to recover this revenue
     }
 
     log.info(`[InvoiceSubagent] ${action} ${status}:`, details);
+
+    // Phase 17C: also persist completion/failure to canonical audit_logs sink
+    // (CLAUDE.md Section L). 'started' rows are skipped to avoid 2× write
+    // amplification; only the terminal state is persisted.
+    if (status !== 'started') {
+      const wsId = (details as any)?.workspaceId ?? null;
+      const entityId = (details as any)?.invoiceId ?? null;
+      void logActionAudit({
+        actionId: action,
+        workspaceId: wsId,
+        entityType: 'invoice',
+        entityId,
+        success: status === 'completed',
+        message: `subagent.${action}.${status}`,
+        payload: { traceId, ...details },
+        errorMessage: status === 'failed' ? ((details as any)?.error ?? null) : null,
+      });
+    }
   }
 
   getAuditLog(traceId?: string): AuditEntry[] {

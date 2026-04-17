@@ -24,6 +24,7 @@ import {
   shifts,
   timeEntries,
   invoices,
+  invoiceLineItems,
   payrollRuns,
   clients,
   notifications,
@@ -38,6 +39,7 @@ import { registerTrainingSessionActions } from './trinityTrainingSessionActions'
 import { createLogger } from '../../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 import { logActionAudit } from './actionAuditLogger';
+import { requiresFinancialApproval, actorMeetsApprovalRequirement } from './financialApprovalThresholds';
 const log = createLogger('actionRegistry');
 
 // ============================================================================
@@ -1282,7 +1284,7 @@ class AIBrainActionRegistry {
         if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
 
         const [updated] = await db.update(timeEntries)
-          .set({ 
+          .set({
             status: 'approved',
             approvedAt: new Date(),
             approvedBy: request.userId,
@@ -1291,7 +1293,37 @@ class AIBrainActionRegistry {
           .where(and(eq(timeEntries.id, timeEntryId), eq(timeEntries.workspaceId, request.workspaceId!)))
           .returning();
 
-        if (!updated) return createResult(request.actionId, false, 'Time entry not found or access denied', null, start);
+        if (!updated) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'time_entry',
+            entityId: timeEntryId,
+            success: false,
+            errorMessage: 'Time entry not found or access denied',
+            payload: { timeEntryId },
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Time entry not found or access denied', null, start);
+        }
+
+        await logActionAudit({
+          actionId: request.actionId,
+          workspaceId: request.workspaceId,
+          userId: request.userId,
+          userRole: request.userRole,
+          platformRole: request.platformRole,
+          entityType: 'time_entry',
+          entityId: timeEntryId,
+          success: true,
+          message: `Time entry ${timeEntryId} approved`,
+          changesAfter: updated as any,
+          durationMs: Date.now() - start,
+        });
+
         return createResult(request.actionId, true, `Time entry ${timeEntryId} approved`, updated, start);
       },
     };
@@ -1309,6 +1341,37 @@ class AIBrainActionRegistry {
         if (!clientId) return createResult(request.actionId, false, 'clientId is required', null, start);
         if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
         await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        // Phase 17C: amount-threshold approval gate. If the requesting actor
+        // doesn't meet the required role for this amount, refuse with a
+        // typed error. The caller is expected to route through the
+        // approval-creation flow (workflowApprovalService) for high-value
+        // invoices instead of executing directly.
+        const approvalDecision = requiresFinancialApproval(amount);
+        if (
+          approvalDecision.requiresApproval &&
+          !actorMeetsApprovalRequirement(request.userRole ?? request.platformRole, approvalDecision.requiredRole)
+        ) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'invoice',
+            success: false,
+            errorMessage: `Approval required: ${approvalDecision.rationale} Required role: ${approvalDecision.requiredRole}.`,
+            payload: { clientId, amount, decision: approvalDecision } as any,
+            durationMs: Date.now() - start,
+          });
+          return createResult(
+            request.actionId,
+            false,
+            `Approval required for amount $${amount}: ${approvalDecision.rationale} Required role: ${approvalDecision.requiredRole}.`,
+            { decision: approvalDecision },
+            start,
+          );
+        }
 
         const [created] = await db.insert(invoices).values({
           workspaceId: request.workspaceId,
@@ -1418,7 +1481,7 @@ class AIBrainActionRegistry {
 
         const logoutTime = clockOutTime ? new Date(clockOutTime) : new Date();
         const [updated] = await db.update(timeEntries)
-          .set({ 
+          .set({
             clockOut: logoutTime,
             status: 'completed',
             updatedAt: new Date()
@@ -1426,7 +1489,37 @@ class AIBrainActionRegistry {
           .where(and(eq(timeEntries.id, timeEntryId), eq(timeEntries.workspaceId, request.workspaceId!)))
           .returning();
 
-        if (!updated) return createResult(request.actionId, false, 'Time entry not found or access denied', null, start);
+        if (!updated) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'time_entry',
+            entityId: timeEntryId,
+            success: false,
+            errorMessage: 'Time entry not found or access denied',
+            payload: { timeEntryId, clockOutTime },
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Time entry not found or access denied', null, start);
+        }
+
+        await logActionAudit({
+          actionId: request.actionId,
+          workspaceId: request.workspaceId,
+          userId: request.userId,
+          userRole: request.userRole,
+          platformRole: request.platformRole,
+          entityType: 'time_entry',
+          entityId: timeEntryId,
+          success: true,
+          message: `Officer clocked out at ${logoutTime.toISOString()}`,
+          changesAfter: updated as any,
+          durationMs: Date.now() - start,
+        });
+
         return createResult(request.actionId, true, `Officer clocked out at ${logoutTime.toISOString()}`, updated, start);
       },
     };
@@ -1442,37 +1535,200 @@ class AIBrainActionRegistry {
         const start = Date.now();
         const { title, description, severity, relatedEntityId, relatedEntityType } = request.payload || {};
         if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
-        
-        const { complianceService } = await import('../compliance/complianceService');
-        const alert = await complianceService.createAlert({
-          workspaceId: request.workspaceId!,
-          title: title || 'Compliance Escalation',
-          description: description || 'Manual escalation via Trinity AI',
-          severity: severity || 'high',
-          status: 'open',
-          relatedEntityId,
-          relatedEntityType,
-          createdBy: request.userId
+
+        try {
+          const { complianceService } = await import('../compliance/complianceService');
+          const alert = await complianceService.createAlert({
+            workspaceId: request.workspaceId!,
+            title: title || 'Compliance Escalation',
+            description: description || 'Manual escalation via Trinity AI',
+            severity: severity || 'high',
+            status: 'open',
+            relatedEntityId,
+            relatedEntityType,
+            createdBy: request.userId
+          });
+
+          await universalNotificationEngine.sendNotification({
+            type: 'compliance_alert',
+            title: `Compliance Escalation: ${(alert as any).title}`,
+            message: (alert as any).description,
+            workspaceId: request.workspaceId!,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            severity: alert.severity === 'critical' ? 'high' : 'medium',
+            source: 'trinity_compliance_escalation',
+            metadata: { alertId: alert.id }
+          });
+
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'compliance_alert',
+            entityId: (alert as any)?.id ?? null,
+            success: true,
+            message: 'Compliance issue escalated',
+            changesAfter: alert as any,
+            durationMs: Date.now() - start,
+          });
+
+          return createResult(request.actionId, true, 'Compliance issue escalated', alert, start);
+        } catch (err: any) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'compliance_alert',
+            success: false,
+            errorMessage: err?.message ?? String(err),
+            payload: { title, severity, relatedEntityId, relatedEntityType },
+            durationMs: Date.now() - start,
+          });
+          throw err;
+        }
+      },
+    };
+
+    // 3c. Add Line Items to Draft Invoice — Phase 17C
+    // Enables proper multi-step invoice workflow:
+    // billing.invoice_create → billing.invoice_add_line_items → billing.invoice_send
+    // Status='draft' precondition prevents mutating finalized invoices.
+    const addInvoiceLineItems: ActionHandler = {
+      actionId: 'billing.invoice_add_line_items',
+      name: 'Add Invoice Line Items',
+      category: 'invoicing',
+      description: 'Append line items to a draft invoice and recalculate the total',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId, items } = request.payload || {};
+        if (!invoiceId) return createResult(request.actionId, false, 'invoiceId is required', null, start);
+        if (!Array.isArray(items) || items.length === 0) {
+          return createResult(request.actionId, false, 'items array required (non-empty)', null, start);
+        }
+        if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+        await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        // Fetch invoice with workspace scope (CLAUDE.md Section G — tenant isolation in raw SQL)
+        const [invoice] = await db.select()
+          .from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, request.workspaceId)))
+          .limit(1);
+
+        if (!invoice) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            entityType: 'invoice',
+            entityId: invoiceId,
+            success: false,
+            errorMessage: 'Invoice not found in this workspace',
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Invoice not found in this workspace', null, start);
+        }
+
+        if ((invoice as any).status !== 'draft') {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            entityType: 'invoice',
+            entityId: invoiceId,
+            success: false,
+            errorMessage: `Cannot add line items to invoice in status '${(invoice as any).status}'. Only drafts accept new line items.`,
+            payload: { items },
+            durationMs: Date.now() - start,
+          });
+          return createResult(
+            request.actionId,
+            false,
+            `Cannot add line items to invoice in status '${(invoice as any).status}'. Only drafts accept new line items.`,
+            null,
+            start,
+          );
+        }
+
+        // Compute deltas (integer cents to avoid float drift)
+        let appendedTotalCents = 0;
+        const rows = items.map((it: any, idx: number) => {
+          const qty = parseFloat(String(it.quantity ?? '1'));
+          const unit = parseFloat(String(it.unitPrice ?? '0'));
+          if (!Number.isFinite(qty) || qty <= 0) {
+            throw new Error(`items[${idx}].quantity must be > 0`);
+          }
+          if (!Number.isFinite(unit) || unit < 0) {
+            throw new Error(`items[${idx}].unitPrice must be >= 0`);
+          }
+          const lineTotal = Math.round(qty * unit * 100);
+          appendedTotalCents += lineTotal;
+          return {
+            invoiceId,
+            workspaceId: request.workspaceId,
+            description: String(it.description ?? '').slice(0, 500),
+            quantity: String(qty),
+            unitPrice: String(unit),
+            amount: (lineTotal / 100).toFixed(2),
+          };
         });
 
-        await universalNotificationEngine.sendNotification({
-          type: 'compliance_alert',
-          title: `Compliance Escalation: ${(alert as any).title}`,
-          message: (alert as any).description,
-          workspaceId: request.workspaceId!,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          severity: alert.severity === 'critical' ? 'high' : 'medium',
-          source: 'trinity_compliance_escalation',
-          metadata: { alertId: alert.id }
-        });
+        try {
+          const inserted = await db.transaction(async (tx) => {
+            const out = await tx.insert(invoiceLineItems).values(rows as any).returning();
+            const newTotalCents = Math.round(parseFloat(String((invoice as any).total ?? '0')) * 100) + appendedTotalCents;
+            await tx.update(invoices)
+              .set({ total: (newTotalCents / 100).toFixed(2), updatedAt: new Date() } as any)
+              .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, request.workspaceId!)));
+            return out;
+          });
 
-        return createResult(request.actionId, true, 'Compliance issue escalated', alert, start);
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'invoice',
+            entityId: invoiceId,
+            success: true,
+            message: `${inserted.length} line items appended to invoice`,
+            changesAfter: { lineItemsAppended: inserted.length, appendedTotalCents } as any,
+            durationMs: Date.now() - start,
+          });
+
+          return createResult(
+            request.actionId,
+            true,
+            `${inserted.length} line items appended`,
+            { lineItems: inserted, appendedTotal: (appendedTotalCents / 100).toFixed(2) },
+            start,
+          );
+        } catch (err: any) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            entityType: 'invoice',
+            entityId: invoiceId,
+            success: false,
+            errorMessage: err?.message ?? String(err),
+            payload: { items },
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, err?.message ?? 'Failed to append line items', null, start);
+        }
       },
     };
 
     helpaiOrchestrator.registerAction(fillOpenShift);
     helpaiOrchestrator.registerAction(approveTimesheet);
     helpaiOrchestrator.registerAction(createInvoice);
+    helpaiOrchestrator.registerAction(addInvoiceLineItems);
     // billing.invoice_send canonical is in trinityInvoiceEmailActions.ts — not registering here
     // helpaiOrchestrator.registerAction(sendInvoice);
     helpaiOrchestrator.registerAction(clockOutOfficer);

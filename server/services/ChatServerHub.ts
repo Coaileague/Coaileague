@@ -1138,8 +1138,18 @@ class ChatServerHubClass {
    */
   private subscribeToEventBus(): void {
     if (this.eventBusSubscribed) return;
+
+    // Defensive: under certain bootstrap orders (e.g. vitest module loading,
+    // partial DI in workers) `platformEventBus` may not yet be initialised
+    // when our deferred `setImmediate` fires. Re-arm and retry instead of
+    // throwing an uncaught TypeError that takes down the host process.
+    if (!platformEventBus || typeof platformEventBus.subscribe !== 'function') {
+      setImmediate(() => this.subscribeToEventBus());
+      return;
+    }
+
     this.eventBusSubscribed = true;
-    
+
     // ChatServerHub intentionally uses '*' — it routes any event that carries
     // event.metadata.conversationId to the appropriate WebSocket chatroom.
     // Since conversationId can appear on any event type, filtering by '*' is correct.

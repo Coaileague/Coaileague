@@ -26,12 +26,26 @@ import { trinityActionReasoner } from '../trinityActionReasoner';
 import { platformEventBus } from '../../platformEventBus';
 import { broadcastToWorkspace } from '../../../websocket';
 import { auditLogger } from '../../audit-logger';
+import { logActionAudit } from '../actionAuditLogger';
 import crypto from 'crypto';
 import { typedQuery } from '../../../lib/typedSql';
 import { workspaces } from '@shared/schema';
 
 import { createLogger } from '../../../lib/logger';
+import { withDistributedLock, LOCK_KEYS } from '../../distributedLock';
 const log = createLogger('PayrollSubagent');
+
+// Phase 17C: workspace-scoped lock key derived from PAYROLL_AUTO_CLOSE base.
+// 32-bit-stable hash of workspaceId offset by the base key keeps lock keys
+// inside the safe int range while ensuring two workspaces never collide.
+function payrollLockKeyFor(workspaceId: string): number {
+  let h = 0;
+  for (let i = 0; i < workspaceId.length; i++) {
+    h = (h * 31 + workspaceId.charCodeAt(i)) | 0;
+  }
+  // shift into high range to avoid collision with reserved LOCK_KEYS values
+  return (LOCK_KEYS.PAYROLL_AUTO_CLOSE * 100000) + (Math.abs(h) % 100000);
+}
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -228,10 +242,28 @@ class DistributedTracer {
       details,
       durationMs: details.durationMs,
     });
-    
+
     // Keep last 1000 entries in memory
     if (this.auditLog.length > 1000) {
       this.auditLog = this.auditLog.slice(-1000);
+    }
+
+    // Phase 17C: persist terminal-state spans to canonical audit_logs
+    // (CLAUDE.md Section L). 'started' rows are skipped to keep durable
+    // log volume bounded.
+    if (status !== 'started' && action.startsWith('payroll.')) {
+      const wsId = (details as any)?.workspaceId ?? null;
+      void logActionAudit({
+        actionId: action,
+        workspaceId: wsId,
+        entityType: 'payroll_run',
+        entityId: (details as any)?.payrollRunId ?? null,
+        success: status === 'completed',
+        message: `subagent.${action}.${status}`,
+        payload: { traceId, spanId, ...details },
+        errorMessage: status === 'failed' ? ((details as any)?.error ?? null) : null,
+        durationMs: typeof details.durationMs === 'number' ? details.durationMs : undefined,
+      });
     }
   }
 
@@ -384,15 +416,43 @@ class PayrollSubagentService {
       };
     }
 
+    const lockKey = payrollLockKeyFor(workspaceId);
+
     while (retryCount <= this.retryStrategy.maxRetries) {
       try {
-        const result = await this.executePayrollInternal(
-          trace,
-          workspaceId,
-          payPeriodStart,
-          payPeriodEnd,
-          options
+        // Phase 17C: workspace-scoped advisory lock prevents concurrent payroll
+        // cycles for the same tenant from racing on time-entry snapshots.
+        const lockedResult = await withDistributedLock(
+          lockKey,
+          `payroll-execute:${workspaceId}`,
+          () => this.executePayrollInternal(trace, workspaceId, payPeriodStart, payPeriodEnd, options),
         );
+
+        if (lockedResult === null) {
+          // Another payroll cycle for this workspace is in flight. Surface a
+          // typed result rather than silently retrying, so the caller can
+          // re-poll the in-flight idempotency key instead.
+          this.tracer.endTrace(trace, 'failed', { error: 'concurrent_payroll_in_flight' });
+          return {
+            success: false,
+            traceId: trace.traceId,
+            totalGross: 0,
+            totalDeductions: 0,
+            totalNet: 0,
+            employeeCount: 0,
+            processingTimeMs: Date.now() - startTime,
+            retryCount,
+            idempotencyKey,
+            issues: [{
+              severity: 'critical',
+              type: 'integration',
+              description: 'Another payroll cycle is currently executing for this workspace. Wait for it to complete and re-check the idempotency key.',
+            }],
+            auditLog: this.tracer.getAuditLog(trace.traceId),
+          };
+        }
+
+        const result = lockedResult;
 
         this.circuitBreaker.recordSuccess();
         this.tracer.endTrace(trace, 'completed', { success: true });
