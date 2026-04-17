@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Users, AlertTriangle, FileText, Clock, MapPin, Calendar, ChevronRight } from "lucide-react";
+import { Users, AlertTriangle, FileText, Clock, MapPin, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
