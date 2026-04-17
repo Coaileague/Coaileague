@@ -1,0 +1,27 @@
+3.1 Possibly unscoped queries in routes: 844 (tolerant grep)
+  WARN
+3.2 workspaceId refs in actionRegistry: 145
+  PASS
+3.3 Schema files with workspaceId: 34
+  PASS
+3.4 Permission checks in routes: 552
+  PASS
+3.5 Workspace-mismatch guards: 133
+  PASS
+3.6 Session-workspace files: 10
+  PASS
+3.7 Token/auth workspace refs: 183
+  PASS
+3.8 WebSocket workspace refs: 1526
+  PASS
+3.9 workspaceId in NDS: 11
+  PASS
+3.10 Error logs with workspaceId: 767
+  PASS
+3.11 Route queries filtering workspaceId: 1397
+  PASS
+3.12 Audit log workspace refs: 61
+  PASS
+
+=== Category 3: PASS=11, WARN=1, FAIL=0 ===
+   Score: 11.5/12

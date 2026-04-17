@@ -1,0 +1,23 @@
+7.1 FK/notNull constraints: 2911
+  PASS
+7.2 Transaction usage: 152
+  PASS
+7.3 Encryption usage: 458
+  PASS
+7.4 Audit-log refs: 796
+  PASS
+7.5 SQL migration files: 6
+  PASS
+7.6 Zod type declarations: 2108
+  PASS
+7.7 Decimal/numeric types: 737
+  PASS
+7.8 Timezone-aware timestamps: 421
+  PASS
+7.9 Sequence refs: 1011
+  PASS
+7.10 FK rules: 15
+  WARN
+
+=== Category 7: PASS=9, WARN=1, FAIL=0 ===
+   Score: 9.5/10

@@ -1,0 +1,19 @@
+8.1 Shutdown handlers: 18
+  PASS
+8.2 Reconnect logic: 74
+  PASS
+8.3 Rollback refs: 396
+  PASS
+8.4 Distributed-tx patterns: 62
+  PASS
+8.5 Integrity checks: 172
+  PASS
+8.6 Boot validators wired: 4
+  PASS
+8.7 Partition-resilience refs: 239
+  PASS
+8.8 Admin route files: 10
+  PASS
+
+=== Category 8: PASS=8, WARN=0, FAIL=0 ===
+   Score: 8.0/8
