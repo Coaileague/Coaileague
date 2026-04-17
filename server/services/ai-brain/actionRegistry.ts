@@ -147,8 +147,35 @@ class AIBrainActionRegistry {
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const serviceName = request.payload?.serviceName;
-        const result = await serviceController.restartService(serviceName, request.userId);
-        return createResult(request.actionId, result.success, result.message, null, start);
+        try {
+          const result = await serviceController.restartService(serviceName, request.userId);
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'service',
+            entityId: serviceName ?? null,
+            success: result.success,
+            message: result.message,
+            errorMessage: result.success ? undefined : result.message,
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, result.success, result.message, null, start);
+        } catch (err: any) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            entityType: 'service',
+            entityId: serviceName ?? null,
+            success: false,
+            errorMessage: err?.message,
+            durationMs: Date.now() - start,
+          });
+          throw err;
+        }
       },
     };
 
@@ -184,14 +211,42 @@ class AIBrainActionRegistry {
       requiredRoles: ['deputy_admin', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
-        const result = await featureToggleManager.setToggle({
-          featurePath: request.payload?.featurePath,
-          enabled: request.payload?.enabled,
-          reason: request.payload?.reason || 'AI Brain action',
-          userId: request.userId,
-          workspaceId: request.workspaceId,
-        });
-        return createResult(request.actionId, true, `Feature toggle updated`, result, start);
+        try {
+          const result = await featureToggleManager.setToggle({
+            featurePath: request.payload?.featurePath,
+            enabled: request.payload?.enabled,
+            reason: request.payload?.reason || 'AI Brain action',
+            userId: request.userId,
+            workspaceId: request.workspaceId,
+          });
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            userRole: request.userRole,
+            platformRole: request.platformRole,
+            entityType: 'feature_toggle',
+            entityId: request.payload?.featurePath ?? null,
+            success: true,
+            message: `Feature toggle updated: ${request.payload?.featurePath}=${request.payload?.enabled}`,
+            changesAfter: result as any,
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, true, `Feature toggle updated`, result, start);
+        } catch (err: any) {
+          await logActionAudit({
+            actionId: request.actionId,
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+            entityType: 'feature_toggle',
+            entityId: request.payload?.featurePath ?? null,
+            success: false,
+            errorMessage: err?.message,
+            payload: request.payload,
+            durationMs: Date.now() - start,
+          });
+          throw err;
+        }
       },
     };
 
@@ -445,8 +500,15 @@ class AIBrainActionRegistry {
             // Also broadcast standard shift update for cross-device sync
             broadcastShiftUpdate(request.workspaceId!, 'shift_created', filledShift);
             
-            return createResult(request.actionId, true, 
-              `Open shift created and assigned to ${assignment.employeeName} with ${(result.confidence.score * 100).toFixed(0)}% confidence`, 
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'shift', entityId: (filledShift as any)?.id ?? openShift.id,
+              success: true, message: `Open shift filled: assigned to ${assignment.employeeName}`,
+              changesAfter: filledShift as any, durationMs: Date.now() - start,
+            });
+            return createResult(request.actionId, true,
+              `Open shift created and assigned to ${assignment.employeeName} with ${(result.confidence.score * 100).toFixed(0)}% confidence`,
               { shift: filledShift, assignment, businessMetrics: result.businessMetrics, strategicDecisions: result.strategicDecisions },
               start
             );
@@ -462,17 +524,30 @@ class AIBrainActionRegistry {
                 shift: openShift,
               }
             });
-            
+
             broadcastShiftUpdate(request.workspaceId!, 'shift_created', openShift);
-            
-            return createResult(request.actionId, true, 
-              'Open shift created but no suitable employee found - shift remains open', 
+
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'shift', entityId: openShift.id,
+              success: true, message: 'Open shift created — no suitable employee found, shift remains open',
+              changesAfter: openShift as any, durationMs: Date.now() - start,
+            });
+            return createResult(request.actionId, true,
+              'Open shift created but no suitable employee found - shift remains open',
               { shift: openShift, alerts: result.alerts },
               start
             );
           }
         } catch (error: any) {
           log.error('[ActionRegistry] Create open shift fill error:', error);
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            entityType: 'shift', entityId: null,
+            success: false, errorMessage: error instanceof Error ? error.message : String(error),
+            payload: request.payload, durationMs: Date.now() - start,
+          });
           return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)) || 'Failed to create and fill shift', null, start);
         }
       },
@@ -555,12 +630,36 @@ class AIBrainActionRegistry {
       requiredRoles: ['manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
-        const [updated] = await db.update(employees)
-          .set({ isActive: true })
-          .where(and(eq(employees.id, request.payload?.employeeId), eq(employees.workspaceId, request.workspaceId!)))
-          .returning();
-        if (!updated) return createResult(request.actionId, false, 'Employee not found', null, start);
-        return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been activated`, updated, start);
+        try {
+          const [updated] = await db.update(employees)
+            .set({ isActive: true })
+            .where(and(eq(employees.id, request.payload?.employeeId), eq(employees.workspaceId, request.workspaceId!)))
+            .returning();
+          if (!updated) {
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'employee', entityId: request.payload?.employeeId ?? null,
+              success: false, errorMessage: 'Employee not found', durationMs: Date.now() - start,
+            });
+            return createResult(request.actionId, false, 'Employee not found', null, start);
+          }
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'employee', entityId: (updated as any).id,
+            success: true, message: `Employee ${updated.firstName} ${updated.lastName} activated`,
+            changesAfter: updated as any, durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been activated`, updated, start);
+        } catch (err: any) {
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            entityType: 'employee', entityId: request.payload?.employeeId ?? null,
+            success: false, errorMessage: err?.message, durationMs: Date.now() - start,
+          });
+          throw err;
+        }
       },
     };
 
@@ -572,12 +671,36 @@ class AIBrainActionRegistry {
       requiredRoles: ['manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
-        const [updated] = await db.update(employees)
-          .set({ isActive: false })
-          .where(and(eq(employees.id, request.payload?.employeeId), eq(employees.workspaceId, request.workspaceId!)))
-          .returning();
-        if (!updated) return createResult(request.actionId, false, 'Employee not found', null, start);
-        return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been deactivated`, updated, start);
+        try {
+          const [updated] = await db.update(employees)
+            .set({ isActive: false })
+            .where(and(eq(employees.id, request.payload?.employeeId), eq(employees.workspaceId, request.workspaceId!)))
+            .returning();
+          if (!updated) {
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'employee', entityId: request.payload?.employeeId ?? null,
+              success: false, errorMessage: 'Employee not found', durationMs: Date.now() - start,
+            });
+            return createResult(request.actionId, false, 'Employee not found', null, start);
+          }
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'employee', entityId: (updated as any).id,
+            success: true, message: `Employee ${updated.firstName} ${updated.lastName} deactivated`,
+            changesAfter: updated as any, durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been deactivated`, updated, start);
+        } catch (err: any) {
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            entityType: 'employee', entityId: request.payload?.employeeId ?? null,
+            success: false, errorMessage: err?.message, durationMs: Date.now() - start,
+          });
+          throw err;
+        }
       },
     };
 
@@ -824,6 +947,13 @@ class AIBrainActionRegistry {
           metadata: { clientId, createdBy: 'trinity' },
           severity: 'info',
         });
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'client', entityId: clientId,
+          success: true, message: `Client ${p.companyName || `${p.firstName} ${p.lastName}`} created`,
+          changesAfter: newClient as any, durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, `Client "${p.companyName || `${p.firstName} ${p.lastName}`}" created successfully`, { client: newClient, clientId }, start);
       },
     };
@@ -848,6 +978,13 @@ class AIBrainActionRegistry {
           message: `Portal invitation sent to ${p.email}`,
           metadata: { clientId: p.clientId, email: p.email },
           severity: 'info',
+        });
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'client', entityId: p.clientId ?? null,
+          success: true, message: `Portal invite sent to ${p.email}`,
+          payload: { email: p.email, clientId: p.clientId } as any, durationMs: Date.now() - start,
         });
         return createResult(request.actionId, true, `Portal invite sent to ${p.email}`, { email: p.email, clientId: p.clientId }, start);
       },
@@ -1019,7 +1156,22 @@ class AIBrainActionRegistry {
           .set(updates)
           .where(and(eq(timeEntries.id, entryId), eq(timeEntries.workspaceId, request.workspaceId!)))
           .returning();
-        if (!updated) return createResult(request.actionId, false, 'Time entry not found', null, start);
+        if (!updated) {
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'time_entry', entityId: entryId,
+            success: false, errorMessage: 'Time entry not found', durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Time entry not found', null, start);
+        }
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'time_entry', entityId: entryId,
+          success: true, message: 'Time entry updated',
+          changesAfter: updated as any, durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, `Time entry updated`, updated, start);
       },
     };
@@ -1079,6 +1231,15 @@ class AIBrainActionRegistry {
           source: 'action_registry',
         });
 
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'notification', entityId: null,
+          success: true, message: `Notification sent: ${title}`,
+          payload: { effectiveSeverity, effectiveType, targetUserIds: targetUserIds.length } as any,
+          durationMs: Date.now() - start,
+        });
+
         return createResult(request.actionId, true, `Notification sent`, { sent: true, effectiveSeverity, effectiveType }, start);
       },
     };
@@ -1112,6 +1273,13 @@ class AIBrainActionRegistry {
           const clearedNotifications = await storage.clearAllNotifications(userId);
           const clearedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
           const totalCleared = clearedNotifications + clearedAlerts;
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'notification', entityId: null,
+            success: true, message: `Cleared ${totalCleared} notifications for user ${userId}`,
+            payload: { clearedNotifications, clearedAlerts } as any, durationMs: Date.now() - start,
+          });
           return createResult(
             request.actionId,
             true,
@@ -1128,6 +1296,13 @@ class AIBrainActionRegistry {
           // Mark both regular notifications and AI maintenance alerts as read
           await storage.markAllNotificationsAsRead(userId);
           const acknowledgedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'notification', entityId: null,
+            success: true, message: `Marked all notifications read for user ${userId}`,
+            payload: { acknowledgedAlerts } as any, durationMs: Date.now() - start,
+          });
           return createResult(
             request.actionId,
             true,
@@ -1263,8 +1438,23 @@ class AIBrainActionRegistry {
           .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, request.workspaceId!)))
           .returning();
 
-        if (!updated) return createResult(request.actionId, false, 'Shift not found or access denied', null, start);
-        
+        if (!updated) {
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'shift', entityId: shiftId,
+            success: false, errorMessage: 'Shift not found or access denied',
+            payload: { shiftId, employeeId } as any, durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, 'Shift not found or access denied', null, start);
+        }
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'shift', entityId: shiftId,
+          success: true, message: `Shift ${shiftId} assigned to employee ${employeeId}`,
+          changesAfter: updated as any, durationMs: Date.now() - start,
+        });
         broadcastShiftUpdate(request.workspaceId!, 'shift_updated', updated);
         return createResult(request.actionId, true, `Shift ${shiftId} assigned to employee ${employeeId}`, updated, start);
       },
@@ -1798,6 +1988,13 @@ class AIBrainActionRegistry {
             invitedAt: new Date(),
           });
 
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'invitation', entityId: invitationId,
+            success: true, message: `Invitation resent to ${invitation.email}`,
+            durationMs: Date.now() - start,
+          });
           return createResult(request.actionId, true, 'Invitation resent successfully', { invitationId }, start);
         }
 
@@ -1811,6 +2008,13 @@ class AIBrainActionRegistry {
             inviteStatus: 'revoked',
           });
 
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'invitation', entityId: invitationId,
+            success: true, message: `Invitation ${invitationId} revoked`,
+            durationMs: Date.now() - start,
+          });
           return createResult(request.actionId, true, 'Invitation revoked successfully', { invitationId }, start);
         }
 
@@ -1825,6 +2029,13 @@ class AIBrainActionRegistry {
           const _welcomeEmail = emailService.buildClientWelcomeEmail(clientId || '', email, clientName, companyName || '', workspace?.name || '');
           await NotificationDeliveryService.send({ type: 'client_welcome', workspaceId: request.workspaceId || 'system', recipientUserId: clientId || email, channel: 'email', body: _welcomeEmail });
 
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'client', entityId: clientId ?? null,
+            success: true, message: `Client welcome email sent to ${email}`,
+            durationMs: Date.now() - start,
+          });
           return createResult(request.actionId, true, 'Client welcome email sent', { clientId }, start);
         }
 
@@ -1856,6 +2067,13 @@ class AIBrainActionRegistry {
           }
         );
 
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'invitation', entityId: invitation.id,
+          success: true, message: `Invitation sent to ${email} (${firstName} ${lastName})`,
+          changesAfter: { email, firstName, lastName, role } as any, durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, 'Invitation sent successfully', { invitationId: invitation.id }, start);
       },
     };
@@ -2148,9 +2366,17 @@ class AIBrainActionRegistry {
           }
         }
 
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'employee', entityId: null,
+          success: true, message: `Bulk import: ${imported.length} employees created, ${errors.length} errors`,
+          changesAfter: { importedCount: imported.length, errorCount: errors.length } as any,
+          durationMs: Date.now() - start,
+        });
         return createResult(
-          request.actionId, 
-          true, 
+          request.actionId,
+          true,
           `Imported ${imported.length} employees with ${errors.length} errors`,
           { imported: imported.length, errors: errors.length, errorDetails: errors },
           start
@@ -2533,7 +2759,17 @@ class AIBrainActionRegistry {
           const totalDecayed = results.reduce((s, r) => s + r.recordsDecayed, 0);
           const totalConsolidated = results.reduce((s, r) => s + r.recordsConsolidated, 0);
           const failures = results.filter(r => !r.success);
-          return createResult(request.actionId, failures.length === 0, 
+          const success = failures.length === 0;
+          await logActionAudit({
+            actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+            userRole: request.userRole, platformRole: request.platformRole,
+            entityType: 'memory', entityId: null,
+            success,
+            message: `Memory optimization: ${totalDeleted} deleted, ${totalDecayed} decayed, ${totalConsolidated} consolidated`,
+            changesAfter: { totalDeleted, totalDecayed, totalConsolidated, failures: failures.length } as any,
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, success,
             `Optimization complete: ${totalDeleted} deleted, ${totalDecayed} decayed, ${totalConsolidated} consolidated${failures.length > 0 ? ` (${failures.length} failures)` : ''}`,
             results, start);
         } catch (error: any) {
@@ -2661,6 +2897,14 @@ class AIBrainActionRegistry {
               }
             }
 
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'billing_preference', entityId: entityId ?? null,
+              success: true,
+              message: `Learned ${preferenceType} for ${learnEntity} ${entityId || ''} (confidence: ${confidence || 'unknown'})`,
+              payload: request.payload as any, durationMs: Date.now() - start,
+            });
             return createResult(request.actionId, true,
               `Learned ${preferenceType} preference for ${learnEntity} ${entityId || ''} (confidence: ${confidence || 'unknown'}, source: ${source || 'unknown'})`,
               request.payload, start);
@@ -2711,6 +2955,13 @@ class AIBrainActionRegistry {
                 .values({ ...payload, workspaceId: request.workspaceId!, clientId })
                 .returning();
             }
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'client_billing_settings', entityId: clientId,
+              success: true, message: `Client ${clientId} billing settings updated`,
+              changesAfter: settings as any, durationMs: Date.now() - start,
+            });
             return createResult(request.actionId, true, `Client ${clientId} billing settings updated`, settings, start);
           }
 
@@ -2745,6 +2996,13 @@ class AIBrainActionRegistry {
                   updated_at = NOW()
               WHERE id = ${request.workspaceId!}
             `);
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'workspace_billing_settings', entityId: request.workspaceId ?? null,
+              success: true, message: 'Workspace billing settings updated',
+              changesAfter: payload as any, durationMs: Date.now() - start,
+            });
             return createResult(request.actionId, true, 'Workspace billing settings updated', payload, start);
           }
 
@@ -3249,9 +3507,25 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
           maxShiftsPerEmployee: request.payload?.maxShiftsPerEmployee || 0,
           respectAvailability: request.payload?.respectAvailability ?? true,
         });
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'schedule', entityId: null,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
+          success: result.success,
+          // @ts-expect-error — TS migration: fix in refactoring sprint
+          message: result.summary,
+          changesAfter: result as any, durationMs: Date.now() - start,
+        });
         // @ts-expect-error — TS migration: fix in refactoring sprint
         return createResult(request.actionId, result.success, result.summary, result, start);
       } catch (error: any) {
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          entityType: 'schedule', entityId: null,
+          success: false, errorMessage: error instanceof Error ? error.message : String(error),
+          durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)) || 'Autonomous scheduling failed', null, start);
       }
     },
@@ -3287,13 +3561,26 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
         const { autonomousSchedulingDaemon } = await import('../scheduling/autonomousSchedulingDaemon');
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await autonomousSchedulingDaemon.start(request.workspaceId!);
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'daemon', entityId: null,
+          success: true, message: 'Background scheduling daemon enabled',
+          durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, 'Background scheduling daemon enabled', { running: true }, start);
       } catch (error: any) {
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          entityType: 'daemon', entityId: null,
+          success: false, errorMessage: error instanceof Error ? error.message : String(error),
+          durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     },
   };
-  
+
   const disableBackgroundScheduling: ActionHandler = {
     actionId: 'scheduling.disable_background_daemon',
     name: 'Disable Background Scheduling Daemon',
@@ -3306,13 +3593,26 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
         const { autonomousSchedulingDaemon } = await import('../scheduling/autonomousSchedulingDaemon');
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await autonomousSchedulingDaemon.stop(request.workspaceId!);
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'daemon', entityId: null,
+          success: true, message: 'Background scheduling daemon disabled',
+          durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, 'Background scheduling daemon disabled', { running: false }, start);
       } catch (error: any) {
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          entityType: 'daemon', entityId: null,
+          success: false, errorMessage: error instanceof Error ? error.message : String(error),
+          durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     },
   };
-  
+
   const importHistoricalPatterns: ActionHandler = {
     actionId: 'scheduling.import_historical_patterns',
     name: 'Import Historical Scheduling Patterns',
@@ -3328,13 +3628,27 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
           request.payload?.csvData || '',
           request.payload?.options
         );
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'schedule', entityId: null,
+          success: result.success,
+          message: (result as any).summary || 'Historical patterns import complete',
+          changesAfter: result as any, durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, result.success, (result as any).summary, result, start);
       } catch (error: any) {
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          entityType: 'schedule', entityId: null,
+          success: false, errorMessage: error instanceof Error ? error.message : String(error),
+          durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     },
   };
-  
+
   const createRecurringTemplate: ActionHandler = {
     actionId: 'scheduling.create_recurring_template',
     name: 'Create Recurring Schedule Template',
@@ -3350,13 +3664,26 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
           request.workspaceId!,
           request.payload?.template
         );
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'schedule_template', entityId: (result as any)?.id ?? null,
+          success: true, message: 'Recurring schedule template created',
+          changesAfter: result as any, durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, 'Recurring template created', result, start);
       } catch (error: any) {
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          entityType: 'schedule_template', entityId: null,
+          success: false, errorMessage: error instanceof Error ? error.message : String(error),
+          payload: request.payload, durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     },
   };
-  
+
   // Register all autonomous scheduling actions with Trinity's brain
   helpaiOrchestrator.registerAction(executeAutonomousScheduling);
   helpaiOrchestrator.registerAction(getSchedulingStatus);
@@ -3462,6 +3789,13 @@ export function registerUniversalIdActions(): void {
           backfillUserNumbers(),
         ]);
         const summary = `Backfilled: ${orgs} orgs, ${clients} clients, ${employees} employees, ${users} users`;
+        await logActionAudit({
+          actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'system', entityId: null,
+          success: true, message: summary,
+          changesAfter: { orgs, clients, employees, users } as any, durationMs: Date.now() - start,
+        });
         return createResult(request.actionId, true, summary, { orgs, clients, employees, users }, start);
       } catch (error: any) {
         return createResult(request.actionId, false, error.message, null, start);
