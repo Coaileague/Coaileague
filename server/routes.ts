@@ -96,7 +96,7 @@ import twilioWebhooksRouter from "./routes/twilioWebhooks";
 import { messageBridgeWebhookRouter } from "./routes/messageBridgeRoutes";
 import { inboundEmailRouter } from "./routes/inboundEmailRoutes";
 import { emailRouter } from "./routes/email/emailRoutes";
-import { initializeVoiceTables, voiceRouter } from "./routes/voiceRoutes";
+import { voiceRouter, initializeVoiceTables } from "./routes/voiceRoutes";
 import platformFeedbackRouter from "./routes/platformFeedbackRoutes";
 import { typedPoolExec, typedQuery } from './lib/typedSql';
 // Phase 46: Holiday calendar routes + service init
@@ -675,6 +675,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(twilioWebhooksRouter);
   app.use(messageBridgeWebhookRouter);
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // TRINITY VOICE + SMS WEBHOOKS — MUST be mounted BEFORE domain mounts and
+  // before the requireAuth catch-alls in mountBillingRoutes / mountCommsRoutes
+  // / etc. Those catch-alls return 401 on Twilio's unauthenticated POSTs,
+  // which was the root cause of the (866) 464-4151 webhook auth failures.
+  //
+  // Twilio webhook handlers inside voiceRouter validate Twilio's HMAC
+  // signature (or bypass via VOICE_DEBUG_BYPASS). Management sub-routes
+  // (/numbers, /calls, /analytics, /support/*) apply requireAuth + tier check
+  // internally via mgmtRouter.use(requireAuth) in voiceRoutes.ts.
+  // Guards in subscriptionGuard.ts / trinityGuard.ts also exempt /api/voice
+  // and /api/sms/{inbound,status} as belt-and-suspenders.
+  // ──────────────────────────────────────────────────────────────────────────
+  app.use('/api/voice', voiceRouter);
+  // Twilio SMS webhook aliases — Twilio console expects /api/sms/inbound and
+  // /api/sms/status. Forward to voiceRouter's sms-inbound / sms-status handlers.
+  app.post('/api/sms/inbound', (req: any, res: any, next: any) => {
+    req.url = '/sms-inbound';
+    voiceRouter(req, res, next);
+  });
+  app.post('/api/sms/status', (req: any, res: any, next: any) => {
+    req.url = '/sms-status';
+    voiceRouter(req, res, next);
+  });
+
   // Phase 13: Inbound email webhook receivers (calloffs@, incidents@, docs@, support@)
   // No auth required — Resend POSTs here; signature verification is internal.
   app.use('/api/inbound/email', inboundEmailRouter);
@@ -716,32 +741,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/onboarding-pipeline", requireLegalAcceptance, onboardingPipelineRouter);
 
   // Phase 56: Initialize voice phone system tables
+  // (voiceRouter + SMS webhook aliases are mounted early, alongside twilioWebhooksRouter,
+  //  before domain mounts / requireAuth catch-alls — see block above.)
   initializeVoiceTables().catch(err => log.error("[VoiceMigration] Failed:", err.message));
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // TRINITY VOICE + SMS WEBHOOKS — MUST be mounted BEFORE any domain that uses
-  // app.use("/api", requireAuth, ...) catch-alls (billing, clients, comms,
-  // compliance, payroll, sales, workforce, audit). Those catch-alls intercept
-  // ALL /api/* requests with requireAuth BEFORE Express checks whether the
-  // target router actually has a matching route, so Twilio's unauthenticated
-  // POST /api/voice/inbound was returning 401.
-  //
-  // Twilio webhook handlers inside voiceRouter validate Twilio's HMAC signature
-  // (or bypass via VOICE_DEBUG_BYPASS). Management sub-routes (/numbers,
-  // /calls, /analytics, /support/*) still apply requireAuth + tier check
-  // internally via mgmtRouter.use(requireAuth) in voiceRoutes.ts.
-  // ──────────────────────────────────────────────────────────────────────────
-  app.use("/api/voice", voiceRouter);
-  // Twilio SMS webhook aliases — Twilio console expects /api/sms/inbound and
-  // /api/sms/status. Forward to voiceRouter's sms-inbound / sms-status handlers.
-  app.post("/api/sms/inbound", (req: any, res: any, next: any) => {
-    req.url = '/sms-inbound';
-    voiceRouter(req, res, next);
-  });
-  app.post("/api/sms/status", (req: any, res: any, next: any) => {
-    req.url = '/sms-status';
-    voiceRouter(req, res, next);
-  });
   // Run expansion migration (create new tables idempotently)
   runExpansionMigration().catch(err => log.error("[ExpansionMigration] Failed:", err.message));
   // Phase 35G: Client Communication Hub tables
