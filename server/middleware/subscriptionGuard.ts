@@ -28,6 +28,10 @@ const BILLING_EXEMPT_PREFIXES = [
   '/api/platform',
   '/api/health',
   '/api/auth',
+  // Trinity Voice + SMS Twilio webhooks — unauthenticated by design, HMAC-verified
+  '/api/voice',
+  '/api/sms/inbound',
+  '/api/sms/status',
 ];
 
 // Routes always exempt for cancelled workspaces (auth + health + billing recovery)
@@ -41,6 +45,10 @@ const CANCELLED_EXEMPT_PREFIXES = [
   '/api/webhooks',
   '/api/platform',
   '/api/csrf-token',
+  // Trinity Voice + SMS Twilio webhooks — unauthenticated by design, HMAC-verified
+  '/api/voice',
+  '/api/sms/inbound',
+  '/api/sms/status',
 ];
 
 // HTTP methods that mutate state

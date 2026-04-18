@@ -10,8 +10,6 @@ import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { attachWorkspaceIdOptional } from "../../rbac";
-import { createLogger } from "../../lib/logger";
-const log = createLogger('CommsRoutes');
 import { registerExternalEmailRoutes } from "../externalEmailRoutes";
 import dockChatRouter from "../dockChatRoutes";
 import broadcastRouter from "../broadcasts";
@@ -32,31 +30,13 @@ import commOsRouter from "../commOsRoutes";
 import privateMessageRouter from "../privateMessageRoutes";
 import notificationsRouter from "../notifications";
 import seasonalRouter from "../seasonalRoutes";
-import { voiceRouter, initializeVoiceTables } from "../voiceRoutes";
+// NOTE: voiceRouter + /api/voice/* and /api/sms/{inbound,status} aliases are
+// mounted in server/routes.ts BEFORE domain mounts. They cannot live here
+// because mountBillingRoutes/etc. register `app.use("/api", requireAuth, ...)`
+// catch-alls that fire before mountCommsRoutes runs — the catch-all would 401
+// Twilio's unauthenticated webhook POSTs.
 
 export function mountCommsRoutes(app: Express): void {
-  // Phase 56 — Trinity Voice Phone System: initialize tables, then mount router
-  // Twilio webhook routes (/inbound, /status-callback, etc.) are exempt from auth
-  // via the global form-encoded bypass in server/index.ts (path starts with /api/voice/).
-  // Management routes inside voiceRouter apply requireAuth + plan check internally.
-  initializeVoiceTables().catch((err: any) => {
-    log.warn('[VoiceInit] Table init warning (non-fatal):', err?.message);
-  });
-  app.use("/api/voice", voiceRouter);
-
-  // Twilio SMS webhook aliases — public, Twilio HMAC validated by twilioSignatureMiddleware.
-  // Twilio console expects /api/sms/inbound and /api/sms/status.
-  // These forward internally to the voiceRouter's sms-inbound / sms-status handlers.
-  // MUST be registered BEFORE the authenticated /api/sms router below.
-  app.post("/api/sms/inbound", (req: any, res: any, next: any) => {
-    req.url = '/sms-inbound';
-    voiceRouter(req, res, next);
-  });
-  app.post("/api/sms/status", (req: any, res: any, next: any) => {
-    req.url = '/sms-status';
-    voiceRouter(req, res, next);
-  });
-
   // notificationsRouter defines its own full /api/notifications/* paths internally
   // and applies requireAuth on every individual route handler.
   app.use(notificationsRouter);

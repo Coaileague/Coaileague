@@ -58,6 +58,12 @@ const WEBHOOK_PREFIXES = [
   // Signature-verified in inboundEmailRouter — body scanning here would cause false-positive
   // IP blocks on Resend's delivery IPs, silently breaking all future inbound mail.
   '/api/inbound/',
+  // Trinity Voice + SMS Twilio webhooks — validated by Twilio HMAC signature,
+  // bodies carry caller-provided content (names, case numbers, spoken transcripts).
+  // Scanning would cause false-positive IP blocks on Twilio's delivery IPs.
+  '/api/voice/',
+  '/api/sms/inbound',
+  '/api/sms/status',
 ];
 
 // Routes that carry long-form user-generated text — skip body scanning to avoid false positives
