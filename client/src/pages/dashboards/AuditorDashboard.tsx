@@ -1,0 +1,111 @@
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { FileText, CheckCircle, AlertCircle, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+
+const pageConfig: CanvasPageConfig = {
+  id: "auditor-dashboard",
+  title: "Audit View",
+  category: "dashboard",
+  variant: "standard",
+  showHeader: false,
+};
+
+export default function AuditorDashboard() {
+  const [, setLocation] = useLocation();
+
+  const { data: workspace } = useQuery<{ id: string; name?: string }>({
+    queryKey: ["/api/workspace/current"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: docsRes } = useQuery<any[] | { data: any[] }>({
+    queryKey: ["/api/sps/documents"],
+    staleTime: 60000,
+  });
+
+  const docs: any[] = Array.isArray(docsRes) ? docsRes : (docsRes as any)?.data ?? [];
+  const orgName = workspace?.name ?? "Your Organization";
+
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Audit View — {orgName}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Read-only compliance and audit access</p>
+        </div>
+
+        {/* Read-only notice */}
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Read-Only Access</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                You have read-only auditor access. You can view compliance documents, audit trails, and license status, but cannot make changes.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Compliance documents */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-muted rounded-lg">
+                  <FileText className="w-5 h-5 text-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Compliance Documents</p>
+                  <p className="text-xs text-muted-foreground">{docs.length} document(s) on file</p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2 mb-3">
+              {docs.slice(0, 4).map((doc: any) => (
+                <div key={doc.id} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground truncate max-w-[160px]">{doc.name || doc.title || "Document"}</span>
+                  <Badge variant="secondary" className="text-xs capitalize">{doc.status ?? "active"}</Badge>
+                </div>
+              ))}
+              {docs.length === 0 && (
+                <p className="text-xs text-muted-foreground">No documents on file</p>
+              )}
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setLocation("/documents")} className="text-xs">
+              <FileText className="w-3 h-3 mr-1" />
+              View All Documents
+            </Button>
+          </div>
+
+          {/* Audit trail */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-muted rounded-lg">
+                <CheckCircle className="w-5 h-5 text-foreground" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Audit Trail</p>
+                <p className="text-xs text-muted-foreground">Read-only activity log</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button size="sm" variant="outline" onClick={() => setLocation("/compliance")} className="text-xs justify-start">
+                <CheckCircle className="w-3 h-3 mr-2" />
+                Compliance Center
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setLocation("/employees")} className="text-xs justify-start">
+                <AlertCircle className="w-3 h-3 mr-2" />
+                License Status
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </CanvasHubPage>
+  );
+}
