@@ -1,5 +1,9 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
+import multer from "multer";
+import path from "path";
+import { randomBytes } from "crypto";
+import { Storage as GCSStorage } from "@google-cloud/storage";
 import { storage } from "../storage";
 import { db } from "../db";
 import { requireAuth } from "../auth";
@@ -19,6 +23,27 @@ import { typedQuery } from '../lib/typedSql';
 import { sumFinancialValues, applyTax, toFinancialString } from '../services/financialCalculator';
 import { createLogger } from '../lib/logger';
 const log = createLogger('WorkspaceInlineRoutes');
+
+// ---- Logo upload setup ----
+const LOGO_BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+const gcs = LOGO_BUCKET_ID ? new GCSStorage() : null;
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error(`Unsupported file type: ${file.mimetype}. Use PNG, SVG, JPG, or WebP.`));
+    }
+    cb(null, true);
+  },
+});
+
+function sanitizeLogoFilename(original: string): string {
+  const base = path.basename(original).replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.{2,}/g, '.').replace(/^\.+/, '').slice(0, 128);
+  return `${randomBytes(8).toString('hex')}_${base}`;
+}
 
 
 const router = Router();
@@ -312,6 +337,116 @@ async function applyAutomationUpdate(params: {
     } catch (error) {
       log.error('Workspace current error:', error);
       res.status(500).json({ message: 'Failed to get current workspace' });
+    }
+  });
+
+  // GET /workspace/branding — available to all tiers
+  // Sub-orgs without their own branding inherit the parent org's logo
+  router.get('/branding', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      const wsId = req.workspaceId || req.user?.currentWorkspaceId;
+      if (!wsId) return res.status(400).json({ message: 'No workspace context' });
+      const [ws] = await db
+        .select({
+          logoUrl: workspaces.logoUrl,
+          brandColor: workspaces.brandColor,
+          companyName: workspaces.companyName,
+          name: workspaces.name,
+          stateLicenseNumber: workspaces.stateLicenseNumber,
+          brandingBlob: workspaces.brandingBlob,
+          isSubOrg: workspaces.isSubOrg,
+          parentWorkspaceId: workspaces.parentWorkspaceId,
+        })
+        .from(workspaces)
+        .where(eq(workspaces.id, wsId))
+        .limit(1);
+      if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+      const blob = (ws.brandingBlob || {}) as Record<string, any>;
+
+      // If sub-org has no logo/branding, inherit from parent workspace
+      let inheritedLogoUrl: string | null = null;
+      let inheritedBrandColor: string | null = null;
+      if (ws.isSubOrg && ws.parentWorkspaceId && !ws.logoUrl && !blob.logoUrl) {
+        const [parent] = await db
+          .select({ logoUrl: workspaces.logoUrl, brandColor: workspaces.brandColor, brandingBlob: workspaces.brandingBlob })
+          .from(workspaces)
+          .where(eq(workspaces.id, ws.parentWorkspaceId))
+          .limit(1);
+        if (parent) {
+          const parentBlob = (parent.brandingBlob || {}) as Record<string, any>;
+          inheritedLogoUrl = parent.logoUrl || parentBlob.logoUrl || null;
+          inheritedBrandColor = parent.brandColor || parentBlob.primaryColor || null;
+        }
+      }
+
+      res.json({
+        logoUrl: ws.logoUrl || blob.logoUrl || inheritedLogoUrl || null,
+        brandColor: ws.brandColor || blob.primaryColor || inheritedBrandColor || null,
+        primaryColor: blob.primaryColor || ws.brandColor || inheritedBrandColor || null,
+        accentColor: blob.accentColor || null,
+        displayName: blob.displayName || ws.companyName || ws.name || null,
+        hidePoweredBy: blob.hidePoweredBy || false,
+        customDomain: blob.customDomain || null,
+        stateLicenseNumber: ws.stateLicenseNumber || null,
+        inheritedFromParent: !!(inheritedLogoUrl && !ws.logoUrl && !blob.logoUrl),
+      });
+    } catch (error) {
+      log.error('Workspace branding fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch branding' });
+    }
+  });
+
+  // POST /workspace/branding — available to all tiers; org owners/admins only
+  router.post('/branding', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      const wsId = req.workspaceId || req.user?.currentWorkspaceId;
+      if (!wsId) return res.status(400).json({ message: 'No workspace context' });
+
+      const { role } = await resolveWorkspaceForUser(userId, wsId);
+      if (!['org_owner', 'co_owner', 'org_admin'].includes(role || '')) {
+        return res.status(403).json({ message: 'Only organization owners and admins can update branding' });
+      }
+
+      const { logoUrl, brandColor, primaryColor, accentColor, displayName, hidePoweredBy, customDomain } = req.body;
+
+      const [existing] = await db
+        .select({ brandingBlob: workspaces.brandingBlob })
+        .from(workspaces)
+        .where(eq(workspaces.id, wsId))
+        .limit(1);
+      const current = ((existing?.brandingBlob || {}) as Record<string, any>);
+      const updatedBlob: Record<string, any> = { ...current, updatedAt: new Date().toISOString() };
+      if (logoUrl !== undefined) updatedBlob.logoUrl = logoUrl;
+      if (primaryColor !== undefined) updatedBlob.primaryColor = primaryColor;
+      if (brandColor !== undefined) updatedBlob.primaryColor = brandColor;
+      if (accentColor !== undefined) updatedBlob.accentColor = accentColor;
+      if (displayName !== undefined) updatedBlob.displayName = displayName;
+      if (hidePoweredBy !== undefined) updatedBlob.hidePoweredBy = hidePoweredBy;
+      if (customDomain !== undefined) updatedBlob.customDomain = customDomain;
+
+      const directUpdates: Record<string, any> = { brandingBlob: updatedBlob };
+      if (logoUrl !== undefined) directUpdates.logoUrl = logoUrl || null;
+      if (brandColor !== undefined) directUpdates.brandColor = brandColor || null;
+      if (primaryColor !== undefined) directUpdates.brandColor = primaryColor || null;
+
+      await db.update(workspaces).set(directUpdates).where(eq(workspaces.id, wsId));
+
+      res.json({
+        logoUrl: logoUrl ?? updatedBlob.logoUrl ?? null,
+        brandColor: directUpdates.brandColor ?? null,
+        primaryColor: updatedBlob.primaryColor ?? null,
+        accentColor: updatedBlob.accentColor ?? null,
+        displayName: updatedBlob.displayName ?? null,
+        hidePoweredBy: updatedBlob.hidePoweredBy ?? false,
+        customDomain: updatedBlob.customDomain ?? null,
+      });
+    } catch (error) {
+      log.error('Workspace branding update error:', error);
+      res.status(500).json({ message: 'Failed to save branding' });
     }
   });
 
@@ -1705,6 +1840,57 @@ router.get('/data-readiness', requireAuth, async (req: AuthenticatedRequest, res
 });
 
 // ============================================================================
+// ============================================================================
+// LOGO UPLOAD — POST /api/workspace/branding/logo
+// Accepts a single image file, uploads to GCS public path, saves URL to workspace
+// Available to all tiers; org_owner/co_owner/org_admin only
+// ============================================================================
+router.post('/branding/logo', requireAuth, logoUpload.single('logo'), async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const wsId = req.workspaceId || req.user?.currentWorkspaceId;
+    if (!wsId) return res.status(400).json({ message: 'No workspace context' });
+
+    const { role } = await resolveWorkspaceForUser(userId, wsId);
+    if (!['org_owner', 'co_owner', 'org_admin'].includes(role || '')) {
+      return res.status(403).json({ message: 'Only organization owners and admins can update branding' });
+    }
+
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) return res.status(400).json({ message: 'No file provided' });
+
+    if (!gcs || !LOGO_BUCKET_ID) {
+      return res.status(503).json({ message: 'Object storage not configured — provide a logo URL instead' });
+    }
+
+    const sanitizedName = sanitizeLogoFilename(file.originalname);
+    const storagePath = `public/logos/${wsId}/${sanitizedName}`;
+    const bucket = gcs.bucket(LOGO_BUCKET_ID);
+    const blob = bucket.file(storagePath);
+
+    await blob.save(file.buffer, {
+      contentType: file.mimetype,
+      metadata: { uploadedBy: userId, workspace: wsId, originalName: file.originalname },
+    });
+
+    const publicUrl = `https://storage.googleapis.com/${LOGO_BUCKET_ID}/${storagePath}`;
+
+    // Persist to workspace columns and branding blob
+    const [existing] = await db.select({ brandingBlob: workspaces.brandingBlob }).from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
+    const blobData = ((existing?.brandingBlob || {}) as Record<string, any>);
+    await db.update(workspaces).set({
+      logoUrl: publicUrl,
+      brandingBlob: { ...blobData, logoUrl: publicUrl, updatedAt: new Date().toISOString() },
+    }).where(eq(workspaces.id, wsId));
+
+    res.json({ logoUrl: publicUrl });
+  } catch (error: any) {
+    log.error('Logo upload error:', error?.message);
+    res.status(500).json({ message: error?.message || 'Failed to upload logo' });
+  }
+});
+
 // STORAGE USAGE — Option B category breakdown for the settings dashboard
 // GET /api/workspace/storage-usage
 // ============================================================================
