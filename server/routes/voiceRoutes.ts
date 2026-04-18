@@ -316,6 +316,11 @@ async function validateTwilioSignature(req: Request): Promise<boolean> {
 }
 
 function twilioSignatureMiddleware(req: Request, res: Response, next: NextFunction): void {
+  if (process.env.VOICE_DEBUG_BYPASS === 'true') {
+    log.warn('VOICE_DEBUG_BYPASS active — skipping Twilio signature validation');
+    next();
+    return;
+  }
   validateTwilioSignature(req).then(valid => {
     if (!valid) {
       log.warn(`[VoiceRoutes] Invalid Twilio signature for ${req.path}`);
