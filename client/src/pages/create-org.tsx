@@ -235,11 +235,11 @@ export default function CreateOrg() {
   };
 
   const checkOrgCodeAvailability = async (code: string) => {
-    if (code.length < 3) {
+    if (code.length < 2) {
       setOrgCodeStatus("invalid");
       return;
     }
-    if (!/^[A-Z0-9]+$/.test(code)) {
+    if (!/^[a-z][a-z0-9]*$/.test(code)) {
       setOrgCodeStatus("invalid");
       return;
     }
@@ -255,20 +255,38 @@ export default function CreateOrg() {
   };
 
   const handleOrgCodeChange = (value: string) => {
-    const upperValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-    setOrgCode(upperValue);
+    const lowerValue = value.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
+    setOrgCode(lowerValue);
 
     if (orgCodeDebounceTimer) clearTimeout(orgCodeDebounceTimer);
 
-    if (upperValue.length >= 3) {
+    if (lowerValue.length >= 2) {
       const timer = setTimeout(() => {
-        checkOrgCodeAvailability(upperValue);
+        checkOrgCodeAvailability(lowerValue);
       }, 500);
       setOrgCodeDebounceTimer(timer);
     } else {
-      setOrgCodeStatus(upperValue.length > 0 ? "invalid" : "idle");
+      setOrgCodeStatus(lowerValue.length > 0 ? "invalid" : "idle");
     }
   };
+
+  const [suggestedCode, setSuggestedCode] = useState("");
+
+  useEffect(() => {
+    if (orgName.trim().length > 3 && !orgCode) {
+      const timer = setTimeout(() => {
+        apiRequest('GET', `/api/workspace/suggest-org-code?name=${encodeURIComponent(orgName.trim())}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data?.suggestion && !orgCode) setSuggestedCode(data.suggestion);
+          })
+          .catch(() => {});
+      }, 600);
+      return () => clearTimeout(timer);
+    } else if (orgCode) {
+      setSuggestedCode("");
+    }
+  }, [orgName, orgCode]);
 
   const createWorkspaceMutation = useMutation({
     mutationFn: async (formData: {
@@ -560,16 +578,16 @@ export default function CreateOrg() {
               <div>
                 <Label htmlFor="orgCode">Organization Code *</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  A short unique code (3-8 characters) for your organization. Used for email routing: staffing-<strong>{orgCode || 'CODE'}</strong>@coaileague.com
+                  A short unique code (2-6 characters) for your organization. Your staffing email: staffing@<strong>{orgCode || 'code'}</strong>.coaileague.com
                 </p>
                 <div className="relative">
                   <Input
                     id="orgCode"
-                    placeholder="e.g., ACME"
+                    placeholder="e.g., sps"
                     value={orgCode}
                     onChange={(e) => handleOrgCodeChange(e.target.value)}
-                    className="uppercase pr-10"
-                    maxLength={8}
+                    className="lowercase pr-10 font-mono"
+                    maxLength={6}
                     data-testid="input-org-code"
                     disabled={createWorkspaceMutation.isPending}
                   />
@@ -588,6 +606,20 @@ export default function CreateOrg() {
                     )}
                   </div>
                 </div>
+                {suggestedCode && !orgCode && (
+                  <p className="text-xs text-muted-foreground mt-2" data-testid="org-code-suggestion">
+                    Suggested:{' '}
+                    <button
+                      type="button"
+                      className="font-mono text-primary underline hover:text-primary/80"
+                      onClick={() => handleOrgCodeChange(suggestedCode)}
+                      data-testid="button-use-suggested-code"
+                    >
+                      {suggestedCode}
+                    </button>
+                    <span className="ml-1">— your staffing email: staffing@{suggestedCode}.coaileague.com</span>
+                  </p>
+                )}
                 {orgCodeStatus === "available" && (
                   <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" /> This code is available!
@@ -597,7 +629,7 @@ export default function CreateOrg() {
                   <p className="text-xs text-destructive mt-1">This code is already taken. Try another.</p>
                 )}
                 {orgCodeStatus === "invalid" && orgCode.length > 0 && (
-                  <p className="text-xs text-amber-600 mt-1">Code must be 3-8 alphanumeric characters.</p>
+                  <p className="text-xs text-amber-600 mt-1">Code must be 2-6 letters/numbers, starting with a letter.</p>
                 )}
               </div>
 

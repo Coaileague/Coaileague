@@ -3165,16 +3165,16 @@ export default function Settings() {
                   <div className="flex gap-2">
                     <Input
                       value={newOrgCode}
-                      onChange={(e) => setNewOrgCode(e.target.value.toUpperCase())}
-                      placeholder="e.g., STATEWIDE"
-                      className="uppercase"
-                      maxLength={12}
+                      onChange={(e) => setNewOrgCode(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6))}
+                      placeholder="e.g., sps"
+                      className="lowercase font-mono"
+                      maxLength={6}
                       data-testid="input-new-org-code"
                     />
                     <Button
                       size="sm"
                       onClick={() => updateOrgCodeMutation.mutate(newOrgCode)}
-                      disabled={updateOrgCodeMutation.isPending || newOrgCode.length < 3}
+                      disabled={updateOrgCodeMutation.isPending || newOrgCode.length < 2}
                       data-testid="button-save-org-code"
                     >
                       {updateOrgCodeMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -3190,7 +3190,7 @@ export default function Settings() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-base px-3 py-1" data-testid="badge-org-code">
+                    <Badge variant="secondary" className="text-base px-3 py-1 font-mono" data-testid="badge-org-code">
                       {staffingEmailConfig.orgCode || 'Not Set'}
                     </Badge>
                     <Button
@@ -3207,7 +3207,7 @@ export default function Settings() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  3-12 alphanumeric characters. Used for routing: staffing-{staffingEmailConfig.orgCode || 'YOURCODE'}@coaileague.com
+                  2-6 alphanumeric characters, lowercase. Your staffing email: staffing@{staffingEmailConfig.orgCode || 'yourcode'}.coaileague.com
                 </p>
               </div>
 

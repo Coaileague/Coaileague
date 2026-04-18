@@ -1541,14 +1541,21 @@ Consider: qualifications match, reliability history, preference match, availabil
             }
 
             // ── DROP NOTIFICATIONS for losing orgs ────────────────────────
-            // @ts-expect-error — TS migration: fix in refactoring sprint
-            if (processResult.claimKey) {
-              // @ts-expect-error — TS migration: fix in refactoring sprint
-              staffingClaimService.sendDropNotifications({
-                claimKey: (processResult as any).claimKey,
-                winnerWorkspaceId: workspaceId,
-              }).catch(err => log.warn('[IOA] sendDropNotifications error (non-blocking):', (err instanceof Error ? err.message : String(err))));
-              notifications.push(`system:drop_notifications_queued:${(processResult as any).claimKey}`);
+            // Await per CLAUDE.md §B — no fire-and-forget for notifications.
+            if ((processResult as any).claimKey) {
+              try {
+                await staffingClaimService.sendDropNotifications({
+                  claimKey: (processResult as any).claimKey,
+                  winnerWorkspaceId: workspaceId,
+                  clientEmail: notifyCtx?.senderEmail || '',
+                  clientName: notifyCtx?.senderName,
+                  shiftDescription: (processResult as any).shift?.location || undefined,
+                  referenceNumber: notifyCtx?.referenceNumber,
+                });
+                notifications.push(`system:drop_notifications_sent:${(processResult as any).claimKey}`);
+              } catch (dropErr: any) {
+                log.warn('[IOA] sendDropNotifications error (non-fatal):', dropErr?.message);
+              }
             }
 
             // Trigger Stage D (contractor notification)

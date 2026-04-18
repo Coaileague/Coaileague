@@ -90,25 +90,25 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       return res.status(429).json({ message: `You have reached the maximum of ${MAX_WORKSPACES_PER_USER} workspaces. Please contact support to request an increase.` });
     }
 
-    // Validate and check org code if provided
+    // Validate and check org code if provided (2-6 chars, lowercase, alphanumeric)
     let validatedOrgCode = null;
     if (orgCode) {
-      const upperCode = String(orgCode).toUpperCase().trim();
-      if (!/^[A-Z0-9]{3,8}$/.test(upperCode)) {
-        return res.status(400).json({ message: 'Organization code must be 3-8 alphanumeric characters' });
+      const lowerCode = String(orgCode).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!/^[a-z][a-z0-9]{1,5}$/.test(lowerCode)) {
+        return res.status(400).json({ message: 'Organization code must be 2-6 alphanumeric characters, starting with a letter' });
       }
-      
-      // Check if org code is already taken
+
+      // Check if org code is already taken (case-insensitive)
       const [existing] = await db.select({ id: workspaces.id })
         .from(workspaces)
-        .where(eq(workspaces.orgCode, upperCode))
+        .where(eq(sql`LOWER(${workspaces.orgCode})`, lowerCode))
         .limit(1);
-      
+
       if (existing) {
         return res.status(409).json({ message: 'This organization code is already taken' });
       }
-      
-      validatedOrgCode = upperCode;
+
+      validatedOrgCode = lowerCode;
     }
 
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14-day trial per OMEGA L1:836
@@ -389,6 +389,29 @@ import {
 } from '../utils/orgCodeValidator';
 
 /**
+ * Suggest an org code derived from a company name.
+ * Used by the create-org flow to auto-populate the field.
+ */
+// @ts-expect-error — TS migration: fix in refactoring sprint
+router.get('/suggest-org-code', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { name } = req.query;
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ message: 'name query parameter required' });
+    }
+    const { generateUniqueOrgCode } = await import('../utils/orgCodeValidator');
+    const suggestion = await generateUniqueOrgCode(name);
+    res.json({
+      suggestion,
+      emailAddress: `staffing@${suggestion}.coaileague.com`,
+    });
+  } catch (error: unknown) {
+    log.error('Error suggesting org code:', error);
+    res.status(500).json({ message: sanitizeError(error) || 'Failed to suggest org code' });
+  }
+});
+
+/**
  * Check if an org code is available (for validation before claiming)
  */
 // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -456,7 +479,7 @@ router.post('/org-code/claim', requireAuth, async (req: AuthenticatedRequest, re
       orgCode: workspace?.orgCode,
       orgCodeStatus: workspace?.orgCodeStatus,
       claimedAt: workspace?.orgCodeClaimedAt,
-      emailAddress: `staffing-${workspace?.orgCode}@coaileague.com`,
+      emailAddress: workspace?.orgCode ? `staffing@${workspace.orgCode}.coaileague.com` : null,
     });
   } catch (error: unknown) {
     log.error("Error claiming org code:", error);
@@ -495,9 +518,9 @@ router.get('/org-code', requireAuth, async (req: AuthenticatedRequest, res: Resp
       orgCodeStatus: workspace.orgCodeStatus,
       claimedAt: workspace.orgCodeClaimedAt,
       releasedAt: workspace.orgCodeReleasedAt,
-      emailAddress: workspace.orgCode ? `staffing-${workspace.orgCode}@coaileague.com` : null,
+      emailAddress: workspace.orgCode ? `staffing@${workspace.orgCode}.coaileague.com` : null,
       instructions: workspace.orgCode
-        ? `Send work requests to: staffing-${workspace.orgCode}@coaileague.com`
+        ? `Send work requests to: staffing@${workspace.orgCode}.coaileague.com`
         : 'Claim an org code to enable inbound email routing',
     });
   } catch (error: unknown) {
@@ -561,28 +584,28 @@ router.put('/org-code', requireAuth, async (req: AuthenticatedRequest, res: Resp
       return res.status(403).json({ message: "Only workspace owners can change org codes" });
     }
 
-    // Validate org code format using the canonical validator
-    const orgCodeUpper = newOrgCode.toUpperCase().trim();
+    // Validate org code format using the canonical validator (returns lowercase)
     const formatResult = validateOrgCodeFormat(newOrgCode);
     if (!formatResult.valid) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: formatResult.error || "Invalid org code format",
         errorCode: formatResult.errorCode,
       });
     }
+    const orgCodeNormalized = formatResult.normalizedCode!;
 
-    // Check if org code is already claimed by another workspace
+    // Check if org code is already claimed by another workspace (case-insensitive)
     const [existing] = await db.select({ id: workspaces.id, name: workspaces.name })
       .from(workspaces)
       .where(and(
-        eq(workspaces.orgCode, orgCodeUpper),
+        eq(sql`LOWER(${workspaces.orgCode})`, orgCodeNormalized),
         sql`${workspaces.id} != ${workspaceId}`
       ))
       .limit(1);
 
     if (existing) {
-      return res.status(409).json({ 
-        message: `Org code ${orgCodeUpper} is already claimed by another organization`,
+      return res.status(409).json({
+        message: `Org code ${orgCodeNormalized} is already claimed by another organization`,
         conflictingOrg: existing.name
       });
     }
@@ -591,25 +614,24 @@ router.put('/org-code', requireAuth, async (req: AuthenticatedRequest, res: Resp
     // lookupWorkspaceByOrgCode requires orgCodeStatus === 'active'
     await db.update(workspaces)
       .set({
-        orgCode: orgCodeUpper,
+        orgCode: orgCodeNormalized,
         orgCodeStatus: 'active',
         orgCodeClaimedAt: new Date(),
       })
       .where(eq(workspaces.id, workspaceId));
 
     // CRITICAL: Migrate all employee IDs to use the new org code
-    // This updates EMP-OLDCODE-00001 -> EMP-NEWCODE-00001 for all employees
-    const migrationResult = await migrateEmployeeIdsToNewOrgCode(workspaceId, orgCodeUpper);
-    
+    const migrationResult = await migrateEmployeeIdsToNewOrgCode(workspaceId, orgCodeNormalized);
+
     if (migrationResult.errors.length > 0) {
       log.warn(`[Workspace] Migration warnings:`, migrationResult.errors);
     }
 
     res.json({
-      message: `Org code updated to: ${orgCodeUpper}`,
-      orgCode: orgCodeUpper,
-      emailAddress: `staffing-${orgCodeUpper}@coaileague.com`,
-      instructions: `Send work requests to: staffing-${orgCodeUpper}@coaileague.com`,
+      message: `Org code updated to: ${orgCodeNormalized}`,
+      orgCode: orgCodeNormalized,
+      emailAddress: `staffing@${orgCodeNormalized}.coaileague.com`,
+      instructions: `Send work requests to: staffing@${orgCodeNormalized}.coaileague.com`,
       employeesMigrated: migrationResult.migratedCount,
     });
   } catch (error: unknown) {
@@ -683,7 +705,7 @@ router.post('/claim-generic-staffing-email', requireAuth, async (req: Authentica
       claimed: true,
       orgCode: workspace?.orgCode,
       genericEmail: 'staffing@coaileague.com',
-      orgEmail: workspace?.orgCode ? `staffing-${workspace.orgCode}@coaileague.com` : null,
+      orgEmail: workspace?.orgCode ? `staffing@${workspace.orgCode}.coaileague.com` : null,
     });
   } catch (error: unknown) {
     log.error("Error claiming generic staffing email:", error);
@@ -772,7 +794,7 @@ router.get('/staffing-email-config', requireAuth, async (req: AuthenticatedReque
 
     res.json({
       orgCode: workspace?.orgCode,
-      orgEmail: workspace?.orgCode ? `staffing-${workspace.orgCode}@coaileague.com` : null,
+      orgEmail: workspace?.orgCode ? `staffing@${workspace.orgCode}.coaileague.com` : null,
       hasGenericEmailClaim: workspace?.hasStaffingEmailClaim || false,
       genericEmail: 'staffing@coaileague.com',
       genericEmailClaimedAt: workspace?.staffingEmailClaimedAt,

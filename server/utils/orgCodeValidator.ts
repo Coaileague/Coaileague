@@ -2,11 +2,11 @@
  * ORG CODE VALIDATION UTILITY
  * ============================
  * Validates organization codes for email routing.
- * Codes are used in dash-addressing: staffing-ORGCODE@coaileague.com
+ * Codes are used as the subdomain in email addresses: staffing@{orgcode}.coaileague.com
  *
  * Rules:
- * - 3-12 characters, alphanumeric + underscores only
- * - Case-insensitive (stored uppercase)
+ * - 2-6 characters, alphanumeric only (NO underscores — email subdomains don't support them)
+ * - Case-insensitive (stored lowercase for DNS compatibility)
  * - No reserved words (platform, support, admin, etc.)
  * - No offensive/inappropriate content
  * - Must be unique across all workspaces
@@ -16,24 +16,24 @@ import { db } from '../db';
 import { workspaces } from '@shared/schema';
 import { eq, sql, and, ne, isNull, or } from 'drizzle-orm';
 
-// Reserved words that cannot be used as org codes (case-insensitive)
+// Reserved words that cannot be used as org codes (case-insensitive, compared lowercase)
 const RESERVED_WORDS = [
   // Platform reserved
-  'COAI', 'COAILEAGUE', 'PLATFORM', 'ADMIN', 'ROOT', 'SYSTEM',
-  'SUPPORT', 'HELP', 'INFO', 'CONTACT', 'SALES', 'BILLING',
-  'STAFF', 'STAFFING', 'TRINITY', 'ASSISTANT', 'BOT', 'AI',
-  'API', 'WEBHOOK', 'SERVICE', 'INTERNAL', 'DEMO', 'TEST',
-  'EXAMPLE', 'SAMPLE', 'DEFAULT', 'NULL', 'UNDEFINED', 'NONE',
+  'coai', 'coaileague', 'platform', 'admin', 'root', 'system',
+  'support', 'help', 'info', 'contact', 'sales', 'billing',
+  'staff', 'staffing', 'trinity', 'assistant', 'bot', 'ai',
+  'api', 'webhook', 'service', 'internal', 'demo', 'test',
+  'example', 'sample', 'default', 'null', 'undefined', 'none',
 
   // Security/impersonation prevention
-  'SECURITY', 'POLICE', 'FBI', 'CIA', 'NSA', 'DHS', 'ATF', 'DEA',
-  'GOVERNMENT', 'FEDERAL', 'STATE', 'COUNTY', 'CITY', 'OFFICIAL',
-  'VERIFIED', 'AUTHENTIC', 'REAL', 'LEGIT', 'LEGITIMATE',
-  'EXECUTIVE', 'CEO', 'CFO', 'COO', 'CTO', 'PRESIDENT', 'DIRECTOR',
+  'security', 'police', 'fbi', 'cia', 'nsa', 'dhs', 'atf', 'dea',
+  'government', 'federal', 'state', 'county', 'city', 'official',
+  'verified', 'authentic', 'real', 'legit', 'legitimate',
+  'executive', 'ceo', 'cfo', 'coo', 'cto', 'president', 'director',
 
   // Inappropriate/offensive content (minimal set - extended check below)
-  'NAZI', 'HITLER', 'KKK', 'RACIST', 'HATE', 'KILL', 'TERROR',
-  'ABUSE', 'FRAUD', 'SCAM', 'SPAM', 'PHISH', 'MALWARE', 'HACK',
+  'nazi', 'hitler', 'kkk', 'racist', 'hate', 'kill', 'terror',
+  'abuse', 'fraud', 'scam', 'spam', 'phish', 'malware', 'hack',
 ];
 
 // Regex patterns for offensive content detection
@@ -69,40 +69,29 @@ export function validateOrgCodeFormat(code: string): OrgCodeValidationResult {
     return { valid: false, error: 'Org code is required', errorCode: 'INVALID_FORMAT' };
   }
 
-  // Normalize: uppercase, trim whitespace
-  const normalizedCode = code.toUpperCase().trim();
+  // Normalize: lowercase (subdomains are lowercase by convention), strip non-alphanumeric
+  const normalizedCode = code.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  // Length check: 3-12 characters
-  if (normalizedCode.length < 3) {
-    return { valid: false, error: 'Org code must be at least 3 characters', errorCode: 'TOO_SHORT' };
+  // Length check: 2-6 characters
+  if (normalizedCode.length < 2) {
+    return { valid: false, error: 'Org code must be at least 2 characters', errorCode: 'TOO_SHORT' };
   }
-  if (normalizedCode.length > 12) {
-    return { valid: false, error: 'Org code must be at most 12 characters', errorCode: 'TOO_LONG' };
+  if (normalizedCode.length > 6) {
+    return { valid: false, error: 'Org code must be 6 characters or fewer', errorCode: 'TOO_LONG' };
   }
 
-  // Format check: alphanumeric + underscore only, must start with letter
-  if (!/^[A-Z][A-Z0-9_]*$/.test(normalizedCode)) {
+  // Format check: alphanumeric only, must start with letter (DNS subdomain rule)
+  if (!/^[a-z][a-z0-9]*$/.test(normalizedCode)) {
     return {
       valid: false,
-      error: 'Org code must start with a letter and contain only letters, numbers, and underscores',
+      error: 'Org code must start with a letter and contain only letters and numbers',
       errorCode: 'INVALID_FORMAT'
     };
   }
 
-  // Reserved word check
+  // Reserved word check (exact match)
   if (RESERVED_WORDS.includes(normalizedCode)) {
     return { valid: false, error: 'This org code is reserved and cannot be used', errorCode: 'RESERVED_WORD' };
-  }
-
-  // Check for reserved word as substring (e.g., "MYCOAI" contains "COAI")
-  for (const reserved of RESERVED_WORDS) {
-    if (normalizedCode.includes(reserved) || reserved.includes(normalizedCode)) {
-      return {
-        valid: false,
-        error: `Org code contains or matches reserved word "${reserved}"`,
-        errorCode: 'RESERVED_WORD'
-      };
-    }
   }
 
   // Offensive content check
@@ -131,7 +120,7 @@ export async function validateOrgCodeAvailability(
 
   const normalizedCode = formatResult.normalizedCode!;
 
-  // Check database for existing code
+  // Check database for existing code (case-insensitive match)
   const existing = await db.select({
     id: workspaces.id,
     name: workspaces.name,
@@ -141,10 +130,10 @@ export async function validateOrgCodeAvailability(
     .where(
       excludeWorkspaceId
         ? and(
-            eq(sql`UPPER(${workspaces.orgCode})`, normalizedCode),
+            eq(sql`LOWER(${workspaces.orgCode})`, normalizedCode),
             ne(workspaces.id, excludeWorkspaceId)
           )
-        : eq(sql`UPPER(${workspaces.orgCode})`, normalizedCode)
+        : eq(sql`LOWER(${workspaces.orgCode})`, normalizedCode)
     )
     .limit(1);
 
@@ -180,7 +169,7 @@ export async function lookupWorkspaceByOrgCode(code: string): Promise<{
     return { found: false, error: 'Invalid org code' };
   }
 
-  const normalizedCode = code.toUpperCase().trim();
+  const normalizedCode = code.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const [workspace] = await db.select({
     id: workspaces.id,
@@ -193,7 +182,7 @@ export async function lookupWorkspaceByOrgCode(code: string): Promise<{
     .from(workspaces)
     .where(
       and(
-        eq(sql`UPPER(${workspaces.orgCode})`, normalizedCode),
+        eq(sql`LOWER(${workspaces.orgCode})`, normalizedCode),
         or(
           eq(workspaces.orgCodeStatus, 'active'),
           eq(workspaces.orgCodeStatus, 'claimed')
@@ -221,11 +210,11 @@ export async function lookupWorkspaceByOrgCode(code: string): Promise<{
 /**
  * Parse org code from email address.
  * Supports three formats:
- *   Dash format (root):    staffing-ORGCODE@coaileague.com      (legacy/alias)
- *   Plus format (root):    staffing+ORGCODE@coaileague.com      (legacy alternate)
- *   Subdomain format:      staffing@ORGCODE.coaileague.com      (primary going forward)
+ *   Dash format (root):    staffing-orgcode@coaileague.com      (legacy/alias)
+ *   Plus format (root):    staffing+orgcode@coaileague.com      (legacy alternate)
+ *   Subdomain format:      staffing@orgcode.coaileague.com      (primary going forward)
  *
- * All formats return the ORGCODE portion in uppercase.
+ * All formats return the orgcode portion in lowercase.
  */
 export function parseOrgCodeFromEmail(email: string): string | null {
   if (!email || typeof email !== 'string') return null;
@@ -235,24 +224,24 @@ export function parseOrgCodeFromEmail(email: string): string | null {
   // Handles: staffing@acme.coaileague.com, calloffs@acme.coaileague.com
   const subdomainMatch = e.match(/^[a-z]+@([a-z0-9_-]+)\.coaileague\.com$/i);
   if (subdomainMatch?.[1]) {
-    return subdomainMatch[1].toUpperCase();
+    return subdomainMatch[1].toLowerCase();
   }
 
-  // Pattern 2: Plus-addressing — local+ORGCODE@coaileague.com
+  // Pattern 2: Plus-addressing — local+orgcode@coaileague.com
   const plusMatch = e.match(/^[^+@]+\+([A-Za-z0-9_]+)@/i);
   if (plusMatch?.[1]) {
-    return plusMatch[1].toUpperCase();
+    return plusMatch[1].toLowerCase();
   }
 
-  // Pattern 3: Dash format — staffing-ORGCODE@coaileague.com
+  // Pattern 3: Dash format — staffing-orgcode@coaileague.com
   const dashMatch = e.match(/^(?:staffing|calloffs|incidents|support|docs|billing|work|jobs|requests)-([A-Za-z0-9_]+)@/i);
-  if (dashMatch?.[2]) {
-    return dashMatch[2].toUpperCase();
+  if (dashMatch?.[1]) {
+    return dashMatch[1].toLowerCase();
   }
-  // Also handle any-function-ORGCODE dash pattern
+  // Also handle any-function-orgcode dash pattern
   const genericDashMatch = e.match(/^[a-z]+-([a-z0-9_]+)@coaileague\.com$/i);
   if (genericDashMatch?.[1]) {
-    return genericDashMatch[1].toUpperCase();
+    return genericDashMatch[1].toLowerCase();
   }
 
   return null;
@@ -345,4 +334,79 @@ export async function releaseOrgCode(workspaceId: string): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(workspaces.id, workspaceId));
+}
+
+/**
+ * Auto-generate a 2-6 char org code from company name.
+ * Uses initials of significant words (skips: Inc, LLC, Corp, Services, Security, etc.)
+ *
+ * Examples:
+ *   "Statewide Protective Services" → "sps"
+ *   "Allied Universal Security" → "aus"
+ *   "Texas Private Security Inc" → "tps"
+ *   "Acme Corp" → "acme" (short enough to use directly)
+ */
+export function generateOrgCodeFromName(companyName: string): string {
+  const SKIP_WORDS = new Set([
+    'inc', 'llc', 'corp', 'ltd', 'co', 'company', 'group', 'holdings',
+    'services', 'security', 'solutions', 'protection', 'protective',
+    'management', 'enterprises', 'associates', 'international', 'national',
+    'the', 'and', 'of', 'a', 'an',
+  ]);
+
+  const words = companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 0 && !SKIP_WORDS.has(w));
+
+  if (words.length === 0) {
+    // Fallback: first 4 chars of cleaned name
+    return companyName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4) || 'org';
+  }
+
+  // If one word and it's short — use it directly
+  if (words.length === 1 && words[0].length <= 6) {
+    return words[0].slice(0, 6);
+  }
+
+  // Take first letter of each significant word
+  const initials = words.map(w => w[0]).join('');
+
+  // If initials are 2-6 chars — perfect
+  if (initials.length >= 2 && initials.length <= 6) {
+    return initials;
+  }
+
+  // Too short — use first word's first 3 chars + second word's first char
+  if (initials.length < 2) {
+    return (words[0].slice(0, 3) + (words[1]?.[0] || '')).slice(0, 6);
+  }
+
+  // Too long — take first 4 initials
+  return initials.slice(0, 4);
+}
+
+/**
+ * Generate a unique org code, appending number if taken.
+ * "sps" → if taken → "sps2" → "sps3" etc.
+ * Guaranteed to return a valid, available code or a random fallback.
+ */
+export async function generateUniqueOrgCode(companyName: string): Promise<string> {
+  const base = generateOrgCodeFromName(companyName);
+
+  // Check if base is available
+  const validation = await validateOrgCodeAvailability(base);
+  if (validation.valid) return validation.normalizedCode || base;
+
+  // Try appending 2, 3, 4...
+  for (let i = 2; i <= 9; i++) {
+    const candidate = `${base.slice(0, 5)}${i}`;
+    const check = await validateOrgCodeAvailability(candidate);
+    if (check.valid) return check.normalizedCode || candidate;
+  }
+
+  // Last resort — base prefix + 3 random chars
+  const rand = Math.random().toString(36).slice(2, 5);
+  return `${base.slice(0, 3)}${rand}`.slice(0, 6);
 }
