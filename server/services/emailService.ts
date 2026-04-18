@@ -2599,109 +2599,199 @@ export class EmailService {
     orgEmail: string;
     jobSummary: string;       // AI-generated summary of the request
     portalUrl?: string;
+    language?: 'en' | 'es';   // Response language — defaults to 'en'
   }): Promise<EmailResult> {
-    const recipientName = params.senderName || 'there';
+    const lang: 'en' | 'es' = params.language === 'es' ? 'es' : 'en';
+    const recipientName = params.senderName || (lang === 'es' ? 'estimado/a' : 'there');
     const licLine = params.licenseNumber
-      ? `<p style="color: #bfdbfe; margin: 6px 0 0 0; font-size: 13px;">License No. ${params.licenseNumber}</p>`
+      ? `<p style="color: #bfdbfe; margin: 6px 0 0 0; font-size: 13px;">${lang === 'es' ? 'No. de licencia' : 'License No.'} ${params.licenseNumber}</p>`
       : '';
+
+    // Localized copy
+    const L = lang === 'es'
+      ? {
+          networkTag: `Red de Personal ${PLATFORM.name}`,
+          requestReceived: 'Solicitud de Personal Recibida',
+          hello: 'Hola',
+          intro1A: 'Saludos. Mi nombre es',
+          intro1B: ', soy el sistema coordinador de personal para todos los proveedores de seguridad de',
+          intro1C: '. He recibido su solicitud para cubrir la siguiente asignación:',
+          assignmentSummary: 'Resumen de la Asignación',
+          refNumberLabel: 'Número de referencia:',
+          attempt: 'Intentaré cubrir esto con oficiales de seguridad calificados y verificados. Todos los proveedores de',
+          attempt2: 'operan bajo la misma estructura estandarizada de clasificación de oficiales — el',
+          scoreTerm: 'Puntaje de Preparación del Oficial',
+          attempt3: '— que evalúa a cada oficial según:',
+          scoreCriteria: 'Criterios del Puntaje de Preparación del Oficial',
+          attnReliability: 'Asistencia y Confiabilidad',
+          attnReliabilityDesc: 'Tasa de finalización de turnos, puntualidad e historial de ausencias',
+          fieldBehavior: 'Conducta en Campo',
+          fieldBehaviorDesc: 'Conducta en el sitio, reportes de incidentes y profesionalismo',
+          yearsExp: 'Años de Experiencia',
+          yearsExpDesc: 'Tiempo verificado en la industria de seguridad',
+          certsTraining: 'Certificaciones y Capacitación',
+          certsTrainingDesc: 'Licencias estatales, credenciales armado/desarmado, primeros auxilios, capacitación especializada',
+          clientSupervisorScores: 'Calificaciones de Cliente y Supervisor',
+          clientSupervisorScoresDesc: 'Comentarios de asignaciones pasadas y evaluaciones directas del supervisor',
+          reassurance: 'Tenga la seguridad — cada oficial seleccionado para su asignación será debidamente examinado dentro de esta estructura de puntaje.',
+          whatNext: 'Qué Sigue',
+          whatNext1a: 'Si',
+          whatNext1b: 'puede cumplir con su solicitud, recibirá un segundo correo electrónico mío con:',
+          confirmationLine: 'Una confirmación de su número de asignación',
+          summaryLine: 'Un resumen de su solicitud enviado a usted y al proveedor',
+          portalLine: 'Acceso a su Portal del Cliente dedicado asignado a',
+          portalParagraph: 'Dentro del portal, puede <strong>contactar al proveedor, enviar comentarios, presentar quejas, solicitar nuevo personal, reemplazar personal, cambiar horarios y revisar todos los contratos y documentos</strong> relacionados con su contratación — mediante nuestro sistema integrado de Chat de Ayuda y correo electrónico. Esto elimina las llamadas telefónicas de medianoche o la necesidad de marcar a alguien. Este proceso es automatizado y resuelve los problemas al instante.',
+          caseManagerLine1: 'Un',
+          caseManagerLineStrong: 'gestor de caso dedicado',
+          caseManagerLine2: 'le será asignado por',
+          caseManagerLine3: 'y se comunicará con usted directamente con su información de contacto una vez que se confirme el personal.',
+          signOffIntro: 'Como mencioné — gracias por confiar en',
+          signOffOutro: 'para cubrir sus necesidades. Estaré en contacto en breve.',
+          sincerely: 'Atentamente,',
+          title: 'Coordinadora IA de Personal —',
+          network: 'Red',
+          replyLine: 'Responda a este correo o contacte:',
+          subjectPrefix: 'Solicitud de personal recibida —',
+        }
+      : {
+          networkTag: `${PLATFORM.name} Staffing Network`,
+          requestReceived: 'Staffing Request Received',
+          hello: 'Hello',
+          intro1A: 'Greetings. My name is',
+          intro1B: ', I am the staffing coordinator system for all',
+          intro1C: 'security providers. I have received your request to staff the following assignment:',
+          assignmentSummary: 'Assignment Summary',
+          refNumberLabel: 'Reference Number:',
+          attempt: 'I will attempt to staff this with qualified, vetted security officers. All',
+          attempt2: 'providers operate under the same standardized officer ranking structure — the',
+          scoreTerm: 'Officer Readiness Score',
+          attempt3: '— which evaluates each officer on:',
+          scoreCriteria: 'Officer Readiness Score Criteria',
+          attnReliability: 'Attendance &amp; Reliability',
+          attnReliabilityDesc: 'Shift completion rate, punctuality, and no-call history',
+          fieldBehavior: 'Field Behavior',
+          fieldBehaviorDesc: 'On-site conduct, incident reports, and professionalism',
+          yearsExp: 'Years of Experience',
+          yearsExpDesc: 'Verified security industry tenure',
+          certsTraining: 'Certifications &amp; Training',
+          certsTrainingDesc: 'State licenses, armed/unarmed credentials, first aid, specialized training',
+          clientSupervisorScores: 'Client &amp; Supervisor Scores',
+          clientSupervisorScoresDesc: 'Feedback from past assignments and direct supervisor evaluations',
+          reassurance: 'Rest assured — every officer selected for your assignment will be properly vetted within this scoring structure.',
+          whatNext: 'What Happens Next',
+          whatNext1a: 'If',
+          whatNext1b: 'is able to fulfill your request, you will receive a second email from me with:',
+          confirmationLine: 'A confirmation of your assignment number',
+          summaryLine: 'A summary of your request sent to both you and the provider',
+          portalLine: 'Access to your dedicated Client Portal assigned to',
+          portalParagraph: 'Inside the portal, you can <strong>contact the provider, send feedback, file complaints, request new staff, replace staff, change schedules, and review all contracts and documents</strong> related to your engagement — via our integrated Help Chat and email system. This eliminates midnight phone calls or the need to dial anyone. This process is automated and resolves issues instantly.',
+          caseManagerLine1: 'A',
+          caseManagerLineStrong: 'dedicated case manager',
+          caseManagerLine2: 'will be assigned to you by',
+          caseManagerLine3: 'and will reach out to you directly with their contact information once staffing is confirmed.',
+          signOffIntro: 'As I stated — thank you for trusting',
+          signOffOutro: 'to staff your needs. I will be in touch shortly.',
+          sincerely: 'Sincerely,',
+          title: 'AI Staffing Coordinator —',
+          network: 'Network',
+          replyLine: 'Reply to this email or contact:',
+          subjectPrefix: 'Staffing Request Received —',
+        };
 
     const html = `
       <table width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;background-color:#e8edf2;">
         <tr><td align="center" style="padding:8px 6px;">
         <div style="max-width:640px;width:100%;margin:0 auto;">
         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); padding: 28px 20px; border-radius: 12px 12px 0 0; text-align: center;">
-          <p style="color: #93c5fd; margin: 0 0 6px 0; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;">${PLATFORM.name} Staffing Network</p>
+          <p style="color: #93c5fd; margin: 0 0 6px 0; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;">${L.networkTag}</p>
           <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">${params.workspaceName}</h1>
           ${licLine}
-          <p style="color: #7dd3fc; margin: 12px 0 0 0; font-size: 14px;">Staffing Request Received</p>
+          <p style="color: #7dd3fc; margin: 12px 0 0 0; font-size: 14px;">${L.requestReceived}</p>
         </div>
 
         <div style="padding: 24px 16px; background-color: #f8fafc; border-radius: 0 0 12px 12px;">
 
-          <p style="font-size: 16px; color: #1e293b; margin: 0 0 18px 0;">Hello ${recipientName},</p>
+          <p style="font-size: 16px; color: #1e293b; margin: 0 0 18px 0;">${L.hello} ${recipientName},</p>
 
           <p style="color: #334155; font-size: 14px; line-height: 1.8; margin: 0 0 20px 0;">
-            Greetings. My name is <strong>Trinity</strong>, I am the staffing coordinator system for all ${PLATFORM.name} security providers.
-            I have received your request to staff the following assignment:
+            ${L.intro1A} <strong>Trinity</strong>${L.intro1B} ${PLATFORM.name} ${L.intro1C}
           </p>
 
           <!-- AI-Generated Job Summary -->
           <div style="background-color: white; padding: 22px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 24px; border-left: 4px solid #2563eb;">
-            <p style="color: #1e40af; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 12px 0;">Assignment Summary</p>
+            <p style="color: #1e40af; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 12px 0;">${L.assignmentSummary}</p>
             <div style="color: #334155; font-size: 14px; line-height: 1.8; white-space: pre-line;">${params.jobSummary}</div>
-            <p style="color: #94a3b8; font-size: 12px; margin: 14px 0 0 0;">Reference Number: <strong style="color:#1e40af;">${params.referenceNumber}</strong></p>
+            <p style="color: #94a3b8; font-size: 12px; margin: 14px 0 0 0;">${L.refNumberLabel} <strong style="color:#1e40af;">${params.referenceNumber}</strong></p>
           </div>
 
           <p style="color: #334155; font-size: 14px; line-height: 1.8; margin: 0 0 20px 0;">
-            I will attempt to staff this with qualified, vetted security officers. All ${PLATFORM.name} providers operate under the same standardized officer ranking structure — the <strong>Officer Readiness Score</strong> — which evaluates each officer on:
+            ${L.attempt} ${PLATFORM.name} ${L.attempt2} <strong>${L.scoreTerm}</strong>${L.attempt3}
           </p>
 
           <!-- Scoring Structure -->
           <div style="background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
-            <p style="color: #1e293b; font-size: 14px; font-weight: 700; margin: 0 0 14px 0;">Officer Readiness Score Criteria</p>
+            <p style="color: #1e293b; font-size: 14px; font-weight: 700; margin: 0 0 14px 0;">${L.scoreCriteria}</p>
             <table style="width:100%;border-collapse:collapse;">
               <tr style="background-color:#f1f5f9;">
-                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;border-radius:6px 0 0 0;">Attendance &amp; Reliability</td>
-                <td style="padding:10px 14px;font-size:13px;color:#64748b;">Shift completion rate, punctuality, and no-call history</td>
+                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;border-radius:6px 0 0 0;">${L.attnReliability}</td>
+                <td style="padding:10px 14px;font-size:13px;color:#64748b;">${L.attnReliabilityDesc}</td>
               </tr>
               <tr>
-                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;">Field Behavior</td>
-                <td style="padding:10px 14px;font-size:13px;color:#64748b;">On-site conduct, incident reports, and professionalism</td>
+                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;">${L.fieldBehavior}</td>
+                <td style="padding:10px 14px;font-size:13px;color:#64748b;">${L.fieldBehaviorDesc}</td>
               </tr>
               <tr style="background-color:#f1f5f9;">
-                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;">Years of Experience</td>
-                <td style="padding:10px 14px;font-size:13px;color:#64748b;">Verified security industry tenure</td>
+                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;">${L.yearsExp}</td>
+                <td style="padding:10px 14px;font-size:13px;color:#64748b;">${L.yearsExpDesc}</td>
               </tr>
               <tr>
-                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;">Certifications &amp; Training</td>
-                <td style="padding:10px 14px;font-size:13px;color:#64748b;">State licenses, armed/unarmed credentials, first aid, specialized training</td>
+                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;">${L.certsTraining}</td>
+                <td style="padding:10px 14px;font-size:13px;color:#64748b;">${L.certsTrainingDesc}</td>
               </tr>
               <tr style="background-color:#f1f5f9;">
-                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;border-radius:0 0 0 6px;">Client &amp; Supervisor Scores</td>
-                <td style="padding:10px 14px;font-size:13px;color:#64748b;">Feedback from past assignments and direct supervisor evaluations</td>
+                <td style="padding:10px 14px;font-size:13px;color:#334155;font-weight:600;border-radius:0 0 0 6px;">${L.clientSupervisorScores}</td>
+                <td style="padding:10px 14px;font-size:13px;color:#64748b;">${L.clientSupervisorScoresDesc}</td>
               </tr>
             </table>
-            <p style="color:#64748b;font-size:12px;margin:12px 0 0 0;font-style:italic;">
-              Rest assured — every officer selected for your assignment will be properly vetted within this scoring structure.
-            </p>
+            <p style="color:#64748b;font-size:12px;margin:12px 0 0 0;font-style:italic;">${L.reassurance}</p>
           </div>
 
           <!-- What Happens Next -->
           <div style="background-color: #eff6ff; padding: 20px; border-radius: 10px; border: 1px solid #bfdbfe; margin-bottom: 24px;">
-            <p style="color: #1e40af; font-size: 14px; font-weight: 700; margin: 0 0 12px 0;">What Happens Next</p>
+            <p style="color: #1e40af; font-size: 14px; font-weight: 700; margin: 0 0 12px 0;">${L.whatNext}</p>
             <p style="color: #334155; font-size: 14px; line-height: 1.7; margin: 0 0 10px 0;">
-              If <strong>${params.workspaceName}</strong> is able to fulfill your request, you will receive a second email from me with:
+              ${L.whatNext1a} <strong>${params.workspaceName}</strong> ${L.whatNext1b}
             </p>
             <ul style="color: #334155; font-size: 14px; padding-left: 20px; margin: 0 0 12px 0; line-height: 1.8;">
-              <li>A confirmation of your assignment number</li>
-              <li>A summary of your request sent to both you and the provider</li>
-              <li>Access to your dedicated <strong>Client Portal</strong> assigned to ${params.workspaceName}</li>
+              <li>${L.confirmationLine}</li>
+              <li>${L.summaryLine}</li>
+              <li>${L.portalLine} <strong>${params.workspaceName}</strong></li>
             </ul>
             <p style="color: #334155; font-size: 14px; line-height: 1.7; margin: 0;">
-              Inside the portal, you can <strong>contact the provider, send feedback, file complaints, request new staff, replace staff, change schedules, and review all contracts and documents</strong> related to your engagement — via our integrated Help Chat and email system. This eliminates midnight phone calls or the need to dial anyone. This process is automated and resolves issues instantly.
+              ${L.portalParagraph}
             </p>
           </div>
 
           <!-- Case Manager -->
           <div style="background-color: #f0fdf4; padding: 18px; border-radius: 10px; border: 1px solid #bbf7d0; margin-bottom: 28px;">
             <p style="color: #065f46; font-size: 14px; margin: 0; line-height: 1.7;">
-              A <strong>dedicated case manager</strong> will be assigned to you by ${params.workspaceName} and will reach out to you directly with their contact information once staffing is confirmed.
+              ${L.caseManagerLine1} <strong>${L.caseManagerLineStrong}</strong> ${L.caseManagerLine2} ${params.workspaceName} ${L.caseManagerLine3}
             </p>
           </div>
 
           <!-- Sign Off -->
           <p style="color: #334155; font-size: 14px; line-height: 1.7; margin: 0 0 20px 0;">
-            As I stated — thank you for trusting ${PLATFORM.name} to staff your needs. I will be in touch shortly.
+            ${L.signOffIntro} ${PLATFORM.name} ${L.signOffOutro}
           </p>
 
-          <p style="color: #1e293b; font-size: 14px; margin: 0;">Sincerely,</p>
+          <p style="color: #1e293b; font-size: 14px; margin: 0;">${L.sincerely}</p>
           <p style="color: #1e40af; font-size: 18px; font-weight: 700; margin: 6px 0 2px 0; font-style: italic;">Trinity</p>
-          <p style="color: #64748b; font-size: 12px; margin: 0;">AI Staffing Coordinator — ${PLATFORM.name} Network</p>
-          <p style="color: #94a3b8; font-size: 12px; margin: 4px 0 0 0;">Reply to this email or contact: ${params.orgEmail}</p>
+          <p style="color: #64748b; font-size: 12px; margin: 0;">${L.title} ${PLATFORM.name} ${L.network}</p>
+          <p style="color: #94a3b8; font-size: 12px; margin: 4px 0 0 0;">${L.replyLine} ${params.orgEmail}</p>
 
           <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0 20px 0;">
           <p style="color: #94a3b8; font-size: 11px; margin: 0; text-align: center;">
-            ${params.workspaceName} | ${PLATFORM.name} Staffing Network | Ref: ${params.referenceNumber}
+            ${params.workspaceName} | ${L.networkTag} | Ref: ${params.referenceNumber}
           </p>
         </div>
         </div>
@@ -2711,7 +2801,7 @@ export class EmailService {
 
     return this._deliver(
       params.senderEmail,
-      `Staffing Request Received — ${params.workspaceName} [Ref: ${params.referenceNumber}]`,
+      `${L.subjectPrefix} ${params.workspaceName} [Ref: ${params.referenceNumber}]`,
       html,
       'trinity_ai_greeting',
       params.workspaceId

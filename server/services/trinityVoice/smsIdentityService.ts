@@ -31,6 +31,7 @@ export interface VerifiedIdentity {
   employeeNumber: string;
   isNewEmployee: boolean;
   hasSmsConsent: boolean;
+  preferredLanguage: 'en' | 'es';
 }
 
 export interface VerificationResult {
@@ -49,7 +50,7 @@ export async function verifyByPhone(phone: string): Promise<VerificationResult> 
     const result = await pool.query(`
       SELECT
         e.id, e.first_name, e.last_name, e.employee_number,
-        e.workspace_id, e.created_at,
+        e.workspace_id, e.created_at, e.preferred_language,
         COALESCE(w.company_name, w.name) AS org_name,
         sc.consent_given, sc.opt_out_at
       FROM employees e
@@ -87,6 +88,7 @@ export async function verifyByPhone(phone: string): Promise<VerificationResult> 
         employeeNumber: row.employee_number || '',
         isNewEmployee: isNew,
         hasSmsConsent: !!row.consent_given,
+        preferredLanguage: (row.preferred_language === 'es' ? 'es' : 'en') as 'en' | 'es',
       },
     };
   } catch (err: any) {
@@ -108,7 +110,7 @@ export async function verifyByEmployeeNumber(
 
     const result = await pool.query(`
       SELECT e.id, e.first_name, e.last_name, e.employee_number,
-             e.workspace_id, e.created_at,
+             e.workspace_id, e.created_at, e.preferred_language,
              COALESCE(w.company_name, w.name) AS org_name
       FROM employees e
       JOIN workspaces w ON w.id = e.workspace_id
@@ -138,6 +140,7 @@ export async function verifyByEmployeeNumber(
         employeeNumber: row.employee_number,
         isNewEmployee: false,
         hasSmsConsent: true,
+        preferredLanguage: (row.preferred_language === 'es' ? 'es' : 'en') as 'en' | 'es',
       },
     };
   } catch (err: any) {

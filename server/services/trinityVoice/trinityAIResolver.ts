@@ -16,8 +16,15 @@ import { withClaude, withGpt } from '../ai/aiCallWrapper';
 import { pool } from '../../db';
 const log = createLogger('TrinityAIResolver');
 
-const SYSTEM_PROMPT = `You are Trinity, a warm and professional AI voice assistant for a security guard company. 
-You handle inbound calls just like a skilled human customer support agent would.
+const SYSTEM_PROMPT = `You are Trinity, a warm and professional AI voice/SMS assistant for a security guard company.
+You handle inbound calls and text messages just like a skilled human customer support agent would.
+
+CRITICAL LANGUAGE RULE:
+- If the user's message is in Spanish, you MUST respond entirely in Spanish.
+- If the user's message is in English, respond in English.
+- Never mix languages in a single response.
+- Match the language the user is speaking/writing — this is non-negotiable.
+- If the request includes an explicit language instruction (e.g. "responde en español"), honor it.
 
 You can help with ANY of these typical issues:
 - Billing questions (invoices, payments, charges, refunds)
@@ -94,16 +101,22 @@ async function parseResolverJSON(text: string): Promise<{ canResolve: boolean; a
 
 // ── 1. Gemini Flash (Primary — fastest, most cost-effective) ─────────────────
 
-async function tryGemini(issue: string, workspaceId: string): Promise<AIResolverResult | null> {
+async function tryGemini(issue: string, workspaceId: string, language?: string): Promise<AIResolverResult | null> {
   try {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return null;
+
+    const langDirective = language === 'es'
+      ? '\n\nLANGUAGE OVERRIDE: The user is communicating in Spanish. Your entire JSON "answer" field MUST be written in Spanish.'
+      : language === 'en'
+        ? '\n\nLANGUAGE OVERRIDE: The user is communicating in English. Your entire JSON "answer" field MUST be written in English.'
+        : '';
 
     const { meteredGemini } = await import('../billing/meteredGeminiClient');
     const result = await meteredGemini.generate({
       workspaceId,
       featureKey: 'voice_support_resolve',
-      prompt: `${SYSTEM_PROMPT}\n\nCALLER'S ISSUE: "${issue}"\n\nRespond with JSON only.`,
+      prompt: `${SYSTEM_PROMPT}${langDirective}\n\nCALLER'S ISSUE: "${issue}"\n\nRespond with JSON only.`,
       model: 'gemini-2.5-flash-lite',
       maxOutputTokens: 400,
     });
@@ -121,10 +134,16 @@ async function tryGemini(issue: string, workspaceId: string): Promise<AIResolver
 
 // ── 2. Claude Haiku (Validator — nuanced, policy-aware) ──────────────────────
 
-async function tryClaude(issue: string, workspaceId: string, tier: string): Promise<AIResolverResult | null> {
+async function tryClaude(issue: string, workspaceId: string, tier: string, language?: string): Promise<AIResolverResult | null> {
   try {
     const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return null;
+
+    const systemWithLang = language === 'es'
+      ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in Spanish. Your entire JSON "answer" field MUST be written in Spanish.`
+      : language === 'en'
+        ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in English. Your entire JSON "answer" field MUST be written in English.`
+        : SYSTEM_PROMPT;
 
     const text = await withClaude( // withClaude
       'claude-3-haiku-20240307',
@@ -137,7 +156,7 @@ async function tryClaude(issue: string, workspaceId: string, tier: string): Prom
           signal: controller.signal,
           headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
           body: JSON.stringify({
-            model: 'claude-3-haiku-20240307', max_tokens: 400, system: SYSTEM_PROMPT,
+            model: 'claude-3-haiku-20240307', max_tokens: 400, system: systemWithLang,
             messages: [{ role: 'user', content: `CALLER'S ISSUE: "${issue}"\n\nRespond with JSON only.` }],
           }),
         });
@@ -159,10 +178,16 @@ async function tryClaude(issue: string, workspaceId: string, tier: string): Prom
 
 // ── 3. OpenAI GPT-4o-mini (Last resort — broadband intelligence) ─────────────
 
-async function tryOpenAI(issue: string, workspaceId: string, tier: string): Promise<AIResolverResult | null> {
+async function tryOpenAI(issue: string, workspaceId: string, tier: string, language?: string): Promise<AIResolverResult | null> {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return null;
+
+    const systemWithLang = language === 'es'
+      ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in Spanish. Your entire JSON "answer" field MUST be written in Spanish.`
+      : language === 'en'
+        ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in English. Your entire JSON "answer" field MUST be written in English.`
+        : SYSTEM_PROMPT;
 
     const text = await withGpt( // withGpt
       'gpt-4o-mini',
@@ -176,7 +201,7 @@ async function tryOpenAI(issue: string, workspaceId: string, tier: string): Prom
           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: 'gpt-4o-mini', max_tokens: 400, temperature: 0.3,
-            messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: `CALLER'S ISSUE: "${issue}"\n\nRespond with JSON only.` }],
+            messages: [{ role: 'system', content: systemWithLang }, { role: 'user', content: `CALLER'S ISSUE: "${issue}"\n\nRespond with JSON only.` }],
           }),
         });
         clearTimeout(timeout);
@@ -203,9 +228,9 @@ export async function resolveWithTrinityBrain(params: {
   language?: string;
 }): Promise<AIResolverResult> {
   const start = Date.now();
-  const { issue, workspaceId } = params;
+  const { issue, workspaceId, language } = params;
 
-  log.info(`[TrinityAIResolver] Resolving issue (${issue.length} chars) for workspace ${workspaceId}`);
+  log.info(`[TrinityAIResolver] Resolving issue (${issue.length} chars, lang=${language ?? 'auto'}) for workspace ${workspaceId}`);
 
   // Resolve workspace tier for metered fallback calls
   let workspaceTier = 'starter';
@@ -217,17 +242,20 @@ export async function resolveWithTrinityBrain(params: {
   }
 
   // Try all three models in sequence (stop as soon as one succeeds)
-  let result = await tryGemini(issue, workspaceId);
-  if (!result) result = await tryClaude(issue, workspaceId, workspaceTier);
-  if (!result) result = await tryOpenAI(issue, workspaceId, workspaceTier);
+  let result = await tryGemini(issue, workspaceId, language);
+  if (!result) result = await tryClaude(issue, workspaceId, workspaceTier, language);
+  if (!result) result = await tryOpenAI(issue, workspaceId, workspaceTier, language);
 
   const responseTimeMs = Date.now() - start;
 
   if (!result) {
     log.warn('[TrinityAIResolver] All AI models unavailable — escalating to human');
+    const fallbackAnswer = language === 'es'
+      ? "Quiero asegurarme de que obtengas la mejor ayuda posible. Déjame conectarte con uno de nuestros especialistas de soporte humano que puede asistirte directamente."
+      : "I want to make sure you get the best help possible. Let me connect you with one of our human support specialists who can assist you directly.";
     return {
       canResolve: false,
-      answer: "I want to make sure you get the best help possible. Let me connect you with one of our human support specialists who can assist you directly.",
+      answer: fallbackAnswer,
       escalationReason: 'AI unavailable — no models responded',
       modelUsed: 'none',
       responseTimeMs,

@@ -21,8 +21,14 @@ import { pool } from '../../db';
 import { createLogger } from '../../lib/logger';
 import { flagFaqCandidate } from '../helpai/faqLearningService';
 import type { VerifiedIdentity, VerificationResult } from './smsIdentityService';
+import { detectLanguage } from './smsLanguageDetector';
 
 const log = createLogger('SmsAutoResolver');
+
+// ─── Bilingual string helper ────────────────────────────────────────────────
+// Tiny helper: pick English or Spanish based on the resolved language.
+// Usage: t('Hello', 'Hola', lang)
+const t = (en: string, es: string, lang: 'en' | 'es'): string => (lang === 'es' ? es : en);
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -97,14 +103,30 @@ const INSTANT_ANSWERS: Record<string, string> = {
   general_question: null as any,
 };
 
+const INSTANT_ANSWERS_ES: Record<string, string> = {
+  account_access: 'Para restablecer tu contraseña, ve a la pantalla de inicio de sesión y toca "Olvidé mi contraseña". Si tu cuenta está bloqueada, responde con tu nombre completo y la desbloquearemos de inmediato.',
+  scheduling_issue: 'Para ver tu horario, abre la aplicación y ve a la pestaña de Horario. Si un turno está incorrecto o falta, tu supervisor puede actualizarlo. Responde con los detalles y lo revisaremos.',
+  payroll_dispute: 'Los comprobantes de pago están en la aplicación en Nómina > Comprobantes. Si tus horas parecen incorrectas, tu supervisor puede enviar una corrección. Responde con la fecha del período de pago y lo investigaremos.',
+  notification_not_received: 'Ve a Configuración en la aplicación y verifica que las notificaciones por SMS y correo electrónico estén activadas. Asegúrate de que tu número de teléfono sea correcto en tu perfil.',
+  document_missing: 'Tus documentos de incorporación están en la sección de Documentos de la aplicación. Si necesitas que te los reenvíen, responde con tu dirección de correo electrónico.',
+  onboarding_stuck: 'Si tu incorporación está atascada en una tarea, intenta actualizar la aplicación. Si una tarea específica no se completa, responde con cuál es la tarea y la reiniciaremos.',
+  compliance_alert: 'Si tu licencia o certificación está por vencer, sube la renovación en la sección de Documentos > Cumplimiento de la aplicación. Normalmente tarda 1-2 días en verificarse.',
+  technical_error: 'Intenta cerrar la aplicación y volver a abrirla. Si el problema continúa, responde con el error que estás viendo y lo resolveremos.',
+  general_question: null as any,
+};
+
 // ─── Trinity AI Fallback ───────────────────────────────────────────────────
 
-async function tryTrinityAI(message: string, workspaceId: string, firstName: string): Promise<string | null> {
+async function tryTrinityAI(message: string, workspaceId: string, firstName: string, lang: 'en' | 'es' = 'en'): Promise<string | null> {
   try {
     const { resolveWithTrinityBrain } = await import('./trinityAIResolver');
+    const langPrefix = lang === 'es'
+      ? `El oficial ${firstName} envió un mensaje de texto en español: "${message}". Responde ENTERAMENTE en español.`
+      : `Officer ${firstName} texted: "${message}"`;
     const result = await resolveWithTrinityBrain({
-      issue: `Officer ${firstName} texted: "${message}"`,
+      issue: langPrefix,
       workspaceId,
+      language: lang,
     });
     if (result.canResolve && result.answer && result.answer.length > 20) {
       return result.answer.length > 300 ? result.answer.slice(0, 297) + '...' : result.answer;
@@ -201,7 +223,8 @@ async function getEmployeeContext(employeeId: string, workspaceId: string): Prom
 
 async function handleShiftOfferAcceptance(
   fromPhone: string,
-  identity: VerifiedIdentity
+  identity: VerifiedIdentity,
+  lang: 'en' | 'es' = 'en'
 ): Promise<SmsResolverResult> {
   try {
     const offer = await pool.query(`
@@ -219,7 +242,11 @@ async function handleShiftOfferAcceptance(
     if (!offer.rows.length) {
       return {
         resolved: true,
-        reply: `Hi ${identity.firstName}! Thanks for the YES, but I don't see any active shift offers for you right now. I'll reach out when something comes up! — Trinity`,
+        reply: t(
+          `Hi ${identity.firstName}! Thanks for the YES, but I don't see any active shift offers for you right now. I'll reach out when something comes up! — Trinity`,
+          `¡Hola ${identity.firstName}! Gracias por aceptar, pero no veo ofertas de turno activas para ti en este momento. ¡Me comunicaré contigo cuando haya algo! — Trinity`,
+          lang
+        ),
         method: 'auto_action',
         workspaceId: identity.workspaceId,
         employeeId: identity.employeeId,
@@ -266,16 +293,23 @@ async function handleShiftOfferAcceptance(
     log.info(`[SMS] ${identity.firstName} accepted shift ${row.staged_shift_id}`);
 
     const startFormatted = row.start_time
-      ? new Date(row.start_time).toLocaleString('en-US', {
+      ? new Date(row.start_time).toLocaleString(lang === 'es' ? 'es-US' : 'en-US', {
           weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
         })
-      : 'your scheduled time';
+      : (lang === 'es' ? 'tu hora programada' : 'your scheduled time');
+
+    const siteLabelEn = row.location || 'your assigned site';
+    const siteLabelEs = row.location || 'tu sitio asignado';
 
     return {
       resolved: true,
-      reply:
-        `You're confirmed, ${identity.firstName}! Shift at ${row.location || 'your assigned site'} starting ${startFormatted}. ` +
+      reply: t(
+        `You're confirmed, ${identity.firstName}! Shift at ${siteLabelEn} starting ${startFormatted}. ` +
         `Your supervisor has been notified. Text HELP if you need anything before your shift. — Trinity`,
+        `¡Confirmado, ${identity.firstName}! Turno en ${siteLabelEs} comenzando ${startFormatted}. ` +
+        `Tu supervisor ha sido notificado. Envía AYUDA si necesitas algo antes de tu turno. — Trinity`,
+        lang
+      ),
       method: 'auto_action',
       workspaceId: identity.workspaceId,
       employeeId: identity.employeeId,
@@ -284,7 +318,11 @@ async function handleShiftOfferAcceptance(
     log.error('[SMS] Shift acceptance error:', err?.message);
     return {
       resolved: true,
-      reply: `Thanks ${identity.firstName}! There was a brief issue confirming your shift. Please confirm directly with your supervisor. — Trinity`,
+      reply: t(
+        `Thanks ${identity.firstName}! There was a brief issue confirming your shift. Please confirm directly with your supervisor. — Trinity`,
+        `¡Gracias ${identity.firstName}! Hubo un breve problema al confirmar tu turno. Por favor confirma directamente con tu supervisor. — Trinity`,
+        lang
+      ),
       method: 'error',
       workspaceId: identity.workspaceId,
       employeeId: identity.employeeId,
@@ -297,12 +335,17 @@ async function handleShiftOfferAcceptance(
 async function handleManagerApproval(
   fromPhone: string,
   verification: VerificationResult,
-  approved: boolean
+  approved: boolean,
+  lang: 'en' | 'es' = 'en'
 ): Promise<SmsResolverResult> {
   if (!verification.verified || !verification.identity) {
     return {
       resolved: true,
-      reply: `I wasn't able to verify your identity as a manager. Please log in to the app to approve requests. — Trinity`,
+      reply: t(
+        `I wasn't able to verify your identity as a manager. Please log in to the app to approve requests. — Trinity`,
+        `No pude verificar tu identidad como gerente. Por favor inicia sesión en la aplicación para aprobar solicitudes. — Trinity`,
+        lang
+      ),
       method: 'auto_action',
     };
   }
@@ -325,7 +368,11 @@ async function handleManagerApproval(
     if (!pending.rows.length) {
       return {
         resolved: true,
-        reply: `Hi ${identity.firstName}! No pending approvals found in your workspace right now. Check the app for the full list. — Trinity`,
+        reply: t(
+          `Hi ${identity.firstName}! No pending approvals found in your workspace right now. Check the app for the full list. — Trinity`,
+          `¡Hola ${identity.firstName}! No se encontraron aprobaciones pendientes en tu espacio de trabajo en este momento. Consulta la aplicación para la lista completa. — Trinity`,
+          lang
+        ),
         method: 'auto_action',
         workspaceId: identity.workspaceId,
         employeeId: identity.employeeId,
@@ -370,12 +417,19 @@ async function handleManagerApproval(
 
     log.info(`[SMS] Manager ${identity.firstName} ${newStatus} request ${req.id}`);
 
+    const esStatus = approved ? 'aprobada' : 'denegada';
+
     return {
       resolved: true,
-      reply:
+      reply: t(
         `Got it ${identity.firstName}! ` +
-        `${empName}'s ${actionLabel} has been ${newStatus}. ` +
-        `They've been notified. — Trinity`,
+          `${empName}'s ${actionLabel} has been ${newStatus}. ` +
+          `They've been notified. — Trinity`,
+        `¡Entendido ${identity.firstName}! ` +
+          `La solicitud de ${actionLabel} de ${empName} ha sido ${esStatus}. ` +
+          `Ya se les notificó. — Trinity`,
+        lang
+      ),
       method: 'auto_action',
       workspaceId: identity.workspaceId,
       employeeId: identity.employeeId,
@@ -384,7 +438,11 @@ async function handleManagerApproval(
     log.error('[SMS] Approval workflow error:', err?.message);
     return {
       resolved: true,
-      reply: `There was an issue processing your ${approved ? 'approval' : 'denial'}. Please use the app. — Trinity`,
+      reply: t(
+        `There was an issue processing your ${approved ? 'approval' : 'denial'}. Please use the app. — Trinity`,
+        `Hubo un problema procesando tu ${approved ? 'aprobación' : 'denegación'}. Por favor usa la aplicación. — Trinity`,
+        lang
+      ),
       method: 'error',
       workspaceId: identity.workspaceId,
       employeeId: identity.employeeId,
@@ -396,18 +454,27 @@ async function handleManagerApproval(
 
 async function handleEmployeeNumberVerification(
   fromPhone: string,
-  employeeNumber: string
+  employeeNumber: string,
+  lang: 'en' | 'es' = 'en'
 ): Promise<SmsResolverResult> {
   const { verifyByEmployeeNumber } = await import('./smsIdentityService');
   const result = await verifyByEmployeeNumber(fromPhone, employeeNumber);
 
   if (result.verified && result.identity) {
+    // Prefer the employee's stored preference if set, otherwise use inbound detection.
+    const replyLang: 'en' | 'es' =
+      result.identity.preferredLanguage === 'es' ? 'es' : lang;
     return {
       resolved: true,
-      reply:
+      reply: t(
         `Welcome, ${result.identity.firstName}! I've verified your identity. ` +
-        `I'm Trinity, your Co-League AI assistant. You can now ask me about your schedule, shifts, pay periods, or anything else. ` +
-        `What can I help you with?`,
+          `I'm Trinity, your Co-League AI assistant. You can now ask me about your schedule, shifts, pay periods, or anything else. ` +
+          `What can I help you with?`,
+        `¡Bienvenido, ${result.identity.firstName}! He verificado tu identidad. ` +
+          `Soy Trinity, tu asistente IA de Co-League. Ahora puedes preguntarme sobre tu horario, turnos, períodos de pago o cualquier otra cosa. ` +
+          `¿En qué puedo ayudarte?`,
+        replyLang
+      ),
       method: 'auto_action',
       workspaceId: result.identity.workspaceId,
       employeeId: result.identity.employeeId,
@@ -416,10 +483,15 @@ async function handleEmployeeNumberVerification(
 
   return {
     resolved: true,
-    reply:
+    reply: t(
       `I wasn't able to match that employee number to your phone number. ` +
-      `Please double-check your employee number in the app under Profile, or contact your supervisor. ` +
-      `If you just started, it may take 24 hours to appear in the system. — Trinity`,
+        `Please double-check your employee number in the app under Profile, or contact your supervisor. ` +
+        `If you just started, it may take 24 hours to appear in the system. — Trinity`,
+      `No pude asociar ese número de empleado con tu número de teléfono. ` +
+        `Por favor verifica tu número de empleado en la aplicación bajo Perfil, o contacta a tu supervisor. ` +
+        `Si acabas de empezar, puede tardar 24 horas en aparecer en el sistema. — Trinity`,
+      lang
+    ),
     method: 'auto_action',
   };
 }
@@ -436,52 +508,72 @@ export async function resolveInboundSms(params: {
 
   log.info(`[SmsAutoResolver] Inbound from ${fromPhone}: "${trimmed.slice(0, 80)}"`);
 
+  // Detect inbound language early — used as a fallback when the employee
+  // has no stored preferred_language.
+  const inboundLang: 'en' | 'es' = detectLanguage(trimmed);
+
   // Step 1: Verify identity by phone
   const { verifyByPhone, notifyManagementUnverified, logFailedVerification } =
     await import('./smsIdentityService');
   const verification = await verifyByPhone(fromPhone);
 
-  // Step 2: Shift offer responses (YES/NO)
-  if (['YES', 'Y'].includes(upper) && verification.verified && verification.identity) {
-    return handleShiftOfferAcceptance(fromPhone, verification.identity);
+  // Resolved language: employee's stored preference wins; otherwise detected.
+  const lang: 'en' | 'es' =
+    verification.identity?.preferredLanguage === 'es' ? 'es' : inboundLang;
+
+  // Step 2: Shift offer responses (YES/NO/SI/SÍ)
+  if (['YES', 'Y', 'SI', 'SÍ'].includes(upper) && verification.verified && verification.identity) {
+    return handleShiftOfferAcceptance(fromPhone, verification.identity, lang);
   }
   if (['NO', 'N'].includes(upper) && verification.verified && verification.identity) {
     return {
       resolved: true,
-      reply: `No problem, ${verification.identity.firstName}! We'll keep you in mind for the next opportunity. — Trinity`,
+      reply: t(
+        `No problem, ${verification.identity.firstName}! We'll keep you in mind for the next opportunity. — Trinity`,
+        `¡Sin problema, ${verification.identity.firstName}! Te tendremos en cuenta para la próxima oportunidad. — Trinity`,
+        lang
+      ),
       method: 'auto_action',
       workspaceId: verification.identity.workspaceId,
       employeeId: verification.identity.employeeId,
     };
   }
 
-  // Step 3: Manager approval / denial
-  if (['APPROVE', 'APPROVED', 'YES APPROVE'].includes(upper)) {
-    return handleManagerApproval(fromPhone, verification, true);
+  // Step 3: Manager approval / denial (bilingual keywords)
+  if (['APPROVE', 'APPROVED', 'YES APPROVE', 'APROBAR', 'APROBADO', 'APROBADA'].includes(upper)) {
+    return handleManagerApproval(fromPhone, verification, true, lang);
   }
-  if (['DENY', 'DENIED', 'DECLINE', 'REJECT'].includes(upper)) {
-    return handleManagerApproval(fromPhone, verification, false);
+  if (['DENY', 'DENIED', 'DECLINE', 'REJECT', 'NEGAR', 'DENEGAR', 'DENEGADO', 'DENEGADA', 'RECHAZAR'].includes(upper)) {
+    return handleManagerApproval(fromPhone, verification, false, lang);
   }
 
   // Step 4: Employee number verification attempt
   if (/^EMP-[A-Z0-9]+-\d+$/i.test(trimmed) || /^\d{4,8}$/.test(trimmed)) {
-    return handleEmployeeNumberVerification(fromPhone, trimmed);
+    return handleEmployeeNumberVerification(fromPhone, trimmed, lang);
   }
 
   // Step 5: Unverified sender — soft challenge + management notice
   if (!verification.verified) {
     await logFailedVerification(fromPhone, 'phone_not_in_system');
-    const isNewOfficerLikely = /help|schedule|shift|work|new|start|begin|how/i.test(trimmed);
+    const isNewOfficerLikely =
+      /help|schedule|shift|work|new|start|begin|how/i.test(trimmed) ||
+      /ayuda|horario|turno|trabajo|nuevo|empezar|comenzar|cómo|como/i.test(trimmed);
 
     if (isNewOfficerLikely) {
       await notifyManagementUnverified(fromPhone, trimmed);
       return {
         resolved: true,
-        reply:
+        reply: t(
           `Hi! I'm Trinity, Co-League's AI assistant. I wasn't able to find your profile in our system — ` +
-          `you might be new, or your phone number may not be registered yet. ` +
-          `Reply with your employee number (like EMP-1234-00001) so I can look you up, ` +
-          `or contact your supervisor to get set up. Your supervisor has been notified. — Trinity`,
+            `you might be new, or your phone number may not be registered yet. ` +
+            `Reply with your employee number (like EMP-1234-00001) so I can look you up, ` +
+            `or contact your supervisor to get set up. Your supervisor has been notified. — Trinity`,
+          `¡Hola! Soy Trinity, la asistente IA de Co-League. No pude encontrar tu perfil en nuestro sistema — ` +
+            `puede que seas nuevo, o que tu número de teléfono aún no esté registrado. ` +
+            `Responde con tu número de empleado (como EMP-1234-00001) para buscarte, ` +
+            `o contacta a tu supervisor para que te configuren. Tu supervisor ha sido notificado. — Trinity`,
+          lang
+        ),
         method: 'auto_action',
       };
     }
@@ -489,10 +581,15 @@ export async function resolveInboundSms(params: {
     await notifyManagementUnverified(fromPhone, trimmed);
     return {
       resolved: true,
-      reply:
+      reply: t(
         `Hi! I'm Trinity from Co-League. I couldn't verify your identity in our system. ` +
-        `If you're a Co-League employee, please reply with your employee number. ` +
-        `If you need general help, visit www.coaileague.com. — Trinity`,
+          `If you're a Co-League employee, please reply with your employee number. ` +
+          `If you need general help, visit www.coaileague.com. — Trinity`,
+        `¡Hola! Soy Trinity de Co-League. No pude verificar tu identidad en nuestro sistema. ` +
+          `Si eres empleado de Co-League, por favor responde con tu número de empleado. ` +
+          `Si necesitas ayuda general, visita www.coaileague.com. — Trinity`,
+        lang
+      ),
       method: 'auto_action',
     };
   }
@@ -504,7 +601,11 @@ export async function resolveInboundSms(params: {
   // FAQ lookup first
   const faqAnswer = await tryFaqLookup(trimmed, identity.workspaceId);
   if (faqAnswer) {
-    const reply = `Hi ${identity.firstName}, ${faqAnswer}`;
+    const reply = t(
+      `Hi ${identity.firstName}, ${faqAnswer}`,
+      `Hola ${identity.firstName}, ${faqAnswer}`,
+      lang
+    );
     void flagFaqCandidate(trimmed, identity.workspaceId, category);
     log.info(`[SmsAutoResolver] FAQ resolved for ${fromPhone}`);
     return {
@@ -516,12 +617,18 @@ export async function resolveInboundSms(params: {
     };
   }
 
-  // Instant answer for common categories
-  const instantAnswer = INSTANT_ANSWERS[category];
+  // Instant answer for common categories (bilingual)
+  const instantAnswer = lang === 'es'
+    ? INSTANT_ANSWERS_ES[category]
+    : INSTANT_ANSWERS[category];
   if (instantAnswer) {
-    const reply = `Hi ${identity.firstName}! ${instantAnswer}`;
+    const reply = t(
+      `Hi ${identity.firstName}! ${instantAnswer}`,
+      `¡Hola ${identity.firstName}! ${instantAnswer}`,
+      lang
+    );
     void flagFaqCandidate(trimmed, identity.workspaceId, category);
-    log.info(`[SmsAutoResolver] Instant answer (${category}) for ${fromPhone}`);
+    log.info(`[SmsAutoResolver] Instant answer (${category}, ${lang}) for ${fromPhone}`);
     return {
       resolved: true,
       reply: reply.slice(0, 320),
@@ -531,16 +638,16 @@ export async function resolveInboundSms(params: {
     };
   }
 
-  // Trinity AI with full context
+  // Trinity AI with full context — reply matches resolved language
   const ctx = await getEmployeeContext(identity.employeeId, identity.workspaceId);
   const contextualMessage = ctx ? `${trimmed}\n\n[Context: ${ctx}]` : trimmed;
-  const aiAnswer = await tryTrinityAI(contextualMessage, identity.workspaceId, identity.firstName);
+  const aiAnswer = await tryTrinityAI(contextualMessage, identity.workspaceId, identity.firstName, lang);
 
   if (aiAnswer) {
-    const prefix = `Hi ${identity.firstName}, `;
+    const prefix = t(`Hi ${identity.firstName}, `, `Hola ${identity.firstName}, `, lang);
     const reply = (prefix + aiAnswer).slice(0, 320);
     void flagFaqCandidate(trimmed, identity.workspaceId, category);
-    log.info(`[SmsAutoResolver] AI resolved for ${fromPhone}`);
+    log.info(`[SmsAutoResolver] AI resolved for ${fromPhone} (lang=${lang})`);
     return {
       resolved: true,
       reply,
@@ -563,9 +670,13 @@ export async function resolveInboundSms(params: {
   log.info(`[SmsAutoResolver] Escalated to ticket ${caseNumber} for ${fromPhone}`);
   return {
     resolved: false,
-    reply:
+    reply: t(
       `Got it ${identity.firstName}! I've created support case ${caseNumber} for your request. ` +
-      `A specialist from ${identity.orgName} will follow up with you shortly. — Trinity`.slice(0, 320),
+        `A specialist from ${identity.orgName} will follow up with you shortly. — Trinity`,
+      `¡Entendido ${identity.firstName}! He creado el caso de soporte ${caseNumber} para tu solicitud. ` +
+        `Un especialista de ${identity.orgName} se comunicará contigo pronto. — Trinity`,
+      lang
+    ).slice(0, 320),
     method: 'ticket',
     caseNumber,
     workspaceId: identity.workspaceId,
