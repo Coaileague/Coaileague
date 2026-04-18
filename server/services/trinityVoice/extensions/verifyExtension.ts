@@ -33,18 +33,20 @@ export function handleEmploymentVerification(params: {
 
     if (lang === 'es') {
       return twiml(
-        say('Ha seleccionado Verificación de Empleo. Por favor envíe su solicitud por escrito ' +
-          'con el nombre completo del empleado, fechas de empleo y el propósito de la verificación ' +
-          'a nuestra dirección de correo electrónico. Deje su nombre y número de contacto después del tono.', 'es') +
+        say('Ha llegado al área de Verificación de Empleo. Para proteger la privacidad de nuestros empleados, ' +
+          'todas las solicitudes de verificación deben enviarse por escrito. Por favor deje su nombre, su organización, ' +
+          'el nombre completo del empleado, las fechas de empleo a verificar, y su número de devolución de llamada. ' +
+          'Respondemos a las solicitudes de verificación dentro de dos días hábiles.', 'es') +
         `<Record action="${baseUrl}/api/voice/recording-done?ext=verify&lang=es" maxLength="120" playBeep="true" />` +
         say('Gracias por llamar.', 'es')
       );
     }
 
     return twiml(
-      say('You have reached Employment Verification. Please submit your request in writing ' +
-        'including the full name of the employee, dates of employment, and the purpose of the verification ' +
-        'to our email address. Leave your name and contact number after the tone.') +
+      say('You\'ve reached Employment Verification. To protect our employees\' privacy, all verification ' +
+        'requests must be submitted in writing. Please leave your name, your organization, the employee\'s ' +
+        'full name, the dates of employment you need verified, and your callback number. ' +
+        'We respond to verification requests within two business days.') +
       `<Record action="${baseUrl}/api/voice/recording-done?ext=verify&lang=en" maxLength="120" playBeep="true" />` +
       say('Thank you for calling.')
     );

@@ -33,17 +33,20 @@ export function handleSales(params: {
 
     if (lang === 'es') {
       return twiml(
-        say('Gracias por su interés. Un representante de ventas se comunicará con usted pronto. ' +
-          'Por favor deje su nombre y número de teléfono después del tono, y nos pondremos en contacto en las próximas 24 horas.', 'es') +
+        say('¡Excelente! Ha llegado a nuestro equipo de ventas. Nos encantaría conocer sus necesidades de seguridad ' +
+          'y mostrarle lo que Co-League puede hacer por su organización. Por favor deje su nombre, el mejor número ' +
+          'para comunicarnos con usted, y una breve descripción de sus necesidades después del tono. ' +
+          'Un miembro de nuestro equipo se comunicará con usted dentro de un día hábil.', 'es') +
         `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=es" maxLength="120" playBeep="true" />` +
-        say('Gracias. Que tenga un buen día.', 'es')
+        say('Gracias. Que tenga un excelente día.', 'es')
       );
     }
 
     return twiml(
-      say('Thank you for your interest in our security services. ' +
-        'A sales representative will be in touch with you shortly. ' +
-        'Please leave your name and phone number after the tone and we will contact you within 24 hours.') +
+      say('Great! You\'ve reached our sales team. We\'d love to learn about your security needs ' +
+        'and show you what Co-League can do for your organization. Please leave your name, the best ' +
+        'number to reach you, and a brief description of your needs after the tone. ' +
+        'A member of our team will reach out within one business day.') +
       `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=en" maxLength="120" playBeep="true" />` +
       say('Thank you. Have a great day.')
     );

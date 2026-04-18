@@ -40,6 +40,7 @@ import { requirePlan } from '../tierGuards';
 import {
   handleInbound,
   buildMainIVR,
+  buildGeneralMenu,
   buildLanguageSelect,
   resolveWorkspaceFromPhoneNumber,
   createCallSession,
@@ -50,6 +51,10 @@ import {
   say,
   redirect,
 } from '../services/trinityVoice/voiceOrchestrator';
+
+// Voice constants used inline by the new identify routes
+const VOICE = 'Polly.Joanna-Neural';
+const VOICE_ES = 'Polly.Lupe-Neural';
 import { voiceSmsMeteringService } from '../services/billing/voiceSmsMeteringService';
 import { handleSales } from '../services/trinityVoice/extensions/salesExtension';
 import { handleClientSupport } from '../services/trinityVoice/extensions/clientExtension';
@@ -59,6 +64,9 @@ import {
   handleClockInStep1,
   handleCollectPin,
   processClockIn,
+  handleClockOutStep1,
+  handleCollectClockOutPin,
+  processClockOut,
   handleCallOff,
   handleStaffSupport,
 } from '../services/trinityVoice/extensions/staffExtension';
@@ -455,11 +463,202 @@ voiceRouter.post('/language-select', twilioSignatureMiddleware, async (req: Requ
   }
 });
 
+// ─── 2b. CALLER IDENTIFY (Phase 18B) ──────────────────────────────────────────
+// After Trinity introduces herself, the caller picks who they are:
+//   1 = employee/platform user → speech ID → personalized lane
+//   2 = client of a security provider → identify provider by name/license
+//   3 (or anything else) = general menu
+
+voiceRouter.post('/caller-identify', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, Digits, To } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+
+    const workspace = await resolveWorkspaceFromPhoneNumber(To);
+    if (!workspace) return xmlResponse(res, twiml('<Say>Configuration error. Goodbye.</Say>'));
+
+    const { workspaceId } = workspace;
+    const session = await getSession(CallSid);
+    const sessionId = session?.id || CallSid;
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    if (Digits === '1') {
+      const prompt = lang === 'es'
+        ? 'Por favor diga su nombre completo o número de empleado para que pueda ayudarle de manera personalizada.'
+        : 'Please say your full name or employee number so I can pull up your information and assist you personally.';
+
+      const action = `${baseUrl}/api/voice/staff-identify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+      return xmlResponse(res, twiml(
+        `<Gather input="speech dtmf" action="${action}" method="POST" timeout="10" speechTimeout="auto">` +
+        say(prompt, voiceId, langCode) +
+        `</Gather>` +
+        say(lang === 'es' ? 'No escuché nada. Pasando al menú general.' : 'I did not hear anything. Taking you to the main menu.', voiceId, langCode) +
+        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+      ));
+    }
+
+    if (Digits === '2') {
+      const prompt = lang === 'es'
+        ? 'Por favor diga el nombre de su empresa de seguridad o su número de licencia para que pueda conectarle con su proveedor.'
+        : 'Please say the name of your security company or their license number so I can connect you with your provider.';
+
+      const action = `${baseUrl}/api/voice/client-identify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+      return xmlResponse(res, twiml(
+        `<Gather input="speech" action="${action}" method="POST" timeout="10" speechTimeout="auto">` +
+        say(prompt, voiceId, langCode) +
+        `</Gather>` +
+        say(lang === 'es' ? 'No le escuché. Pasando al menú general.' : 'I did not catch that. Taking you to the general menu.', voiceId, langCode) +
+        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+      ));
+    }
+
+    // Press 3, 0, or no input → general menu
+    const extEnabled = (workspace.phoneRecord.extensionConfig as Record<string, boolean>) || {};
+    return xmlResponse(res, buildGeneralMenu(lang, baseUrl, extEnabled));
+
+  } catch (err: any) {
+    log.error('[VoiceRoutes] caller-identify error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Please try again.</Say>'));
+  }
+});
+
+// ─── 2c. STAFF IDENTIFY (Phase 18B) ───────────────────────────────────────────
+// Caller says their name or employee number. Trinity tries a fuzzy lookup; either way
+// it routes them into the staff menu (handler takes over from there).
+
+voiceRouter.post('/staff-identify', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, SpeechResult, Digits, To } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+
+    const workspace = await resolveWorkspaceFromPhoneNumber(To);
+    if (!workspace) return xmlResponse(res, twiml('<Say>Configuration error. Goodbye.</Say>'));
+
+    const { workspaceId } = workspace;
+    const session = await getSession(CallSid);
+    const sessionId = session?.id || CallSid;
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    const spoken = (SpeechResult || Digits || '').trim();
+    let foundFirst: string | null = null;
+    if (spoken) {
+      try {
+        const { pool } = await import('../db');
+        const cleaned = spoken.replace(/[^a-zA-Z0-9\s\-]/g, '').slice(0, 64);
+        const result = await pool.query(
+          `SELECT first_name FROM employees
+           WHERE workspace_id = $1
+             AND is_active = true
+             AND (
+               LOWER(first_name || ' ' || last_name) LIKE LOWER($2)
+               OR LOWER(employee_number) = LOWER($3)
+             )
+           LIMIT 1`,
+          [workspaceId, `%${cleaned}%`, cleaned]
+        );
+        if (result.rows.length) foundFirst = result.rows[0].first_name;
+      } catch (e: any) {
+        log.warn('[VoiceRoutes] staff-identify lookup failed (non-fatal):', e.message);
+      }
+    }
+
+    const greet = foundFirst
+      ? (lang === 'es'
+          ? `Hola ${foundFirst}, encantada de hablar con usted. `
+          : `Hi ${foundFirst}, great to hear from you. `)
+      : (lang === 'es'
+          ? 'Gracias. '
+          : 'Thanks for that. ');
+
+    return xmlResponse(res, twiml(
+      say(greet + (lang === 'es'
+        ? 'Pasando al menú de personal.'
+        : 'Taking you to the staff menu now.'), voiceId, langCode) +
+      redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=4`)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] staff-identify error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── 2d. CLIENT IDENTIFY (Phase 18B) ──────────────────────────────────────────
+// Caller says the name of their security provider. Trinity acknowledges and
+// routes them to client support (which handles the actual escalation).
+
+voiceRouter.post('/client-identify', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, SpeechResult, To } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+
+    const workspace = await resolveWorkspaceFromPhoneNumber(To);
+    if (!workspace) return xmlResponse(res, twiml('<Say>Configuration error. Goodbye.</Say>'));
+
+    const session = await getSession(CallSid);
+    const sessionId = session?.id || CallSid;
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    const spoken = (SpeechResult || '').trim().slice(0, 200);
+    if (session && spoken) {
+      logCallAction({
+        callSessionId: sessionId,
+        workspaceId: workspace.workspaceId,
+        action: 'client_identify_provider',
+        payload: { provider: spoken, lang },
+        outcome: 'success',
+      }).catch((err: any) => log.warn('[VoiceRoutes] client-identify log failed:', err?.message));
+    }
+
+    const ack = spoken
+      ? (lang === 'es'
+          ? `Gracias. Conectándole con soporte para ${spoken}.`
+          : `Thank you. Connecting you with support for ${spoken}.`)
+      : (lang === 'es'
+          ? 'Gracias. Conectándole con soporte al cliente.'
+          : 'Thank you. Connecting you with client support.');
+
+    return xmlResponse(res, twiml(
+      say(ack, voiceId, langCode) +
+      redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=2`)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] client-identify error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── 2e. GENERAL MENU (Phase 18B) ─────────────────────────────────────────────
+// Direct entry into the numbered service menu.
+
+voiceRouter.post('/general-menu', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { To } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const workspace = await resolveWorkspaceFromPhoneNumber(To);
+    if (!workspace) return xmlResponse(res, twiml('<Say>Configuration error. Goodbye.</Say>'));
+
+    const extEnabled = (workspace.phoneRecord.extensionConfig as Record<string, boolean>) || {};
+    return xmlResponse(res, buildGeneralMenu(lang, baseUrl, extEnabled));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] general-menu error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
 // ─── 3. MAIN MENU ROUTE ───────────────────────────────────────────────────────
 
 voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Request, res: Response) => {
   try {
-    const { CallSid, Digits, To } = req.body;
+    const { CallSid, To } = req.body;
+    // Allow upstream identify routes to bridge into the menu via a `_d` query param.
+    const Digits: string = req.body.Digits || (req.query._d as string) || '';
     const lang = getLang(req);
     const baseUrl = getBaseUrl(req);
 
@@ -498,7 +697,7 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
         : 'Sorry, that extension is not available at this time. ';
       return xmlResponse(res, twiml(
         say(disabledMsg, 'Polly.Penelope', lang === 'es' ? 'es-US' : 'en-US') +
-        redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}`)
+        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
       ));
     }
 
@@ -523,9 +722,21 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
           : 'Please say or enter your cause number to check the status of your support case.';
         return xmlResponse(res, twiml(
           `<Gather input="speech dtmf" action="${caseCheckAction}" method="POST" timeout="10" speechTimeout="auto">` +
-          say(caseCheckPrompt, lang === 'es' ? 'Polly.Lupe-Neural' : 'Polly.Joanna-Neural', lang === 'es' ? 'es-US' : 'en-US') +
+          say(caseCheckPrompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
           `</Gather>` +
           say(lang === 'es' ? 'No se recibió entrada. Adiós.' : 'No input received. Goodbye.')
+        ));
+      }
+      case '8': {
+        // Phase 18B — Schedule a human callback
+        const cbAction = `${baseUrl}/api/voice/schedule-callback?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+        const cbPrompt = lang === 'es'
+          ? 'Por favor deje su nombre, su número de teléfono y la mejor hora para llamarle. Programaré una llamada con un humano.'
+          : 'Please leave your name, the best phone number to reach you, and the best time to call. I will schedule a callback with a human team member.';
+        return xmlResponse(res, twiml(
+          say(cbPrompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+          `<Record action="${cbAction}" maxLength="90" playBeep="true" />` +
+          say(lang === 'es' ? 'Gracias. Hemos recibido su solicitud. Adiós.' : 'Thank you. Your callback request has been received. Goodbye.')
         ));
       }
       case '0': {
@@ -539,12 +750,12 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
         ));
       }
       case '9': {
-        // Toggle language
+        // Toggle language and re-present the general menu
         const newLang = lang === 'en' ? 'es' : 'en';
-        return xmlResponse(res, buildMainIVR(newLang, baseUrl, extEnabled));
+        return xmlResponse(res, buildGeneralMenu(newLang, baseUrl, extEnabled));
       }
       default:
-        return xmlResponse(res, buildMainIVR(lang, baseUrl, extEnabled));
+        return xmlResponse(res, buildGeneralMenu(lang, baseUrl, extEnabled));
     }
   } catch (err: any) {
     log.error('[VoiceRoutes] Main-menu-route error:', err.message);
@@ -581,12 +792,73 @@ voiceRouter.post('/staff-menu', twilioSignatureMiddleware, async (req: Request, 
         return xmlResponse(res, handleCallOff(baseParams));
       case '3':
         return xmlResponse(res, handleStaffSupport(baseParams));
+      case '4':
+        return xmlResponse(res, handleClockOutStep1(baseParams));
       default:
         return xmlResponse(res, handleStaff(baseParams));
     }
   } catch (err: any) {
     log.error('[VoiceRoutes] Staff-menu error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── 4b. CLOCK-OUT PIN COLLECTION (Phase 18B+) ────────────────────────────────
+
+voiceRouter.post('/clock-out-pin', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, Digits, SpeechResult } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId, workspaceId } = extractQS(req);
+
+    let employeeNumber = Digits?.trim() || '';
+    if (!employeeNumber && SpeechResult) {
+      employeeNumber = SpeechResult
+        .replace(/\b(dash|hyphen|minus)\b/gi, '-')
+        .replace(/[^a-zA-Z0-9\-]/g, '')
+        .toUpperCase();
+    }
+
+    if (!employeeNumber || employeeNumber.length < 3) {
+      const msg = lang === 'es'
+        ? twiml('<Say voice="Polly.Lupe-Neural" language="es-US">Número inválido. Adiós.</Say>')
+        : twiml('<Say>Invalid employee number. Goodbye.</Say>');
+      return xmlResponse(res, msg);
+    }
+
+    return xmlResponse(res, handleCollectClockOutPin({
+      callSid: CallSid, sessionId, workspaceId, lang, baseUrl, employeeNumber,
+    }));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] Clock-out-pin error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── 4c. CLOCK-OUT VERIFY (Phase 18B+) ────────────────────────────────────────
+
+voiceRouter.post('/clock-out-verify', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, Digits } = req.body;
+    const lang = getLang(req);
+    const { sessionId, workspaceId } = extractQS(req);
+    const employeeNumber = (req.query.employeeNumber as string) || '';
+
+    if (!Digits || Digits.length !== 6) {
+      const msg = lang === 'es'
+        ? twiml('<Say voice="Polly.Lupe-Neural" language="es-US">PIN inválido. Adiós.</Say>')
+        : twiml('<Say>Invalid PIN. Goodbye.</Say>');
+      return xmlResponse(res, msg);
+    }
+
+    const xml = await processClockOut({
+      callSid: CallSid, sessionId, workspaceId, lang, employeeNumber, pin: Digits,
+    });
+    xmlResponse(res, xml);
+  } catch (err: any) {
+    log.error('[VoiceRoutes] Clock-out-verify error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred processing your clock-out. Goodbye.</Say>'));
   }
 });
 
@@ -1353,6 +1625,67 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
         `<?xml version="1.0" encoding="UTF-8"?><Response><Message>You have been unsubscribed from ${PLATFORM.name} workforce alerts. Reply START to re-subscribe. Msg&amp;Data rates may apply.</Message></Response>`
       );
       return;
+    }
+
+    // YES / Y / ACCEPT — first check if it's a shift offer acceptance.
+    // Fall back to opt-in handling only if there's no live offer.
+    if (['YES', 'Y', 'ACCEPT', 'ACCEPTED'].includes(body)) {
+      try {
+        const { acceptShiftOffer } = await import('../services/trinityVoice/trinityShiftOfferService');
+        const reply = await acceptShiftOffer({ fromPhone: From });
+        if (reply) {
+          const safe = reply.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          res.type('text/xml').send(
+            `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${safe}</Message></Response>`
+          );
+          return;
+        }
+      } catch (err: any) {
+        log.warn('[VoiceRoutes] Shift offer accept error (non-fatal):', err.message);
+      }
+      // No live shift offer — treat YES/Y as opt-in (existing behavior). ACCEPT
+      // never falls through to opt-in.
+      if (body === 'ACCEPT' || body === 'ACCEPTED') {
+        res.type('text/xml').send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>Thanks! No active shift offer was found for your number. We'll text you when the next opportunity comes up. — Trinity</Message></Response>`
+        );
+        return;
+      }
+    }
+
+    // NO / N / DENY / DECLINE — decline a live shift offer if one exists.
+    if (['NO', 'N', 'DENY', 'DECLINE', 'DECLINED'].includes(body)) {
+      try {
+        const { declineShiftOffer } = await import('../services/trinityVoice/trinityShiftOfferService');
+        const reply = await declineShiftOffer({ fromPhone: From });
+        if (reply) {
+          const safe = reply.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          res.type('text/xml').send(
+            `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${safe}</Message></Response>`
+          );
+          return;
+        }
+      } catch (err: any) {
+        log.warn('[VoiceRoutes] Shift offer decline error (non-fatal):', err.message);
+      }
+    }
+
+    // Phase 18B+ — Trinity SMS keyword router. Recognized command keywords are
+    // tried before the AI auto-resolver so phone-only fallback flows (clock in,
+    // clock out, complaint, request, verify) can be reliably reached even when
+    // the platform is unreachable from the user's device.
+    try {
+      const { handleTrinitySmsKeyword } = await import('../services/trinityVoice/trinitySmsKeywordRouter');
+      const keyworded = await handleTrinitySmsKeyword({ fromPhone: From, rawBody: Body || '' });
+      if (keyworded) {
+        const safe = keyworded.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        res.type('text/xml').send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${safe}</Message></Response>`
+        );
+        return;
+      }
+    } catch (err: any) {
+      log.warn('[VoiceRoutes] SMS keyword router error (non-fatal):', err.message);
     }
 
     // START / UNSTOP / YES — re-opt-in
