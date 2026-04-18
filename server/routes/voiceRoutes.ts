@@ -297,7 +297,13 @@ async function validateTwilioSignature(req: Request): Promise<boolean> {
     return false;
   }
 
-  const url = `${getBaseUrl(req)}${req.originalUrl}`;
+  // Reconstruct the URL from the actual incoming request headers so it always
+  // matches what Twilio signed — regardless of BASE_URL env var or www. prefix.
+  const proto = ((req.headers['x-forwarded-proto'] as string | undefined) || req.protocol)
+    .split(',')[0]
+    .trim();
+  const host = (req.headers['x-forwarded-host'] as string | undefined) || req.get('host') || '';
+  const url = `${proto}://${host}${req.originalUrl}`;
   const params = req.body || {};
 
   try {
@@ -625,10 +631,11 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
 
       // Trigger Twilio transcription asynchronously for completed recordings
       if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+        const transcriptionBaseUrl = getBaseUrl(req);
         scheduleNonBlocking('voice.transcription-request', async () => {
           const twilio = (await import('twilio')).default;
           const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-          const baseUrl = process.env.APP_URL || '';
+          const baseUrl = transcriptionBaseUrl;
           // Use a typed create call; statusCallbackUrl is a valid Twilio param
           // transcriptions.create accepts optional params beyond the TS typings
           await ((twilioClient.recordings(RecordingSid) as any).transcriptions.create as (
