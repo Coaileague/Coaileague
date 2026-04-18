@@ -35,8 +35,27 @@ export function twiml(xml: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<Response>${xml}</Response>`;
 }
 
+// SSML prosody wrapping makes Trinity sound warm and human instead of robotic.
+// - rate="92%" slightly slower than default for natural cadence
+// - pitch="+2%" adds subtle warmth
+// - <break> tags insert natural pauses after punctuation
 export function say(text: string, voice: string = VOICE, language: string = 'en-US'): string {
-  return `<Say voice="${voice}" language="${language}">${text}</Say>`;
+  const ssmlText = text
+    .replace(/\. /g, '.<break time="400ms"/> ')
+    .replace(/\? /g, '?<break time="400ms"/> ')
+    .replace(/! /g, '!<break time="300ms"/> ')
+    .replace(/, /g, ',<break time="150ms"/> ');
+  return `<Say voice="${voice}" language="${language}"><prosody rate="92%" pitch="+2%">${ssmlText}</prosody></Say>`;
+}
+
+// Quicker cadence for short acknowledgements / confirmations
+export function sayFast(text: string, voice: string = VOICE, language: string = 'en-US'): string {
+  return `<Say voice="${voice}" language="${language}"><prosody rate="100%">${text}</prosody></Say>`;
+}
+
+// Warmer, slower cadence for emotional / support / emergency contexts
+export function sayWarm(text: string, voice: string = VOICE, language: string = 'en-US'): string {
+  return `<Say voice="${voice}" language="${language}"><prosody rate="88%" pitch="+4%">${text}</prosody></Say>`;
 }
 
 function gather(opts: {

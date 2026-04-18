@@ -491,5 +491,52 @@ export function registerCommsProactiveActions() {
     };
   }));
 
-  log.info('[Trinity Comms+Proactive] Registered 10 comms, reporting, system audit, and workspace actions + 7 auth.* actions');
+  // ── Phase 18C — Trinity proactive SMS to employees ────────────────────────
+  // Trinity uses these to initiate SMS conversations (shift reminders, open
+  // shift offers, welfare checks). All sends route through smsService which
+  // enforces the NDS consent gate before hitting Twilio.
+
+  helpaiOrchestrator.registerAction(mkAction('sms.send_to_employee', async (params) => {
+    const { employeeId, workspaceId, message, messageType } = params;
+    if (!employeeId || !message) return { error: 'employeeId and message required' };
+    const { sendSMSToEmployee } = await import('../smsService');
+    const result = await sendSMSToEmployee(
+      employeeId,
+      String(message).slice(0, 1600),
+      messageType || 'trinity_alert',
+      workspaceId,
+    );
+    return {
+      sent: !!result?.success,
+      employeeId,
+      error: result?.success ? undefined : result?.error,
+    };
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction('sms.shift_reminder', async (params) => {
+    const { employeeId, workspaceId, location, startTime, shiftDate, shiftTime } = params;
+    if (!employeeId) return { error: 'employeeId required' };
+    const { sendShiftReminder } = await import('../smsService');
+
+    // Accept either a single startTime ISO string or discrete date/time fields
+    let dateStr = shiftDate;
+    let timeStr = shiftTime;
+    if ((!dateStr || !timeStr) && startTime) {
+      const d = new Date(startTime);
+      if (!isNaN(d.getTime())) {
+        dateStr = dateStr || d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        timeStr = timeStr || d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+    }
+    if (!dateStr || !timeStr) return { error: 'startTime or shiftDate+shiftTime required' };
+
+    const result = await sendShiftReminder(employeeId, dateStr, timeStr, location, workspaceId);
+    return {
+      sent: !!result?.success,
+      employeeId,
+      error: result?.success ? undefined : result?.error,
+    };
+  }));
+
+  log.info('[Trinity Comms+Proactive] Registered 10 comms, reporting, system audit, and workspace actions + 7 auth.* actions + 2 SMS actions');
 }
