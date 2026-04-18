@@ -237,6 +237,27 @@ export async function initializeVoiceTables(): Promise<void> {
         process.env.PLATFORM_DEFAULT_WORKSPACE_ID ||
         PLATFORM_WORKSPACE_ID;
       if (platformWorkspaceId) {
+        // Ensure the platform workspace row exists before seeding the phone number,
+        // otherwise any FK constraint silently aborts the insert.
+        try {
+          const wsColumns = await client.query(`
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'workspaces' ORDER BY ordinal_position LIMIT 50
+          `);
+          const colNames = wsColumns.rows.map((r: any) => r.column_name);
+
+          if (colNames.includes('id') && colNames.includes('name')) {
+            await client.query(`
+              INSERT INTO workspaces (id, name, created_at, updated_at)
+              VALUES ($1, 'CoAIleague', NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING
+            `, [platformWorkspaceId]);
+            log.info(`[VoiceRoutes] Platform workspace ${platformWorkspaceId} ensured`);
+          }
+        } catch (wsErr: any) {
+          log.warn(`[VoiceRoutes] Platform workspace ensure failed (non-fatal): ${wsErr?.message}`);
+        }
+
         await client.query(`
           INSERT INTO workspace_phone_numbers (
             id,
@@ -260,9 +281,12 @@ export async function initializeVoiceTables(): Promise<void> {
             '{"voice": true}',
             true,
             true,
-            '{"sales": true, "support": true, "employment_verification": true, "staff": true, "emergency": true, "careers": true}'
+            '{"sales": true, "client_support": true, "employment_verification": true, "staff": true, "emergency": true, "careers": true}'
           )
-          ON CONFLICT (phone_number) DO NOTHING;
+          ON CONFLICT (phone_number) DO UPDATE SET
+            extension_config = EXCLUDED.extension_config,
+            workspace_id = EXCLUDED.workspace_id,
+            is_active = true;
         `, [platformWorkspaceId]);
         log.info(`[VoiceRoutes] Platform number +18664644151 seeded (or already present) under workspace: ${platformWorkspaceId}`);
       }
@@ -297,18 +321,33 @@ async function validateTwilioSignature(req: Request): Promise<boolean> {
     return false;
   }
 
-  const url = `${getBaseUrl(req)}${req.originalUrl}`;
   const params = req.body || {};
+  const baseUrl = (process.env.BASE_URL || 'https://www.coaileague.com').replace(/\/$/, '');
+  const url = `${baseUrl}${req.originalUrl}`;
 
   try {
     // Use Twilio's official validateRequest to match their exact HMAC algorithm
     // including URL normalization and parameter serialization edge-cases.
     const { default: twilio } = await import('twilio');
+
+    // Try primary URL
     const valid = twilio.validateRequest(authToken, twilioSig, url, params);
-    if (!valid) {
-      log.warn(`[VoiceRoutes] Twilio signature mismatch — validated against URL: ${url}`);
+    if (valid) return true;
+    log.warn(`[VoiceRoutes] Sig mismatch on: ${url}`);
+
+    // Try alternate (www ↔ non-www fallback) — Twilio may have computed sig
+    // against a different host than what reaches Express through the proxy chain.
+    const altUrl = url.includes('www.')
+      ? url.replace('https://www.', 'https://')
+      : url.replace('https://', 'https://www.');
+    const validAlt = twilio.validateRequest(authToken, twilioSig, altUrl, params);
+    if (validAlt) {
+      log.info(`[VoiceRoutes] Sig valid on alt URL: ${altUrl}`);
+      return true;
     }
-    return valid;
+
+    log.warn(`[VoiceRoutes] Sig invalid on both ${url} and ${altUrl}`);
+    return false;
   } catch (err: any) {
     log.warn('[VoiceRoutes] Twilio validateRequest error:', err.message);
     return false;
@@ -343,7 +382,8 @@ function getBaseUrl(req: Request): string {
   const proto = ((req.headers['x-forwarded-proto'] as string | undefined) || req.protocol)
     .split(',')[0]
     .trim();
-  return `${proto}://${req.get('host')}`;
+  const host = (req.headers['x-forwarded-host'] as string | undefined) || req.get('host') || 'www.coaileague.com';
+  return `${proto}://${host}`;
 }
 
 function xmlResponse(res: Response, xml: string): void {
@@ -1343,7 +1383,22 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
       return;
     }
 
-    // All other inbound SMS — acknowledge without action
+    // All other inbound SMS — run through Trinity SMS auto-resolver
+    try {
+      const { resolveInboundSms } = await import('../services/trinityVoice/smsAutoResolver');
+      const result = await resolveInboundSms({ fromPhone: From, message: Body || '' });
+      if (result.reply) {
+        const safeReply = result.reply.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        res.type('text/xml').send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${safeReply}</Message></Response>`
+        );
+        return;
+      }
+    } catch (resolverErr: any) {
+      log.warn('[VoiceRoutes] SMS auto-resolver failed (non-fatal):', resolverErr?.message);
+    }
+
+    // Fallback acknowledgement
     res.status(200).type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
   } catch (err: any) {
     log.error('[VoiceRoutes] SMS inbound error:', err.message);

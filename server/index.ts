@@ -344,7 +344,9 @@ app.use(cors({
 // ============================================================================
 app.use((req, res, next) => {
   const host = req.hostname;
-  if (host === 'coaileague.com') {
+  // Exempt ALL /api/ paths from redirect — webhooks must never be redirected.
+  // Twilio, Plaid, Stripe, Resend all call /api/* and cannot follow redirects.
+  if (host === 'coaileague.com' && !req.path.startsWith('/api/')) {
     const wwwUrl = `https://www.coaileague.com${req.originalUrl}`;
     return res.redirect(301, wwwUrl);
   }

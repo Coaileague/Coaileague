@@ -20,31 +20,36 @@ export function handleEmploymentVerification(params: {
   lang: 'en' | 'es';
   baseUrl: string;
 }): string {
-  const { sessionId, workspaceId, lang, baseUrl } = params;
+  try {
+    const { sessionId, workspaceId, lang, baseUrl } = params;
 
-  logCallAction({
-    callSessionId: sessionId,
-    workspaceId,
-    action: 'extension_selected',
-    payload: { extension: '3', label: 'employment_verification' },
-    outcome: 'success',
-  }).catch((err) => log.warn('[verifyExtension] Fire-and-forget failed:', err));
+    logCallAction({
+      callSessionId: sessionId,
+      workspaceId,
+      action: 'extension_selected',
+      payload: { extension: '3', label: 'employment_verification' },
+      outcome: 'success',
+    }).catch((err) => log.warn('[verifyExtension] Fire-and-forget failed:', err));
 
-  if (lang === 'es') {
+    if (lang === 'es') {
+      return twiml(
+        say('Ha seleccionado Verificación de Empleo. Por favor envíe su solicitud por escrito ' +
+          'con el nombre completo del empleado, fechas de empleo y el propósito de la verificación ' +
+          'a nuestra dirección de correo electrónico. Deje su nombre y número de contacto después del tono.', 'es') +
+        `<Record action="${baseUrl}/api/voice/recording-done?ext=verify&lang=es" maxLength="120" playBeep="true" />` +
+        say('Gracias por llamar.', 'es')
+      );
+    }
+
     return twiml(
-      say('Ha seleccionado Verificación de Empleo. Por favor envíe su solicitud por escrito ' +
-        'con el nombre completo del empleado, fechas de empleo y el propósito de la verificación ' +
-        'a nuestra dirección de correo electrónico. Deje su nombre y número de contacto después del tono.', 'es') +
-      `<Record action="${baseUrl}/api/voice/recording-done?ext=verify&lang=es" maxLength="120" playBeep="true" />` +
-      say('Gracias por llamar.', 'es')
+      say('You have reached Employment Verification. Please submit your request in writing ' +
+        'including the full name of the employee, dates of employment, and the purpose of the verification ' +
+        'to our email address. Leave your name and contact number after the tone.') +
+      `<Record action="${baseUrl}/api/voice/recording-done?ext=verify&lang=en" maxLength="120" playBeep="true" />` +
+      say('Thank you for calling.')
     );
+  } catch (err: any) {
+    log.error('[verifyExtension] Error:', err?.message);
+    return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
-
-  return twiml(
-    say('You have reached Employment Verification. Please submit your request in writing ' +
-      'including the full name of the employee, dates of employment, and the purpose of the verification ' +
-      'to our email address. Leave your name and contact number after the tone.') +
-    `<Record action="${baseUrl}/api/voice/recording-done?ext=verify&lang=en" maxLength="120" playBeep="true" />` +
-    say('Thank you for calling.')
-  );
 }
