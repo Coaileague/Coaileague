@@ -53,7 +53,9 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api/owner-employee", requireAuth, ensureWorkspaceAccess, ownerEmployeeRouter);
   app.use(officerScoreRouter);
   // Phase 11: Officer Intelligence Dashboard — AI-driven insights and recommendations
-  app.use(requireAuth, ensureWorkspaceAccess, officerIntelligenceRouter);
+  // Router defines full /api/officers/... paths internally, so scope auth to /api
+  // to avoid swallowing the root request (which served JSON 401 for coaileague.com).
+  app.use("/api", requireAuth, ensureWorkspaceAccess, officerIntelligenceRouter);
   app.use("/api/employees", requireAuth, ensureWorkspaceAccess, employeeRouter);
   app.use("/api/engagement", requireAuth, ensureWorkspaceAccess, engagementRouter);
   app.use("/api/gamification/enhanced", requireAuth, ensureWorkspaceAccess, gamificationEnhancedRoutes);
