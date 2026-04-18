@@ -25,6 +25,7 @@ import {
   timeEntries,
   invoices,
   invoiceLineItems,
+  paymentRecords,
   payrollRuns,
   clients,
   notifications,
@@ -40,7 +41,49 @@ import { createLogger } from '../../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 import { logActionAudit } from './actionAuditLogger';
 import { requiresFinancialApproval, actorMeetsApprovalRequirement } from './financialApprovalThresholds';
+import { trinityDeliberationLoop } from './trinityDeliberationLoop';
 const log = createLogger('actionRegistry');
+
+// ============================================================================
+// PHASE 19: DUAL-AI DELIBERATION GATE
+// Mandatory gate for financial mutations (invoice void, payroll void/adjust).
+// Uses the existing Trinity Prefrontal deliberation loop — any decision that
+// returns `escalated` or `humanNotificationRequired` blocks autonomous execution.
+// ============================================================================
+
+async function requireDeliberationConsensus(params: {
+  actionId: string;
+  workspaceId: string;
+  description: string;
+  userId?: string;
+}): Promise<{ allowed: true } | { allowed: false; reason: string; deliberationId: string }> {
+  try {
+    const decision = await trinityDeliberationLoop.deliberate({
+      type: 'workspace_health_degraded',
+      workspaceId: params.workspaceId,
+      description: `[${params.actionId}] ${params.description}`.slice(0, 500),
+      priority: 'high',
+      sourceSystem: 'action_registry_gate',
+      userId: params.userId,
+    });
+    if (decision.recommendedTier === 'escalated' || decision.humanNotificationRequired) {
+      return {
+        allowed: false,
+        reason: `Dual-AI gate blocked ${params.actionId}: tier=${decision.recommendedTier}, risk=${decision.riskLevel} — ${decision.reasoning.slice(0, 200)}`,
+        deliberationId: decision.deliberationId,
+      };
+    }
+    return { allowed: true };
+  } catch (err: any) {
+    // Fail closed on a deliberation error — financial mutations must not run
+    // when the reasoning loop itself is unavailable.
+    return {
+      allowed: false,
+      reason: `Dual-AI gate unavailable: ${err?.message ?? 'unknown error'}`,
+      deliberationId: 'unavailable',
+    };
+  }
+}
 
 // ============================================================================
 // HELPER: Create ActionResult
@@ -597,9 +640,232 @@ class AIBrainActionRegistry {
       },
     };
 
+    // ============================================================================
+    // PHASE 19: SCHEDULING MUTATION ACTIONS
+    // update, delete, cancel, publish, bulk_publish, reassign
+    // ============================================================================
+
+    const updateShift: ActionHandler = {
+      actionId: 'scheduling.update_shift',
+      name: 'Update Shift',
+      category: 'scheduling',
+      description: 'Update an existing shift — change time, assigned employee, or status. Requires shift ID.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { shiftId, startTime, endTime, employeeId, status, notes } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!shiftId) return createResult(request.actionId, false, 'shiftId required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const updateSet: Record<string, any> = { updatedAt: new Date() };
+        if (startTime) updateSet.startTime = new Date(startTime);
+        if (endTime) updateSet.endTime = new Date(endTime);
+        if (employeeId !== undefined) updateSet.employeeId = employeeId;
+        if (status) updateSet.status = status;
+        if (notes) updateSet.description = notes;
+        if (Object.keys(updateSet).length === 1) {
+          return createResult(request.actionId, false, 'No fields to update', null, start);
+        }
+
+        const [updated] = await db.update(shifts)
+          .set(updateSet)
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .returning();
+
+        if (!updated) return createResult(request.actionId, false, 'Shift not found or access denied', null, start);
+
+        broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
+        return createResult(request.actionId, true, 'Shift updated', updated, start);
+      },
+    };
+
+    const deleteShift: ActionHandler = {
+      actionId: 'scheduling.delete_shift',
+      name: 'Delete Shift',
+      category: 'scheduling',
+      description: 'Delete a shift. Cannot delete shifts with clock-in records — cancel instead.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { shiftId, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!shiftId) return createResult(request.actionId, false, 'shiftId required', null, start);
+        if (!reason) return createResult(request.actionId, false, 'reason required for audit log', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        // GAP-SCHED-1: block deletion if any time entries exist for this shift
+        const [existingEntry] = await db.select({ id: timeEntries.id })
+          .from(timeEntries)
+          .where(and(eq(timeEntries.shiftId, shiftId), eq(timeEntries.workspaceId, workspaceId)))
+          .limit(1);
+        if (existingEntry) {
+          return createResult(request.actionId, false,
+            'Cannot delete shift — clock-in records exist. Cancel the shift instead.', null, start);
+        }
+
+        const [existing] = await db.select().from(shifts)
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .limit(1);
+        if (!existing) return createResult(request.actionId, false, 'Shift not found', null, start);
+
+        await db.delete(shifts)
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)));
+
+        broadcastShiftUpdate(workspaceId, 'shift_deleted', undefined, shiftId);
+        return createResult(request.actionId, true, `Shift deleted (reason: ${reason})`, { shiftId, reason }, start);
+      },
+    };
+
+    const cancelShift: ActionHandler = {
+      actionId: 'scheduling.cancel_shift',
+      name: 'Cancel Shift',
+      category: 'scheduling',
+      description: 'Cancel a shift without deleting it. Status becomes cancelled; assigned employee is notified.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { shiftId, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!shiftId) return createResult(request.actionId, false, 'shiftId required', null, start);
+        if (!reason) return createResult(request.actionId, false, 'reason required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const [updated] = await db.update(shifts)
+          .set({ status: 'cancelled', denialReason: reason, updatedAt: new Date() })
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .returning();
+
+        if (!updated) return createResult(request.actionId, false, 'Shift not found', null, start);
+
+        broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
+        return createResult(request.actionId, true, 'Shift cancelled', updated, start);
+      },
+    };
+
+    const publishShift: ActionHandler = {
+      actionId: 'scheduling.publish_shift',
+      name: 'Publish Shift',
+      category: 'scheduling',
+      description: 'Publish a draft shift, making it visible to employees.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { shiftId } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!shiftId) return createResult(request.actionId, false, 'shiftId required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const [updated] = await db.update(shifts)
+          .set({ status: 'scheduled', updatedAt: new Date() })
+          .where(and(
+            eq(shifts.id, shiftId),
+            eq(shifts.workspaceId, workspaceId),
+            eq(shifts.status, 'draft'),
+          ))
+          .returning();
+
+        if (!updated) return createResult(request.actionId, false, 'Draft shift not found (already published?)', null, start);
+
+        broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
+        return createResult(request.actionId, true, 'Shift published', updated, start);
+      },
+    };
+
+    const bulkPublish: ActionHandler = {
+      actionId: 'scheduling.bulk_publish',
+      name: 'Bulk Publish Shifts',
+      category: 'scheduling',
+      description: 'Publish multiple draft shifts at once. Accepts shiftIds array, or publishes all drafts when omitted.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { shiftIds, weekOf } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const conditions = [
+          eq(shifts.workspaceId, workspaceId),
+          eq(shifts.status, 'draft'),
+        ];
+        if (Array.isArray(shiftIds) && shiftIds.length > 0) {
+          conditions.push(sql`${shifts.id} = ANY(${shiftIds})`);
+        }
+        if (weekOf) {
+          const weekStart = new Date(weekOf);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 7);
+          conditions.push(gte(shifts.startTime, weekStart));
+          conditions.push(lte(shifts.startTime, weekEnd));
+        }
+
+        const published = await db.update(shifts)
+          .set({ status: 'scheduled', updatedAt: new Date() })
+          .where(and(...conditions))
+          .returning({ id: shifts.id });
+
+        broadcastToWorkspace(workspaceId, {
+          type: 'schedule_published',
+          count: published.length,
+          shiftIds: published.map(s => s.id),
+        });
+        return createResult(request.actionId, true, `Published ${published.length} shift(s)`, { count: published.length, shiftIds: published.map(s => s.id) }, start);
+      },
+    };
+
+    const reassignShift: ActionHandler = {
+      actionId: 'scheduling.reassign_shift',
+      name: 'Reassign Shift',
+      category: 'scheduling',
+      description: 'Reassign a shift from one employee to another. Broadcasts update so both employees see the change.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { shiftId, newEmployeeId, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!shiftId) return createResult(request.actionId, false, 'shiftId required', null, start);
+        if (!newEmployeeId) return createResult(request.actionId, false, 'newEmployeeId required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const [existing] = await db.select({ id: shifts.id, employeeId: shifts.employeeId })
+          .from(shifts)
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .limit(1);
+        if (!existing) return createResult(request.actionId, false, 'Shift not found', null, start);
+
+        const [updated] = await db.update(shifts)
+          .set({ employeeId: newEmployeeId, updatedAt: new Date() })
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .returning();
+
+        if (!updated) return createResult(request.actionId, false, 'Reassignment failed', null, start);
+
+        broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
+        return createResult(
+          request.actionId,
+          true,
+          `Shift reassigned from ${existing.employeeId ?? 'open'} to ${newEmployeeId}${reason ? ` (reason: ${reason})` : ''}`,
+          { shift: updated, previousEmployeeId: existing.employeeId, newEmployeeId },
+          start,
+        );
+      },
+    };
+
     helpaiOrchestrator.registerAction(createShift); // explicit audit inside handler
     helpaiOrchestrator.registerAction(withAuditWrap(getShifts, 'shift'));
     helpaiOrchestrator.registerAction(withAuditWrap(createOpenShiftAndFill, 'shift'));
+    helpaiOrchestrator.registerAction(withAuditWrap(updateShift, 'shift'));
+    helpaiOrchestrator.registerAction(withAuditWrap(deleteShift, 'shift'));
+    helpaiOrchestrator.registerAction(withAuditWrap(cancelShift, 'shift'));
+    helpaiOrchestrator.registerAction(withAuditWrap(publishShift, 'shift'));
+    helpaiOrchestrator.registerAction(withAuditWrap(bulkPublish, 'shift'));
+    helpaiOrchestrator.registerAction(withAuditWrap(reassignShift, 'shift'));
   }
 
   // ============================================================================
@@ -1959,12 +2225,366 @@ class AIBrainActionRegistry {
       },
     };
 
+    // ============================================================================
+    // PHASE 19: INVOICE MUTATION ACTIONS
+    // update, void (dual-AI), cancel, duplicate, apply_payment
+    // ============================================================================
+
+    const updateInvoice: ActionHandler = {
+      actionId: 'billing.invoice_update',
+      name: 'Update Invoice',
+      category: 'billing',
+      description: 'Update a draft or open invoice — due date, notes, or memo. Blocked on paid/void/cancelled/refunded invoices.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId, dueDate, notes, memo } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!invoiceId) return createResult(request.actionId, false, 'invoiceId required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const [existing] = await db.select({ id: invoices.id, status: invoices.status })
+          .from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .limit(1);
+        if (!existing) return createResult(request.actionId, false, 'Invoice not found', null, start);
+
+        const frozenStatuses = ['paid', 'void', 'cancelled', 'refunded'];
+        if (frozenStatuses.includes(existing.status || '')) {
+          return createResult(request.actionId, false,
+            `Cannot update invoice with status "${existing.status}" — immutable after settlement`, null, start);
+        }
+
+        const updateSet: Record<string, any> = { updatedAt: new Date() };
+        if (dueDate) updateSet.dueDate = new Date(dueDate);
+        const combinedNotes = [notes, memo].filter(Boolean).join('\n').trim();
+        if (combinedNotes) updateSet.notes = combinedNotes;
+        if (Object.keys(updateSet).length === 1) {
+          return createResult(request.actionId, false, 'No fields to update', null, start);
+        }
+
+        const [updated] = await db.update(invoices)
+          .set(updateSet)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .returning();
+
+        broadcastToWorkspace(workspaceId, { type: 'invoices_updated', action: 'updated', invoiceId });
+        return createResult(request.actionId, true, 'Invoice updated', updated, start);
+      },
+    };
+
+    // ⚠️ DUAL-AI REQUIRED — financial mutation
+    const voidInvoice: ActionHandler = {
+      actionId: 'billing.invoice_void',
+      name: 'Void Invoice',
+      category: 'billing',
+      description: 'Void an invoice. Requires dual-AI deliberation and reason. Writes AR reversal ledger entry.',
+      requiredRoles: ['owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!invoiceId) return createResult(request.actionId, false, 'invoiceId required', null, start);
+        if (!reason || String(reason).trim().length < 5) {
+          return createResult(request.actionId, false, 'reason required (min 5 chars)', null, start);
+        }
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        // ⚠️ DUAL-AI GATE — non-negotiable for financial mutations
+        const gate = await requireDeliberationConsensus({
+          actionId: request.actionId,
+          workspaceId,
+          description: `Void invoice ${invoiceId}. Reason: ${reason}`,
+          userId: request.userId,
+        });
+        if (!gate.allowed) {
+          await logActionAudit({
+            actionId: request.actionId, workspaceId, userId: request.userId,
+            entityType: 'invoice', entityId: invoiceId, success: false,
+            errorMessage: gate.reason, payload: { invoiceId, reason, deliberationId: gate.deliberationId },
+            durationMs: Date.now() - start,
+          });
+          return createResult(request.actionId, false, gate.reason, { deliberationId: gate.deliberationId }, start);
+        }
+
+        const [existing] = await db.select()
+          .from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .limit(1);
+        if (!existing) return createResult(request.actionId, false, 'Invoice not found', null, start);
+        if (['void', 'paid', 'cancelled', 'refunded'].includes(existing.status || '')) {
+          return createResult(request.actionId, false, `Cannot void invoice with status "${existing.status}"`, null, start);
+        }
+
+        const [updated] = await db.update(invoices)
+          .set({
+            status: 'void',
+            voidReason: String(reason).trim(),
+            voidedAt: new Date(),
+            voidedBy: request.userId ?? null,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .returning();
+
+        // AR reversal ledger entry — mirrors invoiceRoutes.ts void path
+        const arOpenStatuses = ['sent', 'partial', 'overdue', 'draft'];
+        if (arOpenStatuses.includes(existing.status || '')) {
+          const totalNum = parseFloat(String(existing.total || updated?.total || 0));
+          const paidNum = parseFloat(String(existing.amountPaid || 0));
+          const remaining = Math.max(0, totalNum - paidNum);
+          if (remaining > 0) {
+            try {
+              const { writeLedgerEntry } = await import('../orgLedgerService');
+              await writeLedgerEntry({
+                workspaceId,
+                entryType: 'invoice_voided',
+                direction: 'credit',
+                amount: remaining,
+                relatedEntityType: 'invoice',
+                relatedEntityId: invoiceId,
+                invoiceId,
+                createdBy: request.userId ?? 'trinity',
+                description: `Invoice ${existing.invoiceNumber} voided by Trinity — AR reversal ${remaining.toFixed(2)}. Reason: ${reason}`,
+                metadata: { previousStatus: existing.status, reason },
+              });
+            } catch (err: any) {
+              log.warn('[billing.invoice_void] ledger write failed (non-fatal):', err?.message);
+            }
+          }
+        }
+
+        // Explicit audit log (financial mutations get full before/after)
+        await logActionAudit({
+          actionId: request.actionId,
+          workspaceId,
+          userId: request.userId,
+          userRole: request.userRole,
+          platformRole: request.platformRole,
+          entityType: 'invoice',
+          entityId: invoiceId,
+          success: true,
+          message: 'Invoice voided via dual-AI gate',
+          changesBefore: existing as any,
+          changesAfter: updated as any,
+          payload: { reason },
+          durationMs: Date.now() - start,
+        });
+
+        broadcastToWorkspace(workspaceId, {
+          type: 'invoice_voided',
+          invoiceId,
+          invoiceNumber: existing.invoiceNumber,
+          reason,
+        });
+        return createResult(request.actionId, true, 'Invoice voided', updated, start);
+      },
+    };
+
+    const cancelInvoice: ActionHandler = {
+      actionId: 'billing.invoice_cancel',
+      name: 'Cancel Invoice',
+      category: 'billing',
+      description: 'Cancel an unpaid invoice. For draft/sent invoices only.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!invoiceId) return createResult(request.actionId, false, 'invoiceId required', null, start);
+        if (!reason) return createResult(request.actionId, false, 'reason required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const [existing] = await db.select()
+          .from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .limit(1);
+        if (!existing) return createResult(request.actionId, false, 'Invoice not found', null, start);
+        if (['paid', 'void', 'cancelled', 'refunded'].includes(existing.status || '')) {
+          return createResult(request.actionId, false, `Cannot cancel invoice with status "${existing.status}"`, null, start);
+        }
+
+        const [updated] = await db.update(invoices)
+          .set({ status: 'cancelled', updatedAt: new Date() })
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .returning();
+
+        broadcastToWorkspace(workspaceId, { type: 'invoices_updated', action: 'cancelled', invoiceId });
+        return createResult(request.actionId, true, `Invoice cancelled (reason: ${reason})`, updated, start);
+      },
+    };
+
+    const duplicateInvoice: ActionHandler = {
+      actionId: 'billing.invoice_duplicate',
+      name: 'Duplicate Invoice',
+      category: 'billing',
+      description: 'Duplicate an existing invoice as a new draft. Copies line items.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId, newDueDate } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!invoiceId) return createResult(request.actionId, false, 'invoiceId required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const [source] = await db.select().from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .limit(1);
+        if (!source) return createResult(request.actionId, false, 'Source invoice not found', null, start);
+
+        const nowSuffix = Date.now().toString(36).toUpperCase();
+        const [cloned] = await db.insert(invoices).values({
+          workspaceId,
+          clientId: source.clientId,
+          invoiceNumber: `${source.invoiceNumber}-COPY-${nowSuffix}`,
+          issueDate: new Date(),
+          dueDate: newDueDate ? new Date(newDueDate) : source.dueDate,
+          subtotal: source.subtotal,
+          taxRate: source.taxRate,
+          taxAmount: source.taxAmount,
+          total: source.total,
+          status: 'draft',
+          notes: source.notes,
+          netTerms: source.netTerms,
+          billingCycle: source.billingCycle,
+          primaryServiceId: source.primaryServiceId,
+        }).returning();
+
+        // Copy line items
+        const sourceItems = await db.select().from(invoiceLineItems)
+          .where(eq(invoiceLineItems.invoiceId, invoiceId));
+        if (sourceItems.length > 0) {
+          await db.insert(invoiceLineItems).values(sourceItems.map(item => ({
+            invoiceId: cloned.id,
+            workspaceId,
+            lineNumber: item.lineNumber,
+            serviceDate: item.serviceDate,
+            productServiceName: item.productServiceName,
+            subClientId: item.subClientId,
+            siteId: item.siteId,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            rate: item.rate,
+            amount: item.amount,
+            descriptionData: item.descriptionData,
+            taxable: item.taxable,
+            taxAmount: item.taxAmount,
+          })));
+        }
+
+        broadcastToWorkspace(workspaceId, { type: 'invoices_updated', action: 'duplicated', invoiceId: cloned.id });
+        return createResult(request.actionId, true, 'Invoice duplicated', { sourceInvoiceId: invoiceId, newInvoice: cloned }, start);
+      },
+    };
+
+    const applyPayment: ActionHandler = {
+      actionId: 'billing.apply_payment',
+      name: 'Apply Payment',
+      category: 'billing',
+      description: 'Record a manual payment against an invoice. Updates balance and writes ledger entry.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId, amount, paymentMethod, paymentDate, reference } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!invoiceId) return createResult(request.actionId, false, 'invoiceId required', null, start);
+        if (!amount || Number(amount) <= 0) return createResult(request.actionId, false, 'amount > 0 required', null, start);
+        if (!paymentMethod) return createResult(request.actionId, false, 'paymentMethod required', null, start);
+        if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        const paidAt = paymentDate ? new Date(paymentDate) : new Date();
+        const amountNum = Number(amount);
+
+        const [preCheck] = await db.select()
+          .from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+          .limit(1);
+        if (!preCheck) return createResult(request.actionId, false, 'Invoice not found', null, start);
+        if (['paid', 'void', 'cancelled', 'refunded'].includes(preCheck.status || '')) {
+          return createResult(request.actionId, false, `Invoice is already ${preCheck.status}`, null, start);
+        }
+
+        const totalNum = parseFloat(String(preCheck.total || 0));
+        const previouslyPaid = parseFloat(String(preCheck.amountPaid || 0));
+        const newPaidTotal = previouslyPaid + amountNum;
+        const isFullyPaid = newPaidTotal >= totalNum - 0.001;
+
+        const { updated, paymentRow } = await db.transaction(async (tx) => {
+          const [updated] = await tx.update(invoices)
+            .set({
+              status: isFullyPaid ? 'paid' : 'partial',
+              amountPaid: newPaidTotal.toFixed(2),
+              paidAt: isFullyPaid ? paidAt : preCheck.paidAt,
+              paymentMethod,
+              paymentReference: reference ?? preCheck.paymentReference,
+              updatedAt: new Date(),
+            })
+            .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+            .returning();
+          const [paymentRow] = await tx.insert(paymentRecords).values({
+            workspaceId,
+            invoiceId,
+            amount: amountNum.toFixed(2),
+            paymentMethod,
+            transactionId: reference ?? null,
+            status: 'completed',
+            paidAt,
+          }).returning();
+          return { updated, paymentRow };
+        });
+
+        try {
+          const { writeLedgerEntry } = await import('../orgLedgerService');
+          await writeLedgerEntry({
+            workspaceId,
+            entryType: 'payment_received',
+            direction: 'credit',
+            amount: amountNum,
+            relatedEntityType: 'invoice',
+            relatedEntityId: invoiceId,
+            invoiceId,
+            createdBy: request.userId ?? 'trinity',
+            description: `Trinity applied ${paymentMethod} payment of ${amountNum.toFixed(2)} to ${preCheck.invoiceNumber}${reference ? ` (ref: ${reference})` : ''}`,
+            metadata: { paymentMethod, reference, paymentRecordId: paymentRow?.id },
+          });
+        } catch (err: any) {
+          log.warn('[billing.apply_payment] ledger write failed (non-fatal):', err?.message);
+        }
+
+        broadcastToWorkspace(workspaceId, {
+          type: 'invoices_updated',
+          action: 'payment_applied',
+          invoiceId,
+          amount: amountNum,
+          paymentMethod,
+        });
+        return createResult(
+          request.actionId,
+          true,
+          isFullyPaid ? 'Payment applied — invoice paid in full' : 'Partial payment applied',
+          { invoice: updated, payment: paymentRow },
+          start,
+        );
+      },
+    };
+
     helpaiOrchestrator.registerAction(withAuditWrap(fillOpenShift, 'shift'));
     helpaiOrchestrator.registerAction(approveTimesheet); // explicit audit inside handler
     helpaiOrchestrator.registerAction(createInvoice); // explicit audit inside handler
     helpaiOrchestrator.registerAction(addInvoiceLineItems); // explicit audit inside handler
     // billing.invoice_send canonical is in trinityInvoiceEmailActions.ts — not registering here
     // helpaiOrchestrator.registerAction(sendInvoice);
+    helpaiOrchestrator.registerAction(withAuditWrap(updateInvoice, 'invoice'));
+    helpaiOrchestrator.registerAction(voidInvoice); // explicit audit + dual-AI inside handler
+    helpaiOrchestrator.registerAction(withAuditWrap(cancelInvoice, 'invoice'));
+    helpaiOrchestrator.registerAction(withAuditWrap(duplicateInvoice, 'invoice'));
+    helpaiOrchestrator.registerAction(withAuditWrap(applyPayment, 'invoice'));
     helpaiOrchestrator.registerAction(clockOutOfficer); // explicit audit inside handler
     helpaiOrchestrator.registerAction(escalateCompliance); // explicit audit inside handler
   }

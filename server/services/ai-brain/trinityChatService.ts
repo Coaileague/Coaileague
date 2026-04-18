@@ -85,7 +85,7 @@ const log = createLogger('TrinityChatService');
 // Compiled once at module load — not on every chat interaction.
 // HIGH_STAKES_KEYWORDS triggers the deliberation loop auto-trigger for manager-level
 // chats that reference financial/legal/compliance-critical topics.
-const HIGH_STAKES_KEYWORDS = /\b(terminate|termination|lawsuit|legal|sue|compliance\s+violation|audit|penalty|fine|breach|payroll\s+error|overpayment|underpayment|discrimination|harassment|injury|accident|incident\s+report|license\s+suspended|contract\s+breach)\b/i;
+const HIGH_STAKES_KEYWORDS = /\b(terminate|termination|lawsuit|legal|sue|compliance\s+violation|audit|penalty|fine|breach|payroll\s+error|overpayment|underpayment|discrimination|harassment|injury|accident|incident\s+report|license\s+suspended|contract\s+breach|void\s+invoice|cancel\s+invoice|void\s+payroll|delete\s+shift|bulk\s+delete|mass\s+cancel|payroll\s+correction|hours\s+adjustment)\b/i;
 
 // ============================================================================
 // TYPES

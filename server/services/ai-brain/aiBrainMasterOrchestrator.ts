@@ -51,11 +51,13 @@ import {
   timeEntries,
   invoices,
   payrollRuns,
+  payrollEntries,
   notifications,
   platformUpdates,
   workspaces,
   systemAuditLogs,
 } from '@shared/schema';
+import { trinityDeliberationLoop } from './trinityDeliberationLoop';
 
 // ============================================================================
 // ORCHESTRATOR SERVICE CATEGORIES
@@ -1228,6 +1230,356 @@ class AIBrainMasterOrchestrator {
           };
         }
       }
+    });
+
+    // ============================================================================
+    // PHASE 19: PAYROLL MUTATION ACTIONS
+    // void_run (dual-AI), adjust_hours (dual-AI), correction, preview, reopen
+    // ============================================================================
+
+    // Dual-AI deliberation gate — mandatory for payroll mutations.
+    const payrollDeliberationGate = async (params: {
+      actionId: string;
+      workspaceId: string;
+      description: string;
+      userId?: string;
+    }): Promise<{ allowed: true } | { allowed: false; reason: string }> => {
+      try {
+        const decision = await trinityDeliberationLoop.deliberate({
+          type: 'payroll_anomaly',
+          workspaceId: params.workspaceId,
+          description: `[${params.actionId}] ${params.description}`.slice(0, 500),
+          priority: 'high',
+          sourceSystem: 'payroll_mutation_gate',
+          userId: params.userId,
+        });
+        if (decision.recommendedTier === 'escalated' || decision.humanNotificationRequired) {
+          return {
+            allowed: false,
+            reason: `Dual-AI gate blocked ${params.actionId}: tier=${decision.recommendedTier}, risk=${decision.riskLevel} — ${decision.reasoning.slice(0, 200)}`,
+          };
+        }
+        return { allowed: true };
+      } catch (err: any) {
+        return { allowed: false, reason: `Dual-AI gate unavailable: ${err?.message ?? 'unknown'}` };
+      }
+    };
+
+    // ⚠️ DUAL-AI REQUIRED
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.void_run',
+      name: 'Void Payroll Run',
+      category: 'payroll',
+      description: 'Void a payroll run. Requires dual-AI deliberation. Reverses entries + ledger, resets time entries.',
+      requiredRoles: ['org_owner', 'co_owner'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const startTime = Date.now();
+        const { runId, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!runId) return { success: false, actionId: request.actionId, message: 'runId required', executionTimeMs: Date.now() - startTime };
+        if (!reason || String(reason).trim().length < 5) {
+          return { success: false, actionId: request.actionId, message: 'reason required (min 5 chars)', executionTimeMs: Date.now() - startTime };
+        }
+        if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
+        if (!request.userId) return { success: false, actionId: request.actionId, message: 'userId required', executionTimeMs: Date.now() - startTime };
+
+        const gate = await payrollDeliberationGate({
+          actionId: request.actionId,
+          workspaceId,
+          description: `Void payroll run ${runId}. Reason: ${reason}`,
+          userId: request.userId,
+        });
+        if (!gate.allowed) {
+          return { success: false, actionId: request.actionId, message: gate.reason, executionTimeMs: Date.now() - startTime };
+        }
+
+        try {
+          const { voidPayrollRun } = await import('../payrollAutomation');
+          const result = await voidPayrollRun(runId, workspaceId, request.userId, String(reason).trim());
+          if (!result.success) {
+            return { success: false, actionId: request.actionId, message: result.error || 'Void failed', executionTimeMs: Date.now() - startTime };
+          }
+
+          await db.insert(systemAuditLogs).values({
+            action: 'payroll_voided',
+            entityType: 'payroll_run',
+            entityId: runId,
+            userId: request.userId,
+            workspaceId,
+            metadata: { runId, reason, source: 'trinity_action' },
+          });
+
+          broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'voided', runId });
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Payroll run voided',
+            data: { runId, reason },
+            executionTimeMs: Date.now() - startTime,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error?.message ?? String(error),
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+      },
+    });
+
+    // ⚠️ DUAL-AI REQUIRED
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.adjust_hours',
+      name: 'Adjust Payroll Hours',
+      category: 'payroll',
+      description: 'Adjust hours for an employee in an existing payroll run. Requires dual-AI approval.',
+      requiredRoles: ['org_owner', 'co_owner'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const startTime = Date.now();
+        const { runId, employeeId, regularHours, overtimeHours, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!runId) return { success: false, actionId: request.actionId, message: 'runId required', executionTimeMs: Date.now() - startTime };
+        if (!employeeId) return { success: false, actionId: request.actionId, message: 'employeeId required', executionTimeMs: Date.now() - startTime };
+        if (regularHours === undefined && overtimeHours === undefined) {
+          return { success: false, actionId: request.actionId, message: 'At least one of regularHours/overtimeHours required', executionTimeMs: Date.now() - startTime };
+        }
+        if (!reason || String(reason).trim().length < 5) {
+          return { success: false, actionId: request.actionId, message: 'reason required (min 5 chars)', executionTimeMs: Date.now() - startTime };
+        }
+        if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
+
+        const gate = await payrollDeliberationGate({
+          actionId: request.actionId,
+          workspaceId,
+          description: `Adjust payroll hours for employee ${employeeId} in run ${runId}. Reason: ${reason}`,
+          userId: request.userId,
+        });
+        if (!gate.allowed) {
+          return { success: false, actionId: request.actionId, message: gate.reason, executionTimeMs: Date.now() - startTime };
+        }
+
+        const [before] = await db.select().from(payrollEntries)
+          .where(and(
+            eq(payrollEntries.payrollRunId, runId),
+            eq(payrollEntries.employeeId, employeeId),
+            eq(payrollEntries.workspaceId, workspaceId),
+          ))
+          .limit(1);
+        if (!before) {
+          return { success: false, actionId: request.actionId, message: 'Payroll entry not found for employee in run', executionTimeMs: Date.now() - startTime };
+        }
+
+        const set: Record<string, any> = { updatedAt: new Date() };
+        if (regularHours !== undefined) set.regularHours = String(regularHours);
+        if (overtimeHours !== undefined) set.overtimeHours = String(overtimeHours);
+        set.notes = sql`COALESCE(${payrollEntries.notes}, '') || ${`\n[ADJUSTED ${new Date().toISOString()}] by ${request.userId ?? 'trinity'}: ${reason}`}`;
+
+        const [after] = await db.update(payrollEntries)
+          .set(set)
+          .where(and(
+            eq(payrollEntries.payrollRunId, runId),
+            eq(payrollEntries.employeeId, employeeId),
+            eq(payrollEntries.workspaceId, workspaceId),
+          ))
+          .returning();
+
+        await db.insert(systemAuditLogs).values({
+          action: 'payroll_hours_adjusted',
+          entityType: 'payroll_entry',
+          entityId: after?.id ?? null,
+          userId: request.userId!,
+          workspaceId,
+          metadata: {
+            runId,
+            employeeId,
+            reason,
+            before: { regularHours: before.regularHours, overtimeHours: before.overtimeHours },
+            after: { regularHours: after?.regularHours, overtimeHours: after?.overtimeHours },
+          },
+        });
+
+        broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'hours_adjusted', runId, employeeId });
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: 'Payroll hours adjusted',
+          data: { runId, employeeId, before, after },
+          executionTimeMs: Date.now() - startTime,
+        };
+      },
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.correction',
+      name: 'Payroll Correction',
+      category: 'payroll',
+      description: 'Create a payroll correction for a specific employee. Issues off-cycle payment or deduction.',
+      requiredRoles: ['org_owner', 'co_owner'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const startTime = Date.now();
+        const { employeeId, amount, reason, correctionType } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!employeeId) return { success: false, actionId: request.actionId, message: 'employeeId required', executionTimeMs: Date.now() - startTime };
+        if (amount === undefined || amount === null) return { success: false, actionId: request.actionId, message: 'amount required', executionTimeMs: Date.now() - startTime };
+        if (!reason) return { success: false, actionId: request.actionId, message: 'reason required', executionTimeMs: Date.now() - startTime };
+        if (!correctionType) return { success: false, actionId: request.actionId, message: 'correctionType required', executionTimeMs: Date.now() - startTime };
+        if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
+
+        const amountNum = Number(amount);
+        const now = new Date();
+        const periodEnd = new Date(now);
+        const [run] = await db.insert(payrollRuns).values({
+          workspaceId,
+          periodStart: now,
+          periodEnd,
+          status: 'draft',
+          totalGrossPay: amountNum.toFixed(2),
+          totalNetPay: amountNum.toFixed(2),
+          runType: 'correction',
+          isOffCycle: true,
+          offCycleRequestedBy: request.userId ?? null,
+        }).returning();
+
+        const [entry] = await db.insert(payrollEntries).values({
+          payrollRunId: run.id,
+          employeeId,
+          workspaceId,
+          regularHours: '0',
+          overtimeHours: '0',
+          hourlyRate: '0',
+          grossPay: amountNum.toFixed(2),
+          netPay: amountNum.toFixed(2),
+          isOffCycle: true,
+          offCycleReason: `${correctionType}: ${reason}`,
+          notes: `[CORRECTION ${correctionType}] ${reason}`,
+        }).returning();
+
+        await db.insert(systemAuditLogs).values({
+          action: 'payroll_correction_created',
+          entityType: 'payroll_run',
+          entityId: run.id,
+          userId: request.userId!,
+          workspaceId,
+          metadata: { employeeId, amount: amountNum, reason, correctionType },
+        });
+
+        broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'correction_created', runId: run.id, employeeId });
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: `Payroll correction created (${correctionType})`,
+          data: { run, entry },
+          executionTimeMs: Date.now() - startTime,
+        };
+      },
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.preview',
+      name: 'Preview Payroll Run',
+      category: 'payroll',
+      description: 'Preview payroll calculations before approving a run. Returns totals and employee breakdown.',
+      requiredRoles: ['manager', 'org_owner', 'co_owner'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const startTime = Date.now();
+        const { runId } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!runId) return { success: false, actionId: request.actionId, message: 'runId required', executionTimeMs: Date.now() - startTime };
+        if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
+
+        const [run] = await db.select().from(payrollRuns)
+          .where(and(eq(payrollRuns.id, runId), eq(payrollRuns.workspaceId, workspaceId)))
+          .limit(1);
+        if (!run) return { success: false, actionId: request.actionId, message: 'Payroll run not found', executionTimeMs: Date.now() - startTime };
+
+        const entries = await db.select().from(payrollEntries)
+          .where(and(eq(payrollEntries.payrollRunId, runId), eq(payrollEntries.workspaceId, workspaceId)));
+
+        const summary = {
+          runId,
+          status: run.status,
+          periodStart: run.periodStart,
+          periodEnd: run.periodEnd,
+          totalGrossPay: run.totalGrossPay,
+          totalTaxes: run.totalTaxes,
+          totalNetPay: run.totalNetPay,
+          employeeCount: entries.length,
+          entries: entries.map(e => ({
+            employeeId: e.employeeId,
+            regularHours: e.regularHours,
+            overtimeHours: e.overtimeHours,
+            grossPay: e.grossPay,
+            netPay: e.netPay,
+          })),
+        };
+
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: 'Payroll preview ready',
+          data: summary,
+          executionTimeMs: Date.now() - startTime,
+        };
+      },
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.reopen',
+      name: 'Reopen Payroll Run',
+      category: 'payroll',
+      description: 'Reopen a submitted-but-not-processed payroll run for edits. Blocked for processed/paid runs.',
+      requiredRoles: ['org_owner', 'co_owner'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const startTime = Date.now();
+        const { runId, reason } = request.payload || {};
+        const workspaceId = request.workspaceId;
+
+        if (!runId) return { success: false, actionId: request.actionId, message: 'runId required', executionTimeMs: Date.now() - startTime };
+        if (!reason) return { success: false, actionId: request.actionId, message: 'reason required', executionTimeMs: Date.now() - startTime };
+        if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
+
+        const [run] = await db.select().from(payrollRuns)
+          .where(and(eq(payrollRuns.id, runId), eq(payrollRuns.workspaceId, workspaceId)))
+          .limit(1);
+        if (!run) return { success: false, actionId: request.actionId, message: 'Payroll run not found', executionTimeMs: Date.now() - startTime };
+
+        const reopenable = ['pending', 'approved'];
+        if (!reopenable.includes(run.status || '')) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Cannot reopen run with status "${run.status}" — only pending/approved runs can be reopened`,
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+
+        await db.update(payrollRuns)
+          .set({ status: 'draft', updatedAt: new Date() })
+          .where(and(eq(payrollRuns.id, runId), eq(payrollRuns.workspaceId, workspaceId)));
+
+        await db.insert(systemAuditLogs).values({
+          action: 'payroll_reopened',
+          entityType: 'payroll_run',
+          entityId: runId,
+          userId: request.userId!,
+          workspaceId,
+          metadata: { runId, reason, previousStatus: run.status, previouslyApprovedBy: run.approvedBy },
+        });
+
+        broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'reopened', runId });
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: 'Payroll run reopened',
+          data: { runId, previousStatus: run.status, reason },
+          executionTimeMs: Date.now() - startTime,
+        };
+      },
     });
 
     log.info('[AI Brain Master Orchestrator] Registered payroll actions');
