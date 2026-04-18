@@ -20,30 +20,35 @@ export function handleSales(params: {
   lang: 'en' | 'es';
   baseUrl: string;
 }): string {
-  const { sessionId, workspaceId, lang, baseUrl } = params;
+  try {
+    const { sessionId, workspaceId, lang, baseUrl } = params;
 
-  logCallAction({
-    callSessionId: sessionId,
-    workspaceId,
-    action: 'extension_selected',
-    payload: { extension: '1', label: 'sales' },
-    outcome: 'success',
-  }).catch((err) => log.warn('[salesExtension] Fire-and-forget failed:', err));
+    logCallAction({
+      callSessionId: sessionId,
+      workspaceId,
+      action: 'extension_selected',
+      payload: { extension: '1', label: 'sales' },
+      outcome: 'success',
+    }).catch((err) => log.warn('[salesExtension] Fire-and-forget failed:', err));
 
-  if (lang === 'es') {
+    if (lang === 'es') {
+      return twiml(
+        say('Gracias por su interés. Un representante de ventas se comunicará con usted pronto. ' +
+          'Por favor deje su nombre y número de teléfono después del tono, y nos pondremos en contacto en las próximas 24 horas.', 'es') +
+        `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=es" maxLength="120" playBeep="true" />` +
+        say('Gracias. Que tenga un buen día.', 'es')
+      );
+    }
+
     return twiml(
-      say('Gracias por su interés. Un representante de ventas se comunicará con usted pronto. ' +
-        'Por favor deje su nombre y número de teléfono después del tono, y nos pondremos en contacto en las próximas 24 horas.', 'es') +
-      `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=es" maxLength="120" playBeep="true" />` +
-      say('Gracias. Que tenga un buen día.', 'es')
+      say('Thank you for your interest in our security services. ' +
+        'A sales representative will be in touch with you shortly. ' +
+        'Please leave your name and phone number after the tone and we will contact you within 24 hours.') +
+      `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=en" maxLength="120" playBeep="true" />` +
+      say('Thank you. Have a great day.')
     );
+  } catch (err: any) {
+    log.error('[salesExtension] Error:', err?.message);
+    return twiml(s('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
-
-  return twiml(
-    say('Thank you for your interest in our security services. ' +
-      'A sales representative will be in touch with you shortly. ' +
-      'Please leave your name and phone number after the tone and we will contact you within 24 hours.') +
-    `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=en" maxLength="120" playBeep="true" />` +
-    say('Thank you. Have a great day.')
-  );
 }
