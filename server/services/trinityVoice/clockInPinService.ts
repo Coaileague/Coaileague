@@ -8,9 +8,9 @@
  *   - Phase 56 staffExtension.ts (voice clock-in IVR flow)
  */
 
-import bcrypt from 'bcryptjs';
 import { pool } from '../../db';
 import { createLogger } from '../../lib/logger';
+import { normalizePin, verifyPin as verifyPinHash } from '../../lib/pinService';
 const log = createLogger('clockInPinService');
 
 
@@ -36,7 +36,7 @@ export async function verifyClockInPin(
   pin: string,
 ): Promise<PinVerifyResult> {
   try {
-    const clean = pin.replace(/\D/g, '');
+    const clean = normalizePin(pin);
 
     const result = await pool.query(
       `SELECT id, workspace_id, first_name, last_name, employee_number, clockin_pin_hash
@@ -50,7 +50,7 @@ export async function verifyClockInPin(
     if (!emp) return { valid: false, reason: 'no_employee' };
     if (!emp.clockin_pin_hash) return { valid: false, reason: 'no_pin' };
 
-    const match = await bcrypt.compare(clean, emp.clockin_pin_hash);
+    const match = await verifyPinHash(clean, emp.clockin_pin_hash);
     if (!match) return { valid: false, reason: 'wrong_pin' };
 
     return {

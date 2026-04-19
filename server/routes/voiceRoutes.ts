@@ -186,6 +186,23 @@ export async function initializeVoiceTables(): Promise<void> {
         CREATE INDEX IF NOT EXISTS voice_verification_log_employee_idx ON voice_verification_log(employee_id);
         CREATE INDEX IF NOT EXISTS voice_verification_log_session_idx ON voice_verification_log(call_session_id);
 
+        -- Phase 21 — voice 2FA code storage. DB-backed so codes survive across
+        -- instances in a load-balanced deploy. TTL is enforced by expires_at.
+        CREATE TABLE IF NOT EXISTS voice_verification_codes (
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          employee_id VARCHAR NOT NULL,
+          workspace_id VARCHAR NOT NULL,
+          code_hash VARCHAR NOT NULL,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          expires_at TIMESTAMP NOT NULL,
+          consumed_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS voice_verification_codes_employee_idx
+          ON voice_verification_codes(employee_id, expires_at);
+        CREATE INDEX IF NOT EXISTS voice_verification_codes_workspace_idx
+          ON voice_verification_codes(workspace_id);
+
         CREATE TABLE IF NOT EXISTS voice_support_cases (
           id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
           workspace_id VARCHAR NOT NULL,
@@ -494,7 +511,8 @@ voiceRouter.post('/language-select', twilioSignatureMiddleware, async (req: Requ
 
 voiceRouter.post('/caller-identify', twilioSignatureMiddleware, async (req: Request, res: Response) => {
   try {
-    const { CallSid, Digits, To, From } = req.body;
+    const { CallSid, To, From, SpeechResult } = req.body;
+    let Digits: string = (req.body.Digits as string) || '';
     const lang = getLang(req);
     const baseUrl = getBaseUrl(req);
 
@@ -507,11 +525,60 @@ voiceRouter.post('/caller-identify', twilioSignatureMiddleware, async (req: Requ
     const voiceId = lang === 'es' ? VOICE_ES : VOICE;
     const langCode = lang === 'es' ? 'es-US' : 'en-US';
 
+    // Phase 21 — speech-first routing. If the caller spoke instead of pressing
+    // a digit, classify the intent and map it onto the equivalent menu choice.
+    const spoken = (SpeechResult || '').toLowerCase().trim();
+    if (!Digits && spoken) {
+      const { detectVoiceIntent } = await import('../services/trinityVoice/voiceIntentDetector');
+      const intent = detectVoiceIntent(spoken, lang);
+      log.info(`[VoiceRoutes] caller-identify speech intent: "${spoken}" → ${intent}`);
+      if (intent === 'emergency') {
+        // Route straight to emergency — do NOT detour through the general menu.
+        return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=5`)));
+      }
+      if (intent === 'employee') Digits = '1';
+      else if (intent === 'client') Digits = '2';
+      else if (intent === 'sales') {
+        return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=1`)));
+      }
+      else if (intent === 'careers') {
+        return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=6`)));
+      }
+      else if (intent === 'verify') {
+        return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=3`)));
+      }
+      else if (intent === 'support') {
+        // "I need help" — drop them into free conversational mode with Trinity.
+        return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=0`)));
+      }
+      else Digits = '3';
+    }
+
     if (Digits === '1') {
       // Phase 18C anti-fraud — the personalized lane is gated on phone-on-profile.
       const { verifyCaller, verificationFailureMessageVoice } = await import('../services/trinityVoice/trinityCallerVerification');
       const v = await verifyCaller(From || '');
       if (!v.verified) {
+        // Phase 21 — if the employee record exists but is not linked to a user
+        // account, offer an email 2FA verification code instead of dropping
+        // straight to the general menu.
+        if (v.reason === 'no_user_link' && v.employeeId) {
+          const { getMaskedEmailForEmployee } = await import('../services/trinityVoice/voiceVerificationCodeService');
+          const maskedEmail = await getMaskedEmailForEmployee(v.employeeId);
+          if (maskedEmail) {
+            const codeAction = `${baseUrl}/api/voice/send-verification?employeeId=${encodeURIComponent(v.employeeId)}&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+            const offer = lang === 'es'
+              ? `Encontré su perfil pero su teléfono aún no está vinculado a su cuenta. Puedo enviar un código de verificación a ${maskedEmail}. Marque 1 para recibir el código, o marque 2 para continuar al menú general.`
+              : `I found your profile but your phone isn't linked to your account yet. I can send a verification code to ${maskedEmail}. Press 1 to receive the code, or press 2 to continue to the general menu.`;
+            return xmlResponse(res, twiml(
+              `<Gather input="dtmf" numDigits="1" timeout="10" action="${codeAction}" method="POST">` +
+              say(offer, voiceId, langCode) +
+              `</Gather>` +
+              redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+            ));
+          }
+        }
+
         log.info(`[VoiceRoutes] Caller verification failed for ${From} (${v.reason}) — routing to general menu`);
         return xmlResponse(res, twiml(
           say(verificationFailureMessageVoice(lang), voiceId, langCode) +
@@ -639,20 +706,62 @@ voiceRouter.post('/client-identify', twilioSignatureMiddleware, async (req: Requ
     const langCode = lang === 'es' ? 'es-US' : 'en-US';
 
     const spoken = (SpeechResult || '').trim().slice(0, 200);
-    if (session && spoken) {
+    let resolvedProviderName: string | null = null;
+    let resolvedProviderWorkspaceId: string | null = null;
+
+    if (spoken) {
+      // Phase 21 — actually look up the security provider's workspace by
+      // company name or license number so downstream support routing knows
+      // which tenant context to use.
+      try {
+        const { pool } = await import('../db');
+        const cleanedSlug = spoken.replace(/[^a-zA-Z0-9]/g, '');
+        const r = await pool.query(
+          `SELECT id, name, company_name, state_license_number
+             FROM workspaces
+            WHERE LOWER(coalesce(name, '')) LIKE LOWER($1)
+               OR LOWER(coalesce(company_name, '')) LIKE LOWER($1)
+               OR LOWER(coalesce(state_license_number, '')) = LOWER($2)
+            LIMIT 1`,
+          [`%${spoken.slice(0, 50)}%`, cleanedSlug],
+        );
+        if (r.rows.length) {
+          resolvedProviderWorkspaceId = r.rows[0].id;
+          resolvedProviderName = r.rows[0].company_name || r.rows[0].name;
+        }
+      } catch (lookupErr: any) {
+        log.warn('[VoiceRoutes] client-identify provider lookup failed:', lookupErr?.message);
+      }
+
+      if (session) {
+        await updateCallSession(CallSid, {
+          metadata: {
+            client_provider_name: resolvedProviderName || spoken,
+            client_provider_workspace_id: resolvedProviderWorkspaceId,
+            client_provider_resolved: !!resolvedProviderWorkspaceId,
+          },
+        }).catch(() => {});
+      }
+
       logCallAction({
         callSessionId: sessionId,
         workspaceId: workspace.workspaceId,
         action: 'client_identify_provider',
-        payload: { provider: spoken, lang },
+        payload: {
+          provider: spoken,
+          resolved: !!resolvedProviderWorkspaceId,
+          providerWorkspaceId: resolvedProviderWorkspaceId,
+          lang,
+        },
         outcome: 'success',
       }).catch((err: any) => log.warn('[VoiceRoutes] client-identify log failed:', err?.message));
     }
 
-    const ack = spoken
+    const providerNameForAck = resolvedProviderName || (spoken ? spoken : null);
+    const ack = providerNameForAck
       ? (lang === 'es'
-          ? `Gracias. Conectándole con soporte para ${spoken}.`
-          : `Thank you. Connecting you with support for ${spoken}.`)
+          ? `Gracias. Conectándole con soporte de ${providerNameForAck}.`
+          : `Thank you. Connecting you with support from ${providerNameForAck}.`)
       : (lang === 'es'
           ? 'Gracias. Conectándole con soporte al cliente.'
           : 'Thank you. Connecting you with client support.');
@@ -690,11 +799,34 @@ voiceRouter.post('/general-menu', twilioSignatureMiddleware, async (req: Request
 
 voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Request, res: Response) => {
   try {
-    const { CallSid, To } = req.body;
+    const { CallSid, To, SpeechResult } = req.body;
     // Allow upstream identify routes to bridge into the menu via a `_d` query param.
-    const Digits: string = req.body.Digits || (req.query._d as string) || '';
+    let Digits: string = req.body.Digits || (req.query._d as string) || '';
     const lang = getLang(req);
     const baseUrl = getBaseUrl(req);
+
+    // Phase 21 — if the caller spoke instead of pressing a digit, translate
+    // the intent onto the equivalent menu option so the flow continues
+    // naturally. Language-switch ("english" / "español") is handled here too.
+    const spokenMenu = (SpeechResult || '').toLowerCase().trim();
+    if (!Digits && spokenMenu) {
+      if (/\b(english|ingl[eé]s)\b/.test(spokenMenu) || /\b(espa[nñ]ol|spanish)\b/.test(spokenMenu)) {
+        Digits = '9';
+      } else {
+        const { detectVoiceIntent } = await import('../services/trinityVoice/voiceIntentDetector');
+        const intent = detectVoiceIntent(spokenMenu, lang);
+        const intentToDigit: Record<string, string> = {
+          sales: '1',
+          client: '2',
+          verify: '3',
+          employee: '4',
+          emergency: '5',
+          careers: '6',
+          support: '0',
+        };
+        Digits = intentToDigit[intent] || '';
+      }
+    }
 
     const workspace = await resolveWorkspaceFromPhoneNumber(To);
     if (!workspace) {
@@ -774,13 +906,16 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
         ));
       }
       case '0': {
-        // Agent case management — PIN-gated
-        const agentClearAction = `${baseUrl}/api/voice/agent-clear?workspaceId=${encodeURIComponent(workspaceId)}&sessionId=${encodeURIComponent(sessionId)}`;
+        // Phase 21 — digit 0 enters free conversational mode with Trinity.
+        const talkAction = `${baseUrl}/api/voice/trinity-talk?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&turn=1`;
+        const invite = lang === 'es'
+          ? 'Claro. Dígame, ¿en qué puedo ayudarle hoy? Puede hablar libremente, le estoy escuchando.'
+          : 'Of course. Go ahead — what can I help you with today? You can speak freely, I\'m listening.';
         return xmlResponse(res, twiml(
-          `<Gather input="dtmf" action="${agentClearAction}&step=pin" method="POST" numDigits="4" timeout="10">` +
-          say('Agent case management. Please enter your 4-digit PIN.') +
+          `<Gather input="speech" action="${talkAction}" method="POST" timeout="15" speechTimeout="auto">` +
+          say(invite, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
           `</Gather>` +
-          say('No PIN entered. Goodbye.')
+          redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
         ));
       }
       case '9': {
@@ -1865,6 +2000,476 @@ voiceRouter.post('/sms-status', twilioSignatureMiddleware, async (req: Request, 
   } catch (err: any) {
     log.error('[VoiceRoutes] SMS status webhook error:', err.message);
     res.status(200).send();
+  }
+});
+
+// ─── 12. PHASE 21 — VOICE 2FA: SEND VERIFICATION CODE ────────────────────────
+// POST /api/voice/send-verification — emails a 6-digit code to the employee
+// when their phone number is on file but not yet linked to a user account.
+
+voiceRouter.post('/send-verification', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { Digits } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const employeeId = (req.query.employeeId as string) || '';
+    const sessionId = (req.query.sessionId as string) || '';
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    if (Digits !== '1' || !employeeId) {
+      return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)));
+    }
+
+    const { sendVerificationCode } = await import('../services/trinityVoice/voiceVerificationCodeService');
+    const result = await sendVerificationCode({ employeeId, workspaceId, lang });
+
+    if (!result.sent) {
+      const rateLimited = result.reason === 'rate_limited';
+      const failMsg = rateLimited
+        ? (lang === 'es'
+            ? 'Ha solicitado varios códigos recientemente. Por favor espere unos minutos antes de intentar de nuevo. Pasando al menú general.'
+            : 'You\'ve requested several codes recently. Please wait a few minutes before trying again. Taking you to the general menu.')
+        : (lang === 'es'
+            ? 'Lo siento, no pude enviar el código en este momento. Pasando al menú general.'
+            : 'I\'m sorry, I could not send the code at this time. Taking you to the general menu.');
+      return xmlResponse(res, twiml(
+        say(failMsg, voiceId, langCode) +
+        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+      ));
+    }
+
+    const verifyAction = `${baseUrl}/api/voice/verify-code?employeeId=${encodeURIComponent(employeeId)}&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&attempt=1`;
+    const promptMsg = lang === 'es'
+      ? 'Su código ha sido enviado. Por favor ingrese los seis dígitos ahora.'
+      : 'Your code has been sent. Please enter the six digits now.';
+
+    return xmlResponse(res, twiml(
+      `<Gather input="dtmf" numDigits="6" timeout="30" action="${verifyAction}" method="POST">` +
+      say(promptMsg, voiceId, langCode) +
+      `</Gather>` +
+      say(lang === 'es' ? 'No se recibió ningún código. Adiós.' : 'No code received. Goodbye.', voiceId, langCode)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] send-verification error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// POST /api/voice/verify-code — validates the entered code and either marks
+// the session as verified-by-2fa or offers a single retry.
+
+voiceRouter.post('/verify-code', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, Digits } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const employeeId = (req.query.employeeId as string) || '';
+    const sessionId = (req.query.sessionId as string) || '';
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const attempt = Math.max(1, parseInt((req.query.attempt as string) || '1', 10));
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    const submitted = (Digits || '').trim();
+    if (!employeeId || submitted.length !== 6) {
+      const msg = lang === 'es' ? 'Código inválido. Adiós.' : 'Invalid code. Goodbye.';
+      return xmlResponse(res, twiml(say(msg, voiceId, langCode)));
+    }
+
+    const { verifyCode } = await import('../services/trinityVoice/voiceVerificationCodeService');
+    const ok = await verifyCode(employeeId, submitted);
+
+    if (ok) {
+      await updateCallSession(CallSid, {
+        metadata: { verified_by: '2fa_email', employee_id: employeeId },
+      }).catch(() => {});
+      logCallAction({
+        callSessionId: sessionId,
+        workspaceId,
+        action: '2fa_verified',
+        payload: { employeeId, channel: 'email' },
+        outcome: 'success',
+      }).catch((e: any) => log.warn('[VoiceRoutes] 2fa audit log failed:', e?.message));
+
+      const okMsg = lang === 'es'
+        ? '¡Identidad verificada! Pasando a su menú personalizado ahora.'
+        : 'Identity verified! Taking you to your personalized menu now.';
+      return xmlResponse(res, twiml(
+        say(okMsg, voiceId, langCode) +
+        redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=4`)
+      ));
+    }
+
+    if (attempt >= 2) {
+      const failMsg = lang === 'es'
+        ? 'Código incorrecto. Pasando al menú general.'
+        : 'That code didn\'t match. Taking you to the general menu.';
+      return xmlResponse(res, twiml(
+        say(failMsg, voiceId, langCode) +
+        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+      ));
+    }
+
+    const retryAction = `${baseUrl}/api/voice/verify-code?employeeId=${encodeURIComponent(employeeId)}&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&attempt=${attempt + 1}`;
+    const retryMsg = lang === 'es'
+      ? 'Ese código no coincidió. Por favor intente de nuevo.'
+      : 'That code didn\'t match. Please try again.';
+    return xmlResponse(res, twiml(
+      `<Gather input="dtmf" numDigits="6" timeout="30" action="${retryAction}" method="POST">` +
+      say(retryMsg, voiceId, langCode) +
+      `</Gather>` +
+      redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] verify-code error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── 13. PHASE 21 — TRINITY-TALK: FREE CONVERSATIONAL MODE ───────────────────
+// POST /api/voice/trinity-talk — guests can simply speak their question to
+// Trinity. Routes through the full Trinity AI resolver, then loops up to 5
+// turns before escalating to a support case.
+
+async function runTrinityTalkTurn(params: {
+  issue: string;
+  sessionId: string;
+  workspaceId: string;
+  lang: 'en' | 'es';
+  turn: number;
+  baseUrl: string;
+}): Promise<string> {
+  const { issue, sessionId, workspaceId, lang, turn, baseUrl } = params;
+  const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+  const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+  logCallAction({
+    callSessionId: sessionId,
+    workspaceId,
+    action: 'trinity_talk_turn',
+    payload: { turn, issue: issue.slice(0, 300) },
+  }).catch((e: any) => log.warn('[VoiceRoutes] trinity-talk audit failed:', e?.message));
+
+  const aiResult = await resolveWithTrinityBrain({ issue, workspaceId, language: lang });
+
+  const issueEncoded = encodeURIComponent(issue.slice(0, 500));
+  const nameAction = `${baseUrl}/api/voice/support-gather-name?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&issue=${issueEncoded}&aiAttempted=true&aiModel=${aiResult.modelUsed || 'none'}`;
+  const escalationPhrase = lang === 'es' ? getEscalationPhraseEs() : getEscalationPhraseEn();
+  const namePhrase = lang === 'es' ? getNameGatherPhraseEs() : getNameGatherPhraseEn();
+
+  // If the AI cannot resolve it, or we've reached the 5-turn ceiling, stop
+  // looping and escalate directly to a support case.
+  if (!aiResult.canResolve || turn >= 5) {
+    return twiml(
+      say(aiResult.answer, voiceId, langCode) +
+      `<Gather input="speech" action="${nameAction}" method="POST" timeout="8" speechTimeout="auto">` +
+      say(escalationPhrase + ' ' + namePhrase, voiceId, langCode) +
+      `</Gather>` +
+      redirect(`${nameAction}&skipMessage=true`)
+    );
+  }
+
+  const confirmAction = `${baseUrl}/api/voice/trinity-talk-confirm?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&turn=${turn + 1}&issue=${issueEncoded}&aiModel=${aiResult.modelUsed || 'none'}`;
+  const followUpPrompt = lang === 'es'
+    ? `${aiResult.answer} ¿Le ayudó eso? Marque 1 si sí, o simplemente haga otra pregunta y le escucharé.`
+    : `${aiResult.answer} Was that helpful? Press 1 for yes, or just ask another question and I'll keep listening.`;
+
+  return twiml(
+    `<Gather input="speech dtmf" numDigits="1" action="${confirmAction}" method="POST" timeout="10" speechTimeout="auto">` +
+    say(followUpPrompt, voiceId, langCode) +
+    `</Gather>` +
+    redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+  );
+}
+
+voiceRouter.post('/trinity-talk', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { SpeechResult, To } = req.body;
+    const { sessionId, workspaceId: wsFromQs } = extractQS(req);
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const turn = Math.max(1, parseInt((req.query.turn as string) || '1', 10));
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    let workspaceId = wsFromQs;
+    if (!workspaceId && To) {
+      const ws = await resolveWorkspaceFromPhoneNumber(To);
+      if (ws) workspaceId = ws.workspaceId;
+    }
+    if (!workspaceId) {
+      return xmlResponse(res, twiml('<Say>Configuration error. Goodbye.</Say>'));
+    }
+
+    const issue = (SpeechResult || '').trim();
+
+    if (!issue || issue.length < 3) {
+      const reprompt = lang === 'es'
+        ? 'No le escuché. Por favor dígame en qué puedo ayudarle.'
+        : 'I didn\'t catch that. Please tell me what I can help you with.';
+      const action = `${baseUrl}/api/voice/trinity-talk?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&turn=${turn}`;
+      return xmlResponse(res, twiml(
+        `<Gather input="speech" action="${action}" method="POST" timeout="12" speechTimeout="auto">` +
+        say(reprompt, voiceId, langCode) +
+        `</Gather>` +
+        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+      ));
+    }
+
+    const xml = await runTrinityTalkTurn({ issue, sessionId, workspaceId, lang, turn, baseUrl });
+    xmlResponse(res, xml);
+  } catch (err: any) {
+    log.error('[VoiceRoutes] trinity-talk error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// POST /api/voice/trinity-talk-confirm — handles "was that helpful?" reply.
+// Press 1 → satisfied, goodbye. Speech → treat as next question and run the
+// next AI turn inline (preserves the caller's speech across the round-trip).
+
+voiceRouter.post('/trinity-talk-confirm', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { Digits, SpeechResult } = req.body;
+    const { sessionId, workspaceId } = extractQS(req);
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const turn = Math.max(2, parseInt((req.query.turn as string) || '2', 10));
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    if (!workspaceId) {
+      return xmlResponse(res, twiml('<Say>Configuration error. Goodbye.</Say>'));
+    }
+
+    if (Digits === '1') {
+      const goodbye = lang === 'es'
+        ? '¡Excelente! Me alegra haberle podido ayudar. Que tenga un día maravilloso. Adiós.'
+        : 'Wonderful! I\'m glad I could help. Have a great day. Goodbye.';
+      return xmlResponse(res, twiml(say(goodbye, voiceId, langCode)));
+    }
+
+    // Treat speech as the next question — run the AI turn inline so the
+    // caller's words aren't lost on a Twilio round-trip.
+    const next = (SpeechResult || '').trim();
+    if (next && next.length >= 3) {
+      const xml = await runTrinityTalkTurn({
+        issue: next,
+        sessionId,
+        workspaceId,
+        lang,
+        turn,
+        baseUrl,
+      });
+      return xmlResponse(res, xml);
+    }
+
+    // No clear input — give them one more chance, then bow out.
+    const talkAction = `${baseUrl}/api/voice/trinity-talk?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&turn=${turn}`;
+    return xmlResponse(res, twiml(
+      `<Gather input="speech dtmf" numDigits="1" action="${talkAction}" method="POST" timeout="10" speechTimeout="auto">` +
+      say(lang === 'es' ? '¿Hay algo más en lo que pueda ayudarle?' : 'Anything else I can help with?', voiceId, langCode) +
+      `</Gather>` +
+      say(lang === 'es' ? 'Gracias por llamar. Adiós.' : 'Thank you for calling. Goodbye.', voiceId, langCode)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] trinity-talk-confirm error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── 14. PHASE 21 — SALES CHOICE ─────────────────────────────────────────────
+// POST /api/voice/sales-choice — three options after the sales extension:
+//   1 = leave voicemail (existing behavior)
+//   2 = wait for live sales agent (warm transfer)
+//   3 = hear a 90-second Co-League overview, then voicemail
+
+voiceRouter.post('/sales-choice', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { Digits, To } = req.body;
+    const { sessionId, workspaceId } = extractQS(req);
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    logCallAction({
+      callSessionId: sessionId,
+      workspaceId,
+      action: 'sales_choice',
+      payload: { digit: Digits, lang },
+    }).catch((e: any) => log.warn('[VoiceRoutes] sales-choice audit failed:', e?.message));
+
+    if (Digits === '2') {
+      // Live transfer to sales team. We prefer the platform-level
+      // PLATFORM_SALES_PHONE env var; as a fallback we accept a per-workspace
+      // phone column if the deployment has added one.
+      let salesPhone = process.env.PLATFORM_SALES_PHONE || '';
+      if (!salesPhone) {
+        try {
+          const { pool } = await import('../db');
+          const r = await pool.query(
+            `SELECT phone FROM workspaces WHERE id = $1 LIMIT 1`,
+            [workspaceId],
+          );
+          salesPhone = r.rows[0]?.phone || '';
+        } catch (e: any) {
+          log.warn('[VoiceRoutes] Workspace sales phone lookup failed:', e?.message);
+        }
+      }
+
+      if (salesPhone && salesPhone.length >= 10) {
+        const { handleTransfer } = await import('../services/trinityVoice/extensions/transferExtension');
+        return xmlResponse(res, handleTransfer({
+          callSid: req.body.CallSid,
+          sessionId,
+          workspaceId,
+          lang,
+          transferTo: salesPhone,
+          reason: 'sales_live_request',
+        }));
+      }
+
+      // No sales phone configured — fall through to voicemail with apology.
+      const apology = lang === 'es'
+        ? 'No hay agentes de ventas disponibles en este momento. Por favor deje un mensaje y le devolveremos la llamada.'
+        : 'No sales agents are available at this time. Please leave a message and we\'ll call you back.';
+      return xmlResponse(res, twiml(
+        say(apology, voiceId, langCode) +
+        `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=${lang}" maxLength="120" playBeep="true" />` +
+        say(lang === 'es' ? 'Gracias.' : 'Thank you.', voiceId, langCode)
+      ));
+    }
+
+    if (Digits === '3') {
+      // 90-second Co-League overview, then offer voicemail.
+      const overviewEn =
+        'Co-League is an A. I.-powered workforce management platform built specifically for security companies. ' +
+        'Trinity — that\'s me — helps you schedule officers, process payroll, track compliance, manage clients, and fill open shifts automatically. ' +
+        'We handle Texas P. S. B. licensing compliance, T. C. O. L. E. tracking, and can integrate with QuickBooks. ' +
+        'Our platform starts at a fraction of the cost of legacy systems, with no long-term contracts. ' +
+        'If you\'d like to schedule a demo or speak with our team, please leave your name and number after the tone.';
+      const overviewEs =
+        'Co-League es una plataforma de gestión de personal impulsada por inteligencia artificial diseñada específicamente para empresas de seguridad. ' +
+        'Trinity, esa soy yo, le ayuda a programar oficiales, procesar nómina, monitorear cumplimiento, gestionar clientes y cubrir turnos abiertos automáticamente. ' +
+        'Manejamos cumplimiento de licencias P. S. B. de Texas, seguimiento T. C. O. L. E. y podemos integrarnos con QuickBooks. ' +
+        'Nuestra plataforma comienza a una fracción del costo de los sistemas tradicionales, sin contratos a largo plazo. ' +
+        'Si desea agendar una demostración o hablar con nuestro equipo, por favor deje su nombre y número después del tono.';
+
+      return xmlResponse(res, twiml(
+        say(lang === 'es' ? overviewEs : overviewEn, voiceId, langCode) +
+        `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=${lang}" maxLength="120" playBeep="true" />` +
+        say(lang === 'es' ? 'Gracias por su interés en Co-League.' : 'Thank you for your interest in Co-League.', voiceId, langCode)
+      ));
+    }
+
+    // Default (Digits === '1' or anything else) → voicemail.
+    const vmPrompt = lang === 'es'
+      ? 'Por favor deje su nombre, el mejor número para comunicarnos con usted, y una breve descripción de sus necesidades después del tono. Un miembro de nuestro equipo se comunicará con usted dentro de un día hábil.'
+      : 'Please leave your name, the best number to reach you, and a brief description of your needs after the tone. A member of our team will reach out within one business day.';
+    return xmlResponse(res, twiml(
+      say(vmPrompt, voiceId, langCode) +
+      `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=${lang}" maxLength="120" playBeep="true" />` +
+      say(lang === 'es' ? 'Gracias. Que tenga un excelente día.' : 'Thank you. Have a great day.', voiceId, langCode)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] sales-choice error:', err.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── 15. PHASE 21 — SCHEDULE CALLBACK PERSISTENCE ────────────────────────────
+// POST /api/voice/schedule-callback — caller leaves a recorded callback request.
+// Persists the request as a support ticket of type 'callback_request' so an
+// agent can pick it up from the dashboard.
+
+voiceRouter.post('/schedule-callback', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { RecordingUrl, CallSid, From } = req.body;
+    const { sessionId, workspaceId } = extractQS(req);
+    const lang = getLang(req);
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    try {
+      const { pool } = await import('../db');
+      const ticketNumber = `CBK-${Date.now().toString(36).toUpperCase()}`;
+      const description =
+        `Callback request received via Trinity Voice.\n` +
+        `Caller: ${From || 'unknown'}\n` +
+        `Call SID: ${CallSid || 'unknown'}\n` +
+        `Voice session: ${sessionId || 'unknown'}\n` +
+        `Recording: ${RecordingUrl || 'pending'}`;
+
+      await pool.query(
+        `INSERT INTO support_tickets
+            (id, workspace_id, ticket_number, type, ticket_type, priority,
+             requested_by, subject, description, status,
+             session_data, created_at, updated_at)
+         VALUES
+            (gen_random_uuid(), $1, $2, 'callback_request', 'callback_request', 'normal',
+             $3, $4, $5, 'open',
+             $6::jsonb, NOW(), NOW())`,
+        [
+          workspaceId,
+          ticketNumber,
+          From || 'unknown',
+          lang === 'es'
+            ? 'Solicitud de llamada de voz'
+            : 'Voice Callback Request',
+          description,
+          JSON.stringify({
+            source: 'voice',
+            callSid: CallSid,
+            voiceSessionId: sessionId,
+            recordingUrl: RecordingUrl || null,
+            callerNumber: From || null,
+            language: lang,
+          }),
+        ],
+      );
+
+      logCallAction({
+        callSessionId: sessionId,
+        workspaceId,
+        action: 'callback_request_created',
+        payload: { ticketNumber, recordingUrl: RecordingUrl || null },
+        outcome: 'success',
+      }).catch((e: any) => log.warn('[VoiceRoutes] callback audit log failed:', e?.message));
+
+      log.info(`[VoiceRoutes] Callback request ${ticketNumber} created for workspace ${workspaceId}`);
+
+      // Best-effort agent notification — awaited per CLAUDE.md §B
+      // (non-fatal try/catch; failure is warn-logged, not thrown).
+      try {
+        const { notifyHumanAgents } = await import('../services/trinityVoice/supportCaseService');
+        await notifyHumanAgents({
+          supportCase: {
+            id: ticketNumber,
+            workspace_id: workspaceId,
+            case_number: ticketNumber,
+            issue_summary: description.slice(0, 500),
+            status: 'open',
+            language: lang,
+          } as any,
+          workspaceId,
+        });
+      } catch (notifyErr: any) {
+        log.warn('[VoiceRoutes] Callback agent notify failed (non-fatal):', notifyErr?.message);
+      }
+    } catch (dbErr: any) {
+      log.warn('[VoiceRoutes] Callback persistence failed (non-fatal):', dbErr?.message);
+    }
+
+    const goodbye = lang === 'es'
+      ? 'Su solicitud de llamada ha sido programada. Un miembro del equipo se comunicará con usted pronto. Gracias por llamar a Co-League.'
+      : 'Your callback has been scheduled. A team member will reach out to you shortly. Thank you for calling Co-League!';
+    return xmlResponse(res, twiml(say(goodbye, voiceId, langCode)));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] schedule-callback error:', err.message);
+    xmlResponse(res, twiml('<Say>Thank you for your callback request. Goodbye.</Say>'));
   }
 });
 

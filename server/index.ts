@@ -13,6 +13,7 @@ import { ensureRequiredTables } from "./services/dbMigrationService";
 import { runLegacyBootstraps } from "./services/legacyBootstrapRegistry";
 import { ensureCriticalConstraints } from "./services/criticalConstraintsBootstrap";
 import { ensureWorkspaceIndexes } from "./services/workspaceIndexBootstrap";
+import { ensureIdentityIntegrity } from "./services/identityIntegrityBootstrap";
 import { isProduction as isProductionEnv } from "./lib/isProduction";
 import { ensurePerformanceIndexes, registerNdsQueueMonitor } from "./services/performanceIndexService";
 import { validateAndLogConfiguration } from "./utils/configValidator";
@@ -741,6 +742,17 @@ async function initializeCriticalServices() {
     await ensureWorkspaceIndexes();
   } catch (error) {
     log.error('Workspace index bootstrap failed', { error: error instanceof Error ? error.message : String(error) });
+  }
+
+  // Universal identity invariants — workspace-scoped uniqueness on the
+  // three identity columns (workspaces.org_id, employees.employee_number,
+  // clients.client_number), an immutability trigger that blocks direct
+  // UPDATEs to them unless the session opens an authorized override, and
+  // a backfill sweep that populates any row still missing its ID.
+  try {
+    await ensureIdentityIntegrity();
+  } catch (error) {
+    log.error('Identity integrity bootstrap failed', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Option B storage quota tables — create if not exists (idempotent)

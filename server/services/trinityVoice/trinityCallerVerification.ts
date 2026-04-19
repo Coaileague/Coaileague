@@ -33,6 +33,13 @@ export interface CallerVerification {
   firstName?: string;
   lastName?: string;
   employeeNumber?: string;
+  /**
+   * The tenant's universal organization ID (workspaces.org_id, format
+   * `ORG-<code>-<seq>`). Populated for verified callers so Trinity, HelpAI,
+   * and the agent dashboard can identify the owning tenant by its canonical
+   * public code, not just by workspace UUID.
+   */
+  orgId?: string;
 }
 
 /**
@@ -49,10 +56,12 @@ export async function verifyCaller(fromPhone: string): Promise<CallerVerificatio
     if (digits.length < 7) return { verified: false, reason: 'no_phone_match' };
 
     const r = await pool.query(
-      `SELECT id, workspace_id, user_id, first_name, last_name, employee_number, is_active
-         FROM employees
-        WHERE REGEXP_REPLACE(coalesce(phone, ''), '[^0-9]', '', 'g') LIKE $1
-        ORDER BY (is_active = true) DESC, updated_at DESC NULLS LAST
+      `SELECT e.id, e.workspace_id, e.user_id, e.first_name, e.last_name,
+              e.employee_number, e.is_active, w.org_id
+         FROM employees e
+         LEFT JOIN workspaces w ON w.id = e.workspace_id
+        WHERE REGEXP_REPLACE(coalesce(e.phone, ''), '[^0-9]', '', 'g') LIKE $1
+        ORDER BY (e.is_active = true) DESC, e.updated_at DESC NULLS LAST
         LIMIT 1`,
       [`%${digits.slice(-10)}`]
     );
@@ -62,8 +71,11 @@ export async function verifyCaller(fromPhone: string): Promise<CallerVerificatio
       const ovr = await isPhoneOverridden(fromPhone);
       if (ovr.overridden && ovr.employeeId) {
         const e = await pool.query(
-          `SELECT id, workspace_id, user_id, first_name, last_name, employee_number, is_active
-             FROM employees WHERE id = $1 LIMIT 1`,
+          `SELECT e.id, e.workspace_id, e.user_id, e.first_name, e.last_name,
+                  e.employee_number, e.is_active, w.org_id
+             FROM employees e
+             LEFT JOIN workspaces w ON w.id = e.workspace_id
+            WHERE e.id = $1 LIMIT 1`,
           [ovr.employeeId]
         );
         if (e.rows.length && e.rows[0].is_active) {
@@ -76,6 +88,7 @@ export async function verifyCaller(fromPhone: string): Promise<CallerVerificatio
             firstName: row.first_name,
             lastName: row.last_name,
             employeeNumber: row.employee_number,
+            orgId: row.org_id,
           };
         }
       }
@@ -93,6 +106,7 @@ export async function verifyCaller(fromPhone: string): Promise<CallerVerificatio
         firstName: row.first_name,
         lastName: row.last_name,
         employeeNumber: row.employee_number,
+        orgId: row.org_id,
       };
     }
     return {
@@ -103,6 +117,7 @@ export async function verifyCaller(fromPhone: string): Promise<CallerVerificatio
       firstName: row.first_name,
       lastName: row.last_name,
       employeeNumber: row.employee_number,
+      orgId: row.org_id,
     };
   } catch (err: any) {
     log.warn('[CallerVerify] lookup failed:', err?.message);

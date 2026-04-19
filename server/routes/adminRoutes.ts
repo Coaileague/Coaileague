@@ -168,6 +168,145 @@ router.get('/support/stats', async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// ─── Universal Identity — Phase 22 ───────────────────────────────────────────
+// Platform-staff-only endpoints that let support agents resolve any caller
+// by their universal identity code (org_id, employee_number, client_number)
+// and — for support-manager+ — rewrite one when two entities have collided.
+
+router.get('/identity/resolve', async (req: AuthenticatedRequest, res) => {
+  try {
+    const raw = typeof req.query.code === 'string' ? req.query.code : '';
+    const code = raw.trim();
+    if (!code) {
+      return res.status(400).json({ error: 'MISSING_CODE', message: 'Query param ?code is required' });
+    }
+
+    const { supportLookup } = await import('../services/identityService');
+    const matches = await supportLookup(code);
+
+    if (!matches.length) {
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        query: code,
+        matches: [],
+      });
+    }
+
+    // Enrich each match with workspace context + PIN-set status so the agent
+    // dashboard can show the tenant + whether PIN protection is configured.
+    const enriched = [];
+    for (const m of matches) {
+      let workspace: Record<string, unknown> | null = null;
+      if (m.orgId) {
+        try {
+          const { rows } = await typedPool<Record<string, unknown>>(
+            `SELECT id, name, company_name, org_id, subscription_tier, subscription_status,
+                    (owner_pin_hash IS NOT NULL) AS owner_pin_set
+               FROM workspaces WHERE id = $1 LIMIT 1`,
+            [m.orgId],
+          );
+          workspace = rows[0] || null;
+        } catch (e: any) {
+          log.warn(`[identity/resolve] workspace enrich failed for ${m.orgId}: ${e?.message}`);
+        }
+      }
+
+      let pinSet: boolean | null = null;
+      try {
+        if (m.entityType === 'org' && m.orgId) {
+          const { rows } = await typedPool<{ owner_pin_hash: string | null }>(
+            `SELECT owner_pin_hash FROM workspaces WHERE id = $1`,
+            [m.orgId],
+          );
+          pinSet = !!rows[0]?.owner_pin_hash;
+        } else if (m.entityType === 'employee') {
+          const { rows } = await typedPool<{ clockin_pin_hash: string | null }>(
+            `SELECT clockin_pin_hash FROM employees WHERE id = $1`,
+            [m.entityId],
+          );
+          pinSet = !!rows[0]?.clockin_pin_hash;
+        } else if (m.entityType === 'client') {
+          const { rows } = await typedPool<{ client_pin_hash: string | null }>(
+            `SELECT client_pin_hash FROM clients WHERE id = $1`,
+            [m.entityId],
+          );
+          pinSet = !!rows[0]?.client_pin_hash;
+        }
+      } catch (e: any) {
+        log.warn(`[identity/resolve] pin-status lookup failed for ${m.entityType} ${m.entityId}: ${e?.message}`);
+      }
+
+      enriched.push({ ...m, workspace, pinSet });
+    }
+
+    log.info(
+      `[AUDIT] Platform staff ${(req as any).user?.id} (${(req as any).platformRole}) resolved identity ${code} (${enriched.length} matches)`,
+    );
+
+    res.json({ query: code, matches: enriched });
+  } catch (error) {
+    log.error('Error resolving identity code:', error);
+    res.status(500).json({ message: 'Failed to resolve identity' });
+  }
+});
+
+router.post('/identity/rewrite', async (req: AuthenticatedRequest, res) => {
+  try {
+    const { entity, entityId, newCode, reason } = req.body || {};
+
+    if (!entity || !['workspace', 'employee', 'client'].includes(entity)) {
+      return res.status(400).json({
+        error: 'INVALID_ENTITY',
+        message: 'entity must be one of: workspace | employee | client',
+      });
+    }
+    if (!entityId || typeof entityId !== 'string') {
+      return res.status(400).json({ error: 'MISSING_ENTITY_ID', message: 'entityId is required' });
+    }
+    if (!newCode || typeof newCode !== 'string') {
+      return res.status(400).json({ error: 'MISSING_NEW_CODE', message: 'newCode is required' });
+    }
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 8) {
+      return res.status(400).json({
+        error: 'MISSING_REASON',
+        message: 'reason must be at least 8 characters so the override is replayable',
+      });
+    }
+
+    const actorUserId = (req as any).user?.id;
+    const actorPlatformRole = (req as any).platformRole;
+
+    if (!actorUserId) {
+      return res.status(401).json({ error: 'UNAUTHENTICATED' });
+    }
+
+    const { rewriteUniversalId } = await import('../services/identityOverrideService');
+    const result = await rewriteUniversalId({
+      entity,
+      entityId,
+      newCode: newCode.trim(),
+      reason: reason.trim(),
+      actorUserId,
+      actorPlatformRole: actorPlatformRole || 'none',
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    const msg = error?.message || 'Failed to rewrite identity';
+    log.error('Error rewriting identity code:', msg);
+    if (msg.startsWith('IDENTITY_OVERRIDE_FORBIDDEN')) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: msg });
+    }
+    if (msg.startsWith('IDENTITY_OVERRIDE_INVALID')) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: msg });
+    }
+    if (msg.startsWith('IDENTITY_OVERRIDE_NOT_FOUND')) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: msg });
+    }
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: msg });
+  }
+});
+
 function mapEventTypeToActivityType(eventType: string) {
   if (eventType.includes('LOGIN') || eventType.includes('SESSION')) return 'login';
   if (eventType.includes('SHIFT') || eventType.includes('SCHEDULE')) return 'shift_created';

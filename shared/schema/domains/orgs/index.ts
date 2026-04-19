@@ -886,6 +886,12 @@ export const workspaces = pgTable("workspaces", {
   stateLicenseVerified: boolean("state_license_verified").default(false), // Trinity AI verification status
   stateLicenseVerifiedAt: timestamp("state_license_verified_at"), // When Trinity verified the license
 
+  // Phase 23 — tenant owner identification PIN. bcrypt hash of a 4–8 digit
+  // code the owner sets during onboarding. Required secondary factor when
+  // the owner (or a support agent acting on the owner's behalf) identifies
+  // the workspace to Trinity or the agent dashboard by org_id.
+  ownerPinHash: varchar("owner_pin_hash"),
+
   // Subscription & billing
   subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'starter', 'professional', 'enterprise'
   subscriptionStatus: varchar("subscription_status").default("active"), // 'active', 'suspended', 'cancelled'

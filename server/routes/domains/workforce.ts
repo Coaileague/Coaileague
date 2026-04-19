@@ -38,6 +38,7 @@ import onboardingTaskRouter from "../onboardingTaskRoutes";
 import performanceRouter from "../performanceRoutes";
 import recognitionRouter from "../recognitionRoutes";
 import { clockinPinRouter } from "../clockinPinRoutes";
+import { identityPinRouter } from "../identityPinRoutes";
 import recruitmentRouter from "../recruitmentRoutes";
 import wellnessRouter from "../wellnessRoutes";
 
@@ -97,6 +98,12 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api/recognition", requireAuth, ensureWorkspaceAccess, recognitionRouter);
   // Phase 57: Clock-in PIN management (set/verify/clear/status per employee)
   app.use("/api/employees", requireAuth, ensureWorkspaceAccess, clockinPinRouter);
+  // Phase 23: Universal identity PINs (owner, client, combined verify)
+  // Note: individual routes inside apply their own auth — /verify-with-pin
+  // is intentionally unauthenticated because Trinity and HelpAI call it with
+  // just (code, pin) from inbound channels. Rate limiting is enforced at the
+  // route level.
+  app.use("/api/identity", identityPinRouter);
   // Phase 58: Trinity Interview Pipeline — Recruitment API
   app.use("/api/recruitment", requireAuth, ensureWorkspaceAccess, recruitmentRouter);
 }

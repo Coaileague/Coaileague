@@ -27,6 +27,11 @@ export interface VerifiedIdentity {
   firstName: string;
   lastName: string;
   workspaceId: string;
+  /**
+   * Universal tenant code (workspaces.org_id, format `ORG-<code>-<seq>`).
+   * Used by Trinity/HelpAI to identify the tenant the caller belongs to.
+   */
+  orgId: string | null;
   orgName: string;
   employeeNumber: string;
   isNewEmployee: boolean;
@@ -52,6 +57,7 @@ export async function verifyByPhone(phone: string): Promise<VerificationResult> 
         e.id, e.first_name, e.last_name, e.employee_number,
         e.workspace_id, e.created_at, e.preferred_language,
         COALESCE(w.company_name, w.name) AS org_name,
+        w.org_id,
         sc.consent_given, sc.opt_out_at
       FROM employees e
       JOIN workspaces w ON w.id = e.workspace_id
@@ -84,6 +90,7 @@ export async function verifyByPhone(phone: string): Promise<VerificationResult> 
         firstName: row.first_name || 'Officer',
         lastName: row.last_name || '',
         workspaceId: row.workspace_id,
+        orgId: row.org_id || null,
         orgName: row.org_name || 'your organization',
         employeeNumber: row.employee_number || '',
         isNewEmployee: isNew,
@@ -111,7 +118,8 @@ export async function verifyByEmployeeNumber(
     const result = await pool.query(`
       SELECT e.id, e.first_name, e.last_name, e.employee_number,
              e.workspace_id, e.created_at, e.preferred_language,
-             COALESCE(w.company_name, w.name) AS org_name
+             COALESCE(w.company_name, w.name) AS org_name,
+             w.org_id
       FROM employees e
       JOIN workspaces w ON w.id = e.workspace_id
       WHERE UPPER(e.employee_number) = $1
@@ -136,6 +144,7 @@ export async function verifyByEmployeeNumber(
         firstName: row.first_name,
         lastName: row.last_name,
         workspaceId: row.workspace_id,
+        orgId: row.org_id || null,
         orgName: row.org_name || 'your organization',
         employeeNumber: row.employee_number,
         isNewEmployee: false,
