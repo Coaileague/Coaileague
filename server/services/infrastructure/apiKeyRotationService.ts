@@ -22,6 +22,30 @@ import { typedExec, typedQuery } from '../../lib/typedSql';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('apiKeyRotationService');
 
+/**
+ * Readiness Section 12 — documented rotation cadence.
+ * This is the source of truth for how often each secret should rotate.
+ * Referenced in docs/SECURITY_AND_DR.md §7.
+ *
+ * Note: ENCRYPTION_KEY intentionally has no cadence — rotating it breaks
+ * already-encrypted data. A key-versioning scheme must be added before
+ * ENCRYPTION_KEY rotation is possible.
+ */
+export const SECRET_ROTATION_CADENCE_DAYS = {
+  SESSION_SECRET: 90,
+  TWILIO_AUTH_TOKEN: 180,
+  RESEND_API_KEY: 180,
+  STRIPE_SECRET_KEY: 365,
+  OPENAI_API_KEY: 180,
+  ANTHROPIC_API_KEY: 180,
+  GEMINI_API_KEY: 180,
+  PLAID_SECRET: 180,
+  VAPID_PRIVATE_KEY: 365,
+  // ENCRYPTION_KEY intentionally omitted — see comment above.
+} as const;
+
+export type ManagedSecretName = keyof typeof SECRET_ROTATION_CADENCE_DAYS;
+
 
 // ============================================================================
 // TYPES

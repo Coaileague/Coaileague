@@ -1,10 +1,12 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
-import { requireManager, requireAdmin } from "../rbac";
+import { requireManager, requireAdmin, requireOwner } from "../rbac";
 import type { AuthenticatedRequest } from "../rbac";
 import { exportEmployees, exportPayroll, exportAuditLogs, exportTimeEntries, exportAllData, anonymizeEmployeeData, exportInvoices, exportPaymentRecords, exportExpenses, exportFinancialSummary, exportProfitLoss, exportShiftHistory } from "../services/exportService";
 import { createLogger } from '../lib/logger';
 import { universalAudit } from '../services/universalAuditService';
+import { db } from '../db';
+import { sql } from 'drizzle-orm';
 
 const log = createLogger('ExportRoutes');
 
@@ -260,6 +262,91 @@ router.post("/anonymize-employee/:employeeId", requireAdmin, async (req: Authent
     res.json({ success: true, data: result });
   } catch (error: unknown) {
     log.error('Error anonymizing employee:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+/**
+ * POST /api/exports/tenant-takeout — Readiness Section 11
+ *
+ * Gated to org_owner / co_owner. This is the canonical tenant-offboarding
+ * data export: calls exportAllData (employees, payroll, audit, time,
+ * shifts) AND appends the new tables added in Sections 2–3 (weapon
+ * inspections, qualifications, ammo inventory + ledger, auditor NDA
+ * acceptances) so nothing we built on this branch is left behind when a
+ * tenant offboards.
+ *
+ * All queries are workspace-scoped (CLAUDE §G). Every takeout writes an
+ * audit_logs row identifying the org_owner who triggered it. The MSA
+ * offboarding clause points to this endpoint.
+ */
+router.post("/tenant-takeout", requireOwner, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    // Reuse the existing consolidated export for the core tables.
+    const core = await exportAllData(workspaceId, { format: 'json' });
+    const parsed = JSON.parse(core.data);
+
+    // Append tables introduced by this readiness-audit branch. Each query
+    // is workspace-scoped (CLAUDE §G) via parameterized SQL; failure on
+    // one table does not abort the takeout — we prefer a partial export
+    // over no export.
+    const safeWorkspaceRows = async <T = any>(table: string): Promise<T[]> => {
+      try {
+        const r = await db.execute(
+          sql`SELECT * FROM ${sql.identifier(table)} WHERE workspace_id = ${workspaceId}`,
+        );
+        return ((r as any).rows ?? []) as T[];
+      } catch (err: any) {
+        log.warn(`[tenant-takeout] ${table} export failed:`, err?.message);
+        return [];
+      }
+    };
+
+    const armory = {
+      weaponInspections:    await safeWorkspaceRows('weapon_inspections'),
+      weaponQualifications: await safeWorkspaceRows('weapon_qualifications'),
+      ammoInventory:        await safeWorkspaceRows('ammo_inventory'),
+      ammoTransactions:     await safeWorkspaceRows('ammo_transactions'),
+    };
+
+    // auditor_nda_acceptances is keyed by auditor_id, not workspace_id —
+    // include acceptances from every auditor who has audited this tenant.
+    let ndaAcceptances: any[] = [];
+    try {
+      const r = await db.execute(sql`
+        SELECT na.*
+          FROM auditor_nda_acceptances na
+          JOIN auditor_audits aa ON aa.auditor_id = na.auditor_id
+         WHERE aa.workspace_id = ${workspaceId}
+      `);
+      ndaAcceptances = ((r as any).rows ?? []);
+    } catch (err: any) {
+      log.warn('[tenant-takeout] auditor_nda_acceptances export failed:', err?.message);
+    }
+
+    const takeout = {
+      ...parsed,
+      armory,
+      auditorNdaAcceptances: ndaAcceptances,
+      takeoutMetadata: {
+        takeoutDate: new Date().toISOString(),
+        triggeredBy: req.user?.id,
+        scope: 'full',
+        note: 'Tenant takeout per MSA offboarding clause. Includes core tables plus armory + auditor compliance data.',
+      },
+    };
+
+    const filename = `tenant-takeout-${workspaceId}-${new Date().toISOString().split('T')[0]}.json`;
+    auditExport(req, 'tenant_takeout', filename);
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(takeout, null, 2));
+  } catch (error: unknown) {
+    log.error('Error generating tenant takeout:', error);
     res.status(500).json({ error: sanitizeError(error) });
   }
 });

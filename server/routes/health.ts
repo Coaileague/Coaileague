@@ -10,6 +10,7 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { db, pool } from '../db';
 import { storage } from '../storage';
+import { captureTestEvent } from '../lib/errorTracker';
 import { 
   getHealthSummary, 
   getServiceHealth, 
@@ -209,6 +210,23 @@ apiHealthRouter.get('/', async (req: Request, res: Response) => {
       error: 'Health check failed',
       services: checks
     });
+  }
+});
+
+// POST /api/health/error-tracker-test — Readiness Section 12
+// Fires a synthetic event through the configured error tracker adapter
+// so operators can verify ERROR_TRACKING_WEBHOOK_URL works end-to-end
+// without waiting for a real error. Not gated (no workspace payload,
+// no tenant data), but harmless — the adapter is no-op when unconfigured.
+apiHealthRouter.post('/error-tracker-test', (_req: Request, res: Response) => {
+  try {
+    captureTestEvent();
+    res.json({
+      ok: true,
+      note: 'Synthetic event fired. Check the configured observability backend. If no backend is configured, the event was no-op.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || 'Unknown failure' });
   }
 });
 

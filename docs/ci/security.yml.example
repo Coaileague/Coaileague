@@ -1,0 +1,49 @@
+# Readiness Section 12 — security CI template (not active)
+# ---------------------------------------------------------
+# .github/workflows is gitignored in this repo (CI managed elsewhere).
+# Copy this file to your CI system — GitHub Actions, CircleCI, etc. —
+# or un-ignore .github/workflows if you want GitHub Actions to own it.
+#
+# Gate sequence:
+#   1. npm ci
+#   2. npm audit --audit-level=high  (starts high so existing transitive
+#      warnings from glob@7/inflight@1 don't block PRs on day one;
+#      tighten to 'moderate' once those are cleared)
+#   3. npx tsc --noEmit              (CLAUDE.md TypeScript Law)
+#   4. npm run build                 (CLAUDE.md Build Integrity Law)
+#
+# Referenced from docs/SECURITY_AND_DR.md §4.
+
+name: security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  audit-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit high-severity vulnerabilities
+        run: npm audit --audit-level=high
+        continue-on-error: false
+
+      - name: TypeScript strict check (CLAUDE.md TypeScript Law)
+        run: npx tsc --noEmit
+
+      - name: Production build (CLAUDE.md Build Integrity Law)
+        run: npm run build
