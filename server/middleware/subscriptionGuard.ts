@@ -63,6 +63,7 @@ interface AuthenticatedRequest extends Request {
   workspaceId?: string;
   currentWorkspaceId?: string;
   user?: { workspaceId?: string };
+  isTrinityBot?: boolean;
 }
 
 export function subscriptionReadOnlyGuard(
@@ -75,6 +76,9 @@ export function subscriptionReadOnlyGuard(
 
   // Exempt billing/payment recovery routes
   if (isBillingExempt(req.path)) return next();
+
+  // System bots (Trinity, HelpAI) operate with platform authority — never blocked
+  if ((req as any).isTrinityBot) return next();
 
   const workspaceId =
     req.workspaceId || req.currentWorkspaceId || req.user?.workspaceId;
@@ -132,6 +136,9 @@ export function cancelledWorkspaceGuard(
 ): void {
   // Exempt auth/health/billing — always pass through
   if (CANCELLED_EXEMPT_PREFIXES.some(p => req.path.startsWith(p))) return next();
+
+  // System bots (Trinity, HelpAI) operate with platform authority — never blocked
+  if ((req as any).isTrinityBot) return next();
 
   const workspaceId =
     req.workspaceId || req.currentWorkspaceId || req.user?.workspaceId;
