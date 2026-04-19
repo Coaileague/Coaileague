@@ -28,6 +28,7 @@ import {
 } from '@shared/schema';
 import { sql, eq, and, or, isNull, desc, asc, gte, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { cacheManager } from "../services/platform/cacheManager";
 import crypto from "crypto";
 import { emailService } from "../services/emailService";
 import { getAllPtoBalances, calculatePtoAccrual, runWeeklyPtoAccrual } from "../services/ptoAccrual";
@@ -363,6 +364,12 @@ router.patch("/organizations/:orgId/status", requireAuth, async (req: Authentica
       }
 
       await db.update(workspaces).set(updateFields).where(eq(workspaces.id, orgId));
+      // Phase 26: platform-admin state transitions (activate / deactivate /
+      // suspend / maintenance) must flush the tier cache so the Trinity
+      // subscription gate sees the new state on the next inbound webhook.
+      if ('subscriptionStatus' in updateFields || 'accountState' in updateFields) {
+        cacheManager.invalidateWorkspace(orgId);
+      }
 
       const { auditLogs } = await import('@shared/schema');
       // @ts-expect-error — TS migration: fix in refactoring sprint

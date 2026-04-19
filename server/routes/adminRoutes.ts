@@ -16,6 +16,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { requirePlatformStaff, type AuthenticatedRequest } from "../rbac";
 import { typedPool } from '../lib/typedSql';
+import { cacheManager } from '../services/platform/cacheManager';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 import { employeeInvitations } from '@shared/schema';
@@ -924,6 +925,7 @@ router.post('/support/suspend-account', async (req: AuthenticatedRequest, res) =
       suspendedBy: adminUserId,
       subscriptionStatus: 'suspended',
     });
+    cacheManager.invalidateWorkspace(workspaceId); // Phase 26: refresh Trinity gate
     res.json({ success: true, message: "Account suspended successfully" });
   } catch (error) {
     log.error("Error suspending account:", error);
@@ -942,6 +944,7 @@ router.post('/support/unsuspend-account', async (req: AuthenticatedRequest, res)
       suspendedBy: null,
       subscriptionStatus: 'active',
     });
+    cacheManager.invalidateWorkspace(workspaceId); // Phase 26: refresh Trinity gate
     res.json({ success: true, message: "Account unsuspended successfully" });
   } catch (error) {
     log.error("Error unsuspending account:", error);
