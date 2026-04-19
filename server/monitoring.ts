@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import * as os from "os";
 import { typedQuery } from './lib/typedSql';
 import { PLATFORM } from './config/platformConfig';
+import { captureError as captureToExternalTracker } from './lib/errorTracker';
 
 interface ErrorLog {
   timestamp: Date;
@@ -181,12 +182,37 @@ class MonitoringService {
     };
 
     this.errorBuffer.push(errorLog);
-    
+
     // Also log to console for development
     log.error(`[ERROR] [${context?.severity || 'error'}] ${errorLog.message}`, {
       ...context,
       stack: errorLog.stack,
     });
+
+    // Readiness Section 5 — forward to external observability backend if
+    // configured (Sentry, Datadog, webhook). No-op when unconfigured.
+    // Non-blocking; failures never affect the request path.
+    try {
+      const sev = context?.severity;
+      const trackerLevel: 'info' | 'warn' | 'error' | 'critical' =
+        sev === 'critical' ? 'critical'
+        : sev === 'high' ? 'error'
+        : sev === 'warn' ? 'warn'
+        : sev === 'info' ? 'info'
+        : 'error';
+      captureToExternalTracker({
+        timestamp: errorLog.timestamp,
+        level: trackerLevel,
+        message: errorLog.message,
+        stack: errorLog.stack,
+        tags: {
+          workspaceId: errorLog.workspaceId,
+          userId: errorLog.userId,
+          requestId: errorLog.requestId,
+        },
+        context: errorLog.context,
+      });
+    } catch { /* never throw from logError */ }
 
     // Flush immediately for critical errors
     if (this.errorBuffer.length >= 10 || context?.severity === 'critical' || context?.severity === 'high') {
