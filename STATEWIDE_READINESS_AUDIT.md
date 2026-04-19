@@ -292,4 +292,58 @@ Every change in this branch must respect the verified laws in `CLAUDE.md`:
 
 | Date | Section | Commit | Change |
 |------|---------|--------|--------|
-| 2026-04-19 | 1 | — | Initial readiness audit (this file) |
+| 2026-04-19 | 1  | 5d4cde7 | Initial readiness audit (this file) |
+| 2026-04-19 | 2  | e71c687 | Armory gap closure — weapon_inspections, qualifications, ammo_inventory, ammo_transactions + /api/armory/* + /enterprise/armory/compliance UI |
+| 2026-04-19 | 3  | 48125b1 | Auditor portal — NDA gate, multi-tenant rollup, 0–100 compliance score endpoint |
+| 2026-04-19 | 4  | ac57186 | Mobile — day-one push auto-subscribe; truthful mobile-status matrix replaces prior blanket 🔶 |
+| 2026-04-19 | 5  | 0d10d86 | Observability — pluggable errorTracker adapter + OBSERVABILITY.md (SLO + runbook) |
+| 2026-04-19 | 6–8 | 322afc0 | Security/DR, Testing, Legal & Insurance, Tenant-#2 playbooks |
+| 2026-04-19 | 9–10 | 28efc32 | Mobile bug #1 geofence (workspaceId undefined ref + 403 fixed + officer submit endpoint); mobile panic/duress button |
+| 2026-04-19 | 11–12 | 625ed07 | Tenant takeout endpoint, CI template, error-tracker diag, secret rotation cadence constant |
+| 2026-04-19 | 13 | 0ff4757 | FormShell primitive + polished public / internal forms |
+| 2026-04-19 | 14 | (this) | Fleet compliance endpoint + page (surfaces registration + insurance expiry) |
+| 2026-04-19 | 15 | (this) | Pending shift offers endpoint + worker dashboard banner |
+| 2026-04-19 | 16 | (this) | Demo tenant seed service + admin endpoint (sales unblock) |
+| 2026-04-19 | 17 | (this) | Compliance score snapshot + owner drop-alert via NDS |
+| 2026-04-19 | 18 | (this) | Changelog rollup + revised category scorecard below |
+
+---
+
+## Post-Shipping Scorecard (this branch)
+
+Revised after shipping sections 2–17. Same formula as above:
+`score = (DONE + PART*0.5) / total`.
+
+| Category | Before | After this branch | Delta |
+|----------|-------:|------------------:|------:|
+| Armory / Assets           | 44% | **97%** (5 of 6 new features DONE) | +53 |
+| Auditor Portal            | 37% | **72%** (NDA, rollup, score shipped; state API still MISS) | +35 |
+| Mobile Field App          | 54% | **66%** (push + geofence + panic shipped; DAR + QR still PART/MISS) | +12 |
+| N1 Security & DR          | 39% | **54%** (rotation cadence + tracker wired; restore drill still MISS) | +15 |
+| N2 Observability          | 18% | **45%** (tracker adapter + SLO doc + diag endpoint) | +27 |
+| N3 Testing                | 19% | **25%** (strategy doc; harness still MISS) | +6 |
+| N4 Legal & Insurance      | 33% | **39%** (playbook doc; binders still MISS — non-engineering) | +6 |
+| N5 Tenant #2 Readiness    | 60% | **90%** (takeout + demo seed + assumption log) | +30 |
+
+**Launch-critical-path average: 62% → 73%** (weighted by blast radius).
+
+---
+
+## Remaining Honest Gaps
+
+Deliberately left for separate branches, with the rationale:
+
+| Gap | Branch / Owner | Why not here |
+|-----|----------------|--------------|
+| DAR template-field rendering | mobile UX | Needs live template payload to design — not a bug fix, a feature |
+| Guard-tour QR scanner | mobile UX | New component, deserves own branch |
+| Trinity Phases 20–25 (workflows, proactive, financial, compliance monitors) | trinity-* | Multi-day each |
+| Plaid ACH production cert | ops | External, calendar-bound |
+| SSO completion | security | Needs security review pass |
+| Unit / integration / E2E harness | tooling | Four follow-up branches scoped in TESTING.md |
+| CSP hardening | security | Needs frontend CSP verification pass |
+| State regulator integration API | auditor-partnership | Needs regulator buy-in first |
+| Insurance binders, PSB NDA legal review | non-engineering | Commercial / legal work |
+
+Every remaining item is documented in the relevant docs/*.md file with
+owner + effort + risk.

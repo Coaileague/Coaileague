@@ -382,6 +382,7 @@ const GateDuty = lazy(() => import("@/pages/gate-duty"));
 const WellnessPage = lazy(() => import("@/pages/wellness"));
 const SiteSurveyPage = lazy(() => import("@/pages/site-survey"));
 const FleetManagement = lazy(() => import("@/pages/fleet-management"));
+const FleetCompliance = lazy(() => import("@/pages/fleet-compliance"));
 const ArmoryManagement = lazy(() => import("@/pages/armory-management"));
 const ArmoryCompliance = lazy(() => import("@/pages/armory-compliance"));
 const SSOConfiguration = lazy(() => import("@/pages/sso-configuration"));
@@ -1748,6 +1749,7 @@ function AppContent() {
                 <Route path="/onboarding-forms"><ErrorBoundary><Suspense fallback={<PageLoader />}><OnboardingForms /></Suspense></ErrorBoundary></Route>
                 <Route path="/enterprise/branding"><ErrorBoundary><WhiteLabelBranding /></ErrorBoundary></Route>
                 <Route path="/enterprise/fleet"><ErrorBoundary><FleetManagement /></ErrorBoundary></Route>
+                <Route path="/enterprise/fleet/compliance"><ErrorBoundary><FleetCompliance /></ErrorBoundary></Route>
                 <Route path="/enterprise/armory"><ErrorBoundary><ArmoryManagement /></ErrorBoundary></Route>
                 <Route path="/enterprise/armory/compliance"><ErrorBoundary><ArmoryCompliance /></ErrorBoundary></Route>
                 <Route path="/enterprise/sso"><ErrorBoundary><SSOConfiguration /></ErrorBoundary></Route>
@@ -2234,6 +2236,7 @@ function AppContent() {
                 <Route path="/settings"><ErrorBoundary componentName="Settings"><Settings /></ErrorBoundary></Route>
                 <Route path="/enterprise/branding"><ErrorBoundary><WhiteLabelBranding /></ErrorBoundary></Route>
                 <Route path="/enterprise/fleet"><ErrorBoundary><FleetManagement /></ErrorBoundary></Route>
+                <Route path="/enterprise/fleet/compliance"><ErrorBoundary><FleetCompliance /></ErrorBoundary></Route>
                 <Route path="/enterprise/armory"><ErrorBoundary><ArmoryManagement /></ErrorBoundary></Route>
                 <Route path="/enterprise/armory/compliance"><ErrorBoundary><ArmoryCompliance /></ErrorBoundary></Route>
                 <Route path="/enterprise/sso"><ErrorBoundary><SSOConfiguration /></ErrorBoundary></Route>

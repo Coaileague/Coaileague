@@ -277,4 +277,68 @@ router.post("/maintenance", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/vehicles/compliance — Readiness Section 14
+ * The vehicles table already tracks insuranceExpiry + registrationExpiry
+ * but nothing surfaced the alerts. This endpoint buckets every vehicle
+ * into expired / expiring-30d / expiring-90d / ok / unknown and returns
+ * a rollup plus the per-vehicle detail.
+ */
+router.get("/compliance", async (req, res) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Missing workspace" });
+
+    const now = new Date();
+    const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const in90 = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+    const rows = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.workspaceId, workspaceId));
+
+    type Bucket = 'expired' | 'expiring_30d' | 'expiring_90d' | 'ok' | 'unknown';
+    const bucket = (date: Date | null): Bucket => {
+      if (!date) return 'unknown';
+      if (date < now) return 'expired';
+      if (date < in30) return 'expiring_30d';
+      if (date < in90) return 'expiring_90d';
+      return 'ok';
+    };
+
+    const enriched = rows.map((v) => ({
+      id: v.id,
+      licensePlate: v.licensePlate,
+      make: v.make,
+      model: v.model,
+      assignedEmployeeId: v.assignedEmployeeId,
+      insurance: {
+        expiresAt: v.insuranceExpiry,
+        bucket: bucket(v.insuranceExpiry ? new Date(v.insuranceExpiry) : null),
+      },
+      registration: {
+        expiresAt: v.registrationExpiry,
+        bucket: bucket(v.registrationExpiry ? new Date(v.registrationExpiry) : null),
+      },
+    }));
+
+    const summary = {
+      total: rows.length,
+      insuranceExpired:      enriched.filter((v) => v.insurance.bucket === 'expired').length,
+      insuranceExpiring30d:  enriched.filter((v) => v.insurance.bucket === 'expiring_30d').length,
+      insuranceMissing:      enriched.filter((v) => v.insurance.bucket === 'unknown').length,
+      registrationExpired:   enriched.filter((v) => v.registration.bucket === 'expired').length,
+      registrationExpiring30d: enriched.filter((v) => v.registration.bucket === 'expiring_30d').length,
+      registrationMissing:   enriched.filter((v) => v.registration.bucket === 'unknown').length,
+    };
+
+    res.json({ summary, vehicles: enriched });
+  } catch (error: unknown) {
+    log.error("Error computing vehicle compliance:", error);
+    res.status(500).json({ error: "Failed to compute vehicle compliance" });
+  }
+});
+
 export default router;

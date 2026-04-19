@@ -3024,6 +3024,65 @@ router.post("/send-reminders/upcoming", requireManager, async (req: Authenticate
 // offerId is the notif.relatedEntityId set when coverage_offer UNS is fired
 // ============================================================================
 
+/**
+ * GET /api/shifts/offers/my/pending — Readiness Section 15
+ * Lists the authenticated worker's open (not accepted, not declined, not
+ * expired) shift offers. The worker-dashboard banner calls this to surface
+ * day-one shift offers instead of relying on SMS.
+ */
+router.get("/offers/my/pending", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'No workspace' });
+
+    const { notifications } = await import('@shared/schema');
+    const { and, eq, desc } = await import('drizzle-orm');
+
+    const rows = await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.workspaceId, workspaceId),
+          eq(notifications.userId, userId),
+          eq(notifications.type, 'coverage_offer'),
+        ),
+      )
+      .orderBy(desc(notifications.createdAt))
+      .limit(25);
+
+    const now = Date.now();
+    const offers = rows
+      .map((n) => {
+        const meta = (n as any).metadata || {};
+        const expiresAt = meta.expiresAt ? new Date(meta.expiresAt).getTime() : null;
+        const expired = expiresAt !== null && expiresAt < now;
+        const accepted = !!meta.accepted;
+        const declined = !!meta.declined;
+        return {
+          offerId: n.relatedEntityId,
+          workflowId: meta.workflowId || '',
+          location: meta.location || 'See details',
+          date: meta.date || null,
+          startTime: meta.startTime || null,
+          endTime: meta.endTime || null,
+          positionType: meta.positionType || 'Security Officer',
+          officerPayRate: meta.officerPayRate ? parseFloat(meta.officerPayRate) : undefined,
+          expiresAt: meta.expiresAt || null,
+          status: accepted ? 'accepted' : declined ? 'declined' : expired ? 'expired' : 'pending',
+        };
+      })
+      .filter((o) => o.status === 'pending' && o.offerId);
+
+    res.json({ offers, count: offers.length });
+  } catch (error: unknown) {
+    log.error('[ShiftOffer] list-my-pending error:', error);
+    res.status(500).json({ error: 'Failed to list pending offers' });
+  }
+});
+
 router.get("/offers/:offerId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { offerId } = req.params;

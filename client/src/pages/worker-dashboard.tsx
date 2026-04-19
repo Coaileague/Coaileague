@@ -14,6 +14,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { markCoreActionPerformed, markCoreActionAndAutoSubscribe } from "@/lib/pushNotifications";
+import { PendingOfferBanner } from "@/components/mobile/PendingOfferBanner";
 import { requestWakeLock, releaseWakeLock, setupWakeLockReacquire } from "@/lib/wakeLock";
 import { format, differenceInMinutes, isToday, isTomorrow } from "date-fns";
 import {
@@ -683,6 +684,9 @@ export default function WorkerDashboard() {
 
         {/* ── Main Scroll Area ───────────────────────── */}
         <div className="px-4 py-4 space-y-4 max-w-5xl mx-auto">
+
+          {/* Readiness Section 15 — pending shift offers (visible only when ≥1) */}
+          <PendingOfferBanner />
 
           {/* ── Block 1: Greeting Hero Banner ─────────── */}
           <div
