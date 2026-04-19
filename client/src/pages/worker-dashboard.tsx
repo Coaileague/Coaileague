@@ -13,7 +13,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { markCoreActionPerformed } from "@/lib/pushNotifications";
+import { markCoreActionPerformed, markCoreActionAndAutoSubscribe } from "@/lib/pushNotifications";
 import { requestWakeLock, releaseWakeLock, setupWakeLockReacquire } from "@/lib/wakeLock";
 import { format, differenceInMinutes, isToday, isTomorrow } from "date-fns";
 import {
@@ -607,7 +607,10 @@ export default function WorkerDashboard() {
   }, [clockStatus?.isClockedIn]);
 
   const handleClockAction = useCallback(() => {
-    markCoreActionPerformed();
+    // Readiness Section 4 — auto-subscribe to push on first clock-in so the
+    // officer receives shift alerts + duress responses from day one, instead
+    // of waiting for the 7-day engagement window.
+    markCoreActionAndAutoSubscribe();
     if (clockStatus?.isClockedIn) {
       clockMutation.mutate("out");
       return;

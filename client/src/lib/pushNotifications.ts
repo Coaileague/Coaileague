@@ -8,6 +8,31 @@ export function markCoreActionPerformed(): void {
   } catch {}
 }
 
+// Readiness Section 4 — day-one field-officer experience.
+// When an officer performs a core action (clock-in, incident report), mark
+// engagement AND silently attempt to subscribe to push so shift reminders,
+// incident escalations, and duress responses reach them from the first
+// shift — not after the 7-day engagement window.
+//
+// Silent: the browser still shows the native permission prompt the first
+// time, but we do not show a second custom "enable notifications" card.
+// Failures (unsupported, permission denied, already subscribed) are
+// swallowed — this is a best-effort side-effect of a core action, not a
+// gating step.
+const AUTO_SUB_ATTEMPTED_KEY = 'coaileague-push-auto-sub-attempted';
+export async function markCoreActionAndAutoSubscribe(): Promise<void> {
+  markCoreActionPerformed();
+  try {
+    if (localStorage.getItem(AUTO_SUB_ATTEMPTED_KEY)) return;
+    localStorage.setItem(AUTO_SUB_ATTEMPTED_KEY, Date.now().toString());
+  } catch { /* storage unavailable — try anyway */ }
+  try {
+    if (!isPushSupported()) return;
+    if (Notification.permission === 'denied') return;
+    await subscribeToPush();
+  } catch { /* best-effort; intentional swallow */ }
+}
+
 export function shouldShowPushPrompt(): boolean {
   try {
     return localStorage.getItem(CORE_ACTION_KEY) !== null;
