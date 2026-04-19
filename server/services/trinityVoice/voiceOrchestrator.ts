@@ -117,6 +117,12 @@ export function buildMainIVR(
   baseUrl: string,
   _extEnabled: Record<string, boolean> = {}
 ): string {
+  // Phase 21 — accept speech OR digit on the main IVR. Trinity listens for any
+  // of the well-known caller categories so a guest who says "I want to join
+  // Co-League" or "I'm an employee" routes correctly without pressing a key.
+  const hintsEn = 'one,two,three,employee,staff,officer,client,sales,emergency,help,join,sign up,careers';
+  const hintsEs = 'uno,dos,tres,empleado,oficial,cliente,ventas,emergencia,ayuda,unirme,carreras,trabajo';
+
   if (lang === 'es') {
     const greeting =
       'Hola, soy Trinity, la asistente de inteligencia artificial de Co-League. ' +
@@ -124,12 +130,12 @@ export function buildMainIVR(
       'Si es un empleado o usuario de la plataforma y desea ayuda personalizada, marque 1. ' +
       'Si es un cliente que necesita asistencia de su proveedor de seguridad, marque 2. ' +
       'Para servicios generales, marque 3. ' +
-      'Por favor tome su tiempo. También puede enviarnos un mensaje de texto a este número en cualquier momento para recibir asistencia inmediata.';
+      'Por favor tome su tiempo. También puede simplemente decirme en qué puedo ayudarle, o enviarnos un mensaje de texto a este número en cualquier momento.';
 
     return twiml(
-      gather({ action: `${baseUrl}/api/voice/caller-identify?lang=es`, numDigits: 1, timeout: 15 },
-        say(greeting, VOICE_ES, 'es-US')
-      ) +
+      `<Gather input="speech dtmf" action="${baseUrl}/api/voice/caller-identify?lang=es" method="POST" numDigits="1" timeout="15" speechTimeout="auto" hints="${hintsEs}">` +
+      say(greeting, VOICE_ES, 'es-US') +
+      `</Gather>` +
       redirect(`${baseUrl}/api/voice/caller-identify?lang=es`)
     );
   }
@@ -140,12 +146,12 @@ export function buildMainIVR(
     'If you\'re a platform user or employee of an organization and would like personalized assistance, press 1. ' +
     'If you\'re a client needing assistance from your security provider, press 2. ' +
     'For general services and information, press 3. ' +
-    'Please take your time. You can also text this number at any time for immediate assistance from me.';
+    'Please take your time. You can also just tell me what you need help with, or text this number at any time for immediate assistance from me.';
 
   return twiml(
-    gather({ action: `${baseUrl}/api/voice/caller-identify?lang=en`, numDigits: 1, timeout: 15 },
-      say(greeting)
-    ) +
+    `<Gather input="speech dtmf" action="${baseUrl}/api/voice/caller-identify?lang=en" method="POST" numDigits="1" timeout="15" speechTimeout="auto" hints="${hintsEn}">` +
+    say(greeting) +
+    `</Gather>` +
     redirect(`${baseUrl}/api/voice/caller-identify?lang=en`)
   );
 }
@@ -159,6 +165,11 @@ export function buildGeneralMenu(
 ): string {
   const enabled = (key: string) => extEnabled[key] !== false;
 
+  // Phase 21 — accept speech OR digit. The new "press 0" option lets any
+  // caller skip the menu and just talk to Trinity conversationally.
+  const hintsEn = 'sales,client,support,employment,staff,clock in,call off,emergency,careers,job,case,callback,trinity,help,join';
+  const hintsEs = 'ventas,cliente,soporte,empleo,personal,ausencia,emergencia,carreras,trabajo,caso,llamada,trinity,ayuda,unirme';
+
   if (lang === 'es') {
     const parts: string[] = ['Aquí están sus opciones. '];
     if (enabled('sales'))                   parts.push('Para consultas de ventas y nuevos servicios, marque 1. ');
@@ -169,13 +180,14 @@ export function buildGeneralMenu(
     if (enabled('careers'))                 parts.push('Para oportunidades de empleo, marque 6. ');
     parts.push('Para verificar el estado de un caso de soporte, marque 7. ');
     parts.push('Para programar una llamada con un humano, marque 8. ');
-    parts.push('Recuerde que también puede enviarnos un mensaje de texto a este número en cualquier momento. ');
+    parts.push('Para hablar conmigo libremente sobre cualquier tema, marque 0. ');
+    parts.push('Recuerde que también puede simplemente decirme lo que necesita, o enviarnos un mensaje de texto a este número en cualquier momento. ');
     parts.push('Para inglés, marque 9.');
 
     return twiml(
-      gather({ action: `${baseUrl}/api/voice/main-menu-route?lang=es`, numDigits: 1, timeout: 15 },
-        say(parts.join(''), VOICE_ES, 'es-US')
-      ) +
+      `<Gather input="speech dtmf" action="${baseUrl}/api/voice/main-menu-route?lang=es" method="POST" numDigits="1" timeout="15" speechTimeout="auto" hints="${hintsEs}">` +
+      say(parts.join(''), VOICE_ES, 'es-US') +
+      `</Gather>` +
       redirect(`${baseUrl}/api/voice/main-menu-route?lang=es`)
     );
   }
@@ -189,13 +201,14 @@ export function buildGeneralMenu(
   if (enabled('careers'))                 parts.push('For employment opportunities and careers, press 6. ');
   parts.push('To check the status of a support case, press 7. ');
   parts.push('To schedule a callback with a human, press 8. ');
-  parts.push('Remember, you can also text this number at any time for immediate assistance. ');
+  parts.push('To talk directly with me about anything, press 0. ');
+  parts.push('Remember, you can also just tell me what you need, or text this number at any time for immediate assistance. ');
   parts.push('Para Español, marque 9.');
 
   return twiml(
-    gather({ action: `${baseUrl}/api/voice/main-menu-route?lang=en`, numDigits: 1, timeout: 15 },
-      say(parts.join(''))
-    ) +
+    `<Gather input="speech dtmf" action="${baseUrl}/api/voice/main-menu-route?lang=en" method="POST" numDigits="1" timeout="15" speechTimeout="auto" hints="${hintsEn}">` +
+    say(parts.join('')) +
+    `</Gather>` +
     redirect(`${baseUrl}/api/voice/main-menu-route?lang=en`)
   );
 }

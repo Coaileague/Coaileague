@@ -31,22 +31,35 @@ export function handleSales(params: {
       outcome: 'success',
     }).catch((err) => log.warn('[salesExtension] Fire-and-forget failed:', err));
 
+    // Phase 21 — present three choices before recording. Trinity asks whether
+    // the caller wants voicemail, a live agent transfer, or a brief overview
+    // of Co-League first. Default (no input) falls through to voicemail.
+    const choiceAction = `${baseUrl}/api/voice/sales-choice?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+
     if (lang === 'es') {
       return twiml(
-        say('¡Excelente! Ha llegado a nuestro equipo de ventas. Nos encantaría conocer sus necesidades de seguridad ' +
-          'y mostrarle lo que Co-League puede hacer por su organización. Por favor deje su nombre, el mejor número ' +
-          'para comunicarnos con usted, y una breve descripción de sus necesidades después del tono. ' +
-          'Un miembro de nuestro equipo se comunicará con usted dentro de un día hábil.', 'es') +
+        `<Gather input="dtmf" action="${choiceAction}" method="POST" numDigits="1" timeout="12">` +
+        say('¡Excelente! Ha llegado al equipo de ventas de Co-League. Nos encantaría conocer sus necesidades de seguridad. ' +
+          'Marque 1 para dejar un mensaje de voz y le devolveremos la llamada dentro de un día hábil. ' +
+          'Marque 2 para esperar a un representante de ventas en vivo. ' +
+          'Marque 3 para conocer más sobre Co-League antes de hablar con alguien.', 'es') +
+        `</Gather>` +
+        // No input → record voicemail directly so the caller is never stranded
+        say('Por favor deje su nombre, el mejor número para comunicarnos con usted, y una breve descripción de sus necesidades después del tono.', 'es') +
         `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=es" maxLength="120" playBeep="true" />` +
         say('Gracias. Que tenga un excelente día.', 'es')
       );
     }
 
     return twiml(
-      say('Great! You\'ve reached our sales team. We\'d love to learn about your security needs ' +
-        'and show you what Co-League can do for your organization. Please leave your name, the best ' +
-        'number to reach you, and a brief description of your needs after the tone. ' +
-        'A member of our team will reach out within one business day.') +
+      `<Gather input="dtmf" action="${choiceAction}" method="POST" numDigits="1" timeout="12">` +
+      say('Great! You\'ve reached Co-League sales. We\'d love to hear about your security needs. ' +
+        'Press 1 to leave a voicemail and we\'ll call you back within one business day. ' +
+        'Press 2 to wait for a live sales representative. ' +
+        'Press 3 to learn more about Co-League before speaking with someone.') +
+      `</Gather>` +
+      // No input → record voicemail directly so the caller is never stranded
+      say('Please leave your name, the best number to reach you, and a brief description of your needs after the tone.') +
       `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=en" maxLength="120" playBeep="true" />` +
       say('Thank you. Have a great day.')
     );
