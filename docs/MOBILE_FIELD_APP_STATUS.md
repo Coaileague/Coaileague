@@ -34,19 +34,23 @@ block with specific file:line references and effort estimates.
 Listed for follow-up. I fixed #3 in this branch because it was the smallest,
 safest, highest-leverage change. #1 and #2 need a dedicated follow-up branch.
 
-### Bug #1 — Geofence override modal never closes after silent-fail
+### Bug #1 — Geofence override modal never closes after silent-fail ✅ FIXED (Section 9)
 
-- **Files:** `client/src/components/UniversalFAB.tsx:272-285` (client), expected `PATCH /api/time-entries/geofence-override/:id` (server, unverified).
-- **Root cause:** client `handleGeofenceSubmit` only clears modal state on the success-toast path; if the endpoint 404s, the modal stays stuck.
-- **Fix sketch:** always clear modal state in `finally`; add the missing PATCH route stub to the time-entry routes with basic manager approval.
-- **Effort:** S (5–10 lines + route stub).
+- **Root cause, verified:** `server/routes/time-entry-routes.ts:1223` has `workspaceId` as an undefined reference (missing the `const workspaceId = req.workspaceId || ...` declaration that every other handler in that file has). The endpoint throws `ReferenceError` at runtime, returning 500. Compounding it, the endpoint requires manager role via `requireWorkspaceRole('manager')`, so the officer's explanation POST also 403'd. Client-side, `UniversalFAB.tsx:272-285` only cleared modal state on the success path, so the user was trapped in the modal on failure.
+- **Fix shipped:**
+  - Added the missing `workspaceId` declaration in the manager PATCH.
+  - Added a new officer-facing endpoint: `POST /api/time-entries/geofence-override/:timeEntryId/submit`. Officer attaches a reason; status moves `required` → `pending`; no manager role required.
+  - Client now calls the new POST endpoint instead of the PATCH.
+  - Client clears modal state in `finally` so submission failure never traps the user.
+- **Effort actual:** S — 30 lines (server endpoint) + 10 lines (client).
 
-### Bug #2 — DAR template fields don't submit
+### Bug #2 — DAR template fields don't submit — DEFERRED
 
-- **File:** `client/src/pages/field-reports.tsx:~91-200+`
-- **Root cause:** template dynamic fields render but have no `onChange` bound to `formData` state, so submission sends a partially-empty object.
-- **Fix sketch:** add `handleFieldChange(name, value)` and wire `onChange` on every dynamic input (mirror the incident-type selection pattern elsewhere in the file).
-- **Effort:** M (10–20 lines).
+- **File:** `client/src/pages/field-reports.tsx`
+- **Verified finding:** the Explore agent's diagnosis was not quite right. The file fetches `ReportTemplate[]` from `/api/report-templates` but **never renders** template-driven fields. The form uses hardcoded fields (title, severity, incidentType, description, checklist). So the "add onChange to dynamic fields" fix doesn't apply — there are no dynamic fields to bind.
+- **Real fix needed:** add template-driven rendering for report types that have templates. This is a new feature, not a bug fix: conditionally render each template field when a matching `ReportTemplate` exists for the selected `reportType`. Estimated 50–80 lines.
+- **Why deferred:** adding template-driven rendering without seeing a live template payload risks breaking the existing hardcoded flow. Needs a follow-up branch with a staging tenant that has real templates.
+- **Effort:** M-L (follow-up branch `claude/mobile-dar-templates`).
 
 ### Bug #3 — Push subscription delayed behind 7-day engagement window ✅ FIXED
 

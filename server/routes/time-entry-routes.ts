@@ -1223,7 +1223,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
 timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('manager'), async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
     const { approved, reason } = req.body;
     if (typeof approved !== 'boolean') return res.status(400).json({ error: 'approved (boolean) required' });
@@ -1236,14 +1236,12 @@ timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('m
       geofenceOverrideAt: new Date(),
     }).where(and(
       eq(timeEntries.id, req.params.timeEntryId),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       eq(timeEntries.workspaceId, workspaceId),
       eq(timeEntries.geofenceOverrideRequired, true)
     ));
 
     platformEventBus.publish({
       type: 'geofence_override_resolved',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: workspaceId,
       payload: { timeEntryId: req.params.timeEntryId, approved, reason, resolvedBy: user.id },
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
@@ -1252,6 +1250,54 @@ timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('m
   } catch (error) {
     log.error('Error resolving geofence override:', error);
     res.status(500).json({ error: 'Failed to resolve geofence override' });
+  }
+});
+
+/**
+ * POST /api/time-entries/geofence-override/:timeEntryId/submit
+ * Officer-facing: attach an explanation reason to an outside-geofence
+ * clock event. Moves status from 'required' → 'pending' so a manager
+ * sees it in the approval queue.
+ *
+ * Readiness Section 9 bug #1 — the original single-PATCH endpoint was
+ * gated to manager role, so the officer's explanation POST 403'd
+ * silently and the modal got stuck.
+ */
+timeEntryRouter.post('/geofence-override/:timeEntryId/submit', async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
+    const { reason } = req.body || {};
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+      return res.status(400).json({ error: 'reason (min 5 chars) required' });
+    }
+
+    const updated = await db.update(timeEntries).set({
+      geofenceOverrideStatus: 'pending',
+      geofenceOverrideReason: reason.trim(),
+      geofenceOverrideAt: new Date(),
+    }).where(and(
+      eq(timeEntries.id, req.params.timeEntryId),
+      eq(timeEntries.workspaceId, workspaceId),
+      eq(timeEntries.geofenceOverrideRequired, true),
+    )).returning();
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Time entry not found or not awaiting an override' });
+    }
+
+    platformEventBus.publish({
+      type: 'geofence_override_submitted',
+      workspaceId,
+      payload: { timeEntryId: req.params.timeEntryId, reason: reason.trim(), submittedBy: user.id },
+    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+
+    res.json({ success: true, message: 'Explanation submitted to supervisor for review.' });
+  } catch (error) {
+    log.error('Error submitting geofence override:', error);
+    res.status(500).json({ error: 'Failed to submit explanation' });
   }
 });
 
