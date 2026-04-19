@@ -14,6 +14,7 @@
 import { NotificationDeliveryService } from './notificationDeliveryService';
 import { db } from '../db';
 import { createLogger } from '../lib/logger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { getAppBaseUrl } from '../utils/getAppBaseUrl';
 
 const log = createLogger('InboundOpportunity');
@@ -636,16 +637,38 @@ export class InboundOpportunityAgent {
     );
     
     if (result.success) {
-      // If auto-staffing is enabled and shifts were extracted, trigger Stage B
+      // If auto-staffing is enabled and shifts were extracted, trigger Stage B.
+      // Phase 26B — deferred via scheduleNonBlocking so the webhook response
+      // returns immediately, but results are inspected and unfillable shifts
+      // are escalated to managers + the original sender. No more silent fail.
       // @ts-expect-error — TS migration: fix in refactoring sprint
       if (result.result?.contractor?.autoStaffingEnabled && (result as any).result?.extractedShifts?.length > 0) {
-        // Auto-trigger staffing (async, don't block)
-        this.triggerAutoStaffing(workspaceId).catch((err: unknown) => log.warn('[InboundOpportunity] Auto-staffing trigger failed', err));
+        const senderEmail = (result as any).result?.senderEmail as string | undefined;
+        const senderName = (result as any).result?.senderName as string | undefined;
+        const referenceNumber = (result as any).result?.referenceNumber as string | undefined;
+        const workspaceName = (result as any).result?.workspaceName as string | undefined;
+
+        scheduleNonBlocking('inbound-opportunity.stage-b-autostaff', async () => {
+          const stageBResults = await this.triggerAutoStaffing(workspaceId);
+          const unfilled = stageBResults.filter(r => !r.success);
+          if (unfilled.length > 0) {
+            await this.escalateUnfillableShifts({
+              workspaceId,
+              senderEmail,
+              senderName,
+              referenceNumber,
+              workspaceName,
+              unfilledCount: unfilled.length,
+              totalCount: stageBResults.length,
+              reasons: unfilled.map(r => r.message).filter(Boolean) as string[],
+            });
+          }
+        });
       }
-      
+
       return {
         success: true,
-        message: (result as any).result?.isShiftRequest 
+        message: (result as any).result?.isShiftRequest
           ? `Extracted ${(result as any).result.extractedShifts?.length || 0} shifts from email`
           : 'Email routed to human inbox for review',
         data: result.result,
@@ -885,7 +908,9 @@ Return ONLY the JSON array, no markdown, no explanations.`;
   // ==========================================================================
   
   /**
-   * Trigger auto-staffing for all ready shifts
+   * Trigger auto-staffing for all ready shifts.
+   * Phase 26B — per-shift try/catch so one failure doesn't abort the batch.
+   * Collects structured results so callers can escalate unfillable shifts.
    */
   async triggerAutoStaffing(workspaceId: string): Promise<StageResult[]> {
     const readyShifts = await db.select()
@@ -894,14 +919,26 @@ Return ONLY the JSON array, no markdown, no explanations.`;
         eq(stagedShifts.workspaceId, workspaceId),
         eq(stagedShifts.status, 'ready_to_staff')
       ));
-    
+
     const results: StageResult[] = [];
-    
+
     for (const shift of readyShifts) {
-      const result = await this.staffSingleShift(workspaceId, shift.id);
-      results.push(result);
+      try {
+        const result = await this.staffSingleShift(workspaceId, shift.id);
+        results.push(result);
+      } catch (err: any) {
+        // Validation-failures (e.g. "No qualified employees available") throw
+        // from executionPipeline. Record the failure so the caller can
+        // escalate rather than swallowing the error in a batch short-circuit.
+        log.warn(`[InboundOpportunityAgent] Shift ${shift.id} staffing failed: ${err?.message}`);
+        results.push({
+          success: false,
+          message: err?.message || 'Staffing failed',
+          data: { stagedShiftId: shift.id },
+        });
+      }
     }
-    
+
     return results;
   }
   
@@ -1279,7 +1316,103 @@ Consider: qualifications match, reliability history, preference match, availabil
       };
     }
   }
-  
+
+  /**
+   * Phase 26B — Escalate when Stage B cannot fill one or more shifts.
+   * Notifies tenant managers (so a human can intervene) and replies to the
+   * original email sender with a clear status instead of silent failure.
+   */
+  private async escalateUnfillableShifts(params: {
+    workspaceId: string;
+    senderEmail?: string;
+    senderName?: string;
+    referenceNumber?: string;
+    workspaceName?: string;
+    unfilledCount: number;
+    totalCount: number;
+    reasons: string[];
+  }): Promise<void> {
+    const {
+      workspaceId, senderEmail, senderName, referenceNumber,
+      workspaceName, unfilledCount, totalCount, reasons,
+    } = params;
+
+    try {
+      const managers = await db.select({
+        email: employees.email,
+        firstName: employees.firstName,
+      })
+        .from(employees)
+        .where(and(
+          eq(employees.workspaceId, workspaceId),
+          eq(employees.isActive, true),
+          // @ts-expect-error — TS migration: fix in refactoring sprint
+          inArray(employees.workspaceRole, [...MANAGER_ROLES]),
+        ));
+
+      const orgLabel = workspaceName || 'Your Operations Team';
+      const refLine = referenceNumber ? ` (Ref: ${referenceNumber})` : '';
+      const reasonList = reasons.slice(0, 5).map(r => `• ${r}`).join('<br>');
+
+      for (const manager of managers) {
+        if (!manager.email) continue;
+        try {
+          await NotificationDeliveryService.send({
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            type: 'staffing_escalation',
+            workspaceId,
+            recipientUserId: manager.email,
+            channel: 'email',
+            body: {
+              to: manager.email,
+              subject: `[Action Required] Auto-staffing couldn't fill ${unfilledCount} of ${totalCount} shifts${refLine}`,
+              html: `<div style="font-family:Arial,sans-serif;max-width:600px;">
+                <h2 style="color:#b91c1c;">Auto-Staffing Needs Human Review</h2>
+                <p>Trinity attempted Stage B auto-staffing for an inbound request but could not assign ${unfilledCount} of ${totalCount} shift(s). Manual staffing is required.</p>
+                ${senderName ? `<p><strong>Requester:</strong> ${senderName}${senderEmail ? ` &lt;${senderEmail}&gt;` : ''}</p>` : ''}
+                ${reasonList ? `<p><strong>Reasons reported:</strong><br>${reasonList}</p>` : ''}
+                <p>Open the staffing queue to review pending staged shifts and assign personnel manually.</p>
+              </div>`,
+            },
+            idempotencyKey: `stage-b-escalate-${workspaceId}-${referenceNumber || 'na'}-${Date.now()}`,
+          });
+        } catch (mgrErr: any) {
+          log.warn(`[InboundOpportunityAgent] Manager escalation email failed for ${manager.email}: ${mgrErr?.message}`);
+        }
+      }
+
+      // Reply to the original sender so they know their request didn't fall
+      // into a black hole. Careful framing: don't say "we failed" — say
+      // "we're finding personnel manually" so the tenant's brand stays intact.
+      if (senderEmail) {
+        try {
+          await NotificationDeliveryService.send({
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            type: 'staffing_escalation_sender',
+            workspaceId,
+            recipientUserId: senderEmail,
+            channel: 'email',
+            body: {
+              to: senderEmail,
+              subject: `Your staffing request is being handled by our team${refLine}`,
+              html: `<div style="font-family:Arial,sans-serif;max-width:600px;">
+                <p>Hi ${senderName ? senderName.split(' ')[0] : 'there'},</p>
+                <p>Thanks for your request${refLine}. Our automated staffing system is routing this to a human coordinator at ${orgLabel} for personal attention.</p>
+                <p>A team member will follow up with you shortly with assignment details.</p>
+                <p style="color:#64748b;font-size:13px;">— ${orgLabel}</p>
+              </div>`,
+            },
+            idempotencyKey: `stage-b-escalate-sender-${workspaceId}-${referenceNumber || 'na'}`,
+          });
+        } catch (senderErr: any) {
+          log.warn(`[InboundOpportunityAgent] Sender escalation email failed for ${senderEmail}: ${senderErr?.message}`);
+        }
+      }
+    } catch (err: any) {
+      log.error('[InboundOpportunityAgent] escalateUnfillableShifts failed:', err?.message);
+    }
+  }
+
   // ==========================================================================
   // STAGE C: EMPLOYEE ACCEPTANCE & AI APPROVAL
   // ==========================================================================

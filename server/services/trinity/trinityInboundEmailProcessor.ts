@@ -32,6 +32,7 @@ import { platformEventBus } from '../platformEventBus';
 import { fireCallOffSequence } from '../staffingBroadcastService';
 import { createLogger } from '../../lib/logger';
 import { scheduleNonBlocking } from '../../lib/scheduleNonBlocking';
+import { detectEmailLanguage } from '../trinityVoice/smsLanguageDetector';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 const log = createLogger('trinityInboundEmailProcessor');
 
@@ -598,6 +599,18 @@ const EMAIL_INSTANT_ANSWERS: Record<string, string> = {
   general: null as any,
 };
 
+/**
+ * Phase 26B — Spanish instant email answers. Mirrors EMAIL_INSTANT_ANSWERS by
+ * category. processSupport picks the dictionary based on detectEmailLanguage
+ * so Spanish-speaking senders get Spanish replies.
+ */
+const EMAIL_INSTANT_ANSWERS_ES: Record<string, string> = {
+  billing: 'Su factura actual y su historial de facturación están disponibles en la aplicación en Facturación > Facturas. Si ve un cargo que no reconoce, responda con el número de factura o el rango de fechas específico y nuestro equipo de finanzas lo verificará dentro de un día hábil.',
+  scheduling: 'Su horario está visible en la aplicación en la pestaña Horario. Si un turno aparece incorrecto, su supervisor de operaciones puede actualizarlo. Responda con la fecha y el lugar del turno y lo corregiremos de inmediato.',
+  technical: 'Para resolver la mayoría de los problemas técnicos, cierre sesión en la aplicación y vuelva a iniciarla. Si el problema persiste, responda con el mensaje de error exacto o la página donde ocurre y nuestro equipo de plataforma lo investigará.',
+  general: null as any,
+};
+
 /** Lightweight FAQ search for inbound email text */
 async function emailFaqLookup(message: string, workspaceId: string): Promise<string | null> {
   try {
@@ -632,14 +645,29 @@ async function processSupport(
   const priority = String(aiData.priority || 'normal');
   const senderName = sender ? sender.name : email.fromEmail;
   const fullBody = [email.subject || '', email.bodyText || ''].join(' ').slice(0, 2000);
+  // Phase 26B — detect the inbound language so replies match the sender's.
+  const replyLang: 'en' | 'es' = detectEmailLanguage(email.subject || '', email.bodyText || '');
+  const replySubjectPrefix = replyLang === 'es' ? 'Re:' : 'Re:';
+  const replyGreeting = (name: string) =>
+    replyLang === 'es'
+      ? `<p>Hola ${name || ''},</p>`
+      : `<p>Hi ${name || 'there'},</p>`;
+  const replySignoff =
+    replyLang === 'es'
+      ? '<p>Si necesita más ayuda, responda a este correo y nuestro equipo de soporte le atenderá.</p><p>— Soporte de Trinity</p>'
+      : '<p>If you need further help, reply here and our support team will assist you.</p><p>— Trinity Support</p>';
+  const replyFaqFollowup =
+    replyLang === 'es'
+      ? '<p>Si esto no respondió completamente su pregunta, simplemente responda a este correo y le daremos seguimiento de inmediato.</p><p>— Soporte de Trinity</p>'
+      : '<p>If this didn\'t fully answer your question, simply reply to this email and we\'ll follow up right away.</p><p>— Trinity Support</p>';
 
   // ── Tier 0: FAQ exact match ────────────────────────────────────────────────
   const faqAnswer = await emailFaqLookup(fullBody, workspaceId);
   if (faqAnswer) {
     scheduleNonBlocking('inbound-email.support-faq-reply', async () => {
       const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-      const subject = `Re: ${email.subject || 'Your Support Request'}`;
-      const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${faqAnswer}</p><p>If this didn't fully answer your question, simply reply to this email and we'll follow up right away.</p><p>— Trinity Support</p>`;
+      const subject = `${replySubjectPrefix} ${email.subject || (replyLang === 'es' ? 'Su solicitud de soporte' : 'Your Support Request')}`;
+      const html = `${replyGreeting(senderName.split(' ')[0] || '')}<p>${faqAnswer}</p>${replyFaqFollowup}`;
       await NotificationDeliveryService.send({
         // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'internal_email_received',
@@ -655,12 +683,13 @@ async function processSupport(
   }
 
   // ── Tier 1: Category instant answer ───────────────────────────────────────
-  const instantAnswer = EMAIL_INSTANT_ANSWERS[category];
+  const instantAnswers = replyLang === 'es' ? EMAIL_INSTANT_ANSWERS_ES : EMAIL_INSTANT_ANSWERS;
+  const instantAnswer = instantAnswers[category];
   if (instantAnswer) {
     scheduleNonBlocking('inbound-email.support-instant-reply', async () => {
       const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-      const subject = `Re: ${email.subject || 'Your Support Request'}`;
-      const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${instantAnswer}</p><p>If you need further help, reply here and our support team will assist you.</p><p>— Trinity Support</p>`;
+      const subject = `${replySubjectPrefix} ${email.subject || (replyLang === 'es' ? 'Su solicitud de soporte' : 'Your Support Request')}`;
+      const html = `${replyGreeting(senderName.split(' ')[0] || '')}<p>${instantAnswer}</p>${replySignoff}`;
       await NotificationDeliveryService.send({
         // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'internal_email_received',
@@ -679,14 +708,17 @@ async function processSupport(
   let aiAnswerResolved = false;
   try {
     const { resolveWithTrinityBrain } = await import('../trinityVoice/trinityAIResolver');
-    const aiResult = await resolveWithTrinityBrain({ issue: fullBody, workspaceId });
+    const aiResult = await resolveWithTrinityBrain({ issue: fullBody, workspaceId, language: replyLang });
     if (aiResult.canResolve && aiResult.answer && aiResult.answer.length > 30) {
       aiAnswerResolved = true;
       const aiAnswer = aiResult.answer;
       scheduleNonBlocking('inbound-email.support-ai-reply', async () => {
         const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-        const subject = `Re: ${email.subject || 'Your Support Request'}`;
-        const html = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>${aiAnswer.replace(/\n/g, '<br>')}</p><p>If this didn't fully resolve your question, reply here and a specialist will follow up.</p><p>— Trinity Support</p>`;
+        const subject = `${replySubjectPrefix} ${email.subject || (replyLang === 'es' ? 'Su solicitud de soporte' : 'Your Support Request')}`;
+        const aiFollowup = replyLang === 'es'
+          ? '<p>Si esto no resolvió por completo su pregunta, responda aquí y un especialista le dará seguimiento.</p><p>— Soporte de Trinity</p>'
+          : '<p>If this didn\'t fully resolve your question, reply here and a specialist will follow up.</p><p>— Trinity Support</p>';
+        const html = `${replyGreeting(senderName.split(' ')[0] || '')}<p>${aiAnswer.replace(/\n/g, '<br>')}</p>${aiFollowup}`;
         await NotificationDeliveryService.send({
           // @ts-expect-error — TS migration: fix in refactoring sprint
           type: 'internal_email_received',
@@ -739,8 +771,21 @@ async function processSupport(
 
   scheduleNonBlocking('inbound-email.support-ticket-confirm', async () => {
     const { NotificationDeliveryService } = await import('../notificationDeliveryService');
-    const confirmSubject = `Support Request Received — ${ticketNumber}`;
-    const confirmHtml = `<p>Hi ${senderName.split(' ')[0] || 'there'},</p><p>We've received your support request (Ticket: <strong>${ticketNumber}</strong>). ${routingNote} We will follow up with you shortly.</p><p>— Trinity Support</p>`;
+    const confirmSubject = replyLang === 'es'
+      ? `Solicitud de soporte recibida — ${ticketNumber}`
+      : `Support Request Received — ${ticketNumber}`;
+    const routingNoteLocalized = replyLang === 'es'
+      ? category === 'billing'
+        ? 'Enviado al equipo de finanzas.'
+        : category === 'scheduling'
+        ? 'Enviado a operaciones.'
+        : category === 'technical'
+        ? 'Enviado al equipo de plataforma.'
+        : 'Enviado a soporte.'
+      : routingNote;
+    const confirmHtml = replyLang === 'es'
+      ? `${replyGreeting(senderName.split(' ')[0] || '')}<p>Hemos recibido su solicitud de soporte (Ticket: <strong>${ticketNumber}</strong>). ${routingNoteLocalized} Le daremos seguimiento en breve.</p><p>— Soporte de Trinity</p>`
+      : `${replyGreeting(senderName.split(' ')[0] || '')}<p>We've received your support request (Ticket: <strong>${ticketNumber}</strong>). ${routingNoteLocalized} We will follow up with you shortly.</p><p>— Trinity Support</p>`;
     await NotificationDeliveryService.send({
       // @ts-expect-error — TS migration: fix in refactoring sprint
       type: 'internal_email_received',
