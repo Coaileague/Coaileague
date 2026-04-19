@@ -1,10 +1,20 @@
 import { pool } from '../../db';
 import { VOICE_PLATINUM_TIERS } from '../../../shared/billingConfig';
 import { createLogger } from '../../lib/logger';
+import { NON_BILLING_WORKSPACE_IDS, GRANDFATHERED_TENANT_ID } from './billingConstants';
 
 const log = createLogger('voiceSmsMeteringService');
 
 export class VoiceSmsMeteringService {
+
+  // Protected workspaces (platform support org, grandfathered tenant, system)
+  // are tracked for observability but are NEVER billed and NEVER blocked.
+  private isProtectedWorkspace(workspaceId: string): boolean {
+    if (!workspaceId) return false;
+    if (NON_BILLING_WORKSPACE_IDS.has(workspaceId)) return true;
+    if (GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID) return true;
+    return false;
+  }
 
   async recordVoiceCall(params: {
     workspaceId: string;
@@ -16,10 +26,40 @@ export class VoiceSmsMeteringService {
     twilioCostCents: number;
   }): Promise<{ billedCents: number; isIncluded: boolean; blocked?: boolean }> {
     try {
+      // Protected workspaces: log for observability, never bill, never block
+      if (this.isProtectedWorkspace(params.workspaceId)) {
+        const minutesBilled = Math.ceil(params.durationSeconds / 60);
+        try {
+          await pool.query(`
+            INSERT INTO voice_sms_event_log (
+              workspace_id, event_type, direction, call_sid,
+              duration_seconds, duration_minutes_billed,
+              is_included, cost_basis_cents, billed_cents, margin_cents,
+              officer_employee_id, call_type
+            ) VALUES ($1,'voice_call',$2,$3,$4,$5,true,0,0,0,$6,$7)
+          `, [
+            params.workspaceId, params.direction, params.callSid,
+            params.durationSeconds, minutesBilled,
+            params.officerEmployeeId ?? null, params.callType,
+          ]);
+        } catch (e: any) {
+          log.warn('[VoiceMetering] Protected workspace log failed:', e?.message || String(e));
+        }
+        return { billedCents: 0, isIncluded: true, blocked: false };
+      }
+
       const minutesBilled = Math.ceil(params.durationSeconds / 60);
       const usage = await this.getOrCreatePeriod(params.workspaceId);
       if (!usage) {
-        return { billedCents: 0, isIncluded: false, blocked: true };
+        // Safety net: should never return null now (safe default), but if it does,
+        // we still do NOT block — we log and proceed with zero billing.
+        log.warn(`[VoiceMetering] Unexpected null period for workspace ${params.workspaceId} — proceeding without billing`);
+        return { billedCents: 0, isIncluded: true, blocked: false };
+      }
+
+      // No subscription row: safe default returned { id: null, ... } — skip DB writes that require usage.id
+      if (!usage.id) {
+        return { billedCents: 0, isIncluded: true, blocked: false };
       }
 
       const newMinutes = usage.minutes_used + minutesBilled;
@@ -75,11 +115,26 @@ export class VoiceSmsMeteringService {
     messageSid: string;
     callType: string;
     twilioCostCents: number;
-  }): Promise<{ billedCents: number; isIncluded: boolean }> {
+  }): Promise<{ billedCents: number; isIncluded: boolean; blocked?: boolean }> {
     try {
+      // Protected workspaces: log for observability, never bill, never block
+      if (this.isProtectedWorkspace(params.workspaceId)) {
+        try {
+          await pool.query(`
+            INSERT INTO voice_sms_event_log (
+              workspace_id, event_type, direction, message_sid,
+              is_included, cost_basis_cents, billed_cents, margin_cents, call_type
+            ) VALUES ($1,'sms_outbound','outbound',$2,true,0,0,0,$3)
+          `, [params.workspaceId, params.messageSid, params.callType]);
+        } catch (e: any) {
+          log.warn('[VoiceMetering] Protected workspace SMS log failed:', e?.message || String(e));
+        }
+        return { billedCents: 0, isIncluded: true, blocked: false };
+      }
+
       const usage = await this.getOrCreatePeriod(params.workspaceId);
-      if (!usage) {
-        return { billedCents: 0, isIncluded: true };
+      if (!usage || !usage.id) {
+        return { billedCents: 0, isIncluded: true, blocked: false };
       }
 
       const newCount = usage.sms_messages_used + 1;
@@ -134,7 +189,7 @@ export class VoiceSmsMeteringService {
     hasPlatinum: boolean;
   }> {
     const usage = await this.getOrCreatePeriod(workspaceId);
-    if (!usage) {
+    if (!usage || !usage.id) {
       return { minutesUsed: 0, includedMinutes: 0, smsUsed: 0, includedSms: 0, overageChargesCents: 0, hasPlatinum: false };
     }
     return {
@@ -158,7 +213,28 @@ export class VoiceSmsMeteringService {
       `SELECT * FROM voice_platinum_subscriptions WHERE workspace_id = $1 AND is_active = true`,
       [workspaceId]
     );
-    if (!sub.rows[0]) return null;
+    if (!sub.rows[0]) {
+      // No active Voice Platinum subscription — return a minimal safe record so
+      // calls aren't blocked. Usage is effectively untracked here (no period row),
+      // but callers treat { id: null } as "do not persist usage, do not block".
+      log.warn(`[VoiceMetering] No active subscription for workspace ${workspaceId} — using safe default (no blocking)`);
+      return {
+        id: null,
+        workspace_id: workspaceId,
+        included_minutes: 0,
+        included_sms_messages: 0,
+        included_recording_minutes: 0,
+        voice_overage_rate_cents: 0,
+        sms_overage_rate_cents: 0,
+        minutes_used: 0,
+        sms_messages_used: 0,
+        soft_cap_minutes: Number.MAX_SAFE_INTEGER,
+        soft_cap_sms_messages: Number.MAX_SAFE_INTEGER,
+        soft_cap_voice_warning_sent_at: new Date(),
+        soft_cap_sms_warning_sent_at: new Date(),
+        total_overage_charges_cents: 0,
+      } as any;
+    }
 
     const s = sub.rows[0];
     const existing = await pool.query(

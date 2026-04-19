@@ -24,6 +24,7 @@
 import bcrypt from 'bcryptjs';
 import { createLogger } from '../../lib/logger';
 import { verifyCaller, verificationFailureMessageSms } from './trinityCallerVerification';
+import { verifyByPhone } from './smsIdentityService';
 import {
   checkAndRecordRate,
   rateLimitMessage,
@@ -46,6 +47,9 @@ const RECOGNIZED = new Set([
   // Phase 20 — calloff workflow. Officer texts CALLOFF [optional reason] to
   // trigger Trinity's autonomous coverage workflow.
   'CALLOFF', 'CALLOUT', 'CALLINSICK', 'SICK',
+  // Phase 23 — self-service data lookups for officers on their personal phones.
+  'SCHEDULE', 'SHIFTS',
+  'PAY', 'PAYCHECK', 'PAYSTUB',
 ]);
 
 function normalizeKeyword(token: string): string {
@@ -272,7 +276,7 @@ function helpReply(): string {
   return (
     `Trinity commands: ` +
     `CLOCKIN <emp#> <pin>, CLOCKOUT <emp#> <pin>, ` +
-    `CALLOFF <reason>, ` +
+    `CALLOFF <reason>, SCHEDULE, PAY, ` +
     `COMPLAINT <message>, REQUEST <message>, VERIFY <emp# or name>, ` +
     `STATUS, HELP, EMERGENCY <location>. ` +
     `Reply STOP to opt out of texts.`
@@ -338,6 +342,9 @@ const REQUIRES_VERIFICATION = new Set([
   // Phase 20 — calloff must be tied to a verified officer profile so an
   // attacker can't trigger false calloffs from a random number.
   'CALLOFF', 'CALLOUT', 'CALLINSICK', 'SICK',
+  // Phase 23 — schedule and pay reveal personal data; require Tier 1 phone verification.
+  'SCHEDULE', 'SHIFTS',
+  'PAY', 'PAYCHECK', 'PAYSTUB',
 ]);
 
 export async function handleTrinitySmsKeyword(params: {
@@ -437,8 +444,111 @@ export async function handleTrinitySmsKeyword(params: {
     case 'SICK':
       return handleCalloff(args, body, officer, params.fromPhone);
 
+    // Phase 23 — self-service data lookups (Tier 1 phone-verified).
+    case 'SCHEDULE':
+    case 'SHIFTS':
+      return handleSchedule(params.fromPhone);
+
+    case 'PAY':
+    case 'PAYCHECK':
+    case 'PAYSTUB':
+      return handlePay(params.fromPhone);
+
     default:
       return null;
+  }
+}
+
+// ─── Phase 23: SCHEDULE / PAY handlers ───────────────────────────────────────
+// Self-service data lookups for officers on personal phones. Tier 1 phone
+// verification (verifyByPhone) resolves the officer identity and also prevents
+// anyone whose number isn't on an active employee record from pulling personal
+// data. REQUIRES_VERIFICATION above additionally runs verifyCaller as a second
+// gate (adds welfare-check escalation on repeat failures).
+
+async function handleSchedule(fromPhone: string): Promise<string> {
+  const v = await verifyByPhone(fromPhone);
+  if (!v.verified || !v.identity) {
+    return `Trinity: I couldn't match this phone to an active officer profile, so I can't pull your schedule. Contact your supervisor to verify your phone number on file.`;
+  }
+  const { employeeId, workspaceId, firstName } = v.identity;
+
+  try {
+    const { pool } = await import('../../db');
+    const r = await pool.query(
+      `SELECT s.start_time, s.end_time, s.status, s.title, s.site_id
+         FROM shifts s
+        WHERE s.workspace_id = $1
+          AND s.employee_id = $2
+          AND s.start_time >= NOW()
+          AND s.start_time <= NOW() + INTERVAL '7 days'
+          AND COALESCE(s.status, '') NOT IN ('cancelled', 'denied')
+        ORDER BY s.start_time ASC
+        LIMIT 5`,
+      [workspaceId, employeeId]
+    );
+
+    if (!r.rows.length) {
+      return `Trinity: ${firstName}, no shifts scheduled in the next 7 days. Reply REQUEST <details> if you think that's wrong.`;
+    }
+
+    const lines = r.rows.map((row: any) => {
+      const start = new Date(row.start_time);
+      const day = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const time = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      return `${day} ${time}${row.title ? ` — ${row.title}` : ''}`;
+    });
+    return `Trinity: ${firstName}, your next shifts: ${lines.join('; ')}. Full detail in the app.`;
+  } catch (err: any) {
+    log.warn('[KeywordRouter] SCHEDULE lookup failed:', err?.message);
+    return `Trinity: I couldn't pull your schedule right now. Please try again in a moment or open the app.`;
+  }
+}
+
+async function handlePay(fromPhone: string): Promise<string> {
+  const v = await verifyByPhone(fromPhone);
+  if (!v.verified || !v.identity) {
+    return `Trinity: I couldn't match this phone to an active officer profile, so I can't pull your pay info. Contact your supervisor to verify your phone number on file.`;
+  }
+  const { employeeId, workspaceId, firstName } = v.identity;
+
+  try {
+    const { pool } = await import('../../db');
+    const r = await pool.query(
+      `SELECT period_start, period_end, regular_hours, overtime_hours,
+              gross_pay, net_pay, pay_date
+         FROM employee_payroll_records
+        WHERE workspace_id = $1
+          AND employee_id = $2
+        ORDER BY COALESCE(period_end, pay_date, created_at) DESC NULLS LAST
+        LIMIT 1`,
+      [workspaceId, employeeId]
+    );
+
+    if (!r.rows.length) {
+      return `Trinity: ${firstName}, no pay records on file yet. Your first pay stub will appear in the app's Payroll section after your first pay period closes.`;
+    }
+
+    const row = r.rows[0];
+    const periodEnd = row.period_end
+      ? new Date(row.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : null;
+    const regular = row.regular_hours != null ? parseFloat(row.regular_hours).toFixed(1) : null;
+    const overtime = row.overtime_hours != null ? parseFloat(row.overtime_hours).toFixed(1) : null;
+    const net = row.net_pay != null ? parseFloat(row.net_pay).toFixed(2) : null;
+    const gross = row.gross_pay != null ? parseFloat(row.gross_pay).toFixed(2) : null;
+
+    const parts: string[] = [];
+    if (periodEnd) parts.push(`period ending ${periodEnd}`);
+    if (regular) parts.push(`${regular}h regular${overtime && parseFloat(overtime) > 0 ? ` + ${overtime}h OT` : ''}`);
+    if (net) parts.push(`net $${net}`);
+    else if (gross) parts.push(`gross $${gross}`);
+
+    const summary = parts.length ? parts.join(', ') : 'details available in the app';
+    return `Trinity: ${firstName}, your most recent pay: ${summary}. Full stub in the app under Payroll > Pay Stubs.`;
+  } catch (err: any) {
+    log.warn('[KeywordRouter] PAY lookup failed:', err?.message);
+    return `Trinity: I couldn't pull your pay info right now. Please try again in a moment or open the app.`;
   }
 }
 
