@@ -598,6 +598,107 @@ export const weaponCheckouts = pgTable("weapon_checkouts", {
   index("weapon_checkout_emp_idx").on(table.employeeId),
 ]);
 
+// ─────────────────────────────────────────────────────────────
+// Armory gap closure (Readiness Section 2)
+// Weapon inspections, qualifications, and ammo tracking.
+// Every mutation writes audit_logs (CLAUDE §L). workspace_id
+// indexed on every table (CLAUDE §D). Raw SQL must filter by
+// workspace_id in WHERE (CLAUDE §G).
+// ─────────────────────────────────────────────────────────────
+
+export const weaponInspections = pgTable("weapon_inspections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  weaponId: varchar("weapon_id").notNull(),
+  inspectedByEmployeeId: varchar("inspected_by_employee_id"),
+  inspectedAt: timestamp("inspected_at").notNull().defaultNow(),
+  inspectionType: varchar("inspection_type").notNull(), // routine, pre_shift, post_shift, quarterly, annual
+  condition: varchar("condition").notNull(), // excellent, good, fair, poor, unserviceable
+  roundsFired: integer("rounds_fired"),
+  findings: text("findings"),
+  actionTaken: varchar("action_taken"), // none, cleaned, repaired, removed_from_service
+  nextInspectionDue: timestamp("next_inspection_due"),
+  photoUrls: jsonb("photo_urls").$type<string[]>().default(sql`'[]'::jsonb`),
+  signature: text("signature"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("weapon_inspections_workspace_idx").on(table.workspaceId),
+  index("weapon_inspections_weapon_idx").on(table.weaponId),
+  index("weapon_inspections_inspected_at_idx").on(table.inspectedAt),
+]);
+
+export const weaponQualifications = pgTable("weapon_qualifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  employeeId: varchar("employee_id").notNull(),
+  weaponType: varchar("weapon_type").notNull(), // handgun, rifle, shotgun, taser, baton
+  caliber: varchar("caliber"),
+  qualificationLevel: varchar("qualification_level"), // basic, advanced, instructor
+  qualifiedAt: timestamp("qualified_at").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  score: integer("score"),
+  maxScore: integer("max_score"),
+  instructorName: varchar("instructor_name"),
+  instructorLicenseNumber: varchar("instructor_license_number"),
+  rangeName: varchar("range_name"),
+  certificateUrl: text("certificate_url"),
+  status: varchar("status").default("active"), // active, expired, revoked
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("weapon_quals_workspace_idx").on(table.workspaceId),
+  index("weapon_quals_employee_idx").on(table.employeeId),
+  index("weapon_quals_expires_idx").on(table.expiresAt),
+]);
+
+export const ammoInventory = pgTable("ammo_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  caliber: varchar("caliber").notNull(),
+  manufacturer: varchar("manufacturer"),
+  lotNumber: varchar("lot_number"),
+  grainWeight: integer("grain_weight"),
+  roundType: varchar("round_type"), // fmj, hp, jhp, training
+  quantityOnHand: integer("quantity_on_hand").notNull().default(0),
+  reorderThreshold: integer("reorder_threshold").default(0),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 4 }),
+  storageLocation: varchar("storage_location"),
+  purchaseOrderNumber: varchar("purchase_order_number"),
+  receivedAt: timestamp("received_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ammo_inventory_workspace_idx").on(table.workspaceId),
+  index("ammo_inventory_caliber_idx").on(table.caliber),
+]);
+
+export const ammoTransactions = pgTable("ammo_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  ammoInventoryId: varchar("ammo_inventory_id").notNull(),
+  transactionType: varchar("transaction_type").notNull(), // receive, issue, return, expended, damaged, audit_adjustment
+  quantity: integer("quantity").notNull(), // positive for receive/return, negative for issue/expended
+  quantityAfter: integer("quantity_after").notNull(),
+  employeeId: varchar("employee_id"), // issued to / returned from
+  relatedQualificationId: varchar("related_qualification_id"),
+  relatedShiftId: varchar("related_shift_id"),
+  reason: text("reason"),
+  performedByUserId: varchar("performed_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("ammo_tx_workspace_idx").on(table.workspaceId),
+  index("ammo_tx_inventory_idx").on(table.ammoInventoryId),
+  index("ammo_tx_employee_idx").on(table.employeeId),
+  index("ammo_tx_created_at_idx").on(table.createdAt),
+]);
+
+export type WeaponInspection = typeof weaponInspections.$inferSelect;
+export type WeaponQualification = typeof weaponQualifications.$inferSelect;
+export type AmmoInventory = typeof ammoInventory.$inferSelect;
+export type AmmoTransaction = typeof ammoTransactions.$inferSelect;
+
 export const guardTours = pgTable("guard_tours", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),

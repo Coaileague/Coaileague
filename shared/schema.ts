@@ -6754,6 +6754,33 @@ export const insertWeaponCheckoutSchema = createInsertSchema(weaponCheckouts).om
 export type InsertWeaponCheckout = z.infer<typeof insertWeaponCheckoutSchema>;
 export type WeaponCheckout = typeof weaponCheckouts.$inferSelect;
 
+// Armory gap closure (Readiness Section 2) — insert schemas
+import { weaponInspections, weaponQualifications, ammoInventory, ammoTransactions } from './schema/domains/ops';
+
+export const insertWeaponInspectionSchema = createInsertSchema(weaponInspections).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertWeaponInspection = z.infer<typeof insertWeaponInspectionSchema>;
+export type WeaponInspectionRow = typeof weaponInspections.$inferSelect;
+
+export const insertWeaponQualificationSchema = createInsertSchema(weaponQualifications).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertWeaponQualification = z.infer<typeof insertWeaponQualificationSchema>;
+export type WeaponQualificationRow = typeof weaponQualifications.$inferSelect;
+
+export const insertAmmoInventorySchema = createInsertSchema(ammoInventory).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertAmmoInventory = z.infer<typeof insertAmmoInventorySchema>;
+export type AmmoInventoryRow = typeof ammoInventory.$inferSelect;
+
+export const insertAmmoTransactionSchema = createInsertSchema(ammoTransactions).omit({
+  id: true, createdAt: true,
+});
+export type InsertAmmoTransaction = z.infer<typeof insertAmmoTransactionSchema>;
+export type AmmoTransactionRow = typeof ammoTransactions.$inferSelect;
+
 // workspaceSsoConfigs merged into workspaces.sso_config_blob
 export const insertSsoConfigSchema = z.object({
   workspaceId: z.string(),

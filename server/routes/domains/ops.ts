@@ -14,6 +14,7 @@ import { situationRouter } from "../situationRoutes";
 import { safetyRouter } from "../safetyRoutes";
 import dispatchRouter from "../dispatch";
 import equipmentRouter from "../equipmentRoutes";
+import armoryRouter from "../armoryRoutes";
 import vehicleRouter from "../vehicleRoutes";
 import guardTourRouter from "../guardTourRoutes";
 import { migrationRouter } from "../migration";
@@ -49,6 +50,8 @@ export function mountOpsRoutes(app: Express): void {
   app.use("/api/safety", requireAuth, ensureWorkspaceAccess, safetyRouter);
   app.use("/api/dispatch", requireAuth, ensureWorkspaceAccess, dispatchRouter);
   app.use("/api/equipment", requireAuth, ensureWorkspaceAccess, equipmentRouter);
+  // Armory — Readiness Section 2 (inspections, qualifications, ammo)
+  app.use("/api/armory", requireAuth, ensureWorkspaceAccess, armoryRouter);
   app.use("/api/vehicles", requireAuth, ensureWorkspaceAccess, vehicleRouter);
   app.use("/api/guard-tours", requireAuth, ensureWorkspaceAccess, guardTourRouter);
   app.use("/api/migration", requireAuth, ensureWorkspaceAccess, migrationRouter);
