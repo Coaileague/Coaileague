@@ -533,6 +533,77 @@ export default function FieldReports() {
               ))}
             </div>
           )}
+
+          {/* Readiness Section 20 — Daily Activity Report fields.
+              Replaces the MISS called out in the mobile reality check:
+              DAR type previously had no dedicated form block, so
+              submissions dropped all DAR-specific detail. */}
+          {selectedType === 'daily' && (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="dar-shift-summary">Shift summary</Label>
+                <Textarea
+                  id="dar-shift-summary"
+                  placeholder="Brief summary of this shift — site, hours, notable events."
+                  value={formData.shiftSummary || ''}
+                  onChange={(e) => setFormData({ ...formData, shiftSummary: e.target.value })}
+                  rows={3}
+                  className="resize-none"
+                  data-testid="input-dar-shift-summary"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dar-activities">Activities performed</Label>
+                <Textarea
+                  id="dar-activities"
+                  placeholder="Patrols, checkpoints, visitors screened, tours completed."
+                  value={formData.activitiesPerformed || ''}
+                  onChange={(e) => setFormData({ ...formData, activitiesPerformed: e.target.value })}
+                  rows={3}
+                  className="resize-none"
+                  data-testid="input-dar-activities"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dar-handoff">Hand-off / relief notes</Label>
+                <Textarea
+                  id="dar-handoff"
+                  placeholder="What the next officer needs to know — open issues, ongoing situations."
+                  value={formData.handoffNotes || ''}
+                  onChange={(e) => setFormData({ ...formData, handoffNotes: e.target.value })}
+                  rows={2}
+                  className="resize-none"
+                  data-testid="input-dar-handoff"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="dar-visitors">Visitors (count)</Label>
+                  <Input
+                    id="dar-visitors"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={formData.visitorCount ?? ''}
+                    onChange={(e) => setFormData({ ...formData, visitorCount: Number(e.target.value) || 0 })}
+                    data-testid="input-dar-visitors"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dar-incidents">Incidents (count)</Label>
+                  <Input
+                    id="dar-incidents"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={formData.incidentCount ?? ''}
+                    onChange={(e) => setFormData({ ...formData, incidentCount: Number(e.target.value) || 0 })}
+                    data-testid="input-dar-incidents"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           
           <div>
             <Label htmlFor="description">Description / Notes</Label>

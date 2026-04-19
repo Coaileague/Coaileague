@@ -773,6 +773,119 @@ export async function computeComplianceScore(workspaceId: string): Promise<Compl
   };
 }
 
+// ─── COMPLIANCE TREND + REGULATOR NOTIFICATIONS (Readiness Section 19) ───────
+
+/**
+ * Last 90 days of compliance_score_snapshots rows (from Section 17) for
+ * the workspace. Auditor portal renders this as a sparkline so the
+ * regulator sees the trend, not just a point-in-time score.
+ */
+export async function getComplianceTrend(workspaceId: string): Promise<Array<{
+  score: number;
+  recordedAt: Date;
+}>> {
+  await ensureTables();
+  const { pool } = await import('../../db');
+  try {
+    const r = await pool.query(
+      `SELECT score, recorded_at
+         FROM compliance_score_snapshots
+        WHERE workspace_id = $1
+          AND recorded_at > NOW() - INTERVAL '90 days'
+        ORDER BY recorded_at ASC`,
+      [workspaceId],
+    );
+    return r.rows.map((row: any) => ({
+      score: Number(row.score),
+      recordedAt: row.recorded_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Regulator notification log — every time an auditor flags or escalates
+ * a finding through the portal, it lands here as a persistent record.
+ * Bootstrapped lazily.
+ */
+let regNotifBootstrapped = false;
+async function ensureRegulatorNotificationTable(): Promise<void> {
+  if (regNotifBootstrapped) return;
+  const { pool } = await import('../../db');
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS auditor_regulator_notifications (
+        id            VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        auditor_id    VARCHAR NOT NULL,
+        workspace_id  VARCHAR NOT NULL,
+        severity      VARCHAR NOT NULL,
+        subject       VARCHAR NOT NULL,
+        body          TEXT NOT NULL,
+        status        VARCHAR NOT NULL DEFAULT 'sent',
+        metadata      JSONB,
+        created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS arn_workspace_idx ON auditor_regulator_notifications(workspace_id);
+      CREATE INDEX IF NOT EXISTS arn_auditor_idx   ON auditor_regulator_notifications(auditor_id);
+    `);
+    regNotifBootstrapped = true;
+  } catch (err: any) {
+    log.warn('[AuditorAccess] regulator-notif bootstrap failed:', err?.message);
+  }
+}
+
+export async function logRegulatorNotification(params: {
+  auditorId: string;
+  workspaceId: string;
+  severity: 'info' | 'warning' | 'violation' | 'critical';
+  subject: string;
+  body: string;
+  metadata?: Record<string, any>;
+}): Promise<{ id: string | null; success: boolean }> {
+  await ensureRegulatorNotificationTable();
+  const { pool } = await import('../../db');
+  try {
+    const r = await pool.query(
+      `INSERT INTO auditor_regulator_notifications
+         (auditor_id, workspace_id, severity, subject, body, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      [
+        params.auditorId,
+        params.workspaceId,
+        params.severity,
+        params.subject,
+        params.body,
+        params.metadata || {},
+      ],
+    );
+    return { id: r.rows[0]?.id ?? null, success: true };
+  } catch (err: any) {
+    log.warn('[AuditorAccess] logRegulatorNotification failed:', err?.message);
+    return { id: null, success: false };
+  }
+}
+
+export async function listRegulatorNotificationsForWorkspace(
+  workspaceId: string,
+): Promise<Array<any>> {
+  await ensureRegulatorNotificationTable();
+  const { pool } = await import('../../db');
+  try {
+    const r = await pool.query(
+      `SELECT * FROM auditor_regulator_notifications
+        WHERE workspace_id = $1
+     ORDER BY created_at DESC
+        LIMIT 200`,
+      [workspaceId],
+    );
+    return r.rows;
+  } catch {
+    return [];
+  }
+}
+
 export async function expireOldAudits(): Promise<{ closed: number }> {
   await ensureTables();
   try {

@@ -213,6 +213,18 @@ apiHealthRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/health/slo — Readiness Section 22
+// Returns the codified SLO targets. Pairs with docs/OBSERVABILITY.md §1.
+// Consumers: internal operator dashboards, external status page embed.
+apiHealthRouter.get('/slo', async (_req: Request, res: Response) => {
+  try {
+    const { SLO_TARGETS } = await import('../lib/sloConfig');
+    res.json({ ok: true, targets: SLO_TARGETS });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err?.message || 'Failed to load SLO config' });
+  }
+});
+
 // POST /api/health/error-tracker-test — Readiness Section 12
 // Fires a synthetic event through the configured error tracker adapter
 // so operators can verify ERROR_TRACKING_WEBHOOK_URL works end-to-end

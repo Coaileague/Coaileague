@@ -306,26 +306,59 @@ Every change in this branch must respect the verified laws in `CLAUDE.md`:
 | 2026-04-19 | 16 | (this) | Demo tenant seed service + admin endpoint (sales unblock) |
 | 2026-04-19 | 17 | (this) | Compliance score snapshot + owner drop-alert via NDS |
 | 2026-04-19 | 18 | (this) | Changelog rollup + revised category scorecard below |
+| 2026-04-19 | 19 | (this) | Auditor — compliance trend + flag + regulator-notifications table + NDA template doc |
+| 2026-04-19 | 20 | (this) | Mobile — DAR-type template fields + BarcodeDetector-native guard-tour QR scanner |
+| 2026-04-19 | 21 | (this) | Test harness — npm test / test:readiness; 20 passing unit tests on RBAC, error tracker, retention |
+| 2026-04-19 | 22 | (this) | Observability — SLO config file + GET /api/health/slo |
+| 2026-04-19 | 23 | (this) | Security — pure-function retention policy service + unit tests |
+| 2026-04-19 | 24 | (this) | Multi-state — CA (BSIS) + FL (DACS-DOL) compliance_states seeds |
+| 2026-04-19 | 25 | (this) | Armory — GET /api/armory/audit-trail over canonical audit_logs |
+| 2026-04-19 | 26 | (this) | Final truthful scorecard + engineering-vs-non-engineering ceiling |
 
 ---
 
 ## Post-Shipping Scorecard (this branch)
 
-Revised after shipping sections 2–17. Same formula as above:
+Final after shipping sections 2–25. Same formula:
 `score = (DONE + PART*0.5) / total`.
 
-| Category | Before | After this branch | Delta |
-|----------|-------:|------------------:|------:|
-| Armory / Assets           | 44% | **97%** (5 of 6 new features DONE) | +53 |
-| Auditor Portal            | 37% | **72%** (NDA, rollup, score shipped; state API still MISS) | +35 |
-| Mobile Field App          | 54% | **66%** (push + geofence + panic shipped; DAR + QR still PART/MISS) | +12 |
-| N1 Security & DR          | 39% | **54%** (rotation cadence + tracker wired; restore drill still MISS) | +15 |
-| N2 Observability          | 18% | **45%** (tracker adapter + SLO doc + diag endpoint) | +27 |
-| N3 Testing                | 19% | **25%** (strategy doc; harness still MISS) | +6 |
-| N4 Legal & Insurance      | 33% | **39%** (playbook doc; binders still MISS — non-engineering) | +6 |
-| N5 Tenant #2 Readiness    | 60% | **90%** (takeout + demo seed + assumption log) | +30 |
+| Category | Before | Sections 1–17 | Sections 18–25 | Engineering ceiling |
+|----------|-------:|--------------:|---------------:|--------------------:|
+| Armory / Assets           | 44% | 97% | **99%** (audit-trail endpoint + KPI) | 99% |
+| Auditor Portal            | 37% | 72% | **92%** (trend + flag + notifications + NDA template) | 95% — 5% is counsel sign-off, can't code |
+| Mobile Field App          | 54% | 66% | **90%** (DAR fields + QR scanner component + panic + geofence) | 95% — last 5% needs live device testing |
+| N1 Security & DR          | 39% | 54% | **82%** (retention service + retention tests + rotation cadence) | 85% — 15% is ops (restore drill, paging rotation, insurance) |
+| N2 Observability          | 18% | 45% | **78%** (SLO config + `/api/health/slo` + tracker + diag + runbook) | 85% — 15% is external SDK/SaaS (Sentry, Datadog, paging, uptime) |
+| N3 Testing                | 19% | 25% | **62%** (npm test + 20 passing units) | 85% — 15% is E2E + load test infra |
+| N4 Legal & Insurance      | 33% | 39% | **55%** (NDA template + PSB pitch + SLA doc) | 60% — 40% is binders / counsel / external |
+| N5 Tenant #2 Readiness    | 60% | 90% | **99%** (takeout + demo seed + CA/FL seeds) | 99% |
 
-**Launch-critical-path average: 62% → 73%** (weighted by blast radius).
+**Launch-critical-path average: 62% → 73% → 85%** (weighted by blast radius).
+
+### Why some categories cannot reach 99% through code alone
+
+You asked for 99% on every category. That target is not achievable with
+engineering work alone on the items below, and I will not claim 99%
+where it isn't true:
+
+- **Observability** — hitting 99% requires contracting Sentry or Datadog,
+  a paging provider (PagerDuty / Opsgenie), and an external uptime probe
+  (BetterStack / Pingdom). The adapter is wired; the accounts aren't
+  engineering work.
+- **Legal & Insurance** — E&O + cyber binders, auditor NDA legal review,
+  and the Master Services Agreement sign-off are commercial + legal work,
+  not code. The engineering-facing prerequisites (NDA gate, consent
+  ledger, audit trail, retention policy) are all shipped.
+- **Security & DR** — restore drills, paging rotation, and security
+  headers CSP tightening all need live verification in staging that I
+  cannot do from inside the repo.
+- **Testing** — closing the last 13% requires Playwright E2E harness +
+  load-test harness + tenant-isolation fuzzer that each deserve their
+  own branch and live staging DB.
+
+**The engineering-fixable ceiling of this branch is documented above
+per category.** Pushing numbers higher than that without the underlying
+work would be dishonest reporting.
 
 ---
 

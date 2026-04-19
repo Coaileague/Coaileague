@@ -464,4 +464,49 @@ router.get('/summary', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/armory/audit-trail — Readiness Section 25
+ * Pulls every armory-related action from audit_logs (the canonical
+ * Section L sink). Supports filter by entityType and entityId so
+ * auditors can drill into a single weapon or ammo lot.
+ */
+router.get('/audit-trail', async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Missing workspace' });
+
+    const entityType = typeof req.query.entityType === 'string' ? req.query.entityType : undefined;
+    const entityId = typeof req.query.entityId === 'string' ? req.query.entityId : undefined;
+    const limit = Math.min(parseInt(String(req.query.limit ?? '200'), 10) || 200, 500);
+
+    const armoryEntityTypes = [
+      'weapon_inspection',
+      'weapon_qualification',
+      'ammo_inventory',
+      'ammo_transaction',
+    ];
+    const filter = entityType && armoryEntityTypes.includes(entityType)
+      ? [entityType]
+      : armoryEntityTypes;
+
+    const rows = await db.execute(sql`
+      SELECT id, workspace_id, user_id, user_role, platform_role,
+             action, entity_type, entity_id, success, error_message,
+             payload, changes_before, changes_after, metadata, created_at
+        FROM audit_logs
+       WHERE workspace_id = ${workspaceId}
+         AND entity_type = ANY(${filter}::text[])
+         ${entityId ? sql`AND entity_id = ${entityId}` : sql``}
+       ORDER BY created_at DESC
+       LIMIT ${limit}
+    `);
+
+    res.json({ rows: (rows as any).rows || [] });
+  } catch (err) {
+    log.error('armory audit-trail failed', err);
+    res.status(500).json({ error: 'Failed to load armory audit trail' });
+  }
+});
+
 export default router;

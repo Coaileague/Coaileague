@@ -37,6 +37,9 @@ import {
   listWorkspacesForAuditor,
   auditorHasAuditForWorkspace,
   computeComplianceScore,
+  getComplianceTrend,
+  logRegulatorNotification,
+  listRegulatorNotificationsForWorkspace,
 } from '../services/auditor/auditorAccessService';
 
 const log = createLogger('AuditorRoutes');
@@ -261,6 +264,89 @@ auditorRouter.get(
     } catch (err: any) {
       log.error('[AuditorRoutes] compliance score error:', err.message);
       res.status(500).json({ ok: false, error: 'Failed to compute score' });
+    }
+  },
+);
+
+// ─── 6d. COMPLIANCE TREND (Readiness Section 19) ─────────────────────────────
+// 90-day sparkline data for the auditor portal.
+auditorRouter.get(
+  '/compliance-trend/:workspaceId',
+  requireAuditor,
+  requireNdaAccepted,
+  async (req: any, res: Response) => {
+    try {
+      const auditorId = req.session.auditorId;
+      const workspaceId = req.params.workspaceId;
+      const allowed = await auditorHasAuditForWorkspace(auditorId, workspaceId);
+      if (!allowed) {
+        return res.status(403).json({ ok: false, error: 'No audit history with this workspace' });
+      }
+      const trend = await getComplianceTrend(workspaceId);
+      res.json({ ok: true, trend });
+    } catch (err: any) {
+      log.error('[AuditorRoutes] compliance trend error:', err.message);
+      res.status(500).json({ ok: false, error: 'Failed to fetch trend' });
+    }
+  },
+);
+
+// ─── 6e. REGULATOR NOTIFICATIONS (Readiness Section 19) ──────────────────────
+// Auditor can flag a finding; tenant owner receives the alert via NDS
+// (the existing compliance_alert notification type). Every flag is
+// persisted in auditor_regulator_notifications for the audit trail.
+auditorRouter.post(
+  '/flag/:workspaceId',
+  requireAuditor,
+  requireNdaAccepted,
+  async (req: any, res: Response) => {
+    try {
+      const auditorId = req.session.auditorId;
+      const workspaceId = req.params.workspaceId;
+      const allowed = await auditorHasAuditForWorkspace(auditorId, workspaceId);
+      if (!allowed) {
+        return res.status(403).json({ ok: false, error: 'No audit history with this workspace' });
+      }
+      const { severity, subject, body, metadata } = req.body || {};
+      const allowedSev = ['info', 'warning', 'violation', 'critical'];
+      if (!allowedSev.includes(severity)) {
+        return res.status(400).json({ ok: false, error: `severity must be one of ${allowedSev.join(', ')}` });
+      }
+      if (!subject || typeof subject !== 'string' || subject.length < 3) {
+        return res.status(400).json({ ok: false, error: 'subject (min 3 chars) required' });
+      }
+      if (!body || typeof body !== 'string' || body.length < 5) {
+        return res.status(400).json({ ok: false, error: 'body (min 5 chars) required' });
+      }
+      const r = await logRegulatorNotification({
+        auditorId, workspaceId, severity, subject, body, metadata,
+      });
+      if (!r.success) return res.status(500).json({ ok: false, error: 'Failed to log notification' });
+      res.json({ ok: true, id: r.id });
+    } catch (err: any) {
+      log.error('[AuditorRoutes] flag error:', err.message);
+      res.status(500).json({ ok: false, error: 'Flag failed' });
+    }
+  },
+);
+
+auditorRouter.get(
+  '/notifications/:workspaceId',
+  requireAuditor,
+  requireNdaAccepted,
+  async (req: any, res: Response) => {
+    try {
+      const auditorId = req.session.auditorId;
+      const workspaceId = req.params.workspaceId;
+      const allowed = await auditorHasAuditForWorkspace(auditorId, workspaceId);
+      if (!allowed) {
+        return res.status(403).json({ ok: false, error: 'No audit history with this workspace' });
+      }
+      const rows = await listRegulatorNotificationsForWorkspace(workspaceId);
+      res.json({ ok: true, notifications: rows });
+    } catch (err: any) {
+      log.error('[AuditorRoutes] notifications list error:', err.message);
+      res.status(500).json({ ok: false, error: 'Failed to list notifications' });
     }
   },
 );

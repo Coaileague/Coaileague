@@ -1813,4 +1813,21 @@ router.post("/compliance-snapshot/:workspaceId", requirePlatformAdmin, async (re
   }
 });
 
+/**
+ * POST /api/dev/seed-multi-state-regulatory — Readiness Section 24
+ * Adds California (BSIS) + Florida (DACS-DOL) rows to compliance_states.
+ * Idempotent via ON CONFLICT(state_code) DO NOTHING. Texas is already
+ * seeded elsewhere.
+ */
+router.post("/seed-multi-state-regulatory", requirePlatformAdmin, async (_req: AuthenticatedRequest, res) => {
+  try {
+    const { seedMultiStateRegulatory } = await import("../services/multiStateRegulatorySeed");
+    const result = await seedMultiStateRegulatory();
+    res.json(result);
+  } catch (err: any) {
+    log.error('[DevRoutes] multi-state seed failed:', err?.message);
+    res.status(500).json({ error: err?.message || 'Multi-state seed failed' });
+  }
+});
+
 export default router;
