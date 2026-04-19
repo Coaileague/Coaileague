@@ -202,6 +202,100 @@ identityPinRouter.get(
   },
 );
 
+// ─── CLIENT PIN (self-service from client portal) — Phase 25 ──────────────────
+// The tenant-manager routes above require workspace roles that portal-only
+// client users do not hold. The self-service routes below let an authenticated
+// client user manage the PIN on their own client row. The caller is resolved
+// by matching the logged-in user's email to a clients row in their workspace —
+// never by accepting an arbitrary clientId path parameter.
+
+async function resolveSelfClient(
+  req: AuthenticatedRequest,
+): Promise<{ clientId: string; workspaceId: string } | null> {
+  const workspaceId = (req as any).workspaceId ?? (req as any).user?.workspaceId;
+  const userId = (req as any).user?.id as string | undefined;
+  const email = (req as any).user?.email as string | undefined;
+  if (!workspaceId || (!userId && !email)) return null;
+
+  // Tenant-scoped — the WHERE clause always includes workspace_id per §G.
+  const { pool } = await import('../db');
+  const { rows } = await pool.query(
+    `SELECT id FROM clients
+      WHERE workspace_id = $1
+        AND (
+          ($2::text IS NOT NULL AND user_id = $2::text)
+          OR ($3::text IS NOT NULL AND lower(coalesce(email, '')) = lower($3::text))
+        )
+      LIMIT 1`,
+    [workspaceId, userId ?? null, email ?? null],
+  );
+  if (!rows.length) return null;
+  return { clientId: rows[0].id, workspaceId };
+}
+
+identityPinRouter.get('/pin/client/self/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const resolved = await resolveSelfClient(req);
+    if (!resolved) return res.status(404).json({ error: 'CLIENT_NOT_FOUND' });
+    const status = await getEntityPinStatus({
+      entity: 'client',
+      entityId: resolved.clientId,
+      workspaceId: resolved.workspaceId,
+    });
+    return res.json({ ...status, clientId: resolved.clientId });
+  } catch (err: any) {
+    log.error('[ClientPin] self status failed:', err?.message);
+    return res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
+
+identityPinRouter.post('/pin/client/self/set', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const actorUserId = (req as any).user?.id;
+    if (!actorUserId) return res.status(401).json({ error: 'UNAUTHENTICATED' });
+    const resolved = await resolveSelfClient(req);
+    if (!resolved) return res.status(404).json({ error: 'CLIENT_NOT_FOUND' });
+
+    const { pin } = req.body || {};
+    await setEntityPin({
+      entity: 'client',
+      entityId: resolved.clientId,
+      pin,
+      workspaceId: resolved.workspaceId,
+      actorUserId,
+      actorPlatformRole: (req as any).platformRole ?? null,
+    });
+    return res.json({ success: true, message: 'Client PIN saved' });
+  } catch (err: any) {
+    const msg = err?.message || 'Failed to set client PIN';
+    if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
+    if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
+    log.error('[ClientPin] self set failed:', msg);
+    return res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
+
+identityPinRouter.delete('/pin/client/self', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const actorUserId = (req as any).user?.id;
+    if (!actorUserId) return res.status(401).json({ error: 'UNAUTHENTICATED' });
+    const resolved = await resolveSelfClient(req);
+    if (!resolved) return res.status(404).json({ error: 'CLIENT_NOT_FOUND' });
+
+    await clearEntityPin({
+      entity: 'client',
+      entityId: resolved.clientId,
+      workspaceId: resolved.workspaceId,
+      actorUserId,
+      actorPlatformRole: (req as any).platformRole ?? null,
+    });
+    return res.json({ success: true, message: 'Client PIN cleared' });
+  } catch (err: any) {
+    log.error('[ClientPin] self clear failed:', err?.message);
+    return res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
+
 // ─── COMBINED IDENTITY + PIN VERIFY (Trinity / HelpAI) ───────────────────────
 // No workspace auth required — this is the entry point for inbound channels
 // where the caller only has the universal code + PIN. Rate-limited to prevent

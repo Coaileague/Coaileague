@@ -760,6 +760,46 @@ export default function ClientPortal() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  // ── Phase 25 — Client Identity: CLT number + self-service PIN ───────────────
+  const [clientPinInput, setClientPinInput] = useState("");
+  const [clientPinCopied, setClientPinCopied] = useState(false);
+  const { data: clientPinStatus } = useQuery<{ hasPin: boolean }>({
+    queryKey: ["/api/identity/pin/client/self/status"],
+    staleTime: 30_000,
+  });
+  const setClientPinMutation = useMutation({
+    mutationFn: (pin: string) => apiRequest("POST", "/api/identity/pin/client/self/set", { pin }),
+    onSuccess: () => {
+      toast({ title: "Client PIN saved", description: "Trinity and support can now verify you by phone." });
+      setClientPinInput("");
+      queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
+    },
+    onError: (e: any) => toast({
+      title: "Could not save PIN",
+      description: e?.message || "Please try again",
+      variant: "destructive",
+    }),
+  });
+  const clearClientPinMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/identity/pin/client/self"),
+    onSuccess: () => {
+      toast({ title: "Client PIN cleared" });
+      queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
+    },
+    onError: (e: any) => toast({
+      title: "Could not clear PIN",
+      description: e?.message || "Please try again",
+      variant: "destructive",
+    }),
+  });
+  const clientNumber = (currentClient as any)?.clientNumber || (currentClient as any)?.externalId || null;
+  const copyClientNumber = () => {
+    if (!clientNumber) return;
+    navigator.clipboard.writeText(clientNumber);
+    setClientPinCopied(true);
+    setTimeout(() => setClientPinCopied(false), 1500);
+  };
+
   const downloadPdf = (invoiceId: number) => {
     window.open(`/api/invoices/${invoiceId}/pdf`, "_blank");
   };
@@ -1815,6 +1855,95 @@ export default function ClientPortal() {
                   {changePasswordMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
                   Change Password
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Phase 25 — Client Identity: CLT number + PIN card */}
+            <Card data-testid="client-identity-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  Your Client Identity
+                </CardTitle>
+                <CardDescription>
+                  Use your client number when contacting your security provider by phone
+                  or email for verified assistance. Your PIN is the secondary factor that
+                  prevents anyone else from impersonating you.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Client Number</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <code
+                      className="px-3 py-2 bg-muted rounded text-sm font-mono flex-1 break-all"
+                      data-testid="client-identity-number"
+                    >
+                      {clientNumber || "Not assigned yet"}
+                    </code>
+                    {clientNumber && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={copyClientNumber}
+                        data-testid="button-copy-client-number"
+                      >
+                        {clientPinCopied ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          "Copy"
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Client PIN</Label>
+                  <p className="text-sm text-muted-foreground mt-1 mb-2">
+                    Set a PIN to verify your identity when calling (866) 464-4151. Support
+                    will only ever ask for it to confirm it's really you — never share it.
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge
+                      variant={clientPinStatus?.hasPin ? "default" : "secondary"}
+                      data-testid="client-pin-status"
+                    >
+                      {clientPinStatus?.hasPin ? "✓ PIN set" : "No PIN set"}
+                    </Badge>
+                    <Input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={8}
+                      placeholder="4–8 digits"
+                      value={clientPinInput}
+                      onChange={e => setClientPinInput(e.target.value.replace(/\D/g, ""))}
+                      className="h-8 text-sm font-mono w-32"
+                      data-testid="input-client-pin"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => setClientPinMutation.mutate(clientPinInput)}
+                      disabled={clientPinInput.length < 4 || setClientPinMutation.isPending}
+                      data-testid="button-set-client-pin"
+                    >
+                      <Key className="h-3.5 w-3.5 mr-1" />
+                      {clientPinStatus?.hasPin ? "Update PIN" : "Set PIN"}
+                    </Button>
+                    {clientPinStatus?.hasPin && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => clearClientPinMutation.mutate()}
+                        disabled={clearClientPinMutation.isPending}
+                        data-testid="button-clear-client-pin"
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

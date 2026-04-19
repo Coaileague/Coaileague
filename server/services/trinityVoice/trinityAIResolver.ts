@@ -99,9 +99,16 @@ async function parseResolverJSON(text: string): Promise<{ canResolve: boolean; a
   return null;
 }
 
+// Phase 25 — shared builder for the context addendum. Kept small to respect
+// the spoken-word latency budget (max ~6s total across all three models).
+function buildContextAddendum(clientContext?: string): string {
+  if (!clientContext) return '';
+  return `\n\nCLIENT ACCOUNT CONTEXT (from tenant records — use this when answering if relevant): ${clientContext}`;
+}
+
 // ── 1. Gemini Flash (Primary — fastest, most cost-effective) ─────────────────
 
-async function tryGemini(issue: string, workspaceId: string, language?: string): Promise<AIResolverResult | null> {
+async function tryGemini(issue: string, workspaceId: string, language?: string, clientContext?: string): Promise<AIResolverResult | null> {
   try {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return null;
@@ -112,11 +119,13 @@ async function tryGemini(issue: string, workspaceId: string, language?: string):
         ? '\n\nLANGUAGE OVERRIDE: The user is communicating in English. Your entire JSON "answer" field MUST be written in English.'
         : '';
 
+    const ctx = buildContextAddendum(clientContext);
+
     const { meteredGemini } = await import('../billing/meteredGeminiClient');
     const result = await meteredGemini.generate({
       workspaceId,
       featureKey: 'voice_support_resolve',
-      prompt: `${SYSTEM_PROMPT}${langDirective}\n\nCALLER'S ISSUE: "${issue}"\n\nRespond with JSON only.`,
+      prompt: `${SYSTEM_PROMPT}${langDirective}${ctx}\n\nCALLER'S ISSUE: "${issue}"\n\nRespond with JSON only.`,
       model: 'gemini-2.5-flash-lite',
       maxOutputTokens: 400,
     });
@@ -134,16 +143,17 @@ async function tryGemini(issue: string, workspaceId: string, language?: string):
 
 // ── 2. Claude Haiku (Validator — nuanced, policy-aware) ──────────────────────
 
-async function tryClaude(issue: string, workspaceId: string, tier: string, language?: string): Promise<AIResolverResult | null> {
+async function tryClaude(issue: string, workspaceId: string, tier: string, language?: string, clientContext?: string): Promise<AIResolverResult | null> {
   try {
     const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return null;
 
-    const systemWithLang = language === 'es'
+    const baseSystem = language === 'es'
       ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in Spanish. Your entire JSON "answer" field MUST be written in Spanish.`
       : language === 'en'
         ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in English. Your entire JSON "answer" field MUST be written in English.`
         : SYSTEM_PROMPT;
+    const systemWithLang = baseSystem + buildContextAddendum(clientContext);
 
     const text = await withClaude( // withClaude
       'claude-3-haiku-20240307',
@@ -178,16 +188,17 @@ async function tryClaude(issue: string, workspaceId: string, tier: string, langu
 
 // ── 3. OpenAI GPT-4o-mini (Last resort — broadband intelligence) ─────────────
 
-async function tryOpenAI(issue: string, workspaceId: string, tier: string, language?: string): Promise<AIResolverResult | null> {
+async function tryOpenAI(issue: string, workspaceId: string, tier: string, language?: string, clientContext?: string): Promise<AIResolverResult | null> {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return null;
 
-    const systemWithLang = language === 'es'
+    const baseSystem = language === 'es'
       ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in Spanish. Your entire JSON "answer" field MUST be written in Spanish.`
       : language === 'en'
         ? `${SYSTEM_PROMPT}\n\nLANGUAGE OVERRIDE: The user is communicating in English. Your entire JSON "answer" field MUST be written in English.`
         : SYSTEM_PROMPT;
+    const systemWithLang = baseSystem + buildContextAddendum(clientContext);
 
     const text = await withGpt( // withGpt
       'gpt-4o-mini',
@@ -226,11 +237,15 @@ export async function resolveWithTrinityBrain(params: {
   issue: string;
   workspaceId: string;
   language?: string;
+  /** Phase 25 — tenant-resolved client account facts (name, counts). Injected
+   *  into the AI system prompt when present so Trinity can answer with real
+   *  account context instead of guessing. */
+  clientContext?: string;
 }): Promise<AIResolverResult> {
   const start = Date.now();
-  const { issue, workspaceId, language } = params;
+  const { issue, workspaceId, language, clientContext } = params;
 
-  log.info(`[TrinityAIResolver] Resolving issue (${issue.length} chars, lang=${language ?? 'auto'}) for workspace ${workspaceId}`);
+  log.info(`[TrinityAIResolver] Resolving issue (${issue.length} chars, lang=${language ?? 'auto'}, ctx=${clientContext ? 'yes' : 'no'}) for workspace ${workspaceId}`);
 
   // Resolve workspace tier for metered fallback calls
   let workspaceTier = 'starter';
@@ -242,9 +257,9 @@ export async function resolveWithTrinityBrain(params: {
   }
 
   // Try all three models in sequence (stop as soon as one succeeds)
-  let result = await tryGemini(issue, workspaceId, language);
-  if (!result) result = await tryClaude(issue, workspaceId, workspaceTier, language);
-  if (!result) result = await tryOpenAI(issue, workspaceId, workspaceTier, language);
+  let result = await tryGemini(issue, workspaceId, language, clientContext);
+  if (!result) result = await tryClaude(issue, workspaceId, workspaceTier, language, clientContext);
+  if (!result) result = await tryOpenAI(issue, workspaceId, workspaceTier, language, clientContext);
 
   const responseTimeMs = Date.now() - start;
 

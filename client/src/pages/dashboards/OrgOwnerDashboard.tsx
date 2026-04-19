@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { DollarSign, Users, Building2, FileText, AlertCircle, Receipt, Activity, ShieldCheck, Copy, KeyRound, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/formatters";
@@ -36,6 +44,19 @@ export default function OrgOwnerDashboard() {
 
   const [pinInput, setPinInput] = useState("");
   const [pinCopied, setPinCopied] = useState(false);
+
+  // Phase 25 — one-time Owner PIN setup modal.
+  // Fires when: PIN status has loaded, user has NOT set a PIN, and the user
+  // has not previously dismissed the reminder (stored in localStorage).
+  const [showPinSetupModal, setShowPinSetupModal] = useState(false);
+  const [modalPinInput, setModalPinInput] = useState("");
+  useEffect(() => {
+    if (!pinStatus) return;
+    const dismissed = typeof window !== "undefined" && window.localStorage.getItem("pin-setup-dismissed") === "1";
+    if (pinStatus.hasPin === false && !dismissed) {
+      setShowPinSetupModal(true);
+    }
+  }, [pinStatus?.hasPin]);
 
   const setPinMutation = useMutation({
     mutationFn: async (pin: string) => {
@@ -363,6 +384,65 @@ export default function OrgOwnerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Phase 25 — Owner PIN onboarding modal (fires once per owner account) */}
+      <Dialog open={showPinSetupModal} onOpenChange={setShowPinSetupModal}>
+        <DialogContent data-testid="owner-pin-setup-modal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-emerald-600" />
+              Set Your Owner PIN
+            </DialogTitle>
+            <DialogDescription>
+              Your Owner PIN lets Trinity verify your identity when you call
+              (866) 464-4151 for account management. Takes 30 seconds to set up.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={8}
+              placeholder="4–8 digits"
+              value={modalPinInput}
+              onChange={(e) => setModalPinInput(e.target.value.replace(/\D/g, ""))}
+              data-testid="owner-pin-modal-input"
+              className="font-mono"
+            />
+            <p className="text-xs text-muted-foreground">
+              Keep your PIN private. Support will only ask for it to verify you.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowPinSetupModal(false);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem("pin-setup-dismissed", "1");
+                }
+              }}
+              data-testid="owner-pin-modal-dismiss"
+            >
+              Remind me later
+            </Button>
+            <Button
+              disabled={modalPinInput.length < 4 || setPinMutation.isPending}
+              onClick={() =>
+                setPinMutation.mutate(modalPinInput, {
+                  onSuccess: () => {
+                    setShowPinSetupModal(false);
+                    setModalPinInput("");
+                  },
+                })
+              }
+              data-testid="owner-pin-modal-save"
+            >
+              {setPinMutation.isPending ? "Saving…" : "Save PIN"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CanvasHubPage>
   );
 }

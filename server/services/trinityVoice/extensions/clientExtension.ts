@@ -44,15 +44,78 @@ function speechGather(opts: {
   return `<Gather input="speech dtmf" action="${opts.action}" method="POST" timeout="${opts.timeout ?? 8}" speechTimeout="${opts.speechTimeout ?? 'auto'}"${numDigitsAttr}${hintsAttr}>${children}</Gather>`;
 }
 
-export function handleClientSupport(params: {
+/**
+ * Phase 25 — Client context enrichment.
+ * Pulls the caller's client row + rollup stats for the resolved provider
+ * workspace so Trinity's AI brain has real account context before answering.
+ * Never throws — returns an empty context string if anything fails.
+ */
+async function fetchClientContext(params: {
+  workspaceId: string;
+  clientId?: string;
+  callerPhone?: string;
+}): Promise<string> {
+  const { workspaceId, clientId, callerPhone } = params;
+  if (!workspaceId) return '';
+  if (!clientId && !callerPhone) return '';
+
+  try {
+    const { pool } = await import('../../../db');
+    // Tenant-scoped lookup — WHERE clause always includes workspace_id (CLAUDE.md §G).
+    const r = await pool.query(
+      `SELECT c.id, c.company_name, c.first_name, c.last_name, c.client_number,
+              COUNT(DISTINCT s.id) FILTER (
+                WHERE s.status IN ('scheduled','confirmed','accepted','acknowledged')
+                  AND s.start_time >= NOW()
+              ) AS upcoming_shifts,
+              COUNT(DISTINCT i.id) FILTER (
+                WHERE i.status IN ('sent','overdue')
+              ) AS open_invoices
+         FROM clients c
+         LEFT JOIN shifts s
+           ON s.client_id = c.id AND s.workspace_id = $1
+         LEFT JOIN invoices i
+           ON i.client_id = c.id AND i.workspace_id = $1
+        WHERE c.workspace_id = $1
+          AND (
+            ($2::text IS NOT NULL AND c.id = $2::text)
+            OR ($3::text IS NOT NULL AND regexp_replace(coalesce(c.phone, ''), '[^0-9]', '', 'g') = regexp_replace($3::text, '[^0-9]', '', 'g'))
+          )
+        GROUP BY c.id, c.company_name, c.first_name, c.last_name, c.client_number
+        LIMIT 1`,
+      [workspaceId, clientId ?? null, callerPhone ?? null],
+    );
+
+    if (!r.rows[0]) return '';
+    const row = r.rows[0];
+    const displayName =
+      row.company_name ||
+      `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() ||
+      'Client';
+    return (
+      `Client: ${displayName}. ` +
+      (row.client_number ? `Client number: ${row.client_number}. ` : '') +
+      `${row.upcoming_shifts ?? 0} upcoming scheduled shifts. ` +
+      `${row.open_invoices ?? 0} open invoices.`
+    );
+  } catch (e: any) {
+    log.warn('[clientExtension] Context enrichment failed (non-fatal):', e?.message);
+    return '';
+  }
+}
+
+export async function handleClientSupport(params: {
   callSid: string;
   sessionId: string;
   workspaceId: string;
   lang: 'en' | 'es';
   baseUrl: string;
-}): string {
+  clientId?: string;
+  callerPhone?: string;
+  providerWorkspaceId?: string;
+}): Promise<string> {
   try {
-    const { sessionId, workspaceId, lang, baseUrl } = params;
+    const { sessionId, workspaceId, lang, baseUrl, clientId, callerPhone, providerWorkspaceId } = params;
 
     logCallAction({
       callSessionId: sessionId,
@@ -62,8 +125,21 @@ export function handleClientSupport(params: {
       outcome: 'success',
     }).catch((err) => log.warn('[clientExtension] Fire-and-forget failed:', err));
 
+    // Phase 25 — pull tenant-scoped client context for the caller.
+    // If the caller was routed through /client-identify, we already know the
+    // downstream provider workspace and can fetch their client row there.
+    const contextWorkspaceId = providerWorkspaceId || workspaceId;
+    const clientContext = await fetchClientContext({
+      workspaceId: contextWorkspaceId,
+      clientId,
+      callerPhone,
+    });
+
     const greeting = lang === 'es' ? getGatherIssuePhraseEs() : getGatherIssuePhraseEn();
-    const action = `${baseUrl}/api/voice/support-resolve?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+    const contextParam = clientContext
+      ? `&clientContext=${encodeURIComponent(clientContext.slice(0, 300))}`
+      : '';
+    const action = `${baseUrl}/api/voice/support-resolve?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}${contextParam}`;
 
     return twiml(
       speechGather(

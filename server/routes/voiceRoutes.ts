@@ -999,8 +999,21 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
     switch (Digits) {
       case '1':
         return xmlResponse(res, handleSales(baseParams));
-      case '2':
-        return xmlResponse(res, handleClientSupport(baseParams));
+      case '2': {
+        // Phase 25 — surface client context (provider workspace + caller phone +
+        // pre-resolved clientId) so clientExtension can enrich Trinity's prompt.
+        const meta = (session?.metadata as Record<string, any> | null) || {};
+        const providerWorkspaceId = meta.client_provider_workspace_id || undefined;
+        const clientId = meta.client_id || undefined;
+        const callerPhone = (req.body.From as string | undefined) || session?.callerNumber || undefined;
+        const xml = await handleClientSupport({
+          ...baseParams,
+          clientId,
+          callerPhone,
+          providerWorkspaceId,
+        });
+        return xmlResponse(res, xml);
+      }
       case '3':
         return xmlResponse(res, handleEmploymentVerification(baseParams));
       case '4':
@@ -1436,6 +1449,9 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
     const { sessionId, workspaceId } = extractQS(req);
     const lang = getLang(req);
     const baseUrl = getBaseUrl(req);
+    // Phase 25 — client account context passed from clientExtension. Forwarded
+    // across retries so the AI brain keeps it until a resolution is attempted.
+    const clientContext = decodeURIComponent((req.query.clientContext as string) || '').slice(0, 300);
 
     const issue = (SpeechResult || '').trim();
 
@@ -1444,7 +1460,8 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
     const sayL = (en: string, es: string) => lang === 'es' ? sayEs(es) : sayEn(en);
 
     if (!issue || issue.length < 5) {
-      const action = `${baseUrl}/api/voice/support-resolve?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+      const ctxParam = clientContext ? `&clientContext=${encodeURIComponent(clientContext)}` : '';
+      const action = `${baseUrl}/api/voice/support-resolve?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}${ctxParam}`;
       return xmlResponse(res, twiml(
         `<Gather input="speech dtmf" action="${action}" method="POST" timeout="8" speechTimeout="auto">` +
         sayL(
@@ -1460,11 +1477,11 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
       callSessionId: sessionId,
       workspaceId,
       action: 'support_issue_received',
-      payload: { issue: issue.slice(0, 300) },
+      payload: { issue: issue.slice(0, 300), hasClientContext: !!clientContext },
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
-    // Attempt AI resolution (max ~6s)
-    const aiResult = await resolveWithTrinityBrain({ issue, workspaceId, language: lang });
+    // Attempt AI resolution (max ~6s) — pass client context into the brain.
+    const aiResult = await resolveWithTrinityBrain({ issue, workspaceId, language: lang, clientContext });
 
     if (aiResult.canResolve) {
       const answer = lang === 'es'
