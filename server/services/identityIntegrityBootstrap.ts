@@ -215,12 +215,34 @@ async function backfillMissingIds(): Promise<{
 
 // ── Public entry point ───────────────────────────────────────────────────────
 
+// ── Phase 23 — identity PIN columns ──────────────────────────────────────────
+// workspaces.owner_pin_hash and clients.client_pin_hash are declared in the
+// Drizzle schema (orgs/index.ts, clients/index.ts) but drizzle-kit push does
+// not always backfill new varchar columns on existing deployments. These ALTERs
+// are idempotent via IF NOT EXISTS so they are safe to run on every boot.
+
+async function ensurePinColumns(): Promise<void> {
+  await pool.query(
+    `ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS owner_pin_hash VARCHAR`,
+  );
+  await pool.query(
+    `ALTER TABLE clients ADD COLUMN IF NOT EXISTS client_pin_hash VARCHAR`,
+  );
+}
+
 export async function ensureIdentityIntegrity(): Promise<void> {
   log.info('[identityIntegrity] Verifying universal identity invariants');
 
   let indexOk = 0;
   let triggerOk = 0;
   let failed = 0;
+
+  try {
+    await ensurePinColumns();
+  } catch (err: any) {
+    failed++;
+    log.error(`[identityIntegrity] Failed to ensure PIN columns: ${err?.message}`);
+  }
 
   for (const idx of UNIQUE_INDEXES) {
     try {

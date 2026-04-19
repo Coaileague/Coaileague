@@ -192,15 +192,16 @@ router.get('/identity/resolve', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    // Enrich each match with workspace context so the agent dashboard can
-    // show the tenant the entity belongs to.
+    // Enrich each match with workspace context + PIN-set status so the agent
+    // dashboard can show the tenant + whether PIN protection is configured.
     const enriched = [];
     for (const m of matches) {
       let workspace: Record<string, unknown> | null = null;
       if (m.orgId) {
         try {
           const { rows } = await typedPool<Record<string, unknown>>(
-            `SELECT id, name, company_name, org_id, subscription_tier, subscription_status
+            `SELECT id, name, company_name, org_id, subscription_tier, subscription_status,
+                    (owner_pin_hash IS NOT NULL) AS owner_pin_set
                FROM workspaces WHERE id = $1 LIMIT 1`,
             [m.orgId],
           );
@@ -209,7 +210,33 @@ router.get('/identity/resolve', async (req: AuthenticatedRequest, res) => {
           log.warn(`[identity/resolve] workspace enrich failed for ${m.orgId}: ${e?.message}`);
         }
       }
-      enriched.push({ ...m, workspace });
+
+      let pinSet: boolean | null = null;
+      try {
+        if (m.entityType === 'org' && m.orgId) {
+          const { rows } = await typedPool<{ owner_pin_hash: string | null }>(
+            `SELECT owner_pin_hash FROM workspaces WHERE id = $1`,
+            [m.orgId],
+          );
+          pinSet = !!rows[0]?.owner_pin_hash;
+        } else if (m.entityType === 'employee') {
+          const { rows } = await typedPool<{ clockin_pin_hash: string | null }>(
+            `SELECT clockin_pin_hash FROM employees WHERE id = $1`,
+            [m.entityId],
+          );
+          pinSet = !!rows[0]?.clockin_pin_hash;
+        } else if (m.entityType === 'client') {
+          const { rows } = await typedPool<{ client_pin_hash: string | null }>(
+            `SELECT client_pin_hash FROM clients WHERE id = $1`,
+            [m.entityId],
+          );
+          pinSet = !!rows[0]?.client_pin_hash;
+        }
+      } catch (e: any) {
+        log.warn(`[identity/resolve] pin-status lookup failed for ${m.entityType} ${m.entityId}: ${e?.message}`);
+      }
+
+      enriched.push({ ...m, workspace, pinSet });
     }
 
     log.info(
