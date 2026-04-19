@@ -2,8 +2,40 @@
  * Panic Alert Service
  * ====================
  * Manages officer panic/duress SOS alerts.
- * All panic alerts are routed through the Trinity amygdala priority layer as
- * the highest urgency signal — no panic ever fails silently.
+ *
+ * ──────────────────────────────────────────────────────────────────────────────
+ * SCOPE & LIABILITY — READ FIRST
+ * ──────────────────────────────────────────────────────────────────────────────
+ * This service is a **human-supervisor notification channel, nothing more.**
+ *
+ *  - It does NOT contact 911, dispatch, law enforcement, fire, EMS, medical,
+ *    or any emergency service.
+ *  - It does NOT guarantee an officer's safety, rescue, welfare, or recovery.
+ *  - It does NOT create a duty of care to the officer, the client, the public,
+ *    or any third party on the part of CoAIleague or the tenant organization.
+ *  - It is NOT a substitute for human supervision. Every tenant organization
+ *    is required — by Texas Occupations Code Chapter 1702 and by the analogous
+ *    regulatory framework of every other U.S. state that licenses private
+ *    security — to maintain adequate licensed human supervision at all times.
+ *    This platform cannot and does not replace that obligation.
+ *  - A panic alert reaching a supervisor does NOT mean the supervisor acted.
+ *    Supervisor acknowledgement, response, dispatch of help, and contact with
+ *    911 are the sole responsibility of human personnel at the tenant
+ *    organization.
+ *  - Delivery of SMS/WS notifications is best-effort. Cellular networks, carrier
+ *    policy, device state, "Do Not Disturb," blocked numbers, silent mode, and
+ *    app-kill behavior may all prevent a notification from being seen in time.
+ *    CoAIleague does not warrant timely delivery.
+ *
+ * In short: **officers in life-threatening danger should call 911 directly.**
+ * This service notifies designated humans that help may be needed. It is not,
+ * and will never be, a rescue mechanism.
+ *
+ * Every outgoing SMS carries a short version of this disclaimer, every API
+ * response returns a `notice` field, and every tenant-facing panic UI must
+ * render <EmergencyDisclaimer />. Do not remove any of these surfaces without
+ * explicit written legal approval.
+ * ──────────────────────────────────────────────────────────────────────────────
  *
  * Domain: ops
  * Tables: panic_alerts
@@ -20,6 +52,24 @@ import { panicAlerts, employees } from '@shared/schema';
 import { eq, sql, and, inArray } from 'drizzle-orm';
 import { NotificationDeliveryService } from '../notificationDeliveryService';
 import { MANAGER_ROLES, OWNER_ROLES } from '@shared/lib/rbac/roleDefinitions';
+
+/**
+ * Canonical liability notice returned with every panic API response and
+ * surfaced on every tenant-facing panic UI. Exported so the HTTP layer, the
+ * mobile client, and any downstream integration share one string.
+ *
+ * Change only with written legal approval — see CLAUDE.md Section O.
+ */
+export const PANIC_LIABILITY_NOTICE =
+  'This panic alert is a notification to designated human supervisors only. ' +
+  'CoAIleague does not contact 911, emergency services, law enforcement, fire, ' +
+  'or EMS, and does not guarantee officer safety, response, or outcome. ' +
+  'Responding to the alert, contacting emergency services, and supervising the ' +
+  'officer are the sole responsibility of the tenant organization and its ' +
+  'licensed human personnel. Human supervision is required at all times by ' +
+  'applicable state law (e.g. Texas Occupations Code Chapter 1702) and is not ' +
+  'replaced by this platform. Officers in life-threatening situations should ' +
+  'call 911 directly.';
 
 const log = createLogger('PanicAlertService');
 
@@ -48,6 +98,16 @@ export interface PanicAlert {
   status: 'active' | 'acknowledged' | 'resolved';
   triggeredAt: Date;
   createdAt: Date;
+}
+
+/**
+ * HTTP response shape for POST /api/safety/panic. Always bundles the liability
+ * notice with the alert — no caller should ever display or forward panic
+ * metadata without the notice attached.
+ */
+export interface PanicAlertResponse {
+  alert: PanicAlert;
+  notice: typeof PANIC_LIABILITY_NOTICE;
 }
 
 class PanicAlertService {
@@ -209,10 +269,15 @@ class PanicAlertService {
     const locationLine = alert.latitude != null && alert.longitude != null
       ? `GPS ${Number(alert.latitude).toFixed(4)},${Number(alert.longitude).toFixed(4)}`
       : alert.siteName || 'location unknown';
+    // Liability language is MANDATORY in the SMS body. Recipients must know this
+    // notification is informational only — they are the responders, and calling
+    // 911 is their judgment call, not the platform's. Do not shorten.
     const smsBody =
-      `COALEAGUE EMERGENCY: ${alert.employeeName} triggered SOS panic alert. ` +
-      `${locationLine}. Respond in CoAIleague NOW. Call officer directly. ` +
-      `Call 911 if needed.`;
+      `COALEAGUE SUPERVISOR ALERT: ${alert.employeeName} pressed the panic button. ` +
+      `${locationLine}. You are a designated supervisor. ` +
+      `Contact the officer now and decide whether to call 911. ` +
+      `This is a notification only — CoAIleague does NOT contact emergency services ` +
+      `and does NOT guarantee officer safety. Human response is required.`;
 
     let reachableCount = 0;
     for (const recipient of chain) {

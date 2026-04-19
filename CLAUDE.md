@@ -533,6 +533,94 @@ const match = all.find(ws => ws.name.toLowerCase().includes(slug));
 
 ---
 
+## Section O — Panic Button Is Notification-Only (Liability)
+
+**The law:** The panic / duress / SOS button is a **human-supervisor
+notification channel, nothing more.** It must never be described, marketed,
+coded, or UX-presented as an emergency service, a rescue mechanism, a safety
+guarantee, or a substitute for licensed human supervision. This is a
+**liability requirement**, not a preference.
+
+**What the panic system is:**
+- A DB row written to `panic_alerts`, an awaited SMS blast to
+  MANAGER_ROLES ∪ OWNER_ROLES via `NotificationDeliveryService`, a WebSocket
+  broadcast, a priority-1 CAD call auto-creation, and a platform event publish.
+- A tool that helps tenant supervisors decide whether to contact 911.
+
+**What the panic system is NOT:**
+- It does **not** contact 911, law enforcement, fire, EMS, or any public
+  emergency service.
+- It does **not** guarantee officer safety, rescue, welfare, response, or
+  any outcome.
+- It does **not** guarantee delivery. Cellular networks, carrier policy,
+  device state, "Do Not Disturb," blocked numbers, silent mode, and app-kill
+  behavior may all prevent delivery.
+- It does **not** create a duty of care on the part of CoAIleague or the
+  tenant organization to the officer, the client, or the public.
+- It is **not** a substitute for licensed human supervision, which is
+  mandatory at all times under Texas Occupations Code Chapter 1702 and the
+  analogous regulatory framework of every other U.S. state.
+
+**The canonical string:** `PANIC_LIABILITY_NOTICE` exported from
+`server/services/ops/panicAlertService.ts`. Every panic HTTP response MUST
+bundle this string in a `notice` field. Every panic SMS body MUST include
+the short form ("This is a notification only — CoAIleague does NOT contact
+emergency services and does NOT guarantee officer safety"). Every
+tenant-facing panic UI MUST render `<EmergencyDisclaimer />` or the compact
+`<PanicButtonDisclaimer />` variant.
+
+**Required pattern:**
+```ts
+// ✅ API response — bundle the notice
+import { PANIC_LIABILITY_NOTICE } from '../services/ops/panicAlertService';
+res.status(201).json({ alert, notice: PANIC_LIABILITY_NOTICE });
+
+// ✅ SMS body — carries the notification-only framing
+const smsBody =
+  `COALEAGUE SUPERVISOR ALERT: ${officerName} pressed the panic button. ` +
+  `${locationLine}. You are a designated supervisor. ` +
+  `Contact the officer now and decide whether to call 911. ` +
+  `This is a notification only — CoAIleague does NOT contact emergency ` +
+  `services and does NOT guarantee officer safety. Human response is required.`;
+```
+
+**Forbidden patterns:**
+```ts
+// 🔴 forbidden — reassurance language that implies a platform duty
+const smsBody = `Help is on the way. Stay safe.`;
+const trinityReply = `I am here with you. You are safe now.`;
+
+// 🔴 forbidden — panic response without the liability notice
+res.status(201).json(alert);
+
+// 🔴 forbidden — any code path that actually calls emergency services
+await fetch('https://cad.example.gov/dispatch/911', ...);
+
+// 🔴 forbidden — marketing/help copy claiming "guaranteed response"
+"Trinity guarantees a supervisor responds within X seconds."
+```
+
+**Files governed:**
+- `server/services/ops/panicAlertService.ts` — canonical service, exports
+  `PANIC_LIABILITY_NOTICE`, SMS body composition, DB write, CAD call
+  auto-create, event publish.
+- `server/services/fieldOperations/panicProtocolService.ts` — alternate
+  8-step protocol service (carries the same disclaimer header).
+- `server/routes/safetyRoutes.ts` — POST/GET/acknowledge/resolve
+  `/api/safety/panic` endpoints; must wrap responses with `notice`.
+- `client/src/components/liability-disclaimers.tsx` —
+  `EmergencyDisclaimer`, `PanicButtonDisclaimer` components.
+- Any future mobile officer-side panic button **must** render
+  `<PanicButtonDisclaimer />` inline with the trigger.
+
+**Adding a new panic-adjacent surface:** Any new panic-related HTTP endpoint,
+SMS template, push notification, voice prompt, chat-room message, marketing
+page, or officer UI MUST route through `PANIC_LIABILITY_NOTICE` or render one
+of the disclaimer components. Legal sign-off is required to alter the
+canonical string.
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When Claude Code (or any future debug session) discovers a new architectural
@@ -570,6 +658,8 @@ valid.
 | Trinity service inventory | `server/services/trinity/trinityServiceRegistry.ts` | — |
 | Trinity transparency API | `server/routes/trinityTransparencyRoutes.ts` | `/api/trinity/transparency/*` |
 | Trinity agent dashboard API | `server/routes/trinityAgentDashboardRoutes.ts` | `/api/trinity/agent-dashboard/*` |
+| Panic liability notice | `server/services/ops/panicAlertService.ts#PANIC_LIABILITY_NOTICE` | exported string, bundled in every panic API response |
+| Panic disclaimer UI | `client/src/components/liability-disclaimers.tsx` (`EmergencyDisclaimer`, `PanicButtonDisclaimer`) | rendered on every tenant-facing panic surface |
 
 ## Audit History
 
@@ -592,3 +682,4 @@ valid.
 | T | (this commit) | remove statewideWriteGuard — protected = billing-only |
 | 16 | (phase-16 branch) | Trinity service registry + transparency + agent dashboard |
 | 17A/B | (this commit) | Trinity audit trail helper, platform-role tightening, workspace-enumeration fix |
+| O | (this commit) | Panic button notification-only liability codification + canonical `PANIC_LIABILITY_NOTICE`, disclaimer UI components, CLAUDE.md Section O |

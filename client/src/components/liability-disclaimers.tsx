@@ -7,6 +7,7 @@
  * Disclaimer 1 — AI Assistance General    → <AIGeneralDisclaimer /> (footer of every page)
  * Disclaimer 2 — Legal Documents          → <LegalDocumentDisclaimer /> (handbook/contract editors)
  * Disclaimer 3 — Emergency Features       → <EmergencyDisclaimer /> (panic/on-call/emergency settings)
+ *                                          → <PanicButtonDisclaimer /> (compact inline variant next to the officer's panic trigger)
  * Disclaimer 4 — Report Assistance        → <ReportDisclaimer /> (report creation/review screens)
  * Disclaimer 5 — Supervisory Responsibility → <SupervisoryDisclaimer /> (owner dashboard/settings)
  * Disclaimer 6 — Bilingual Translation    → <TranslationDisclaimer /> (any translated content)
@@ -71,16 +72,43 @@ export function EmergencyDisclaimer({ className, compact }: DisclaimerProps) {
     >
       <Shield className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
       <p className="text-muted-foreground">
-        <span className="font-semibold text-foreground">Emergency Response Responsibility — </span>
-        CoAIleague&apos;s emergency notification system contacts your designated supervisors and
-        management chain when an officer activates the panic button.{" "}
+        <span className="font-semibold text-foreground">Notification Only — Not an Emergency Service. </span>
+        The panic button sends a notification to designated human supervisors on your account.{" "}
         <span className="font-semibold text-foreground">
-          CoAIleague does not contact 911 or emergency services.
+          CoAIleague does NOT contact 911, law enforcement, fire, EMS, or any emergency service,
+          and does NOT guarantee officer safety, response, welfare, or outcome.
         </span>{" "}
-        Emergency response is the sole responsibility of your organization&apos;s supervisory
-        personnel. Officers should always call 911 directly in life-threatening situations.
-        CoAIleague expressly disclaims liability for emergency response outcomes. Organizations
-        are required to maintain adequate human supervision at all times per applicable state law.
+        Responding to alerts, contacting emergency services, and supervising the officer are the
+        sole responsibility of the tenant organization and its licensed personnel. Human
+        supervision is required at all times by applicable state law (e.g. Texas Occupations Code
+        Chapter 1702) and is not replaced by this platform. Officers in life-threatening situations
+        must call 911 directly. CoAIleague expressly disclaims any duty of care, guarantee of
+        rescue, or warranty of timely delivery.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Compact variant for the officer's panic button itself — shown inline next to
+ * the trigger so the officer sees the notification-only scope before activating.
+ */
+export function PanicButtonDisclaimer({ className }: DisclaimerProps) {
+  return (
+    <div
+      className={cn(
+        "flex gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-2 text-[11px] leading-snug",
+        className
+      )}
+      data-testid="disclaimer-panic-button"
+    >
+      <AlertTriangle className="w-3 h-3 text-red-400 mt-0.5 shrink-0" />
+      <p className="text-muted-foreground">
+        <span className="font-semibold text-foreground">
+          If your life is in danger, call 911 now.
+        </span>{" "}
+        The panic button notifies your human supervisors. It does not contact 911 or guarantee
+        help will arrive.
       </p>
     </div>
   );

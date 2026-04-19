@@ -6,7 +6,7 @@ import { requireAuth } from "../auth";
 import { ensureWorkspaceAccess } from "../middleware/workspaceScope";
 import { randomUUID } from "crypto";
 import { platformEventBus } from "../services/platformEventBus";
-import { panicAlertService } from "../services/ops/panicAlertService";
+import { panicAlertService, PANIC_LIABILITY_NOTICE } from "../services/ops/panicAlertService";
 import { typedPool } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 import { clampLimit, clampOffset } from '../utils/pagination';
@@ -49,7 +49,8 @@ safetyRouter.get("/panic", requireAuth as any, ensureWorkspaceAccess as any, asy
     const params: any[] = [workspaceId];
     if (status) { query += ` AND status=$2`; params.push(status); }
     query += ` ORDER BY triggered_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
-    res.json({ alerts: await q(query, params) });
+    // `notice` bundled for consistency across the panic API — see CLAUDE.md Section O.
+    res.json({ alerts: await q(query, params), notice: PANIC_LIABILITY_NOTICE });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
@@ -89,7 +90,11 @@ safetyRouter.post("/panic", requireAuth as any, ensureWorkspaceAccess as any, as
       triggeredByUserId: req.user?.id,
     });
 
-    res.status(201).json(alert);
+    // Every panic API response bundles the canonical liability notice so any
+    // client — officer app, supervisor dashboard, third-party integration —
+    // receives the scope-of-service disclaimer alongside the alert payload.
+    // See CLAUDE.md Section O.
+    res.status(201).json({ alert, notice: PANIC_LIABILITY_NOTICE });
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 

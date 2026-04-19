@@ -3,11 +3,26 @@
  * ============================================
  * DB-backed emergency event system with 8-step supervisor chain notification.
  *
- * AUTONOMOUS 911 CONTACT REMOVED BY DESIGN.
- * CoAIleague facilitates communication between officers and their supervisory
- * chain only. Emergency service contact is the sole responsibility of the
- * tenant organization and their designated supervisors per Texas Occupations
- * Code Chapter 1702. This is intentional and legally correct.
+ * ──────────────────────────────────────────────────────────────────────────────
+ * SCOPE & LIABILITY — READ FIRST
+ * ──────────────────────────────────────────────────────────────────────────────
+ * This service is a **human-supervisor notification channel, nothing more.**
+ * It does NOT contact 911, emergency services, law enforcement, fire, or EMS.
+ * It does NOT guarantee officer safety, rescue, welfare, recovery, or any
+ * outcome. It does NOT create a duty of care to the officer, the client, the
+ * public, or any third party on the part of CoAIleague or the tenant. It is
+ * NOT a substitute for licensed human supervision, which every private-security
+ * tenant is required to maintain at all times under Texas Occupations Code
+ * Chapter 1702 and the analogous regulatory framework of every other U.S. state.
+ *
+ * AUTONOMOUS 911 CONTACT REMOVED BY DESIGN. Emergency service contact is the
+ * sole responsibility of the tenant organization and their designated
+ * supervisors. Officers in life-threatening situations should call 911 directly.
+ *
+ * See CLAUDE.md Section O for the verified law. See
+ * `server/services/ops/panicAlertService.ts#PANIC_LIABILITY_NOTICE` for the
+ * canonical disclaimer string surfaced on every panic API response.
+ * ──────────────────────────────────────────────────────────────────────────────
  *
  * 8-Step Protocol:
  *  STEP 1 (0-500ms)  — Immediate DB capture, no AI call
@@ -206,9 +221,13 @@ async function runEmergencyProtocol(ctx: {
   startEscalationLoop(eventId, params, address, timeStr);
 
   // ── STEP 7 — Trinity presence note logged ─────────────────────────────────
+  // IMPORTANT: Trinity's in-room message must NOT reassure the officer of safety
+  // or imply a rescue. The platform does not guarantee safety. Stick to factual,
+  // neutral phrasing that points the officer to 911 for life-threatening danger.
   log.info(
     `[PANIC] STEP 7 — Trinity present in emergency room for ${params.officerName}. ` +
-    'Sending: "I am here with you. Your supervisors are being contacted. Stay safe."'
+    'Sending: "Your supervisors have been notified. If this is a life-threatening ' +
+    'emergency, call 911 directly now. CoAIleague does not contact emergency services."'
   );
 }
 
