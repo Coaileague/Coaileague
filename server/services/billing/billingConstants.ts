@@ -52,3 +52,44 @@ export function isBillingExcluded(workspaceId: string | null | undefined): boole
   if (!workspaceId) return true;
   return NON_BILLING_WORKSPACE_IDS.has(workspaceId);
 }
+
+// ── Subscription status taxonomy (Phase 26) ─────────────────────────────────
+// Canonical set of statuses that grant full Trinity service.
+// Includes both the platform's own values (`active`, `trial`, `free_trial`) and
+// the Stripe equivalents that propagate in via webhooks (`trialing`).
+export const ACTIVE_SUBSCRIPTION_STATUSES = new Set<string>([
+  'active',
+  'trial',
+  'trialing',      // Stripe
+  'free_trial',
+]);
+
+// Statuses that are recoverable: bill issue, lapsed payment, paused. Callers
+// see the "on hold due to billing" message and are told to have their admin
+// log in. Includes both platform values and Stripe webhook values.
+export const SUSPENDED_SUBSCRIPTION_STATUSES = new Set<string>([
+  'suspended',
+  'past_due',            // Stripe
+  'unpaid',              // Stripe
+  'incomplete',          // Stripe
+  'incomplete_expired',  // Stripe
+  'paused',              // Stripe
+]);
+
+/**
+ * Returns true if the given subscription status grants full Trinity service.
+ * `null` / `undefined` / empty string is treated as active (schema default).
+ */
+export function isSubscriptionActive(status: string | null | undefined): boolean {
+  if (!status) return true;
+  return ACTIVE_SUBSCRIPTION_STATUSES.has(status);
+}
+
+/**
+ * Returns true if the given status is recoverable (billing/payment issue) —
+ * used to pick between "on hold" and "no longer active" grace messaging.
+ */
+export function isSubscriptionSuspended(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return SUSPENDED_SUBSCRIPTION_STATUSES.has(status);
+}

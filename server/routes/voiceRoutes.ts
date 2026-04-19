@@ -56,6 +56,10 @@ import {
 const VOICE = 'Polly.Joanna-Neural';
 const VOICE_ES = 'Polly.Lupe-Neural';
 import { voiceSmsMeteringService } from '../services/billing/voiceSmsMeteringService';
+import {
+  isSubscriptionActive,
+  isSubscriptionSuspended,
+} from '../services/billing/billingConstants';
 import { universalAudit } from '../services/universalAuditService';
 import { handleSales } from '../services/trinityVoice/extensions/salesExtension';
 import { handleClientSupport } from '../services/trinityVoice/extensions/clientExtension';
@@ -442,8 +446,8 @@ voiceRouter.post('/inbound', twilioSignatureMiddleware, async (req: Request, res
     // ── SUBSCRIPTION GATE ────────────────────────────────────────────────────
     // Resolve workspace + subscription status before any Trinity service is
     // invoked. Protected workspaces (platform + grandfathered) always pass
-    // through. For all others: only 'active' and 'trial' subscriptions get
-    // Trinity service. Suspended/cancelled get a graceful professional end.
+    // through. For all others: only an active/trial subscription gets Trinity
+    // service. Suspended/cancelled get a graceful professional end.
     const workspace = await resolveWorkspaceFromPhoneNumber(To);
     if (!workspace) {
       log.warn(`[VoiceRoutes] Unknown phone number: ${To}`);
@@ -452,9 +456,9 @@ voiceRouter.post('/inbound', twilioSignatureMiddleware, async (req: Request, res
       ));
     }
 
-    if (!workspace.isProtected && !['active', 'trial', 'free_trial'].includes(workspace.subscriptionStatus)) {
-      const isSuspended = workspace.subscriptionStatus === 'suspended';
-      const message = isSuspended
+    if (!workspace.isProtected && !isSubscriptionActive(workspace.subscriptionStatus)) {
+      const suspended = isSubscriptionSuspended(workspace.subscriptionStatus);
+      const message = suspended
         ? 'Hello! Your organization\'s Co-League account is currently on hold due to a billing issue. ' +
           'Please have your administrator log in to Co-League and update your payment information to restore service. ' +
           'We apologize for any inconvenience. Goodbye.'
@@ -463,6 +467,29 @@ voiceRouter.post('/inbound', twilioSignatureMiddleware, async (req: Request, res
           'Thank you for calling. Goodbye.';
 
       log.warn(`[VoiceRoutes] Blocked call from inactive workspace ${workspace.workspaceId} (${workspace.subscriptionStatus})`);
+
+      // Record the block in the universal audit trail so it surfaces in the
+      // tenant-owner transparency dashboard alongside resolved calls.
+      try {
+        await universalAudit.log({
+          workspaceId: workspace.workspaceId,
+          actorType: 'system',
+          action: 'trinity.subscription_gate_blocked',
+          entityType: 'voice_call',
+          entityId: CallSid,
+          changeType: 'action',
+          metadata: {
+            channel: 'voice',
+            subscriptionStatus: workspace.subscriptionStatus,
+            subscriptionTier: workspace.subscriptionTier,
+            fromPhone: From,
+            toPhone: To,
+            recoverable: suspended,
+          },
+        });
+      } catch (auditErr: any) {
+        log.warn('[VoiceRoutes] Subscription-gate audit failed (non-fatal):', auditErr?.message);
+      }
 
       return xmlResponse(res, twiml(
         `<Say voice="Polly.Joanna-Neural" language="en-US">${message}</Say>`
@@ -1517,20 +1544,24 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
 
       // Workspace-scoped audit log so every Trinity voice AI resolution is
       // visible in the universal audit trail (not just the per-call log).
-      void universalAudit.log({
-        workspaceId,
-        actorType: 'trinity',
-        action: 'trinity.voice_ai_resolved',
-        entityType: 'voice_call',
-        entityId: sessionId,
-        changeType: 'action',
-        metadata: {
-          model: aiResult.modelUsed,
-          responseTimeMs: aiResult.responseTimeMs,
-          channel: 'voice',
-          extension: 'support',
-        },
-      }).catch(() => {});
+      try {
+        await universalAudit.log({
+          workspaceId,
+          actorType: 'trinity',
+          action: 'trinity.voice_ai_resolved',
+          entityType: 'voice_call',
+          entityId: sessionId,
+          changeType: 'action',
+          metadata: {
+            model: aiResult.modelUsed,
+            responseTimeMs: aiResult.responseTimeMs,
+            channel: 'voice',
+            extension: 'support',
+          },
+        });
+      } catch (auditErr: any) {
+        log.warn('[VoiceRoutes] support-resolve audit failed (non-fatal):', auditErr?.message);
+      }
 
       return xmlResponse(res, twiml(
         `<Gather input="dtmf" action="${confirmAction}" method="POST" numDigits="1" timeout="10">` +
@@ -2040,16 +2071,38 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
     // regardless of subscription state. Protected workspaces (platform +
     // grandfathered) always pass.
     const smsWorkspace = await resolveWorkspaceFromPhoneNumber(To);
-    if (smsWorkspace && !smsWorkspace.isProtected) {
-      if (!['active', 'trial', 'free_trial'].includes(smsWorkspace.subscriptionStatus)) {
-        log.warn(`[VoiceRoutes] Blocked SMS from inactive workspace ${smsWorkspace.workspaceId} (${smsWorkspace.subscriptionStatus})`);
-        res.type('text/xml').send(
-          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>` +
-          `We're unable to process your request at this time. Please contact your organization's administrator. — Trinity` +
-          `</Message></Response>`
-        );
-        return;
+    if (smsWorkspace && !smsWorkspace.isProtected && !isSubscriptionActive(smsWorkspace.subscriptionStatus)) {
+      log.warn(`[VoiceRoutes] Blocked SMS from inactive workspace ${smsWorkspace.workspaceId} (${smsWorkspace.subscriptionStatus})`);
+
+      // Record the block in the universal audit trail so tenant owners can
+      // see turned-away SMS alongside AI-resolved ones.
+      try {
+        await universalAudit.log({
+          workspaceId: smsWorkspace.workspaceId,
+          actorType: 'system',
+          action: 'trinity.subscription_gate_blocked',
+          entityType: 'sms_message',
+          entityId: MessageSid || null,
+          changeType: 'action',
+          metadata: {
+            channel: 'sms',
+            subscriptionStatus: smsWorkspace.subscriptionStatus,
+            subscriptionTier: smsWorkspace.subscriptionTier,
+            fromPhone: From,
+            toPhone: To,
+            recoverable: isSubscriptionSuspended(smsWorkspace.subscriptionStatus),
+          },
+        });
+      } catch (auditErr: any) {
+        log.warn('[VoiceRoutes] SMS subscription-gate audit failed (non-fatal):', auditErr?.message);
       }
+
+      res.type('text/xml').send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Message>` +
+        `We're unable to process your request at this time. Please contact your organization's administrator. — Trinity` +
+        `</Message></Response>`
+      );
+      return;
     }
     // ── END SUBSCRIPTION GATE ────────────────────────────────────────────────
 
@@ -2355,21 +2408,25 @@ async function runTrinityTalkTurn(params: {
   // Workspace-scoped audit log for every resolved Trinity-talk turn, so AI
   // invocations on this channel are visible in the universal audit trail.
   if (aiResult.canResolve) {
-    void universalAudit.log({
-      workspaceId,
-      actorType: 'trinity',
-      action: 'trinity.voice_ai_resolved',
-      entityType: 'voice_call',
-      entityId: sessionId,
-      changeType: 'action',
-      metadata: {
-        model: aiResult.modelUsed,
-        responseTimeMs: aiResult.responseTimeMs,
-        channel: 'voice',
-        extension: 'trinity_talk',
-        turn,
-      },
-    }).catch(() => {});
+    try {
+      await universalAudit.log({
+        workspaceId,
+        actorType: 'trinity',
+        action: 'trinity.voice_ai_resolved',
+        entityType: 'voice_call',
+        entityId: sessionId,
+        changeType: 'action',
+        metadata: {
+          model: aiResult.modelUsed,
+          responseTimeMs: aiResult.responseTimeMs,
+          channel: 'voice',
+          extension: 'trinity_talk',
+          turn,
+        },
+      });
+    } catch (auditErr: any) {
+      log.warn('[VoiceRoutes] trinity-talk audit failed (non-fatal):', auditErr?.message);
+    }
   }
 
   const issueEncoded = encodeURIComponent(issue.slice(0, 500));

@@ -17,7 +17,6 @@ import {
   voiceCallActions,
   type VoiceCallSession,
 } from '../../../shared/schema/domains/voice';
-import { workspaces } from '../../../shared/schema/domains/orgs';
 import { eq, and, desc } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
 import { trinityHelpaiCommandBus } from '../helpai/trinityHelpaiCommandBus';
@@ -25,6 +24,7 @@ import {
   PLATFORM_WORKSPACE_ID,
   GRANDFATHERED_TENANT_ID,
 } from '../billing/billingConstants';
+import { cacheManager } from '../platform/cacheManager';
 const log = createLogger('voiceOrchestrator');
 
 
@@ -98,37 +98,38 @@ function pause(seconds: number = 1): string {
 export async function resolveWorkspaceFromPhoneNumber(to: string): Promise<{
   workspaceId: string;
   phoneRecord: typeof workspacePhoneNumbers.$inferSelect;
-  subscriptionStatus: string;   // 'active' | 'suspended' | 'cancelled' | 'trial'
+  subscriptionStatus: string;   // 'active' | 'trial' | 'suspended' | 'cancelled' | etc.
   subscriptionTier: string;     // 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise'
   isProtected: boolean;         // grandfathered or platform — always serve
 } | null> {
-  const rows = await db
-    .select({
-      phoneRecord: workspacePhoneNumbers,
-      subscriptionStatus: workspaces.subscriptionStatus,
-      subscriptionTier: workspaces.subscriptionTier,
-    })
+  const [phoneRecord] = await db
+    .select()
     .from(workspacePhoneNumbers)
-    .innerJoin(workspaces, eq(workspaces.id, workspacePhoneNumbers.workspaceId))
     .where(and(
       eq(workspacePhoneNumbers.phoneNumber, to),
       eq(workspacePhoneNumbers.isActive, true),
     ))
     .limit(1);
 
-  if (!rows.length) return null;
+  if (!phoneRecord) return null;
 
-  const { phoneRecord, subscriptionStatus, subscriptionTier } = rows[0];
   const workspaceId = phoneRecord.workspaceId;
   const isProtected =
     workspaceId === PLATFORM_WORKSPACE_ID ||
     (!!GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID);
 
+  // Subscription status comes from the shared tier cache (10-min TTL) so
+  // Trinity webhooks don't stampede the workspaces table and stay in sync
+  // with the HTTP tier guards. On cache miss or DB failure we default to
+  // 'active' / 'starter' so a transient lookup failure can't lock out a
+  // legitimate tenant.
+  const tierInfo = await cacheManager.getWorkspaceTierWithStatus(workspaceId);
+
   return {
     workspaceId,
     phoneRecord,
-    subscriptionStatus: subscriptionStatus ?? 'active',
-    subscriptionTier: subscriptionTier ?? 'starter',
+    subscriptionStatus: tierInfo?.status ?? 'active',
+    subscriptionTier: tierInfo?.tier ?? 'starter',
     isProtected,
   };
 }

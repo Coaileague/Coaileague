@@ -724,23 +724,22 @@ export async function resolveInboundSms(params: {
     void flagFaqCandidate(trimmed, identity.workspaceId, category);
     log.info(`[SmsAutoResolver] AI resolved for ${fromPhone} (lang=${lang})`);
 
-    // Record AI-resolved SMS for billing/metering (non-fatal on failure).
-    // Uses the existing recordSmsMessage signature — we supply a synthetic
-    // message sid so the row can be inserted. twilioCostCents=0 because the
-    // outbound carrier cost is recorded separately by the SMS sender.
-    void (async () => {
-      try {
-        const { voiceSmsMeteringService } = await import('../billing/voiceSmsMeteringService');
-        await voiceSmsMeteringService.recordSmsMessage({
-          workspaceId: identity.workspaceId,
-          messageSid: `ai-sms-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          callType: 'trinity_ai_response',
-          twilioCostCents: 0,
-        });
-      } catch (e: any) {
-        log.warn('[SmsAutoResolver] SMS metering failed (non-fatal):', e?.message);
-      }
-    })();
+    // Record AI-resolved SMS for billing/metering. Awaited with a non-fatal
+    // try/catch per CLAUDE.md §B — no fire-and-forget. The carrier cost of
+    // the outbound Trinity reply is recorded separately by the SMS sender,
+    // so twilioCostCents=0 here. The synthetic messageSid lets the row be
+    // inserted before Twilio returns the real SID.
+    try {
+      const { voiceSmsMeteringService } = await import('../billing/voiceSmsMeteringService');
+      await voiceSmsMeteringService.recordSmsMessage({
+        workspaceId: identity.workspaceId,
+        messageSid: `ai-sms-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        callType: 'trinity_ai_response',
+        twilioCostCents: 0,
+      });
+    } catch (e: any) {
+      log.warn('[SmsAutoResolver] SMS metering failed (non-fatal):', e?.message);
+    }
 
     return {
       resolved: true,
