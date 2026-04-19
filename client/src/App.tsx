@@ -250,6 +250,8 @@ const PrivateMessages = lazy(() => import("@/pages/private-messages"));
 const WorkerDashboard = lazy(() => import("@/pages/worker-dashboard"));
 const WorkerPanic = lazy(() => import("@/pages/worker-panic"));
 const GuardTourScan = lazy(() => import("@/pages/guard-tours-scan"));
+const PlatformOps = lazy(() => import("@/pages/platform-ops"));
+const SettingsDataPrivacy = lazy(() => import("@/pages/settings-data-privacy"));
 const WorkerIncidents = lazy(() => import("@/pages/worker-incidents"));
 const TeamSchedule = lazy(() => import("@/pages/team-schedule"));
 const ApprovalsHub = lazy(() => import("@/pages/approvals-hub"));
@@ -1442,6 +1444,8 @@ function AppContent() {
                 <Route path="/worker"><ErrorBoundary><WorkerDashboard /></ErrorBoundary></Route>
                 <Route path="/worker/panic"><ErrorBoundary><WorkerPanic /></ErrorBoundary></Route>
                 <Route path="/worker/guard-tour/scan"><ErrorBoundary><GuardTourScan /></ErrorBoundary></Route>
+                <Route path="/admin/platform-ops"><ErrorBoundary><PlatformOps /></ErrorBoundary></Route>
+                <Route path="/settings/data-privacy"><ErrorBoundary><SettingsDataPrivacy /></ErrorBoundary></Route>
                 <Route path="/worker/incidents"><ErrorBoundary><WorkerIncidents /></ErrorBoundary></Route>
                 <Route path="/schedule"><ErrorBoundary componentName="Schedule Board"><UniversalSchedule /></ErrorBoundary></Route>
                 <Route path="/shift-marketplace"><ErrorBoundary><ShiftMarketplace /></ErrorBoundary></Route>
@@ -1936,6 +1940,8 @@ function AppContent() {
                 <Route path="/worker"><ErrorBoundary><WorkerDashboard /></ErrorBoundary></Route>
                 <Route path="/worker/panic"><ErrorBoundary><WorkerPanic /></ErrorBoundary></Route>
                 <Route path="/worker/guard-tour/scan"><ErrorBoundary><GuardTourScan /></ErrorBoundary></Route>
+                <Route path="/admin/platform-ops"><ErrorBoundary><PlatformOps /></ErrorBoundary></Route>
+                <Route path="/settings/data-privacy"><ErrorBoundary><SettingsDataPrivacy /></ErrorBoundary></Route>
                 <Route path="/worker/incidents"><ErrorBoundary><WorkerIncidents /></ErrorBoundary></Route>
                 <Route path="/schedule"><ErrorBoundary componentName="Schedule Board"><UniversalSchedule /></ErrorBoundary></Route>
                 <Route path="/shift-marketplace"><ErrorBoundary><ShiftMarketplace /></ErrorBoundary></Route>

@@ -10,6 +10,7 @@ import {
 } from '@shared/schema';
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../../auth";
+import { type AuthenticatedRequest } from "../../rbac";
 import { createLogger } from '../../lib/logger';
 const log = createLogger('Matrix');
 
@@ -219,6 +220,26 @@ router.get("/", async (req: Request, res: Response) => {
   } catch (error) {
     log.error("[Compliance Matrix] Error:", error);
     res.status(500).json({ success: false, error: "Failed to build compliance matrix" });
+  }
+});
+
+/**
+ * GET /api/compliance/matrix/my-score — Readiness Section 27 #9
+ * Tenant-facing workspace compliance score. Thin wrapper over the
+ * existing computeComplianceScore() service (Readiness §3) so the
+ * owner dashboard can surface the number without going through the
+ * auditor-role-gated endpoint.
+ */
+router.get("/my-score", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "No workspace" });
+    const { computeComplianceScore } = await import("../../services/auditor/auditorAccessService");
+    const score = await computeComplianceScore(workspaceId);
+    res.json(score);
+  } catch (err: any) {
+    log.error("[Compliance my-score] Error:", err?.message);
+    res.status(500).json({ error: "Failed to compute score" });
   }
 });
 

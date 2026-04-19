@@ -1,14 +1,24 @@
 /**
- * Fleet Compliance Panel — Readiness Section 14
- * Surfaces vehicle registration + insurance expiry alerts. Pairs with
- * GET /api/vehicles/compliance. Mirrors the armory-compliance pattern.
+ * Fleet Compliance Panel — Readiness Section 14 + Section 27 #5
+ * Surfaces vehicle registration + insurance expiry alerts AND lets
+ * managers update those dates inline via existing PATCH /api/vehicles/:id.
+ * No new endpoints.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, FileText, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertTriangle, FileText, Loader2, ShieldAlert } from "lucide-react";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type Bucket = 'expired' | 'expiring_30d' | 'expiring_90d' | 'ok' | 'unknown';
 
@@ -48,17 +58,86 @@ function bucketBadge(b: Bucket): JSX.Element {
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
-  try {
-    return new Date(value).toLocaleDateString();
-  } catch {
-    return value;
-  }
+  try { return new Date(value).toLocaleDateString(); } catch { return value; }
 }
+
+// ─── Update-expiry dialog — shared for insurance AND registration ───────────
+
+function ExpiryUpdateDialog({
+  open, onOpenChange, vehicle, kind,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  vehicle: VehicleComplianceRow | null;
+  kind: 'insurance' | 'registration';
+}): JSX.Element {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [expiry, setExpiry] = useState("");
+
+  const kindLabel = kind === 'insurance' ? 'Insurance' : 'Registration';
+  const field = kind === 'insurance' ? 'insuranceExpiry' : 'registrationExpiry';
+
+  const mut = useMutation({
+    mutationFn: () =>
+      apiRequest("PATCH", `/api/vehicles/${vehicle?.id}`, {
+        [field]: new Date(expiry).toISOString(),
+      }),
+    onSuccess: () => {
+      toast({ title: `${kindLabel} renewed`, description: `New expiry: ${new Date(expiry).toLocaleDateString()}.` });
+      qc.invalidateQueries({ queryKey: ["/api/vehicles/compliance"] });
+      onOpenChange(false);
+      setExpiry("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Update failed", description: err?.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent data-testid={`dialog-${kind}-update`}>
+        <DialogHeader>
+          <DialogTitle>Update {kindLabel} Expiry</DialogTitle>
+          <DialogDescription>
+            {vehicle ? `${vehicle.make} ${vehicle.model} · plate ${vehicle.licensePlate || '—'}` : ''}
+          </DialogDescription>
+        </DialogHeader>
+        <div>
+          <Label htmlFor={`expiry-${kind}`}>New expiration date</Label>
+          <Input
+            id={`expiry-${kind}`}
+            type="date"
+            value={expiry}
+            onChange={(e) => setExpiry(e.target.value)}
+            data-testid={`input-${kind}-expiry`}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={() => mut.mutate()}
+            disabled={!expiry || mut.isPending}
+            data-testid={`submit-${kind}-expiry`}
+          >
+            {mut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function FleetCompliancePage(): JSX.Element {
   const { data, isLoading } = useQuery<VehicleComplianceResponse>({
     queryKey: ['/api/vehicles/compliance'],
   });
+
+  const [insuranceVehicle, setInsuranceVehicle] = useState<VehicleComplianceRow | null>(null);
+  const [regVehicle, setRegVehicle] = useState<VehicleComplianceRow | null>(null);
 
   const pageConfig: CanvasPageConfig = {
     id: 'fleet-compliance',
@@ -81,6 +160,19 @@ export default function FleetCompliancePage(): JSX.Element {
 
   return (
     <CanvasHubPage config={pageConfig}>
+      <ExpiryUpdateDialog
+        open={!!insuranceVehicle}
+        onOpenChange={(v) => { if (!v) setInsuranceVehicle(null); }}
+        vehicle={insuranceVehicle}
+        kind="insurance"
+      />
+      <ExpiryUpdateDialog
+        open={!!regVehicle}
+        onOpenChange={(v) => { if (!v) setRegVehicle(null); }}
+        vehicle={regVehicle}
+        kind="registration"
+      />
+
       <div className="grid gap-4 md:grid-cols-4 mb-4">
         <Card data-testid="fleet-kpi-insurance-expired">
           <CardHeader className="pb-2">
@@ -135,9 +227,7 @@ export default function FleetCompliancePage(): JSX.Element {
         <CardHeader>
           <CardTitle>Fleet status ({summary.total} vehicles)</CardTitle>
           <CardDescription>
-            One row per vehicle. Red buckets need immediate attention — an
-            expired registration or insurance pulls the vehicle off the
-            compliance roster and blocks scheduling it to a billable shift.
+            Click "Update" to record a renewal. Saves to PATCH /api/vehicles/:id.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -153,7 +243,8 @@ export default function FleetCompliancePage(): JSX.Element {
                     <th className="py-2 pr-3">Insurance</th>
                     <th className="py-2 pr-3">Insurance expires</th>
                     <th className="py-2 pr-3">Registration</th>
-                    <th className="py-2">Registration expires</th>
+                    <th className="py-2 pr-3">Registration expires</th>
+                    <th className="py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -164,7 +255,27 @@ export default function FleetCompliancePage(): JSX.Element {
                       <td className="py-2 pr-3">{bucketBadge(v.insurance.bucket)}</td>
                       <td className="py-2 pr-3">{formatDate(v.insurance.expiresAt)}</td>
                       <td className="py-2 pr-3">{bucketBadge(v.registration.bucket)}</td>
-                      <td className="py-2">{formatDate(v.registration.expiresAt)}</td>
+                      <td className="py-2 pr-3">{formatDate(v.registration.expiresAt)}</td>
+                      <td className="py-2 text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setInsuranceVehicle(v)}
+                            data-testid={`button-update-insurance-${v.id}`}
+                          >
+                            Insurance
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setRegVehicle(v)}
+                            data-testid={`button-update-registration-${v.id}`}
+                          >
+                            Registration
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

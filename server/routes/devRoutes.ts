@@ -1830,4 +1830,23 @@ router.post("/seed-multi-state-regulatory", requirePlatformAdmin, async (_req: A
   }
 });
 
+/**
+ * POST /api/dev/retention-scan — Readiness Section 27 #11
+ * Runs the pure-function retention policy from §23 across every
+ * workspace and returns the non-retain decisions. Dry-run only; an
+ * archival/deletion executor is a separate (non-engineering-in-this-
+ * branch) step. Called manually from platform-ops UI; scheduled
+ * monthly via cron when wired.
+ */
+router.post("/retention-scan", requirePlatformAdmin, async (_req: AuthenticatedRequest, res) => {
+  try {
+    const { runRetentionScan } = await import("../services/retentionPolicyService");
+    const result = await runRetentionScan();
+    res.json(result);
+  } catch (err: any) {
+    log.error('[DevRoutes] retention-scan failed:', err?.message);
+    res.status(500).json({ error: err?.message || 'Retention scan failed' });
+  }
+});
+
 export default router;

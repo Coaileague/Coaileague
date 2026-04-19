@@ -86,3 +86,41 @@ export function decideRetentionBatch(inputs: RetentionInput[]): Array<{
     .map((input) => ({ workspaceId: input.workspaceId, decision: decideRetentionAction(input) }))
     .filter((r) => r.decision.action !== 'retain');
 }
+
+/**
+ * Readiness Section 27 #11 — scan every workspace, return non-retain
+ * decisions. Dry-run by default (does NOT execute archive/delete). A
+ * cron worker will call this with execute=true once the archival
+ * targets (S3 Glacier, etc.) are configured.
+ */
+export async function runRetentionScan(): Promise<{
+  scanned: number;
+  decisions: Array<{ workspaceId: string; decision: RetentionAction }>;
+  scannedAt: string;
+}> {
+  const { pool } = await import('../db');
+  const now = new Date();
+
+  const r = await pool.query(`
+    SELECT id AS workspace_id,
+           status,
+           status_changed_at,
+           COALESCE(regulatory_hold, false) AS regulatory_hold
+      FROM workspaces
+  `);
+
+  const inputs: RetentionInput[] = r.rows.map((row: any) => ({
+    workspaceId: row.workspace_id,
+    status: (row.status as WorkspaceStatus) ?? 'active',
+    statusChangedAt: row.status_changed_at ? new Date(row.status_changed_at) : null,
+    regulatoryHold: !!row.regulatory_hold,
+    now,
+  }));
+
+  const decisions = decideRetentionBatch(inputs);
+  return {
+    scanned: inputs.length,
+    decisions,
+    scannedAt: now.toISOString(),
+  };
+}
