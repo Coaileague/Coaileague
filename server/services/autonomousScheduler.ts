@@ -329,7 +329,7 @@ async function applyGovernanceGate(
 
 interface AutomationEventData {
   jobName: string;
-  category: 'billing' | 'scheduling' | 'payroll' | 'compliance' | 'maintenance' | 'notification';
+  category: 'billing' | 'scheduling' | 'payroll' | 'compliance' | 'maintenance' | 'notification' | 'automation' | 'governance';
   success: boolean;
   recordsProcessed?: number;
   duration?: number;
@@ -2631,7 +2631,6 @@ export function startAutonomousScheduler() {
           const expiredCount = await approvalRequestService.expireOldApprovals();
           emitAutomationEvent({
             jobName: 'Approval Expiry Sweep',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             category: 'governance',
             success: true,
             duration: Date.now() - startTime,
@@ -2641,7 +2640,6 @@ export function startAutonomousScheduler() {
         } catch (err: any) {
           emitAutomationEvent({
             jobName: 'Approval Expiry Sweep',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             category: 'governance',
             success: false,
             details: { error: (err instanceof Error ? err.message : String(err)) },

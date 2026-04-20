@@ -9,8 +9,8 @@
  */
 
 import { taskRouter, type TaskType, type TaskRoutingDecision, type AIProvider } from './taskRouter';
-import { claudeService, type ClaudeRequest } from './claudeService';
-import { claudeVerificationService, type VerificationResult } from './claudeVerificationService';
+import { claudeService, type ClaudeRequest } from './trinityValidationService';
+import { claudeVerificationService, type VerificationResult } from './trinityVerificationService';
 import { trinityConfidenceScorer, type TrinityOperation, type ConfidenceScore } from './trinityConfidenceScorer';
 import { aiActionLogger, type AIActionContext } from './aiActionLogger';
 import { geminiClient } from '../providers/geminiClient';

@@ -1437,7 +1437,7 @@ ${rawBody.substring(0, 2000)}
               url: a.url,
             })),
             receivedAt: new Date(),
-            rawPayload: inboundEmail,
+            rawPayload: inboundEmail as unknown as Record<string, unknown>,
           });
 
           log.info(`[Resend→Trinity] processInboundEmail complete: ${emailCategory} → ${result.status}`, {
