@@ -1025,44 +1025,44 @@ export const BILLING = {
   middlewareFees: {
     // INVOICE PAYMENT PROCESSING
     // Our cost: Stripe 2.9% + $0.30 per card / 0.8% max $5 ACH
-    // We charge: 3.4% + $0.50 card / 1.2% max $8 ACH
-    // Margin:    ~0.5% + $0.20 card / ~0.4% + $3 ACH
+    // We charge: 3.4% + $0.80 card / 1.3% max $10 ACH
+    // Margin:    ~0.5% + $0.50 card / ~0.5% + $5 ACH
     invoiceProcessing: {
-      ratePercent: 3.4,
-      flatFeeCents: 50,
-      description: "Invoice payment processing — card",
+      ratePercent: 3.4,   // 2.9% Stripe cost + 0.5% margin
+      flatFeeCents: 80,   // $0.80 total: $0.30 Stripe cost + $0.50 margin
+      description: "Invoice payment — card processing",
     },
     achPayments: {
-      ratePercent: 1.2,
-      capCents: 800,
-      description: "Invoice payment processing — ACH bank transfer",
+      ratePercent: 1.3,   // Stripe ACH 0.8% cost + 0.5% margin
+      capCents: 1000,     // $10 cap — Stripe caps at $5, $5 margin at cap
+      description: "Invoice payment — ACH bank transfer",
     },
 
     // PAYROLL PROCESSING
     // Our cost: Plaid ~$0.50–$1.00 per employee transfer
-    // We charge: $3.50 starter / $2.95 professional / $2.50 business (post-discount)
+    // We charge: $3.50 starter / $2.975 professional / $2.80 business (post-discount)
     // Margin:    $2.50–$3.00 per employee per run
     payrollMiddleware: {
       baseMonthly: 0,
-      perEmployeeCents: 350,
+      perEmployeeCents: 350,   // $3.50/employee — margin $2.50–$3.00 per employee
       description: "Payroll processing — per employee per run",
     },
 
     // DIRECT DEPOSIT / STRIPE CONNECT PAYOUTS
     // Our cost: Stripe Connect 0.25%
-    // We charge: 0.50% — double, covers cost + margin
+    // We charge: 0.75% — covers cost + 0.50% margin
     stripePayouts: {
-      ratePercent: 0.50,
+      ratePercent: 0.75,   // Stripe Connect 0.25% cost + 0.50% margin
       description: "Direct-to-bank payout processing",
     },
 
     // TAX FORM FEES
-    // Our cost: ~$0 (we generate them internally)
-    // We charge per form at year-end
+    // Our cost: ~$0.10 per form (pdfkit generation); we charge per form at year-end.
     taxForms: {
-      w2PerForm: 500,         // $5.00 per W-2 generated + delivered
-      form1099PerForm: 300,   // $3.00 per 1099-NEC generated + delivered
-      form941Quarterly: 0,    // Included in payroll processing fee
+      w2PerFormCents: 500,        // $5.00/W-2 — our cost ~$0.10 (pdfkit)
+      form1099PerFormCents: 300,  // $3.00/1099-NEC — our cost ~$0.10
+      form941Cents: 0,            // Free — included in payroll processing fee
+      form940Cents: 0,            // Free — included in payroll processing fee
       description: "Year-end tax form generation and delivery",
     },
 
@@ -1071,10 +1071,10 @@ export const BILLING = {
       free: 0,
       trial: 0,
       starter: 0,
-      professional: 15,
-      business: 20,
-      enterprise: 25,
-      strategic: 30,
+      professional: 15,   // 15% off all middleware fees
+      business: 20,       // 20% off
+      enterprise: 25,     // 25% off
+      strategic: 30,      // custom enterprise — 30% off
     } as Record<string, number>,
   },
 
@@ -1275,12 +1275,12 @@ export function getMiddlewareFees(tierId: TierKey) {
   const ach = BILLING.middlewareFees.achPayments;
   const payroll = BILLING.middlewareFees.payrollMiddleware;
   const payout = BILLING.middlewareFees.stripePayouts;
-  const taxForms = BILLING.middlewareFees.taxForms;
+  const tax = BILLING.middlewareFees.taxForms;
 
   return {
     invoiceProcessing: {
       ratePercent: +(inv.ratePercent * (1 - discount / 100)).toFixed(2),
-      flatFeeCents: inv.flatFeeCents,
+      flatFeeCents: Math.round(inv.flatFeeCents * (1 - discount / 100)),
       description: inv.description,
     },
     achPayments: {
@@ -1298,10 +1298,11 @@ export function getMiddlewareFees(tierId: TierKey) {
       description: payout.description,
     },
     taxForms: {
-      w2PerForm: Math.round(taxForms.w2PerForm * (1 - discount / 100)),
-      form1099PerForm: Math.round(taxForms.form1099PerForm * (1 - discount / 100)),
-      form941Quarterly: taxForms.form941Quarterly,
-      description: taxForms.description,
+      w2PerFormCents: Math.round(tax.w2PerFormCents * (1 - discount / 100)),
+      form1099PerFormCents: Math.round(tax.form1099PerFormCents * (1 - discount / 100)),
+      form941Cents: tax.form941Cents,
+      form940Cents: tax.form940Cents,
+      description: tax.description,
     },
     tierDiscount: discount,
   };

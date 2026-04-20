@@ -1252,14 +1252,15 @@ export default function Billing() {
                         </p>
                         <div className="space-y-1 text-xs text-muted-foreground">
                           <div className="flex justify-between"><span>Payroll processing / employee / run</span><span className="font-mono">$3.50</span></div>
-                          <div className="flex justify-between"><span>Invoice payment — card</span><span className="font-mono">3.4% + $0.50</span></div>
-                          <div className="flex justify-between"><span>Invoice payment — ACH</span><span className="font-mono">1.2% (max $8)</span></div>
-                          <div className="flex justify-between"><span>Direct bank payout</span><span className="font-mono">0.50%</span></div>
-                          <div className="flex justify-between"><span>Year-end W-2 / employee</span><span className="font-mono">$5.00</span></div>
-                          <div className="flex justify-between"><span>Year-end 1099-NEC / contractor</span><span className="font-mono">$3.00</span></div>
+                          <div className="flex justify-between"><span>Invoice payment — card</span><span className="font-mono">3.4% + $0.80</span></div>
+                          <div className="flex justify-between"><span>Invoice payment — ACH</span><span className="font-mono">1.3% (max $10)</span></div>
+                          <div className="flex justify-between"><span>Direct bank payout</span><span className="font-mono">0.75%</span></div>
+                          <div className="flex justify-between"><span>W-2 tax form</span><span className="font-mono">$5.00 / form</span></div>
+                          <div className="flex justify-between"><span>1099-NEC tax form</span><span className="font-mono">$3.00 / form</span></div>
+                          <div className="flex justify-between"><span>AI token overage</span><span className="font-mono">$2.00 / 100K</span></div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Tier discounts: Professional 15% • Business 20% • Enterprise 25%.
+                          Professional tier: 15% discount on middleware fees. Business: 20%. Enterprise: 25%. Strategic: 30%.
                         </p>
                       </div>
                     </div>
@@ -1796,8 +1797,9 @@ export default function Billing() {
                   <p className="text-sm font-medium">What these cards are charged for:</p>
                   <ul className="text-xs text-muted-foreground space-y-1">
                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Monthly or yearly subscription renewal</li>
-                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Payroll processing: $3.50/employee/run (professional/business tiers save 15–20%)</li>
-                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Invoice payment: 3.4% + $0.50 card | 1.2% ACH (same as market rate, included in platform)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Payroll processing fee ($3.50/employee/run via middleware)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Invoice payment processing (3.4% + $0.80 card / 1.3% ACH)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Direct-to-bank payout fee (0.75% via Stripe Connect)</li>
                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Year-end W-2: $5.00/form | 1099-NEC: $3.00/form</li>
                   </ul>
                 </div>

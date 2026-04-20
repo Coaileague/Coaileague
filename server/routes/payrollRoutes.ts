@@ -1671,8 +1671,8 @@ router.get('/tax-center', async (req: AuthenticatedRequest, res) => {
     const tierId = (await getWorkspaceTier(workspaceId)) as any;
     const { getMiddlewareFees } = await import('@shared/billingConfig');
     const fees = getMiddlewareFees(tierId);
-    const w2PerFormDollars = fees.taxForms.w2PerForm / 100;
-    const form1099PerFormDollars = fees.taxForms.form1099PerForm / 100;
+    const w2PerFormDollars = fees.taxForms.w2PerFormCents / 100;
+    const form1099PerFormDollars = fees.taxForms.form1099PerFormCents / 100;
 
     return res.json({
       taxYear,
@@ -2702,20 +2702,58 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
         }
 
         const netPay = parseFloat(String(stub.netPay ?? 0));
+
+        // Compensating-transaction step 1: write PENDING row BEFORE touching Plaid.
+        // Mirrors the main disbursement path in payrollAutomation.ts. If this
+        // retry loop crashes between Plaid success and pay-stub UPDATE, the
+        // attempt row with its transfer_id is the only authoritative record
+        // reconciliation can use to find the in-flight transfer.
+        const { plaidTransferAttempts } = await import('@shared/schema');
+        const [pendingRecord] = await db.insert(plaidTransferAttempts).values({
+          workspaceId,
+          employeeId: empId,
+          payrollRunId: runId,
+          payrollEntryId: null,
+          amount: netPay.toFixed(2),
+          status: 'pending',
+        } as any).returning().catch(() => [null as any]);
+
         // GAP-AUDIT-1 FIX: Pass stub-derived idempotencyKey so Plaid can deduplicate
         // at the API level if this retry loop executes twice (e.g. user double-clicks,
         // network timeout causes client to re-POST, or server restarts mid-loop).
         // Without this, two concurrent retry requests for the same failed stub would
         // produce two Plaid transfer authorizations for the same employee — double pay.
-        const transfer = await initiateTransfer({
-          accessToken: empAccessToken,
-          accountId: empBank.plaidAccountId!,
-          amount: netPay.toFixed(2),
-          description: 'Payroll Retry',
-          legalName: empId,
-          type: 'credit',
-          idempotencyKey: `retry-${stub.id}`,
-        });
+        let transfer: Awaited<ReturnType<typeof initiateTransfer>>;
+        try {
+          transfer = await initiateTransfer({
+            accessToken: empAccessToken,
+            accountId: empBank.plaidAccountId!,
+            amount: netPay.toFixed(2),
+            description: 'Payroll Retry',
+            legalName: empId,
+            type: 'credit',
+            idempotencyKey: `retry-${stub.id}`,
+          });
+
+          // Compensating-transaction step 2: Plaid accepted — mark INITIATED
+          // with the transfer ID. The webhook will later flip this to completed.
+          if (pendingRecord?.id) {
+            await db.update(plaidTransferAttempts).set({
+              status: 'initiated',
+              transferId: transfer.transferId,
+              initiatedAt: new Date(),
+            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
+          }
+        } catch (plaidErr: any) {
+          // Compensating-transaction step 3: Plaid rejected — no money moved.
+          if (pendingRecord?.id) {
+            await db.update(plaidTransferAttempts).set({
+              status: 'failed',
+              errorMessage: plaidErr?.message ?? String(plaidErr),
+            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
+          }
+          throw plaidErr;
+        }
 
         // GAP-49 FIX: The DB update that persists the transferId is now wrapped in its own
         // try/catch SEPARATE from the initiateTransfer() call above.
@@ -2734,8 +2772,8 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
           } as any).where(eq(payStubs.id, stub.id));
         } catch (dbErr: unknown) {
           log.error(
-            '[FinancialAudit] CRITICAL: Plaid transfer initiated but pay stub DB update failed — transfer ID may be orphaned. Manual reconciliation required.',
-            { payStubId: stub.id, employeeId: empId, transferId: transfer.transferId, amount: netPay, runId, error: (dbErr as any)?.message }
+            '[FinancialAudit] CRITICAL: Plaid transfer initiated but pay stub DB update failed — attempt row holds transfer_id for reconciliation.',
+            { payStubId: stub.id, employeeId: empId, transferId: transfer.transferId, attemptId: pendingRecord?.id, amount: netPay, runId, error: (dbErr as any)?.message }
           );
           // Fall through: transfer IS in flight, we report it as retried despite tracking failure
         }

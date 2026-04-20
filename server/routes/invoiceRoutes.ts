@@ -1889,6 +1889,44 @@ import { createHash } from "crypto";
         }
       })();
 
+      // NDS in-app notification to workspace owner so the dashboard reflects
+      // the paid state even when the email is unread. Complements the
+      // platformEventBus 'invoice_paid' event which drives QB sync and role-
+      // targeted notifications — this is a direct owner ping with the
+      // transactional detail attached.
+      (async () => {
+        try {
+          const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+          const { workspaces: workspacesSchema } = await import('@shared/schema');
+          const [ws] = await db
+            .select({ ownerId: workspacesSchema.ownerId })
+            .from(workspacesSchema)
+            .where(eq(workspacesSchema.id, workspace.id))
+            .limit(1);
+          if (ws?.ownerId) {
+            await NotificationDeliveryService.send({
+              type: 'invoice_paid',
+              workspaceId: workspace.id,
+              recipientUserId: ws.ownerId,
+              channel: 'in_app',
+              subject: `Invoice ${updated.invoiceNumber} marked paid`,
+              body: {
+                invoiceId: id,
+                invoiceNumber: updated.invoiceNumber,
+                amount: updated.total,
+                paymentMethod,
+                referenceNumber: referenceNumber || null,
+                paidAt: paidAt.toISOString(),
+                paymentRecordId: paymentRow?.id || null,
+              },
+              idempotencyKey: `invoice_paid-${id}-${paidAt.getTime()}`,
+            });
+          }
+        } catch (ndsErr: unknown) {
+          log.warn('[InvoiceRoutes] NDS invoice_paid notification failed (non-blocking):', (ndsErr instanceof Error ? ndsErr.message : String(ndsErr)));
+        }
+      })();
+
       // Charge middleware processing fee for non-manual invoice payments (awaited per CLAUDE.md §B).
       // Manual payments have no processing fee (no card/ACH network involved).
       // chargeInvoiceMiddlewareFee uses idempotencyKey `invoice_${workspaceId}_${invoiceId}`,
