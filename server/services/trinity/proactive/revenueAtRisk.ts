@@ -25,7 +25,7 @@
 
 import { createLogger } from '../../../lib/logger';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
-import { sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { platformEventBus } from '../../platformEventBus';
 import { logActionAudit } from '../../ai-brain/actionAuditLogger';
 
@@ -134,13 +134,13 @@ export async function runRevenueAtRiskForWorkspace(workspaceId: string): Promise
     });
 
     await Promise.allSettled(
-      ownerPhones.slice(0, 2).map((phone) =>
-        sendSMS({
-          to: phone,
-          body: `Trinity: ${summary} Reply if you want me to send a reminder.`,
+      ownerPhones.slice(0, 2).map((owner) =>
+        sendSMSToEmployee(
+          owner.id,
+          `Trinity: ${summary} Reply if you want me to send a reminder.`,
+          'revenue_overdue_invoice',
           workspaceId,
-          type: 'revenue_overdue_invoice',
-        }),
+        ),
       ),
     );
 
@@ -440,11 +440,11 @@ async function fetchManagers(workspaceId: string): Promise<string[]> {
   }
 }
 
-async function fetchOwnerPhones(workspaceId: string): Promise<string[]> {
+async function fetchOwnerPhones(workspaceId: string): Promise<Array<{ id: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT e.phone
+      `SELECT e.id, e.phone
          FROM workspace_memberships wm
          JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
         WHERE wm.workspace_id = $1
@@ -453,7 +453,9 @@ async function fetchOwnerPhones(workspaceId: string): Promise<string[]> {
         LIMIT 3`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ id: row.id as string, phone: row.phone as string }))
+      .filter((o: { id: string; phone: string }) => Boolean(o.id && o.phone));
   } catch {
     return [];
   }

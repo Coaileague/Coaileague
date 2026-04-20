@@ -33,7 +33,7 @@
 
 import { createLogger } from '../../../lib/logger';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
-import { sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { platformEventBus } from '../../platformEventBus';
 import { logActionAudit } from '../../ai-brain/actionAuditLogger';
 
@@ -239,17 +239,17 @@ async function notify(flag: PreShiftFlag, shift: UpcomingShift): Promise<boolean
     ),
   );
 
-  // Medium + high also go by SMS to the first 3 supervisor phones.
+  // Medium + high also go by SMS to the first 3 supervisors (consent-checked).
   if (flag.severity !== 'low') {
-    const phones = await fetchSupervisorPhones(shift.workspaceId);
+    const supervisors = await fetchSupervisorPhones(shift.workspaceId);
     await Promise.allSettled(
-      phones.slice(0, 3).map((phone) =>
-        sendSMS({
-          to: phone,
-          body: `Trinity heads-up: ${summary}`,
-          workspaceId: shift.workspaceId,
-          type: `preshift_${flag.code}`,
-        }).then(() => {
+      supervisors.slice(0, 3).map((sup) =>
+        sendSMSToEmployee(
+          sup.id,
+          `Trinity heads-up: ${summary}`,
+          `preshift_${flag.code}`,
+          shift.workspaceId,
+        ).then(() => {
           delivered = true;
         }),
       ),
@@ -502,11 +502,11 @@ async function fetchManagers(workspaceId: string): Promise<string[]> {
   }
 }
 
-async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
+async function fetchSupervisorPhones(workspaceId: string): Promise<Array<{ id: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT e.phone
+      `SELECT e.id, e.phone
          FROM workspace_memberships wm
          JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
         WHERE wm.workspace_id = $1
@@ -515,7 +515,9 @@ async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
         LIMIT 5`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ id: row.id as string, phone: row.phone as string }))
+      .filter((s: { id: string; phone: string }) => Boolean(s.id && s.phone));
   } catch {
     return [];
   }

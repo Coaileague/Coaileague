@@ -45,6 +45,9 @@ async function ensureTable(): Promise<void> {
       CREATE INDEX IF NOT EXISTS trinity_shift_offers_workspace_idx ON trinity_shift_offers(workspace_id);
       CREATE INDEX IF NOT EXISTS trinity_shift_offers_status_idx ON trinity_shift_offers(status);
       CREATE INDEX IF NOT EXISTS trinity_shift_offers_employee_idx ON trinity_shift_offers(employee_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS trinity_shift_offers_one_accepted_per_shift
+        ON trinity_shift_offers(shift_id)
+        WHERE status = 'accepted';
     `);
     bootstrapped = true;
   } catch (err: any) {
@@ -319,6 +322,12 @@ export async function acceptShiftOffer(params: {
       `Text us anytime if you need support. — Trinity`
     );
   } catch (err: any) {
+    // 23505 = unique_violation against trinity_shift_offers_one_accepted_per_shift.
+    // Means two officers replied YES simultaneously; this one lost the race.
+    if (err?.code === '23505') {
+      log.info('[ShiftOffer] Race loss on accept — another officer won the shift');
+      return `Thanks for your reply — that shift was just filled by another officer. We'll keep you in mind for the next one!`;
+    }
     log.error('[ShiftOffer] Accept error:', err.message);
     return `Thanks for accepting! There was a brief issue processing your request. Please confirm with your supervisor directly.`;
   }

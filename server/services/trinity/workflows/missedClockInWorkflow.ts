@@ -27,7 +27,7 @@
 import { and, eq, lt, gt, isNull, sql as drizzleSql } from 'drizzle-orm';
 import { db } from '../../../db';
 import { shifts, employees, auditLogs } from '@shared/schema';
-import { sendSMSToEmployee, sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { callOfficerWelfareCheck } from '../../trinityVoice/trinityOutboundService';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
 import { platformEventBus } from '../../platformEventBus';
@@ -267,7 +267,7 @@ async function advanceToEscalation(
     const summary = `${officerName} has not clocked in and is unresponsive. Shift ${miss.shiftId} requires supervisor intervention.`;
 
     const supervisorIds = await fetchSupervisors(miss.workspaceId);
-    const phones = await fetchSupervisorPhones(miss.workspaceId);
+    const supervisors = await fetchSupervisorPhones(miss.workspaceId);
 
     await Promise.allSettled([
       ...supervisorIds.map((recipientUserId) =>
@@ -281,13 +281,13 @@ async function advanceToEscalation(
           idempotencyKey: `missed-clockin-${miss.shiftId}-${recipientUserId}`,
         }),
       ),
-      ...phones.slice(0, 3).map((phone) =>
-        sendSMS({
-          to: phone,
-          body: `URGENT: ${summary}`,
-          workspaceId: miss.workspaceId,
-          type: 'missed_clockin_escalation',
-        }),
+      ...supervisors.slice(0, 3).map((sup) =>
+        sendSMSToEmployee(
+          sup.id,
+          `URGENT: ${summary}`,
+          'missed_clockin_escalation',
+          miss.workspaceId,
+        ),
       ),
     ]);
 
@@ -499,11 +499,11 @@ async function fetchSupervisors(workspaceId: string): Promise<string[]> {
   }
 }
 
-async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
+async function fetchSupervisorPhones(workspaceId: string): Promise<Array<{ id: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT e.phone
+      `SELECT e.id, e.phone
          FROM workspace_memberships wm
          JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
         WHERE wm.workspace_id = $1
@@ -512,7 +512,9 @@ async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
         LIMIT 5`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ id: row.id as string, phone: row.phone as string }))
+      .filter((s: { id: string; phone: string }) => Boolean(s.id && s.phone));
   } catch {
     return [];
   }

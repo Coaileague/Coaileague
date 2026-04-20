@@ -25,7 +25,7 @@ import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '../../../db';
 import { payrollRuns, auditLogs } from '@shared/schema';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
-import { sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { platformEventBus } from '../../platformEventBus';
 import { createLogger } from '../../../lib/logger';
 import {
@@ -338,15 +338,15 @@ async function notifyStakeholders(params: {
 
   if (params.highestSeverity === 'medium' || params.highestSeverity === 'high') {
     try {
-      const phones = await fetchManagerPhones(params.workspaceId);
+      const managers = await fetchManagerPhones(params.workspaceId);
       await Promise.allSettled(
-        phones.slice(0, 3).map((phone) =>
-          sendSMS({
-            to: phone,
-            body: summary,
-            workspaceId: params.workspaceId,
-            type: params.blocked ? 'payroll_blocked' : 'payroll_anomaly_flag',
-          }),
+        managers.slice(0, 3).map((mgr) =>
+          sendSMSToEmployee(
+            mgr.id,
+            summary,
+            params.blocked ? 'payroll_blocked' : 'payroll_anomaly_flag',
+            params.workspaceId,
+          ),
         ),
       );
     } catch (err: any) {
@@ -372,11 +372,11 @@ async function fetchWorkspaceManagers(workspaceId: string): Promise<string[]> {
   }
 }
 
-async function fetchManagerPhones(workspaceId: string): Promise<string[]> {
+async function fetchManagerPhones(workspaceId: string): Promise<Array<{ id: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT e.phone
+      `SELECT e.id, e.phone
          FROM workspace_memberships wm
          JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
         WHERE wm.workspace_id = $1
@@ -385,7 +385,9 @@ async function fetchManagerPhones(workspaceId: string): Promise<string[]> {
         LIMIT 5`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ id: row.id as string, phone: row.phone as string }))
+      .filter((m: { id: string; phone: string }) => Boolean(m.id && m.phone));
   } catch {
     return [];
   }

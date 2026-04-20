@@ -35,7 +35,7 @@
 
 import { createLogger } from '../../../lib/logger';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
-import { sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { platformEventBus } from '../../platformEventBus';
 import { logActionAudit } from '../../ai-brain/actionAuditLogger';
 
@@ -315,12 +315,12 @@ async function sendCheckInSms(c: WellnessCandidate): Promise<boolean> {
   const body =
     `Hi ${c.firstName || 'there'}! You just finished a ${hours}-hour shift. How are you doing? ` +
     `Reply OK if you're good, or HELP if you need anything. — Trinity`;
-  const res = await sendSMS({
-    to: c.phone,
+  const res = await sendSMSToEmployee(
+    c.employeeId,
     body,
-    workspaceId: c.workspaceId,
-    type: 'officer_wellness_checkin',
-  });
+    'officer_wellness_checkin',
+    c.workspaceId,
+  );
   if (res.success) {
     try {
       await platformEventBus.publish({
