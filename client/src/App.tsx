@@ -78,6 +78,7 @@ import { ChatDockProvider } from "@/contexts/ChatDockContext";
 import { UnifiedChatBubble } from "@/components/chatdock/ChatDock";
 import { TrinityAmbientFAB } from "@/components/trinity/TrinityAmbientFAB";
 import { TrinityActivityBar } from "@/components/trinity/TrinityActivityBar";
+import { TrinityTaskWidget } from "@/components/trinity/TrinityTaskWidget";
 // FloatingTrinityButton removed - redundant with header Trinity access
 import { HeaderTrinityButton } from "@/components/header-trinity-button";
 import { UniversalHeader } from "@/components/universal-header";
@@ -1426,6 +1427,9 @@ function AppContent() {
             {/* Trinity activity bar — below nav, above content */}
             <TrinityActivityBar />
 
+            {/* Trinity task widget — global modal for approvals / onboarding / compliance */}
+            <TrinityTaskWidget />
+
             {/* Main content area - with bottom nav padding + route guard */}
             {/* Chat routes need fixed-height container (no scroll, no bottom padding) for proper h-full cascade */}
             <main id="main-content" className={`flex-1 overflow-x-hidden min-h-0 w-full max-w-full ${isFixedHeightRoute ? 'overflow-hidden' : 'overflow-y-auto pb-[120px]'}`}>
@@ -1924,6 +1928,9 @@ function AppContent() {
 
               {/* Trinity activity bar — below nav banners, above content */}
               <TrinityActivityBar />
+
+              {/* Trinity task widget — global modal for approvals / onboarding / compliance */}
+              <TrinityTaskWidget />
 
               {/* Main content area - visible scrollbar for desktop users */}
               <main id="main-content" className="flex-1 overflow-x-hidden overflow-y-auto bg-background min-h-0 w-full max-w-full" data-scroll="styled">

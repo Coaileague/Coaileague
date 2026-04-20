@@ -26,6 +26,8 @@ import { useChatDock } from "@/contexts/ChatDockContext";
 import { useChatUnreadTotal } from "@/hooks/useChatManager";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { TrinityThoughtBar } from "@/components/chatdock/TrinityThoughtBar";
+import { TrinityTaskLauncher } from "@/components/trinity/TrinityTaskWidget";
 
 /**
  * TrinityDesktopButton - INLINED to bypass Replit webview module caching
@@ -264,7 +266,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   return (
     <nav className="universal-header sticky top-0 z-[1030] border-b bg-background shadow-sm">
       <div className={`mx-auto ${HEADER_SPACING.containerPadding} max-w-full`}>
-        <div className={`flex ${HEADER_HEIGHTS.mobile} ${HEADER_HEIGHTS.desktop} items-center justify-between gap-1 sm:gap-3`}>
+        <div className={`flex ${HEADER_HEIGHTS.mobile} ${HEADER_HEIGHTS.desktop} items-center justify-between gap-1 sm:gap-3`} data-testid="universal-header-row">
           {/* Logo - Unified responsive branding */}
           <button 
             onClick={handleLogoClick}
@@ -531,6 +533,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 <div className="hidden lg:block">
                   <AISearchTrigger />
                 </div>
+                <TrinityTaskLauncher data-testid="button-trinity-tasks-desktop" />
                 <NotificationsPopover />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -617,6 +620,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     >
                       <Search className="h-4 w-4" />
                     </button>
+                    <TrinityTaskLauncher compact data-testid="button-trinity-tasks-mobile" />
                     <NotificationsPopover />
                   </>
                 )}
@@ -746,6 +750,9 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
           )}
         </div>
       </div>
+      {isWorkspaceMode && user && (
+        <TrinityThoughtBar className="border-t border-cyan-500/20" />
+      )}
     </nav>
   );
 }

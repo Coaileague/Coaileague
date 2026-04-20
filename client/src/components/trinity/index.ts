@@ -16,3 +16,4 @@ export { TrinityThinkingPanel } from './TrinityThinkingPanel';
 export { TrinityActivityBar } from './TrinityActivityBar';
 export { TrinityActionHistoryPanel } from './TrinityActionHistoryPanel';
 export { TrinityInsightBar } from './TrinityInsightBar';
+export { TrinityTaskWidget, TrinityTaskLauncher, openTrinityTaskWidget, closeTrinityTaskWidget } from './TrinityTaskWidget';
