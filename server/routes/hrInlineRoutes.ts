@@ -39,6 +39,8 @@ import { getReviewReminderSummary, getOverdueReviews, getUpcomingReviews } from 
 import { createLogger } from '../lib/logger';
 const log = createLogger('HrInlineRoutes');
 
+const ONBOARDING_DEADLINE_DAYS = 7;
+
 
 const router = Router();
 
@@ -943,6 +945,10 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
       return res.status(404).json({ message: "Organization no longer exists" });
     }
 
+    const onboardingPosition = employeeDocumentOnboardingService.getPositionFromRole((invite as any).inviteeRole || 'staff');
+    const onboardingRequiredDocs = employeeDocumentOnboardingService.getRequiredDocuments(onboardingPosition);
+    const onboardingRequiredStepIds = onboardingRequiredDocs.map((doc) => doc.id);
+
     let newEmployeeId: string | null = null;
     await db.transaction(async (tx) => {
       await tx.update(workspaceInvites)
@@ -972,16 +978,12 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
       newEmployeeId = createdEmployee?.id || null;
 
       if (newEmployeeId) {
-        const position = employeeDocumentOnboardingService.getPositionFromRole((invite as any).inviteeRole || 'staff');
-        const requiredDocs = employeeDocumentOnboardingService.getRequiredDocuments(position);
-        const requiredStepIds = requiredDocs.map((doc) => doc.id);
-
         await tx.insert(employeeOnboardingProgress).values({
           workspaceId: invite.workspaceId,
           employeeId: newEmployeeId,
-          status: requiredStepIds.length > 0 ? 'in_progress' : 'complete',
+          status: onboardingRequiredStepIds.length > 0 ? 'in_progress' : 'complete',
           stepsCompleted: [],
-          stepsRemaining: requiredStepIds,
+          stepsRemaining: onboardingRequiredStepIds,
           overallProgressPct: 0,
           invitationAcceptedAt: new Date(),
           lastUpdatedAt: new Date(),
@@ -994,14 +996,14 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
       if (!inviteEmail) {
         log.warn('[Invite] Onboarding welcome email skipped: missing invitee email');
       } else {
-      const employeeName = `${user.firstName || 'New'} ${user.lastName || 'Employee'}`.trim();
-      const position = employeeDocumentOnboardingService.getPositionFromRole((invite as any).inviteeRole || 'staff');
-      const requiredDocs = employeeDocumentOnboardingService.getRequiredDocuments(position);
+      const localPart = inviteEmail.includes('@') ? inviteEmail.split('@')[0].trim() : inviteEmail.trim();
+      const fallbackName = localPart || 'Team Member';
+      const employeeName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || fallbackName;
       const onboardingToken = invite.inviteCode;
       const portalUrl = `${getAppBaseUrl()}/employee-portal?token=${onboardingToken}`;
-      const deadlineDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      const deadlineDate = new Date(Date.now() + ONBOARDING_DEADLINE_DAYS * 24 * 60 * 60 * 1000)
         .toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-      const requiredList = requiredDocs.map((doc) => `<li>${doc.name}</li>`).join('');
+      const requiredList = onboardingRequiredDocs.map((doc) => `<li>${doc.name}</li>`).join('');
 
       await emailService.sendCustomEmail(
         inviteEmail,

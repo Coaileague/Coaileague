@@ -22,6 +22,8 @@ import { universalAudit } from '../universalAuditService';
 import { format } from 'date-fns';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityDocumentActions');
+const I9_COMPLIANCE_WINDOW_DAYS = 90;
+const I9_DEADLINE_DAYS = 3;
 
 export function registerTrinityDocumentActions(orchestrator: any): void {
   log.info('[TrinityDocumentActions] Registering 7 document orchestration actions...');
@@ -633,6 +635,9 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
 }
 
 export async function scanOverdueI9s(workspaceId: string): Promise<void> {
+  const complianceWindowStart = new Date(Date.now() - I9_COMPLIANCE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const i9DeadlineCutoff = new Date(Date.now() - I9_DEADLINE_DAYS * 24 * 60 * 60 * 1000);
+
   const overdue = await db.execute(sql`
     SELECT e.id, e.first_name, e.last_name, e.hire_date, p.i9_complete
     FROM employees e
@@ -640,9 +645,9 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
     WHERE e.workspace_id = ${workspaceId}
       AND e.is_active = true
       AND e.hire_date IS NOT NULL
-      AND e.hire_date > NOW() - INTERVAL '90 days'
+      AND e.hire_date > ${complianceWindowStart}
       AND (p.i9_complete IS NULL OR p.i9_complete = false)
-      AND e.hire_date < NOW() - INTERVAL '3 days'
+      AND e.hire_date < ${i9DeadlineCutoff}
   `);
 
   const rows = (overdue as any).rows || [];
@@ -664,7 +669,7 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
       workspaceId,
       approvalKind: 'compliance',
       title,
-      description: `I-9 not completed. Hired ${format(new Date(emp.hire_date), 'MMM d')}. Federal law requires completion within 3 days of hire. Risk: ICE audit liability.`,
+      description: `I-9 not completed. Hired ${format(new Date(emp.hire_date), 'MMM d')}. Company compliance policy requires completion within 3 days of hire date. Risk: ICE audit liability.`,
       requestType: 'compliance_alert',
       priority: 'urgent',
       sourceSystem: 'trinity',

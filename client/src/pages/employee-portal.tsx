@@ -91,11 +91,11 @@ export default function EmployeePortal() {
   const { data: onboardingProgress, isLoading: onboardingLoading } = useQuery<any>({
     queryKey: ["/api/employee-onboarding/me"],
   });
-  const onboardingStatus = onboardingProgress;
+  const isOnboardingIncomplete = !!onboardingProgress && (onboardingProgress.completionPercentage ?? 0) < 100;
   const { data: requiredDocs = [] } = useQuery<any[]>({
     queryKey: ["/api/employee-onboarding/required-documents"],
     queryFn: () => apiRequest("GET", "/api/employee-onboarding/required-documents").then(r => r.json()),
-    enabled: !!onboardingProgress && (onboardingProgress.completionPercentage ?? 0) < 100,
+    enabled: isOnboardingIncomplete,
   });
 
   const isLoading = employeesLoading || shiftsLoading || entriesLoading;
@@ -214,7 +214,7 @@ export default function EmployeePortal() {
         </div>
       )}
 
-      {onboardingProgress && (onboardingProgress.completionPercentage ?? 0) < 100 && (
+      {isOnboardingIncomplete && (
         <Card className="border-amber-500/40 bg-amber-950/20 mb-4">
           <CardHeader>
             <CardTitle className="text-amber-400 flex items-center gap-2">
@@ -489,9 +489,9 @@ export default function EmployeePortal() {
                     </CardTitle>
                     <CardDescription>Complete all required documents to become eligible for shift assignments</CardDescription>
                   </div>
-                  {onboardingStatus && (
+                  {onboardingProgress && (
                     <div className="flex items-center gap-2">
-                      {onboardingStatus.isWorkEligible ? (
+                      {onboardingProgress.isWorkEligible ? (
                         <Badge className="bg-green-500/10 text-green-700 border-green-300 dark:text-green-400 dark:border-green-700">
                           <ShieldCheck className="h-3 w-3 mr-1" />
                           Work Eligible
@@ -511,7 +511,7 @@ export default function EmployeePortal() {
                   <div className="space-y-3">
                     {[1,2,3,4].map(i => <div key={i} className="h-14 rounded-md bg-muted animate-pulse" />)}
                   </div>
-                ) : !onboardingStatus ? (
+                ) : !onboardingProgress ? (
                   <div className="text-center py-10 text-muted-foreground">
                     <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-40" />
                     <p>Onboarding status not available</p>
@@ -522,23 +522,23 @@ export default function EmployeePortal() {
                     {/* Progress overview */}
                     <div className="grid grid-cols-3 gap-3">
                       <div className="rounded-md bg-muted/50 p-3 text-center">
-                        <p className="text-2xl font-bold text-primary">{onboardingStatus.completionPercentage ?? 0}%</p>
+                        <p className="text-2xl font-bold text-primary">{onboardingProgress.completionPercentage ?? 0}%</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Complete</p>
                       </div>
                       <div className="rounded-md bg-muted/50 p-3 text-center">
-                        <p className="text-2xl font-bold">{onboardingStatus.totalDocumentsCompleted ?? 0}</p>
+                        <p className="text-2xl font-bold">{onboardingProgress.totalDocumentsCompleted ?? 0}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Approved</p>
                       </div>
                       <div className="rounded-md bg-muted/50 p-3 text-center">
-                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{onboardingStatus.criticalDocumentsMissing ?? 0}</p>
+                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{onboardingProgress.criticalDocumentsMissing ?? 0}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Critical Missing</p>
                       </div>
                     </div>
 
                     {/* Blocked reasons */}
-                    {onboardingStatus.blockedReasons?.length > 0 && (
+                    {onboardingProgress.blockedReasons?.length > 0 && (
                       <div className="rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-1">
-                        {onboardingStatus.blockedReasons.map((reason: string, i: number) => (
+                        {onboardingProgress.blockedReasons.map((reason: string, i: number) => (
                           <div key={i} className="flex items-start gap-2">
                             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                             <p className="text-sm text-amber-700 dark:text-amber-300">{reason}</p>
@@ -548,11 +548,11 @@ export default function EmployeePortal() {
                     )}
 
                     {/* Document statuses */}
-                    {onboardingStatus.documentStatuses?.length > 0 && (
+                    {onboardingProgress.documentStatuses?.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Required Documents</p>
                         <div className="space-y-2">
-                          {onboardingStatus.documentStatuses.map((doc: any, i: number) => (
+                          {onboardingProgress.documentStatuses.map((doc: any, i: number) => (
                             <div
                               key={i}
                               className="flex items-center gap-3 p-3 rounded-md bg-muted/30"
@@ -605,16 +605,16 @@ export default function EmployeePortal() {
                     )}
 
                     {/* Deadline */}
-                    {onboardingStatus.onboardingDeadline && (
+                    {onboardingProgress.onboardingDeadline && (
                       <div className="rounded-md bg-muted/50 p-3">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <p className="text-sm">
                             <span className="font-medium">Onboarding deadline: </span>
-                            <span className={onboardingStatus.onboardingDeadline.isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-muted-foreground'}>
-                              {onboardingStatus.onboardingDeadline.isOverdue
-                                ? `${Math.abs(onboardingStatus.onboardingDeadline.daysRemaining)} days overdue`
-                                : `${onboardingStatus.onboardingDeadline.daysRemaining} days remaining`}
+                            <span className={onboardingProgress.onboardingDeadline.isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-muted-foreground'}>
+                              {onboardingProgress.onboardingDeadline.isOverdue
+                                ? `${Math.abs(onboardingProgress.onboardingDeadline.daysRemaining)} days overdue`
+                                : `${onboardingProgress.onboardingDeadline.daysRemaining} days remaining`}
                             </span>
                           </p>
                         </div>
