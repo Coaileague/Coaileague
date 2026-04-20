@@ -39,8 +39,25 @@ export interface BriefItem {
 export interface MorningBriefResult {
   intro: string;
   items: BriefItem[];
+  /** Wins Trinity noticed overnight — surfaced before the issue list. */
+  wins?: OrgWin[];
   totalIssues: number;
   generatedAt: Date;
+}
+
+export type OrgWinType =
+  | 'collection_milestone'
+  | 'payroll_clean'
+  | 'officer_turnaround'
+  | 'contract_won'
+  | 'compliance_clean'
+  | 'revenue_milestone';
+
+export interface OrgWin {
+  type: OrgWinType;
+  message: string;
+  /** 1-10 — higher means Trinity is more confident this is worth marking. */
+  significance: number;
 }
 
 interface DailyScanResult {
@@ -1363,6 +1380,13 @@ class TrinityProactiveScannerService {
     items.sort((a, b) => (b.score || 0) - (a.score || 0));
     const topItems = items.slice(0, 5).map((item, idx) => ({ ...item, rank: idx + 1 }));
 
+    // Wins Trinity noticed overnight — surfaced first in the brief so that
+    // real progress is marked before the punch list of what still needs work.
+    const wins = await this.detectWins(workspaceId).catch(() => [] as OrgWin[]);
+    const topWins = wins
+      .sort((a, b) => b.significance - a.significance)
+      .slice(0, 2);
+
     const totalIssues = items.length;
     const criticalCount = items.filter(i => i.urgency === 'critical').length;
     const intro = criticalCount > 0
@@ -1371,8 +1395,113 @@ class TrinityProactiveScannerService {
         ? `Good morning. Here are the ${Math.min(topItems.length, totalIssues)} priority items for today.`
         : `Good morning. Operations look clean — no immediate action required.`;
 
-    log.info(`[TrinityProactiveScanner] Morning brief: ws=${workspaceId}, totalIssues=${totalIssues}, critical=${criticalCount}`);
-    return { intro, items: topItems, totalIssues, generatedAt: now };
+    log.info(`[TrinityProactiveScanner] Morning brief: ws=${workspaceId}, totalIssues=${totalIssues}, critical=${criticalCount}, wins=${topWins.length}`);
+    return { intro, items: topItems, wins: topWins, totalIssues, generatedAt: now };
+  }
+
+  /**
+   * Detect meaningful wins in the org over the past 30 days. Trinity marks
+   * what matters — clean payroll, contract wins, officer turnarounds —
+   * so the morning brief opens with recognition before the punch list.
+   *
+   * Each subquery is wrapped in its own try/catch so a single missing
+   * table/column never breaks the rest.
+   */
+  private async detectWins(workspaceId: string): Promise<OrgWin[]> {
+    const wins: OrgWin[] = [];
+
+    // 1. AR collection rate milestone (≥95% last 30 days)
+    try {
+      const result: any = await db.execute(sql`
+        SELECT
+          CASE WHEN COALESCE(SUM(total::numeric), 0) = 0 THEN 0
+          ELSE (SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END)
+                / NULLIF(SUM(total::numeric), 0)) * 100
+          END AS collection_rate
+        FROM invoices
+        WHERE workspace_id = ${workspaceId}
+          AND created_at > NOW() - INTERVAL '30 days'
+      `);
+      const row = result?.rows?.[0] ?? result?.[0];
+      const rate = parseFloat(row?.collection_rate ?? '0');
+      if (rate >= 95) {
+        wins.push({
+          type: 'collection_milestone',
+          significance: 8,
+          message: `AR collection rate hit ${rate.toFixed(0)}% this month — one of the best windows I've tracked for you.`,
+        });
+      }
+    } catch (err) {
+      log.warn('[TrinityProactiveScanner] detectWins:collection_milestone failed:', err instanceof Error ? err.message : err);
+    }
+
+    // 2. Clean payroll run (last run in past 7 days completed without anomalies)
+    try {
+      const result: any = await db.execute(sql`
+        SELECT status, run_date
+        FROM payroll_runs
+        WHERE workspace_id = ${workspaceId}
+          AND created_at > NOW() - INTERVAL '7 days'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+      const recent = result?.rows?.[0] ?? result?.[0];
+      if (recent?.status === 'completed') {
+        wins.push({
+          type: 'payroll_clean',
+          significance: 7,
+          message: `Clean payroll run — no anomalies flagged. That consistency matters.`,
+        });
+      }
+    } catch (err) {
+      log.warn('[TrinityProactiveScanner] detectWins:payroll_clean failed:', err instanceof Error ? err.message : err);
+    }
+
+    // 3. Officer turnaround (recovering trajectory in temporal entity arcs)
+    try {
+      const result: any = await db.execute(sql`
+        SELECT e.first_name, e.last_name, tea.trajectory, tea.narrative_summary
+        FROM temporal_entity_arcs tea
+        JOIN employees e ON e.id = tea.entity_id
+        WHERE tea.workspace_id = ${workspaceId}
+          AND tea.entity_type = 'officer'
+          AND tea.trajectory = 'recovering'
+          AND tea.last_assessed_at > NOW() - INTERVAL '3 days'
+        LIMIT 3
+      `);
+      for (const t of (result?.rows ?? result ?? [])) {
+        wins.push({
+          type: 'officer_turnaround',
+          significance: 8,
+          message: `${t.first_name} ${t.last_name} is showing real improvement — trajectory is recovering. That's worth noting.`,
+        });
+      }
+    } catch (err) {
+      log.warn('[TrinityProactiveScanner] detectWins:officer_turnaround failed:', err instanceof Error ? err.message : err);
+    }
+
+    // 4. New contract won in last 48 hours
+    try {
+      const result: any = await db.execute(sql`
+        SELECT title, client_name, created_at
+        FROM contracts
+        WHERE workspace_id = ${workspaceId}
+          AND status = 'active'
+          AND created_at > NOW() - INTERVAL '48 hours'
+        LIMIT 2
+      `);
+      for (const c of (result?.rows ?? result ?? [])) {
+        wins.push({
+          type: 'contract_won',
+          significance: 9,
+          message: `The ${c.client_name} contract is now active. You've been working toward that.`,
+        });
+      }
+    } catch (err) {
+      log.warn('[TrinityProactiveScanner] detectWins:contract_won failed:', err instanceof Error ? err.message : err);
+    }
+
+    return wins;
   }
 
   /**

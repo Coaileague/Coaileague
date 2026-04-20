@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { TrinityThoughtBar } from "@/components/chatdock/TrinityThoughtBar";
 import { TrinityTaskLauncher } from "@/components/trinity/TrinityTaskWidget";
+import { useTrinitySession } from "@/contexts/TrinitySessionContext";
 
 /**
  * TrinityDesktopButton - INLINED to bypass Replit webview module caching
@@ -130,6 +131,7 @@ interface UniversalHeaderProps {
 export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
+  const { activeSessionId } = useTrinitySession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isChristmas, setIsChristmas] = useState(false);
   const isMobile = useIsMobile();
@@ -751,7 +753,11 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
         </div>
       </div>
       {isWorkspaceMode && user && (
-        <TrinityThoughtBar className="border-t border-cyan-500/20" />
+        <TrinityThoughtBar
+          className="border-t border-cyan-500/20"
+          sessionId={activeSessionId ?? undefined}
+          isProcessing={!!activeSessionId}
+        />
       )}
     </nav>
   );

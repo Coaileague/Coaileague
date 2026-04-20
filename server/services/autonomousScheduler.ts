@@ -4560,6 +4560,46 @@ export function startAutonomousScheduler() {
     }
   })();
 
+  // ══════════════════════════════════════════════════════════════════════
+  // TRINITY ANNUAL LEGAL KNOWLEDGE REVIEW
+  // Every January 1st at 06:00, Trinity re-verifies every regulatory rule
+  // older than 365 days against its authoritative source URL. Stale rules
+  // get refreshed in place; ones that no longer return a match are flagged
+  // in logs for human review. The chat path never depends on this cron.
+  // ══════════════════════════════════════════════════════════════════════
+  registerJobInfo(
+    'Trinity Annual Legal Knowledge Review',
+    '0 6 1 1 *',
+    'Re-verify all regulatory_rules against source URLs; update stale entries',
+    true,
+  );
+  cron.schedule('0 6 1 1 *', () => {
+    trackJobExecution('Trinity Annual Legal Knowledge Review', async () => {
+      const { trinityLegalResearch } = await import('./ai-brain/trinityLegalResearch');
+      const { lt } = await import('drizzle-orm');
+      const { regulatoryRules } = await import('@shared/schema');
+      const staleCutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .substring(0, 10);
+
+      const stale = await db.select()
+        .from(regulatoryRules)
+        .where(lt(regulatoryRules.lastVerified, staleCutoff));
+
+      let updated = 0;
+      for (const rule of stale) {
+        const result = await trinityLegalResearch.researchAndLearn({
+          question: rule.ruleName,
+          state: rule.state,
+          category: rule.category,
+          workspaceId: 'system',
+        }).catch(() => ({ found: false }));
+        if (result.found) updated++;
+      }
+      log.info(`[LegalReview] Updated ${updated}/${stale.length} stale regulatory rules`);
+    });
+  });
+
   isSchedulerRunning = true;
 
   log.info('Autonomous scheduler running successfully');

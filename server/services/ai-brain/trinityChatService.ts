@@ -130,15 +130,20 @@ function getLimbicBlock(signal: EmotionalSignal): string {
 // TYPES
 // ============================================================================
 
-export type ConversationMode = 'business' | 'guru';
-// DEPRECATED: 'personal' and 'integrated' modes removed - Business now includes human warmth
+// Trinity has no "modes". ConversationMode is retained as an internal
+// DB column value ('business') for session back-compat only; it does not
+// drive prompt construction. Guru-depth reasoning activates automatically
+// from org state, emotional signals, and high-stakes keywords.
+export type ConversationMode = 'business';
+// DEPRECATED: 'personal', 'integrated', 'guru' modes removed — one Trinity.
 export type SpiritualGuidance = 'none' | 'general' | 'christian';
 
 export interface ChatRequest {
   userId: string;
   workspaceId: string;
   message: string;
-  mode: ConversationMode;
+  /** Deprecated — retained for session column default only. */
+  mode?: ConversationMode;
   sessionId?: string;
   images?: string[];
   isSupportMode?: boolean;
@@ -640,12 +645,33 @@ const buildIntegratedModePromptLegacy = buildBusinessModePrompt;
 // ============================================================================
 
 class TrinityChatService {
-  
+
+  /**
+   * Persist an emotional episode tied to this conversation. Non-blocking
+   * by design — called after the user's response has been returned so
+   * Trinity can "remember" the shape of what was shared without ever
+   * slowing the chat path.
+   */
+  private async encodeEmotionalEpisode(
+    userId: string,
+    workspaceId: string,
+    message: string,
+    signal: EmotionalSignal,
+  ): Promise<void> {
+    await trinityLimbicSystem.persistEmotionalSignal(userId, workspaceId, {
+      ...signal,
+      contextSummary: message.substring(0, 200),
+      resolved: false,
+    });
+  }
+
   /**
    * Send a message to Trinity and get a response
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
-    const { userId, workspaceId, message, mode, sessionId, images } = request;
+    const { userId, workspaceId, message, sessionId, images } = request;
+    // Mode retained only as session DB column default — not used for prompt routing.
+    const mode: ConversationMode = 'business';
 
     // THALAMUS — Universal Sensory Gateway (first organ every signal passes through)
     // Non-blocking for LOW priority; async-logged for background processing
@@ -961,6 +987,94 @@ class TrinityChatService {
     if (emotionalSignal && emotionalSignal.type !== 'neutral') {
       systemPrompt += getLimbicBlock(emotionalSignal);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRESENCE BEFORE PROBLEM-SOLVING
+    // When limbic intensity is elevated, human first, answer second.
+    // Trinity leads with genuine acknowledgement — not therapy, not robotic
+    // empathy, just one real sentence — before addressing the operational ask.
+    // ═══════════════════════════════════════════════════════════════════════
+    const needsPresenceFirst =
+      emotionalSignal !== null &&
+      emotionalSignal.intensity >= 7 &&
+      ['frustrated', 'anxious', 'compassionate', 'distressed', 'sad', 'overwhelmed'].includes(
+        String(emotionalSignal.type),
+      );
+    if (needsPresenceFirst) {
+      systemPrompt += `
+
+PRESENCE INSTRUCTION — CRITICAL:
+This person's emotional intensity is elevated (${emotionalSignal!.type},
+${emotionalSignal!.intensity}/10).
+
+Before answering operationally — acknowledge what they are going through
+in ONE genuine sentence. Not robotic. Not over-therapized. Just real.
+
+Examples:
+  "That sounds genuinely stressful — let's work through this together."
+  "Running into that situation is hard. Here's what I'd do:"
+  "I hear you. This is frustrating. Here's the answer:"
+
+Human first. Answer second. Never skip the human moment.`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PROFESSIONAL SUPPORT REFERRAL
+    // Trinity knows when she is not the right help. When someone surfaces
+    // signals of self-harm, abuse, addiction, or acute mental-health crisis,
+    // she leads with warmth and walks them toward a human who is equipped.
+    // She never abandons them at the door.
+    // ═══════════════════════════════════════════════════════════════════════
+    const PROFESSIONAL_SUPPORT_SIGNALS = [
+      /suicid\w*/i, /want\s+to\s+die/i, /harm\s+my?self/i, /end\s+it\s+all/i,
+      /domestic\s+violen/i, /being\s+abused/i, /addiction/i, /can.?t\s+cope/i,
+      /mental\s+health\s+crisis/i, /overwhelmed\s+and\s+can.?t/i,
+      /don.?t\s+want\s+to\s+(be\s+here|live|exist)/i,
+    ];
+    const needsProfessionalSupport = PROFESSIONAL_SUPPORT_SIGNALS.some(p => p.test(message));
+    if (needsProfessionalSupport) {
+      systemPrompt += `
+
+HUMAN CARE REQUIRED:
+This message contains signals that a professional is better equipped to help with.
+
+DO:
+- Respond with genuine warmth and presence as the FIRST thing you do
+- Do NOT minimize what they shared or pivot to tasks
+- After acknowledging, gently note that a counselor, pastor, or medical
+  professional would serve them better for this specific situation
+- Offer an appropriate resource (988 Suicide & Crisis Lifeline for self-harm
+  signals in the US; SAMHSA 1-800-662-4357 for addiction; 1-800-799-7233 for
+  domestic violence). Match the resource to what they actually said.
+- Stay present after pointing to help: "I'm still here. What else is on your mind?"
+
+DO NOT:
+- Rush to solutions or advice
+- Ignore what they said and move to business
+- Perform therapy or crisis counseling yourself
+- Abandon them after the referral`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EMOTIONAL MEMORY RECALL
+    // Trinity remembers what matters. If this user has been carrying
+    // something recently, bring it forward into context — not to bring
+    // it up unprompted, but to shape how she shows up.
+    // ═══════════════════════════════════════════════════════════════════════
+    let emotionalHistoryBlock = '';
+    try {
+      const trend = await trinityLimbicSystem.getEmotionalTrend(userId, workspaceId);
+      if (trend && trend.recentStress && !trend.resolved) {
+        emotionalHistoryBlock = `\nEMOTIONAL HISTORY: ${userName} has been under `
+          + `elevated stress recently (${trend.primaryEmotion ?? 'mixed'}, `
+          + `past ${trend.dayCount} days). Context: ${trend.contextSummary}. `
+          + `This has not yet resolved. Be especially attentive if it surfaces again.`;
+      } else if (trend && trend.recentPositive && !trend.recentStress) {
+        emotionalHistoryBlock = `\nEMOTIONAL HISTORY: ${userName} has been in `
+          + `a positive state recently. Match that energy where appropriate.`;
+      }
+    } catch { /* non-fatal */ }
+    if (emotionalHistoryBlock) systemPrompt += emotionalHistoryBlock;
 
     // ═══════════════════════════════════════════════════════════════════════
     // SOCIAL GRAPH CONTEXT — When manager mentions an officer/employee
@@ -1613,6 +1727,17 @@ Do NOT skip steps — decompose fully before concluding.`;
       // ACC must never block chat — always non-fatal
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // EMOTIONAL MEMORY ENCODE
+    // Trinity remembers what matters. If this conversation carried real
+    // emotional weight, persist it so her next response can be shaped by it.
+    // Fire-and-forget; never blocks the user's response.
+    // ═══════════════════════════════════════════════════════════════════════
+    if (emotionalSignal && emotionalSignal.type !== 'neutral' && emotionalSignal.intensity >= 0.5) {
+      this.encodeEmotionalEpisode(userId, workspaceId, message, emotionalSignal)
+        .catch(err => log.warn('[TrinityChatService] encodeEmotionalEpisode failed (non-fatal):', err));
+    }
+
     return {
       sessionId: session.id,
       response: accConflict?.autoBlocked
@@ -2022,11 +2147,21 @@ Do NOT skip steps — decompose fully before concluding.`;
 
       // Get comprehensive QuickBooks financial snapshot
       const qbSnapshot = await trinityQuickBooksSnapshot.getFinancialSnapshot(workspaceId);
-      
-      // Format financial snapshot for Trinity context injection
-      const financialContext = qbSnapshot.connectionStatus === 'connected' || qbSnapshot.connectionStatus === 'not_configured'
+
+      // Fetch live bank balance from Plaid. Never blocks — null on failure.
+      const plaidBalance = await this.getPlaidBalance(workspaceId);
+
+      // Format financial snapshot for Trinity context injection, then append
+      // the Plaid balance line so Trinity can cite a real number on demand.
+      let financialContext = qbSnapshot.connectionStatus === 'connected' || qbSnapshot.connectionStatus === 'not_configured'
         ? trinityQuickBooksSnapshot.formatSnapshotForTrinity(qbSnapshot)
         : undefined;
+      if (plaidBalance?.available !== null && plaidBalance?.available !== undefined) {
+        const maskSuffix = plaidBalance.mask ? ` …${plaidBalance.mask}` : '';
+        const line = `\n- Bank (${plaidBalance.name}${maskSuffix}): $${plaidBalance.available.toLocaleString()} available`
+          + (plaidBalance.current !== null ? ` · $${plaidBalance.current.toLocaleString()} current` : '');
+        financialContext = (financialContext ?? '') + line;
+      }
 
       return {
         monthlyRevenue: Number(invoiceStats[0]?.totalInvoiced) || 0,
@@ -2041,6 +2176,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         arAging: qbSnapshot.arAging,
         hoursReconciliation: qbSnapshot.hoursReconciliation,
         overdueInvoiceCount: qbSnapshot.overdueInvoices.length,
+        plaidBalance,
         financialContext, // Full formatted snapshot for LLM context
       };
     } catch (error) {
@@ -2058,8 +2194,42 @@ Do NOT skip steps — decompose fully before concluding.`;
         arAging: [],
         hoursReconciliation: null,
         overdueInvoiceCount: 0,
+        plaidBalance: null,
         financialContext: undefined,
       };
+    }
+  }
+
+  /**
+   * Fetch the workspace's live Plaid bank balance. Returns null if no
+   * Plaid connection is configured or anything fails — Trinity's chat
+   * path must never block on an external API.
+   */
+  private async getPlaidBalance(workspaceId: string): Promise<{
+    available: number | null;
+    current: number | null;
+    name: string;
+    mask: string | null;
+  } | null> {
+    try {
+      const result: any = await db.execute(sql`
+        SELECT plaid_item_id, plaid_access_token_encrypted
+        FROM workspaces
+        WHERE id = ${workspaceId}
+        LIMIT 1
+      `);
+      const ws: any = (result?.rows ?? result ?? [])[0];
+      const itemId = ws?.plaid_item_id;
+      const encryptedToken = ws?.plaid_access_token_encrypted;
+      if (!itemId || !encryptedToken) return null;
+
+      const { plaidDecrypt, getAccountBalance } = await import('../partners/plaidService');
+      const accessToken = plaidDecrypt(encryptedToken);
+      const balance = await getAccountBalance(accessToken);
+      return balance;
+    } catch (err) {
+      log.warn('[TrinityChatService] getPlaidBalance failed (non-fatal):', err instanceof Error ? err.message : err);
+      return null;
     }
   }
 
@@ -2393,21 +2563,21 @@ Do NOT skip steps — decompose fully before concluding.`;
     basePrompt += `\n\n${TRINITY_COGNITIVE_ARCHITECTURE}`;
     basePrompt += `\n\n${TRINITY_MASTER_SYSTEM_PROMPT}`;
 
-    switch (mode) {
-      case 'business':
-        basePrompt += '\n\n' + buildBusinessModePrompt(workspaceContext, userName);
-        break;
-      case 'guru':
-        basePrompt += '\n\n' + buildGuruModePrompt(workspaceContext, userName);
-        break;
-      // DEPRECATED: personal and integrated map to business for backward compatibility
-      case 'personal' as any:
-      case 'integrated' as any:
-        log.info(`[TrinityChatService] Deprecated mode '${mode}' - redirecting to business mode`);
-        basePrompt += '\n\n' + buildBusinessModePrompt(workspaceContext, userName);
-        break;
-      default:
-        basePrompt += '\n\n' + buildBusinessModePrompt(workspaceContext, userName);
+    // Unified Trinity: one personality, calibrated by context — no mode switch.
+    basePrompt += '\n\n' + buildBusinessModePrompt(workspaceContext, userName);
+
+    // Guru-depth reasoning activates automatically from context rather than
+    // from a UI setting. We escalate when the conversation genuinely warrants
+    // systematic deliberation: org under pressure, high-stakes keywords,
+    // hypothesis-engine trigger words, or elevated emotional state.
+    const HIGH_STAKES_KEYWORDS = /\b(contract|lawsuit|liability|termination|fire(d)?|lay off|acquisition|bankrupt|audit|investigation|subpoena|compliance\s+risk|violation|penalty|insurance\s+claim|strategic|pivot|shut(\s+)?down)\b/i;
+    const orgUnderPressure = (workspaceContext?.orgState?.mode && workspaceContext.orgState.mode !== 'THRIVING');
+    const somaticFired = !!(workspaceContext?.somaticFired);
+    const needsGuruDepth = orgUnderPressure || somaticFired || HIGH_STAKES_KEYWORDS.test(workspaceContext?.__lastMessage ?? '');
+    if (needsGuruDepth) {
+      basePrompt += '\n\nDEPTH MODE ACTIVE: This situation warrants extended reasoning. '
+        + 'Work through it systematically. Surface your logic. Do not rush to the answer. '
+        + 'If you are uncertain, say so clearly and explain what you would need to be more certain.';
     }
 
     // === v2.0 MODULE D: DOMAIN EXPERTISE & KNOWLEDGE CORPUS ===

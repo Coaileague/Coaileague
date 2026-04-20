@@ -27,7 +27,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { useToast } from "@/hooks/use-toast";
-import { TrinityThoughtBar } from "./TrinityThoughtBar";
+import { useTrinitySession } from "@/contexts/TrinitySessionContext";
 
 function smartTimestamp(dateStr: string | Date | null | undefined): string {
   if (!dateStr) return "—";
@@ -1715,6 +1715,11 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
 function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string }) {
   const { closeChat, openChat } = useChatDock();
   const { user } = useAuth();
+  const { setActiveSessionId } = useTrinitySession();
+  useEffect(() => {
+    setActiveSessionId(roomId);
+    return () => setActiveSessionId(null);
+  }, [roomId, setActiveSessionId]);
   const [input, setInput] = useState("");
   const [showInfo, setShowInfo] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
@@ -2131,7 +2136,10 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
         </div>
       )}
 
-      <TrinityThoughtBar priority={wsError ? "high" : "normal"} sessionId={roomId} />
+      {/* Trinity thought bar moved into universal header via TrinitySessionContext.
+          The header bar reads activeSessionId (set by this InlineChatView's effect)
+          and polls the thought-stream endpoint for THIS room's phases. One bar,
+          always visible, always context-aware. */}
 
       <div className="flex-1 overflow-y-auto px-2.5 py-1.5 space-y-px relative chatdock-chat-bg" data-scroll="styled" ref={scrollContainerRef} role="log" aria-live="polite" aria-label="Chat messages">
         {wsMessages.length === 0 ? (

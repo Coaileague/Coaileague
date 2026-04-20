@@ -166,6 +166,34 @@ export async function getAccountDetails(accessToken: string): Promise<{
   };
 }
 
+/**
+ * Fetch the primary account's current and available balance from Plaid.
+ * Returns null on any failure so Trinity's chat path never blocks.
+ */
+export async function getAccountBalance(accessToken: string): Promise<{
+  available: number | null;
+  current: number | null;
+  name: string;
+  mask: string | null;
+} | null> {
+  try {
+    const client = buildClient();
+    const resp = await client.accountsBalanceGet({ access_token: accessToken });
+    const accounts = resp.data.accounts;
+    if (!accounts || accounts.length === 0) return null;
+    const primary = accounts[0];
+    return {
+      available: primary.balances?.available ?? null,
+      current: primary.balances?.current ?? null,
+      name: primary.name ?? primary.official_name ?? 'Business Account',
+      mask: primary.mask ?? null,
+    };
+  } catch (err) {
+    log.warn('[Plaid] getAccountBalance failed (non-fatal):', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 export async function initiateTransfer(opts: {
   accessToken: string;
   accountId: string;

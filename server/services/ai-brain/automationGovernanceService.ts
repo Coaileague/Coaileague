@@ -117,6 +117,58 @@ const DEFAULT_HIGH_RISK_CATEGORIES = [
   'contract_modification',
 ];
 
+/**
+ * Per-action auto-approval thresholds (0–100 confidence percentage).
+ *
+ * 101 = NEVER auto-approve. Trinity always asks a human first.
+ * Below-threshold confidence requires explicit approval.
+ *
+ * These thresholds are consulted AFTER the workspace's policy-level gate
+ * (hand_held / graduated / full_automation) and act as a stricter floor:
+ * no matter how permissive the policy, `payroll_run` never auto-executes.
+ *
+ * Actions not listed fall back to 85 (standard) to preserve current behavior.
+ */
+export const ACTION_AUTO_APPROVE_THRESHOLDS: Record<string, number> = {
+  // NEVER auto-approve — human decision is non-negotiable (101 > max confidence)
+  'payroll_run':            101,
+  'payroll_modify':         101,
+  'payroll_void':           101,
+  'financial_transfer':     101,
+  'wire_transfer':          101,
+  'hire_employee':          101,
+  'terminate_employee':     101,
+  'contract_sign':          101,
+  'contract_modify':        101,
+  'bid_submit':             101,
+  'invoice_void_large':     101,
+
+  // HIGH confidence required
+  'invoice_send':           97,
+  'invoice_create':         95,
+  'client_communication':   93,
+  'shift_auto_assign':      90,
+  'calloff_coverage':       90,
+  'schedule_publish':       88,
+
+  // STANDARD confidence
+  'timesheet_approve':      85,
+  'schedule_generate':      85,
+  'report_generate':        80,
+  'notification_send':      80,
+
+  // LOW RISK — Trinity handles automatically
+  'shift_reminder':         50,
+  'dashboard_refresh':      50,
+  'status_check':           50,
+  'summary_generate':       50,
+};
+
+/** Confidence threshold at or above which an action may auto-approve. */
+export function getApprovalThreshold(actionType: string): number {
+  return ACTION_AUTO_APPROVE_THRESHOLDS[actionType] ?? 85;
+}
+
 // ============================================================================
 // AUTOMATION GOVERNANCE SERVICE CLASS
 // ============================================================================
@@ -575,6 +627,27 @@ class AutomationGovernanceService {
       if (isHighRisk && !policy.waiverAccepted) {
         requiresApproval = true;
         riskFactors.push('Bot action in high-risk category without waiver');
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PER-ACTION THRESHOLD FLOOR
+    // Even under the most permissive policy, specific action types (payroll_run,
+    // hire/terminate, financial transfers, etc.) ALWAYS require human approval.
+    // This check runs last so it can only ever INCREASE the approval bar, never
+    // lower it — Trinity's default is to err on the side of asking.
+    // ════════════════════════════════════════════════════════════════════════
+    const actionThreshold = getApprovalThreshold(context.actionName);
+    if (confidenceScore < actionThreshold) {
+      if (!requiresApproval) {
+        requiresApproval = true;
+        riskFactors.push(
+          `Action '${context.actionName}' requires ≥${actionThreshold}% confidence to auto-approve; got ${confidenceScore}%`,
+        );
+      }
+      if (actionThreshold > 100) {
+        // Sentinel value meaning "never auto-approve for any confidence"
+        riskFactors.push(`Action '${context.actionName}' always requires human approval`);
       }
     }
 

@@ -9,7 +9,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { trinityChatService, ConversationMode } from '../services/ai-brain/trinityChatService';
+import { trinityChatService } from '../services/ai-brain/trinityChatService';
 import { attachWorkspaceId, AuthenticatedRequest } from '../rbac';
 import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
@@ -61,16 +61,17 @@ const requireTrinityAccess = (req: Request, res: Response, next: NextFunction) =
 };
 
 // Request schemas
+// Mode is dissolved: Trinity is ONE unified intelligence. Contextual depth
+// (guru-level reasoning, hypothesis engine, etc.) activates automatically
+// from org state + emotional signals + keyword stakes — not a UI toggle.
 const chatSchema = z.object({
   message: z.string().min(1).max(10000),
-  mode: z.enum(['business', 'personal', 'integrated', 'guru']).default('business'),
   sessionId: z.string().optional(),
   images: z.array(z.string()).max(5).optional(),
 });
 
 const updateSettingsSchema = z.object({
   personalDevelopmentEnabled: z.boolean().optional(),
-  spiritualGuidance: z.enum(['none', 'general', 'christian']).optional(),
   accountabilityLevel: z.enum(['gentle', 'balanced', 'challenging']).optional(),
   weeklyCheckInEnabled: z.boolean().optional(),
   checkInDay: z.string().optional(),
@@ -94,7 +95,7 @@ router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Reques
       return res.status(400).json({ error: 'Invalid request', details: parsed.error.issues });
     }
 
-    const { message, mode, sessionId, images } = parsed.data;
+    const { message, sessionId, images } = parsed.data;
     const userId = authReq.user!.id;
     const workspaceId = authReq.workspaceId;
 
@@ -112,7 +113,6 @@ router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Reques
       userId,
       workspaceId,
       message,
-      mode: mode as ConversationMode,
       sessionId,
       images,
       isSupportMode,
@@ -163,32 +163,9 @@ router.get('/session/:sessionId/messages', attachWorkspaceId, requireTrinityAcce
   }
 });
 
-/**
- * POST /api/trinity/chat/mode
- * Switch conversation mode
- */
-router.post('/mode', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
-  try {
-    const authReq = req as AuthenticatedRequest;
-    const { mode } = req.body;
-    if (!['business', 'personal', 'integrated', 'guru'].includes(mode)) {
-      return res.status(400).json({ error: 'Invalid mode' });
-    }
-
-    const userId = authReq.user!.id;
-    const workspaceId = authReq.workspaceId;
-
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'Workspace context required' });
-    }
-
-    const session = await trinityChatService.switchMode(userId, workspaceId, mode as ConversationMode);
-    return res.json({ session, mode });
-  } catch (error: unknown) {
-    log.error('[TrinityChat] Mode switch error:', error);
-    return res.status(500).json({ error: 'Failed to switch mode' });
-  }
-});
+// Legacy POST /api/trinity/chat/mode removed. Trinity has no "modes" —
+// she is one unified intelligence that calibrates depth, warmth, and
+// rigor from context automatically.
 
 /**
  * GET /api/trinity/chat/settings

@@ -367,6 +367,77 @@ export class TrinityLimbicSystem {
   }
 
   /**
+   * Persist an emotional signal against a user. Thin wrapper over
+   * storeEmotionalMemory that accepts a contextSummary + resolved flag so
+   * TrinityChatService can encode "what the user said and how they felt"
+   * without blocking the response path.
+   */
+  async persistEmotionalSignal(
+    userId: string,
+    workspaceId: string,
+    payload: EmotionalSignal & { contextSummary?: string; resolved?: boolean },
+  ): Promise<void> {
+    const outcome = payload.resolved
+      ? 'resolved'
+      : payload.contextSummary
+        ? `ctx:${payload.contextSummary.substring(0, 160)}`
+        : undefined;
+    await this.storeEmotionalMemory(userId, 'ticket', payload, workspaceId, outcome);
+  }
+
+  /**
+   * Summarise recent emotional state for a user. Returns the dominant
+   * emotion, day-count of elevated signals, and whether anything is
+   * unresolved. Non-fatal on error.
+   */
+  async getEmotionalTrend(
+    userId: string,
+    workspaceId: string,
+  ): Promise<{
+    recentStress: boolean;
+    recentPositive: boolean;
+    resolved: boolean;
+    primaryEmotion: EmotionalState | null;
+    dayCount: number;
+    contextSummary: string;
+  } | null> {
+    try {
+      const history = await this.getEmotionalHistory(userId, 'ticket', workspaceId, 14);
+      if (history.length === 0) return null;
+
+      const counts: Partial<Record<EmotionalState, number>> = {};
+      for (const s of history) counts[s.type] = (counts[s.type] ?? 0) + 1;
+      const primary = (Object.entries(counts).sort((a, b) => b[1]! - a[1]!)[0]?.[0] ?? null) as EmotionalState | null;
+
+      const stressTypes: EmotionalState[] = ['frustrated', 'escalated', 'concerned', 'urgent'];
+      const positiveTypes: EmotionalState[] = ['satisfied', 'compassionate'];
+      const recentStress = history.some(s => stressTypes.includes(s.type) && s.intensity >= 0.5);
+      const recentPositive = history.some(s => positiveTypes.includes(s.type));
+
+      // Resolved if the most recent signal is neutral or positive AND >= 2 days old
+      const mostRecent = history[0];
+      const ageDays = (Date.now() - new Date(mostRecent.timestamp).getTime()) / 86_400_000;
+      const resolved = (mostRecent.type === 'neutral' || mostRecent.type === 'satisfied') && ageDays >= 2;
+
+      const dayCount = Math.min(14, Math.max(1, Math.round(
+        (Date.now() - new Date(history[history.length - 1].timestamp).getTime()) / 86_400_000,
+      )));
+
+      const contextSummary = history
+        .slice(0, 3)
+        .map(s => s.trigger || s.recommendedAction || s.type)
+        .filter(Boolean)
+        .join('; ')
+        .substring(0, 200);
+
+      return { recentStress, recentPositive, resolved, primaryEmotion: primary, dayCount, contextSummary };
+    } catch (err) {
+      log.warn('[LimbicSystem] getEmotionalTrend failed (non-fatal):', err);
+      return null;
+    }
+  }
+
+  /**
    * Retrieve the emotional history for a given entity within `days` days.
    * Results are returned newest-first.
    */
