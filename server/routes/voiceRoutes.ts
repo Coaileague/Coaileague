@@ -1452,7 +1452,7 @@ voiceRouter.post('/status-callback', twilioSignatureMiddleware, async (req: Requ
             durationSeconds: durationSec,
             direction: 'inbound',
             callType: 'trinity_voice',
-            twilioCostCents: Math.ceil((durationSec / 60) * 220),
+            twilioCostCents: Math.ceil((durationSec / 60) * 1.4),
           }).catch((e: Error) => log.warn('[VoiceRoutes] Voice metering error:', e.message));
         }
       }
@@ -2028,7 +2028,7 @@ voiceRouter.post('/status', twilioSignatureMiddleware, async (req: Request, res:
             durationSeconds: durationSec,
             direction: 'inbound',
             callType: 'trinity_voice',
-            twilioCostCents: Math.ceil((durationSec / 60) * 220),
+            twilioCostCents: Math.ceil((durationSec / 60) * 1.4),
           }).catch((e: Error) => log.warn('[VoiceRoutes] Status alias metering error:', e.message));
         }
       }

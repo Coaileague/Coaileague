@@ -1251,13 +1251,16 @@ export default function Billing() {
                           These fees are charged via Stripe per transaction when you use payroll, invoicing, or direct-pay features. All charges are off-session — no manual action needed.
                         </p>
                         <div className="space-y-1 text-xs text-muted-foreground">
-                          <div className="flex justify-between"><span>Payroll processing / employee</span><span className="font-mono">$3.95–5.95</span></div>
-                          <div className="flex justify-between"><span>Card payment processing</span><span className="font-mono">2.9% + $0.25</span></div>
-                          <div className="flex justify-between"><span>ACH bank transfer</span><span className="font-mono">1.0% (max $10)</span></div>
-                          <div className="flex justify-between"><span>Direct bank payout</span><span className="font-mono">0.25%</span></div>
+                          <div className="flex justify-between"><span>Payroll processing / employee / run</span><span className="font-mono">$3.50</span></div>
+                          <div className="flex justify-between"><span>Invoice payment — card</span><span className="font-mono">3.4% + $0.80</span></div>
+                          <div className="flex justify-between"><span>Invoice payment — ACH</span><span className="font-mono">1.3% (max $10)</span></div>
+                          <div className="flex justify-between"><span>Direct bank payout</span><span className="font-mono">0.75%</span></div>
+                          <div className="flex justify-between"><span>W-2 tax form</span><span className="font-mono">$5.00 / form</span></div>
+                          <div className="flex justify-between"><span>1099-NEC tax form</span><span className="font-mono">$3.00 / form</span></div>
+                          <div className="flex justify-between"><span>AI token overage</span><span className="font-mono">$2.00 / 100K</span></div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Professional tier: 10% discount on middleware fees. Enterprise: 20% discount.
+                          Professional tier: 15% discount on middleware fees. Business: 20%. Enterprise: 25%. Strategic: 30%.
                         </p>
                       </div>
                     </div>
@@ -1794,9 +1797,9 @@ export default function Billing() {
                   <p className="text-sm font-medium">What these cards are charged for:</p>
                   <ul className="text-xs text-muted-foreground space-y-1">
                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Monthly or yearly subscription renewal</li>
-                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Payroll processing fee ($3.95–5.95/run via middleware)</li>
-                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Invoice delivery fee ($0.25/invoice via middleware)</li>
-                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> ACH bank payout fee ($0.25/transfer via middleware)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Payroll processing fee ($3.50/employee/run via middleware)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Invoice payment processing (3.4% + $0.80 card / 1.3% ACH)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Direct-to-bank payout fee (0.75% via Stripe Connect)</li>
                   </ul>
                 </div>
               </div>

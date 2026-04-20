@@ -344,7 +344,7 @@ export async function sendSMS(message: SMSMessage): Promise<SMSResult> { // infr
           workspaceId: message.workspaceId,
           messageSid: result.sid,
           callType: message.type || 'sms_notification',
-          twilioCostCents: 104,
+          twilioCostCents: 1, // Twilio SMS ~$0.0079/msg → 1 cent (ceil)
         });
       } catch (e: any) {
         log.warn('[smsService] SMS metering error:', e?.message || String(e));
