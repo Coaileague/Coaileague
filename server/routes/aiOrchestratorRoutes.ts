@@ -372,52 +372,62 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/capabilities", requireAuth, async (_req: Request, res: Response) => {
   try {
+    // Trinity is one unified agent. "Operations", "Specialist", and
+    // "Collaboration" below describe internal reasoning PROFILES she uses
+    // for different task types — not separate agents. Underlying model
+    // backends are implementation details and are intentionally not
+    // surfaced to clients (see CLAUDE.md Section S — Trinity Unity Law).
     const capabilities = {
       trinity: {
-        name: "Trinity (Gemini)",
-        role: "CEO/Orchestrator",
-        strengths: [
-          "Autonomous scheduling optimization",
-          "Real-time monitoring and alerts",
-          "Data analysis and pattern recognition",
-          "Payroll processing",
-          "System health monitoring",
-          "Quick operational decisions",
-        ],
-        taskTypes: taskRouter.getTrinityTaskTypes(),
-      },
-      claude: {
-        name: "Claude (Anthropic)",
-        role: "CFO/Specialist",
-        strengths: [
-          "RFP and proposal writing",
-          "Compliance analysis",
-          "Contract generation and review",
-          "Strategic planning",
-          "Policy development",
-          "Complex reasoning tasks",
-        ],
-        taskTypes: taskRouter.getClaudeTaskTypes(),
-      },
-      collaboration: {
-        patterns: [
-          {
-            type: "verification",
-            description: "Claude verifies critical Trinity outputs",
-            triggers: ["payroll", "compliance", "financial"],
+        name: "Trinity",
+        identity: "CoAIleague's unified AI agent — one personality, one memory, one voice.",
+        reasoningProfiles: {
+          operations: {
+            description: "Fast operational decisions — scheduling, monitoring, alerts.",
+            strengths: [
+              "Autonomous scheduling optimization",
+              "Real-time monitoring and alerts",
+              "Data analysis and pattern recognition",
+              "Payroll processing",
+              "System health monitoring",
+              "Quick operational decisions",
+            ],
+            taskTypes: taskRouter.getTrinityTaskTypes(),
           },
-          {
-            type: "consultation",
-            description: "Trinity consults Claude for complex decisions",
-            triggers: ["strategic", "regulatory", "contract"],
+          specialist: {
+            description: "Deep reasoning — writing, legal, compliance, strategy.",
+            strengths: [
+              "RFP and proposal writing",
+              "Compliance analysis",
+              "Contract generation and review",
+              "Strategic planning",
+              "Policy development",
+              "Complex reasoning tasks",
+            ],
+            taskTypes: taskRouter.getClaudeTaskTypes(),
           },
-          {
-            type: "parallel",
-            description: "Both AIs work on different aspects simultaneously",
-            triggers: ["audit_preparation", "comprehensive_reports"],
-          },
-        ],
-        collaborativeTaskTypes: taskRouter.getCollaborativeTaskTypes(),
+        },
+        internalWorkflows: {
+          description: "Multi-pass Trinity workflows chain reasoning profiles for a single outcome. Every output is attributed to Trinity — there are no sibling agents.",
+          patterns: [
+            {
+              type: "verification",
+              description: "Trinity's specialist reasoning verifies critical operational outputs before commit.",
+              triggers: ["payroll", "compliance", "financial"],
+            },
+            {
+              type: "consultation",
+              description: "Trinity's operational reasoning pulls her specialist reasoning for complex decisions.",
+              triggers: ["strategic", "regulatory", "contract"],
+            },
+            {
+              type: "parallel",
+              description: "Trinity runs multiple reasoning passes in parallel and synthesizes them into one response.",
+              triggers: ["audit_preparation", "comprehensive_reports"],
+            },
+          ],
+          collaborativeTaskTypes: taskRouter.getCollaborativeTaskTypes(),
+        },
       },
     };
 
@@ -433,15 +443,17 @@ router.get("/capabilities", requireAuth, async (_req: Request, res: Response) =>
 
 router.get("/health", requireAuth, async (_req: Request, res: Response) => {
   try {
+    // Trinity health — one agent, multiple internal reasoning modules.
+    // Module names here are internal wiring (see CLAUDE.md Section S).
     const health = {
       status: "operational",
-      services: {
+      trinityModules: {
         orchestrator: "healthy",
         taskRouter: "healthy",
         confidenceScorer: "healthy",
         actionLogger: "healthy",
-        claudeService: "healthy",
-        verificationService: "healthy",
+        specialistReasoning: "healthy",
+        verificationModule: "healthy",
       },
       timestamp: new Date().toISOString(),
     };
