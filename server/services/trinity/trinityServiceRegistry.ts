@@ -401,6 +401,17 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
     exports: ['registerTrinityInvoiceEmailActions'],
   },
   {
+    id: 'employmentVerificationService',
+    name: 'Employment Verification Service',
+    path: 'server/services/trinity/employmentVerificationService.ts',
+    domain: 'communications',
+    description: 'FCRA-compliant employment verification workflow: parses verify@{slug} emails, creates VER-XXXXXX tickets, alerts management with approve/deny, auto-acknowledges requester.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_6_email','phase_9_support','phase_3_employees'],
+    integrationStatus: 'verified',
+    exports: ['handleEmploymentVerificationEmail'],
+  },
+  {
     id: 'trinityCommsProactiveActions',
     name: 'Proactive Comms Actions',
     path: 'server/services/ai-brain/trinityCommsProactiveActions.ts',
