@@ -1165,7 +1165,11 @@ class AIBrainMasterOrchestrator {
             workspaceId: wsId,
             metadata: { payrollRunId, approverNotes },
           });
-          
+
+          if (payrollRunId) {
+            broadcastToWorkspace(wsId, { type: 'payroll_updated', action: 'approved', runId: payrollRunId });
+          }
+
           return {
             success: true,
             actionId: request.actionId,
@@ -1208,12 +1212,20 @@ class AIBrainMasterOrchestrator {
             ));
           
           const processedCount = targetEmployees.length || entries.length;
-          
+
+          broadcastToWorkspace(wsId, {
+            type: 'payroll_updated',
+            action: 'bulk_processed',
+            processedCount,
+            periodStart,
+            periodEnd,
+          });
+
           return {
             success: true,
             actionId: request.actionId,
             message: `Bulk payroll processing initiated for ${processedCount} employees`,
-            data: { 
+            data: {
               processedCount,
               periodStart,
               periodEnd,

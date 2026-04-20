@@ -28,7 +28,7 @@ import { and, eq, lt, lte, gt, isNotNull } from 'drizzle-orm';
 import { db } from '../../../db';
 import { employeeSkills, employees, auditLogs } from '@shared/schema';
 import { addDays } from 'date-fns';
-import { sendSMSToEmployee, sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
 import { platformEventBus } from '../../platformEventBus';
 import { createLogger } from '../../../lib/logger';
@@ -92,6 +92,11 @@ export async function runComplianceMonitorWorkflow(): Promise<ComplianceSweepRes
       for (const exp of expirations) {
         try {
           if (await alreadyNotified(exp.skillId, bucket.label)) continue;
+          // Phase 26: subscription gate — skip cancelled/suspended workspaces.
+          const { isWorkspaceServiceable } = await import('../../billing/billingConstants');
+          if (!(await isWorkspaceServiceable(exp.workspaceId))) {
+            continue;
+          }
           await notifyExpiration(exp, bucket);
 
           if (bucket.label === 'expired') {
@@ -289,15 +294,15 @@ async function notifyExpiration(
         ),
       );
       if (bucket.sms) {
-        const phones = await fetchManagerPhones(exp.workspaceId);
+        const contacts = await fetchManagerContacts(exp.workspaceId);
         await Promise.allSettled(
-          phones.slice(0, 3).map((phone) =>
-            sendSMS({
-              to: phone,
-              body: `Trinity compliance alert: ${name}'s ${skill} — ${label}.`,
-              workspaceId: exp.workspaceId,
-              type: `compliance_mgr_${bucket.label}`,
-            }),
+          contacts.slice(0, 3).map((c) =>
+            sendSMSToEmployee(
+              c.employeeId,
+              `Trinity compliance alert: ${name}'s ${skill} — ${label}.`,
+              `compliance_mgr_${bucket.label}`,
+              exp.workspaceId,
+            ),
           ),
         );
       }
@@ -384,11 +389,11 @@ async function fetchManagers(workspaceId: string): Promise<string[]> {
   }
 }
 
-async function fetchManagerPhones(workspaceId: string): Promise<string[]> {
+async function fetchManagerContacts(workspaceId: string): Promise<Array<{ employeeId: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT e.phone
+      `SELECT e.id, e.phone
          FROM workspace_memberships wm
          JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
         WHERE wm.workspace_id = $1
@@ -397,7 +402,9 @@ async function fetchManagerPhones(workspaceId: string): Promise<string[]> {
         LIMIT 5`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ employeeId: row.id as string, phone: row.phone as string }))
+      .filter((row: any) => row.employeeId && row.phone);
   } catch {
     return [];
   }

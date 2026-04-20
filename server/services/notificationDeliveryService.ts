@@ -112,6 +112,38 @@ export const CRITICAL_NOTIFICATION_TYPES: NotificationDeliveryType[] = [
   'panic_alert',
 ];
 
+// Action buttons rendered on web-push notifications. The service worker
+// (public/sw.js) handles "accept", "decline", "approve", "view", "sign",
+// "clock_in" click targets; entries here must match those handlers.
+export const NOTIFICATION_ACTION_MAP: Partial<Record<NotificationDeliveryType, Array<{ action: string; title: string }>>> = {
+  shift_offer_notification: [
+    { action: 'accept', title: 'Accept Shift' },
+    { action: 'decline', title: 'Decline' },
+  ],
+  shift_assignment: [
+    { action: 'accept', title: 'Accept' },
+    { action: 'view', title: 'View Shift' },
+  ],
+  payroll_approval_required: [
+    { action: 'approve', title: 'Approve' },
+    { action: 'view', title: 'Review First' },
+  ],
+  document_requires_signature: [
+    { action: 'sign', title: 'Sign Now' },
+    { action: 'view', title: 'View Document' },
+  ],
+  calloff_received: [
+    { action: 'view', title: 'Find Coverage' },
+  ],
+  coverage_needed: [
+    { action: 'view', title: 'Find Coverage' },
+  ],
+  shift_reminder: [
+    { action: 'clock_in', title: 'Clock In' },
+    { action: 'view', title: 'View Shift' },
+  ],
+};
+
 export interface SendNotificationPayload {
   type: NotificationDeliveryType;
   workspaceId: string;
@@ -381,12 +413,14 @@ export class NotificationDeliveryService {
     const userId = record.recipientUserId;
     if (!userId) throw new Error('No recipient userId for push delivery');
     const { PLATFORM } = await import('../config/platformConfig');
+    const actions = NOTIFICATION_ACTION_MAP[record.notificationType as NotificationDeliveryType];
     await sendPushToUser(userId, {
       title: record.subject ?? String(payload.title ?? `${PLATFORM.name} Notification`),
       body: String(payload.body ?? payload.message ?? record.subject ?? ''),
       type: record.notificationType,
       url: String(payload.url ?? payload.actionUrl ?? '/'),
       data: { workspaceId: record.workspaceId, type: record.notificationType, notificationId: record.id },
+      ...(actions && actions.length ? { actions } : {}),
     });
   }
 

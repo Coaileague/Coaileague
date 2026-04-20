@@ -45,6 +45,10 @@ async function ensureTable(): Promise<void> {
       CREATE INDEX IF NOT EXISTS trinity_shift_offers_workspace_idx ON trinity_shift_offers(workspace_id);
       CREATE INDEX IF NOT EXISTS trinity_shift_offers_status_idx ON trinity_shift_offers(status);
       CREATE INDEX IF NOT EXISTS trinity_shift_offers_employee_idx ON trinity_shift_offers(employee_id);
+      -- Race-prevention: at most one accepted offer per shift. Two simultaneous
+      -- YES replies cannot both succeed under MVCC without this constraint.
+      CREATE UNIQUE INDEX IF NOT EXISTS trinity_shift_offers_one_accepted_per_shift
+        ON trinity_shift_offers(shift_id) WHERE status = 'accepted';
     `);
     bootstrapped = true;
   } catch (err: any) {
@@ -267,12 +271,28 @@ export async function acceptShiftOffer(params: {
     }
 
     // Mark this offer accepted; mark all sibling pending offers as superseded.
-    await pool.query(
-      `UPDATE trinity_shift_offers
-          SET status = 'accepted', responded_at = NOW()
-        WHERE id = $1`,
-      [offer.id]
-    );
+    // The trinity_shift_offers_one_accepted_per_shift unique partial index
+    // catches the case where two concurrent winners reach this UPDATE.
+    try {
+      await pool.query(
+        `UPDATE trinity_shift_offers
+            SET status = 'accepted', responded_at = NOW()
+          WHERE id = $1`,
+        [offer.id]
+      );
+    } catch (err: any) {
+      if (String(err?.code) === '23505') {
+        // Another concurrent YES already marked an offer for this shift accepted.
+        await pool.query(
+          `UPDATE trinity_shift_offers
+              SET status = 'expired', responded_at = NOW()
+            WHERE id = $1`,
+          [offer.id]
+        );
+        return `Hi ${officer.first_name}! Thanks for your reply — that shift was just filled by another officer. We'll keep you in mind for the next one!`;
+      }
+      throw err;
+    }
     await pool.query(
       `UPDATE trinity_shift_offers
           SET status = 'superseded', responded_at = NOW()

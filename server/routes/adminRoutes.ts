@@ -2318,4 +2318,72 @@ router.post('/breach-response/incidents', async (req: AuthenticatedRequest, res)
   }
 });
 
+// ============================================================================
+// SCHEDULER HEALTH — last 10 runs per registered cron job
+// ============================================================================
+// Surfaces cron_run_log rows + in-memory registered-jobs summary so platform
+// staff can spot silently failing or long-unrun jobs. No tenant data leaks:
+// scheduler logs are platform-scoped.
+router.get('/scheduler/jobs', async (req: AuthenticatedRequest, res) => {
+  try {
+    const { getScheduledJobsSummary } = await import('../services/autonomousScheduler');
+    const jobs = getScheduledJobsSummary();
+
+    const runs = await typedPool<{
+      job_name: string;
+      status: string;
+      started_at: Date;
+      completed_at: Date | null;
+      duration_ms: number | null;
+      error_message: string | null;
+    }>(
+      `SELECT job_name, status, started_at, completed_at, duration_ms, error_message
+         FROM cron_run_log
+        WHERE started_at > NOW() - INTERVAL '7 days'
+        ORDER BY started_at DESC
+        LIMIT 2000`
+    );
+
+    const byJob = new Map<string, any[]>();
+    for (const row of runs.rows) {
+      const arr = byJob.get(row.job_name) ?? [];
+      if (arr.length < 10) {
+        arr.push({
+          status: row.status,
+          startedAt: row.started_at,
+          completedAt: row.completed_at,
+          durationMs: row.duration_ms,
+          errorMessage: row.error_message,
+        });
+      }
+      byJob.set(row.job_name, arr);
+    }
+
+    const out = jobs.map((j) => {
+      const history = byJob.get(j.jobName) ?? [];
+      const last = history[0] ?? null;
+      const lastCompleted = history.find((h: any) => h.status === 'completed') ?? null;
+      const recentFailures = history.filter((h: any) => h.status === 'failed').length;
+      return {
+        jobName: j.jobName,
+        description: j.description,
+        schedule: j.schedule,
+        enabled: j.enabled,
+        lastRunAt: last?.startedAt ?? j.lastRunAt ?? null,
+        lastStatus: last?.status ?? j.lastStatus ?? null,
+        lastDurationMs: last?.durationMs ?? null,
+        lastError: last?.errorMessage ?? null,
+        lastCompletedAt: lastCompleted?.completedAt ?? null,
+        recentFailures,
+        history,
+      };
+    });
+
+    res.json({ jobs: out, generatedAt: new Date().toISOString() });
+  } catch (err: unknown) {
+    log.error('[SchedulerHealth] query failed:', err);
+    res.status(500).json({ message: sanitizeError(err) });
+  }
+});
+
 export default router;

@@ -35,7 +35,7 @@
 
 import { createLogger } from '../../../lib/logger';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
-import { sendSMS } from '../../smsService';
+// sendSMSToEmployee imported lazily inside sendCheckInSms to avoid circular imports.
 import { platformEventBus } from '../../platformEventBus';
 import { logActionAudit } from '../../ai-brain/actionAuditLogger';
 
@@ -74,10 +74,16 @@ export async function runWellnessCheckSweep(): Promise<WellnessSweepResult> {
     return result;
   }
 
+  const { isWorkspaceServiceable } = await import('../../billing/billingConstants');
+
   for (const c of candidates) {
     result.scanned++;
     try {
       if (await alreadySentCheckIn(c.timeEntryId)) continue;
+      // Phase 26: subscription gate — skip cancelled/suspended workspaces.
+      if (!(await isWorkspaceServiceable(c.workspaceId))) {
+        continue;
+      }
       const sent = await sendCheckInSms(c);
       if (sent) result.smsSent++;
       await recordSent(c);
@@ -315,12 +321,14 @@ async function sendCheckInSms(c: WellnessCandidate): Promise<boolean> {
   const body =
     `Hi ${c.firstName || 'there'}! You just finished a ${hours}-hour shift. How are you doing? ` +
     `Reply OK if you're good, or HELP if you need anything. — Trinity`;
-  const res = await sendSMS({
-    to: c.phone,
+  // TCPA: route through sendSMSToEmployee to enforce consent + subscription gates.
+  const { sendSMSToEmployee } = await import('../../smsService');
+  const res = await sendSMSToEmployee(
+    c.employeeId,
     body,
-    workspaceId: c.workspaceId,
-    type: 'officer_wellness_checkin',
-  });
+    'officer_wellness_checkin',
+    c.workspaceId,
+  );
   if (res.success) {
     try {
       await platformEventBus.publish({

@@ -27,7 +27,7 @@
 import { and, eq, lt, gt, isNull, sql as drizzleSql } from 'drizzle-orm';
 import { db } from '../../../db';
 import { shifts, employees, auditLogs } from '@shared/schema';
-import { sendSMSToEmployee, sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { callOfficerWelfareCheck } from '../../trinityVoice/trinityOutboundService';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
 import { platformEventBus } from '../../platformEventBus';
@@ -85,9 +85,15 @@ export async function runMissedClockInSweep(): Promise<MissedClockInSweepResult>
     return result;
   }
 
+  const { isWorkspaceServiceable } = await import('../../billing/billingConstants');
+
   for (const miss of missing) {
     result.scanned++;
     try {
+      // Phase 26: subscription gate — skip cancelled/suspended workspaces.
+      if (!(await isWorkspaceServiceable(miss.workspaceId))) {
+        continue;
+      }
       const existing = await findExistingWorkflow(miss.workspaceId, miss.shiftId);
       if (!existing) {
         const advanced = await startMissedClockInWorkflow(miss);
@@ -267,7 +273,7 @@ async function advanceToEscalation(
     const summary = `${officerName} has not clocked in and is unresponsive. Shift ${miss.shiftId} requires supervisor intervention.`;
 
     const supervisorIds = await fetchSupervisors(miss.workspaceId);
-    const phones = await fetchSupervisorPhones(miss.workspaceId);
+    const contacts = await fetchSupervisorContacts(miss.workspaceId);
 
     await Promise.allSettled([
       ...supervisorIds.map((recipientUserId) =>
@@ -281,13 +287,13 @@ async function advanceToEscalation(
           idempotencyKey: `missed-clockin-${miss.shiftId}-${recipientUserId}`,
         }),
       ),
-      ...phones.slice(0, 3).map((phone) =>
-        sendSMS({
-          to: phone,
-          body: `URGENT: ${summary}`,
-          workspaceId: miss.workspaceId,
-          type: 'missed_clockin_escalation',
-        }),
+      ...contacts.slice(0, 3).map((c) =>
+        sendSMSToEmployee(
+          c.employeeId,
+          `URGENT: ${summary}`,
+          'missed_clockin_escalation',
+          miss.workspaceId,
+        ),
       ),
     ]);
 
@@ -499,11 +505,11 @@ async function fetchSupervisors(workspaceId: string): Promise<string[]> {
   }
 }
 
-async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
+async function fetchSupervisorContacts(workspaceId: string): Promise<Array<{ employeeId: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT e.phone
+      `SELECT e.id, e.phone
          FROM workspace_memberships wm
          JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
         WHERE wm.workspace_id = $1
@@ -512,7 +518,9 @@ async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
         LIMIT 5`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ employeeId: row.id as string, phone: row.phone as string }))
+      .filter((row: any) => row.employeeId && row.phone);
   } catch {
     return [];
   }

@@ -33,7 +33,7 @@
 
 import { createLogger } from '../../../lib/logger';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
-import { sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { platformEventBus } from '../../platformEventBus';
 import { logActionAudit } from '../../ai-brain/actionAuditLogger';
 
@@ -93,9 +93,15 @@ export async function runPreShiftIntelligenceSweep(): Promise<PreShiftSweepResul
     return result;
   }
 
+  const { isWorkspaceServiceable } = await import('../../billing/billingConstants');
+
   for (const shift of upcoming) {
     result.scanned++;
     try {
+      // Phase 26: subscription gate — skip cancelled/suspended workspaces.
+      if (!(await isWorkspaceServiceable(shift.workspaceId))) {
+        continue;
+      }
       const flags = await evaluateShift(shift);
       if (!flags.length) continue;
 
@@ -239,17 +245,17 @@ async function notify(flag: PreShiftFlag, shift: UpcomingShift): Promise<boolean
     ),
   );
 
-  // Medium + high also go by SMS to the first 3 supervisor phones.
+  // Medium + high also go by SMS to the first 3 supervisor contacts.
   if (flag.severity !== 'low') {
-    const phones = await fetchSupervisorPhones(shift.workspaceId);
+    const contacts = await fetchSupervisorContacts(shift.workspaceId);
     await Promise.allSettled(
-      phones.slice(0, 3).map((phone) =>
-        sendSMS({
-          to: phone,
-          body: `Trinity heads-up: ${summary}`,
-          workspaceId: shift.workspaceId,
-          type: `preshift_${flag.code}`,
-        }).then(() => {
+      contacts.slice(0, 3).map((c) =>
+        sendSMSToEmployee(
+          c.employeeId,
+          `Trinity heads-up: ${summary}`,
+          `preshift_${flag.code}`,
+          shift.workspaceId,
+        ).then(() => {
           delivered = true;
         }),
       ),
@@ -502,11 +508,11 @@ async function fetchManagers(workspaceId: string): Promise<string[]> {
   }
 }
 
-async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
+async function fetchSupervisorContacts(workspaceId: string): Promise<Array<{ employeeId: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT e.phone
+      `SELECT e.id, e.phone
          FROM workspace_memberships wm
          JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
         WHERE wm.workspace_id = $1
@@ -515,7 +521,9 @@ async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
         LIMIT 5`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ employeeId: row.id as string, phone: row.phone as string }))
+      .filter((row: any) => row.employeeId && row.phone);
   } catch {
     return [];
   }

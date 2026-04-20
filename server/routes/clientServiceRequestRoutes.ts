@@ -134,6 +134,56 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
       visibility: 'supervisor',
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
+    // Notify every workspace manager/owner in-app so the ticket doesn't sit
+    // silently in the portal. Urgent/high requests also get push.
+    try {
+      const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+      const { pool } = await import('../db');
+      const mgrRes = await pool.query(
+        `SELECT DISTINCT user_id
+           FROM workspace_memberships
+          WHERE workspace_id = $1
+            AND role IN ('org_owner','co_owner','org_admin','org_manager','manager','supervisor')
+          LIMIT 20`,
+        [workspaceId]
+      );
+      const managerIds: string[] = mgrRes.rows.map((r: any) => r.user_id).filter(Boolean);
+      const isHighPriority = parsed.data.urgency === 'urgent' || parsed.data.urgency === 'high';
+      await Promise.allSettled(
+        managerIds.flatMap((recipientUserId) => [
+          NotificationDeliveryService.send({
+            type: 'client_portal_report' as any,
+            workspaceId,
+            recipientUserId,
+            channel: 'in_app' as any,
+            subject: `New Client Service Request — ${parsed.data.requestType}`,
+            body: {
+              title: 'New Client Service Request',
+              message: `Client submitted a ${parsed.data.requestType} request (${ticket.ticketNumber}).`,
+              url: `/service-requests/${request.id}`,
+              urgency: parsed.data.urgency,
+            },
+            idempotencyKey: `srq-${request.id}-inapp-${recipientUserId}`,
+          }),
+          ...(isHighPriority ? [NotificationDeliveryService.send({
+            type: 'client_portal_report' as any,
+            workspaceId,
+            recipientUserId,
+            channel: 'push' as any,
+            subject: `${parsed.data.urgency?.toUpperCase()}: Client Service Request`,
+            body: {
+              title: `${parsed.data.urgency?.toUpperCase()}: Service Request`,
+              message: `${parsed.data.requestType} — ${ticket.ticketNumber}`,
+              url: `/service-requests/${request.id}`,
+            },
+            idempotencyKey: `srq-${request.id}-push-${recipientUserId}`,
+          })] : []),
+        ]),
+      );
+    } catch (err: any) {
+      log.warn('[ClientServiceRequest] Manager notification failed (non-blocking):', err?.message);
+    }
+
     res.status(201).json({ ...request, ticket });
   } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });

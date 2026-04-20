@@ -34,7 +34,7 @@ import { and, eq, gt, lt, sql as drizzleSql } from 'drizzle-orm';
 import { db } from '../../../db';
 import { shifts, employees, clients, workspaces, auditLogs } from '@shared/schema';
 import { sendShiftOffers } from '../../trinityVoice/trinityShiftOfferService';
-import { sendSMS } from '../../smsService';
+import { sendSMSToEmployee } from '../../smsService';
 import { NotificationDeliveryService } from '../../notificationDeliveryService';
 import { platformEventBus } from '../../platformEventBus';
 import { logActionAudit } from '../../ai-brain/actionAuditLogger';
@@ -80,6 +80,20 @@ export interface CalloffWorkflowResult {
 export async function executeCalloffCoverageWorkflow(
   params: CalloffWorkflowParams,
 ): Promise<CalloffWorkflowResult> {
+  // Phase 26: subscription gate — skip cancelled/suspended workspaces.
+  const { isWorkspaceServiceable } = await import('../../billing/billingConstants');
+  if (!(await isWorkspaceServiceable(params.workspaceId))) {
+    return {
+      success: false,
+      workflowId: '',
+      shiftId: null,
+      offersSent: 0,
+      escalated: false,
+      summary: 'Workspace not serviceable (subscription inactive)',
+      errors: ['workspace_not_serviceable'],
+    };
+  }
+
   const record: WorkflowRecord = await logWorkflowStart({
     workflowName: WORKFLOW_NAME,
     workspaceId: params.workspaceId,
@@ -522,17 +536,17 @@ async function notifySupervisors(params: {
     ),
   );
 
-  // SMS the highest-priority supervisor phone numbers (best-effort).
+  // TCPA: route through sendSMSToEmployee for consent + subscription gating.
   try {
-    const phones = await fetchSupervisorPhones(params.workspaceId);
+    const contacts = await fetchSupervisorContacts(params.workspaceId);
     await Promise.allSettled(
-      phones.slice(0, 3).map((phone) =>
-        sendSMS({
-          to: phone,
-          body: `Trinity: ${summary}`,
-          workspaceId: params.workspaceId,
-          type: 'calloff_coverage_alert',
-        }),
+      contacts.slice(0, 3).map((c) =>
+        sendSMSToEmployee(
+          c.employeeId,
+          `Trinity: ${summary}`,
+          'calloff_coverage_alert',
+          params.workspaceId,
+        ),
       ),
     );
   } catch (err: any) {
@@ -569,7 +583,7 @@ async function escalateToSupervisor(params: {
   shiftId: string;
 }): Promise<void> {
   const supervisorIds = await fetchWorkspaceSupervisors(params.workspaceId);
-  const phones = await fetchSupervisorPhones(params.workspaceId);
+  const contacts = await fetchSupervisorContacts(params.workspaceId);
   const body = {
     severity: 'high',
     reason: 'calloff_unfilled',
@@ -589,13 +603,13 @@ async function escalateToSupervisor(params: {
         idempotencyKey: `calloff-escalation-${params.shiftId}-${recipientUserId}`,
       }),
     ),
-    ...phones.slice(0, 3).map((phone) =>
-      sendSMS({
-        to: phone,
-        body: `URGENT: Trinity was unable to fill shift ${params.shiftId} within ${SLA_MINUTES} minutes. Please assign coverage.`,
-        workspaceId: params.workspaceId,
-        type: 'calloff_escalation',
-      }),
+    ...contacts.slice(0, 3).map((c) =>
+      sendSMSToEmployee(
+        c.employeeId,
+        `URGENT: Trinity was unable to fill shift ${params.shiftId} within ${SLA_MINUTES} minutes. Please assign coverage.`,
+        'calloff_escalation',
+        params.workspaceId,
+      ),
     ),
   ]);
 
@@ -630,11 +644,11 @@ async function fetchWorkspaceSupervisors(workspaceId: string): Promise<string[]>
   }
 }
 
-async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
+async function fetchSupervisorContacts(workspaceId: string): Promise<Array<{ employeeId: string; phone: string }>> {
   try {
     const { pool } = await import('../../../db');
     const r = await pool.query(
-      `SELECT phone
+      `SELECT id, phone
          FROM employees
         WHERE workspace_id = $1
           AND phone IS NOT NULL
@@ -643,13 +657,15 @@ async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
         LIMIT 5`,
       [workspaceId],
     );
-    return r.rows.map((row: any) => row.phone).filter(Boolean);
+    return r.rows
+      .map((row: any) => ({ employeeId: row.id as string, phone: row.phone as string }))
+      .filter((row: any) => row.employeeId && row.phone);
   } catch (err: any) {
     // `role`/`is_supervisor` may not exist; fall back to any active phone for an owner/manager.
     try {
       const { pool } = await import('../../../db');
       const r = await pool.query(
-        `SELECT e.phone
+        `SELECT e.id, e.phone
            FROM workspace_memberships wm
            JOIN employees e ON e.user_id = wm.user_id AND e.workspace_id = wm.workspace_id
           WHERE wm.workspace_id = $1
@@ -658,7 +674,9 @@ async function fetchSupervisorPhones(workspaceId: string): Promise<string[]> {
           LIMIT 5`,
         [workspaceId],
       );
-      return r.rows.map((row: any) => row.phone).filter(Boolean);
+      return r.rows
+        .map((row: any) => ({ employeeId: row.id as string, phone: row.phone as string }))
+        .filter((row: any) => row.employeeId && row.phone);
     } catch (fallbackErr: any) {
       log.info('[calloff] supervisor phone fallback skipped:', fallbackErr?.message);
       return [];

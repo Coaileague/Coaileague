@@ -329,9 +329,25 @@ async function handleBotCommand(
     }
     case "/trinity": {
       const query = parts.slice(1).join(" ");
-      botResponse = query
-        ? `Trinity received your query: "${query}". Processing via AI...`
-        : "Ask Trinity anything: `/trinity your question here`";
+      if (!query) {
+        botResponse = "Ask Trinity anything: `/trinity your question here`";
+      } else {
+        try {
+          const { trinityChatService } = await import("../services/ai-brain/trinityChatService");
+          const result = await trinityChatService.chat({
+            userId: uid,
+            workspaceId: wid,
+            message: query,
+            mode: "business",
+            sessionId: `chatdock-${roomId}-${uid}`,
+          });
+          botResponse = (result?.response && typeof result.response === "string" && result.response.trim())
+            ? result.response
+            : "I was unable to process that request.";
+        } catch (err: any) {
+          botResponse = "Trinity is temporarily unavailable. Please try again shortly.";
+        }
+      }
       break;
     }
     default:
@@ -354,8 +370,28 @@ async function handleBotCommand(
 }
 
 async function handleTrinityMention(wid: string, roomId: string, uid: string, content: string) {
+  let response = "I was unable to process that request.";
   try {
-    const response = `Trinity here! I received your message: "${content.replace(/@[Tt]rinity/g, "").trim()}". I'm processing your request...`;
+    const { trinityChatService } = await import("../services/ai-brain/trinityChatService");
+    const cleaned = content.replace(/@[Tt]rinity/g, "").trim();
+    const result = await trinityChatService.chat({
+      userId: uid,
+      workspaceId: wid,
+      message: cleaned,
+      mode: "business",
+      sessionId: `chatdock-${roomId}-${uid}`,
+    });
+    if (result?.response && typeof result.response === "string" && result.response.trim()) {
+      response = result.response;
+    }
+  } catch (err: any) {
+    try {
+      const { createLogger } = await import("../lib/logger");
+      createLogger("DockChatTrinity").warn("Trinity mention failed (non-fatal):", err?.message);
+    } catch { /* non-fatal */ }
+  }
+
+  try {
     await pool.query(
       `INSERT INTO chat_messages (workspace_id, sender_id, sender_type, content, message_type, metadata)
        VALUES ($1,'trinity','trinity',$2,'text',$3)`,
