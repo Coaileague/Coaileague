@@ -2,7 +2,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { db } from '../db';
 import { eq, and, ne } from 'drizzle-orm';
-import { payStubs } from '@shared/schema';
+import { payStubs, plaidTransferAttempts } from '@shared/schema';
 import { getTransferStatus, verifyPlaidWebhookJwt } from '../services/partners/plaidService';
 import { platformEventBus } from '../services/platformEventBus';
 import { broadcastToWorkspace } from '../websocket';
@@ -97,6 +97,24 @@ router.post('/', async (req, res) => {
         netPay: payStubs.netPay,
         payrollRunId: payStubs.payrollRunId,
       });
+
+    // Close the compensating-transaction lifecycle in plaid_transfer_attempts
+    // so reconciliation queries can filter on terminal states. A 'settled'
+    // webhook marks the attempt 'completed'. Failed/returned attempts stay
+    // 'initiated' so the daily orphan-scanner can surface them for review.
+    if (status === 'settled') {
+      try {
+        await db.update(plaidTransferAttempts).set({
+          status: 'completed',
+          completedAt: new Date(),
+        } as any).where(and(
+          eq(plaidTransferAttempts.transferId, transfer_id),
+          ne(plaidTransferAttempts.status, 'completed'),
+        ));
+      } catch (attemptErr: any) {
+        log.warn('[PlaidWebhook] plaid_transfer_attempts completion update failed (non-fatal):', attemptErr?.message);
+      }
+    }
 
     // GAP-2 FIX: Log a warning when no stubs match the transfer_id.
     // This indicates either the transfer was initiated outside of CoAIleague or the

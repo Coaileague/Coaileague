@@ -21,8 +21,8 @@ self.addEventListener('push', (event) => {
   let payload = {
     title: 'CoAIleague',
     body: 'You have a new notification',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-72.png',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     tag: 'default',
     data: {}
   };
@@ -41,8 +41,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body,
-    icon: payload.icon || '/icons/icon-192.png',
-    badge: payload.badge || '/icons/badge-72.png',
+    icon: payload.icon || '/icon-192.png',
+    badge: payload.badge || '/icon-192.png',
     tag: payload.tag || 'coaileague-notification',
     data: payload.data || {},
     requireInteraction: payload.requireInteraction || false,
