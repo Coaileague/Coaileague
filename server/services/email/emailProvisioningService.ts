@@ -32,12 +32,13 @@ export const PLATFORM_PROTECTED_ADDRESSES: ReadonlyArray<{
  *   Primary (subdomain):  staffing@{slug}.coaileague.com   ← requires wildcard MX *.coaileague.com
  */
 const WORKSPACE_SYSTEM_TYPES = [
-  { fn: 'staffing',  displayName: 'Staffing',  trinityType: 'staffing_inquiry', autoProcess: true },
-  { fn: 'calloffs',  displayName: 'Calloffs',  trinityType: 'calloff',          autoProcess: true },
-  { fn: 'incidents', displayName: 'Incidents', trinityType: 'incident',         autoProcess: true },
-  { fn: 'support',   displayName: 'Support',   trinityType: 'support_ticket',   autoProcess: true },
-  { fn: 'docs',      displayName: 'Documents', trinityType: 'document_intake',  autoProcess: true },
-  { fn: 'billing',   displayName: 'Billing',   trinityType: 'billing_inquiry',  autoProcess: true },
+  { fn: 'staffing',  displayName: 'Staffing',     trinityType: 'staffing_inquiry',         autoProcess: true },
+  { fn: 'calloffs',  displayName: 'Calloffs',     trinityType: 'calloff',                  autoProcess: true },
+  { fn: 'incidents', displayName: 'Incidents',    trinityType: 'incident',                 autoProcess: true },
+  { fn: 'support',   displayName: 'Support',      trinityType: 'support_ticket',           autoProcess: true },
+  { fn: 'docs',      displayName: 'Documents',    trinityType: 'document_intake',          autoProcess: true },
+  { fn: 'billing',   displayName: 'Billing',      trinityType: 'billing_inquiry',          autoProcess: true },
+  { fn: 'verify',    displayName: 'Verification', trinityType: 'employment_verification',  autoProcess: true },
 ] as const;
 
 /**

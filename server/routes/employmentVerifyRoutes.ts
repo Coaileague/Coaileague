@@ -21,6 +21,7 @@ import { requireAuth, requireManager, type AuthenticatedRequest } from '../rbac'
 import { pool } from '../db';
 import { createLogger } from '../lib/logger';
 import { sendCanSpamCompliantEmail } from '../services/emailCore';
+import { logActionAudit } from '../services/ai-brain/actionAuditLogger';
 
 const log = createLogger('EmploymentVerifyRoutes');
 
@@ -206,6 +207,8 @@ employmentVerifyRouter.get(
       });
 
       const actorUserId = (req as any).user?.id ?? null;
+      const actorRole = (req as any).workspaceRole ?? null;
+      const actorPlatformRole = (req as any).platformRole ?? null;
       await pool.query(
         `UPDATE support_tickets
             SET status = 'resolved',
@@ -218,6 +221,28 @@ employmentVerifyRouter.get(
         [actorUserId, refNum, workspaceId]
       );
 
+      // FCRA audit — who approved, when, which employee, which requester.
+      // Never logs salary, disciplinary notes, or other FCRA-restricted data.
+      await logActionAudit({
+        actionId: 'employment_verification.approve',
+        workspaceId,
+        userId: actorUserId,
+        userRole: actorRole,
+        platformRole: actorPlatformRole,
+        entityType: 'employment_verification',
+        entityId: refNum,
+        success: true,
+        message: 'Verification approved and FCRA-compliant response emailed.',
+        changesAfter: {
+          refNum,
+          ticketId: ticket.id,
+          employeeId: emp.id,
+          employeeNumber: emp.employee_number,
+          requesterEmail,
+          fieldsDisclosed: ['name', 'employee_id', 'title', 'status', 'start_date', 'pay_band', 'officer_score'],
+        },
+      });
+
       log.info(`[EmploymentVerify] ${refNum} approved; verification sent to ${requesterEmail}`);
       return res.json({
         success: true,
@@ -227,6 +252,15 @@ employmentVerifyRouter.get(
       });
     } catch (err: any) {
       log.error(`[EmploymentVerify] approve error: ${err?.message}`);
+      await logActionAudit({
+        actionId: 'employment_verification.approve',
+        workspaceId,
+        userId: (req as any).user?.id ?? null,
+        entityType: 'employment_verification',
+        entityId: refNum,
+        success: false,
+        errorMessage: err?.message,
+      });
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
   }
@@ -274,6 +308,8 @@ employmentVerifyRouter.get(
       }
 
       const actorUserId = (req as any).user?.id ?? null;
+      const actorRole = (req as any).workspaceRole ?? null;
+      const actorPlatformRole = (req as any).platformRole ?? null;
       await pool.query(
         `UPDATE support_tickets
             SET status = 'closed',
@@ -286,6 +322,25 @@ employmentVerifyRouter.get(
         [actorUserId, refNum, workspaceId]
       );
 
+      // FCRA audit — who denied, when, which requester was notified.
+      await logActionAudit({
+        actionId: 'employment_verification.deny',
+        workspaceId,
+        userId: actorUserId,
+        userRole: actorRole,
+        platformRole: actorPlatformRole,
+        entityType: 'employment_verification',
+        entityId: refNum,
+        success: true,
+        message: 'Verification denied; requester notified.',
+        changesAfter: {
+          refNum,
+          ticketId: ticket.id,
+          requesterEmail: requesterEmail || null,
+          notified: !!requesterEmail,
+        },
+      });
+
       log.info(`[EmploymentVerify] ${refNum} denied; requester notified=${!!requesterEmail}`);
       return res.json({
         success: true,
@@ -294,6 +349,15 @@ employmentVerifyRouter.get(
       });
     } catch (err: any) {
       log.error(`[EmploymentVerify] deny error: ${err?.message}`);
+      await logActionAudit({
+        actionId: 'employment_verification.deny',
+        workspaceId,
+        userId: (req as any).user?.id ?? null,
+        entityType: 'employment_verification',
+        entityId: refNum,
+        success: false,
+        errorMessage: err?.message,
+      });
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
   }
