@@ -26,12 +26,15 @@ command center where AI handles 80%+ of routine decisions autonomously.
   incident summaries, and service reports. Automated weekly briefings.
 - **Sales & proposal automation** — AI-generated, legally articulate
   security scope proposals, e-signature workflow, automated follow-up.
-- **Trinity AI intelligence** — A self-aware operational AI (the central
-  nervous system) that proactively scans the platform, flags risks,
-  recommends coverage, drafts communications, and surfaces revenue
-  opportunities. Trinity uses a triad of Gemini, Claude, and OpenAI
-  under a Moral Compass rubric that prioritizes officer safety, truth
-  to the client, and dignity for all parties.
+- **Trinity AI intelligence** — A single, self-aware operational AI
+  agent (the central nervous system of the platform) with her own
+  personality, reasoning, and memory. Trinity proactively scans the
+  platform, flags risks, recommends coverage, drafts communications,
+  and surfaces revenue opportunities. She operates under a Moral
+  Compass rubric that prioritizes officer safety, truth to the client,
+  and dignity for all parties. Trinity is one unified agent — not a
+  collection of separate AIs — with interchangeable model backends
+  that are implementation details, not product identity.
 
 ## Who it serves
 

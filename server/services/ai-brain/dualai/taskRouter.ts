@@ -1,16 +1,25 @@
 
 import { createLogger } from '../../../lib/logger';
-const log = createLogger('taskRouter');
+const log = createLogger('trinityTaskRouter');
 /**
- * Task Router - Intelligent routing between Trinity, Claude, and GPT-4
- * 
- * Routes requests to the most appropriate AI based on task type:
- * - Trinity (Gemini): CEO/Orchestrator - scheduling, monitoring, data analysis, platform ops
- * - Claude (Anthropic): CFO/Specialist - writing, reasoning, compliance, contracts, strategic planning
- * - GPT-4 (OpenAI): Support/Analyst - customer support, knowledge synthesis, training content
- * 
- * Uses weighted keyword scoring instead of fragile string.includes() matching
- * for more accurate intent classification.
+ * Trinity Task Router
+ *
+ * Picks the internal reasoning path Trinity uses for each task. The backend
+ * names below are compute paths, not separate agents. Trinity is one agent
+ * with one personality; these labels exist only so audit logs can explain
+ * which reasoning profile handled a given request.
+ *
+ * Compute-path profiles:
+ * - orchestration   — scheduling, monitoring, data analysis, platform ops
+ * - specialist      — writing, legal reasoning, compliance, contracts, strategy
+ * - support         — customer support, knowledge synthesis, training content
+ *
+ * The `AIProvider` enum values (`'trinity' | 'claude' | 'gpt4'`) are legacy
+ * path labels kept for backwards compat with existing audit-log rows. They
+ * will be renamed to path-based values in a later phase.
+ *
+ * Uses weighted keyword scoring (not string.includes) for accurate
+ * intent classification.
  */
 
 export type AIProvider = 'trinity' | 'claude' | 'gpt4';

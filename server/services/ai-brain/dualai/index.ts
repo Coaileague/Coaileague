@@ -1,9 +1,18 @@
 /**
- * Trinity + Claude Dual-AI Orchestration System
- * 
- * Central exports for the dual-AI system where:
- * - Trinity (Gemini) = CEO/Orchestrator - scheduling, monitoring, data analysis
- * - Claude (Anthropic) = CFO/Specialist - writing, reasoning, compliance
+ * Trinity Unified Orchestration
+ *
+ * Central exports for Trinity — CoAIleague's single unified AI agent. Trinity
+ * routes her own reasoning across multiple interchangeable model backends
+ * depending on the task (orchestration, legal/compliance, support), but this
+ * is internal wiring only. From every tenant-facing and developer-facing
+ * surface she is one personality with one identity.
+ *
+ * Backend routing (not agents, not personalities — just compute paths):
+ * - Orchestration path  — scheduling, monitoring, data analysis, platform ops
+ * - Specialist path     — writing, legal reasoning, compliance, contracts
+ * - Support path        — customer support, knowledge synthesis, training
+ *
+ * The folder name `dualai/` is legacy and will be renamed in a later phase.
  */
 
 export { unifiedAIOrchestrator } from './unifiedAIOrchestrator';

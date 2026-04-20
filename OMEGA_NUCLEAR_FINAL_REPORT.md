@@ -25,7 +25,7 @@
 
 ### Layer 2 — Billing Integrity ✅
 - **Webhook idempotency**: `stripeWebhookIdempotency` table with unique constraint on `(event_id)`; duplicate events return `200 OK` without re-processing — verified in `stripeWebhooks.ts`.
-- **AI credit degraded mode**: `AICreditGateway.preAuthorize()` checks workspace credits; `ResilientAIGateway` with Gemini/Claude/OpenAI fallback chain with health checks at boot.
+- **AI credit degraded mode**: `AICreditGateway.preAuthorize()` checks workspace credits; `ResilientAIGateway` routes Trinity across her interchangeable model backends with health-checked fallback at boot.
 - **Trial expiry job**: `autonomousScheduler.ts:2856` — `0 8 * * *` cron; `trinityAutonomousTaskQueue` detects `compliance_expiry` tasks 30 days before expiry.
 - **Low credit alert**: Trinity AI anomaly detector watches AI spend; workspace-scoped NDS on threshold breach.
 - **PAYMENT_HELD**: Payroll ACH gated at `payrollRoutes.ts:2513` — unverified Plaid bank account stamps `PAYMENT_HELD` on pay stub; ACH is skipped.
