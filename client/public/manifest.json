@@ -265,7 +265,7 @@
   "lang": "en-US",
   "dir": "ltr",
   "serviceworker": {
-    "src": "/service-worker.js",
+    "src": "/sw.js",
     "scope": "/",
     "use_cache": true
   }

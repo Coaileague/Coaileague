@@ -113,8 +113,9 @@ export const CRITICAL_NOTIFICATION_TYPES: NotificationDeliveryType[] = [
 ];
 
 // Action buttons rendered on web-push notifications. The service worker
-// (public/sw.js) handles "accept", "decline", "approve", "view", "sign",
-// "clock_in" click targets; entries here must match those handlers.
+// (client/public/sw.js) handles "accept", "decline", "approve", "view", "sign",
+// "clock_in", "reply", "acknowledge", "respond", "dismiss" click targets;
+// entries here must match those handlers.
 export const NOTIFICATION_ACTION_MAP: Partial<Record<NotificationDeliveryType, Array<{ action: string; title: string }>>> = {
   shift_offer_notification: [
     { action: 'accept', title: 'Accept Shift' },
