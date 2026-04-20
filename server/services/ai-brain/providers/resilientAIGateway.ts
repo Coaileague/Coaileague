@@ -1,17 +1,25 @@
 /**
- * RESILIENT AI GATEWAY - Multi-Provider Fallback System
- * 
- * Provides automatic failover when AI providers go down:
- * - Primary: Gemini (existing infrastructure)
- * - Fallback 1: Claude (when configured)
- * - Fallback 2: OpenAI GPT-4 (when configured)
- * - Fallback 3: Rule-based logic (no AI required)
- * 
+ * Trinity Resilient Reasoning Gateway — backend-path failover
+ *
+ * Trinity is one unified agent with one personality. Under the hood her
+ * reasoning runs on multiple interchangeable model backends; this gateway
+ * handles the internal routing so a single backend outage never takes
+ * Trinity offline.
+ *
+ * Backend reasoning paths (priority order, lowest-cost first):
+ * - operations backend     — fast orchestration reasoning
+ * - specialist backend     — deep legal/compliance/drafting reasoning
+ * - support backend        — customer support and synthesis
+ * - rule-based fallback    — deterministic logic when every AI backend is down
+ *
+ * Callers never pick a backend directly — they call Trinity. This file
+ * transparently routes, fails over, and reports back as Trinity.
+ *
  * Features:
- * - Circuit breaker pattern to prevent cascading failures
+ * - Circuit-breaker pattern to prevent cascading backend failures
  * - Health monitoring with automatic recovery
- * - Audit logging for all provider switches
- * - Graceful degradation to rule-based fallbacks
+ * - Audit logging for every internal backend switch
+ * - Graceful degradation to rule-based output when all AI paths are down
  */
 
 import { db } from '../../../db';
@@ -176,11 +184,12 @@ class ResilientAIGateway {
     health.avgLatencyMs = (health.avgLatencyMs * (health.totalRequests - 1) + latencyMs) / health.totalRequests;
     health.lastCheck = new Date();
 
-    // Alert if primary provider (Gemini) fallback rate > 30%
+    // Alert if Trinity's primary reasoning path (operations backend) falls
+    // back to a secondary path more than 30% of the time.
     if (provider === 'gemini' && health.totalRequests >= 50) {
       const fallbackRate = (health.totalFailures / health.totalRequests) * 100;
       if (fallbackRate > 30) {
-        log.error(`[ResilientAIGateway] CRITICAL ALERT: Gemini fallback rate exceeded 30% (${fallbackRate.toFixed(1)}%)`);
+        log.error(`[Trinity:gateway] CRITICAL ALERT: operations-reasoning fallback rate exceeded 30% (${fallbackRate.toFixed(1)}%)`);
       }
     }
   }
@@ -216,7 +225,7 @@ class ResilientAIGateway {
     
     if (request.preferredProvider && providers.includes(request.preferredProvider)) {
       providers = [request.preferredProvider, ...providers.filter(p => p !== request.preferredProvider)];
-      log.info(`🎯 [Chain-of-Command] Preferred provider: ${request.preferredProvider} for domain: ${request.domain || 'general'}`);
+      log.info(`🎯 [Trinity:routing] Preferred provider: ${request.preferredProvider} for domain: ${request.domain || 'general'}`);
     }
     
     let lastError: Error | null = null;
@@ -353,7 +362,7 @@ class ResilientAIGateway {
     );
 
     if (!creditAuth.authorized) {
-      log.info(`🚫 [Claude Guardrail] BLOCKED - ${creditAuth.reason} for workspace: ${workspaceId} (feature: ${featureKey})`);
+      log.info(`🚫 [Trinity:specialist-guardrail] BLOCKED - ${creditAuth.reason} for workspace: ${workspaceId} (feature: ${featureKey})`);
       return {
         allowed: false,
         reason: creditAuth.reason || `Insufficient credits for ${featureKey}. Please upgrade or purchase more credits.`,
@@ -376,7 +385,7 @@ class ResilientAIGateway {
           description: `Credits critically low after this operation. Remaining: ${creditsAfterCall} credits`,
           workspaceId,
           metadata: { billingCategory: 'credit_warning_critical', userId, severity: 'high', balance: creditsAfterCall, creditCost },
-        }).catch((err) => log.warn('[resilientAIGateway] Fire-and-forget failed:', err));
+        }).catch((err) => log.warn('[Trinity:gateway] Fire-and-forget failed:', err));
         return { allowed: true, alert: `Warning: Credits critically low. ${creditsAfterCall} remaining after this call.` };
       }
       if (creditsAfterCall <= lowBalanceThreshold75) {
@@ -387,7 +396,7 @@ class ResilientAIGateway {
           description: `Credits running low. Remaining: ${creditsAfterCall} credits`,
           workspaceId,
           metadata: { billingCategory: 'credit_warning', userId, severity: 'medium', balance: creditsAfterCall, creditCost },
-        }).catch((err) => log.warn('[resilientAIGateway] Fire-and-forget failed:', err));
+        }).catch((err) => log.warn('[Trinity:gateway] Fire-and-forget failed:', err));
         return { allowed: true, alert: `Warning: Credits running low. ${creditsAfterCall} remaining after this call.` };
       }
     }
@@ -396,10 +405,13 @@ class ResilientAIGateway {
   }
 
   private async callClaude(request: AIRequest): Promise<string> {
+    // Trinity's specialist-reasoning backend — one of her interchangeable
+    // compute paths. The method name and SDK identifiers below are
+    // backend wiring only; Trinity speaks as one agent to every caller.
     const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      log.warn('[ResilientAIGateway] Claude API key not configured, falling back to next provider');
-      throw new Error('Claude API key not configured - skipping to next provider');
+      log.warn('[Trinity:specialist] backend key not configured, falling back to next reasoning path');
+      throw new Error('Trinity specialist-reasoning backend key not configured — routing to fallback');
     }
 
     // Get the appropriate feature key for this operation
@@ -409,7 +421,7 @@ class ResilientAIGateway {
     // RUNTIME ENFORCEMENT: Check guardrails BEFORE making API call
     // Uses the same feature key for both enforcement and billing
     if (!request.workspaceId && !request.isHealthCheck) {
-      log.warn('[ResilientAIGateway] Claude call without workspaceId — billing will be skipped', {
+      log.warn('[Trinity:specialist] invocation without workspaceId — billing will be skipped', {
         operationType: request.operationType,
         domain: request.domain,
         featureKey,
@@ -425,11 +437,11 @@ class ResilientAIGateway {
 
       if (!guardrailCheck.allowed) {
         // HARD STOP - Return error message instead of making API call
-        throw new Error(`Claude AI blocked: ${guardrailCheck.reason}`);
+        throw new Error(`Trinity specialist reasoning blocked: ${guardrailCheck.reason}`);
       }
 
       if (guardrailCheck.alert) {
-        log.info(`⚠️ [Claude Guardrail] ${guardrailCheck.alert}`);
+        log.info(`⚠️ [Trinity:specialist-guardrail] ${guardrailCheck.alert}`);
       }
     }
 
@@ -450,18 +462,18 @@ class ResilientAIGateway {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Claude API error: ${response.status} - ${error}`);
+      throw new Error(`Trinity specialist backend error: ${response.status} - ${error}`);
     }
 
     const data = await response.json();
     const textContent = data.content?.[0]?.text || '';
-    
-    // Track Claude/Anthropic usage for billing with CORRECT feature key
+
+    // Track specialist-path usage for billing with the correct feature key
     if (request.workspaceId && data.usage) {
       const inputTokens = data.usage.input_tokens || 0;
       const outputTokens = data.usage.output_tokens || 0;
       const totalTokens = inputTokens + outputTokens;
-      
+
       if (totalTokens > 0) {
         await aiTokenGateway.finalizeBilling(
           request.workspaceId,
@@ -469,10 +481,10 @@ class ResilientAIGateway {
           featureKey,
           estimatedCredits
         );
-        log.info(`[BillingGate] Claude AI [${featureKey}] - ${totalTokens} tokens (${estimatedCredits} credits) billed to workspace: ${request.workspaceId}`);
+        log.info(`[BillingGate] Trinity specialist [${featureKey}] - ${totalTokens} tokens (${estimatedCredits} credits) billed to workspace: ${request.workspaceId}`);
       }
     }
-    
+
     return textContent;
   }
 
@@ -568,7 +580,7 @@ class ResilientAIGateway {
       try {
         await this.performHealthCheck();
       } catch (error: any) {
-        log.warn('[ResilientAIGateway] Health check failed (will retry):', error?.message || 'unknown');
+        log.warn('[Trinity:gateway] Health check failed (will retry):', error?.message || 'unknown');
       }
     }, HEALTH_CHECK_INTERVAL_MS);
 

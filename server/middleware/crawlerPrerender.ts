@@ -362,7 +362,7 @@ ${socialMeta({ path: '/trinity-features', ogTitle: 'Trinity AI - AI-Assisted Wor
     <section>
       <h2>Trinity AI Technical Capabilities</h2>
       <ul>
-        <li><strong>Tri-AI Architecture:</strong> Trinity (Gemini) for scheduling, monitoring, payroll, data analysis. Claude (Anthropic) for RFPs, compliance, contracts, strategic planning. GPT-4 (OpenAI) for customer support, training content, chatbot queries.</li>
+        <li><strong>Unified AI Agent:</strong> Trinity is a single unified agent with one personality and one voice. Her reasoning spans operations (scheduling, monitoring, payroll, data analysis), specialist (RFPs, compliance, contracts, strategic planning), and support (customer support, training content, in-app chat). The model backends powering her reasoning are implementation details, never separate agents.</li>
         <li><strong>400+ Registered Actions:</strong> Trinity can execute over 400 different workforce management actions autonomously</li>
         <li><strong>Reinforcement Learning:</strong> Trinity learns from every correction and improves her accuracy over time</li>
         <li><strong>Knowledge Graph:</strong> Entity-based memory for client preferences, employee patterns, and business intelligence</li>

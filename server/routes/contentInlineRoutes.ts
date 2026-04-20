@@ -11,8 +11,14 @@ import {
   insertCustomRuleSchema,
   insertReportSubmissionSchema,
   documentSignatures,
+  sites,
+  guardTours,
+  guardTourScans,
+  darReports,
+  incidentReports,
+  employees,
 } from '@shared/schema';
-import { sql, eq, and, desc } from "drizzle-orm";
+import { sql, eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { UPLOADS } from '../config/platformConfig';
 import { sendReportDeliveryEmail } from "../services/emailCore";

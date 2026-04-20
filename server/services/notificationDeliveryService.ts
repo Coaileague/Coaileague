@@ -104,6 +104,7 @@ export type NotificationDeliveryType =
   | 'shift_trade_request'
   | 'shift_trade_accepted'
   | 'shift_trade_declined'
+  | 'shift_trade_approved'
   | 'incident_submitted'
   | 'incident_high_severity'
   | 'dar_delivered';

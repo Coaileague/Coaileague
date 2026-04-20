@@ -246,7 +246,7 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
   "claude_contract_analysis": {
     id: "claude_contract_analysis",
     name: "Trinity Contract Analysis",
-    description: "Reads full contracts, flags liability clauses, unfavorable terms, missing protections, and ambiguous language. Compares against Texas PSB and target-state requirements and produces line-by-line redlines. Multi-model: Claude for legal reasoning, Gemini for compliance cross-check.",
+    description: "Trinity reads full contracts, flags liability clauses, unfavorable terms, missing protections, and ambiguous language. She compares against Texas PSB and target-state requirements and produces line-by-line redlines. Trinity's legal-reasoning path handles the interpretation; her compliance cross-check path verifies against regulation — one agent, multiple reasoning passes.",
     category: "contracts",
     featureType: "elite",
     minimumTier: "starter",
@@ -289,7 +289,7 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
   "trinity_rfp_generation": {
     id: "trinity_rfp_generation",
     name: "Trinity RFP & Proposal Generation",
-    description: "Reads the RFP document, researches the client/project, pulls your company's past performance data, and generates executive summary, scope response, staffing plan, compliance section, pricing narrative, tech section, and why-choose-us — all tailored to this specific bid. Multi-phase: research → draft → validate → refine. Uses Claude for strategic reasoning, Gemini for data synthesis. Full PDF-ready proposal.",
+    description: "Trinity reads the RFP document, researches the client/project, pulls your company's past performance data, and generates executive summary, scope response, staffing plan, compliance section, pricing narrative, tech section, and why-choose-us — all tailored to this specific bid. Multi-phase workflow: research → draft → validate → refine, all executed by Trinity. Full PDF-ready proposal.",
     category: "contracts",
     featureType: "elite",
     minimumTier: "starter",

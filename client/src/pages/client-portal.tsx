@@ -1322,6 +1322,103 @@ export default function ClientPortal() {
                 })}
               </CardContent>
             </Card>
+
+            {/* Guard Tours — proof of patrol */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-emerald-600" /> Guard Tours</CardTitle>
+                <CardDescription>Patrol routes and checkpoint scans at your sites</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {clientGuardTours.length === 0 ? (
+                  <div className="text-center py-8"><Shield className="h-10 w-10 text-muted-foreground mx-auto mb-2" /><p className="text-muted-foreground text-sm">No guard tours logged yet</p></div>
+                ) : clientGuardTours.map(t => (
+                  <div key={t.id} className="flex items-start gap-4 p-4 rounded-md border mb-2" data-testid={`card-guardtour-${t.id}`}>
+                    <div className="h-9 w-9 rounded-md bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0"><Shield className="h-4 w-4 text-emerald-600" /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="font-semibold truncate">{t.tour_name || 'Guard Tour'}</p>
+                        {t.status && <Badge variant="secondary">{t.status}</Badge>}
+                        {t.completion_percentage && <Badge variant="outline">{t.completion_percentage}% complete</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {t.officer_name && `Officer: ${t.officer_name}`}
+                        {t.completed_at && ` • Completed ${formatDate(t.completed_at)}`}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Daily Activity Reports */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-indigo-600" /> Daily Activity Reports</CardTitle>
+                <CardDescription>Verified shift reports delivered from the field</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {clientDars.length === 0 ? (
+                  <div className="text-center py-8"><FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" /><p className="text-muted-foreground text-sm">No daily activity reports yet</p></div>
+                ) : clientDars.map(d => (
+                  <div key={d.id} className="flex items-start gap-4 p-4 rounded-md border mb-2" data-testid={`card-dar-${d.id}`}>
+                    <div className="h-9 w-9 rounded-md bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center shrink-0"><FileText className="h-4 w-4 text-indigo-600" /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="font-semibold truncate">{d.report_number || `DAR — ${d.site_name || 'Site'}`}</p>
+                        {d.status && <Badge variant="secondary">{d.status}</Badge>}
+                        {d.photo_count ? <Badge variant="outline">{d.photo_count} photos</Badge> : null}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {d.employee_name && `By ${d.employee_name} • `}
+                        {d.shift_date && formatDate(d.shift_date)}
+                        {d.site_name && ` • ${d.site_name}`}
+                      </p>
+                    </div>
+                    {d.pdf_url && (
+                      <Button size="sm" variant="outline" asChild data-testid={`button-view-dar-${d.id}`}>
+                        <a href={d.pdf_url} target="_blank" rel="noopener noreferrer"><Download className="h-3.5 w-3.5 mr-1" />PDF</a>
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Incidents */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" /> Incidents at Your Sites</CardTitle>
+                <CardDescription>Redacted incident summaries — detailed notes available on request</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {clientIncidents.length === 0 ? (
+                  <div className="text-center py-8"><AlertTriangle className="h-10 w-10 text-muted-foreground mx-auto mb-2" /><p className="text-muted-foreground text-sm">No incidents to report</p></div>
+                ) : clientIncidents.map(i => (
+                  <div key={i.id} className="flex items-start gap-4 p-4 rounded-md border mb-2" data-testid={`card-incident-${i.id}`}>
+                    <div className="h-9 w-9 rounded-md bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0"><AlertTriangle className="h-4 w-4 text-amber-600" /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="font-semibold truncate">{i.title}</p>
+                        {i.severity && (
+                          <Badge variant="outline" className={
+                            i.severity === "critical" ? "border-rose-400 text-rose-600" :
+                            i.severity === "high" ? "border-amber-400 text-amber-600" :
+                            ""
+                          }>{i.severity}</Badge>
+                        )}
+                        {i.incident_type && <Badge variant="secondary">{i.incident_type}</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {i.occurred_at && formatDate(i.occurred_at)}
+                        {i.location && ` • ${i.location}`}
+                        {i.officer_name && ` • ${i.officer_name}`}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* ── CONTRACTS ────────────────────────────────────────────────── */}

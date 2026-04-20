@@ -1,13 +1,19 @@
 /**
- * AI Action Logger - Tracks all AI decisions for audit trails
- * 
- * Provides centralized logging for the Trinity + Claude Dual-AI system.
- * All AI actions, collaborations, and decisions are logged here.
+ * Trinity Action Logger — tracks every Trinity decision for audit trails
+ *
+ * Trinity is one agent. Internally her reasoning can take multiple compute
+ * paths (orchestration, specialist, support); this logger records which
+ * path she used for each action so operators can audit cost and confidence
+ * without leaking the backend taxonomy to tenants.
+ *
+ * The `primaryAi`/`supportAi` fields are internal compute-path labels, not
+ * separate agents. They will be renamed to `primaryPath`/`supportPath` in
+ * a later phase once database history is migrated.
  */
 
 import { db } from '../../../db';
 import { createLogger } from '../../../lib/logger';
-const log = createLogger('aiActionLogger');
+const log = createLogger('trinityActionLogger');
 
 
 export interface AIActionContext {

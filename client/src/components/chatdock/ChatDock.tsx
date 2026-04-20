@@ -2226,7 +2226,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                 >
                   {!isOwn && !isGrouped && (
                     <span className="text-[10px] text-muted-foreground mb-0.5 px-2 inline-flex items-center gap-1">
-                      {isBot ? "HelpAI" : (msg.senderName || "Unknown")}
+                      {isBot ? "Trinity" : (msg.senderName || "Unknown")}
                       {(msg as any).bridgeChannelType && (
                         <ChannelIndicator channelType={(msg as any).bridgeChannelType} />
                       )}

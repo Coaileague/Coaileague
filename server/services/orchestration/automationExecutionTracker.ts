@@ -6,7 +6,7 @@
  * - Provides user-visible breakdown of work done
  * - Verification workflow before external system sync
  * - Failure reasons with remediation steps
- * - Integration with Trinity/Claude AI for summaries
+ * - Integration with Trinity for execution summaries
  */
 
 import { db } from '../../db';

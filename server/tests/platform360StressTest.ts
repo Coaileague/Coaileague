@@ -866,7 +866,7 @@ async function phase15_comprehensive_service_coverage() {
     { name: 'Credit Manager', path: '../services/billing/tokenManager.ts' },
     { name: 'Stripe Webhooks', path: '../services/billing/stripeWebhooks.ts' },
     { name: 'AI Brain Service', path: '../services/ai-brain/aiBrainService.ts' },
-    { name: 'Claude Service', path: '../services/ai-brain/dualai/trinityValidationService.ts' },
+    { name: 'Claude Service', path: '../services/ai-brain/trinity-orchestration/trinityValidationService.ts' },
   ];
 
   let existCount = 0;

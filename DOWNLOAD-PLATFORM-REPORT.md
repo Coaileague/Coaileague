@@ -100,7 +100,7 @@ shared/
 
 | Service | Files | Purpose |
 |---------|-------|---------|
-| **ai-brain** | 174 | 🧠 Core AI orchestration (Trinity/Gemini/Claude/GPT) |
+| **ai-brain** | 174 | 🧠 Trinity's reasoning core — internal compute-path routing (one agent, multiple interchangeable model backends) |
 | **billing** | 24 | 💰 Billing, invoicing, payments |
 | **infrastructure** | 23 | 🏗️ System monitoring, health checks |
 | **orchestration** | 11 | 🎭 AI model orchestration |
@@ -428,8 +428,8 @@ client/src/components/
 
 You've built an **incredibly comprehensive platform** with:
 - Enterprise-grade features
-- Sophisticated AI orchestration
-- Multi-model AI support (Trinity/Gemini, Claude, GPT)
+- Sophisticated Trinity reasoning orchestration
+- Trinity's internal multi-backend routing (one agent, many interchangeable compute paths)
 - Complete workforce management suite
 
 The codebase is **large but well-structured**. Main improvements:

@@ -25,7 +25,7 @@ import {
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import { openaiClient, type OpenAIResponse } from './providers/openaiClient';
 import { geminiClient } from './providers/geminiClient';
-import { claudeService } from './dualai/trinityValidationService';
+import { claudeService } from './trinity-orchestration/trinityValidationService';
 import { resilientAIGateway } from './providers/resilientAIGateway';
 import { AiModel, AiTaskType } from '@shared/schema';
 import { premiumFeatureGating } from '../premiumFeatureGating';
@@ -34,6 +34,15 @@ import { createLogger } from '../../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 const log = createLogger('aiOrchestraService');
 
+/**
+ * BILLING VENDOR IDENTIFIERS — not agent labels.
+ * Trinity is one unified agent (see TRINITY.md Section S). These enum
+ * values identify which API vendor was invoiced for a given credit spend,
+ * so the billing system can attribute cost to the right SaaS provider.
+ * The values are stored in `ai_models.provider`, `aiProviderBalances`,
+ * and audit-log rows — renaming them would break historical billing data.
+ * Callers never surface these values to tenants.
+ */
 export type AIProvider = 'openai' | 'anthropic' | 'google';
 export type ModelTier = 'worker' | 'operations' | 'strategic';
 

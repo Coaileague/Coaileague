@@ -291,7 +291,7 @@ export default function Help() {
                 How can we help you?
               </h2>
               <p className="text-muted-foreground max-w-xl mx-auto text-sm">
-                Chat with HelpAI for instant answers, or browse our knowledge base
+                Chat with Trinity for instant answers, or browse our knowledge base
               </p>
               {chatState === "idle" && (
                 <Button
@@ -540,7 +540,7 @@ export default function Help() {
                       <Bot className="h-5 w-5 text-violet-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base mb-1">Chat with HelpAI</CardTitle>
+                      <CardTitle className="text-base mb-1">Chat with Trinity</CardTitle>
                       <CardDescription>
                         Intelligent support powered by Trinity AI. Handles complex issues, escalates only when needed.
                       </CardDescription>

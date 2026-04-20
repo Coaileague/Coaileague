@@ -124,7 +124,7 @@ export const PRICING_TIERS: Record<SubscriptionTier, PricingTier> = {
       "500 AI interactions total",
       "Trinity full biological AI brain",
       "Scheduling, GPS timekeeping, incident reporting",
-      "HelpAI for every seat",
+      "Trinity for every seat",
       "No credit card required — no auto-charge",
     ],
     notIncluded: [
@@ -166,7 +166,7 @@ export const PRICING_TIERS: Record<SubscriptionTier, PricingTier> = {
       "Scheduling and shift management",
       "GPS clock in/out",
       "Incident reporting (HelpAI)",
-      "HelpAI for every officer 24/7",
+      "Trinity for every officer 24/7",
       "ChatDock messaging (rooms and DMs)",
       "Employee management and onboarding",
       "8 standard compliance documents",

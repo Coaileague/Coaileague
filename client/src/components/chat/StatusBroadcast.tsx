@@ -53,7 +53,7 @@ export function StatusBroadcast({ who, visible, overrideMessage }: StatusBroadca
       style={{ opacity: 0.92 }}
       data-testid={`status-broadcast-${who}`}
       aria-live="polite"
-      aria-label={`${who === "helpai" ? "HelpAI" : "Trinity"} is ${phrase}`}
+      aria-label={`${who === "helpai" ? "Trinity" : "Trinity"} is ${phrase}`}
     >
       <BouncingDots color={dotColor} />
       <span

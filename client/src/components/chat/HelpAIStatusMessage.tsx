@@ -95,7 +95,7 @@ export function HelpAIStatusMessage({
       className="flex gap-2 mb-1.5"
       role="status"
       aria-live={state === "critical" ? "assertive" : "polite"}
-      aria-label="HelpAI is working"
+      aria-label="Trinity is working"
       data-testid="helpai-status-message"
       data-state={state}
     >

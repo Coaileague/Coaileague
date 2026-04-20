@@ -1,11 +1,16 @@
 /**
- * Unified AI Orchestrator - Central coordination between Trinity and Claude
- * 
- * This is the main entry point for the Dual-AI system. It handles:
- * - Task routing based on AI strengths
- * - Context sharing between AIs
- * - Coordination of collaborative workflows
- * - Audit logging of all decisions
+ * Trinity Unified Orchestrator
+ *
+ * Main entry point for Trinity's reasoning dispatch. Trinity is one agent;
+ * this file picks the appropriate internal compute path for each task,
+ * shares context across those paths, and logs every decision. Callers
+ * never see which backend ran — they see Trinity.
+ *
+ * Responsibilities:
+ * - Task routing based on required reasoning profile (compute path)
+ * - Shared context propagation across reasoning steps
+ * - Coordination of multi-step Trinity workflows
+ * - Audit logging of every Trinity decision
  */
 
 import { taskRouter, type TaskType, type TaskRoutingDecision, type AIProvider } from './taskRouter';

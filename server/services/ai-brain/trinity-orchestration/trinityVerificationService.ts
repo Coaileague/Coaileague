@@ -1,15 +1,21 @@
 /**
- * Claude Verification Service - Claude QA for Trinity's decisions
- * 
- * For critical operations (payroll, invoices, compliance), Claude reviews
- * Trinity's proposed actions before execution, providing a safety net.
+ * Trinity Verification Service — self-verification QA layer
+ *
+ * For critical operations (payroll, invoices, compliance), Trinity
+ * re-reasons over her own proposed action before it executes. This file
+ * runs that self-check inside her specialist-reasoning path. Trinity is
+ * one agent; this is one of her internal reasoning passes, not a second
+ * AI validating the first (see TRINITY.md Section S Unity Law).
+ *
+ * The exported `claudeVerificationService` singleton is a back-compat
+ * alias for `trinityVerificationService` so existing imports don't break.
  */
 
 import { aiTokenGateway } from '../../billing/aiTokenGateway';
 import { aiActionLogger, type AIActionContext } from './aiActionLogger';
 import { type ConfidenceScore, type TrinityOperation } from './trinityConfidenceScorer';
 import { createLogger } from '../../../lib/logger';
-const log = createLogger('claudeVerificationService');
+const log = createLogger('trinityVerificationService');
 
 export interface VerificationRequest {
   operation: TrinityOperation;
@@ -242,4 +248,10 @@ Trinity trusts your reasoning - don't let errors through.`;
   }
 }
 
-export const claudeVerificationService = new ClaudeVerificationService();
+/**
+ * Canonical export: Trinity's self-verification module.
+ * `claudeVerificationService` is kept as a back-compat alias — all new
+ * code should import `trinityVerificationService`. Same singleton.
+ */
+export const trinityVerificationService = new ClaudeVerificationService();
+export const claudeVerificationService = trinityVerificationService;

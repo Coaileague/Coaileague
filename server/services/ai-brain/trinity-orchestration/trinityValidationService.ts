@@ -1,17 +1,23 @@
 /**
- * Claude Service - Claude (Anthropic) integration with Trinity awareness
- * 
- * Claude acts as the CFO/Specialist in the Dual-AI system:
+ * Trinity Validation Service — specialist-reasoning backend
+ *
+ * Trinity's specialist-reasoning module, historically powered by a
+ * Claude backend (the file previously lived at `dualai/claudeService.ts`).
+ * Trinity is one agent; this module is one of her internal reasoning
+ * paths (see TRINITY.md Section S Unity Law). Responsibilities:
  * - Deep analysis and reasoning tasks
  * - Document generation (RFPs, capability statements, contracts)
  * - Compliance interpretation and analysis
  * - Strategic planning and recommendations
+ *
+ * The exported `claudeService` singleton is a back-compat alias for
+ * `trinityValidationService` so existing imports don't break.
  */
 
 import { aiTokenGateway } from '../../billing/aiTokenGateway';
 import { aiActionLogger, type AIActionContext } from './aiActionLogger';
 import { createLogger } from '../../../lib/logger';
-const log = createLogger('claudeService');
+const log = createLogger('trinityValidationService');
 
 export interface ClaudeRequest {
   task: string;
@@ -370,4 +376,15 @@ Remember: You and Trinity are partners working together to help this security co
   }
 }
 
-export const claudeService = new ClaudeService();
+/**
+ * Canonical export: Trinity's specialist-reasoning module.
+ * `claudeService` is kept as a back-compat alias — all new code should
+ * import `trinityValidationService`. Both refer to the same singleton.
+ */
+export const trinityValidationService = new ClaudeService();
+export const claudeService = trinityValidationService;
+
+// Type aliases so callers can migrate gradually
+export type TrinityValidationRequest = ClaudeRequest;
+export type TrinityValidationResponse = ClaudeResponse;
+export type TrinityValidationConsultation = ClaudeConsultation;

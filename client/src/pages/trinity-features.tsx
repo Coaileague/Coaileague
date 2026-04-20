@@ -82,7 +82,7 @@ const TRINITY_CAPABILITIES = [
   },
   {
     icon: Bot,
-    name: "HelpAI — Officer Field Assistant",
+    name: "Trinity — Officer Field Assistant",
     description: "The face your officers see. Lives in every shift room. Answers questions, takes calloffs, files incident reports, and looks up schedules — by text or voice, instantly.",
     color: "bg-teal-500/10 text-teal-400",
   },
@@ -775,7 +775,7 @@ export default function TrinityFeatures() {
             "Data-driven raise and promotion recommendations",
             "Disciplinary pattern detection with full analysis",
             "Career development and advancement tracking",
-            "HelpAI — one AI assistant for every officer, available 24/7 directly in their shift room",
+            "Trinity — one AI assistant for every officer, available 24/7 directly in their shift room",
           ]}
           visual={<OfficerProfileMock />}
           reverse

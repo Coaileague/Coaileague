@@ -12,6 +12,7 @@ import {
   contractorPool,
   employees,
   insertShiftSchema,
+  shiftChatrooms,
   shiftCoverageRequests,
   shiftOffers,
   shiftOrders,
@@ -870,6 +871,9 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       
       // 📡 REAL-TIME: Broadcast shift creation ONLY after successful DB operation
       broadcastShiftUpdate(workspaceId, 'shift_created', shift);
+
+      // Note: chatroom is pre-provisioned at the top of this handler (see
+      // provisionChatroom call above) — no duplicate provision needed here.
 
       // 🧠 TRINITY: Publish to platformEventBus so Trinity and all service monitors see this shift
       platformEventBus.publish({
@@ -2821,6 +2825,107 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
     } catch (error: unknown) {
       log.error("Error ending shift:", error);
       res.status(500).json({ message: sanitizeError(error) || "Failed to end shift" });
+    }
+  });
+
+  // POST /api/shifts/:shiftId/proof-of-service
+  // Officer-side proof-of-service photo capture. Stores the photo as a
+  // chatroom photo message (audit-protected, flows into the DAR photo manifest).
+  // Broadcasts so the client portal and managers see it in real time.
+  router.post('/:shiftId/proof-of-service', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee) return res.status(404).json({ message: 'Employee not found' });
+
+      const shiftId = req.params.shiftId;
+      const accessCheck = await validateShiftAccess(shiftId, employee.id, employee.workspaceId, storage);
+      if (!accessCheck.authorized) return res.status(403).json({ message: accessCheck.reason });
+
+      const workspaceId = employee.workspaceId;
+      const { photoUrl, latitude, longitude, notes, capturedAt } = req.body || {};
+      if (!photoUrl || typeof photoUrl !== 'string') {
+        return res.status(400).json({ message: 'photoUrl required' });
+      }
+
+      // Ensure a chatroom exists for this shift (provisioned at creation, promoted
+      // at clock-in; create on demand if neither ran yet)
+      const [existingRoom] = await db.select()
+        .from(shiftChatrooms)
+        .where(and(
+          eq(shiftChatrooms.shiftId, shiftId),
+          eq(shiftChatrooms.workspaceId, workspaceId),
+        ))
+        .limit(1);
+
+      let chatroomId: string | null = existingRoom?.id ?? null;
+      if (!chatroomId) {
+        const provision = await shiftChatroomWorkflowService.provisionChatroom({
+          shiftId,
+          workspaceId,
+          siteId: accessCheck.shift?.siteId ?? undefined,
+          assignedEmployeeId: employee.id,
+        });
+        chatroomId = provision.chatroomId;
+      }
+
+      if (!chatroomId) {
+        return res.status(500).json({ message: 'Failed to resolve shift chatroom for proof-of-service' });
+      }
+
+      const sendResult = await shiftChatroomWorkflowService.sendMessage(
+        chatroomId,
+        userId,
+        {
+          content: notes || 'Proof of service photo',
+          messageType: 'photo',
+          attachmentUrl: photoUrl,
+          attachmentType: 'image/jpeg',
+          metadata: {
+            proofOfService: true,
+            gps: (typeof latitude === 'number' && typeof longitude === 'number')
+              ? { lat: latitude, lng: longitude }
+              : null,
+            capturedAt: capturedAt || new Date().toISOString(),
+            officerEmployeeId: employee.id,
+          },
+        }
+      );
+
+      if (!sendResult.success) {
+        return res.status(400).json({ message: sendResult.error || 'Failed to store proof-of-service photo' });
+      }
+
+      // Broadcast so managers + client portal see it immediately
+      broadcastToWorkspace(workspaceId, {
+        type: 'proof_of_service_submitted',
+        shiftId,
+        chatroomId,
+        officerId: userId,
+        photoUrl,
+        timestamp: new Date().toISOString(),
+      });
+
+      platformEventBus.publish({
+        type: 'proof_of_service_submitted',
+        category: 'automation',
+        title: 'Proof of Service Submitted',
+        description: `Officer submitted proof-of-service photo for shift ${shiftId}`,
+        workspaceId,
+        metadata: { shiftId, chatroomId, officerEmployeeId: employee.id, photoUrl },
+      }).catch((err: any) => log.warn('[ProofOfService] publish failed (non-blocking):', err?.message));
+
+      res.status(201).json({
+        success: true,
+        messageId: sendResult.messageId,
+        chatroomId,
+        shiftId,
+      });
+    } catch (error: unknown) {
+      log.error('Error capturing proof-of-service:', error);
+      res.status(500).json({ message: sanitizeError(error) || 'Failed to capture proof-of-service' });
     }
   });
 

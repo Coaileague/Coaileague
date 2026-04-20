@@ -457,7 +457,7 @@ const TABLE_DATA: { category: string; rows: [string, CellVal, CellVal, CellVal, 
   {
     category: "Officer Tools",
     rows: [
-      ["HelpAI Field Assistant", true, true, true, true, true],
+      ["Trinity Field Assistant", true, true, true, true, true],
       ["ChatDock Messaging", true, true, true, true, true],
       ["Incident Reporting (HelpAI)", true, true, true, true, true],
       ["DAR Legal Narratives", false, true, true, true, true],
@@ -1159,12 +1159,12 @@ export default function PricingPage() {
                 {
                   icon: Mail,
                   title: "Incident Reports That Hold Up in Court",
-                  body: "HelpAI generates a GPS-stamped, time-verified, legally structured incident narrative in plain English. What used to take 45 minutes takes 90 seconds. What used to cost you in court now protects you.",
+                  body: "Trinity generates a GPS-stamped, time-verified, legally structured incident narrative in plain English. What used to take 45 minutes takes 90 seconds. What used to cost you in court now protects you.",
                 },
                 {
                   icon: Users,
                   title: "Officers Who Feel Like They Matter",
-                  body: "HelpAI gives every officer a personal field assistant. Schedule lookups, post orders, incident filing, calloffs — by voice or text, instantly. Officers who feel supported show up. Turnover drops 25% in the first 90 days.",
+                  body: "Trinity gives every officer a personal field assistant. Schedule lookups, post orders, incident filing, calloffs — by voice or text, instantly. Officers who feel supported show up. Turnover drops 25% in the first 90 days.",
                 },
               ].map(({ icon: Icon, title, body }) => (
                 <Card key={title} data-testid={`card-seat-covers-${title.toLowerCase().replace(/\s/g, "-")}`}>

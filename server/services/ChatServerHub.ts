@@ -494,7 +494,7 @@ class ChatServerHubClass {
 
   getAIFallbackMessage(context: string): string {
     const fallbackMessages: Record<string, string> = {
-      'chat_response': 'Our AI assistant is temporarily unavailable. A support agent will be with you shortly.',
+      'chat_response': 'Trinity is temporarily unavailable. A support agent will be with you shortly.',
       'sentiment_analysis': 'Sentiment analysis is temporarily paused. Messages are still being delivered normally.',
       'auto_escalation': 'Automatic escalation is temporarily unavailable. Please use manual escalation if needed.',
       'suggestion': 'AI suggestions are temporarily unavailable. Please proceed with your best judgment.',

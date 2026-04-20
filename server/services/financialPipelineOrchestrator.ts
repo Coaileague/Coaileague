@@ -22,8 +22,8 @@
 import { db } from '../db';
 import { invoices, payrollRuns, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
-import { trinityConfidenceScorer, type TrinityOperation } from './ai-brain/dualai/trinityConfidenceScorer';
-import { claudeVerificationService } from './ai-brain/dualai/trinityVerificationService';
+import { trinityConfidenceScorer, type TrinityOperation } from './ai-brain/trinity-orchestration/trinityConfidenceScorer';
+import { claudeVerificationService } from './ai-brain/trinity-orchestration/trinityVerificationService';
 import { syncInvoiceToQuickBooks, syncPayrollToQuickBooks } from './quickbooksClientBillingSync';
 import { quickbooksReceiptService } from './quickbooksReceiptService';
 import { platformEventBus } from './platformEventBus';

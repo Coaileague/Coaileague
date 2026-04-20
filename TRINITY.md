@@ -1189,6 +1189,121 @@ await db.update(workspaceSettings)
 
 ---
 
+## Section V — Client Portal Proof-of-Service Visibility (Phase SYS-1)
+
+> **Terminology note (see Section S):** "Trinity legal flags" and
+> "Trinity-driven" references in this section refer to the one Trinity
+> agent's single reasoning stream. Internal compute-path handoffs are
+> implementation details and MUST NOT be surfaced to clients as
+> multi-agent activity. Client-facing copy always reads "Trinity," never
+> a model-provider name.
+
+**The law:** Clients have the right to verify the security service they
+are paying for. The `/api/client-reports` endpoint MUST surface every
+proof-of-service artifact tied to the client's account: approved field
+reports, guard tours with checkpoint scan counts, verified/sent DARs,
+redacted incident summaries, and any shift transparency PDFs. Internal
+notes, disciplinary details, manager commentary, raw voice transcripts,
+and compensation data are NEVER included.
+
+**What MAY be disclosed per artifact:**
+- Guard tours: tour name, officer name, status, completion percentage,
+  completedAt
+- DARs: report_number, site_name, shift_date, employee_name, status,
+  pdf_url, photo_count
+- Incidents: title, incident_type, severity, status, occurred_at,
+  location, officer_name
+- Transparency PDFs: report_number, site_name, shift_date, pdf_url
+
+**What MUST NEVER appear:**
+- Officer discipline, performance reviews, manager coaching notes
+- Raw voice transcripts or raw descriptions (only polished summary when
+  the underlying section exposes one)
+- Chain-of-custody access logs
+- Employee contact info (email, phone, home address)
+- Pay rate, shift pay, compensation data
+- Trinity legal flags or use-of-force details outside the polished summary
+
+**Required pattern:**
+```ts
+// ✅ always resolve the caller's client, filter by clientId AND workspaceId
+const matchingClient = clients.find(c => c.userId === userId);
+if (!matchingClient) {
+  return res.json({
+    reports: [], guardTours: [], dars: [], incidents: [], transparencyPdfs: [],
+  });
+}
+const clientId = matchingClient.id;
+// Every query: eq(workspaceId) AND resolves the client's site set AND status-in-approved-set
+```
+
+**Files governed:**
+- `server/routes/contentInlineRoutes.ts → GET /client-reports` — single
+  source of truth for the client Reports tab response.
+- `client/src/pages/client-portal.tsx` — Reports tab renders the five
+  sections; a non-zero total lights the tab badge.
+
+---
+
+## Section W — FLSA Overtime Is Aggregator-Derived (Phase SYS-1)
+
+> **Terminology note (see Section S):** Trinity's payroll automation is
+> one reasoning stream; "payroll engine" is the module that runs inside
+> the one Trinity brain. This section governs the computation path, not
+> a second agent.
+
+**The law:** `regularHours`, `overtimeHours`, and `holidayHours` on payroll
+entries MUST be derived from time-entry data via the canonical
+`bucketHours()` helper in `server/services/automation/rateResolver.ts:454`
+(invoked transitively by `aggregatePayrollHours` in
+`server/services/automation/payrollHoursAggregator.ts`). Direct assignment
+of these fields from external input is forbidden — they are calculated
+fields. Multi-rate weeks MUST pass through
+`PayrollAutomationEngine.calculateFLSAWeightedAverageOvertime` for the
+FLSA-compliant weighted-average premium.
+
+**The bug it prevents:** A payroll run that trusts user-entered "regular"
+and "overtime" columns lets a scheduler or data-entry error bypass FLSA —
+underpaying officers (violating 29 USC §207) or overpaying and creating a
+reversal headache. Workspaces with daily-OT policies (CA, AK, NV) would
+lose the threshold-switching logic.
+
+**The canonical path:**
+1. `payrollAutomation.ts#createAutomatedPayrollRun` calls
+   `aggregatePayrollHours({ workspaceId, startDate, endDate })`.
+2. The aggregator runs `bucketHours()` per time entry, resetting the
+   weekly counter on week boundaries.
+3. If an employee worked at multiple pay rates AND accrued OT,
+   `calculateFLSAWeightedAverageOvertime` recalculates the premium using
+   the FLSA weighted-average method.
+4. `createAutomatedPayrollRun` reads `employeeSummary.totalRegularHours` /
+   `totalOvertimeHours` / `totalHolidayHours` and stores them verbatim —
+   never overwrites or re-derives.
+
+**Forbidden patterns:**
+```ts
+// 🔴 forbidden — accepting external regular/overtime hours
+await db.insert(payrollEntries).values({
+  regularHours: req.body.regularHours,
+  overtimeHours: req.body.overtimeHours,
+  ...
+});
+
+// 🔴 forbidden — inline ad-hoc OT split
+const overtime = Math.max(0, totalHours - 40);
+const regular = totalHours - overtime;
+
+// ✅ required — canonical bucket
+const bucket = bucketHours({
+  totalHours, weeklyHoursSoFar,
+  enableDailyOvertime: workspace.enableDailyOT,
+  weeklyOvertimeThreshold: workspace.weeklyOTThreshold,
+  isHoliday: isHolidayDate(clockIn, holidayCalendar, workspaceTz),
+});
+```
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When a new architectural invariant is discovered through any debug pass,

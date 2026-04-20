@@ -222,7 +222,7 @@ export default function AdminHelpAI() {
 
   const pageConfig: CanvasPageConfig = {
     id: "admin-helpai",
-    title: "HelpAI Review Dashboard",
+    title: "Trinity Review Dashboard",
     subtitle: "Monitor and review all HelpAI support sessions, actions, and escalations",
     category: "admin",
     maxWidth: "7xl",

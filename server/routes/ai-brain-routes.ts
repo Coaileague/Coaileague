@@ -1505,12 +1505,18 @@ aiBrainRouter.post('/routing/execute', requireAuth, async (req: Request, res: Re
         featureKey: 'cost_optimized_routing',
       });
       
+      // TRINITY.md §S: tenant-facing response must not expose which
+      // internal backend (provider/model) served the request. Trinity
+      // speaks as one agent. Backend identifiers stay in server logs.
+      log.info('[ai-brain] Trinity cost-optimized + verified', {
+        provider: result.provider,
+        model: result.model,
+        agreementScore: result.agreementScore,
+      });
       return res.json({
         success: true,
         result: {
           content: result.content,
-          provider: result.provider,
-          model: result.model,
           confidence: result.confidence,
           agreementScore: result.agreementScore,
           escalated: result.escalated,
@@ -1531,12 +1537,17 @@ aiBrainRouter.post('/routing/execute', requireAuth, async (req: Request, res: Re
       forceProvider,
     });
     
+    // TRINITY.md §S: tenant-facing response must not expose which
+    // internal backend (provider/model) served the request. Trinity
+    // speaks as one agent. Backend identifiers stay in server logs.
+    log.info('[ai-brain] Trinity cost-optimized route', {
+      provider: result.provider,
+      model: result.model,
+    });
     res.json({
       success: true,
       result: {
         content: result.content,
-        provider: result.provider,
-        model: result.model,
         confidence: result.confidence,
         escalated: result.escalated,
         escalationReason: result.escalationReason,

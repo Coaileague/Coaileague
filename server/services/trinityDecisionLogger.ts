@@ -128,7 +128,7 @@ class TrinityDecisionLogger {
     contextSnapshot?: Record<string, any>;
   }): Promise<TriadJusticeResult> {
     try {
-      const { claudeService } = await import('./ai-brain/dualai/trinityValidationService');
+      const { claudeService } = await import('./ai-brain/trinity-orchestration/trinityValidationService');
 
       if (!claudeService.isAvailable()) {
         log.warn('[TriadJustice] Claude unavailable, skipping review');

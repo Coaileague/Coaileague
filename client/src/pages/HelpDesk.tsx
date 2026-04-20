@@ -689,7 +689,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  setShowMotd(false);
  toast({
  title: "Welcome to HelpDesk!",
- description: "You can now access the support chat powered by HelpAI",
+ description: "You can now access the support chat powered by Trinity",
  });
  },
  onError: (error: Error) =>{
@@ -946,8 +946,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  const positionInQueue = silencedUsers.size; // Count of silenced users
  
  sendMessage(
- `${CHAT_CONFIG.messages.queueUpdate.label}\nTicket: ${newTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nHelpAI is reviewing your issue. An agent will be assigned shortly.`,
- 'HelpAI Bot',
+ `${CHAT_CONFIG.messages.queueUpdate.label}\nTicket: ${newTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nTrinity is reviewing your issue. An agent will be assigned shortly.`,
+ 'Trinity Support',
  'system'
  );
  }
@@ -2191,7 +2191,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  {!isSelf && !isGrouped && (
  <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5 min-w-0 max-w-full">
  <span className={`text-[11px] sm:text-xs font-semibold ${isSelf ? 'text-primary-foreground/80' : 'text-primary'} truncate`}>
- {role === 'bot' ? 'HelpAI Bot' : actualName.split('(')[0].trim()}
+ {role === 'bot' ? 'Trinity Support' : actualName.split('(')[0].trim()}
  {getRoleIcon(role)}
  </span>
  </div>
@@ -2521,7 +2521,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  }
  }
  }}
- placeholder={isInTriage ? "Describe your issue to HelpAI..." : isGuest ? "Describe your issue..." : "Type message or / for commands..."}
+ placeholder={isInTriage ? "Describe your issue to Trinity..." : isGuest ? "Describe your issue..." : "Type message or / for commands..."}
  disabled={!isConnected || ticketClosed}
  className="flex-1 p-2 sm:p-2.5 md:p-3 border-2 border-border rounded-xl sm:rounded-2xl resize-none focus:ring-primary focus:border-primary bg-background text-foreground placeholder:text-muted-foreground text-base"
  data-testid="input-message"
@@ -2691,7 +2691,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-0.5 flex-wrap">
  <span className={`text-sm font-semibold break-words ${getRoleColor(u.role, u.platformRole)}`}>
- {u.role === 'bot' ? 'HelpAI Bot' : u.name}
+ {u.role === 'bot' ? 'Trinity Support' : u.name}
  {getRoleIcon(u.role, u.platformRole)}
  </span>
  </div>
@@ -3493,7 +3493,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  });
  
  toast({
- title: newState ? "HelpAI Enabled" : "HelpAI Disabled",
+ title: newState ? "Trinity Support Enabled" : "Trinity Support Disabled",
  description: newState 
  ? "AI costs are billed to customer credits" 
  : "Standard support mode active",
@@ -3611,7 +3611,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </div>
  <div>
  <h3 className="text-gray-900 dark:text-gray-100 font-bold text-lg">
- {selectedUserId.startsWith('helpbot') ? 'HelpAI Bot' : 'System Bot'}
+ {selectedUserId.startsWith('helpbot') ? 'Trinity Support' : 'System Bot'}
  </h3>
  <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 mt-1">
  Trinity AI System

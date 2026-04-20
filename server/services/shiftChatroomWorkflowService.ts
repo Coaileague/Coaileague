@@ -12,7 +12,7 @@
  * 
  * Integrates with:
  * - UniversalStepLogger (7-step pattern)
- * - Trinity+Claude orchestration
+ * - Trinity orchestration (unified agent — one personality across all backends)
  * - Audit integrity system
  */
 
@@ -200,6 +200,9 @@ class ShiftChatroomWorkflowService {
   /**
    * Start Shift Workflow
    * TRIGGER → FETCH → VALIDATE → PROCESS → MUTATE → CONFIRM → NOTIFY
+   *
+   * If a pending chatroom exists (provisioned at shift creation), it is
+   * promoted to 'active' instead of creating a new one.
    */
   async startShift(context: ShiftChatroomContext): Promise<{
     success: boolean;
@@ -306,6 +309,7 @@ class ShiftChatroomWorkflowService {
         return { success: true, chatroomId: pendingId, steps };
       }
 
+      // No existing chatroom (neither active nor pending) — fresh-create path.
       steps.push({ step: 'VALIDATE', status: 'completed', duration: Date.now() - validateStart });
       await this.logStep(orchContext, 'VALIDATE', 'completed', { shiftId: context.shiftId }, { existingChatroom: false, shiftStatus: shift.status });
 

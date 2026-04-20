@@ -361,7 +361,7 @@ rmsRouter.post("/dars/:id/submit", requireAuth as any, ensureWorkspaceAccess as 
     // Trinity Claude articulation pass — improve activity_summary for professional articulation
     if (dar.activity_summary && dar.activity_summary.trim().length > 20) {
       try {
-        const { claudeService } = await import("../services/ai-brain/dualai/trinityValidationService");
+        const { claudeService } = await import("../services/ai-brain/trinity-orchestration/trinityValidationService");
         if (claudeService.isAvailable()) {
           const claudeResult = await claudeService.processRequest({
             task: `You are a professional security report editor. Improve the following field officer's activity summary for a formal Daily Activity Report (DAR). Keep all facts intact, maintain accuracy, and improve professionalism and clarity. Do not add information not present. Return only the improved text with no preamble.\n\nOriginal activity summary:\n${dar.activity_summary}`,
@@ -852,7 +852,7 @@ rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceA
     // Trinity Claude articulation pass — improve summary for professional articulation
     if (report.summary && report.summary.trim().length > 20) {
       try {
-        const { claudeService } = await import("../services/ai-brain/dualai/trinityValidationService");
+        const { claudeService } = await import("../services/ai-brain/trinity-orchestration/trinityValidationService");
         if (claudeService.isAvailable()) {
           const claudeResult = await claudeService.processRequest({
             task: `You are a professional security report editor. Improve the following shift report summary for a formal Daily Activity Report (DAR). Keep all facts intact, maintain accuracy, and improve professionalism and clarity. Do not add information not present. Return only the improved text with no preamble.\n\nOriginal summary:\n${report.summary}`,

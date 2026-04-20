@@ -659,7 +659,7 @@ export function UniversalChatLayout({
                 <p className="text-muted-foreground text-xs mt-1">
                   {currentUser.isStaff 
                     ? "Tap the tools button to access commands" 
-                    : "HelpAI is ready to assist you!"}
+                    : "Trinity is ready to assist you!"}
                 </p>
               </div>
             </div>

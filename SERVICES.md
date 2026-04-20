@@ -3,13 +3,17 @@
 ## AI Services
 
 ### ai-brain/
-Core multi-model AI orchestration system (Trinity/Gemini/Claude/GPT)
-- Model routing and fallback chains
+Trinity's core reasoning system. Trinity is one unified AI agent; this
+folder holds the internal compute-path routing that dispatches her
+reasoning across multiple interchangeable model backends (orchestration,
+specialist, support). The backends are implementation details, not
+separate agents — every surface always speaks as Trinity.
+- Internal path routing and fallback chains
 - Cost tracking and credit management
 - Response caching and optimization
 
 ### helpai/
-AI-powered support chatbot using Gemini
+Trinity's in-app support channel
 - IRC-style response pattern (responds to all messages except acknowledgments)
 - Unified bot service: `helpAIBotService.ts`
 - Domain-specific expertise routing

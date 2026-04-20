@@ -37,7 +37,7 @@ import { idempotencyService, registerIdempotencyActions } from '../ai-brain/idem
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { validateBeforeExecution } from '../trinity/preExecutionValidator';
 import { evaluateConscience, logConscienceDecision } from '../ai-brain/trinityConscience';
-import { claudeVerificationService } from '../ai-brain/dualai/trinityVerificationService';
+import { claudeVerificationService } from '../ai-brain/trinity-orchestration/trinityVerificationService';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 
@@ -2593,7 +2593,7 @@ class PlatformActionHub {
           taskType: handler.category,
           task: handler.name,
         };
-        const { trinityConfidenceScorer } = await import('../ai-brain/dualai/trinityConfidenceScorer');
+        const { trinityConfidenceScorer } = await import('../ai-brain/trinity-orchestration/trinityConfidenceScorer');
         const confidenceScore = trinityConfidenceScorer.calculateConfidence(dualAIOperation);
         const verificationResult = await claudeVerificationService.verify({
           operation: dualAIOperation,

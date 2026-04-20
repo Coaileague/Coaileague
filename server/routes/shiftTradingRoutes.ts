@@ -9,6 +9,9 @@ import { platformActionHub } from "../services/helpai/platformActionHub";
 import { requireAuth, requireManager, type AuthenticatedRequest } from "../rbac";
 import { createNotification } from "../services/notificationService";
 import { NotificationDeliveryService } from "../services/notificationDeliveryService";
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('ShiftTradingRoutes');
 
 const router = Router();
 
@@ -217,7 +220,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
         }
       }
     } else {
-      // Open marketplace — notify managers
+      // Open marketplace — notify managers (in-app only; no push spam)
       const managers = await pool.query(
         `SELECT u.id FROM users u WHERE u.workspace_id=$1 AND u.role IN ('owner','co_owner','org_admin','manager') LIMIT 10`,
         [wid]
@@ -462,7 +465,6 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
         });
       }
     } catch (webhookErr: any) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.warn('[ShiftTrading] Failed to log webhook error to audit log', { error: webhookErr.message });
     }
 
@@ -476,6 +478,20 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
           message: "Your shift trade has been approved. Check your updated schedule.",
           type: "shift_trade", actionUrl: `/schedule`,
         }).catch(() => null);
+
+        await NotificationDeliveryService.send({
+          type: 'shift_trade_approved',
+          workspaceId: wid,
+          recipientUserId: userRes.rows[0].user_id,
+          channel: 'push',
+          subject: 'Shift Trade Approved',
+          body: {
+            title: 'Shift Trade Approved',
+            body: 'Your shift trade has been approved. Check your updated schedule.',
+            url: `/schedule`,
+            tradeId: trade.id,
+          },
+        }).catch(err => log.warn('[ShiftTrading] NDS shift_trade_approved failed (non-blocking):', err?.message));
       }
     }
     res.json(rows[0]);
