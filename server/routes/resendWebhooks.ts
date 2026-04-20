@@ -1408,6 +1408,52 @@ ${rawBody.substring(0, 2000)}
       log.warn('[Resend Inbound] Prospect detection error (non-blocking):', (prospectErr instanceof Error ? prospectErr.message : String(prospectErr)));
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // TRINITY INBOUND EMAIL PROCESSOR — routes to calloff/incident/docs/support/careers
+    // Canonical pipeline for every workspace-scoped inbound email. Runs
+    // non-blocking so the webhook ACKs Resend in <200ms while Trinity does
+    // the heavy downstream work (coverage search, incident creation, etc).
+    // ═══════════════════════════════════════════════════════════════════════
+    if (workspaceId && emailCategory !== 'verification') {
+      scheduleNonBlocking('resend-inbound.trinity-processor', async () => {
+        try {
+          const { processInboundEmail } = await import(
+            '../services/trinity/trinityInboundEmailProcessor'
+          );
+
+          const result = await processInboundEmail({
+            messageId: inboundEmail.message_id || `resend-${Date.now()}`,
+            fromEmail: senderEmail || inboundEmail.from || 'unknown@unknown.com',
+            fromName: senderName || undefined,
+            toEmail: toAddrs[0] || inboundEmail.to?.[0] || '',
+            subject: inboundEmail.subject || '(no subject)',
+            bodyText: emailBody,
+            bodyHtml: inboundEmail.html || undefined,
+            attachments: (inboundEmail.attachments || []).map((a: any) => ({
+              filename: a.filename || a.name || 'attachment',
+              contentType: a.contentType || a.content_type || 'application/octet-stream',
+              size: a.size,
+              content: a.content,
+              url: a.url,
+            })),
+            receivedAt: new Date(),
+            rawPayload: inboundEmail,
+          });
+
+          log.info(`[Resend→Trinity] processInboundEmail complete: ${emailCategory} → ${result.status}`, {
+            workspaceId,
+            category: emailCategory,
+            logId: result.logId,
+            downstreamRecordId: result.downstreamRecordId,
+          });
+        } catch (err: unknown) {
+          log.error('[Resend→Trinity] processInboundEmail failed (non-fatal):',
+            err instanceof Error ? err.message : String(err),
+            { workspaceId, category: emailCategory });
+        }
+      });
+    }
+
     res.status(200).json({
       received: true,
       processed: true,
@@ -1417,6 +1463,8 @@ ${rawBody.substring(0, 2000)}
       orgCode: orgCode || undefined,
       isNewProspect,
       prospectTempCode: prospectTempCode || undefined,
+      trinityProcessingScheduled: workspaceId && emailCategory !== 'verification',
+      category: emailCategory,
       result,
     });
   } catch (error: unknown) {
