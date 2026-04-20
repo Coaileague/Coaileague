@@ -1584,6 +1584,131 @@ router.get('/tax-filing/state-portals', async (req: AuthenticatedRequest, res) =
   }
 });
 
+// ============================================================================
+// TAX CENTER — consolidated view of tax obligations, forms, deadlines, fees
+// ============================================================================
+router.get('/tax-center', async (req: AuthenticatedRequest, res) => {
+  try {
+    const roleCheck = checkManagerRole(req);
+    if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
+
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
+
+    const currentYear = new Date().getFullYear();
+    const priorYear = currentYear - 1;
+    const taxYear = req.query.taxYear ? parseInt(req.query.taxYear as string, 10) : priorYear;
+
+    // 1. Classify employees (W-2 vs 1099) for the current roster
+    const roster = await db
+      .select({
+        id: employees.id,
+        workerType: employees.workerType,
+        firstName: employees.firstName,
+        lastName: employees.lastName,
+      })
+      .from(employees)
+      .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
+
+    const w2Employees = roster.filter(e => (e.workerType || 'employee') !== 'contractor');
+    const contractorRoster = roster.filter(e => (e.workerType || 'employee') === 'contractor');
+
+    // 2. Scan prior-year payroll totals for contractors and find $600+ candidates
+    const FORM_1099_THRESHOLD = 600;
+    const yearStart = new Date(taxYear, 0, 1);
+    const yearEnd = new Date(taxYear, 11, 31, 23, 59, 59);
+
+    let contractorsAbove600 = 0;
+    const contractorDetails: Array<{ employeeId: string; name: string; totalPaid: number; requiresFiling: boolean }> = [];
+
+    for (const contractor of contractorRoster) {
+      try {
+        const totals = await db
+          .select({ totalPaid: sql<string>`COALESCE(SUM(${payrollEntries.grossPay}), 0)` })
+          .from(payrollEntries)
+          .innerJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))
+          .where(
+            and(
+              eq(payrollEntries.employeeId, contractor.id),
+              eq(payrollRuns.workspaceId, workspaceId),
+              gte(payrollRuns.periodStart, yearStart),
+              lte(payrollRuns.periodEnd, yearEnd),
+            )
+          );
+        const totalPaid = parseFloat(totals[0]?.totalPaid || '0');
+        const requiresFiling = totalPaid >= FORM_1099_THRESHOLD;
+        if (requiresFiling) contractorsAbove600 += 1;
+        contractorDetails.push({
+          employeeId: contractor.id,
+          name: `${contractor.firstName || ''} ${contractor.lastName || ''}`.trim(),
+          totalPaid,
+          requiresFiling,
+        });
+      } catch (err: unknown) {
+        log.warn('Tax center contractor total calc failed', { employeeId: contractor.id });
+      }
+    }
+
+    // 3. Generated forms for the tax year
+    const { employeeTaxForms } = await import('@shared/schema');
+    const forms = await db
+      .select()
+      .from(employeeTaxForms)
+      .where(
+        and(
+          eq(employeeTaxForms.workspaceId, workspaceId),
+          eq(employeeTaxForms.taxYear, taxYear),
+        )
+      );
+    const w2sGenerated = forms.filter(f => f.formType === 'w2').length;
+    const form1099sGenerated = forms.filter(f => f.formType === '1099').length;
+
+    // 4. Deadlines
+    const { taxFilingAssistanceService } = await import('../services/taxFilingAssistanceService');
+    const deadlines = taxFilingAssistanceService.getFilingDeadlines(taxYear);
+
+    // 5. Fees — pull tier discount and compute
+    const tierId = (await getWorkspaceTier(workspaceId)) as any;
+    const { getMiddlewareFees } = await import('@shared/billingConfig');
+    const fees = getMiddlewareFees(tierId);
+    const w2PerFormDollars = fees.taxForms.w2PerForm / 100;
+    const form1099PerFormDollars = fees.taxForms.form1099PerForm / 100;
+
+    return res.json({
+      taxYear,
+      employees: {
+        w2Count: w2Employees.length,
+        total1099Count: contractorRoster.length,
+        contractorsAbove600,
+        contractorDetails,
+      },
+      forms: {
+        w2sGenerated,
+        form1099sGenerated,
+        w2sExpected: w2Employees.length,
+        form1099sExpected: contractorsAbove600,
+      },
+      deadlines,
+      filingGuides: {
+        w2:       { url: 'https://www.ssa.gov/employer',              label: 'SSA Business Services Online' },
+        form1099: { url: 'https://www.irs.gov/filing/e-file-providers', label: 'IRS FIRE System' },
+        form941:  { url: 'https://www.eftps.gov',                     label: 'Electronic Federal Tax System (EFTPS)' },
+        texasTWC: { url: 'https://apps.twc.state.tx.us',              label: 'Texas Workforce Commission' },
+      },
+      fees: {
+        w2PerForm: w2PerFormDollars,
+        form1099PerForm: form1099PerFormDollars,
+        tierDiscountPercent: fees.tierDiscount,
+        estimatedTotal: +(w2Employees.length * w2PerFormDollars + contractorsAbove600 * form1099PerFormDollars).toFixed(2),
+      },
+      disclaimer: `${PLATFORM.name} is middleware — we generate and deliver tax forms but do not file them with the IRS, SSA, or state agencies. Verify all figures with your CPA or tax professional before filing.`,
+    });
+  } catch (error: unknown) {
+    log.error('Error fetching tax center data:', error);
+    res.status(500).json({ message: sanitizeError(error) || 'Failed to fetch tax center data' });
+  }
+});
+
 router.post("/calculate-taxes", async (req, res) => {
   try {
     const { grossWages, filingStatus, ytdWages } = req.body;

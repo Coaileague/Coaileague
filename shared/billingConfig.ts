@@ -1023,30 +1023,58 @@ export const BILLING = {
   // Designed to undercut QB, Gusto, Patriot, and Square on every line item.
   // ==========================================================================
   middlewareFees: {
+    // INVOICE PAYMENT PROCESSING
+    // Our cost: Stripe 2.9% + $0.30 per card / 0.8% max $5 ACH
+    // We charge: 3.4% + $0.50 card / 1.2% max $8 ACH
+    // Margin:    ~0.5% + $0.20 card / ~0.4% + $3 ACH
     invoiceProcessing: {
-      ratePercent: 2.9,
-      flatFeeCents: 25,
-      description: "Credit/debit card payment processing",
+      ratePercent: 3.4,
+      flatFeeCents: 50,
+      description: "Invoice payment processing — card",
     },
     achPayments: {
-      ratePercent: 1.0,
-      capCents: 1000,
-      description: "ACH bank transfer processing",
+      ratePercent: 1.2,
+      capCents: 800,
+      description: "Invoice payment processing — ACH bank transfer",
     },
+
+    // PAYROLL PROCESSING
+    // Our cost: Plaid ~$0.50–$1.00 per employee transfer
+    // We charge: $3.50 starter / $2.95 professional / $2.50 business (post-discount)
+    // Margin:    $2.50–$3.00 per employee per run
     payrollMiddleware: {
       baseMonthly: 0,
-      perEmployeeCents: 250,
-      description: "Per-employee payroll processing fee",
+      perEmployeeCents: 350,
+      description: "Payroll processing — per employee per run",
     },
+
+    // DIRECT DEPOSIT / STRIPE CONNECT PAYOUTS
+    // Our cost: Stripe Connect 0.25%
+    // We charge: 0.50% — double, covers cost + margin
     stripePayouts: {
-      ratePercent: 0.25,
-      description: "Direct-to-bank payout via Stripe Connect",
+      ratePercent: 0.50,
+      description: "Direct-to-bank payout processing",
     },
+
+    // TAX FORM FEES
+    // Our cost: ~$0 (we generate them internally)
+    // We charge per form at year-end
+    taxForms: {
+      w2PerForm: 500,         // $5.00 per W-2 generated + delivered
+      form1099PerForm: 300,   // $3.00 per 1099-NEC generated + delivered
+      form941Quarterly: 0,    // Included in payroll processing fee
+      description: "Year-end tax form generation and delivery",
+    },
+
+    // TIER DISCOUNTS — loyal customers pay less
     tierDiscounts: {
       free: 0,
+      trial: 0,
       starter: 0,
-      professional: 10,
-      enterprise: 20,
+      professional: 15,
+      business: 20,
+      enterprise: 25,
+      strategic: 30,
     } as Record<string, number>,
   },
 
@@ -1247,6 +1275,7 @@ export function getMiddlewareFees(tierId: TierKey) {
   const ach = BILLING.middlewareFees.achPayments;
   const payroll = BILLING.middlewareFees.payrollMiddleware;
   const payout = BILLING.middlewareFees.stripePayouts;
+  const taxForms = BILLING.middlewareFees.taxForms;
 
   return {
     invoiceProcessing: {
@@ -1267,6 +1296,12 @@ export function getMiddlewareFees(tierId: TierKey) {
     stripePayouts: {
       ratePercent: +(payout.ratePercent * (1 - discount / 100)).toFixed(2),
       description: payout.description,
+    },
+    taxForms: {
+      w2PerForm: Math.round(taxForms.w2PerForm * (1 - discount / 100)),
+      form1099PerForm: Math.round(taxForms.form1099PerForm * (1 - discount / 100)),
+      form941Quarterly: taxForms.form941Quarterly,
+      description: taxForms.description,
     },
     tierDiscount: discount,
   };

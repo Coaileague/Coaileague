@@ -169,32 +169,35 @@ export const BILLING = {
   ],
 
   // Payroll internal service fees (Professional+)
+  // Base per-employee fee: $3.50. Professional tier = $3.50 × 0.85 = $2.97.
+  // Business tier = $3.50 × 0.80 = $2.80. Year-end W-2 base $5.00 with same discounts.
   payrollFees: {
     professional: {
-      perEmployeePerRun: parseFloat(process.env.PAYROLL_FEE_PRO_PER_EMP  || '4.95'),
-      directDeposit:     parseFloat(process.env.PAYROLL_FEE_PRO_DD        || '0.25'),
-      taxFiling:         parseFloat(process.env.PAYROLL_FEE_PRO_TAX       || '49.00'),
-      yearEndForm:       parseFloat(process.env.PAYROLL_FEE_PRO_W2        || '5.00'),
+      perEmployeePerRun: parseFloat(process.env.PAYROLL_FEE_PRO_PER_EMP  || '2.97'),
+      directDeposit:     parseFloat(process.env.PAYROLL_FEE_PRO_DD       || '0.20'),
+      taxFiling:         parseFloat(process.env.PAYROLL_FEE_PRO_TAX      || '49.00'),
+      yearEndForm:       parseFloat(process.env.PAYROLL_FEE_PRO_W2       || '4.25'),
     },
     business: {
-      perEmployeePerRun: parseFloat(process.env.PAYROLL_FEE_BIZ_PER_EMP  || '3.95'),
-      directDeposit:     parseFloat(process.env.PAYROLL_FEE_BIZ_DD        || '0.20'),
-      taxFiling:         parseFloat(process.env.PAYROLL_FEE_BIZ_TAX       || '39.00'),
-      yearEndForm:       parseFloat(process.env.PAYROLL_FEE_BIZ_W2        || '4.00'),
+      perEmployeePerRun: parseFloat(process.env.PAYROLL_FEE_BIZ_PER_EMP  || '2.80'),
+      directDeposit:     parseFloat(process.env.PAYROLL_FEE_BIZ_DD       || '0.15'),
+      taxFiling:         parseFloat(process.env.PAYROLL_FEE_BIZ_TAX      || '39.00'),
+      yearEndForm:       parseFloat(process.env.PAYROLL_FEE_BIZ_W2       || '4.00'),
     },
   },
 
   // Invoicing collection fees (Professional+)
+  // Base card rate: 3.4% + $0.50. Base ACH: $0.80. Tier discounts applied.
   invoicingFees: {
     professional: {
-      cardRate:          parseFloat(process.env.INVOICE_FEE_PRO_CARD_RATE || '0.024'),
-      cardFixed:         parseFloat(process.env.INVOICE_FEE_PRO_CARD_FIXED|| '0.25'),
-      achPerTransaction: parseFloat(process.env.INVOICE_FEE_PRO_ACH       || '0.50'),
+      cardRate:          parseFloat(process.env.INVOICE_FEE_PRO_CARD_RATE || '0.0289'),
+      cardFixed:         parseFloat(process.env.INVOICE_FEE_PRO_CARD_FIXED|| '0.43'),
+      achPerTransaction: parseFloat(process.env.INVOICE_FEE_PRO_ACH       || '0.68'),
     },
     business: {
-      cardRate:          parseFloat(process.env.INVOICE_FEE_BIZ_CARD_RATE || '0.022'),
-      cardFixed:         parseFloat(process.env.INVOICE_FEE_BIZ_CARD_FIXED|| '0.20'),
-      achPerTransaction: parseFloat(process.env.INVOICE_FEE_BIZ_ACH       || '0.40'),
+      cardRate:          parseFloat(process.env.INVOICE_FEE_BIZ_CARD_RATE || '0.0272'),
+      cardFixed:         parseFloat(process.env.INVOICE_FEE_BIZ_CARD_FIXED|| '0.40'),
+      achPerTransaction: parseFloat(process.env.INVOICE_FEE_BIZ_ACH       || '0.64'),
     },
   },
 };

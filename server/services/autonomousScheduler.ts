@@ -4286,6 +4286,54 @@ export function startAutonomousScheduler() {
   });
   log.info('Trinity Compliance Expiry Monitor registered', { schedule: '0 6 * * *' });
 
+  // Annual 1099 contractor scan — runs Jan 1 at 6 AM.
+  // Flags prior-year contractors who exceeded $600 with a filing-deadline
+  // reminder to the org owner. Filing deadline: Jan 31.
+  registerJobInfo(
+    '1099 January Contractor Scan',
+    '0 6 1 1 *',
+    'Annual scan of prior-year contractor payroll for 1099-NEC filing candidates',
+    true,
+  );
+  cron.schedule('0 6 1 1 *', () => {
+    trackJobExecution('1099 January Contractor Scan', async () => {
+      const { run1099JanuaryScan } = await import('./billing/contractorTaxAutomationService');
+      const priorYear = new Date().getFullYear() - 1;
+      const result = await run1099JanuaryScan(priorYear);
+      emitAutomationEvent({
+        jobName: '1099 January Contractor Scan',
+        category: 'payroll',
+        success: true,
+        recordsProcessed: result.flagged,
+        details: result as any,
+      });
+    });
+  });
+  log.info('1099 January Contractor Scan registered', { schedule: '0 6 1 1 *' });
+
+  // Trinity tax deadline monitor — daily at 7 AM. Alerts org owners at
+  // 30/14/7/1 days before federal filing deadlines (W-2, 1099-NEC, 941, 940).
+  registerJobInfo(
+    'Trinity Tax Deadline Monitor',
+    '0 7 * * *',
+    'Daily tax filing deadline alerts (30/14/7/1 day warnings to owners)',
+    true,
+  );
+  cron.schedule('0 7 * * *', () => {
+    trackJobExecution('Trinity Tax Deadline Monitor', async () => {
+      const { runTaxDeadlineMonitor } = await import('./trinity/workflows/taxDeadlineMonitor');
+      const result = await runTaxDeadlineMonitor();
+      emitAutomationEvent({
+        jobName: 'Trinity Tax Deadline Monitor',
+        category: 'compliance',
+        success: result.errors.length === 0,
+        recordsProcessed: result.notified,
+        details: result as any,
+      });
+    });
+  });
+  log.info('Trinity Tax Deadline Monitor registered', { schedule: '0 7 * * *' });
+
   // Trinity payroll anomaly scan — hourly while approvals are possible. Scans
   // pending runs; each gets a severity-graded response.
   registerJobInfo(
