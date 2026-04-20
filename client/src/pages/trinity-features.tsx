@@ -501,6 +501,139 @@ const AI_CARDS = [
   },
 ];
 
+// ─── Elite Feature Pricing Showcase ──────────────────────────────────────────
+
+const ELITE_FEATURES_SHOWCASE: Array<{
+  name: string;
+  human: string;
+  trinity: string;
+  ratio: string;
+  blurb: string;
+}> = [
+  {
+    name: "RFP & Proposal Generation",
+    human: "$3,500–$7,500 / proposal (firm)",
+    trinity: "$149–$499 / proposal",
+    ratio: "4.3–6.6% of firm cost",
+    blurb: "Full PDF-ready proposal: research, scope, staffing, compliance, pricing, and why-choose-us — tailored to the bid.",
+  },
+  {
+    name: "Contract Analysis",
+    human: "$1,750–$6,000 / review (attorney)",
+    trinity: "$89–$189 / contract",
+    ratio: "5–5.4% of attorney cost",
+    blurb: "Line-by-line liability flagging, missing-protection callouts, and auto-redlines against PSB requirements.",
+  },
+  {
+    name: "Compliance Audit Report",
+    human: "$2,000–$10,000 / audit (consultant)",
+    trinity: "$129–$199 / report",
+    ratio: "1.5–10% of consultant cost",
+    blurb: "Full audit-readiness report with compliance score, findings, and auditor-ready exhibit index.",
+  },
+  {
+    name: "Regulatory Filing Packet",
+    human: "$5,000–$10,000 / packet",
+    trinity: "$149–$349 / packet",
+    ratio: "1.5–7% of consultant cost",
+    blurb: "Complete evidence package for PSB/TCOLE audits. One violation avoided pays for this 100× over.",
+  },
+  {
+    name: "Incident Investigation Report",
+    human: "$500–$2,500 / report (attorney)",
+    trinity: "$29–$39 / report",
+    ratio: "1.2–7.8% of attorney cost",
+    blurb: "Court-ready narrative with timeline, root cause, and officer conduct assessment for insurance and litigation.",
+  },
+  {
+    name: "Strategic Multi-Site Scheduling",
+    human: "$8–$15 / shift (dispatcher labor)",
+    trinity: "$0.15–$0.25 / shift over quota",
+    ratio: "~2% of dispatcher cost",
+    blurb: "Profit-optimized scheduling across every site simultaneously — included in Enterprise.",
+  },
+  {
+    name: "Employment Verification Letter",
+    human: "$50–$200 / letter (attorney)",
+    trinity: "$3–$5 / letter",
+    ratio: "1.5–10% of attorney cost",
+    blurb: "FCRA-bounded disclosure letter with manager approve/deny routing. See CLAUDE.md §P.",
+  },
+  {
+    name: "Officer Performance Review",
+    human: "$150–$400 / review (HR writer)",
+    trinity: "$9–$19 / review",
+    ratio: "3.5–13% of HR writer cost",
+    blurb: "Structured review narrative from 12 months of shift, attendance, incident, and compliance data.",
+  },
+  {
+    name: "Document Deep Analysis",
+    human: "$50–$150 / document (manual)",
+    trinity: "$5–$9 / document",
+    ratio: "4.7–18% of manual review",
+    blurb: "Extract key data, flag issues, and produce an action-item summary from any uploaded document.",
+  },
+  {
+    name: "Client Profitability Analysis",
+    human: "$500–$2,000 / analysis (CFO)",
+    trinity: "$39–$49 / analysis",
+    ratio: "2.5–10% of CFO cost",
+    blurb: "True per-client P&L with repricing, scope, or exit recommendations.",
+  },
+];
+
+function EliteFeaturesShowcase() {
+  return (
+    <section className="border-t border-border py-14 bg-muted/30" data-testid="section-elite-features-showcase">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="text-center mb-10">
+          <Badge variant="secondary" className="mb-3">Elite Features — April 2026</Badge>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+            Priced at 5–8% of What a Human Professional Charges
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Every elite price is anchored to two numbers: what a human professional charges for the same work,
+            and what winning that work is worth. Trinity delivers the output at a deep discount — so it's obvious
+            value, not a hobby fee.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {ELITE_FEATURES_SHOWCASE.map((f) => (
+            <Card key={f.name} className="bg-card border-border" data-testid={`elite-card-${f.name.replace(/\s+/g, '-').toLowerCase()}`}>
+              <CardContent className="p-5 space-y-3">
+                <h3 className="text-base font-semibold text-foreground">{f.name}</h3>
+                <p className="text-xs text-muted-foreground">{f.blurb}</p>
+                <div className="space-y-1.5 pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Human cost</span>
+                    <span className="font-mono text-foreground/70">{f.human}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Trinity</span>
+                    <span className="font-mono font-semibold text-primary">{f.trinity}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                    <span>Ratio</span>
+                    <span>{f.ratio}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-8 p-5 rounded-md border border-primary/30 bg-primary/5 text-center">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">Enterprise tier:</span> every elite feature unlimited — included.
+            A 50-officer company bidding 12 RFPs/year saves <span className="font-mono text-primary">$57,010/year</span> on RFPs alone.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Pricing teaser ───────────────────────────────────────────────────────────
 
 function PricingTeaser() {
@@ -814,6 +947,9 @@ export default function TrinityFeatures() {
           visual={<VoiceMock />}
           reverse
         />
+
+        {/* Elite feature pricing showcase */}
+        <EliteFeaturesShowcase />
 
         {/* Pricing teaser */}
         <PricingTeaser />

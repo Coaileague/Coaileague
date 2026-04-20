@@ -40,9 +40,20 @@ export interface PremiumFeatureDefinition {
     free: number;
     starter: number;
     professional: number;
+    business?: number;
     enterprise: number;
   };
-  
+
+  // Elite per-tier USD surcharge (cents) — charged per additional use after the tier's
+  // monthly included quota is exhausted. See Section: Elite Feature Pricing (April 2026).
+  // A value of 0 on enterprise signals "included / unlimited".
+  eliteSurchargeCents?: {
+    starter?: number;
+    professional?: number;
+    business?: number;
+    enterprise?: number;
+  };
+
   // Add-on Support
   availableAsAddon: boolean;
   addonPricePerMonth?: number;
@@ -199,20 +210,27 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
 
   "trinity_strategic_optimization": {
     id: "trinity_strategic_optimization",
-    name: "Trinity Strategic Optimization",
-    description: "Profit-first scheduling algorithm with demand forecasting and labor cost optimization",
+    name: "Strategic Multi-Site Scheduling",
+    description: "Profit-first multi-agent scheduling across ALL sites — certifications, overtime exposure, travel time, guard preferences, client requirements, profitability targets. Standard scheduling is included in every tier; this is the strategic + profit-optimized tier.",
     category: "ai_automation",
     featureType: "elite",
     minimumTier: "professional",
     includedInTiers: ["enterprise"],
-    creditCost: 5, // 5 credits per shift scheduled (profit-optimized runs cost more per shift)
+    creditCost: 5, // fallback per-shift credit cost for below-tier access
     billingMode: "per_shift",
     creditCostUnit: "per shift scheduled",
     monthlyLimits: {
       free: 0,
       starter: 0,
-      professional: 300, // ~75 shifts/week via profit-optimized scheduling
-      enterprise: 1500,  // ~375 shifts/week via profit-optimized scheduling
+      professional: 300,   // 300 strategic shifts/month included
+      business: 1000,      // 1,000 strategic shifts/month included
+      enterprise: -1,      // Unlimited — included in Enterprise
+    },
+    // Per-shift USD surcharge when monthly quota is exceeded
+    eliteSurchargeCents: {
+      professional: 25,    // $0.25/shift over 300
+      business: 15,        // $0.15/shift over 1,000
+      enterprise: 0,       // Included, unlimited
     },
     availableAsAddon: true,
     addonPricePerMonth: 99,
@@ -227,20 +245,28 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
 
   "claude_contract_analysis": {
     id: "claude_contract_analysis",
-    name: "Claude Contract Analysis",
-    description: "Advanced contract review with risk assessment, compliance checking, and negotiation suggestions",
+    name: "Trinity Contract Analysis",
+    description: "Reads full contracts, flags liability clauses, unfavorable terms, missing protections, and ambiguous language. Compares against Texas PSB and target-state requirements and produces line-by-line redlines. Multi-model: Claude for legal reasoning, Gemini for compliance cross-check.",
     category: "contracts",
     featureType: "elite",
-    minimumTier: "professional",
+    minimumTier: "starter",
     includedInTiers: ["enterprise"],
-    creditCost: 20, // 20 credits per document
+    creditCost: 20, // fallback per-document credit cost for below-tier access
     billingMode: "per_document",
     creditCostUnit: "per contract analyzed",
     monthlyLimits: {
       free: 0,
-      starter: 0,
-      professional: 5,
-      enterprise: 25,
+      starter: 0,          // pay per use at $89
+      professional: 2,     // 2 free/month
+      business: 5,         // 5 free/month
+      enterprise: -1,      // unlimited
+    },
+    // Human attorney: $1,750–$3,500/contract. Trinity: 5% of attorney fee.
+    eliteSurchargeCents: {
+      starter: 8900,       // $89 per additional
+      professional: 12900, // $129 per additional
+      business: 18900,     // $189 per additional
+      enterprise: 0,       // Included, unlimited
     },
     availableAsAddon: true,
     addonPricePerMonth: 149,
@@ -248,6 +274,293 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
     badgeLabel: "Elite",
     badgeColor: "gradient",
     icon: "FileSearch",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  // =========================================================================
+  // ELITE FEATURES — April 2026 pricing anchored to human/firm cost
+  // 1 credit = $0.01. eliteSurchargeCents holds per-tier USD cents per additional use
+  // after the tier's monthly included quota is exhausted. creditCost is retained
+  // as a fallback for below-minimum-tier credit-based access.
+  // =========================================================================
+
+  "trinity_rfp_generation": {
+    id: "trinity_rfp_generation",
+    name: "Trinity RFP & Proposal Generation",
+    description: "Reads the RFP document, researches the client/project, pulls your company's past performance data, and generates executive summary, scope response, staffing plan, compliance section, pricing narrative, tech section, and why-choose-us — all tailored to this specific bid. Multi-phase: research → draft → validate → refine. Uses Claude for strategic reasoning, Gemini for data synthesis. Full PDF-ready proposal.",
+    category: "contracts",
+    featureType: "elite",
+    minimumTier: "starter",
+    includedInTiers: ["enterprise"],
+    creditCost: 30, // fallback per-proposal credit cost for below-tier access
+    billingMode: "per_document",
+    creditCostUnit: "per proposal generated",
+    monthlyLimits: {
+      free: 0,
+      starter: 0,
+      professional: 2,   // 2 free/month
+      business: 5,       // 5 free/month
+      enterprise: -1,    // unlimited
+    },
+    // Human firm: $3,500–$7,500/proposal. Trinity: 4.3–6.6% of firm fee.
+    eliteSurchargeCents: {
+      starter: 14900,      // $149 per additional
+      professional: 29900, // $299 per additional
+      business: 49900,     // $499 per additional
+      enterprise: 0,       // Included, unlimited
+    },
+    availableAsAddon: true,
+    addonPricePerMonth: 249,
+    addonUnlimitedCredits: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "FileText",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  "trinity_compliance_audit_report": {
+    id: "trinity_compliance_audit_report",
+    name: "Trinity Compliance Audit Report",
+    description: "Scans all officers' licenses, certs, training records, and incident history. Cross-references against Texas PSB and any additional state requirements. Produces a full audit-readiness report with compliance score, findings, corrective action plan, and auditor-ready exhibit index.",
+    category: "compliance",
+    featureType: "elite",
+    minimumTier: "starter",
+    includedInTiers: ["enterprise"],
+    creditCost: 20,
+    billingMode: "per_document",
+    creditCostUnit: "per audit report generated",
+    monthlyLimits: {
+      free: 0,
+      starter: 0,
+      professional: 1,
+      business: 2,
+      enterprise: -1,
+    },
+    // Compliance consultant: $2,000–$10,000. Trinity: 1.5–10% of consultant fee.
+    eliteSurchargeCents: {
+      starter: 19900,      // $199 per additional
+      professional: 14900, // $149 per additional
+      business: 12900,     // $129 per additional
+      enterprise: 0,
+    },
+    availableAsAddon: true,
+    addonPricePerMonth: 199,
+    addonUnlimitedCredits: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "ClipboardCheck",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  "trinity_regulatory_filing_packet": {
+    id: "trinity_regulatory_filing_packet",
+    name: "Trinity Regulatory Filing Packet",
+    description: "Compiles the complete evidence package for a PSB/TCOLE/state regulatory audit. Organizes licenses, certs, post orders, incident reports, and training records. Generates cover memo, table of contents, and compliance narrative. Highest-value output — one violation avoided pays for this 100× over.",
+    category: "compliance",
+    featureType: "elite",
+    minimumTier: "professional",
+    includedInTiers: ["enterprise"],
+    creditCost: 40,
+    billingMode: "per_document",
+    creditCostUnit: "per regulatory packet generated",
+    monthlyLimits: {
+      free: 0,
+      starter: 0,
+      professional: 0,
+      business: 1,
+      enterprise: 3,
+    },
+    // Consultant: $5,000–$10,000. Trinity: 1.5–7% of consultant fee.
+    eliteSurchargeCents: {
+      professional: 34900, // $349 per packet
+      business: 24900,     // $249 per additional
+      enterprise: 14900,   // $149 per additional after 3 free
+    },
+    availableAsAddon: true,
+    addonPricePerMonth: 349,
+    addonUnlimitedCredits: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "FolderLock",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  "trinity_incident_investigation_report": {
+    id: "trinity_incident_investigation_report",
+    name: "Trinity Incident Investigation Report",
+    description: "Reads the incident record, officer notes, witness statements, GPS data, and camera timestamps. Writes a professionally structured narrative in the correct legal format — timeline, root cause, officer conduct assessment, recommendations. Used for insurance claims, litigation, and client disputes.",
+    category: "operations",
+    featureType: "elite",
+    minimumTier: "starter",
+    includedInTiers: ["business", "enterprise"],
+    creditCost: 8,
+    billingMode: "per_document",
+    creditCostUnit: "per investigation report generated",
+    monthlyLimits: {
+      free: 0,
+      starter: 2,
+      professional: 10,
+      business: -1,
+      enterprise: -1,
+    },
+    // Attorney-drafted: $500–$2,500. Trinity: 1.2–7.8% of attorney cost.
+    eliteSurchargeCents: {
+      starter: 3900,       // $39 per additional
+      professional: 2900,  // $29 per additional
+      business: 0,         // Unlimited
+      enterprise: 0,       // Unlimited
+    },
+    availableAsAddon: true,
+    addonPricePerMonth: 79,
+    addonUnlimitedCredits: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "AlertOctagon",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  "trinity_employment_verification_letter": {
+    id: "trinity_employment_verification_letter",
+    name: "Trinity Employment Verification Letter",
+    description: "Generates an FCRA-compliant employment verification letter with correct disclosures, FCRA-allowed data only, and an employer signature block. Routes to management for approve/deny. Delivers a formatted PDF. See CLAUDE.md §P for the bounded disclosure contract.",
+    category: "hr",
+    featureType: "elite",
+    minimumTier: "starter",
+    includedInTiers: ["enterprise"],
+    creditCost: 3,
+    billingMode: "per_document",
+    creditCostUnit: "per verification letter",
+    monthlyLimits: {
+      free: 0,
+      starter: 3,
+      professional: 10,
+      business: 50,
+      enterprise: -1,
+    },
+    // Attorney-drafted: $50–$200. Trinity: 1.5–10% of attorney cost.
+    eliteSurchargeCents: {
+      starter: 500,        // $5 per additional
+      professional: 400,   // $4 per additional
+      business: 300,       // $3 per additional
+      enterprise: 0,
+    },
+    availableAsAddon: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "Mail",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  "trinity_officer_performance_review": {
+    id: "trinity_officer_performance_review",
+    name: "Trinity Officer Performance Review",
+    description: "Analyzes 12 months of shift data, attendance, incident involvement, compliance record, supervisor notes, and client feedback. Produces a structured annual/quarterly review narrative with development recommendations.",
+    category: "hr",
+    featureType: "elite",
+    minimumTier: "starter",
+    includedInTiers: ["enterprise"],
+    creditCost: 3,
+    billingMode: "per_document",
+    creditCostUnit: "per performance review",
+    monthlyLimits: {
+      free: 0,
+      starter: 0,
+      professional: 5,
+      business: 25,
+      enterprise: -1,
+    },
+    // HR writer: $150–$400 per review. Trinity: 3.5–13% of HR cost.
+    eliteSurchargeCents: {
+      starter: 1900,       // $19 per additional
+      professional: 1400,  // $14 per additional
+      business: 900,       // $9 per additional
+      enterprise: 0,
+    },
+    availableAsAddon: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "Award",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  "trinity_document_deep_analysis": {
+    id: "trinity_document_deep_analysis",
+    name: "Trinity Document Deep Analysis",
+    description: "Reads any uploaded document (contract, insurance cert, license, inspection report), extracts key data, flags issues, and produces a structured summary with action items.",
+    category: "contracts",
+    featureType: "elite",
+    minimumTier: "starter",
+    includedInTiers: ["enterprise"],
+    creditCost: 5,
+    billingMode: "per_document",
+    creditCostUnit: "per document analyzed",
+    monthlyLimits: {
+      free: 0,
+      starter: 3,
+      professional: 10,
+      business: 50,
+      enterprise: -1,
+    },
+    // Manual review: $50–$150. Trinity: 4.7–18% of manual cost.
+    eliteSurchargeCents: {
+      starter: 900,        // $9 per additional
+      professional: 700,   // $7 per additional
+      business: 500,       // $5 per additional
+      enterprise: 0,
+    },
+    availableAsAddon: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "FileSearch",
+    enabled: true,
+    betaOnly: false,
+    requiresSetup: false,
+  },
+
+  "trinity_client_profitability_analysis": {
+    id: "trinity_client_profitability_analysis",
+    name: "Trinity Client Profitability Analysis",
+    description: "Calculates true per-client profitability including guard cost, overhead allocation, overtime, travel, equipment, and invoice collection rate. Produces recommendations on contract repricing, scope adjustment, or exit.",
+    category: "financial",
+    featureType: "elite",
+    minimumTier: "professional",
+    includedInTiers: ["enterprise"],
+    creditCost: 10,
+    billingMode: "per_document",
+    creditCostUnit: "per client profitability analysis",
+    monthlyLimits: {
+      free: 0,
+      starter: 0,
+      professional: 2,
+      business: 5,
+      enterprise: -1,
+    },
+    // CFO/consultant: $500–$2,000. Trinity: 2.5–10% of consultant cost.
+    eliteSurchargeCents: {
+      professional: 4900,  // $49 per additional
+      business: 3900,      // $39 per additional
+      enterprise: 0,
+    },
+    availableAsAddon: true,
+    addonPricePerMonth: 99,
+    addonUnlimitedCredits: false,
+    badgeLabel: "Elite",
+    badgeColor: "gradient",
+    icon: "TrendingUp",
     enabled: true,
     betaOnly: false,
     requiresSetup: false,
