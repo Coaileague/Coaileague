@@ -1667,32 +1667,22 @@ router.post('/team/agents', async (req: AuthenticatedRequest, res) => {
 // RECYCLED CREDITS PIPELINE — /api/platform/credits
 // ============================================================================
 
-// GET /api/platform/credits/recycled
-// Returns platform pool balance and deposit history from forfeited tenant credits
-router.get('/credits/recycled', async (req: AuthenticatedRequest, res) => {
-  try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const { getRecycledCreditsStats } = await import('../services/billing/recycledCreditsPipeline');
-    const stats = await getRecycledCreditsStats();
-    res.json(stats);
-  } catch (err: unknown) {
-    res.status(500).json({ error: 'Failed to fetch recycled credits stats', details: sanitizeError(err) });
-  }
+// GET /api/platform/credits/recycled — RETIRED
+// Credits are not recycled. Token usage rolls over naturally via token_usage_monthly.
+router.get('/credits/recycled', async (_req: AuthenticatedRequest, res) => {
+  res.status(410).json({
+    error: 'Recycled credits pipeline retired — tokens are not recycled.',
+    stats: { pool: 0, deposits: [] },
+  });
 });
 
-// POST /api/platform/credits/recycled/trigger
-// Manually trigger a recycled credits sweep (root_admin only, for testing)
-router.post('/credits/recycled/trigger', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { resetMonthlyCredits } = await import('../services/billing/creditResetCron');
-    // Only sweep, don't reset balances — run a targeted sweep of current cycle
-    const { sweepRecycledCredits } = await import('../services/billing/recycledCreditsPipeline');
-    // workspace_credits table dropped (Phase 16) — sweep is a no-op
-    const result = await sweepRecycledCredits([]);
-    res.json({ success: true, result });
-  } catch (err: unknown) {
-    res.status(500).json({ error: 'Sweep failed', details: sanitizeError(err) });
-  }
+// POST /api/platform/credits/recycled/trigger — RETIRED
+router.post('/credits/recycled/trigger', requirePlatformAdmin, async (_req: AuthenticatedRequest, res) => {
+  res.status(410).json({
+    error: 'Recycled credits sweep retired — no action taken.',
+    success: true,
+    result: null,
+  });
 });
 
 // ============================================================================

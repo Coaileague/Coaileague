@@ -42,7 +42,7 @@ import { workRequestParser, type ParsedWorkRequest } from './workRequestParser';
 import { escalationChainService, type EscalationState } from './escalationChainService';
 import { clientConfirmationService, type ConfirmationEmailData } from './clientConfirmationService';
 import { premiumFeatureGating } from '../premiumFeatureGating';
-import { CREDIT_COSTS } from '../billing/creditManager';
+import { TOKEN_COSTS } from '../billing/tokenManager';
 import { emailService } from '../emailService';
 import { universalStepLogger } from '../orchestration/universalStepLogger';
 import { MANAGER_ROLES } from '@shared/platformConfig';
@@ -215,7 +215,7 @@ class TrinityStaffingOrchestrator {
         }
         
         // Check credits
-        const deductResult = await premiumFeatureGating.deductCredits(
+        const deductResult = await premiumFeatureGating.recordUsage(
           workspaceId,
           'trinity_staffing_request_parse',
           // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -378,7 +378,7 @@ class TrinityStaffingOrchestrator {
       }
     }
     
-    const deductResult = await premiumFeatureGating.deductCredits(
+    const deductResult = await premiumFeatureGating.recordUsage(
       workflow.workspaceId,
       'trinity_staffing_auto_assign',
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -572,7 +572,7 @@ class TrinityStaffingOrchestrator {
       }
     }
     
-    const deductResult = await premiumFeatureGating.deductCredits(
+    const deductResult = await premiumFeatureGating.recordUsage(
       workflow.workspaceId,
       'trinity_staffing_confirmation',
       // @ts-expect-error — TS migration: fix in refactoring sprint

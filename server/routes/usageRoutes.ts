@@ -112,17 +112,18 @@ async function resolveBillingWorkspace(workspaceId: string): Promise<{ billingWo
   return { billingWorkspaceId: workspaceId, isSubOrg: false };
 }
 
-router.get('/balance', requireAuth, async (req: AuthenticatedRequest, res) => {
+// GET /api/usage/tokens — canonical token usage endpoint.
+// Legacy aliases (/balance, also GET /api/credits/balance via route mount)
+// return the same token-native payload.
+router.get(['/tokens', '/balance'], requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, error } = await resolveActiveWorkspace(req);
     if (!workspaceId) {
       return res.status(400).json({ error: error || 'No workspace found' });
     }
 
-    // Resolve billing workspace (parent for sub-orgs with shared pool)
     const { billingWorkspaceId, isSubOrg } = await resolveBillingWorkspace(workspaceId);
 
-    // Load workspace metadata from the billing owner
     const [workspace] = await db.select().from(workspaces)
       .where(eq(workspaces.id, billingWorkspaceId)).limit(1);
     if (!workspace) {
@@ -132,66 +133,34 @@ router.get('/balance', requireAuth, async (req: AuthenticatedRequest, res) => {
     const tier = (workspace.subscriptionTier || 'free').toLowerCase();
     const allowance = getTokenAllowance(tier);
     const isUnlimited = allowance === null || !!(workspace as any).founderExemption;
-
     const nextReset = getNextMonthStart();
+    const tokenSummary = await getMonthlyTokenSummary(billingWorkspaceId, tier);
 
-    // Short-circuit for unlimited tiers (strategic/grandfathered/founderExemption)
     if (isUnlimited) {
-      const tokenSummary = await getMonthlyTokenSummary(billingWorkspaceId, tier);
       return res.json({
-        id: 'unlimited',
         workspaceId: billingWorkspaceId,
-        // Token fields (authoritative)
         tokensUsed: tokenSummary.totalTokensUsed,
         tokensAllowance: null,
         overageTokens: 0,
         overageAmountCents: 0,
-        // Legacy-compat shape (used by existing UI)
-        currentBalance: 0,
-        monthlyAllocation: -1,
-        totalCreditsEarned: 0,
-        totalCreditsSpent: tokenSummary.totalTokensUsed,
-        totalCreditsPurchased: 0,
-        creditsUsedThisPeriod: tokenSummary.totalTokensUsed,
-        periodStartingBalance: 1,
-        lastResetAt: new Date().toISOString(),
-        nextResetAt: nextReset.toISOString(),
-        isActive: true,
-        isSuspended: false,
+        unlimited: true,
         subscriptionTier: tier,
-        unlimitedCredits: true,
+        periodEnd: nextReset.toISOString(),
         isSubOrg,
         actorWorkspaceId: isSubOrg ? workspaceId : null,
       });
     }
 
-    // Token-based balance from token_usage_monthly
-    const tokenSummary = await getMonthlyTokenSummary(billingWorkspaceId, tier);
-    const remaining = Math.max(0, (allowance ?? 0) - tokenSummary.totalTokensUsed);
-
     res.json({
-      id: billingWorkspaceId,
       workspaceId: billingWorkspaceId,
-      // Token fields (authoritative)
       tokensUsed: tokenSummary.totalTokensUsed,
       tokensAllowance: allowance,
       overageTokens: tokenSummary.overageTokens,
       overageAmountCents: tokenSummary.overageAmountCents,
       overageRateCentsPer100k: TOKEN_OVERAGE_RATE_CENTS_PER_100K,
-      // Legacy-compat shape (used by existing UI)
-      currentBalance: remaining,
-      monthlyAllocation: allowance ?? 0,
-      totalCreditsEarned: allowance ?? 0,
-      totalCreditsSpent: tokenSummary.totalTokensUsed,
-      totalCreditsPurchased: 0,
-      creditsUsedThisPeriod: tokenSummary.totalTokensUsed,
-      periodStartingBalance: allowance ?? 0,
-      lastResetAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString(),
-      nextResetAt: nextReset.toISOString(),
-      isActive: true,
-      isSuspended: false,
+      unlimited: false,
       subscriptionTier: tier,
-      unlimitedCredits: false,
+      periodEnd: nextReset.toISOString(),
       isSubOrg,
       actorWorkspaceId: isSubOrg ? workspaceId : null,
     });
@@ -201,7 +170,8 @@ router.get('/balance', requireAuth, async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get('/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, res) => {
+// GET /api/usage/token-breakdown — per-feature monthly usage (legacy alias: /usage-breakdown).
+router.get(['/token-breakdown', '/usage-breakdown'], requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, error } = await resolveActiveWorkspace(req);
     if (!workspaceId) {
@@ -211,11 +181,10 @@ router.get('/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, re
     const { billingWorkspaceId } = await resolveBillingWorkspace(workspaceId);
     const monthYear = getCurrentMonthYear();
 
-    // Return per-action token usage from token_usage_log for the current month
     const result = await pool.query(
       `SELECT action_type AS "featureKey",
               action_type AS "featureName",
-              COALESCE(SUM(tokens_total), 0)::bigint AS "totalCredits",
+              COALESCE(SUM(tokens_total), 0)::bigint AS "tokensUsed",
               COUNT(*)::int AS "operationCount"
        FROM token_usage_log
        WHERE workspace_id = $1
@@ -228,7 +197,7 @@ router.get('/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, re
     res.json(result.rows.map((r: any) => ({
       featureKey: r.featureKey,
       featureName: r.featureName,
-      totalCredits: Number(r.totalCredits),
+      tokensUsed: Number(r.tokensUsed),
       operationCount: Number(r.operationCount),
     })));
   } catch (error) {
@@ -237,7 +206,8 @@ router.get('/usage-breakdown', requireAuth, async (req: AuthenticatedRequest, re
   }
 });
 
-router.get('/transactions', requireAuth, async (req: AuthenticatedRequest, res) => {
+// GET /api/usage/token-log — per-entry token usage history (legacy alias: /transactions).
+router.get(['/token-log', '/transactions'], requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -247,7 +217,6 @@ router.get('/transactions', requireAuth, async (req: AuthenticatedRequest, res) 
       return res.status(400).json({ error: error || 'No workspace found' });
     }
 
-    // Validate role — must be owner/co-owner to view full token history
     const { resolveWorkspaceForUser } = await import('../rbac');
     const { role } = await resolveWorkspaceForUser(userId, workspaceId);
     if (role !== 'org_owner' && role !== 'co_owner') {
@@ -259,17 +228,15 @@ router.get('/transactions', requireAuth, async (req: AuthenticatedRequest, res) 
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
     const offset = parseInt(req.query.offset as string) || 0;
 
-    // Return token usage log entries as "transactions"
     const result = await pool.query(
       `SELECT id,
               workspace_id AS "workspaceId",
               user_id AS "userId",
-              action_type AS "transactionType",
-              tokens_total AS "amount",
-              0 AS "balanceAfter",
+              action_type AS "actionType",
+              tokens_total AS "tokensUsed",
               action_type AS "featureKey",
               feature_name AS "featureName",
-              model_used AS "description",
+              model_used AS "modelUsed",
               timestamp AS "createdAt"
        FROM token_usage_log
        WHERE workspace_id = $1
@@ -282,83 +249,35 @@ router.get('/transactions', requireAuth, async (req: AuthenticatedRequest, res) 
       id: r.id,
       workspaceId: r.workspaceId,
       userId: r.userId,
-      transactionType: r.transactionType,
-      amount: Number(r.amount),
-      balanceAfter: 0,
+      actionType: r.actionType,
+      tokensUsed: Number(r.tokensUsed),
       featureKey: r.featureKey,
       featureName: r.featureName,
-      description: r.description,
+      modelUsed: r.modelUsed,
       createdAt: r.createdAt,
     })));
   } catch (error) {
     log.error('[API] Error fetching token usage history:', error);
-    res.status(500).json({ message: 'Failed to fetch transactions' });
+    res.status(500).json({ message: 'Failed to fetch token log' });
   }
 });
 
-router.get('/packs', requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    // creditPacks table dropped (Phase 16)
-    res.json([]);
-  } catch (error) {
-    log.error('[API] Error fetching credit packs:', error);
-    res.status(500).json({ message: 'Failed to fetch credit packs' });
-  }
+// /packs and /purchase removed — CoAIleague does not sell credits. Token
+// overages are billed automatically on the monthly invoice.
+// Legacy UI calls return 410 Gone with a clear deprecation message.
+router.get('/packs', requireAuth, async (_req: AuthenticatedRequest, res) => {
+  res.status(410).json({
+    error: 'Credit packs are no longer sold. AI usage is billed as token overage on the monthly invoice.',
+    migration: 'Use /api/usage/tokens for current monthly token usage.',
+    packs: [],
+  });
 });
 
-router.post('/purchase', requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-
-    const { workspaceId, error } = await resolveActiveWorkspace(req);
-    if (!workspaceId) {
-      return res.status(400).json({ error: error || 'No workspace found' });
-    }
-
-    // Only owner/co-owner of the billing workspace can purchase
-    const { billingWorkspaceId } = await resolveBillingWorkspace(workspaceId);
-    const { resolveWorkspaceForUser } = await import('../rbac');
-    const { role } = await resolveWorkspaceForUser(userId, billingWorkspaceId);
-    if (role !== 'org_owner' && role !== 'co_owner') {
-      return res.status(403).json({ error: 'Only the organization owner can purchase credits' });
-    }
-
-    const { creditPackId, successUrl, cancelUrl } = req.body;
-    if (!creditPackId || !successUrl || !cancelUrl) {
-      return res.status(400).json({ error: 'Missing required fields: creditPackId, successUrl, cancelUrl' });
-    }
-
-    const isValidRedirect = (url: string) => {
-      if (url.startsWith('/')) return true;
-      try {
-        const parsed = new URL(url);
-        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
-        const devDomain = process.env.APP_BASE_URL;
-        if (devDomain && (parsed.hostname === devDomain || parsed.hostname.endsWith(`.${devDomain}`))) return true;
-        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return true;
-        if (parsed.hostname.endsWith('.replit.app')) return true;
-        return false;
-      } catch { return false; }
-    };
-    if (!isValidRedirect(successUrl) || !isValidRedirect(cancelUrl)) {
-      return res.status(400).json({ error: 'Invalid redirect URL' });
-    }
-
-    const { creditPurchaseService } = await import('../services/billing/creditPurchase');
-    const session = await creditPurchaseService.createCheckoutSession({
-      workspaceId: billingWorkspaceId,
-      userId,
-      creditPackId,
-      successUrl,
-      cancelUrl,
-    });
-
-    res.json(session);
-  } catch (error) {
-    log.error('[API] Error creating credit purchase session:', error);
-    res.status(500).json({ message: 'Failed to create checkout session' });
-  }
+router.post('/purchase', requireAuth, async (_req: AuthenticatedRequest, res) => {
+  res.status(410).json({
+    error: 'Credit purchase is retired. AI usage is billed as monthly token overage.',
+    migration: 'Use /api/usage/tokens for current monthly token usage.',
+  });
 });
 
 export default router;

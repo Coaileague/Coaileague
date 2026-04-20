@@ -754,7 +754,7 @@ async function resolveInboundSmsInner(params: {
 
   // Token hard-cap pre-check — free/trial tenants at cap must not invoke AI.
   // aiMeteringService.checkUsageAllowedById is the same gate used by every
-  // AI provider through aiCreditGateway.preAuthorize(). Protected workspaces
+  // AI provider through aiTokenGateway.preAuthorize(). Protected workspaces
   // (platform + grandfathered) are internally bypassed by that service.
   let tokenCapExhausted = false;
   if (identity.workspaceId && identity.workspaceId !== 'platform') {

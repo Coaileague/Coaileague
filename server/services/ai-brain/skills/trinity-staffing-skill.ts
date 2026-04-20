@@ -245,7 +245,7 @@ export class TrinityStaffingSkill extends BaseSkill {
     payload: { emailId: string; subject: string; body: string; from: string; receivedAt?: Date }
   ): Promise<SkillResult<WorkRequest>> {
     try {
-      const deductionResult = await premiumFeatureGating.deductCredits(
+      const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_request_parse',
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -320,7 +320,7 @@ export class TrinityStaffingSkill extends BaseSkill {
     payload: { workRequest: WorkRequest; shiftId: string }
   ): Promise<SkillResult<EmployeeMatch[]>> {
     try {
-      const deductionResult = await premiumFeatureGating.deductCredits(
+      const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_auto_assign',
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -468,7 +468,7 @@ export class TrinityStaffingSkill extends BaseSkill {
     payload: { workRequest: WorkRequest; assignedEmployees: EmployeeMatch[]; shiftDetails: any }
   ): Promise<SkillResult<{ emailSent: boolean; confirmationId: string }>> {
     try {
-      const deductionResult = await premiumFeatureGating.deductCredits(
+      const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_confirmation',
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -604,7 +604,7 @@ Trinity Staffing Team
     payload: { shiftId: string; reason: string; notifyClient: boolean }
   ): Promise<SkillResult<{ notificationSent: boolean; replacementStarted: boolean }>> {
     try {
-      const deductionResult = await premiumFeatureGating.deductCredits(
+      const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_cancellation',
         // @ts-expect-error — TS migration: fix in refactoring sprint

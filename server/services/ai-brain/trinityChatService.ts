@@ -57,7 +57,7 @@ import { getTrinityPersonalityPrompt } from '../../trinity/personality';
 import { trinityContentGuardrails, GuardrailStatus } from './trinityContentGuardrails';
 import { trinityQuickBooksSnapshot } from './trinityQuickBooksSnapshot';
 import { orgDataPrivacyGuard } from '../privacy/orgDataPrivacyGuard';
-import { creditManager, CREDIT_COSTS, isUnlimitedCreditUser, UNLIMITED_CREDITS_BALANCE, getWorkspaceTierAllowance, TIER_MONTHLY_CREDITS } from '../billing/creditManager';
+import { tokenManager, TOKEN_COSTS, isUnlimitedTokenUser, getWorkspaceTierAllowance, TIER_TOKEN_ALLOCATIONS } from '../billing/tokenManager';
 import {
   buildSharedPersonalityBlock,
   buildToneGuidance,
@@ -744,7 +744,7 @@ class TrinityChatService {
         await this.recordTurn(session.id, 'assistant', chatResponse);
         await this.updateSessionActivity(session.id);
 
-        const balanceRemaining = await creditManager.getBalance(workspaceId);
+        const balanceRemaining = await tokenManager.getBalance(workspaceId);
         return {
           sessionId: session.id,
           response: chatResponse,
@@ -1328,13 +1328,13 @@ Do NOT skip steps — decompose fully before concluding.`;
       log.warn('[TrinityChatService] Tier lookup failed (non-fatal):', err?.message);
     }
     let balanceRemaining = 0;
-    let actualCreditsUsed = 2; // CREDIT_COSTS['trinity_chat'] = 2 (flat rate via geminiClient universal enforcement)
+    let actualCreditsUsed = 2; // TOKEN_COSTS['trinity_chat'] = 2 (flat rate via geminiClient universal enforcement)
     
-    // Credits are now deducted universally by geminiClient.generate() via creditManager
+    // Credits are now deducted universally by geminiClient.generate() via tokenManager
     // No manual deduction here to prevent double-charging
     // Just fetch the updated balance for display (non-fatal)
     try {
-      balanceRemaining = await creditManager.getBalance(workspaceId);
+      balanceRemaining = await tokenManager.getBalance(workspaceId);
     } catch (err: any) {
       log.warn('[TrinityChatService] Balance lookup failed (non-fatal):', err?.message);
     }

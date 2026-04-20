@@ -36,7 +36,7 @@ interface ROIData {
   totalTasks: number;
   fastModeTasks: number;
   normalModeTasks: number;
-  totalCreditsSpent: number;
+  totalTokensUsed: number;
   fastModeCredits: number;
   estimatedTimeSavedSeconds: number;
   estimatedMoneySaved: number;
@@ -250,7 +250,7 @@ export function FastModeROIDashboard({ workspaceId, className = '' }: FastModeRO
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Total Credits Spent</span>
-              <span className="font-medium">{roi.totalCreditsSpent}</span>
+              <span className="font-medium">{roi.totalTokensUsed}</span>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Fast Mode Credits</span>

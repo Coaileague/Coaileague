@@ -443,9 +443,9 @@ export default function SubscriptionDashboard() {
               testId="stat-period-end"
             />
             <Stat
-              label="Credits remaining"
+              label="Tokens remaining this month"
               value={String(sub?.credits.remaining ?? 0)}
-              testId="stat-credits-remaining"
+              testId="stat-tokens-remaining"
             />
           </div>
 

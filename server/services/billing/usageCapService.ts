@@ -1,7 +1,7 @@
 import { db } from '../../db';
 import { usageCaps } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
-import { creditManager, CREDIT_COSTS } from './creditManager';
+import { tokenManager, TOKEN_COSTS } from './tokenManager';
 
 const BILLING_CYCLE = () => {
   const now = new Date();
@@ -12,9 +12,9 @@ type CapField = 'aiScheduledShiftsUsed' | 'analyticsReportsUsed' | 'contractRevi
 type CapLimitField = 'aiScheduledShiftsCap' | 'analyticsReportsCap' | 'contractReviewsCap' | 'botInteractionsDailyCap';
 
 // Maps gateway feature keys → usage cap tracking fields.
-// creditCost uses the canonical CREDIT_COSTS rate for the associated feature key.
-// IMPORTANT: these must reference canonical keys from CREDIT_COSTS so rates stay in sync.
-const FEATURE_TO_CAP: Record<string, { used: CapField; cap: CapLimitField; creditKey: keyof typeof CREDIT_COSTS }> = {
+// creditCost uses the canonical TOKEN_COSTS rate for the associated feature key.
+// IMPORTANT: these must reference canonical keys from TOKEN_COSTS so rates stay in sync.
+const FEATURE_TO_CAP: Record<string, { used: CapField; cap: CapLimitField; creditKey: keyof typeof TOKEN_COSTS }> = {
   'ai_scheduling':      { used: 'aiScheduledShiftsUsed',  cap: 'aiScheduledShiftsCap',    creditKey: 'ai_scheduling' },
   'ai_schedule_shift':  { used: 'aiScheduledShiftsUsed',  cap: 'aiScheduledShiftsCap',    creditKey: 'ai_scheduling' },
   'analytics_report':   { used: 'analyticsReportsUsed',   cap: 'analyticsReportsCap',     creditKey: 'ai_analytics_report' },
@@ -89,8 +89,8 @@ export class UsageCapService {
     }
 
     // Over cap — charge credits from the canonical workspace credit pool
-    const creditCost = CREDIT_COSTS[mapping.creditKey] || 5;
-    const deductResult = await creditManager.deductCredits({
+    const creditCost = TOKEN_COSTS[mapping.creditKey] || 5;
+    const deductResult = await tokenManager.recordUsage({
       workspaceId: params.workspaceId,
       userId: params.userId || 'system-usage-cap',
       featureKey: mapping.creditKey,

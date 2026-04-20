@@ -24,7 +24,7 @@
 import crypto from 'crypto';
 import { GoogleGenerativeAI, GenerativeModel, FunctionDeclarationsTool, FunctionDeclaration, SchemaType, Content, Part } from "@google/generative-ai";
 import { aiGuardRails, type AIRequestContext } from '../../aiGuardRails';
-import { creditManager, CREDIT_COSTS, CREDIT_EXEMPT_FEATURES } from '../../billing/creditManager';
+import { tokenManager, TOKEN_COSTS, TOKEN_FREE_FEATURES } from '../../billing/tokenManager';
 import { db } from '../../../db';
 import {
   employeeCertifications,
@@ -2520,9 +2520,9 @@ export class UnifiedGeminiClient {
   ): Promise<{ allowed: boolean; errorMessage?: string }> {
     try {
       const safeFeatureKey = featureKey || 'ai_general';
-      const { aiCreditGateway } = await import('../../billing/aiCreditGateway');
+      const { aiTokenGateway } = await import('../../billing/aiTokenGateway');
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      const result = await aiCreditGateway.preAuthorize(workspaceId, userId, safeFeatureKey);
+      const result = await aiTokenGateway.preAuthorize(workspaceId, userId, safeFeatureKey);
       if (!result.authorized) {
         return { allowed: false, errorMessage: result.reason };
       }
@@ -2535,7 +2535,7 @@ export class UnifiedGeminiClient {
 
   /**
    * UNIVERSAL CREDIT ENFORCEMENT - Post-deduction after successful AI operation
-   * Routes through the single aiCreditGateway.finalizeBilling() gate.
+   * Routes through the single aiTokenGateway.finalizeBilling() gate.
    * No silent failures - all errors logged as BILLING_LEAK.
    */
   private async enforceCreditDeduction(
@@ -2545,10 +2545,10 @@ export class UnifiedGeminiClient {
     tokenData?: { inputTokens?: number; outputTokens?: number; model?: string }
   ): Promise<void> {
     try {
-      const { aiCreditGateway } = await import('../../billing/aiCreditGateway');
+      const { aiTokenGateway } = await import('../../billing/aiTokenGateway');
       const tokensTotal = (tokenData?.inputTokens || 0) + (tokenData?.outputTokens || 0);
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      await aiCreditGateway.finalizeBilling(workspaceId, userId, featureKey, tokensTotal, {
+      await aiTokenGateway.finalizeBilling(workspaceId, userId, featureKey, tokensTotal, {
         inputTokens: tokenData?.inputTokens || 0,
         outputTokens: tokenData?.outputTokens || 0,
         model: tokenData?.model || 'gemini',
@@ -2565,14 +2565,14 @@ export class UnifiedGeminiClient {
   ): Promise<void> {
     if (!workspaceId) return;
 
-    if (CREDIT_EXEMPT_FEATURES.has(featureKey)) return;
+    if (TOKEN_FREE_FEATURES.has(featureKey)) return;
 
-    const creditKey = (featureKey in CREDIT_COSTS) 
-      ? featureKey as keyof typeof CREDIT_COSTS 
-      : 'ai_general' as keyof typeof CREDIT_COSTS;
+    const creditKey = (featureKey in TOKEN_COSTS) 
+      ? featureKey as keyof typeof TOKEN_COSTS 
+      : 'ai_general' as keyof typeof TOKEN_COSTS;
 
     try {
-      const result = await creditManager.deductCredits({
+      const result = await tokenManager.recordUsage({
         workspaceId,
         userId: userId || 'system-gemini',
         featureKey: creditKey,

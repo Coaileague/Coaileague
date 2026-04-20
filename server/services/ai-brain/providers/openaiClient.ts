@@ -11,7 +11,7 @@
  */
 
 import OpenAI from 'openai';
-import { aiCreditGateway } from '../../billing/aiCreditGateway';
+import { aiTokenGateway } from '../../billing/aiTokenGateway';
 import { aiMeteringService } from '../../billing/aiMeteringService';
 import { createLogger } from '../../../lib/logger';
 const log = createLogger('openaiClient');
@@ -148,7 +148,7 @@ class OpenAIClient {
     const userId = request.context?.userId;
     const featureKey = request.context?.featureKey || 'ai_general';
 
-    const preAuth = await aiCreditGateway.preAuthorize(workspaceId, userId, featureKey);
+    const preAuth = await aiTokenGateway.preAuthorize(workspaceId, userId, featureKey);
     if (!preAuth.authorized) {
       throw new Error(preAuth.reason || 'Insufficient credits for OpenAI request');
     }
@@ -179,7 +179,7 @@ class OpenAIClient {
 
       this.recordSuccess(modelId, latencyMs);
 
-      await aiCreditGateway.finalizeBilling(workspaceId, userId, featureKey, inputTokens + outputTokens, {
+      await aiTokenGateway.finalizeBilling(workspaceId, userId, featureKey, inputTokens + outputTokens, {
         inputTokens,
         outputTokens,
         model: modelId,

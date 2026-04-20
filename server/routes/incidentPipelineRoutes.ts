@@ -6,7 +6,7 @@ import { ensureWorkspaceAccess } from "../middleware/workspaceScope";
 import { sanitizeError } from "../middleware/errorHandler";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { creditManager } from "../services/billing/creditManager";
+import { tokenManager } from "../services/billing/tokenManager";
 import { typedPool } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 const log = createLogger('IncidentPipelineRoutes');
@@ -294,7 +294,7 @@ incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWor
     if (!rawText) return res.status(400).json({ error: "No raw description to polish" });
 
     try {
-      await creditManager.deductCredits({
+      await tokenManager.recordUsage({
         workspaceId,
         userId,
         featureKey: "ai_document_processing",

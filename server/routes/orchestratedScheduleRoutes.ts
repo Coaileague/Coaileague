@@ -3,8 +3,8 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { automationExecutions, shifts, employees, workspaces } from '@shared/schema';
 import { eq, and, desc, gte } from 'drizzle-orm';
-import { creditManager, CREDIT_COSTS } from '../services/billing/creditManager';
-import { aiCreditGateway } from '../services/billing/aiCreditGateway';
+import { tokenManager, TOKEN_COSTS } from '../services/billing/tokenManager';
+import { aiTokenGateway } from '../services/billing/aiTokenGateway';
 import { automationOrchestration } from '../services/orchestration/automationOrchestration';
 import { platformEventBus } from '../services/platformEventBus';
 import { type AuthenticatedRequest } from '../rbac';
@@ -51,14 +51,14 @@ interface CreditPreCheckResult {
 
 async function creditPreCheck(
   workspaceId: string,
-  featureKey: keyof typeof CREDIT_COSTS,
+  featureKey: keyof typeof TOKEN_COSTS,
   userId?: string
 ): Promise<CreditPreCheckResult> {
-  const auth = await aiCreditGateway.preAuthorize(workspaceId, userId, featureKey);
+  const auth = await aiTokenGateway.preAuthorize(workspaceId, userId, featureKey);
   return {
     allowed: auth.authorized,
     balance: 0,
-    cost: auth.classification.creditCost,
+    cost: auth.classification.tokenCost,
     shortfall: 0,
   };
 }
@@ -95,7 +95,7 @@ router.post('/ai/fill-shift', async (req: Request, res: Response) => {
         // @ts-expect-error — TS migration: fix in refactoring sprint
         triggeredBy: 'user',
         billable: true,
-        creditCost: CREDIT_COSTS['ai_open_shift_fill'],
+        creditCost: TOKEN_COSTS['ai_open_shift_fill'],
         maxRetries: 2,
       },
       async () => {
@@ -161,7 +161,7 @@ router.post('/ai/fill-shift', async (req: Request, res: Response) => {
           aiConfidenceScore: String(assignment.confidence || 0.85),
         });
 
-        await aiCreditGateway.finalizeBilling(workspaceId, userId, 'ai_open_shift_fill', CREDIT_COSTS['ai_open_shift_fill']);
+        await aiTokenGateway.finalizeBilling(workspaceId, userId, 'ai_open_shift_fill', TOKEN_COSTS['ai_open_shift_fill']);
 
         return {
           shift: updatedShift,
@@ -185,7 +185,7 @@ router.post('/ai/fill-shift', async (req: Request, res: Response) => {
       success: result.success,
       orchestrationId: result.orchestrationId,
       data: result.data,
-      creditsDeducted: result.success ? CREDIT_COSTS['ai_open_shift_fill'] : 0,
+      creditsDeducted: result.success ? TOKEN_COSTS['ai_open_shift_fill'] : 0,
       error: result.error,
       remediation: result.remediation,
     });
@@ -211,7 +211,7 @@ router.post('/ai/trigger-session', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid mode' });
     }
 
-    const costMap: Record<string, keyof typeof CREDIT_COSTS> = {
+    const costMap: Record<string, keyof typeof TOKEN_COSTS> = {
       'optimize': 'ai_schedule_optimization',
       'fill_gaps': 'ai_open_shift_fill',
       'full_generate': 'ai_scheduling',
@@ -239,7 +239,7 @@ router.post('/ai/trigger-session', async (req: Request, res: Response) => {
         // @ts-expect-error — TS migration: fix in refactoring sprint
         triggeredBy: 'user',
         billable: true,
-        creditCost: CREDIT_COSTS[featureKey],
+        creditCost: TOKEN_COSTS[featureKey],
         maxRetries: 2,
       },
       async () => {
@@ -253,7 +253,7 @@ router.post('/ai/trigger-session', async (req: Request, res: Response) => {
         });
 
         const shiftsProcessed = sessionResult?.totalMutations || 1;
-        await aiCreditGateway.finalizeBilling(workspaceId, userId, featureKey, CREDIT_COSTS[featureKey], undefined, shiftsProcessed);
+        await aiTokenGateway.finalizeBilling(workspaceId, userId, featureKey, TOKEN_COSTS[featureKey], undefined, shiftsProcessed);
 
         return sessionResult;
       }
@@ -280,7 +280,7 @@ router.post('/ai/trigger-session', async (req: Request, res: Response) => {
       summary: result.data?.summary,
       aiSummary: result.data?.aiSummary,
       requiresVerification: result.data?.requiresVerification,
-      creditsDeducted: result.success ? CREDIT_COSTS[featureKey] * shiftsProcessed : 0,
+      creditsDeducted: result.success ? TOKEN_COSTS[featureKey] * shiftsProcessed : 0,
       error: result.error,
       remediation: result.remediation,
     });
@@ -416,17 +416,17 @@ router.get('/credit-status', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'workspaceId is required' });
     }
 
-    const account = await (creditManager as any).getCreditsAccountWithStatus(
+    const account = await (tokenManager as any).getCreditsAccountWithStatus(
       workspaceId as string,
       userId
     );
 
     const scheduleCosts = {
-      ai_shift_fill: CREDIT_COSTS['ai_open_shift_fill'],
-      optimize: CREDIT_COSTS['ai_schedule_optimization'],
-      fill_gaps: CREDIT_COSTS['ai_open_shift_fill'],
-      full_generate: CREDIT_COSTS['ai_scheduling'],
-      shift_matching: CREDIT_COSTS['ai_shift_matching'],
+      ai_shift_fill: TOKEN_COSTS['ai_open_shift_fill'],
+      optimize: TOKEN_COSTS['ai_schedule_optimization'],
+      fill_gaps: TOKEN_COSTS['ai_open_shift_fill'],
+      full_generate: TOKEN_COSTS['ai_scheduling'],
+      shift_matching: TOKEN_COSTS['ai_shift_matching'],
     };
 
     const canAfford = {
@@ -438,9 +438,9 @@ router.get('/credit-status', async (req: Request, res: Response) => {
 
     res.json({
       balance: account.effectiveBalance,
-      unlimitedCredits: account.unlimitedCredits,
+      unlimitedCredits: account.unlimited,
       monthlyAllocation: account.credits?.monthlyAllocation || 0,
-      totalSpent: account.credits?.totalCreditsSpent || 0,
+      totalSpent: account.credits?.totalTokensUsed || 0,
       costs: scheduleCosts,
       canAfford,
     });

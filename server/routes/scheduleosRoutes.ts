@@ -16,7 +16,7 @@ import {
   users,
   platformRoles,
 } from "@shared/schema";
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { sql, eq, and, or, isNull, isNotNull, inArray, desc, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import { stripe } from "../routes";
@@ -1100,9 +1100,10 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
       const isPlatformStaff = platformRole && ['root_admin', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole);
 
       if (!isPlatformStaff) {
-        // Credit account check via aiUsageEvents-backed creditManager (workspace_credits dropped)
-        const creditAccount = await creditManager.getCreditsAccount(workspace.id);
-        const hasCreditAccount = creditAccount !== null && creditAccount.isActive;
+        // Check the workspace has an active token ledger (row may be absent
+        // for brand-new workspaces with zero AI usage — treat as active).
+        const creditAccount = await tokenManager.getWorkspaceState(workspace.id);
+        const hasCreditAccount = creditAccount !== null;
 
         if (!hasCreditAccount) {
           const isActivated = !!workspace.scheduleosActivatedAt;
@@ -1137,9 +1138,9 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
         });
       }
 
-      const { withCredits } = await import('../services/billing/creditWrapper');
+      const { withTokens } = await import('../services/billing/tokenWrapper');
 
-      const creditResult = await withCredits(
+      const creditResult = await withTokens(
         {
           workspaceId: workspace.id,
           featureKey: 'ai_scheduling',

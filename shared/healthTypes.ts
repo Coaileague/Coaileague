@@ -17,7 +17,7 @@ export type ExtendedServiceKey =
   // Scheduling
   | 'scheduling_engine' | 'autonomous_scheduler' | 'calendar_sync' | 'availability_service' | 'breaks_service'
   // Billing
-  | 'payroll_service' | 'invoicing' | 'credit_system'
+  | 'payroll_service' | 'invoicing' | 'token_system'
   // Analytics
   | 'analytics_engine' | 'ai_analytics' | 'usage_analytics'
   // Compliance

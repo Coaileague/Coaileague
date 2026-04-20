@@ -10,16 +10,16 @@ interface TokenBalanceResponse {
   monthlyAllocation?: number;
   creditsUsedThisPeriod?: number;
   isActive?: boolean;
-  unlimitedCredits?: boolean;
+  unlimited?: boolean;
   subscriptionTier?: string;
 }
 
-export function useCreditAwareness() {
+export function useTokenAwareness() {
   const { user } = useAuth();
   const lastUsedRef = useRef<number | null>(null);
 
   const { data: balanceData } = useQuery<TokenBalanceResponse>({
-    queryKey: ['/api/credits/balance'],
+    queryKey: ['/api/usage/tokens'],
     enabled: !!user,
     refetchInterval: 60000,
     staleTime: 30000,
@@ -31,7 +31,7 @@ export function useCreditAwareness() {
 
     const tokensUsed = balanceData.tokensUsed ?? balanceData.creditsUsedThisPeriod ?? 0;
     const allowance = balanceData.tokensAllowance ?? (balanceData.monthlyAllocation !== -1 ? balanceData.monthlyAllocation : null) ?? 5_000_000;
-    const isUnlimited = balanceData.unlimitedCredits === true || balanceData.monthlyAllocation === -1 || !allowance;
+    const isUnlimited = balanceData.unlimited === true || balanceData.monthlyAllocation === -1 || !allowance;
 
     const percentUsed = allowance && !isUnlimited ? Math.min(1, tokensUsed / allowance) : 0;
 

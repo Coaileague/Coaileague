@@ -27,7 +27,7 @@ import {
 } from '@shared/schema';
 import { eq, and, sql, lt, not, inArray, isNull } from 'drizzle-orm';
 import { subscriptionManager, type SubscriptionTier } from './subscriptionManager';
-import { creditManager } from './creditManager';
+import { tokenManager } from './tokenManager';
 import { createLogger } from '../../lib/logger';
 import { writeLedgerEntry } from '../orgLedgerService';
 import { createNotification } from '../notificationService';
@@ -264,15 +264,7 @@ export class StripeWebhookService {
 
     log.info('Subscription created', { workspaceId, tier });
 
-    // GAP-39 FIX (part 2): Run initializeCredits BEFORE db.update(workspaces).
-    // If the credit initialization fails (e.g. credit service throws), the workspace tier
-    // is never upgraded — so Stripe retries the webhook and both operations run again.
-    // initializeCredits is idempotent (UPSERT logic) so a retry is always safe.
-    // Previously the order was reversed: workspace was updated first, then initializeCredits
-    // was called. If initializeCredits failed, workspace was left with a new tier but zero
-    // credit balance — the org owner had a paid plan but Trinity returned "no credits".
-    await creditManager.initializeCredits(workspaceId, tier);
-
+    // Token tracking is event-driven; no per-workspace initialization needed.
     await db.update(workspaces)
       .set({
         subscriptionTier: tier,
@@ -347,12 +339,8 @@ export class StripeWebhookService {
     
     const previousTier = currentWorkspace?.subscriptionTier;
 
-    // GAP-39 extension: if tier changed, update credit allocation BEFORE workspace update.
-    // updateTierAllocation is idempotent (UPSERT) — safe to retry if workspace update fails.
-    if (previousTier !== tier) {
-      await creditManager.updateTierAllocation(workspaceId, tier);
-    }
-
+    // Token allowance is tier-driven via TIER_TOKEN_ALLOCATIONS; no separate
+    // allocation record to update on tier change.
     await db.update(workspaces)
       .set({
         subscriptionTier: tier,
@@ -442,8 +430,9 @@ export class StripeWebhookService {
     // this workspace on the very next inbound call/SMS.
     cacheManager.invalidateWorkspace(workspaceId);
 
-    await creditManager.downgradeCreditsOnCancellation(workspaceId);
-    
+    // Free-tier token allowance applies automatically once subscriptionTier
+    // is set to 'free' above — no separate balance operation required.
+
     await this.sendSubscriptionEmail(workspaceId, 'subscription_cancelled', {});
 
     // In-platform notification + WebSocket broadcast
@@ -1166,10 +1155,14 @@ export class StripeWebhookService {
     
     log.info('Checkout session completed', { sessionId: session.id });
     
+    // Credit packs are retired. If a legacy checkout.session includes creditPackId,
+    // acknowledge the webhook without side effects — purchase fulfillment is no-op.
     if (creditPackId && workspaceId && userId) {
-      const { creditPurchaseService } = await import('./creditPurchase');
-      await (creditPurchaseService as any).handlePaymentSuccess(session);
-      return { success: true, handled: true, message: 'Credit purchase fulfilled' };
+      log.warn('[stripeWebhooks] Ignoring legacy credit-pack checkout session — credit packs retired', {
+        sessionId: session.id,
+        workspaceId,
+      });
+      return { success: true, handled: true, message: 'Credit-pack checkout ignored — feature retired' };
     }
 
     // Subscription checkout completed — activate workspace
@@ -1207,11 +1200,7 @@ export class StripeWebhookService {
         // so the Trinity gate starts serving this workspace immediately.
         cacheManager.invalidateWorkspace(workspaceId);
 
-        // 2. Reinitialize credits for the new tier
-        try {
-          const { creditManager } = await import('./creditManager');
-          await creditManager.initializeCredits(workspaceId, tier as any);
-        } catch (_) { /* non-fatal */ }
+        // Token tracking is event-driven — no initialization needed for the new tier.
         log.info('Workspace activated via checkout', { workspaceId, tier, customerId: session.customer });
 
         // 3. Fire welcome subscription email to org_owner

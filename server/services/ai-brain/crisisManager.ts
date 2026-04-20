@@ -19,7 +19,7 @@ import {
   workspaces,
   employees,
 } from '@shared/schema';
-import { creditManager } from '../../services/billing/creditManager';
+import { tokenManager } from '../../services/billing/tokenManager';
 import { createLogger } from '../../lib/logger';
 import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('crisisManager');
@@ -364,17 +364,9 @@ class CrisisManagerService {
         const goodwillBonus = refundAmount * 0.25;
         const totalCredits = Math.round((refundAmount + goodwillBonus) * 100); // In credits
 
-        // 2. Issue credit to workspace via creditManager
-        const refundResult = await creditManager.refundCredits({
-          workspaceId,
-          amount: totalCredits,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          reason: `Dispute Resolution: ${incidentId} - System fault reimbursement + goodwill bonus`,
-          issuedByUserId: initiatedBy,
-          issuedByName: 'Crisis Manager',
-          relatedEntityType: 'dispute',
-          relatedEntityId: incidentId,
-        });
+        // 2. Log the goodwill adjustment — the actual invoice credit is
+        // applied manually via Stripe by platform staff.
+        log.info(`[CRISIS] Dispute resolution queued for Stripe credit: ${incidentId} ws=${workspaceId} amount=$${(refundAmount + goodwillBonus).toFixed(2)}`);
 
         // 3. Create audit log
         this.logAudit('CRISIS_DISPUTE_APPROVED', initiatedBy, workspaceId, {

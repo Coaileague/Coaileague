@@ -10,7 +10,7 @@
  * Contract: shared/schema/domains/DOMAIN_CONTRACT.ts
  */
 
-export { creditManager } from './billing/creditManager';
+export { tokenManager } from './billing/tokenManager';
 export { orgBillingService } from './billing/orgBillingService';
 export { featureGateService } from './billing/featureGateService';
 export { subscriptionManager } from './billing/subscriptionManager';
@@ -20,7 +20,7 @@ export { overdueCollectionsService } from './billing/overdueCollectionsService';
 export { invoiceResendService } from './billing/invoiceResendService';
 export { trialManager } from './billing/trialManager';
 export { platformBillService } from './billing/platformBillService';
-export { aiCreditGateway } from './billing/aiCreditGateway';
+export { aiTokenGateway } from './billing/aiTokenGateway';
 // @ts-expect-error — TS migration: fix in refactoring sprint
 export { universalAIBillingInterceptor } from './billing/universalAIBillingInterceptor';
 

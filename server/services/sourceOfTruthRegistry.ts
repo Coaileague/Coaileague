@@ -97,15 +97,15 @@ const registry: DomainEntry[] = [
     humanGateRequired: true,
   },
 
-  // ── Billing / Credits ─────────────────────────────────────────────────────
+  // ── Billing / Tokens ──────────────────────────────────────────────────────
   {
     domain: 'billing',
-    description: 'Stripe subscriptions, invoices, credit ledger, and AI token metering',
+    description: 'Stripe subscriptions, invoices, and AI token metering',
     canonicalApiPrefix: '/api/billing',
     canonicalRouteFile: 'server/routes/domains/billing.ts',
-    canonicalService: 'server/services/billing/creditsLedgerService.ts',
+    canonicalService: 'server/services/billing/tokenManager.ts',
     frontendPage: 'client/src/pages/billing.tsx',
-    legacyAliases: ['/api/stripe'],
+    legacyAliases: ['/api/stripe', '/api/credits'],
     trinityCan: ['aging_report', 'collection_priority', 'revenue_forecast'],
     humanGateRequired: true,
   },

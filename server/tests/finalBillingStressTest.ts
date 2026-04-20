@@ -1,8 +1,8 @@
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
-import { PREMIUM_FEATURES, CREDIT_PACKAGES, canAccessFeature, getFeatureCreditCost, isPremiumFeature, isEliteFeature, isFeatureIncludedInTier, getMonthlyLimit } from '@shared/config/premiumFeatures';
+import { PREMIUM_FEATURES, CREDIT_PACKAGES, canAccessFeature, getFeatureTokenCost, isPremiumFeature, isEliteFeature, isFeatureIncludedInTier, getMonthlyLimit } from '@shared/config/premiumFeatures';
 import { BILLING } from '@shared/billingConfig';
-import { CREDIT_COSTS, TIER_CREDIT_ALLOCATIONS, CREDIT_EXEMPT_FEATURES, SUPPORT_POOL_FEATURES } from '../services/billing/creditManager';
+import { TOKEN_COSTS, TIER_TOKEN_ALLOCATIONS, TOKEN_FREE_FEATURES, SUPPORT_POOL_FEATURES } from '../services/billing/tokenManager';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { typedQuery } from '../lib/typedSql';
 
@@ -125,8 +125,8 @@ async function phase3_credit_costs_completeness() {
   console.log('PHASE 3: Credit Costs - Completeness & Consistency');
   console.log('='.repeat(70));
 
-  const creditKeys = Object.keys(CREDIT_COSTS);
-  record({ name: 'CREDIT_COSTS >= 100 Entries', phase: 'COSTS', passed: creditKeys.length >= 100, details: `${creditKeys.length} credit cost entries in creditManager.ts`, severity: 'critical' });
+  const creditKeys = Object.keys(TOKEN_COSTS);
+  record({ name: 'TOKEN_COSTS >= 100 Entries', phase: 'COSTS', passed: creditKeys.length >= 100, details: `${creditKeys.length} credit cost entries in tokenManager.ts`, severity: 'critical' });
 
   const criticalCreditKeys = [
     'guard_tour_scan', 'equipment_checkout', 'equipment_maintenance',
@@ -145,12 +145,12 @@ async function phase3_credit_costs_completeness() {
     'bot_clock_validation', 'bot_cleanup_retention',
     'quickbooks_error_analysis', 'financial_pl_summary',
   ];
-  const missingCosts = criticalCreditKeys.filter(k => !(k in CREDIT_COSTS));
+  const missingCosts = criticalCreditKeys.filter(k => !(k in TOKEN_COSTS));
   record({ name: 'All Critical Credit Keys Present', phase: 'COSTS', passed: missingCosts.length === 0, details: missingCosts.length === 0 ? `All ${criticalCreditKeys.length} critical keys present` : `MISSING: ${missingCosts.join(', ')}`, severity: 'critical' });
 
   let negativeCosts: string[] = [];
   let zeroCost = 0, paidCost = 0;
-  for (const [key, cost] of Object.entries(CREDIT_COSTS)) {
+  for (const [key, cost] of Object.entries(TOKEN_COSTS)) {
     if ((cost as number) < 0) negativeCosts.push(key);
     if ((cost as number) === 0) zeroCost++;
     else paidCost++;
@@ -175,18 +175,18 @@ async function phase3_credit_costs_completeness() {
   ];
   let syncMismatches: string[] = [];
   for (const key of syncKeys) {
-    const cm = (CREDIT_COSTS as any)[key];
+    const cm = (TOKEN_COSTS as any)[key];
     const bc = billingCreditCosts[key];
     if (cm !== undefined && bc !== undefined && cm !== bc) syncMismatches.push(`${key}: CM=${cm} BC=${bc}`);
   }
-  record({ name: 'creditManager ↔ billingConfig Sync (23 keys)', phase: 'COSTS', passed: syncMismatches.length === 0, details: syncMismatches.length === 0 ? 'All 23 checked keys in sync' : `MISMATCHES: ${syncMismatches.join('; ')}`, severity: 'critical' });
+  record({ name: 'tokenManager ↔ billingConfig Sync (23 keys)', phase: 'COSTS', passed: syncMismatches.length === 0, details: syncMismatches.length === 0 ? 'All 23 checked keys in sync' : `MISMATCHES: ${syncMismatches.join('; ')}`, severity: 'critical' });
 
   const aiCosts = ['ai_scheduling', 'ai_invoice_generation', 'ai_payroll_processing', 'ai_chat_query', 'trinity_chat'];
   const claudeCosts = ['claude_analysis', 'claude_strategic', 'claude_executive'];
-  const aiAllPositive = aiCosts.every(k => (CREDIT_COSTS as any)[k] > 0);
-  const claudeAllPositive = claudeCosts.every(k => (CREDIT_COSTS as any)[k] > 0);
-  record({ name: 'AI Features Have Positive Costs', phase: 'COSTS', passed: aiAllPositive, details: aiCosts.map(k => `${k}=${(CREDIT_COSTS as any)[k]}`).join(', '), severity: 'high' });
-  record({ name: 'Claude Features Have Positive Costs', phase: 'COSTS', passed: claudeAllPositive, details: claudeCosts.map(k => `${k}=${(CREDIT_COSTS as any)[k]}`).join(', '), severity: 'high' });
+  const aiAllPositive = aiCosts.every(k => (TOKEN_COSTS as any)[k] > 0);
+  const claudeAllPositive = claudeCosts.every(k => (TOKEN_COSTS as any)[k] > 0);
+  record({ name: 'AI Features Have Positive Costs', phase: 'COSTS', passed: aiAllPositive, details: aiCosts.map(k => `${k}=${(TOKEN_COSTS as any)[k]}`).join(', '), severity: 'high' });
+  record({ name: 'Claude Features Have Positive Costs', phase: 'COSTS', passed: claudeAllPositive, details: claudeCosts.map(k => `${k}=${(TOKEN_COSTS as any)[k]}`).join(', '), severity: 'high' });
 }
 
 async function phase4_subscription_tiers_pricing() {
@@ -210,9 +210,9 @@ async function phase4_subscription_tiers_pricing() {
 
   record({ name: 'Free Tier Blocks Credit Overage', phase: 'PRICING', passed: BILLING.tiers.free.allowCreditOverage === false, details: `allowCreditOverage=${BILLING.tiers.free.allowCreditOverage}`, severity: 'critical' });
 
-  const tca = TIER_CREDIT_ALLOCATIONS;
+  const tca = TIER_TOKEN_ALLOCATIONS;
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  record({ name: 'TIER_CREDIT_ALLOCATIONS Match billingConfig', phase: 'PRICING', passed: tca.free === 250 && tca.starter === 2500 && tca.professional === 10000 && tca.enterprise === 50000, details: `free=${tca.free}, starter=${tca.starter}, pro=${tca.professional}, ent=${tca.enterprise}`, severity: 'critical' });
+  record({ name: 'TIER_TOKEN_ALLOCATIONS Match billingConfig', phase: 'PRICING', passed: tca.free === 250 && tca.starter === 2500 && tca.professional === 10000 && tca.enterprise === 50000, details: `free=${tca.free}, starter=${tca.starter}, pro=${tca.professional}, ent=${tca.enterprise}`, severity: 'critical' });
 
   record({ name: 'Prices Monotonically Increase by Tier', phase: 'PRICING', passed: BILLING.tiers.free.monthlyPrice < BILLING.tiers.starter.monthlyPrice && BILLING.tiers.starter.monthlyPrice < BILLING.tiers.professional.monthlyPrice && BILLING.tiers.professional.monthlyPrice < BILLING.tiers.enterprise.monthlyPrice, details: 'free < starter < professional < enterprise', severity: 'critical' });
 
@@ -286,12 +286,12 @@ async function phase6_access_control_logic() {
   }
 
   for (const id of featureIds) {
-    const cost = getFeatureCreditCost(id);
+    const cost = getFeatureTokenCost(id);
     if (cost === undefined || cost === null) {
-      record({ name: `getFeatureCreditCost(${id})`, phase: 'ACCESS', passed: false, details: 'returned undefined/null', severity: 'high' });
+      record({ name: `getFeatureTokenCost(${id})`, phase: 'ACCESS', passed: false, details: 'returned undefined/null', severity: 'high' });
     }
   }
-  record({ name: 'All Features Return Valid Credit Cost', phase: 'ACCESS', passed: true, details: `Verified getFeatureCreditCost for ${featureIds.length} features`, severity: 'high' });
+  record({ name: 'All Features Return Valid Credit Cost', phase: 'ACCESS', passed: true, details: `Verified getFeatureTokenCost for ${featureIds.length} features`, severity: 'high' });
 
   const premiumCount = featureIds.filter(id => isPremiumFeature(id)).length;
   const eliteCount = featureIds.filter(id => isEliteFeature(id)).length;
@@ -432,10 +432,10 @@ async function phase10_exemptions_and_pools() {
   console.log('PHASE 10: Credit Exemptions & Support Pool');
   console.log('='.repeat(70));
 
-  record({ name: 'Exempt Features <= 5 (Minimal)', phase: 'EXEMPT', passed: CREDIT_EXEMPT_FEATURES.size <= 5, details: `${CREDIT_EXEMPT_FEATURES.size} exempt: ${[...CREDIT_EXEMPT_FEATURES].join(', ')}`, severity: 'high' });
+  record({ name: 'Exempt Features <= 5 (Minimal)', phase: 'EXEMPT', passed: TOKEN_FREE_FEATURES.size <= 5, details: `${TOKEN_FREE_FEATURES.size} exempt: ${[...TOKEN_FREE_FEATURES].join(', ')}`, severity: 'high' });
   record({ name: 'Support Pool >= 10 Features', phase: 'EXEMPT', passed: SUPPORT_POOL_FEATURES.size >= 10, details: `${SUPPORT_POOL_FEATURES.size} support pool features`, severity: 'high' });
 
-  const overlap = [...CREDIT_EXEMPT_FEATURES].filter(f => SUPPORT_POOL_FEATURES.has(f));
+  const overlap = [...TOKEN_FREE_FEATURES].filter(f => SUPPORT_POOL_FEATURES.has(f));
   record({ name: 'No Exempt ↔ Pool Overlap', phase: 'EXEMPT', passed: overlap.length === 0, details: overlap.length === 0 ? 'No overlap' : `Overlap: ${overlap.join(', ')}`, severity: 'high' });
 
   let unlimitedCount = 0;
@@ -462,7 +462,7 @@ async function phase11_cross_validation() {
   record({ name: 'Premium/Elite Non-Included Features All Priced', phase: 'CROSS', passed: premiumUnpriced.length === 0, details: premiumUnpriced.length === 0 ? 'All premium/elite per_use features have credit costs' : premiumUnpriced.join(', '), severity: 'critical' });
 
   const featureIds = Object.keys(PREMIUM_FEATURES);
-  const costIds = Object.keys(CREDIT_COSTS);
+  const costIds = Object.keys(TOKEN_COSTS);
   const matrixIds = Object.keys(BILLING.featureMatrix);
 
   record({ name: 'Registry (34) vs Costs (100+) vs Matrix (51)', phase: 'CROSS', passed: featureIds.length >= 30 && costIds.length >= 100 && matrixIds.length >= 40, details: `Registry=${featureIds.length}, Costs=${costIds.length}, Matrix=${matrixIds.length}`, severity: 'info' });
@@ -609,11 +609,11 @@ async function phase15_financial_pipeline_alignment() {
   const fs = await import('fs');
 
   let creditManagerContent = '';
-  try { creditManagerContent = fs.readFileSync('server/services/billing/creditManager.ts', 'utf-8'); } catch {}
+  try { creditManagerContent = fs.readFileSync('server/services/billing/tokenManager.ts', 'utf-8'); } catch {}
 
-  record({ name: 'creditManager.ts Exists', phase: 'PIPELINE', passed: creditManagerContent.length > 0, details: `${creditManagerContent.length} chars`, severity: 'critical' });
-  record({ name: 'creditManager Exports CREDIT_COSTS', phase: 'PIPELINE', passed: creditManagerContent.includes('CREDIT_COSTS'), details: 'CREDIT_COSTS constant exported', severity: 'critical' });
-  record({ name: 'creditManager Exports TIER_CREDIT_ALLOCATIONS', phase: 'PIPELINE', passed: creditManagerContent.includes('TIER_CREDIT_ALLOCATIONS'), details: 'TIER_CREDIT_ALLOCATIONS constant exported', severity: 'critical' });
+  record({ name: 'tokenManager.ts Exists', phase: 'PIPELINE', passed: creditManagerContent.length > 0, details: `${creditManagerContent.length} chars`, severity: 'critical' });
+  record({ name: 'tokenManager Exports TOKEN_COSTS', phase: 'PIPELINE', passed: creditManagerContent.includes('TOKEN_COSTS'), details: 'TOKEN_COSTS constant exported', severity: 'critical' });
+  record({ name: 'tokenManager Exports TIER_TOKEN_ALLOCATIONS', phase: 'PIPELINE', passed: creditManagerContent.includes('TIER_TOKEN_ALLOCATIONS'), details: 'TIER_TOKEN_ALLOCATIONS constant exported', severity: 'critical' });
 
   let billingConfigContent = '';
   try { billingConfigContent = fs.readFileSync('shared/billingConfig.ts', 'utf-8'); } catch {}

@@ -9,9 +9,9 @@ import {
   subscriptionInvoices,
 } from '@shared/schema';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
-import { TIER_CREDIT_ALLOCATIONS, TIER_MONTHLY_CREDITS } from './creditManager';
+import { TIER_TOKEN_ALLOCATIONS } from './tokenManager';
 import { createLogger } from '../../lib/logger';
-import { creditManager } from './creditManager';
+import { tokenManager } from './tokenManager';
 
 const log = createLogger('OrgBillingService');
 
@@ -95,7 +95,7 @@ class OrgBillingServiceImpl {
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`);
 
     const tier = (workspace.subscriptionTier || 'free').toLowerCase();
-    const allocation = TIER_CREDIT_ALLOCATIONS[tier as keyof typeof TIER_CREDIT_ALLOCATIONS] || 100;
+    const allocation = TIER_TOKEN_ALLOCATIONS[tier as keyof typeof TIER_TOKEN_ALLOCATIONS] || 100;
 
     // workspace_credits table dropped (Phase 16) — use defaults
     const currentBalance = 999_999;
@@ -106,7 +106,7 @@ class OrgBillingServiceImpl {
     // mid-period corrections cause the actual pool to differ from monthlyAllocation.
     let creditsUsedThisPeriod = 0;
     try {
-      const usageBreakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId);
+      const usageBreakdown = await tokenManager.getMonthlyBreakdown(workspaceId);
       creditsUsedThisPeriod = usageBreakdown.reduce(
         (sum: number, item: any) => sum + (Number(item.totalCredits) || 0), 0
       );

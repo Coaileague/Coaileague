@@ -9,7 +9,7 @@ import {
   type PartnerApiUsageEvent,
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
-import { creditManager } from './creditManager';
+import { tokenManager } from './tokenManager';
 
 const log = createLogger('partnerApiUsage');
 export interface PartnerApiCallInput {
@@ -175,7 +175,7 @@ export class PartnerApiUsageService {
     usageEventId: string
   ): Promise<void> {
     try {
-      await creditManager.deductCredits({
+      await tokenManager.recordUsage({
         workspaceId,
         featureKey: 'partner_api_call',
         // @ts-expect-error — TS migration: fix in refactoring sprint

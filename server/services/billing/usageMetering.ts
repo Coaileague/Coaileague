@@ -2,7 +2,7 @@ import { createLogger } from '../../lib/logger';
 import { db } from '../../db';
 import { aiUsageEvents, aiUsageDailyRollups, workspaces, workspaceAddons, billingAddons, billingAuditLog, type InsertAiUsageEvent, type AiUsageEvent } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
-import { creditManager } from './creditManager';
+import { tokenManager } from './tokenManager';
 import { platformEventBus } from '../platformEventBus';
 import { calculateProviderCostUsd } from './platformAIBudgetService';
 import { typedExec } from '../../lib/typedSql';
@@ -24,7 +24,7 @@ export interface UsageEventInput {
   userAgent?: string;
   // Control event bus emission - set to false when caller emits its own billing event
   emitEvent?: boolean;
-  // Skip credit deduction - set to true when caller already deducted credits (e.g., aiCreditGateway.finalizeBilling)
+  // Skip credit deduction - set to true when caller already deducted credits (e.g., aiTokenGateway.finalizeBilling)
   skipBillingDeduction?: boolean;
   // AI model tracking — provider cost calculation
   aiModel?: string;           // e.g., 'gemini-2.5-flash', 'gpt-4o', 'claude-sonnet'
@@ -522,7 +522,7 @@ export class UsageMeteringService {
     workspaceId: string,
     estimatedCost: number
   ): Promise<boolean> {
-    const balance = await creditManager.getBalance(workspaceId);
+    const balance = await tokenManager.getBalance(workspaceId);
     return balance >= estimatedCost;
   }
 

@@ -170,8 +170,8 @@ async function runGapAnalysis() {
   // DOMAIN 6: BILLING & SUBSCRIPTIONS (Core Promise)
   // ================================================================
   check('Billing', 'Credit System (112 definitions)', 'Every AI action has credit cost',
-    'server/services/billing/creditManager.ts',
-    fileContains('server/services/billing/creditManager.ts', 'CREDIT_COSTS'));
+    'server/services/billing/tokenManager.ts',
+    fileContains('server/services/billing/tokenManager.ts', 'TOKEN_COSTS'));
 
   check('Billing', 'Subscription Tiers (4)', 'Free/Starter/Pro/Enterprise with credit allotments',
     'server/services/billing/subscriptionManager.ts',

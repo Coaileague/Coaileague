@@ -17,10 +17,9 @@ import { db } from '../../db';
 import { 
   invoices, 
   workspaces, 
-  employees, 
+  employees,
   timeEntries,
   clients,
-  trinityCreditTransactions,
   notifications,
   supportTickets,
 } from '@shared/schema';
@@ -401,16 +400,13 @@ class GrowthStrategistService {
         });
       }
 
-      const creditUsage = await db.select({
-        totalCredits: sql<number>`COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0)`,
-      })
-        .from(trinityCreditTransactions)
-        .where(and(
-          eq(trinityCreditTransactions.workspaceId, workspaceId),
-          gte(trinityCreditTransactions.createdAt, subDays(new Date(), 30))
-        ));
-
-      const monthlyCredits = creditUsage[0]?.totalCredits || 0;
+      const creditUsage = await db.execute<{ totalCredits: number }>(sql`
+        SELECT COALESCE(SUM(tokens_total), 0)::int AS "totalCredits"
+        FROM token_usage_log
+        WHERE workspace_id = ${workspaceId}
+          AND timestamp >= ${subDays(new Date(), 30).toISOString()}
+      `);
+      const monthlyCredits = Number((creditUsage as any)?.rows?.[0]?.totalCredits ?? 0);
 
       if (monthlyCredits > 5000) {
         cards.push({

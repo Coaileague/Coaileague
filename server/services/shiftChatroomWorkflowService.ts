@@ -1241,7 +1241,7 @@ class ShiftChatroomWorkflowService {
       }
 
       // Deduct credits for the minutes used
-      const deduction = await premiumFeatureGating.deductCredits(
+      const deduction = await premiumFeatureGating.recordUsage(
         workspaceId,
         'trinity_meeting_recording',
         estimatedMinutes,

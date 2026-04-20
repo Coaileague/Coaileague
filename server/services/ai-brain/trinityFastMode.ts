@@ -14,7 +14,7 @@
  */
 
 import { db } from '../../db';
-import { aiWorkboardTasks, trinityCredits, systemAuditLogs } from '@shared/schema';
+import { aiWorkboardTasks, systemAuditLogs } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
@@ -244,7 +244,7 @@ class TrinityFastModeService {
       const creditsCost = Math.ceil(baseCreditCost * config.creditMultiplier);
 
       // Deduct credits
-      await this.deductCredits(request.workspaceId, request.userId, creditsCost, requestId);
+      await this.recordUsage(request.workspaceId, request.userId, creditsCost, requestId);
 
       // Create telemetry
       const telemetry: ExecutionTelemetry = {
@@ -421,26 +421,18 @@ class TrinityFastModeService {
   }
 
   // ---------------------------------------------------------------------------
-  // CREDIT MANAGEMENT
+  // USAGE RECORDING
+  // Token usage is recorded centrally via tokenManager.recordUsage() and
+  // tokenUsageService.recordTokenUsageAsync(). FastMode does not keep its own
+  // ledger — callers hit the shared token gateway.
   // ---------------------------------------------------------------------------
-
-  private async deductCredits(
-    workspaceId: string,
-    userId: string,
-    amount: number,
-    requestId: string
+  private async recordUsage(
+    _workspaceId: string,
+    _userId: string,
+    _amount: number,
+    _requestId: string,
   ): Promise<void> {
-    try {
-      // Update the credit balance for this workspace
-      await db.update(trinityCredits)
-        .set({
-          balance: sql`${trinityCredits.balance} - ${amount}`,
-          lifetimeUsed: sql`${trinityCredits.lifetimeUsed} + ${amount}`
-        })
-        .where(eq(trinityCredits.workspaceId, workspaceId));
-    } catch (error) {
-      console.error('[TrinityFastMode] Failed to deduct credits:', error);
-    }
+    // Intentionally empty — see comment above.
   }
 
   // ---------------------------------------------------------------------------

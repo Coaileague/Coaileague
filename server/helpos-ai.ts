@@ -2,7 +2,7 @@
  * HelpAI Intelligence Service
  * Client-pays-all model - AI costs are tracked and billed to the customer
  * Can be toggled on/off by support staff
- * ALL billing routed through universal aiCreditGateway - ZERO TOKEN LOSS
+ * ALL billing routed through universal aiTokenGateway - ZERO TOKEN LOSS
  */
 
 import { getMeteredOpenAICompletion } from './services/billing/universalAIBillingInterceptor';

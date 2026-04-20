@@ -21,7 +21,6 @@ import {
   aiTaskQueue,
   aiUsageEvents,
   aiModelHealth,
-  aiCreditSettings,
 } from '@shared/schema';
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import { openaiClient, type OpenAIResponse } from './providers/openaiClient';

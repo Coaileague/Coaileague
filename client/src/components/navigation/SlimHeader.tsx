@@ -17,7 +17,7 @@ import { UnifiedBrandLogo } from '@/components/unified-brand-logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CreditBalanceBadge } from '@/components/credit-balance';
+import { CreditBalanceBadge } from '@/components/plan-status';
 
 interface SlimHeaderProps {
   pageTitle?: string;
