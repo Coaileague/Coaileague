@@ -39,6 +39,7 @@ import performanceRouter from "../performanceRoutes";
 import recognitionRouter from "../recognitionRoutes";
 import { clockinPinRouter } from "../clockinPinRoutes";
 import { identityPinRouter } from "../identityPinRoutes";
+import { employmentVerifyRouter } from "../employmentVerifyRoutes";
 import recruitmentRouter from "../recruitmentRoutes";
 import wellnessRouter from "../wellnessRoutes";
 
@@ -104,6 +105,10 @@ export function mountWorkforceRoutes(app: Express): void {
   // just (code, pin) from inbound channels. Rate limiting is enforced at the
   // route level.
   app.use("/api/identity", identityPinRouter);
+  // Phase 27: Employment verification — manager-facing approve/deny endpoints
+  // for verify@{slug}.coaileague.com inbound requests. FCRA-compliant: only
+  // employment dates, title, status, pay band, and officer score are shared.
+  app.use("/api/employment-verify", requireAuth, ensureWorkspaceAccess, employmentVerifyRouter);
   // Phase 58: Trinity Interview Pipeline — Recruitment API
   app.use("/api/recruitment", requireAuth, ensureWorkspaceAccess, recruitmentRouter);
 }

@@ -950,6 +950,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
       if (['docs', 'documents'].includes(local)) return 'document';
       if (['support', 'help'].includes(local)) return 'support';
       if (['billing'].includes(local)) return 'billing';
+      if (['verify', 'verification', 'verifications'].includes(local)) return 'verification';
       return 'staffing';
     })();
 
@@ -1012,6 +1013,26 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
     }
 
     const emailBody = inboundEmail.text || inboundEmail.html?.replace(/<[^>]*>/g, ' ') || '';
+
+    // ============================================================================
+    // EMPLOYMENT VERIFICATION — verify@{slug}.coaileague.com
+    // FCRA-compliant workflow: Trinity parses the request (requester, employee,
+    // authorization), creates a VER-XXXXXX ticket, alerts management with
+    // approve/deny links, and auto-acknowledges the requester. No employment
+    // detail is disclosed until a manager explicitly approves.
+    // ============================================================================
+    if (emailCategory === 'verification' && slug && workspaceId) {
+      log.info(`[Resend Inbound] Employment verification email detected → ${slug} / ${workspaceId}`);
+      try {
+        const { handleEmploymentVerificationEmail } = await import(
+          '../services/trinity/employmentVerificationService'
+        );
+        await handleEmploymentVerificationEmail(inboundEmail as any, slug, workspaceId);
+      } catch (verifyErr: any) {
+        log.warn('[Resend Inbound] Employment verification handler failed (non-fatal):', verifyErr?.message);
+      }
+      return res.status(200).json({ received: true, routed: 'employment_verification' });
+    }
 
     // ============================================================================
     // TRINITY EMAIL REPLY HANDLER

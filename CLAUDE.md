@@ -621,6 +621,117 @@ canonical string.
 
 ---
 
+## Section P — Employment Verification Is FCRA-Bounded (Phase 27)
+
+**The law:** Employment verification is a **legally regulated disclosure
+channel**, not a generic support workflow. Every surface that answers "does
+this person work there" — voice, email, HTTP, Trinity — may disclose ONLY
+the FCRA-allowed subset and MUST require a signed employee authorization
+form before any disclosure.
+
+**FCRA-allowed subset (may disclose):**
+- Full legal name
+- Co-League employee ID (`EMP-{ORGCODE}-{NNNNN}`)
+- Job title / position
+- Employment status: `active` or `former`
+- Start date
+- Compensation **band** (never the exact figure)
+- Officer readiness score (0–100) + link to the score-explanation page
+
+**FCRA-forbidden (must never disclose through this channel):**
+- Exact salary or hourly rate
+- Disciplinary history, write-ups, performance-improvement plans
+- Termination reason, voluntary/involuntary classification
+- Performance reviews, ratings, manager notes
+- Medical, leave, workers-comp, or accommodation data
+- Home address, SSN, tax IDs, benefits details
+- Client/site assignments, shift schedules
+
+**The canonical files:**
+- `server/services/trinityVoice/extensions/verifyExtension.ts` — Extension 3
+  entry point. Collects employee ID via `<Gather>`, routes to
+  `/api/voice/verify-employee-id`. Never reads employee data.
+- `server/routes/voiceRoutes.ts → POST /api/voice/verify-employee-id` —
+  Parses `EMP-{ORGCODE}-{NNNNN}`, resolves the workspace by `org_code`
+  within that tenant only (no cross-tenant search), and directs the
+  verifier to email `verify@{slug}.coaileague.com`. Never discloses
+  employment details over the phone.
+- `server/services/trinity/employmentVerificationService.ts →
+  handleEmploymentVerificationEmail()` — Parses inbound `verify@{slug}`
+  emails, creates a `VER-XXXXXX` `support_tickets` row (category =
+  `employment_verification`), alerts management with approve/deny links,
+  auto-acknowledges the requester. Never sends employment data directly.
+- `server/routes/employmentVerifyRoutes.ts` — Manager-gated
+  (`requireManager`) approve/deny endpoints. The approve template is the
+  **sole** point where employment detail is composed and sent, and it
+  includes ONLY the FCRA-allowed subset. Both endpoints call
+  `logActionAudit()` with actionId `employment_verification.{approve|deny}`.
+- `server/services/email/emailProvisioningService.ts` — Provisions
+  `verify@{slug}.coaileague.com` on every new workspace alongside
+  `staffing@`, `calloffs@`, etc. (auto-process = true, trinityType =
+  `employment_verification`).
+
+**Required pattern (approve template):**
+```tsx
+// ✅ FCRA-compliant fields only
+<tr><td>Full Name:</td><td>{emp.first_name} {emp.last_name}</td></tr>
+<tr><td>Employee ID:</td><td>{emp.employee_number}</td></tr>
+<tr><td>Job Title:</td><td>{emp.role || emp.position}</td></tr>
+<tr><td>Employment Status:</td>
+    <td>{isActive ? 'Currently Employed' : 'Former Employee'}</td></tr>
+<tr><td>Start Date:</td><td>{formatDate(emp.hire_date)}</td></tr>
+<tr><td>Compensation Band:</td><td>{toPayBand(hourly)}</td></tr>
+<tr><td>Officer Readiness Score:</td>
+    <td>{emp.scheduling_score}/100 — <a href={scoreUrl}>explain</a></td></tr>
+```
+
+**Forbidden patterns:**
+```ts
+// 🔴 forbidden — exact salary disclosure
+`<td>Hourly Rate:</td><td>$${emp.hourly_rate}/hr</td>`
+
+// 🔴 forbidden — discipline/performance disclosure
+`<p>Termination reason: ${termination.reason}</p>`
+`<p>Last review: ${review.rating}/5 — ${review.notes}</p>`
+
+// 🔴 forbidden — disclosure without authorization
+// (approve endpoint must only be reachable after manager confirms they
+//  received a signed authorization form from the employee)
+if (req.body.skipAuthCheck) return sendVerification(...);
+
+// 🔴 forbidden — disclosure over phone
+// Trinity voice never reads employment details out loud. The /verify-
+// employee-id handler only acknowledges the employee's existence and
+// directs the caller to the email channel.
+return twiml(say(`Yes, ${emp.first_name} works here since ${emp.hire_date}`));
+
+// 🔴 forbidden — cross-tenant employee search
+// verify@ routing resolves a single workspace from the email subdomain;
+// the /verify-employee-id voice handler resolves a single workspace from
+// the ORGCODE portion of the employee ID. Never scan across tenants.
+```
+
+**Audit requirement:** Every approve and deny MUST call `logActionAudit()`
+with `actionId = 'employment_verification.approve'` or
+`'employment_verification.deny'`, `entityType = 'employment_verification'`,
+`entityId = refNum`, and `changesAfter` summarizing the fields disclosed
+(NOT their values). Error paths must also audit with `success: false`.
+
+**Adding a new verification surface:** Any new endpoint, SMS template,
+voice prompt, chat handler, or portal page that answers "does this person
+work there" MUST:
+1. Require a signed employee authorization form before responding.
+2. Route disclosure through the approve-endpoint template so the FCRA-
+   allowed subset is the only possible output.
+3. Call `logActionAudit()` on both approve and deny paths.
+4. Never disclose details in a channel with no authorization gate (e.g.
+   the phone line answers only "please email us" — it never reads data).
+
+Legal sign-off is required to expand the disclosed subset beyond the
+seven fields above.
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When Claude Code (or any future debug session) discovers a new architectural
@@ -660,6 +771,9 @@ valid.
 | Trinity agent dashboard API | `server/routes/trinityAgentDashboardRoutes.ts` | `/api/trinity/agent-dashboard/*` |
 | Panic liability notice | `server/services/ops/panicAlertService.ts#PANIC_LIABILITY_NOTICE` | exported string, bundled in every panic API response |
 | Panic disclaimer UI | `client/src/components/liability-disclaimers.tsx` (`EmergencyDisclaimer`, `PanicButtonDisclaimer`) | rendered on every tenant-facing panic surface |
+| Employment verification workflow | `server/services/trinity/employmentVerificationService.ts`, `server/routes/employmentVerifyRoutes.ts` | FCRA-bounded `verify@{slug}.coaileague.com` pipeline + approve/deny |
+| Verification voice entry | `server/routes/voiceRoutes.ts → POST /api/voice/verify-employee-id` | Twilio Gather → org-code resolution → email channel |
+| Verification email provisioning | `server/services/email/emailProvisioningService.ts` (`WORKSPACE_SYSTEM_TYPES`) | `verify@` auto-provisioned on every workspace |
 
 ## Audit History
 
@@ -683,3 +797,4 @@ valid.
 | 16 | (phase-16 branch) | Trinity service registry + transparency + agent dashboard |
 | 17A/B | (this commit) | Trinity audit trail helper, platform-role tightening, workspace-enumeration fix |
 | O | (this commit) | Panic button notification-only liability codification + canonical `PANIC_LIABILITY_NOTICE`, disclaimer UI components, CLAUDE.md Section O |
+| 27 / P | (this commit) | FCRA-bounded employment verification — voice → org-code resolver → email channel → manager approve/deny with `logActionAudit`; `verify@` auto-provisioned; CLAUDE.md Section P |

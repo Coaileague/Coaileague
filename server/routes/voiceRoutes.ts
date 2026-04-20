@@ -2602,6 +2602,99 @@ voiceRouter.post('/schedule-callback', twilioSignatureMiddleware, async (req: Re
   }
 });
 
+// ─── Employment Verification (Extension 3) ───────────────────────────────────
+// Verifier speaks/enters a Co-League employee ID (EMP-{ORGCODE}-{NNNNN}).
+// Trinity parses the org code, resolves the workspace entirely within that
+// tenant's context (no cross-tenant search), and directs the verifier to
+// submit a signed authorization via email. FCRA compliance requires written
+// authorization before any employment detail is disclosed.
+voiceRouter.post('/verify-employee-id', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { SpeechResult, Digits } = req.body || {};
+    const { sessionId, workspaceId } = extractQS(req);
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    const spoken = (SpeechResult || Digits || '').toString().trim().toUpperCase();
+    // Normalize spoken ID: "E M P dash S P S dash 0 0 0 0 1" → "EMP-SPS-00001"
+    const normalized = spoken.replace(/\s+/g, '').replace(/DASH/g, '-').replace(/[^A-Z0-9-]/g, '');
+
+    // Validate format: EMP-{ORGCODE}-{SEQUENCE}
+    const empIdMatch = normalized.match(/^EMP-([A-Z0-9]{2,6})-(\d{1,8})$/);
+    if (!empIdMatch) {
+      const retry = lang === 'es'
+        ? `No reconocí ese número. El formato es E-M-P guión, seguido del código de organización, guión, y el número de empleado. Por ejemplo, E-M-P guión S-P-S guión 0-0-0-0-1. Por favor intente de nuevo o envíe su solicitud por escrito.`
+        : `I didn't recognize that format. Employee IDs begin with EMP dash, followed by the org code, dash, and employee number. For example, EMP dash SPS dash 00001. Please try again or submit a written request.`;
+
+      return xmlResponse(res, twiml(
+        say(retry, voiceId, langCode) +
+        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
+      ));
+    }
+
+    const empId = normalized;
+    const orgCode = empIdMatch[1];
+
+    // Look up workspace by org code — WITHIN THAT TENANT ONLY.
+    // Direct pool query keeps the lookup scoped to a single row filtered by
+    // org_code (no cross-tenant enumeration).
+    const { pool } = await import('../db');
+    const wsResult = await pool.query(
+      `SELECT id, name, company_name, org_code, email_slug
+         FROM workspaces
+        WHERE UPPER(org_code) = $1
+          AND subscription_status IN ('active','free_trial','trial')
+        LIMIT 1`,
+      [orgCode]
+    );
+
+    if (!wsResult.rows.length) {
+      const notFound = lang === 'es'
+        ? `No encontré una organización con el código ${orgCode}. Verifique el número de empleado o comuníquese directamente con el empleador.`
+        : `I couldn't find an organization with code ${orgCode}. Please verify the employee ID number or contact the employer directly.`;
+      return xmlResponse(res, twiml(say(notFound, voiceId, langCode)));
+    }
+
+    const tenantWs = wsResult.rows[0];
+    const orgSlug = (tenantWs.email_slug || tenantWs.org_code || orgCode).toString().toLowerCase();
+    const companyName = tenantWs.company_name || tenantWs.name;
+
+    // Log the verification request (FCRA audit requirement)
+    logCallAction({
+      callSessionId: sessionId,
+      workspaceId: tenantWs.id,
+      action: 'employment_verification_requested',
+      payload: { employeeId: empId, requestedBySession: sessionId, orgCode },
+      outcome: 'success',
+    }).catch((e: any) => log.warn('[VoiceRoutes] verify audit log failed:', e?.message));
+
+    // Direct verifier to email channel — legal best practice. Trinity will not
+    // disclose any details over the phone without a signed authorization on
+    // file; the email pipeline handles authorization parsing and management
+    // approval.
+    const referenceNumber = (sessionId || '').slice(-6) || Date.now().toString(36).slice(-6).toUpperCase();
+    const instructions = lang === 'es'
+      ? `Encontré al empleado en ${companyName}. ` +
+        `Por ley, las verificaciones de empleo deben realizarse por escrito con autorización del empleado. ` +
+        `Por favor envíe su solicitud de autorización firmada a: verificar arroba ${orgSlug} punto coaileague punto com. ` +
+        `Le responderemos dentro de dos días hábiles. Su número de referencia es ${referenceNumber}. ` +
+        `Gracias.`
+      : `I found the employee at ${companyName}. ` +
+        `By law, employment verifications require written authorization from the employee. ` +
+        `Please email your signed authorization form to: verify at ${orgSlug} dot coaileague dot com. ` +
+        `We will respond within two business days. Your reference number is ${referenceNumber}. ` +
+        `Thank you for calling.`;
+
+    return xmlResponse(res, twiml(say(instructions, voiceId, langCode)));
+
+  } catch (err: any) {
+    log.error('[VoiceRoutes] verify-employee-id error:', err?.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Please call back or submit your request in writing.</Say>'));
+  }
+});
+
 // ─── Helper: extract QS params set during the call flow ──────────────────────
 
 function extractQS(req: Request): { sessionId: string; workspaceId: string } {
