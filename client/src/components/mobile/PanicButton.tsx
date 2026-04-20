@@ -16,7 +16,6 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import haptics from "@/lib/haptics";
 import { useAuth } from "@/hooks/useAuth";
@@ -71,7 +70,8 @@ export function PanicButton({
         (user as any)?.fullName ||
         (user as any)?.email ||
         "Unknown Officer";
-      const alert = await apiRequest("POST", "/api/safety/panic", {
+      const { fetchWithOfflineFallback } = await import("@/lib/offlineQueue");
+      const result = await fetchWithOfflineFallback("/api/safety/panic", "POST", {
         employeeName: nameForServer,
         employeeId: (user as any)?.employeeId || null,
         siteId: siteId || null,
@@ -79,7 +79,22 @@ export function PanicButton({
         latitude: coords?.latitude ?? null,
         longitude: coords?.longitude ?? null,
         locationAccuracy: coords?.accuracy ?? null,
-      });
+      }, "panic_alert");
+
+      if (result.queued) {
+        toast({
+          title: "Saved Offline",
+          description: "Your panic alert was queued and will auto-send when connection returns.",
+        });
+        return;
+      }
+
+      if (result.response && !result.response.ok) {
+        const text = await result.response.text();
+        throw new Error(text || "Failed to send panic alert");
+      }
+
+      const alert = result.response ? await result.response.json() : null;
       const alertNumber = (alert as any)?.alert_number || (alert as any)?.alertNumber || null;
       setLastAlertNumber(alertNumber);
       toast({

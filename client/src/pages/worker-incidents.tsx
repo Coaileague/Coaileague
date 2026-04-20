@@ -37,7 +37,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 interface IncidentType {
@@ -111,24 +110,35 @@ export default function WorkerIncidents() {
   const submitMutation = useMutation({
     mutationFn: async () => {
       setSubmitting(true);
-      return apiRequest(
-        'POST',
-        '/api/incidents',
-        {
-          type: selectedType,
-          severity,
-          description,
-          location: location,
-          timestamp: new Date().toISOString(),
-        }
-      );
+      const payload = {
+        type: selectedType,
+        severity,
+        description,
+        location: location,
+        timestamp: new Date().toISOString(),
+      };
+      const { fetchWithOfflineFallback } = await import('@/lib/offlineQueue');
+      const result = await fetchWithOfflineFallback('/api/incidents', 'POST', payload, 'incident_report');
+      if (result.queued) return { queued: true };
+      if (result.response && !result.response.ok) {
+        const text = await result.response.text();
+        throw new Error(text || 'Failed to submit incident report');
+      }
+      return { queued: false };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/incidents/my-reports'] });
-      toast({
-        title: 'Incident Reported',
-        description: 'Your incident report has been submitted and management has been notified.',
-      });
+    onSuccess: (result: { queued?: boolean } | undefined) => {
+      if (result?.queued) {
+        toast({
+          title: 'Saved Offline',
+          description: 'Your incident report was queued and will sync when you reconnect.',
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/incidents/my-reports'] });
+        toast({
+          title: 'Incident Reported',
+          description: 'Your incident report has been submitted and management has been notified.',
+        });
+      }
       setMode('list');
       resetForm();
       

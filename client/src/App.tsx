@@ -67,6 +67,7 @@ import { WebSocketProvider } from "@/providers/WebSocketProvider";
 import { UniversalConfigProvider } from "@/providers/universal-config-provider";
 import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { useChatManagerInit, useChatManagerWebSocketBridge } from "@/hooks/useChatManager";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
@@ -1125,6 +1126,7 @@ function AppContent() {
 
   useChatManagerInit(user?.id);
   useChatManagerWebSocketBridge();
+  usePushNotifications({ autoRegister: true });
   useScrollLockGuard();
   usePageTitle();
 
