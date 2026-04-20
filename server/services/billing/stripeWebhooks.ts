@@ -35,6 +35,7 @@ import { broadcastToWorkspace } from '../../websocket';
 import { PLATFORM } from '../../config/platformConfig';
 import { platformEventBus } from '../platformEventBus';
 import { withDistributedLock, LOCK_KEYS } from '../distributedLock';
+import { cacheManager } from '../platform/cacheManager';
 
 const log = createLogger('StripeWebhookService');
 
@@ -280,7 +281,11 @@ export class StripeWebhookService {
         updatedAt: new Date(),
       })
       .where(eq(workspaces.id, workspaceId));
-    
+    // Phase 26: invalidate the shared tier cache so the Trinity
+    // subscription gate sees the new status within seconds, not up to the
+    // 10-min TTL of cacheManager.getWorkspaceTierWithStatus.
+    cacheManager.invalidateWorkspace(workspaceId);
+
     await this.logSubscriptionPayment({
       workspaceId,
       stripeSubscriptionId: subscription.id,
@@ -356,9 +361,12 @@ export class StripeWebhookService {
         updatedAt: new Date(),
       })
       .where(eq(workspaces.id, workspaceId));
-    
+    // Phase 26: flush cached tier/status so Trinity picks up upgrades,
+    // downgrades, and pending_cancel transitions without a 10-min lag.
+    cacheManager.invalidateWorkspace(workspaceId);
+
     if (previousTier !== tier) {
-      
+
       const isUpgrade = this.isUpgrade(previousTier as SubscriptionTier, tier);
       await this.sendSubscriptionEmail(workspaceId, isUpgrade ? 'subscription_upgraded' : 'subscription_downgraded', {
         previousTier,
@@ -430,7 +438,10 @@ export class StripeWebhookService {
         updatedAt: new Date(),
       })
       .where(eq(workspaces.id, workspaceId));
-    
+    // Phase 26: drop cached tier/status so the Trinity gate stops serving
+    // this workspace on the very next inbound call/SMS.
+    cacheManager.invalidateWorkspace(workspaceId);
+
     await creditManager.downgradeCreditsOnCancellation(workspaceId);
     
     await this.sendSubscriptionEmail(workspaceId, 'subscription_cancelled', {});
@@ -504,6 +515,9 @@ export class StripeWebhookService {
     await db.update(workspaces)
       .set({ subscriptionStatus: 'active', updatedAt: new Date() })
       .where(eq(workspaces.id, workspaceId));
+    // Phase 26: past_due → active recovery must clear the tier cache
+    // immediately so Trinity resumes service on the next inbound call.
+    cacheManager.invalidateWorkspace(workspaceId);
 
     // 2. Revenue ledger entry for subscription renewal payment
     try {
@@ -634,6 +648,10 @@ export class StripeWebhookService {
           updatedAt: new Date(),
         })
         .where(eq(workspaces.id, workspaceId));
+      // Phase 26: payment-failed → past_due must invalidate cache so the
+      // Trinity gate transitions this workspace to the "on hold" grace
+      // path on the next inbound call/SMS without a 10-min stale window.
+      cacheManager.invalidateWorkspace(workspaceId);
 
       await this.sendSubscriptionEmail(workspaceId, 'payment_failed', {
         amount: amountDue,
@@ -1185,6 +1203,9 @@ export class StripeWebhookService {
         }
 
         await storage.updateWorkspace(workspaceId, updatePayload);
+        // Phase 26: checkout-session activation must flush the tier cache
+        // so the Trinity gate starts serving this workspace immediately.
+        cacheManager.invalidateWorkspace(workspaceId);
 
         // 2. Reinitialize credits for the new tier
         try {
@@ -1818,6 +1839,9 @@ export class StripeWebhookService {
     await db.update(workspaces)
       .set({ subscriptionStatus: 'suspended', updatedAt: new Date() })
       .where(eq(workspaces.id, workspaceId));
+    // Phase 26: suspension must flip the Trinity gate to the "on hold"
+    // message on the very next inbound call/SMS — flush cache immediately.
+    cacheManager.invalidateWorkspace(workspaceId);
 
     // Notify owner
     try {
@@ -1872,6 +1896,9 @@ export class StripeWebhookService {
     await db.update(workspaces)
       .set({ subscriptionStatus: 'active', updatedAt: new Date() })
       .where(eq(workspaces.id, workspaceId));
+    // Phase 26: resumption must lift the Trinity gate immediately — no
+    // 10-min stale window where a paid-up workspace is still blocked.
+    cacheManager.invalidateWorkspace(workspaceId);
 
     // Notify owner
     try {

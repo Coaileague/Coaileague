@@ -14,6 +14,8 @@
 import { createLogger } from '../../lib/logger';
 import { withClaude, withGpt } from '../ai/aiCallWrapper';
 import { pool } from '../../db';
+import { isWorkspaceServiceable } from '../billing/billingConstants';
+import { universalAudit } from '../universalAuditService';
 const log = createLogger('TrinityAIResolver');
 
 const SYSTEM_PROMPT = `You are Trinity, a warm and professional AI voice/SMS assistant for a security guard company.
@@ -231,6 +233,44 @@ export async function resolveWithTrinityBrain(params: {
   const { issue, workspaceId, language } = params;
 
   log.info(`[TrinityAIResolver] Resolving issue (${issue.length} chars, lang=${language ?? 'auto'}) for workspace ${workspaceId}`);
+
+  // ── Phase 26: Subscription gate ─────────────────────────────────────────
+  // Canonical AI entry point for voice / SMS / email / Trinity-proactive.
+  // Voice and SMS webhooks gate at their ingress; this hook catches every
+  // other channel (email auto-reply, proactive monitors, command bus) and
+  // double-gates the webhook paths. Protected workspaces (platform,
+  // grandfathered, system) always pass through.
+  const serviceable = await isWorkspaceServiceable(workspaceId);
+  if (!serviceable) {
+    log.warn(`[TrinityAIResolver] Subscription gate blocked AI for workspace ${workspaceId}`);
+    try {
+      await universalAudit.log({
+        workspaceId,
+        actorType: 'system',
+        action: 'trinity.subscription_gate_blocked',
+        entityType: 'ai_invocation',
+        changeType: 'action',
+        metadata: {
+          channel: 'trinity_brain',
+          reason: 'subscription_inactive',
+          issueLength: issue.length,
+          language: language ?? 'auto',
+        },
+      });
+    } catch (auditErr: any) {
+      log.warn('[TrinityAIResolver] Gate audit failed (non-fatal):', auditErr?.message);
+    }
+    // Return canResolve:false with empty answer so callers fall through to
+    // their own escalation path (ticket creation, voicemail, etc.) instead
+    // of spending any tokens.
+    return {
+      canResolve: false,
+      answer: '',
+      escalationReason: 'subscription_inactive',
+      modelUsed: 'none',
+      responseTimeMs: Date.now() - start,
+    };
+  }
 
   // Resolve workspace tier for metered fallback calls
   let workspaceTier = 'starter';

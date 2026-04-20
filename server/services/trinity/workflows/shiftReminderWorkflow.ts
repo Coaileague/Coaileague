@@ -173,6 +173,16 @@ async function sendReminder(params: {
   bucket: '4h' | '1h';
   message: string;
 }): Promise<void> {
+  // Phase 26: Subscription gate — don't send proactive shift reminders
+  // on behalf of a workspace whose subscription is inactive. Cron sweeps
+  // every workspace; the gate filters per-tenant. Protected workspaces
+  // always pass.
+  const { isWorkspaceServiceable } = await import('../../billing/billingConstants');
+  if (!(await isWorkspaceServiceable(params.workspaceId))) {
+    log.info(`[shift-reminder] Skipping workspace ${params.workspaceId} — subscription inactive`);
+    return;
+  }
+
   const record = await logWorkflowStart({
     workflowName: WORKFLOW_NAME,
     workspaceId: params.workspaceId,

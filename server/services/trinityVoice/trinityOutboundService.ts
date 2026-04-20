@@ -12,6 +12,8 @@
  */
 
 import { createLogger } from '../../lib/logger';
+import { isWorkspaceServiceable } from '../billing/billingConstants';
+import { universalAudit } from '../universalAuditService';
 const log = createLogger('trinityOutbound');
 
 export interface OutboundCallParams {
@@ -28,8 +30,33 @@ export async function makeOutboundCall(params: OutboundCallParams): Promise<{
   callSid?: string;
   error?: string;
 }> {
-  const { toPhone, message, baseUrl, language } = params;
+  const { toPhone, message, baseUrl, language, workspaceId } = params;
   const fromPhone = params.fromPhone || process.env.TWILIO_PHONE_NUMBER;
+
+  // Phase 26: Subscription gate — never initiate outbound Trinity calls
+  // for a workspace whose subscription is inactive. Protected workspaces
+  // (platform, grandfathered) always pass.
+  const serviceable = await isWorkspaceServiceable(workspaceId);
+  if (!serviceable) {
+    log.warn(`[TrinityOutbound] Subscription gate blocked outbound call for workspace ${workspaceId}`);
+    try {
+      await universalAudit.log({
+        workspaceId,
+        actorType: 'system',
+        action: 'trinity.subscription_gate_blocked',
+        entityType: 'voice_call',
+        changeType: 'action',
+        metadata: {
+          channel: 'voice_outbound',
+          reason: 'subscription_inactive',
+          toPhone,
+        },
+      });
+    } catch (auditErr: any) {
+      log.warn('[TrinityOutbound] Gate audit failed (non-fatal):', auditErr?.message);
+    }
+    return { success: false, error: 'SUBSCRIPTION_INACTIVE' };
+  }
 
   try {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;

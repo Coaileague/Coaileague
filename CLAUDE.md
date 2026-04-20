@@ -732,6 +732,113 @@ seven fields above.
 
 ---
 
+## Section Q — Trinity Subscription + Identity Gate (Phase 26)
+
+**The law:** Before Trinity spends any tokens or places any outbound voice /
+SMS on behalf of a tenant, the workspace's subscription status MUST be
+verified. Protected workspaces (platform support org, grandfathered tenant,
+system) always pass; everything else must be `active`, `trial`, `trialing`,
+or `free_trial`. Suspended / past_due / cancelled / paused workspaces get a
+warm professional message and the call/SMS ends. No token spend, no Twilio
+charge, no silent fire-and-forget.
+
+**The bug it prevents:** HTTP tier guards (`requirePlan`,
+`subscriptionReadOnlyGuard`, `cancelledWorkspaceGuard`) block inactive
+workspaces correctly, but Twilio webhooks are unauthenticated POSTs exempt
+from those guards. Before Phase 26, a cancelled workspace's phone number
+could still reach Trinity, burn Gemini/Claude/OpenAI tokens, and place
+outbound shift offers indefinitely. Trinity had no awareness of subscription
+status before invoking AI.
+
+**The canonical helper:** `server/services/billing/billingConstants.ts`
+exports `isWorkspaceServiceable(workspaceId): Promise<boolean>` — the single
+source of truth that every Phase 26 gate calls. It is protected-workspace
+aware, consults `cacheManager.getWorkspaceTierWithStatus` (10-min TTL; same
+source used by `requirePlan`), and fails OPEN on DB miss so a transient
+outage cannot lock legitimate tenants out.
+
+Status coverage (both platform and Stripe webhook spellings):
+- Active set: `active`, `trial`, `trialing`, `free_trial`
+- Suspended set: `suspended`, `past_due`, `unpaid`, `incomplete`,
+  `incomplete_expired`, `paused`
+
+**Files governed (every gate site):**
+
+| Channel | File | Gate |
+|---|---|---|
+| Inbound voice | `server/routes/voiceRoutes.ts` POST `/inbound` | `isSubscriptionActive` on resolved workspace |
+| Inbound SMS | `server/routes/voiceRoutes.ts` POST `/sms-inbound` | Same, after TCPA STOP handling |
+| AI entry | `server/services/trinityVoice/trinityAIResolver.ts#resolveWithTrinityBrain` | `isWorkspaceServiceable` — covers email (`trinityInboundEmailProcessor`) + belt-and-suspenders for voice/SMS |
+| SMS AI cap | `server/services/trinityVoice/smsAutoResolver.ts` | `aiMeteringService.checkUsageAllowedById` before `tryTrinityAI` |
+| Outbound voice | `server/services/trinityVoice/trinityOutboundService.ts#makeOutboundCall` | `isWorkspaceServiceable` — `callOfficerWelfareCheck` inherits |
+| Outbound shift SMS | `server/services/trinityVoice/trinityShiftOfferService.ts#sendShiftOffers` | `isWorkspaceServiceable` |
+| Outbound per-employee SMS | `server/services/smsService.ts#sendSMSToEmployee` | `isWorkspaceServiceable` on effective workspaceId |
+| Cron workflow | `server/services/trinity/workflows/shiftReminderWorkflow.ts#sendReminder` | Early exit per-tenant |
+
+**Cache freshness:** Every Stripe webhook and platform-admin mutation that
+touches `workspaces.subscriptionStatus` now calls
+`cacheManager.invalidateWorkspace(workspaceId)` so gate decisions propagate
+within seconds, not up to the 10-min TTL. Wired in:
+- `server/services/billing/stripeWebhooks.ts` (8 handlers: created, updated,
+  deleted, payment-succeeded, payment-failed, checkout, paused, resumed)
+- `server/services/billing/stripeEventBridge.ts` (6 handlers)
+- `server/routes/adminRoutes.ts` (support suspend/unsuspend)
+- `server/routes/hrInlineRoutes.ts` (org activate/deactivate/maintenance)
+
+**Audit trail taxonomy (universal_audit_trail):**
+- `trinity.voice_ai_resolved` — Trinity brain handled a turn
+  (entityType `voice_call`, metadata: model, responseTimeMs, channel, extension)
+- `trinity.subscription_gate_blocked` — gate turned a request away
+  (entityType: `voice_call` | `sms_message` | `ai_invocation` | `shift_offer`;
+  metadata: channel, subscriptionStatus, subscriptionTier, reason,
+  fromPhone, toPhone, recoverable)
+
+**Owner-facing surface:** `GET /api/trinity/transparency/trinity-activity`
+queries `universal_audit_trail` filtered to `trinity.*` actions and returns
+summary counters + row list. Rendered in the **Gate Activity** tab of
+`client/src/pages/trinity-transparency-dashboard.tsx` (`/trinity/transparency`).
+
+**Safety carve-out (never gated):** Emergency / panic / regulatory SMS
+routes through `sendSMSToUser` → `NotificationDeliveryService`, not
+`sendSMSToEmployee`. Per CLAUDE.md §O the panic channel is a liability
+requirement and must never be blocked by a billing gate.
+
+**Forbidden patterns:**
+```ts
+// 🔴 forbidden — calling Trinity AI without checking subscription
+await resolveWithTrinityBrain({ issue, workspaceId, language });
+// (fine now — the function itself gates, but do not remove the gate)
+
+// 🔴 forbidden — mutating subscriptionStatus without invalidating cache
+await db.update(workspaces).set({ subscriptionStatus: 'active' })
+  .where(eq(workspaces.id, workspaceId));
+// Trinity gate will still block for up to 10 minutes.
+
+// ✅ required — invalidate after every subscriptionStatus mutation
+await db.update(workspaces).set({ subscriptionStatus: 'active' })
+  .where(eq(workspaces.id, workspaceId));
+cacheManager.invalidateWorkspace(workspaceId);
+```
+
+**Required pattern for new outbound Trinity channels:**
+```ts
+import { isWorkspaceServiceable } from '../billing/billingConstants';
+import { universalAudit } from '../universalAuditService';
+
+const serviceable = await isWorkspaceServiceable(workspaceId);
+if (!serviceable) {
+  await universalAudit.log({
+    workspaceId, actorType: 'system', changeType: 'action',
+    action: 'trinity.subscription_gate_blocked',
+    entityType: 'my_new_channel',
+    metadata: { channel: 'my_new_channel', reason: 'subscription_inactive' },
+  }).catch(() => { /* non-fatal */ });
+  return { success: false, error: 'SUBSCRIPTION_INACTIVE' };
+}
+```
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When Claude Code (or any future debug session) discovers a new architectural
@@ -774,6 +881,14 @@ valid.
 | Employment verification workflow | `server/services/trinity/employmentVerificationService.ts`, `server/routes/employmentVerifyRoutes.ts` | FCRA-bounded `verify@{slug}.coaileague.com` pipeline + approve/deny |
 | Verification voice entry | `server/routes/voiceRoutes.ts → POST /api/voice/verify-employee-id` | Twilio Gather → org-code resolution → email channel |
 | Verification email provisioning | `server/services/email/emailProvisioningService.ts` (`WORKSPACE_SYSTEM_TYPES`) | `verify@` auto-provisioned on every workspace |
+| Subscription gate helper | `server/services/billing/billingConstants.ts#isWorkspaceServiceable` | async gate used by every Phase 26 channel |
+| Subscription gate — inbound voice/SMS | `server/routes/voiceRoutes.ts` POST `/inbound`, POST `/sms-inbound` | blocks inactive workspaces before Trinity is invoked |
+| Subscription gate — AI entry | `server/services/trinityVoice/trinityAIResolver.ts#resolveWithTrinityBrain` | covers email + all callers of the canonical AI entry point |
+| Subscription gate — outbound voice | `server/services/trinityVoice/trinityOutboundService.ts#makeOutboundCall` | short-circuits before Twilio |
+| Subscription gate — outbound SMS | `server/services/smsService.ts#sendSMSToEmployee`, `trinityShiftOfferService.ts#sendShiftOffers` | canonical per-employee primitive + shift offers |
+| Tier cache invalidation | `cacheManager.invalidateWorkspace` called after every `subscriptionStatus` mutation (stripeWebhooks, stripeEventBridge, adminRoutes, hrInlineRoutes) | gate decisions propagate in seconds |
+| Trinity activity endpoint | `server/routes/trinityTransparencyRoutes.ts → GET /api/trinity/transparency/trinity-activity` | reads `universal_audit_trail` for `trinity.*` actions |
+| Trinity activity UI | `client/src/pages/trinity-transparency-dashboard.tsx` ("Gate Activity" tab) | owner-facing counters + event list |
 
 ## Audit History
 
@@ -798,3 +913,4 @@ valid.
 | 17A/B | (this commit) | Trinity audit trail helper, platform-role tightening, workspace-enumeration fix |
 | O | (this commit) | Panic button notification-only liability codification + canonical `PANIC_LIABILITY_NOTICE`, disclaimer UI components, CLAUDE.md Section O |
 | 27 / P | (this commit) | FCRA-bounded employment verification — voice → org-code resolver → email channel → manager approve/deny with `logActionAudit`; `verify@` auto-provisioned; CLAUDE.md Section P |
+| 26 / Q | (this commit) | Trinity subscription + identity gate — inbound voice/SMS, email AI, outbound voice/SMS, shift offers, cron workflows; `isWorkspaceServiceable` helper; Stripe + admin cache invalidation; `trinity.voice_ai_resolved` / `trinity.subscription_gate_blocked` audit taxonomy; owner-facing Gate Activity tab; CLAUDE.md Section Q |

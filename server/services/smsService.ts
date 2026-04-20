@@ -409,7 +409,7 @@ export async function sendSMSToUser(userId: string, body: string, type: string =
 export async function sendSMSToEmployee(employeeId: string, body: string, type: string = 'notification', workspaceId?: string): Promise<SMSResult> { // infra
   try {
     const employee = await db.query.employees.findFirst({
-      where: workspaceId 
+      where: workspaceId
         ? and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId))
         : eq(employees.id, employeeId),
     });
@@ -420,6 +420,23 @@ export async function sendSMSToEmployee(employeeId: string, body: string, type: 
 
     if (!employee.phone) {
       return { success: false, error: 'Employee has no phone number' };
+    }
+
+    // ── Phase 26: Subscription gate ─────────────────────────────────────────
+    // Trinity-proactive SMS paths (shift reminders, cron workflows, etc.)
+    // route through this function. Block per-tenant when the workspace's
+    // subscription is inactive. Emergency / safety SMS routes through
+    // sendSMSToUser → NotificationDeliveryService and is unaffected by this
+    // gate. workspaceId is optional; if absent we fail open so existing
+    // callers that rely on the old behavior keep working.
+    const effectiveWorkspaceId = workspaceId || employee.workspaceId || null;
+    if (effectiveWorkspaceId) {
+      const { isWorkspaceServiceable } = await import('./billing/billingConstants');
+      const serviceable = await isWorkspaceServiceable(effectiveWorkspaceId);
+      if (!serviceable) {
+        log.info(`[SMS] Subscription gate blocked employee SMS for workspace ${effectiveWorkspaceId} (type=${type})`);
+        return { success: false, error: 'SUBSCRIPTION_INACTIVE' };
+      }
     }
 
     // Phase B — Consent gate

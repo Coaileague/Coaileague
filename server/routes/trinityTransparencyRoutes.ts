@@ -331,6 +331,68 @@ router.get('/audit-trail', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// GET /api/trinity/transparency/trinity-activity (Phase 26)
+// Recent Trinity voice/SMS/AI activity from universal_audit_trail — powers
+// the dashboard section showing AI resolutions alongside subscription-gate
+// blocks. Query params: days (default 7), limit (default 100, max 500),
+// action (optional, e.g. 'trinity.voice_ai_resolved').
+// ────────────────────────────────────────────────────────────────────────────
+
+router.get('/trinity-activity', async (req: AuthenticatedRequest, res: Response) => {
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) {
+    return res.status(400).json({ success: false, error: 'Workspace context required' });
+  }
+
+  try {
+    const days = Math.max(1, Math.min(90, parseInt((req.query.days as string) || '7', 10)));
+    const limit = Math.max(1, Math.min(500, parseInt((req.query.limit as string) || '100', 10)));
+    const actionFilter = typeof req.query.action === 'string' ? req.query.action : null;
+
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const params: Array<string | Date | number> = [workspaceId, since];
+    let actionClause = `AND action LIKE 'trinity.%'`;
+    if (actionFilter) {
+      params.push(actionFilter);
+      actionClause = `AND action = $${params.length}`;
+    }
+    params.push(limit);
+    const limitPlaceholder = `$${params.length}`;
+
+    const rows = (await pool.query(
+      `SELECT id, action, entity_type, entity_id, actor_type,
+              metadata, created_at
+         FROM universal_audit_trail
+        WHERE workspace_id = $1
+          AND created_at >= $2
+          ${actionClause}
+        ORDER BY created_at DESC
+        LIMIT ${limitPlaceholder}`,
+      params,
+    )).rows;
+
+    // Compact summary counters so the dashboard can render headline
+    // numbers without a second query.
+    const summary = {
+      total: rows.length,
+      byAction: {} as Record<string, number>,
+      byChannel: {} as Record<string, number>,
+    };
+    for (const r of rows) {
+      summary.byAction[r.action] = (summary.byAction[r.action] || 0) + 1;
+      const channel = (r.metadata && r.metadata.channel) || 'unknown';
+      summary.byChannel[channel] = (summary.byChannel[channel] || 0) + 1;
+    }
+
+    res.json({ success: true, days, summary, rows });
+  } catch (error: unknown) {
+    log.error('[Transparency] Trinity activity fetch failed:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 // GET /api/trinity/transparency/service-registry
 // Returns the canonical Trinity service inventory (Phase 16 registry)
 // ────────────────────────────────────────────────────────────────────────────

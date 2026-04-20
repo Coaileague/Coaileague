@@ -20,6 +20,11 @@ import {
 import { eq, and, desc } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
 import { trinityHelpaiCommandBus } from '../helpai/trinityHelpaiCommandBus';
+import {
+  PLATFORM_WORKSPACE_ID,
+  GRANDFATHERED_TENANT_ID,
+} from '../billing/billingConstants';
+import { cacheManager } from '../platform/cacheManager';
 const log = createLogger('voiceOrchestrator');
 
 
@@ -93,8 +98,12 @@ function pause(seconds: number = 1): string {
 export async function resolveWorkspaceFromPhoneNumber(to: string): Promise<{
   workspaceId: string;
   phoneRecord: typeof workspacePhoneNumbers.$inferSelect;
+  subscriptionStatus: string;   // 'active' | 'trial' | 'suspended' | 'cancelled' | etc.
+  subscriptionTier: string;     // 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise'
+  isProtected: boolean;         // grandfathered or platform — always serve
 } | null> {
-  const [phoneRecord] = await db.select()
+  const [phoneRecord] = await db
+    .select()
     .from(workspacePhoneNumbers)
     .where(and(
       eq(workspacePhoneNumbers.phoneNumber, to),
@@ -103,7 +112,26 @@ export async function resolveWorkspaceFromPhoneNumber(to: string): Promise<{
     .limit(1);
 
   if (!phoneRecord) return null;
-  return { workspaceId: phoneRecord.workspaceId, phoneRecord };
+
+  const workspaceId = phoneRecord.workspaceId;
+  const isProtected =
+    workspaceId === PLATFORM_WORKSPACE_ID ||
+    (!!GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID);
+
+  // Subscription status comes from the shared tier cache (10-min TTL) so
+  // Trinity webhooks don't stampede the workspaces table and stay in sync
+  // with the HTTP tier guards. On cache miss or DB failure we default to
+  // 'active' / 'starter' so a transient lookup failure can't lock out a
+  // legitimate tenant.
+  const tierInfo = await cacheManager.getWorkspaceTierWithStatus(workspaceId);
+
+  return {
+    workspaceId,
+    phoneRecord,
+    subscriptionStatus: tierInfo?.status ?? 'active',
+    subscriptionTier: tierInfo?.tier ?? 'starter',
+    isProtected,
+  };
 }
 
 // ─── Main Menu Builder ────────────────────────────────────────────────────────

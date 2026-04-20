@@ -169,6 +169,30 @@ export default function TrinityTransparencyDashboard() {
       queryFn: () => fetchJson('/api/trinity/transparency/decisions?limit=20'),
     });
 
+  // Phase 26 — Trinity voice/SMS/AI + subscription-gate activity
+  const { data: trinityActivityData, isLoading: trinityActivityLoading } =
+    useQuery<{
+      success: boolean;
+      days: number;
+      summary: {
+        total: number;
+        byAction: Record<string, number>;
+        byChannel: Record<string, number>;
+      };
+      rows: Array<{
+        id: string;
+        action: string;
+        entity_type: string;
+        entity_id: string | null;
+        actor_type: string;
+        metadata: Record<string, any> | null;
+        created_at: string;
+      }>;
+    }>({
+      queryKey: ['/api/trinity/transparency/trinity-activity'],
+      queryFn: () => fetchJson('/api/trinity/transparency/trinity-activity?days=7&limit=100'),
+    });
+
   const overview = overviewData?.overview;
 
   return (
@@ -300,6 +324,9 @@ export default function TrinityTransparencyDashboard() {
             </TabsTrigger>
             <TabsTrigger value="registry" className="data-[state=active]:bg-[#1a2540]">
               <Layers className="w-3.5 h-3.5 mr-1.5" /> Services
+            </TabsTrigger>
+            <TabsTrigger value="gate" className="data-[state=active]:bg-[#1a2540]">
+              <Shield className="w-3.5 h-3.5 mr-1.5" /> Gate Activity
             </TabsTrigger>
           </TabsList>
 
@@ -583,6 +610,111 @@ export default function TrinityTransparencyDashboard() {
           {/* ── Services Registry Tab ── */}
           <TabsContent value="registry">
             <ServiceRegistryPanel />
+          </TabsContent>
+
+          {/* ── Gate Activity Tab (Phase 26) ── */}
+          <TabsContent value="gate">
+            <Card className="bg-[#0d1426] border-white/10">
+              <CardHeader>
+                <CardTitle className="text-base">Trinity Gate Activity</CardTitle>
+                <CardDescription>
+                  AI resolutions and subscription-gate blocks across voice, SMS, email, and proactive automation (last 7 days)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {trinityActivityLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full bg-white/10" />
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary counters */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div className="rounded-lg bg-white/5 p-3">
+                        <div className="text-xs text-white/40">AI Resolved</div>
+                        <div className="text-2xl font-bold text-[#4FC3F7]">
+                          {trinityActivityData?.summary.byAction?.['trinity.voice_ai_resolved'] ?? 0}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white/5 p-3">
+                        <div className="text-xs text-white/40">Gate Blocks</div>
+                        <div className="text-2xl font-bold text-amber-400">
+                          {trinityActivityData?.summary.byAction?.['trinity.subscription_gate_blocked'] ?? 0}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white/5 p-3">
+                        <div className="text-xs text-white/40">Voice Events</div>
+                        <div className="text-2xl font-bold text-white">
+                          {trinityActivityData?.summary.byChannel?.voice ?? 0}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white/5 p-3">
+                        <div className="text-xs text-white/40">SMS Events</div>
+                        <div className="text-2xl font-bold text-white">
+                          {trinityActivityData?.summary.byChannel?.sms ?? 0}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row list */}
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-2">
+                        {(trinityActivityData?.rows ?? []).map(row => {
+                          const isBlock = row.action === 'trinity.subscription_gate_blocked';
+                          const meta = row.metadata || {};
+                          return (
+                            <div
+                              key={row.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  {isBlock ? (
+                                    <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  ) : (
+                                    <Zap className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
+                                  )}
+                                  <span className="text-sm font-medium truncate">
+                                    {row.action.replace('trinity.', '').replace(/_/g, ' ')}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-white/40">
+                                  {meta.channel && <span>{String(meta.channel)}</span>}
+                                  {meta.extension && <span>{String(meta.extension)}</span>}
+                                  {meta.model && <span>{String(meta.model)}</span>}
+                                  {meta.subscriptionStatus && <span>status: {String(meta.subscriptionStatus)}</span>}
+                                  {meta.reason && <span>reason: {String(meta.reason)}</span>}
+                                  <span>{new Date(row.created_at).toLocaleString()}</span>
+                                </div>
+                              </div>
+                              <div className="ml-3 shrink-0">
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    isBlock
+                                      ? 'border-amber-400/40 text-amber-300 bg-amber-400/10'
+                                      : 'border-[#4FC3F7]/40 text-[#4FC3F7] bg-[#4FC3F7]/10'
+                                  }
+                                >
+                                  {isBlock ? 'Blocked' : 'Resolved'}
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {!trinityActivityData?.rows?.length && (
+                          <div className="text-center text-white/40 py-12">
+                            No Trinity voice / SMS / AI activity in the last 7 days
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

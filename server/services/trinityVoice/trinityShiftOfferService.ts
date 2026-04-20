@@ -78,6 +78,30 @@ export async function sendShiftOffers(params: ShiftOfferParams): Promise<{
     maxOfficers = 10,
   } = params;
 
+  // ── Phase 26: Subscription gate ─────────────────────────────────────────
+  // Don't push shift offers on behalf of a workspace whose subscription is
+  // not active. Protected workspaces (platform, grandfathered) always pass.
+  const { isWorkspaceServiceable } = await import('../billing/billingConstants');
+  const serviceable = await isWorkspaceServiceable(workspaceId);
+  if (!serviceable) {
+    log.warn(`[ShiftOffer] Subscription gate blocked shift offer for workspace ${workspaceId}`);
+    try {
+      const { universalAudit } = await import('../universalAuditService');
+      await universalAudit.log({
+        workspaceId,
+        actorType: 'system',
+        action: 'trinity.subscription_gate_blocked',
+        entityType: 'shift_offer',
+        entityId: shiftId,
+        changeType: 'action',
+        metadata: { channel: 'sms_outbound', reason: 'subscription_inactive' },
+      });
+    } catch (auditErr: any) {
+      log.warn('[ShiftOffer] Gate audit failed (non-fatal):', auditErr?.message);
+    }
+    return { offered: 0, errors: ['SUBSCRIPTION_INACTIVE'] };
+  }
+
   await ensureTable();
 
   try {

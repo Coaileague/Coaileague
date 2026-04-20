@@ -56,6 +56,11 @@ import {
 const VOICE = 'Polly.Joanna-Neural';
 const VOICE_ES = 'Polly.Lupe-Neural';
 import { voiceSmsMeteringService } from '../services/billing/voiceSmsMeteringService';
+import {
+  isSubscriptionActive,
+  isSubscriptionSuspended,
+} from '../services/billing/billingConstants';
+import { universalAudit } from '../services/universalAuditService';
 import { handleSales } from '../services/trinityVoice/extensions/salesExtension';
 import { handleClientSupport } from '../services/trinityVoice/extensions/clientExtension';
 import { handleEmploymentVerification } from '../services/trinityVoice/extensions/verifyExtension';
@@ -437,6 +442,60 @@ voiceRouter.post('/inbound', twilioSignatureMiddleware, async (req: Request, res
     const baseUrl = getBaseUrl(req);
 
     log.info(`[VoiceRoutes] Inbound call: ${From} → ${To} (${CallSid})`);
+
+    // ── SUBSCRIPTION GATE ────────────────────────────────────────────────────
+    // Resolve workspace + subscription status before any Trinity service is
+    // invoked. Protected workspaces (platform + grandfathered) always pass
+    // through. For all others: only an active/trial subscription gets Trinity
+    // service. Suspended/cancelled get a graceful professional end.
+    const workspace = await resolveWorkspaceFromPhoneNumber(To);
+    if (!workspace) {
+      log.warn(`[VoiceRoutes] Unknown phone number: ${To}`);
+      return xmlResponse(res, twiml(
+        '<Say voice="Polly.Joanna-Neural" language="en-US">This number is not configured. Goodbye.</Say>'
+      ));
+    }
+
+    if (!workspace.isProtected && !isSubscriptionActive(workspace.subscriptionStatus)) {
+      const suspended = isSubscriptionSuspended(workspace.subscriptionStatus);
+      const message = suspended
+        ? 'Hello! Your organization\'s Co-League account is currently on hold due to a billing issue. ' +
+          'Please have your administrator log in to Co-League and update your payment information to restore service. ' +
+          'We apologize for any inconvenience. Goodbye.'
+        : 'Hello! Your organization\'s Co-League account is no longer active. ' +
+          'Please have your administrator contact us at support at co-league dot com to restore access. ' +
+          'Thank you for calling. Goodbye.';
+
+      log.warn(`[VoiceRoutes] Blocked call from inactive workspace ${workspace.workspaceId} (${workspace.subscriptionStatus})`);
+
+      // Record the block in the universal audit trail so it surfaces in the
+      // tenant-owner transparency dashboard alongside resolved calls.
+      try {
+        await universalAudit.log({
+          workspaceId: workspace.workspaceId,
+          actorType: 'system',
+          action: 'trinity.subscription_gate_blocked',
+          entityType: 'voice_call',
+          entityId: CallSid,
+          changeType: 'action',
+          metadata: {
+            channel: 'voice',
+            subscriptionStatus: workspace.subscriptionStatus,
+            subscriptionTier: workspace.subscriptionTier,
+            fromPhone: From,
+            toPhone: To,
+            recoverable: suspended,
+          },
+        });
+      } catch (auditErr: any) {
+        log.warn('[VoiceRoutes] Subscription-gate audit failed (non-fatal):', auditErr?.message);
+      }
+
+      return xmlResponse(res, twiml(
+        `<Say voice="Polly.Joanna-Neural" language="en-US">${message}</Say>`
+      ));
+    }
+    // ── END SUBSCRIPTION GATE ────────────────────────────────────────────────
 
     // Phase 18D — fire-and-forget caller-ID risk lookup. Result is cached and
     // available to downstream verifiers and the dashboard via session metadata.
@@ -1490,6 +1549,27 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
         outcome: 'success',
       }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
+      // Workspace-scoped audit log so every Trinity voice AI resolution is
+      // visible in the universal audit trail (not just the per-call log).
+      try {
+        await universalAudit.log({
+          workspaceId,
+          actorType: 'trinity',
+          action: 'trinity.voice_ai_resolved',
+          entityType: 'voice_call',
+          entityId: sessionId,
+          changeType: 'action',
+          metadata: {
+            model: aiResult.modelUsed,
+            responseTimeMs: aiResult.responseTimeMs,
+            channel: 'voice',
+            extension: 'support',
+          },
+        });
+      } catch (auditErr: any) {
+        log.warn('[VoiceRoutes] support-resolve audit failed (non-fatal):', auditErr?.message);
+      }
+
       return xmlResponse(res, twiml(
         `<Gather input="dtmf" action="${confirmAction}" method="POST" numDigits="1" timeout="10">` +
         (lang === 'es' ? sayEs(answer) : sayEn(answer)) +
@@ -1991,6 +2071,48 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
       return;
     }
 
+    // ── SUBSCRIPTION GATE ────────────────────────────────────────────────────
+    // Resolve workspace from the dialed number (To) to verify subscription
+    // status before invoking any Trinity-capable path (shift offers, keyword
+    // router, AI auto-resolver). STOP is handled above for TCPA compliance
+    // regardless of subscription state. Protected workspaces (platform +
+    // grandfathered) always pass.
+    const smsWorkspace = await resolveWorkspaceFromPhoneNumber(To);
+    if (smsWorkspace && !smsWorkspace.isProtected && !isSubscriptionActive(smsWorkspace.subscriptionStatus)) {
+      log.warn(`[VoiceRoutes] Blocked SMS from inactive workspace ${smsWorkspace.workspaceId} (${smsWorkspace.subscriptionStatus})`);
+
+      // Record the block in the universal audit trail so tenant owners can
+      // see turned-away SMS alongside AI-resolved ones.
+      try {
+        await universalAudit.log({
+          workspaceId: smsWorkspace.workspaceId,
+          actorType: 'system',
+          action: 'trinity.subscription_gate_blocked',
+          entityType: 'sms_message',
+          entityId: MessageSid || null,
+          changeType: 'action',
+          metadata: {
+            channel: 'sms',
+            subscriptionStatus: smsWorkspace.subscriptionStatus,
+            subscriptionTier: smsWorkspace.subscriptionTier,
+            fromPhone: From,
+            toPhone: To,
+            recoverable: isSubscriptionSuspended(smsWorkspace.subscriptionStatus),
+          },
+        });
+      } catch (auditErr: any) {
+        log.warn('[VoiceRoutes] SMS subscription-gate audit failed (non-fatal):', auditErr?.message);
+      }
+
+      res.type('text/xml').send(
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Message>` +
+        `We're unable to process your request at this time. Please contact your organization's administrator. — Trinity` +
+        `</Message></Response>`
+      );
+      return;
+    }
+    // ── END SUBSCRIPTION GATE ────────────────────────────────────────────────
+
     // YES / Y / ACCEPT — first check if it's a shift offer acceptance.
     // Fall back to opt-in handling only if there's no live offer.
     if (['YES', 'Y', 'ACCEPT', 'ACCEPTED'].includes(body)) {
@@ -2364,16 +2486,48 @@ async function runTrinityTalkTurn(params: {
     }
   }
 
+  // Workspace-scoped audit log for every resolved Trinity-talk turn, so AI
+  // invocations on this channel are visible in the universal audit trail.
+  if (aiResult.canResolve) {
+    try {
+      await universalAudit.log({
+        workspaceId,
+        actorType: 'trinity',
+        action: 'trinity.voice_ai_resolved',
+        entityType: 'voice_call',
+        entityId: sessionId,
+        changeType: 'action',
+        metadata: {
+          model: aiResult.modelUsed,
+          responseTimeMs: aiResult.responseTimeMs,
+          channel: 'voice',
+          extension: 'trinity_talk',
+          turn,
+        },
+      });
+    } catch (auditErr: any) {
+      log.warn('[VoiceRoutes] trinity-talk audit failed (non-fatal):', auditErr?.message);
+    }
+  }
+
   const issueEncoded = encodeURIComponent(issue.slice(0, 500));
   const nameAction = `${baseUrl}/api/voice/support-gather-name?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&issue=${issueEncoded}&aiAttempted=true&aiModel=${aiResult.modelUsed || 'none'}`;
   const escalationPhrase = lang === 'es' ? getEscalationPhraseEs() : getEscalationPhraseEn();
   const namePhrase = lang === 'es' ? getNameGatherPhraseEs() : getNameGatherPhraseEn();
 
   // If the AI cannot resolve it, or we've reached the 5-turn ceiling, stop
-  // looping and escalate directly to a support case.
+  // looping and escalate directly to a support case. `aiResult.answer` is
+  // empty when resolveWithTrinityBrain short-circuits on the subscription
+  // gate — use a graceful fallback so the caller hears a real sentence
+  // instead of dead air before the escalation gather.
   if (!aiResult.canResolve || turn >= 5) {
+    const spokenAnswer = aiResult.answer && aiResult.answer.trim().length > 0
+      ? aiResult.answer
+      : (lang === 'es'
+          ? 'Déjame conectarte con un especialista humano que podrá ayudarte.'
+          : 'Let me connect you with a human specialist who can help.');
     return twiml(
-      say(aiResult.answer, voiceId, langCode) +
+      say(spokenAnswer, voiceId, langCode) +
       `<Gather input="speech" action="${nameAction}" method="POST" timeout="8" speechTimeout="auto">` +
       say(escalationPhrase + ' ' + namePhrase, voiceId, langCode) +
       `</Gather>` +
