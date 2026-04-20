@@ -29,13 +29,11 @@ function wid(req: AuthenticatedRequest) {
   return req.workspaceId || (req as any).session?.workspaceId;
 }
 
-// ── Banned stub check (Phase 35L integration target) ─────────────────────────
-async function checkIsBanned(workspaceId: string, visitorName: string, visitorCompany?: string): Promise<boolean> {
-  // Phase 35L: full trespass registry integration deferred.
-  // Returns false until trespass_registry table is populated.
+// ── Banned check — queries trespass_notices (active trespass records for workspace) ──
+async function checkIsBanned(workspaceId: string, visitorName: string, _visitorCompany?: string): Promise<boolean> {
   try {
     const { rows } = await pool.query(
-      `SELECT 1 FROM trespass_registry
+      `SELECT 1 FROM trespass_notices
        WHERE workspace_id = $1
          AND lower(subject_name) = lower($2)
          AND status = 'active'

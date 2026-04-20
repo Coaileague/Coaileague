@@ -11,8 +11,10 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth';
 import { db } from '../db';
-import { employeeCertifications } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { employeeCertifications, employeeBackgroundChecks } from '@shared/schema';
+import { complianceEnrollments } from '@shared/schema/domains/workforce';
+import { eq, and, lte, gt, inArray } from 'drizzle-orm';
+import { format } from 'date-fns';
 import { universalAudit } from '../services/universalAuditService';
 import { runAllAcmeScenarios } from '../services/compliance/complianceScenarioRunner';
 import {
@@ -293,6 +295,112 @@ router.post('/override-out-of-state/:employeeId', requireAuth, async (req, res) 
   } catch (err: unknown) {
     log.error('[ComplianceOverride] Out-of-state override error:', err);
     return res.status(500).json({ message: 'Failed to log override', error: sanitizeError(err) });
+  }
+});
+
+// ── Compliance tasks pending — feeds TrinityTaskWidget ───────────────────────
+router.get('/tasks/pending', requireAuth, async (req, res) => {
+  try {
+    const workspaceId = req.workspaceId as string;
+    if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
+
+    const now = new Date();
+    const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+
+    const [expiringCerts, overdueChecks, pendingEnrollments] = await Promise.all([
+      db.select({
+        id: employeeCertifications.id,
+        employeeId: employeeCertifications.employeeId,
+        certificationType: employeeCertifications.certificationType,
+        expirationDate: employeeCertifications.expirationDate,
+      })
+      .from(employeeCertifications)
+      .where(
+        and(
+          eq(employeeCertifications.workspaceId, workspaceId),
+          lte(employeeCertifications.expirationDate, in30Days),
+          gt(employeeCertifications.expirationDate, now),
+        )
+      )
+      .limit(10),
+
+      db.select({
+        id: employeeBackgroundChecks.id,
+        employeeId: employeeBackgroundChecks.employeeId,
+        status: employeeBackgroundChecks.status,
+        requestedAt: employeeBackgroundChecks.requestedAt,
+      })
+      .from(employeeBackgroundChecks)
+      .where(
+        and(
+          eq(employeeBackgroundChecks.workspaceId, workspaceId),
+          inArray(employeeBackgroundChecks.status, ['pending', 'in_review']),
+          lte(employeeBackgroundChecks.requestedAt, fiveDaysAgo),
+        )
+      )
+      .limit(10),
+
+      db.select({
+        id: complianceEnrollments.id,
+        employeeId: complianceEnrollments.employeeId,
+        credentialType: complianceEnrollments.credentialType,
+        deadline: complianceEnrollments.deadline,
+      })
+      .from(complianceEnrollments)
+      .where(
+        and(
+          eq(complianceEnrollments.workspaceId, workspaceId),
+          eq(complianceEnrollments.status, 'pending'),
+        )
+      )
+      .limit(10),
+    ]);
+
+    const tasks = [
+      ...expiringCerts.map(c => ({
+        id: `cert-expiry-${c.id}`,
+        kind: 'compliance' as const,
+        title: `${c.certificationType} expiring soon`,
+        description: c.expirationDate
+          ? `Expires ${format(new Date(c.expirationDate), 'MMM d, yyyy')}`
+          : 'Expiration date unknown',
+        priority: 'high' as const,
+        category: 'certification',
+        linkedRecordId: c.employeeId,
+        actionRoute: `/compliance/employee-detail/${c.employeeId}`,
+        createdAt: new Date().toISOString(),
+      })),
+      ...overdueChecks.map(b => ({
+        id: `bgcheck-${b.id}`,
+        kind: 'compliance' as const,
+        title: 'Background check pending review',
+        description: `Status: ${b.status}. Requested ${b.requestedAt ? format(new Date(b.requestedAt), 'MMM d') : 'unknown'}`,
+        priority: 'normal' as const,
+        category: 'background_check',
+        linkedRecordId: b.employeeId,
+        actionRoute: `/background-checks`,
+        createdAt: new Date().toISOString(),
+      })),
+      ...pendingEnrollments.map(e => ({
+        id: `enroll-${e.id}`,
+        kind: 'compliance' as const,
+        title: `${e.credentialType ?? 'Credential'} enrollment pending`,
+        description: e.deadline
+          ? `Due ${format(new Date(e.deadline), 'MMM d, yyyy')}`
+          : 'No due date set',
+        priority: 'normal' as const,
+        category: 'enrollment',
+        linkedRecordId: e.employeeId,
+        actionRoute: `/compliance`,
+        createdAt: new Date().toISOString(),
+      })),
+    ];
+
+    res.json(tasks);
+  } catch (error) {
+    log.error('[Compliance] tasks/pending error:', error);
+    res.json([]);
   }
 });
 

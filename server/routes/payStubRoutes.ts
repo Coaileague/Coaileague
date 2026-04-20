@@ -10,10 +10,50 @@ import { requireAuth } from '../auth';
 import { attachWorkspaceId, requireEmployee, requireManager, type AuthenticatedRequest } from '../rbac';
 import { paystubService } from '../services/paystubService';
 import { db } from '../db';
-import { employees } from '@shared/schema';
+import { employees, payStubs } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 const router = Router();
+
+/**
+ * GET /api/pay-stubs/:id — fetch a single pay stub by ID for the authenticated employee.
+ * Mounted at /api so the full path is /api/pay-stubs/:id.
+ */
+router.get('/pay-stubs/:id', requireAuth, attachWorkspaceId, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const workspaceId = authReq.workspaceId;
+    const { id } = req.params;
+
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const employee = workspaceId
+      ? await db.query.employees.findFirst({
+          where: and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)),
+        })
+      : null;
+
+    const [stub] = await db
+      .select()
+      .from(payStubs)
+      .where(
+        and(
+          eq(payStubs.id, id),
+          employee
+            ? eq(payStubs.employeeId, employee.id)
+            : eq(payStubs.workspaceId, workspaceId ?? ''),
+        )
+      )
+      .limit(1);
+
+    if (!stub) return res.status(404).json({ error: 'Pay stub not found' });
+    res.json(stub);
+  } catch (error) {
+    console.error('[PayStubs] Error fetching pay stub by id:', error);
+    res.status(500).json({ message: 'Failed to fetch pay stub' });
+  }
+});
 
 /**
  * Get paystub data for mobile/web display (JSON)
