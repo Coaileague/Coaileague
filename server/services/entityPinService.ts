@@ -92,7 +92,7 @@ export async function setEntityPin(params: PinSetParams): Promise<void> {
   const start = Date.now();
 
   // Tenant isolation — the WHERE clause MUST include workspaceId so nobody
-  // can rewrite a PIN in a workspace they don't belong to (CLAUDE.md §G).
+  // can rewrite a PIN in a workspace they don't belong to (TRINITY.md §G).
   const result = await pool.query(
     `UPDATE ${spec.table}
         SET ${spec.pinColumn} = $1

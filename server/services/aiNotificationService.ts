@@ -21,7 +21,7 @@ import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
 
 const log = createLogger('AiNotificationService');
 
-// LAZY INIT (CLAUDE.md §F): construct GoogleGenerativeAI on first use, not at
+// LAZY INIT (TRINITY.md §F): construct GoogleGenerativeAI on first use, not at
 // module load. The previous module-load instantiation was guarded by a
 // truthy check, but if any future change makes it unconditional it would
 // crash boot when GEMINI_API_KEY is unset. Lazy factory + null fallback

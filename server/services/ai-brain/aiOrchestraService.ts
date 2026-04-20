@@ -25,7 +25,7 @@ import {
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import { openaiClient, type OpenAIResponse } from './providers/openaiClient';
 import { geminiClient } from './providers/geminiClient';
-import { claudeService } from './dualai/claudeService';
+import { claudeService } from './dualai/trinityValidationService';
 import { resilientAIGateway } from './providers/resilientAIGateway';
 import { AiModel, AiTaskType } from '@shared/schema';
 import { premiumFeatureGating } from '../premiumFeatureGating';

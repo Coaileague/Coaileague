@@ -24,7 +24,7 @@ const log = createLogger('ErrorHandler');
  * In development: returns the real error.message for debugging.
  */
 export function sanitizeError(error: unknown, fallback = 'An unexpected error occurred'): string {
-  // CLAUDE.md §A: production detection via canonical helper.
+  // TRINITY.md §A: production detection via canonical helper.
   if (isProductionEnv()) return fallback;
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
@@ -58,7 +58,7 @@ export function globalErrorHandler(
 ): void {
   if (res.headersSent) return;
 
-  // CLAUDE.md §A: production detection via canonical helper.
+  // TRINITY.md §A: production detection via canonical helper.
   const isProd = isProductionEnv();
 
   // --- Zod validation errors ---

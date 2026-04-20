@@ -9,7 +9,7 @@
  *   2. Grandfathered founding tenant — GRANDFATHERED_TENANT_ID env var
  *
  * No UUID or company name is hardcoded here. All identity resolution
- * comes from billingConstants (CLAUDE.md Section I).
+ * comes from billingConstants (TRINITY.md Section I).
  */
 
 import { pool } from '../../db';

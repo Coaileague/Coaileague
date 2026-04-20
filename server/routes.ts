@@ -39,7 +39,7 @@ import Stripe from "stripe";
 import { getStripe, isStripeConfigured } from "./services/billing/stripeClient";
 
 // ============================================================================
-// STRIPE SINGLETON — Lazy proxy (CLAUDE.md §F): avoids module-load crash
+// STRIPE SINGLETON — Lazy proxy (TRINITY.md §F): avoids module-load crash
 // ============================================================================
 export const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {

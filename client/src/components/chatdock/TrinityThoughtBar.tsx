@@ -47,9 +47,9 @@ const MODEL_COLORS: Record<string, string> = {
 };
 
 const MODEL_LABELS: Record<string, string> = {
-  gpt: "CORE",
-  claude: "VERIFY",
-  gemini: "GUARD",
+  gpt: "REASON",
+  claude: "VALIDATE",
+  gemini: "EXECUTE",
   fallback: "FALLBACK",
 };
 
@@ -454,9 +454,9 @@ function CognitiveLayers({
   }
 
   const models: Array<{ key: "gpt" | "claude" | "gemini"; label: string }> = [
-    { key: "gpt", label: "CORE" },
-    { key: "claude", label: "VERIFY" },
-    { key: "gemini", label: "GUARD" },
+    { key: "gpt", label: "REASON" },
+    { key: "claude", label: "VALIDATE" },
+    { key: "gemini", label: "EXECUTE" },
   ];
 
   return (

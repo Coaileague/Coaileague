@@ -87,7 +87,7 @@ class BillingReconciliationService {
       dailyBreakdown: [],
       topFeatures: [
         { featureKey: 'gemini', tokensK: usage.geminiTokensK },
-        { featureKey: 'claude', tokensK: usage.claudeTokensK },
+        { featureKey: 'trinity_validate', tokensK: usage.claudeTokensK },
         { featureKey: 'gpt', tokensK: usage.gptTokensK }
       ]
     };

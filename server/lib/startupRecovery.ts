@@ -1,5 +1,5 @@
 /**
- * STARTUP RECOVERY (CLAUDE.md Section R, Law P4)
+ * STARTUP RECOVERY (TRINITY.md Section R, Law P4)
  *
  * Runs once at boot, after ensureRequiredTables() / ensureCriticalConstraints()
  * / ensureWorkspaceIndexes() so all required tables exist. Reconciles

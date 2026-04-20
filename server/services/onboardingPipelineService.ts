@@ -35,7 +35,7 @@ import { getStripe, isStripeConfigured } from './billing/stripeClient';
 const log = createLogger('onboardingPipelineService');
 
 
-// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
     return (getStripe() as any)[prop];

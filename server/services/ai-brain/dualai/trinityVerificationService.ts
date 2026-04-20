@@ -56,7 +56,7 @@ class ClaudeVerificationService {
       };
     }
     const apiKey = this.getApiKey();
-    const featureKey = 'claude_verification';
+    const featureKey = 'trinity_verification';
     const creditsForVerification = 15;
 
     const preAuth = await aiTokenGateway.preAuthorize(

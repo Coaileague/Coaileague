@@ -125,7 +125,7 @@ rmsRouter.post("/incidents", requireAuth as any, ensureWorkspaceAccess as any, a
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     // Notify supervisors + org owner + client portal per §7 RMS pipeline.
-    // All NDS calls awaited with non-fatal try/catch (CLAUDE.md §B).
+    // All NDS calls awaited with non-fatal try/catch (TRINITY.md §B).
     try {
       const supervisors = await q(
         `SELECT id FROM users
@@ -255,7 +255,7 @@ rmsRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspac
     const aiNarrativeResult = await meteredGemini.generate({ workspaceId, userId: req.user?.id || req.session?.userId || "system", featureKey: "rms_narrative_polish", prompt });
     const aiNarrative = aiNarrativeResult.text;
     // Tenant isolation: enforce workspace_id in the UPDATE WHERE clause
-    // (CLAUDE.md §1 — every query scoped by workspace_id, no exceptions)
+    // (TRINITY.md §1 — every query scoped by workspace_id, no exceptions)
     await q(`UPDATE incident_reports SET ai_narrative = $1, updated_at = NOW() WHERE id = $2 AND workspace_id = $3`, [aiNarrative, req.params.id, workspaceId]);
     res.json({ aiNarrative });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
@@ -361,7 +361,7 @@ rmsRouter.post("/dars/:id/submit", requireAuth as any, ensureWorkspaceAccess as 
     // Trinity Claude articulation pass — improve activity_summary for professional articulation
     if (dar.activity_summary && dar.activity_summary.trim().length > 20) {
       try {
-        const { claudeService } = await import("../services/ai-brain/dualai/claudeService");
+        const { claudeService } = await import("../services/ai-brain/dualai/trinityValidationService");
         if (claudeService.isAvailable()) {
           const claudeResult = await claudeService.processRequest({
             task: `You are a professional security report editor. Improve the following field officer's activity summary for a formal Daily Activity Report (DAR). Keep all facts intact, maintain accuracy, and improve professionalism and clarity. Do not add information not present. Return only the improved text with no preamble.\n\nOriginal activity summary:\n${dar.activity_summary}`,
@@ -852,7 +852,7 @@ rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceA
     // Trinity Claude articulation pass — improve summary for professional articulation
     if (report.summary && report.summary.trim().length > 20) {
       try {
-        const { claudeService } = await import("../services/ai-brain/dualai/claudeService");
+        const { claudeService } = await import("../services/ai-brain/dualai/trinityValidationService");
         if (claudeService.isAvailable()) {
           const claudeResult = await claudeService.processRequest({
             task: `You are a professional security report editor. Improve the following shift report summary for a formal Daily Activity Report (DAR). Keep all facts intact, maintain accuracy, and improve professionalism and clarity. Do not add information not present. Return only the improved text with no preamble.\n\nOriginal summary:\n${report.summary}`,

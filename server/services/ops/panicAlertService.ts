@@ -58,7 +58,7 @@ import { MANAGER_ROLES, OWNER_ROLES } from '@shared/lib/rbac/roleDefinitions';
  * surfaced on every tenant-facing panic UI. Exported so the HTTP layer, the
  * mobile client, and any downstream integration share one string.
  *
- * Change only with written legal approval — see CLAUDE.md Section O.
+ * Change only with written legal approval — see TRINITY.md Section O.
  */
 export const PANIC_LIABILITY_NOTICE =
   'This panic alert is a notification to designated human supervisors only. ' +

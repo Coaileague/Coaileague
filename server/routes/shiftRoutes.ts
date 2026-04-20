@@ -699,7 +699,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
       // Pre-provision a pending shift chatroom so manager↔officer messaging
       // works the moment the shift hits the schedule — before clock-in.
-      // Awaited try/catch (non-fatal): per CLAUDE.md §B no fire-and-forget.
+      // Awaited try/catch (non-fatal): per TRINITY.md §B no fire-and-forget.
       try {
         const { shiftChatroomWorkflowService } = await import('../services/shiftChatroomWorkflowService');
         await shiftChatroomWorkflowService.provisionChatroom({

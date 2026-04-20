@@ -56,7 +56,7 @@ registerLegacyBootstrap('plaid_transfer_attempts', async (p) => {
   `);
 });
 
-// CLAUDE.md Section R / Law P2: payroll run lock is DB-backed so a Railway
+// TRINITY.md Section R / Law P2: payroll run lock is DB-backed so a Railway
 // redeploy mid-run cannot let a second request start a duplicate concurrent
 // payroll run for the same workspace + period.
 const PAYROLL_RUN_LOCK_TTL_MS = 5 * 60 * 1000;

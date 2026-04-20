@@ -457,7 +457,7 @@ async function getCredentials() {
   // Railway-only deployment. The legacy Replit connector fallback
   // (REPLIT_CONNECTORS_HOSTNAME + REPL_IDENTITY) has been removed —
   // Resend is now configured exclusively via the RESEND_API_KEY env
-  // variable. Canonical production detection per CLAUDE.md §A.
+  // variable. Canonical production detection per TRINITY.md §A.
   const isProd = isProduction();
 
   if (process.env.RESEND_API_KEY) {
@@ -481,7 +481,7 @@ export async function getUncachableResendClient() {
   const credentials = await getCredentials();
 
   if (!credentials) {
-    // Canonical production detection per CLAUDE.md §A. The previous local
+    // Canonical production detection per TRINITY.md §A. The previous local
     // check `NODE_ENV === 'production' || REPLIT_DEPLOYMENT` did not detect
     // Railway, which meant the noop client below fell through to the dev
     // fake-success branch on Railway deploys. Under that branch, a missing

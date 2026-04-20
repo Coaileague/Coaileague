@@ -570,7 +570,7 @@ export const weapons = pgTable("weapons", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  // CLAUDE.md Section R / Law P1 — soft delete (armory record retained for audit)
+  // TRINITY.md Section R / Law P1 — soft delete (armory record retained for audit)
   deletedAt: timestamp("deleted_at"),
   deletedBy: varchar("deleted_by"),
 }, (table) => [
@@ -791,7 +791,7 @@ export const vehicles = pgTable("vehicles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 
   createdAt: timestamp("created_at", { withTimezone: true }).default(sql`now()`),
-  // CLAUDE.md Section R / Law P1 — soft delete (vehicle record retained)
+  // TRINITY.md Section R / Law P1 — soft delete (vehicle record retained)
   deletedAt: timestamp("deleted_at"),
   deletedBy: varchar("deleted_by"),
 }, (table) => [

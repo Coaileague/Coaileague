@@ -1316,7 +1316,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
     // coverage workflow. We look up the caller's employee profile via the
     // call session and hand off to executeCalloffCoverageWorkflow. Scheduled
     // non-blocking (not fire-and-forget — scheduleNonBlocking is the
-    // platform-approved wrapper, per CLAUDE.md §F) so Twilio gets a fast
+    // platform-approved wrapper, per TRINITY.md §F) so Twilio gets a fast
     // TwiML response while the fan-out runs in the background.
     if (ext === 'calloff') {
       scheduleNonBlocking('voice.calloff-workflow', async () => {
@@ -1785,7 +1785,7 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
     // ── Post-call SMS confirmation ─────────────────────────────────────────────
     // Send the caller their case number via SMS immediately after the case is
     // created, so they have a written record even after the call ends.
-    // Awaited to satisfy "no fire-and-forget" rule (CLAUDE.md §9); sendSMS
+    // Awaited to satisfy "no fire-and-forget" rule (TRINITY.md §9); sendSMS
     // persists to smsAttemptLog regardless of outcome, so failures are logged.
     if (callerNumber && callerNumber.trim().length >= 10) {
       try {
@@ -2805,7 +2805,7 @@ voiceRouter.post('/schedule-callback', twilioSignatureMiddleware, async (req: Re
 
       log.info(`[VoiceRoutes] Callback request ${ticketNumber} created for workspace ${workspaceId}`);
 
-      // Best-effort agent notification — awaited per CLAUDE.md §B
+      // Best-effort agent notification — awaited per TRINITY.md §B
       // (non-fatal try/catch; failure is warn-logged, not thrown).
       try {
         const { notifyHumanAgents } = await import('../services/trinityVoice/supportCaseService');

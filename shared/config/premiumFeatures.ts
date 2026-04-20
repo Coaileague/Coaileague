@@ -431,7 +431,7 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
 
   "trinity_employment_verification_letter": {
     id: "trinity_employment_verification_letter",
-    // IMPORTANT (CLAUDE.md §P): Employment verification is a legally regulated
+    // IMPORTANT (TRINITY.md §P): Employment verification is a legally regulated
     // disclosure channel. This premium-feature definition is the BILLING
     // surface — monthly quotas + per-letter USD surcharges — and must NEVER
     // block or gate the FCRA approve/deny workflow itself. The canonical
@@ -440,7 +440,7 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
     // call premiumFeatureGating.checkAccess and must not start doing so in
     // a way that could deny a legally-mandated disclosure.
     name: "Trinity Employment Verification Letter",
-    description: "Generates an FCRA-compliant employment verification letter with correct disclosures, FCRA-allowed data only, and an employer signature block. Routes to management for approve/deny. Delivers a formatted PDF. See CLAUDE.md §P for the bounded disclosure contract.",
+    description: "Generates an FCRA-compliant employment verification letter with correct disclosures, FCRA-allowed data only, and an employer signature block. Routes to management for approve/deny. Delivers a formatted PDF. See TRINITY.md §P for the bounded disclosure contract.",
     category: "hr",
     featureType: "elite",
     minimumTier: "starter",

@@ -1575,7 +1575,7 @@ router.get("/api/webhooks/resend/inbound/status", async (req, res) => {
  *     `webhookPathsNeedingRawBody`, so express.json's verify callback will
  *     populate `req.rawBody` identically to production.
  *
- * Gated by isProduction() per CLAUDE.md §A so we never expose this surface on
+ * Gated by isProduction() per TRINITY.md §A so we never expose this surface on
  * customer deployments.
  */
 router.get("/api/webhooks/resend/diagnostic", (_req, res) => {

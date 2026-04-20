@@ -28,7 +28,7 @@ export const invoiceService = {
         };
       }
 
-      // Atomically workspace-scoped FK lookup (CLAUDE.md §G).
+      // Atomically workspace-scoped FK lookup (TRINITY.md §G).
       const [client] = await db.select()
         .from(clients)
         .where(and(eq(clients.id, invoice.clientId), eq(clients.workspaceId, workspaceId)))

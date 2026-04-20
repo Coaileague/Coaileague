@@ -138,7 +138,7 @@ async function phase3_credit_costs_completeness() {
     'ai_chat_query', 'schedule_optimization',
     'trinity_chat', 'trinity_thought', 'trinity_insight',
     'email_transactional', 'sms_notification',
-    'claude_analysis', 'claude_strategic', 'claude_executive',
+    'trinity_analysis', 'trinity_strategic', 'trinity_executive',
     'trinity_staffing_scan', 'trinity_staffing_parse',
     'trinity_staffing_auto_assign', 'trinity_staffing_confirmation',
     'bot_helpai_response', 'bot_meeting_transcription', 'bot_report_detection',
@@ -170,7 +170,7 @@ async function phase3_credit_costs_completeness() {
     'incident_management', 'client_billing', 'post_order_creation',
     'ai_scheduling', 'ai_invoice_generation', 'ai_payroll_processing',
     'ai_chat_query', 'schedule_optimization',
-    'claude_analysis', 'claude_strategic', 'claude_executive',
+    'trinity_analysis', 'trinity_strategic', 'trinity_executive',
     'quickbooks_error_analysis', 'financial_pl_summary',
   ];
   let syncMismatches: string[] = [];
@@ -182,7 +182,7 @@ async function phase3_credit_costs_completeness() {
   record({ name: 'tokenManager ↔ billingConfig Sync (23 keys)', phase: 'COSTS', passed: syncMismatches.length === 0, details: syncMismatches.length === 0 ? 'All 23 checked keys in sync' : `MISMATCHES: ${syncMismatches.join('; ')}`, severity: 'critical' });
 
   const aiCosts = ['ai_scheduling', 'ai_invoice_generation', 'ai_payroll_processing', 'ai_chat_query', 'trinity_chat'];
-  const claudeCosts = ['claude_analysis', 'claude_strategic', 'claude_executive'];
+  const claudeCosts = ['trinity_analysis', 'trinity_strategic', 'trinity_executive'];
   const aiAllPositive = aiCosts.every(k => (TOKEN_COSTS as any)[k] > 0);
   const claudeAllPositive = claudeCosts.every(k => (TOKEN_COSTS as any)[k] > 0);
   record({ name: 'AI Features Have Positive Costs', phase: 'COSTS', passed: aiAllPositive, details: aiCosts.map(k => `${k}=${(TOKEN_COSTS as any)[k]}`).join(', '), severity: 'high' });

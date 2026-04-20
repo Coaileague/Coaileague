@@ -29,7 +29,7 @@ const ANVIL = 'dev-anvil-security-ws';
 const QB_SANDBOX_REALM = '9341456086062919';
 const QB_SANDBOX_BASE = 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 
-// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
     return (getStripe() as any)[prop];
@@ -671,7 +671,7 @@ async function seedAnvilStripeFallback() {
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function runFinancialIntegrationsSeed(): Promise<{ message: string }> {
-  // Production guard — dev seeds must NEVER run in production (CLAUDE.md §A)
+  // Production guard — dev seeds must NEVER run in production (TRINITY.md §A)
   const { isProduction } = await import('../lib/isProduction');
   if (isProduction()) return { message: 'Skipped — production environment' };
 

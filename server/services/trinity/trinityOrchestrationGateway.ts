@@ -63,7 +63,7 @@ const TIER_UPGRADES: Record<string, string> = {
 const PAIN_POINT_ADDONS: Record<string, string[]> = {
   'overtime_tracking': ['predictive_workforce_insights'],
   'client_billing': ['client_profitability_analytics'],
-  'ai_features': ['claude_premium_ai'],
+  'ai_features': ['trinity_premium_ai'],
   'multi_location': ['additional_location'],
 };
 

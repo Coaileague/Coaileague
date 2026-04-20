@@ -325,7 +325,7 @@ export async function sendSMS(message: SMSMessage): Promise<SMSResult> { // infr
     log.info(`[SMS] Sent to ${maskedPhone}: ${result.sid}`);
 
     if (message.workspaceId) {
-      // Cost ledger write is awaited (no fire-and-forget per CLAUDE.md §9).
+      // Cost ledger write is awaited (no fire-and-forget per TRINITY.md §9).
       // Failure is logged but does not fail the send — the SMS already
       // succeeded and the attempt is tracked in smsAttemptLog.
       try {

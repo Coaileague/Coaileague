@@ -6,7 +6,7 @@
  *   form.auto_submit   — programmatically submit a draft submission on behalf of an officer
  *   form.query_status  — check submission status for compliance audits
  *
- * Each action is tenant-scoped (workspaceId required) per Section G of CLAUDE.md.
+ * Each action is tenant-scoped (workspaceId required) per Section G of TRINITY.md.
  */
 
 import { helpaiOrchestrator, type ActionHandler, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';

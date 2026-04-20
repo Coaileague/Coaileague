@@ -1104,7 +1104,7 @@ advancedSchedulingRouter.delete('/templates/:templateId', requireManager, async 
 
     const { templateId } = req.params;
 
-    // CLAUDE.md Section R / Law P1 — soft delete (template history retained)
+    // TRINITY.md Section R / Law P1 — soft delete (template history retained)
     const [existing] = await db.select({ id: scheduleTemplates.id })
       .from(scheduleTemplates)
       .where(and(

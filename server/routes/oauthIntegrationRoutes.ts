@@ -131,7 +131,7 @@ router.get('/quickbooks/diagnostic', async (req: Request, res: Response) => {
     const qbEnvironment = INTEGRATIONS.quickbooks.getEnvironmentForDomain(canonicalHost);
     
     // Build expected redirect URI based on environment (matches buildRedirectUri logic)
-    // CLAUDE.md §A: production detection via canonical helper, not raw env vars.
+    // TRINITY.md §A: production detection via canonical helper, not raw env vars.
     const isProductionRuntime = isProduction();
     const expectedRedirectUri =
       (isProductionRuntime && process.env.QUICKBOOKS_REDIRECT_URI) ||

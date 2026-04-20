@@ -8,8 +8,8 @@
  *
  * Officers who miss 2+ consecutive hourly prompts trigger a supervisor alert.
  *
- * Per CLAUDE.md §B (NDS sole sender) all notifications are awaited and
- * logged. Per CLAUDE.md §G (tenant isolation) every query is scoped by
+ * Per TRINITY.md §B (NDS sole sender) all notifications are awaited and
+ * logged. Per TRINITY.md §G (tenant isolation) every query is scoped by
  * workspace_id implicitly through the chatroom row itself.
  */
 

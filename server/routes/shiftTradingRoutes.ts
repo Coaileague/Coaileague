@@ -181,7 +181,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
 
     // Notify target officer if specified, otherwise notify managers
     if (targetOfficerId) {
-      // Tenant isolation: enforce workspace_id (CLAUDE.md §1)
+      // Tenant isolation: enforce workspace_id (TRINITY.md §1)
       const targetUser = await pool.query(`SELECT user_id FROM employees WHERE id=$1 AND workspace_id=$2`, [targetOfficerId, wid]);
       if (targetUser.rows[0]?.user_id) {
         await createNotification({
@@ -192,7 +192,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
           type: "shift_trade",
           actionUrl: `/shift-trading?tab=received`,
         }).catch(() => null);
-        // NDS: deliver through the canonical sender (CLAUDE.md §B) so
+        // NDS: deliver through the canonical sender (TRINITY.md §B) so
         // delivery is logged and push/in-app channels are respected.
         try {
           await NotificationDeliveryService.send({
@@ -269,7 +269,7 @@ router.post("/trades/:id/accept", requireAuth, async (req: AuthenticatedRequest,
     );
     if (!rows[0]) return res.status(404).json({ error: "Trade request not found or not pending" });
 
-    // Notify requester (workspace_id enforced for tenant isolation per CLAUDE.md §1)
+    // Notify requester (workspace_id enforced for tenant isolation per TRINITY.md §1)
     const requester = await pool.query(`SELECT user_id FROM employees WHERE id=$1 AND workspace_id=$2`, [rows[0].requesting_officer_id, wid]);
     if (requester.rows[0]?.user_id) {
       await createNotification({
@@ -380,7 +380,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
     // Check that swapping won't violate rest periods for either officer
     const shiftIds = [trade.requested_shift_id, trade.offered_shift_id].filter(Boolean);
     for (const shiftId of shiftIds) {
-      // Tenant isolation: scope by workspace_id (CLAUDE.md §1)
+      // Tenant isolation: scope by workspace_id (TRINITY.md §1)
       const shiftRes = await client.query(
         `SELECT start_time, end_time, employee_id FROM shifts WHERE id=$1 AND workspace_id=$2`, [shiftId, wid]
       );
@@ -466,7 +466,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
       log.warn('[ShiftTrading] Failed to log webhook error to audit log', { error: webhookErr.message });
     }
 
-    // Notify both parties (workspace_id enforced for tenant isolation per CLAUDE.md §1)
+    // Notify both parties (workspace_id enforced for tenant isolation per TRINITY.md §1)
     for (const empId of [trade.requesting_officer_id, trade.target_officer_id].filter(Boolean)) {
       const userRes = await client.query(`SELECT user_id FROM employees WHERE id=$1 AND workspace_id=$2`, [empId, wid]);
       if (userRes.rows[0]?.user_id) {

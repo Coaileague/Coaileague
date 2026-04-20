@@ -177,7 +177,7 @@ const log = createLogger('server');
 const app = express();
 
 // Trust proxy MUST be set before any middleware reads req.ip (rate limiting, CORS origin logging).
-// CLAUDE.md §A: use isProductionEnv() from lib/isProduction — not process.env.REPLIT_DEPLOYMENT.
+// TRINITY.md §A: use isProductionEnv() from lib/isProduction — not process.env.REPLIT_DEPLOYMENT.
 app.set('trust proxy', 1);
 
 // Phase 97 security: remove framework fingerprint and add critical headers for ALL routes
@@ -321,7 +321,7 @@ app.use(cors({
       return callback(null, isAllowed);
     }
 
-    // CORS allowlist (CLAUDE.md §6 platform identity): only coaileague.com
+    // CORS allowlist (TRINITY.md §6 platform identity): only coaileague.com
     // and dev-host loopbacks. Replit domains removed.
     const allowedPatterns = [
       /^https?:\/\/(www\.)?coaileague\.com$/,
@@ -481,7 +481,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:", "https:", "https://*.tile.openstreetmap.org"],
-      // CSP allowlist (CLAUDE.md §6 platform identity): only the
+      // CSP allowlist (TRINITY.md §6 platform identity): only the
       // production-relevant SaaS partners. Replit dev domains have been
       // removed — they were a legacy artifact from the Replit hosting
       // era and are no longer needed on Railway production.
@@ -741,7 +741,7 @@ async function initializeCriticalServices() {
 
   // workspace_id performance indexes — installs btree indexes on every
   // multi-tenant table that lacks one in the Drizzle schema declaration.
-  // CLAUDE.md §9: All workspace_id columns indexed.
+  // TRINITY.md §9: All workspace_id columns indexed.
   try {
     await ensureWorkspaceIndexes();
   } catch (error) {
@@ -767,7 +767,7 @@ async function initializeCriticalServices() {
     log.error('Storage quota table init failed', { error: error instanceof Error ? error.message : String(error) });
   }
 
-  // CLAUDE.md Section R / Law P4 — startup recovery: clear stale payroll
+  // TRINITY.md Section R / Law P4 — startup recovery: clear stale payroll
   // locks, mark interrupted goals & supervisor handoffs from the prior boot.
   // Non-fatal — degraded recovery is preferable to a stalled boot.
   try {
@@ -776,7 +776,7 @@ async function initializeCriticalServices() {
     log.error('Startup recovery failed (non-fatal)', { error: error instanceof Error ? error.message : String(error) });
   }
 
-  // CLAUDE.md Section R / Law P3 — surface missing object-storage configuration
+  // TRINITY.md Section R / Law P3 — surface missing object-storage configuration
   // at boot so file-upload failures do not appear as silent 500s later.
   checkObjectStorageConfig();
 

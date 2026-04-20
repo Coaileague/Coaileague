@@ -528,7 +528,7 @@ export const budgets = pgTable("budgets", {
 
   lineItems: jsonb("line_items").default('[]'),
   variances: jsonb("variances").default('[]'),
-  // CLAUDE.md Section R / Law P1 — soft delete (financial record retained)
+  // TRINITY.md Section R / Law P1 — soft delete (financial record retained)
   deletedAt: timestamp("deleted_at"),
   deletedBy: varchar("deleted_by"),
 });
@@ -2116,7 +2116,7 @@ export const insertTokenUsageMonthlySchema = createInsertSchema(tokenUsageMonthl
 export type InsertTokenUsageMonthly = z.infer<typeof insertTokenUsageMonthlySchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// payroll_run_locks (Persistence Phase — CLAUDE.md Section R, Law P2)
+// payroll_run_locks (Persistence Phase — TRINITY.md Section R, Law P2)
 // Replaces in-memory `payrollRunLocks` Map. Survives server restart so a
 // Railway redeploy mid-run cannot allow a duplicate concurrent payroll run.
 // PRIMARY KEY on workspace_id gives us atomic INSERT-or-fail concurrency.

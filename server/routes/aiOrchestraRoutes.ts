@@ -262,7 +262,7 @@ router.get('/providers/status', requireAuth, async (_req: Request, res: Response
       providers,
       trinity: {
         configured: providers.openai.available && providers.anthropic.available && providers.google.available,
-        description: 'AI Orchestra: Gemini (Operations) + Claude (Analysis) + GPT-4 (Creative)',
+        description: 'Trinity Intelligence: Unified tri-cognitive architecture',
       },
     });
   } catch (error: unknown) {

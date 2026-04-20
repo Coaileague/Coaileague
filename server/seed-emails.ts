@@ -180,7 +180,7 @@ function getRandomRecipients(count: number = 1): string[] {
 }
 
 export async function seedEmails(workspaceId?: string) {
-  // Production guard — test data must NEVER be seeded in production (CLAUDE.md §A)
+  // Production guard — test data must NEVER be seeded in production (TRINITY.md §A)
   const { isProduction } = await import('./lib/isProduction');
   if (isProduction()) return { success: false, error: 'Seeding test emails blocked in production', emailCount: 0, trinityActionRequired: 0 };
   console.log("📧 Seeding email test data...");

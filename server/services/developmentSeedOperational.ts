@@ -54,7 +54,7 @@ async function seedTable(name: string, fn: () => Promise<void>): Promise<void> {
 }
 
 export async function runAcmeOperationalSeed(): Promise<{ success: boolean; message: string }> {
-  // Production guard — dev seeds must NEVER run in production (CLAUDE.md §A)
+  // Production guard — dev seeds must NEVER run in production (TRINITY.md §A)
   const { isProduction } = await import('../lib/isProduction');
   if (isProduction()) return { success: true, message: 'Skipped — production environment' };
 
@@ -832,7 +832,7 @@ Photo 2 — 12:00: Food court incident location — post-incident clear [GPS: 29
  * Trinity's scheduling daemon will generate new shifts when the pool is low.
  */
 export async function ensureFutureOpenShifts(): Promise<void> {
-  // Production guard — dev seeds must NEVER run in production (CLAUDE.md §A)
+  // Production guard — dev seeds must NEVER run in production (TRINITY.md §A)
   const { isProduction } = await import('../lib/isProduction');
   if (isProduction()) return;
 

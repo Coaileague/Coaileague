@@ -74,7 +74,7 @@ function isoDate(d: Date): string {
 // ──────────────────────────────────────────────────────────────────────────────
 export async function seedAcmeFullDemo(): Promise<void> {
   // ── -1. Production guard: dev tenants must NEVER be created in production ─
-  // (CLAUDE.md §12 — Acme Security is only a dev/test tenant)
+  // (TRINITY.md §12 — Acme Security is only a dev/test tenant)
   const { isProduction } = await import('./lib/isProduction');
   if (isProduction()) {
     console.log("🌱 [ACME] Skipped — production environment");

@@ -295,15 +295,15 @@ export const TOKEN_COSTS = {
   'support_pool_chat': 1,
   'support_pool_ticket': 2,
 
-  // Claude / Anthropic
-  'claude_analysis': 25,
-  'claude_strategic': 30,
-  'claude_executive': 35,
-  'claude_premium_ai': 25,
-  'claude_rfp_response': 35,
-  'claude_capability_statement': 30,
-  'claude_contract_review': 30,
-  'claude_proposal': 30,
+  // Trinity premium features
+  'trinity_analysis': 25,
+  'trinity_strategic': 30,
+  'trinity_executive': 35,
+  'trinity_premium_ai': 25,
+  'trinity_rfp_response': 35,
+  'trinity_capability_statement': 30,
+  'trinity_contract_review': 30,
+  'trinity_proposal': 30,
 
   // Bots
   'bot_helpai_greeting': 1,
@@ -484,15 +484,15 @@ export const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'financial_client_profitability': 'Client Profitability',
   'financial_trend_analysis': 'Trend Analysis',
 
-  // Claude Premium
-  'claude_analysis': 'Premium Analysis',
-  'claude_strategic': 'Strategic Planning',
-  'claude_executive': 'Executive Summary',
+  // Trinity Premium
+  'trinity_analysis': 'Trinity Analysis',
+  'trinity_strategic': 'Trinity Strategic Planning',
+  'trinity_executive': 'Trinity Executive Summary',
   'rfp_proposal_generation': 'RFP Proposal Draft',
-  'claude_rfp_response': 'RFP Response',
-  'claude_capability_statement': 'Capability Statement',
-  'claude_contract_review': 'Contract Review',
-  'claude_proposal': 'Proposal Generation',
+  'trinity_rfp_response': 'Trinity RFP Response',
+  'trinity_capability_statement': 'Trinity Capability Statement',
+  'trinity_contract_review': 'Trinity Contract Review',
+  'trinity_proposal': 'Trinity Proposal Generation',
   'sales_lead_gen': 'AI Lead Discovery',
   'sales_email': 'AI Sales Email',
 

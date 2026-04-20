@@ -11,8 +11,8 @@
  * - Deferred revenue: move from deferred_revenue → org_ledger when earned
  * - Audit trail on every mutation
  *
- * Per CLAUDE.md §B: Every write awaited (no fire-and-forget).
- * Per CLAUDE.md §G: All queries workspace-scoped.
+ * Per TRINITY.md §B: Every write awaited (no fire-and-forget).
+ * Per TRINITY.md §G: All queries workspace-scoped.
  */
 
 import { db } from '../../db';

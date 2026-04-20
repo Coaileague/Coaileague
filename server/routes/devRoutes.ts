@@ -78,7 +78,7 @@ router.post('/seed-expired-keys', requireOwner, async (req: AuthenticatedRequest
 
 router.post('/trigger-automation/:jobType', requireOwner, async (req: AuthenticatedRequest, res) => {
   // Block in production — this is a development/ops convenience endpoint only.
-  // Use canonical isProduction() helper (CLAUDE.md §A). Direct
+  // Use canonical isProduction() helper (TRINITY.md §A). Direct
   // Direct NODE_ENV/Railway env checks are forbidden because they don't fire consistently on
   // Railway / Cloud Run / other hosts.
   if (isProduction()) {
@@ -1485,7 +1485,7 @@ router.post('/seed-acme-demo', requirePlatformAdmin, async (_req, res) => {
 // ──────────────────────────────────────────────────────────────────────────────
 router.post('/seed/acme', requirePlatformAdmin, async (_req, res) => {
   try {
-    // Production guard via canonical isProduction() helper (CLAUDE.md §A).
+    // Production guard via canonical isProduction() helper (TRINITY.md §A).
     // Direct platform-env checks are forbidden — they don't fire consistently on
     // Railway / Cloud Run / other hosts.
     if (isProduction()) {
@@ -1526,7 +1526,7 @@ router.get('/seed/acme/status', requirePlatformAdmin, async (_req, res) => {
 // ──────────────────────────────────────────────────────────────────────────────
 router.post('/trinity/trigger-demo-actions', requirePlatformAdmin, async (_req, res) => {
   try {
-    // Production guard via canonical isProduction() helper (CLAUDE.md §A).
+    // Production guard via canonical isProduction() helper (TRINITY.md §A).
     // Direct platform-env checks are forbidden — they don't fire consistently on
     // Railway / Cloud Run / other hosts.
     if (isProduction()) {

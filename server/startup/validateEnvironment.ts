@@ -1,4 +1,4 @@
-// CLAUDE.md §A: always use canonical production helper, never check NODE_ENV directly
+// TRINITY.md §A: always use canonical production helper, never check NODE_ENV directly
 import { isProduction } from '../lib/isProduction';
 
 const CRITICAL_VARS = [

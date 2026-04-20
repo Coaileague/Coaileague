@@ -308,19 +308,19 @@ class ResilientAIGateway {
   private getClaudeFeatureKey(operationType?: string, domain?: string): string {
     // Map operation types to specific Claude feature keys
     if (operationType === 'critical' || domain?.includes('executive') || domain?.includes('board')) {
-      return 'claude_executive'; // 35 credits - highest tier
+      return 'trinity_executive'; // 35 credits - highest tier
     }
     if (operationType === 'standard' || domain?.includes('strategic') || domain?.includes('analysis')) {
-      return 'claude_strategic'; // 30 credits - mid tier
+      return 'trinity_strategic'; // 30 credits - mid tier
     }
     if (domain?.includes('rfp')) {
-      return 'claude_rfp_response'; // 35 credits - high-value
+      return 'trinity_rfp_response'; // 35 credits - high-value
     }
     if (domain?.includes('capability') || domain?.includes('proposal')) {
-      return 'claude_capability_statement'; // 30 credits
+      return 'trinity_capability_statement'; // 30 credits
     }
     // Default to standard analysis
-    return 'claude_analysis'; // 25 credits - base tier
+    return 'trinity_analysis'; // 25 credits - base tier
   }
 
   /**

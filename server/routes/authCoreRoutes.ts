@@ -456,7 +456,7 @@ router.post("/api/auth/login", async (req, res) => {
 
     // Issue auth_token cookie with canonical cross-subdomain options.
     // Was previously sameSite:'strict' + no domain, which broke session
-    // sending on Railway with the custom domain (CLAUDE.md §A).
+    // sending on Railway with the custom domain (TRINITY.md §A).
     try {
       const { authService } = await import('../services/authService');
       const sessionResult = await authService.createSessionToken(user.id, req.ip || req.socket?.remoteAddress, req.get('user-agent'));

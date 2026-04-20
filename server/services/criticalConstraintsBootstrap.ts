@@ -493,7 +493,7 @@ const constraints: CriticalConstraint[] = [
       await pool.query(`ALTER TYPE payroll_status ADD VALUE IF NOT EXISTS 'completed'`);
     },
   },
-  // ── Phase X: Optimistic locking column (CLAUDE.md §15) ─────────────────
+  // ── Phase X: Optimistic locking column (TRINITY.md §15) ─────────────────
   // Section 15 mandates optimistic locking for concurrent shift edits:
   //   UPDATE shifts SET ..., version = version + 1
   //   WHERE id = $1 AND version = $2 RETURNING *
@@ -780,7 +780,7 @@ const constraints: CriticalConstraint[] = [
   },
   {
     name: 'shifts_version_column',
-    rationale: 'Optimistic locking for concurrent shift edits (CLAUDE.md §15)',
+    rationale: 'Optimistic locking for concurrent shift edits (TRINITY.md §15)',
     isPresent: async () => {
       const { rows } = await pool.query(
         `SELECT 1 FROM information_schema.columns

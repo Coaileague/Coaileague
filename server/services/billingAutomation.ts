@@ -880,7 +880,7 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
       return { success: false, error: 'Stripe not configured' };
     }
 
-    // Lazy Stripe singleton (CLAUDE.md §F) — replaces per-call new Stripe(...)
+    // Lazy Stripe singleton (TRINITY.md §F) — replaces per-call new Stripe(...)
     // which leaked sockets and reinitialized on every invocation. The
     // canonical factory in billing/stripeClient.ts handles config and caching.
     const stripe = getStripe();

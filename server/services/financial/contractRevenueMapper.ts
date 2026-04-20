@@ -4,7 +4,7 @@
  * Maps client contracts to invoice revenue and creates revenue recognition schedules.
  * Implements contract-based accrual recognition per ASC 606.
  *
- * Per CLAUDE.md §G: All queries workspace-scoped.
+ * Per TRINITY.md §G: All queries workspace-scoped.
  */
 
 import { db } from '../../db';

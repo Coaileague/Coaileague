@@ -3,7 +3,7 @@
  *
  * Well-known IDs that exist on every CoAIleague deployment by design.
  * Centralized here so the literal strings appear exactly once in the
- * codebase. Per CLAUDE.md Section I (Multi-Tenant Universalization),
+ * codebase. Per TRINITY.md Section I (Multi-Tenant Universalization),
  * any literal ID outside this file is a bug.
  *
  * Sentinels are NOT tenant identifiers — they are platform-level

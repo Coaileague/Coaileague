@@ -2113,7 +2113,7 @@ class AIBrainActionRegistry {
         if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
         await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
 
-        // Fetch invoice with workspace scope (CLAUDE.md Section G — tenant isolation in raw SQL)
+        // Fetch invoice with workspace scope (TRINITY.md Section G — tenant isolation in raw SQL)
         const [invoice] = await db.select()
           .from(invoices)
           .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, request.workspaceId)))

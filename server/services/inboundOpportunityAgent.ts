@@ -1541,7 +1541,7 @@ Consider: qualifications match, reliability history, preference match, availabil
             }
 
             // ── DROP NOTIFICATIONS for losing orgs ────────────────────────
-            // Await per CLAUDE.md §B — no fire-and-forget for notifications.
+            // Await per TRINITY.md §B — no fire-and-forget for notifications.
             if ((processResult as any).claimKey) {
               try {
                 await staffingClaimService.sendDropNotifications({

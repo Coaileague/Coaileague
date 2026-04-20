@@ -302,7 +302,7 @@ spsNegotiationRouter.post('/:id/convert-to-contract', async (req: any, res) => {
       expiresAt,
       recipientName: thread.clientName,
       recipientEmail: thread.clientEmail,
-      // White-label (CLAUDE.md §6): signer comes from the authenticated
+      // White-label (TRINITY.md §6): signer comes from the authenticated
       // user. Hardcoded tenant identity removed.
       orgSignerName: (req.user)?.firstName
         ? `${(req.user).firstName} ${(req.user).lastName || ''}`.trim()

@@ -80,7 +80,7 @@ export interface PhaseResult {
 }
 
 // ============================================================================
-// STRIPE INTEGRATION — Lazy proxy (CLAUDE.md §F)
+// STRIPE INTEGRATION — Lazy proxy (TRINITY.md §F)
 // ============================================================================
 
 const stripe = new Proxy({} as Stripe, {

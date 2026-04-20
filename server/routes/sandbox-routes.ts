@@ -733,7 +733,7 @@ router.post('/e2e-quickbooks-test', sandboxDevBypass, async (req: Request, res: 
       testLog,
     });
   } catch (error: unknown) {
-    // CLAUDE.md §A: production detection via canonical helper, never
+    // TRINITY.md §A: production detection via canonical helper, never
     // direct per-platform env checks. Use isProduction() helper instead.
     const isProd = isProduction();
     addLog('ERROR', 'failed', {

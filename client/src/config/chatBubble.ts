@@ -181,7 +181,7 @@ export const CHAT_BUBBLE_CONFIG = {
   // ===== VISIBILITY =====
   zIndex: 2501,
   // Was 'none' — changed to 'pan-y' so the chat bubble never blocks
-  // vertical scroll on mobile (CLAUDE.md scroll fix v4).
+  // vertical scroll on mobile (TRINITY.md scroll fix v4).
   touchAction: 'pan-y',
   userSelect: 'none',
 };

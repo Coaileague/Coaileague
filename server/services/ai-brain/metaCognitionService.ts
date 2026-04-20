@@ -32,7 +32,7 @@ import { db } from "../../db";
 import { sql, eq } from "drizzle-orm";
 import { geminiClient } from "./providers/geminiClient";
 import { openaiClient } from "./providers/openaiClient";
-import { claudeService } from "./dualai/claudeService";
+import { claudeService } from "./dualai/trinityValidationService";
 import { eventBus } from "../trinity/eventBus";
 import { typedCount, typedExec, typedQuery } from '../../lib/typedSql';
 import { metaCognitionLogs } from "@shared/schema";

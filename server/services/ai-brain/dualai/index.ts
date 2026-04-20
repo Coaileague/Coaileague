@@ -9,11 +9,11 @@
 export { unifiedAIOrchestrator } from './unifiedAIOrchestrator';
 export type { OrchestratorRequest, OrchestratorResponse, ExecutionResult } from './unifiedAIOrchestrator';
 
-export { claudeService } from './claudeService';
-export type { ClaudeRequest, ClaudeResponse, ClaudeConsultation } from './claudeService';
+export { claudeService } from './trinityValidationService';
+export type { ClaudeRequest, ClaudeResponse, ClaudeConsultation } from './trinityValidationService';
 
-export { claudeVerificationService } from './claudeVerificationService';
-export type { VerificationRequest, VerificationResult } from './claudeVerificationService';
+export { claudeVerificationService } from './trinityVerificationService';
+export type { VerificationRequest, VerificationResult } from './trinityVerificationService';
 
 export { trinityConfidenceScorer } from './trinityConfidenceScorer';
 export type { TrinityOperation, ConfidenceScore, VerificationRecommendation } from './trinityConfidenceScorer';

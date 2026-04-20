@@ -140,7 +140,7 @@ function isoDate(d: Date): string {
 // ─── Main seeder ─────────────────────────────────────────────────────────────
 
 async function seedStatewideDevData(): Promise<void> {
-  // ── Production guard (CLAUDE.md §A) ──────────────────────────────────────
+  // ── Production guard (TRINITY.md §A) ──────────────────────────────────────
   const { isProduction } = await import("./lib/isProduction");
   if (isProduction()) {
     console.log("🌱 [STATEWIDE] Skipped — production environment");

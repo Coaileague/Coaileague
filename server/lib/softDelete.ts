@@ -1,5 +1,5 @@
 /**
- * SOFT DELETE UTILITY (CLAUDE.md Section R, Law P1)
+ * SOFT DELETE UTILITY (TRINITY.md Section R, Law P1)
  *
  * No business record is ever hard-deleted. This helper sets `deleted_at` and
  * `deleted_by` on a row so it disappears from normal queries (which filter

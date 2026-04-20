@@ -2913,7 +2913,7 @@ export type TrinityAuditLog = typeof trinityAuditLogs.$inferSelect;
 export type InsertTrinityAuditLog = typeof trinityAuditLogs.$inferInsert;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// trinity_goal_executions (Persistence Phase — CLAUDE.md Section R, Law P2)
+// trinity_goal_executions (Persistence Phase — TRINITY.md Section R, Law P2)
 // Mirror of goalExecutionService.activeExecutions Map. Write-through on
 // start/complete so a Railway redeploy mid-run leaves a row that
 // runStartupRecovery() can mark `interrupted` and notify the workspace owner.
@@ -2941,7 +2941,7 @@ export type TrinityGoalExecution = typeof trinityGoalExecutions.$inferSelect;
 export type InsertTrinityGoalExecution = typeof trinityGoalExecutions.$inferInsert;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// supervisor_handoffs (Persistence Phase — CLAUDE.md Section R, Law P2)
+// supervisor_handoffs (Persistence Phase — TRINITY.md Section R, Law P2)
 // Mirror of adaptiveSupervisionRouter.activeHandoffs Map. An in-flight
 // handoff that vanishes on restart leaves both agents unaware of state.
 // ─────────────────────────────────────────────────────────────────────────────

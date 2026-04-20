@@ -557,7 +557,7 @@ const ELITE_FEATURES_SHOWCASE: Array<{
     human: "$50–$200 / letter (attorney)",
     trinity: "$3–$5 / letter",
     ratio: "1.5–10% of attorney cost",
-    blurb: "FCRA-bounded disclosure letter with manager approve/deny routing. See CLAUDE.md §P.",
+    blurb: "FCRA-bounded disclosure letter with manager approve/deny routing. See TRINITY.md §P.",
   },
   {
     name: "Officer Performance Review",

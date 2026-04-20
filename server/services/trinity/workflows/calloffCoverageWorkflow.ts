@@ -27,7 +27,7 @@
  *                 (scanStaleCalloffWorkflows) which runs every few minutes
  *                 and escalates any calloff workflow where the shift is
  *                 still unfilled past its 15-minute SLA. This avoids
- *                 fire-and-forget timers (CLAUDE.md §F).
+ *                 fire-and-forget timers (TRINITY.md §F).
  */
 
 import { and, eq, gt, lt, sql as drizzleSql } from 'drizzle-orm';

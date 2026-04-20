@@ -10,7 +10,7 @@
  *   4. Allocate transaction price to performance obligations
  *   5. Recognize revenue when (or as) a performance obligation is satisfied
  *
- * Per CLAUDE.md §G: All queries workspace-scoped.
+ * Per TRINITY.md §G: All queries workspace-scoped.
  */
 
 import { db } from '../../db';
