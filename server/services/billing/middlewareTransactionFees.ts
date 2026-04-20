@@ -793,3 +793,135 @@ export async function chargeStorageOverageFee(params: {
     };
   }
 }
+
+/**
+ * Charge voice/SMS overage fees via Stripe.
+ * Reads accumulated overage from workspace_voice_sms_usage for the current monthly
+ * billing period. After a successful Stripe charge, zeroes the overage counters
+ * so the next weekly run only bills new usage since the last charge.
+ *
+ * Counters zeroed: overage_minutes, sms_overage_count,
+ * voice_overage_charges_cents, sms_overage_charges_cents, total_overage_charges_cents.
+ * The raw minutes_used / sms_messages_used are preserved for the lifetime of the
+ * billing period (consumed by getCurrentPeriodUsage for tier-limit math).
+ *
+ * Idempotency key is week-scoped so each weekly run bills its own delta.
+ */
+export async function chargeVoiceSmsOverageFee(params: {
+  workspaceId: string;
+  weekKey?: string;
+}): Promise<MiddlewareFeeResult> {
+  const { workspaceId, weekKey } = params;
+
+  if (isBillingExcluded(workspaceId)) {
+    return { success: true, amountCents: 0, description: 'Platform workspace — voice/SMS overage excluded' };
+  }
+
+  const workspace = await getWorkspaceBillingInfo(workspaceId);
+  if (!workspace) {
+    return { success: false, amountCents: 0, description: 'Workspace not found', error: 'workspace_not_found' };
+  }
+
+  if (isBillingExemptByRecord(workspace)) {
+    await logExemptedAction({ workspaceId, action: 'chargeVoiceSmsOverageFee', skippedAmountUnit: 'cents' });
+    return { success: true, amountCents: 0, description: 'Founder exemption — voice/SMS overage skipped' };
+  }
+
+  const { pool } = await import('../../db');
+
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString().split('T')[0];
+
+  const usageRow = await pool.query(
+    `SELECT id, overage_minutes, sms_overage_count,
+            voice_overage_charges_cents, sms_overage_charges_cents,
+            total_overage_charges_cents
+       FROM workspace_voice_sms_usage
+      WHERE workspace_id = $1 AND billing_period_start = $2
+      LIMIT 1`,
+    [workspaceId, periodStart]
+  );
+
+  const row = usageRow.rows[0];
+  if (!row) {
+    return { success: true, amountCents: 0, description: 'No voice/SMS usage recorded for this period' };
+  }
+
+  const totalCents = Number(row.total_overage_charges_cents) || 0;
+  if (totalCents <= 0) {
+    return { success: true, amountCents: 0, description: 'No voice/SMS overage to bill' };
+  }
+
+  const customerId = await ensureStripeCustomer(workspaceId, workspace.name || 'Workspace');
+  if (!customerId) {
+    log.warn(`[VoiceSmsOverage] No Stripe customer for workspace ${workspaceId} — overage calculated but not charged`);
+    return {
+      success: false,
+      amountCents: totalCents,
+      description: `Voice/SMS overage: $${(totalCents / 100).toFixed(2)}`,
+      error: 'no_stripe_customer',
+    };
+  }
+
+  const voiceCents = Number(row.voice_overage_charges_cents) || 0;
+  const smsCents = Number(row.sms_overage_charges_cents) || 0;
+  const voiceMinutes = Number(row.overage_minutes) || 0;
+  const smsCount = Number(row.sms_overage_count) || 0;
+  const description = `Voice/SMS overage — ${voiceMinutes} min ($${(voiceCents / 100).toFixed(2)}) + ${smsCount} SMS ($${(smsCents / 100).toFixed(2)}) = $${(totalCents / 100).toFixed(2)}`;
+
+  try {
+    const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+    const weekToken = weekKey ?? `W${Math.ceil(now.getDate() / 7)}`;
+    const idempotencyKey = `voice_sms_overage_${workspaceId}_${now.getFullYear()}_${monthStr}_${weekToken}`;
+
+    const invoiceItem = await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: totalCents,
+      currency: 'usd',
+      description,
+      metadata: {
+        type: 'voice_sms_overage',
+        workspaceId,
+        periodStart,
+        weekKey: weekToken,
+        voiceOverageCents: String(voiceCents),
+        smsOverageCents: String(smsCents),
+        overageMinutes: String(voiceMinutes),
+        smsOverageCount: String(smsCount),
+      },
+    }, { idempotencyKey });
+
+    // Zero the overage accumulators so the next weekly run only bills new usage.
+    // minutes_used / sms_messages_used are intentionally preserved — they still
+    // gate the tier-limit math in voiceSmsMeteringService.getOrCreatePeriod.
+    await pool.query(
+      `UPDATE workspace_voice_sms_usage
+          SET overage_minutes = 0,
+              sms_overage_count = 0,
+              voice_overage_charges_cents = 0,
+              sms_overage_charges_cents = 0,
+              total_overage_charges_cents = 0,
+              updated_at = NOW()
+        WHERE id = $1`,
+      [row.id]
+    );
+
+    log.info(`[VoiceSmsOverage] Charged $${(totalCents / 100).toFixed(2)} — workspace ${workspaceId} (Stripe item: ${invoiceItem.id})`);
+
+    return {
+      success: true,
+      amountCents: totalCents,
+      stripeInvoiceItemId: invoiceItem.id,
+      description,
+    };
+  } catch (err: any) {
+    log.error(`[VoiceSmsOverage] Stripe charge failed for workspace ${workspaceId}: ${err?.message}`);
+    return {
+      success: false,
+      amountCents: totalCents,
+      description,
+      error: err?.message ?? 'stripe_error',
+    };
+  }
+}
