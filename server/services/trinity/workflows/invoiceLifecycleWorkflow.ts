@@ -289,3 +289,82 @@ function startOfDay(d: Date | string): Date {
   copy.setUTCHours(0, 0, 0, 0);
   return copy;
 }
+
+/**
+ * Phase 26F — retry sweep for stuck approved time entries.
+ * The workflow is event-driven (fired from time-entry approval). If the
+ * approval endpoint fails mid-flight or a transient DB error aborts the
+ * mutate step, an approved entry can sit with invoiceId=NULL and never be
+ * picked up (the nightly runNightlyInvoiceGeneration is schedule-gated per
+ * workspace, so weekly/monthly tenants don't get a daily retry). This sweep
+ * runs hourly: it finds time entries approved >2h ago with no invoiceId
+ * that are billable, and re-fires the workflow per entry.
+ */
+export interface InvoiceLifecycleSweepResult {
+  scanned: number;
+  retried: number;
+  succeeded: number;
+  skipped: number;
+  failed: number;
+}
+
+export async function sweepStuckInvoiceLifecycleEntries(): Promise<InvoiceLifecycleSweepResult> {
+  const result: InvoiceLifecycleSweepResult = {
+    scanned: 0,
+    retried: 0,
+    succeeded: 0,
+    skipped: 0,
+    failed: 0,
+  };
+
+  try {
+    // 2h grace window gives the immediate event-driven handler time to finish
+    // before the sweeper tries the same entry. Cap at 1000 entries per pass
+    // so a backlogged workspace doesn't starve the rest.
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const stuck = await db
+      .select({
+        id: timeEntries.id,
+        workspaceId: timeEntries.workspaceId,
+        approvedBy: timeEntries.approvedBy,
+      })
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.status, 'approved'),
+          isNull(timeEntries.invoiceId),
+          eq(timeEntries.billableToClient, true),
+          lte(timeEntries.approvedAt, twoHoursAgo),
+        ),
+      )
+      .limit(1000);
+
+    result.scanned = stuck.length;
+
+    for (const entry of stuck) {
+      result.retried++;
+      try {
+        const r = await executeInvoiceLifecycleWorkflow({
+          workspaceId: entry.workspaceId,
+          timeEntryId: entry.id,
+          triggerSource: 'trinity_action',
+          userId: entry.approvedBy ?? null,
+        });
+        if (r.success && r.invoiceId) result.succeeded++;
+        else if (r.skipped) result.skipped++;
+        else result.failed++;
+      } catch (err: any) {
+        result.failed++;
+        log.warn(`[invoice-lifecycle-sweep] Retry failed for entry ${entry.id}: ${err?.message}`);
+      }
+    }
+
+    if (result.scanned > 0) {
+      log.info('[invoice-lifecycle-sweep] complete', result);
+    }
+  } catch (err: any) {
+    log.error('[invoice-lifecycle-sweep] catastrophic failure:', err?.message);
+  }
+
+  return result;
+}

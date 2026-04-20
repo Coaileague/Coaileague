@@ -2376,6 +2376,11 @@ export function startAutonomousScheduler() {
     tokenCleanup: { enabled: true, schedule: '0 3 * * *', description: 'Daily token cleanup' },
     sundayWeeklyReports: { enabled: true, schedule: '0 8 * * 0', description: 'Sunday weekly reports generation' },
     revenueRecognition: { enabled: true, schedule: '0 1 1 * *', description: 'Monthly ASC 606 accrual revenue recognition: process scheduled entries, update deferred revenue, write org ledger' },
+    // Phase 26F — hourly retry sweep for event-driven invoiceLifecycleWorkflow.
+    // Event-driven approvals can leave entries with status=approved, invoiceId=NULL
+    // if the workflow aborts mid-flight. runNightlyInvoiceGeneration is
+    // schedule-gated (weekly/monthly), so this hourly sweep is the real safety net.
+    invoiceLifecycleSweep: { enabled: true, schedule: '17 * * * *', description: 'Hourly retry for approved time entries stuck without an invoice (Phase 26F)' },
   };
 
   log.info('CoAIleague autonomous scheduler starting');
@@ -2667,6 +2672,18 @@ export function startAutonomousScheduler() {
       trackJobExecution('Idempotency Key Cleanup', () => runIdempotencyKeyCleanup());
     });
     log.info('Idempotency Key Cleanup registered', { schedule: SCHEDULER_CONFIG.cleanup.schedule, description: SCHEDULER_CONFIG.cleanup.description });
+  }
+
+  // Phase 26F — Invoice lifecycle retry sweep (hourly at :17)
+  registerJobInfo('Invoice Lifecycle Retry Sweep', (SCHEDULER_CONFIG as any).invoiceLifecycleSweep.schedule, (SCHEDULER_CONFIG as any).invoiceLifecycleSweep.description, (SCHEDULER_CONFIG as any).invoiceLifecycleSweep.enabled);
+  if ((SCHEDULER_CONFIG as any).invoiceLifecycleSweep.enabled) {
+    cron.schedule((SCHEDULER_CONFIG as any).invoiceLifecycleSweep.schedule, () => {
+      trackJobExecution('Invoice Lifecycle Retry Sweep', async () => {
+        const { sweepStuckInvoiceLifecycleEntries } = await import('./trinity/workflows/invoiceLifecycleWorkflow');
+        await sweepStuckInvoiceLifecycleEntries();
+      });
+    });
+    log.info('Invoice Lifecycle Retry Sweep registered', { schedule: (SCHEDULER_CONFIG as any).invoiceLifecycleSweep.schedule });
   }
 
   // 4b. Terminated Employee Access Expiry (Daily 4:30 AM UTC)
