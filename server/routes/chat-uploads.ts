@@ -5,7 +5,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router, type Request } from "express";
 import multer from "multer";
 import path from "path";
-import { createHash, randomBytes, randomUUID } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { db, pool } from "../db";
 import { chatUploads, roomEvents, chatConversations, chatParticipants } from "../../shared/schema";
 import { requireAuth } from "../auth";
@@ -348,18 +348,23 @@ router.post(
                     JSON.stringify(Object.keys(msgMeta).length ? msgMeta : {}),
                   ]
                 );
-                const messageId = insertedMessageRows?.rows?.[0]?.id || randomUUID();
+                const messageId = insertedMessageRows?.rows?.[0]?.id;
 
                 // Persist GPS-tagged photo evidence to shift_proof_photos (critical durability).
+                const gpsLatRaw = (gpsData as any)?.lat ?? (gpsData as any)?.latitude;
+                const gpsLngRaw = (gpsData as any)?.lng ?? (gpsData as any)?.longitude;
+                const gpsLat = gpsLatRaw !== undefined && gpsLatRaw !== null ? Number(gpsLatRaw) : NaN;
+                const gpsLng = gpsLngRaw !== undefined && gpsLngRaw !== null ? Number(gpsLngRaw) : NaN;
                 if (
                   shiftChatroom?.shift_id &&
                   senderEmployeeId &&
-                  typeof gpsData?.lat === 'number' &&
-                  typeof gpsData?.lng === 'number'
+                  messageId &&
+                  Number.isFinite(gpsLat) &&
+                  Number.isFinite(gpsLng)
                 ) {
                   const capturedAt = new Date();
                   const chainOfCustodyHash = createHash('sha256')
-                    .update(`${shiftChatroom.shift_id}:${messageId}:${f.url}:${gpsData.lat}:${gpsData.lng}:${capturedAt.toISOString()}`)
+                    .update(`${shiftChatroom.shift_id}:${messageId}:${f.url}:${gpsLat}:${gpsLng}:${capturedAt.toISOString()}`)
                     .digest('hex');
                   await typedPoolExec(
                     `INSERT INTO shift_proof_photos
@@ -367,9 +372,8 @@ router.post(
                         photo_url, thumbnail_url, gps_lat, gps_lng, gps_address, gps_accuracy,
                         captured_at, device_meta, photo_type, notes, is_audit_protected, chain_of_custody_hash, created_at)
                      VALUES
-                       ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15,$16,$17,$18,NOW())`,
+                       (gen_random_uuid(),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16,$17,NOW())`,
                     [
-                      randomUUID(),
                       workspaceId,
                       shiftChatroom.shift_id,
                       conversationId,
@@ -377,10 +381,10 @@ router.post(
                       messageId,
                       f.url,
                       null,
-                      String(gpsData.lat),
-                      String(gpsData.lng),
-                      gpsData.address || null,
-                      gpsData.accuracy !== undefined ? String(gpsData.accuracy) : null,
+                      String(gpsLat),
+                      String(gpsLng),
+                      gpsData?.address || null,
+                      gpsData?.accuracy !== undefined ? String(gpsData.accuracy) : null,
                       capturedAt.toISOString(),
                       JSON.stringify({ source: 'chat_upload', uploadedBy: userId }),
                       'hourly_proof',
@@ -389,6 +393,8 @@ router.post(
                       chainOfCustodyHash,
                     ]
                   );
+                } else if (!messageId) {
+                  log.warn('[ChatUploads] shift_chatroom_messages insert returned no id; skipped shift_proof_photos insert');
                 }
               }
 

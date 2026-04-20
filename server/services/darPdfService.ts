@@ -1177,7 +1177,8 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
 
   const hourlyBuckets = groupMessagesByHour(textMessages, photos);
 
-  // Cover metric: start/end GPS distance traveled (first to last GPS point).
+  // Cover metric: start-to-end displacement using first/last GPS point
+  // (not cumulative patrol path distance).
   const gpsPoints = photos.filter((p) => p.gpsLat !== null && p.gpsLat !== undefined && p.gpsLng !== null && p.gpsLng !== undefined);
   const gpsDistanceKm = gpsPoints.length >= 2
     ? haversineDistanceKm(

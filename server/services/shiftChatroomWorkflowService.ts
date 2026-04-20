@@ -692,6 +692,8 @@ class ShiftChatroomWorkflowService {
               .where(eq(shifts.id, chatroom.shiftId))
               .limit(1);
 
+            // Precedence: sender employee mapping is most accurate for multi-officer rooms;
+            // fallback to shift assignment when sender lookup is unavailable.
             const employeeIdForPhoto = senderEmployee?.id || shiftAssignment?.employeeId || null;
             if (employeeIdForPhoto) {
               const capturedAtRaw = (message.metadata as any)?.capturedAt;
