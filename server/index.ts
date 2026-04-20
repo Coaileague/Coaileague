@@ -270,6 +270,18 @@ app.get('/api/platform/readiness', rateLimitMiddleware(
     status: process.env.STRIPE_SECRET_KEY ? (process.env.STRIPE_SECRET_KEY.includes('_test_') ? 'test-mode' : 'live') : 'MISSING',
   };
   checks.stripeWebhook = { status: process.env.STRIPE_WEBHOOK_SECRET ? 'configured' : 'MISSING' };
+
+  const missingPriceIds = [
+    'STRIPE_PRICE_STARTER_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+  ].filter(k => !process.env[k]);
+  checks.stripePriceIds = {
+    status: missingPriceIds.length === 0 ? 'configured' : 'MISSING',
+    detail: missingPriceIds.length > 0 ? `Missing: ${missingPriceIds.join(', ')} — upgrades will fail` : undefined,
+  };
+  if (missingPriceIds.length > 0) {
+    log.warn('[Startup] Missing Stripe price IDs — upgrades will fail:', missingPriceIds);
+  }
   checks.emailService = { status: process.env.RESEND_API_KEY ? 'configured' : 'MISSING' };
   checks.aiEngine = { status: process.env.GEMINI_API_KEY ? 'configured' : 'MISSING' };
   checks.monitoringWebhook = { status: process.env.MONITORING_WEBHOOK_URL ? 'configured' : 'not-set', detail: 'For error alerts' };

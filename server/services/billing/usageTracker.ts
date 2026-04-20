@@ -328,8 +328,8 @@ export class UsageTracker {
 
     const tier = (workspace.subscriptionTier || 'free') as TierKey;
     const tierConfig = BILLING.tiers[tier];
-    const monthlyAllocation = tierConfig.monthlyCredits;
-    const allowsOverage = tierConfig.allowCreditOverage ?? false;
+    const monthlyAllocation = tierConfig.monthlyTokens;
+    const allowsOverage = tier !== 'free'; // free tier is hard-capped; paid tiers bill overages automatically
     
     // Get credit balance from credits ledger (would integrate with creditsLedgerService)
     // For now, return the monthly allocation as balance

@@ -475,7 +475,7 @@ export default function SubscriptionDashboard() {
           {sub && sub.credits.total > 0 && (
             <div className="space-y-1" data-testid="section-credit-usage">
               <div className="flex flex-wrap items-center justify-between gap-1">
-                <span className="text-sm">AI credits</span>
+                <span className="text-sm">AI tokens</span>
                 <span className="text-sm text-muted-foreground" data-testid="text-credit-count">
                   {sub.credits.remaining} / {sub.credits.total} remaining
                 </span>

@@ -111,12 +111,12 @@ export const SUPPORT_POOL_FEATURES = new Set([
 // Tier allowances (monthly token pool)
 // ---------------------------------------------------------------------------
 export const TIER_TOKEN_ALLOCATIONS = {
-  'free':         BILLING.tiers.free.monthlyCredits,
-  'trial':        BILLING.tiers.free.monthlyCredits,
-  'starter':      BILLING.tiers.starter.monthlyCredits,
-  'professional': BILLING.tiers.professional.monthlyCredits,
-  'business':     BILLING.tiers.business.monthlyCredits,
-  'enterprise':   BILLING.tiers.enterprise.monthlyCredits,
+  'free':         BILLING.tiers.free.monthlyTokens,
+  'trial':        BILLING.tiers.free.monthlyTokens,
+  'starter':      BILLING.tiers.starter.monthlyTokens,
+  'professional': BILLING.tiers.professional.monthlyTokens,
+  'business':     BILLING.tiers.business.monthlyTokens,
+  'enterprise':   BILLING.tiers.enterprise.monthlyTokens,
   'strategic':    500_000,
   'unlimited':    12_000,
 } as const;

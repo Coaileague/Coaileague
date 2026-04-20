@@ -604,7 +604,7 @@ class FeatureGateService {
 
     // Hard stop: insufficient credits — block execution, notify owner, return structured error
     if (balance < creditsNeeded) {
-      const allowsOverage = tierConfig.allowCreditOverage;
+      const allowsOverage = tier !== 'free'; // free tier is hard-capped; paid tiers bill overages automatically
       
       if (!allowsOverage) {
         // Notify org owner of depleted credits — fire-and-forget

@@ -37,16 +37,15 @@ export const BILLING = {
       yearlyPrice: 0,
       maxEmployees: 5,
       maxManagers: 1,
-      monthlyCredits: 500, // Trial credits — enough to genuinely experience Trinity before converting (was 150)
+      monthlyTokens: 500, // Trial tokens — enough to genuinely experience Trinity before converting (was 150)
       trialDays: 14,
       adminReplacementValue: 0,
-      allowCreditOverage: false, // Must upgrade to continue
       features: [
         "Up to 5 employees, 1 manager",
         "Basic scheduling (manual, no AI optimization)",
         "Basic time tracking (no GPS)",
         "Dashboard access",
-        "500 AI credits for trial",
+        "500 AI tokens for trial",
         "Email support only",
       ],
       limitations: [
@@ -67,10 +66,9 @@ export const BILLING = {
       yearlyPrice: 287040, // $2,870.40/year ($239.20/mo - 20% savings)
       maxEmployees: 10,
       maxManagers: 2,
-      monthlyCredits: 5000, // 5,000 AI interactions/month; hard cap at 8,000
+      monthlyTokens: 5000, // 5,000 AI tokens/month; hard cap at 8,000
       adminReplacementValue: 32600, // Saves ~$2,716/mo = $32,592/year in admin replacement
       overagePerEmployee: 2500, // $25/employee after 10
-      allowCreditOverage: false, // Must upgrade or purchase add-on
       roiMetrics: {
         humansReplaced: "Part-time scheduler ($2,166/mo) + Admin ($400/mo) + Payroll ($150/mo)",
         monthlyLaborSaved: 2716, // $2,716/month in labor costs replaced
@@ -91,7 +89,7 @@ export const BILLING = {
         "Basic equipment checkout (50 items - prevents $4K/year losses)",
         "QuickBooks export (for payroll)",
         "Basic invoicing",
-        "5,000 AI credits/month (hard cap — covers full monthly ops)",
+        "5,000 AI tokens/month (hard cap)",
         "Email support (48hr response)",
       ],
       excludedFeatures: [
@@ -118,12 +116,9 @@ export const BILLING = {
       yearlyPrice: 959040, // $9,590.40/year ($799.20/mo - 20% savings)
       maxEmployees: 100,
       maxManagers: 5,
-      monthlyCredits: 20000, // 20,000 AI interactions/month; hard cap at 35,000; overage at $0.12/interaction
+      monthlyTokens: 20000, // 20,000 AI tokens/month; hard cap at 35,000; overages billed monthly
       adminReplacementValue: 184200, // Saves ~$15,351/mo = $184,212/year in labor replacement
       overagePerEmployee: 2500, // $25/employee after 100
-      allowCreditOverage: true, // Auto-charge $29/2,000 credits
-      creditOveragePackPrice: 2900, // $29 per 2,000 additional credits
-      creditOveragePackAmount: 2000, // 2,000 credits per pack
       roiMetrics: {
         humansReplaced: "Full scheduler ($5,000) + Admin ($3,000) + Compliance ($3,500) + Equipment mgr ($3,000) + Payroll ($600)",
         monthlyLaborSaved: 17350, // $17,350/month in labor costs replaced
@@ -160,7 +155,7 @@ export const BILLING = {
         "Contract pipeline + E-signatures",
         "TRINITY PREMIUM AI (uses 2x credits):",
         "RFP responses, proposals, capability statements",
-        "10,000 AI credits/month (soft cap — overages at $0.01/credit)",
+        "10,000 AI tokens/month (soft cap — overages billed monthly)",
         "Priority support (24hr response)",
       ],
       addonsAvailable: [
@@ -181,12 +176,9 @@ export const BILLING = {
       yearlyPrice: 2879040, // $28,790.40/year ($2,399.20/mo - 20% savings)
       maxEmployees: 300,
       maxManagers: 15,
-      monthlyCredits: 60000, // 60,000 AI interactions/month; hard cap at 120,000; overage at $0.10/interaction
+      monthlyTokens: 60000, // 60,000 AI tokens/month; hard cap at 120,000; overages billed monthly
       adminReplacementValue: 360000, // Saves ~$30,000/mo in labor
       overagePerEmployee: 2500, // $25/employee after 300
-      allowCreditOverage: true,
-      creditOveragePackPrice: 2900,
-      creditOveragePackAmount: 2000,
       roiMetrics: {
         humansReplaced: "2× Schedulers ($10,000) + Ops Manager ($7,000) + Compliance ($6,000) + Finance ($4,500) + Payroll ($3,000)",
         monthlyLaborSaved: 30500,
@@ -216,13 +208,12 @@ export const BILLING = {
       yearlyPrice: 7679040, // $76,790.40/year ($6,399.20/mo - 20% savings)
       maxEmployees: 1000, // Enterprise base cap — designed for Securitas/Allied/GuardWorld scale
       maxManagers: 100,
-      monthlyCredits: 200000, // 200,000 AI interactions/month; hard cap 400,000; overage $0.08/interaction
+      monthlyTokens: 200000, // 200,000 AI tokens/month; hard cap 400,000; overages at $0.08/1,000 tokens
       adminReplacementValue: 500000, // Saves ~$50,250/mo = $603,000/year in labor replacement
       isContactSales: false,
       startsAt: 799900, // Starts at $7,999/month base
       perEmployeePrice: 2500, // $25/employee after 1,000
       overagePerEmployee: 2500,
-      allowCreditOverage: true,
       roiMetrics: {
         humansReplaced: "2× Schedulers ($10,000) + Ops Director ($8,000) + 2× Admin ($6,000) + Compliance ($6,000) + Equipment/Fleet ($5,000) + HR ($4,500) + Payroll Mgr ($5,000)",
         monthlyLaborSaved: 50250,
@@ -252,7 +243,7 @@ export const BILLING = {
         "Advanced onboarding workflows",
         "Custom integrations (ADP, Workday, Paychex)",
         "ENTERPRISE AI (200,000 interactions/month):",
-        "200,000 AI interactions monthly (hard cap 400K — overages at $0.08/interaction)",
+        "200,000 AI tokens/month (soft cap — overages at $0.08/1,000 tokens)",
         "ENTERPRISE FEATURES:",
         "White-label options",
         "Full API access",
@@ -275,9 +266,8 @@ export const BILLING = {
       startsAt: 1500000, // $15,000/month minimum in cents
       maxEmployees: 0, // Custom — 300+ officers
       maxManagers: 0, // Custom
-      monthlyCredits: 0, // Custom AI allocation
+      monthlyTokens: 0, // Custom AI allocation
       adminReplacementValue: 0, // Custom ROI analysis provided
-      allowCreditOverage: true,
       roiMetrics: {
         humansReplaced: "Custom analysis provided by dedicated implementation team",
         monthlyLaborSaved: 0,
