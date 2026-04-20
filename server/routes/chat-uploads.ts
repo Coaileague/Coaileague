@@ -327,7 +327,7 @@ router.post(
                   `SELECT id FROM employees WHERE user_id = $1 AND workspace_id = $2 LIMIT 1`,
                   [userId, workspaceId]
                 );
-                if (employeeRows?.rows?.[0]?.id) senderEmployeeId = employeeRows.rows[0].id;
+                if (employeeRows?.rows?.[0]?.id) senderEmployeeId = String(employeeRows.rows[0].id);
               } catch {
                 // non-fatal fallback to assigned_employee_id
               }

@@ -687,7 +687,12 @@ class ShiftChatroomWorkflowService {
               ))
               .limit(1);
 
-            const employeeIdForPhoto = senderEmployee?.id || chatroom.assignedEmployeeId || null;
+            const [shiftAssignment] = await tx.select({ employeeId: shifts.employeeId })
+              .from(shifts)
+              .where(eq(shifts.id, chatroom.shiftId))
+              .limit(1);
+
+            const employeeIdForPhoto = senderEmployee?.id || shiftAssignment?.employeeId || null;
             if (employeeIdForPhoto) {
               const capturedAtRaw = (message.metadata as any)?.capturedAt;
               const capturedAt = capturedAtRaw ? new Date(capturedAtRaw) : new Date();
