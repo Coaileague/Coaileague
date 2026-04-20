@@ -1000,7 +1000,7 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
       case '1':
         return xmlResponse(res, handleSales(baseParams));
       case '2':
-        return xmlResponse(res, handleClientSupport(baseParams));
+        return xmlResponse(res, await handleClientSupport(baseParams));
       case '3':
         return xmlResponse(res, handleEmploymentVerification(baseParams));
       case '4':
@@ -1436,6 +1436,10 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
     const { sessionId, workspaceId } = extractQS(req);
     const lang = getLang(req);
     const baseUrl = getBaseUrl(req);
+    const clientContext = (req.query.clientContext as string) || '';
+    const clientContextParam = clientContext
+      ? `&clientContext=${encodeURIComponent(clientContext.slice(0, 300))}`
+      : '';
 
     const issue = (SpeechResult || '').trim();
 
@@ -1444,7 +1448,7 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
     const sayL = (en: string, es: string) => lang === 'es' ? sayEs(es) : sayEn(en);
 
     if (!issue || issue.length < 5) {
-      const action = `${baseUrl}/api/voice/support-resolve?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+      const action = `${baseUrl}/api/voice/support-resolve?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}${clientContextParam}`;
       return xmlResponse(res, twiml(
         `<Gather input="speech dtmf" action="${action}" method="POST" timeout="8" speechTimeout="auto">` +
         sayL(
@@ -1463,8 +1467,11 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
       payload: { issue: issue.slice(0, 300) },
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
-    // Attempt AI resolution (max ~6s)
-    const aiResult = await resolveWithTrinityBrain({ issue, workspaceId, language: lang });
+    // Attempt AI resolution (max ~6s); inject account context if we have it.
+    const issueWithContext = clientContext
+      ? `${issue}\n\nACCOUNT CONTEXT (use to personalize — do not read verbatim): ${clientContext}`
+      : issue;
+    const aiResult = await resolveWithTrinityBrain({ issue: issueWithContext, workspaceId, language: lang });
 
     if (aiResult.canResolve) {
       const answer = lang === 'es'
@@ -2073,6 +2080,26 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
       return;
     }
 
+    // Phase 18D — abuse prevention gate (rate limit + failure welfare check).
+    // Runs AFTER the TCPA keyword handlers (STOP / HELP / START) so nothing
+    // blocks regulatory replies, but BEFORE the auto-resolver so we stop
+    // consuming AI cycles on a throttled phone.
+    try {
+      const { checkAndRecordRate, rateLimitMessage } = await import(
+        '../services/trinityVoice/smsAbusePrevention'
+      );
+      const gate = await checkAndRecordRate(From, body);
+      if (!gate.allowed) {
+        const safe = rateLimitMessage().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        res.type('text/xml').send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${safe}</Message></Response>`
+        );
+        return;
+      }
+    } catch (abuseErr: any) {
+      log.warn('[VoiceRoutes] SMS abuse check failed (non-fatal):', abuseErr?.message);
+    }
+
     // All other inbound SMS — run through Trinity SMS auto-resolver
     try {
       const { resolveInboundSms } = await import('../services/trinityVoice/smsAutoResolver');
@@ -2281,7 +2308,61 @@ async function runTrinityTalkTurn(params: {
     payload: { turn, issue: issue.slice(0, 300) },
   }).catch((e: any) => log.warn('[VoiceRoutes] trinity-talk audit failed:', e?.message));
 
-  const aiResult = await resolveWithTrinityBrain({ issue, workspaceId, language: lang });
+  // Phase 25 — load prior-turn memory from the voice_call_sessions metadata
+  // so Trinity remembers what was already said in this call. The sessionId
+  // threaded through the talk URL can be either a voice_call_sessions.id or
+  // the Twilio CallSid (see the `session?.id || CallSid` fallback upstream),
+  // so match on either.
+  let conversationHistory = '';
+  let priorTurns: Array<{ issue: string; answer: string }> = [];
+  if (turn > 1 && sessionId) {
+    try {
+      const { pool } = await import('../db');
+      const r = await pool.query(
+        `SELECT metadata FROM voice_call_sessions
+          WHERE id = $1 OR twilio_call_sid = $1
+          LIMIT 1`,
+        [sessionId]
+      );
+      const meta = (r.rows[0]?.metadata ?? {}) as Record<string, unknown>;
+      const hist = Array.isArray((meta as any).talkHistory) ? (meta as any).talkHistory : [];
+      priorTurns = hist.slice(-5);
+      if (priorTurns.length > 0) {
+        const last3 = priorTurns.slice(-3);
+        conversationHistory = '\n\nPrior conversation:\n' + last3
+          .map((t) => `Caller: "${t.issue}"\nTrinity: "${t.answer}"`)
+          .join('\n');
+      }
+    } catch (e: any) {
+      log.warn('[VoiceRoutes] trinity-talk memory load failed (non-fatal):', e?.message);
+    }
+  }
+
+  const aiResult = await resolveWithTrinityBrain({
+    issue: issue + conversationHistory,
+    workspaceId,
+    language: lang,
+  });
+
+  // Phase 25 — persist this turn into metadata.talkHistory (keep last 5)
+  if (aiResult.canResolve && sessionId) {
+    try {
+      const { pool } = await import('../db');
+      const nextHistory = [
+        ...priorTurns,
+        { issue: issue.slice(0, 200), answer: aiResult.answer.slice(0, 200) },
+      ].slice(-5);
+      await pool.query(
+        `UPDATE voice_call_sessions
+            SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('talkHistory', $1::jsonb),
+                updated_at = NOW()
+          WHERE id = $2 OR twilio_call_sid = $2`,
+        [JSON.stringify(nextHistory), sessionId]
+      );
+    } catch (e: any) {
+      log.warn('[VoiceRoutes] trinity-talk memory save failed (non-fatal):', e?.message);
+    }
+  }
 
   const issueEncoded = encodeURIComponent(issue.slice(0, 500));
   const nameAction = `${baseUrl}/api/voice/support-gather-name?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&issue=${issueEncoded}&aiAttempted=true&aiModel=${aiResult.modelUsed || 'none'}`;

@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { DollarSign, Users, Building2, FileText, AlertCircle, Receipt, Activity, ShieldCheck, Copy, KeyRound, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/formatters";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
 import { ComplianceScoreWidget } from "@/components/dashboard/ComplianceScoreWidget";
+
+const PIN_SETUP_DISMISSED_KEY = "pin-setup-dismissed";
 
 const pageConfig: CanvasPageConfig = {
   id: "org-owner-dashboard",
@@ -36,6 +47,20 @@ export default function OrgOwnerDashboard() {
 
   const [pinInput, setPinInput] = useState("");
   const [pinCopied, setPinCopied] = useState(false);
+
+  // Phase 25 — first-login PIN setup modal
+  const [showPinSetupModal, setShowPinSetupModal] = useState(false);
+  const [modalPinInput, setModalPinInput] = useState("");
+  const [modalPinConfirm, setModalPinConfirm] = useState("");
+
+  useEffect(() => {
+    if (!pinStatus) return;
+    if (pinStatus.hasPin) return;
+    const dismissed = typeof window !== "undefined" &&
+      window.localStorage.getItem(PIN_SETUP_DISMISSED_KEY) === "1";
+    if (dismissed) return;
+    setShowPinSetupModal(true);
+  }, [pinStatus?.hasPin]);
 
   const setPinMutation = useMutation({
     mutationFn: async (pin: string) => {
@@ -363,6 +388,87 @@ export default function OrgOwnerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Phase 25 — first-login Owner PIN setup prompt */}
+      <Dialog open={showPinSetupModal} onOpenChange={setShowPinSetupModal}>
+        <DialogContent data-testid="dialog-owner-pin-setup">
+          <DialogHeader>
+            <DialogTitle>Set Your Owner PIN</DialogTitle>
+            <DialogDescription>
+              Your Owner PIN lets Trinity verify your identity when you call
+              (866) 464-4151 for account management. Takes 30 seconds to set up.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>New PIN (4–8 digits)</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={8}
+                autoComplete="new-password"
+                value={modalPinInput}
+                onChange={(e) => setModalPinInput(e.target.value.replace(/\D/g, ""))}
+                data-testid="input-owner-pin-modal"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Confirm PIN</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={8}
+                autoComplete="new-password"
+                value={modalPinConfirm}
+                onChange={(e) => setModalPinConfirm(e.target.value.replace(/\D/g, ""))}
+                data-testid="input-owner-pin-modal-confirm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowPinSetupModal(false);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(PIN_SETUP_DISMISSED_KEY, "1");
+                }
+              }}
+              data-testid="button-owner-pin-modal-remind-later"
+            >
+              Remind me later
+            </Button>
+            <Button
+              disabled={
+                setPinMutation.isPending ||
+                modalPinInput.length < 4 ||
+                modalPinInput.length > 8 ||
+                modalPinInput !== modalPinConfirm
+              }
+              data-testid="button-owner-pin-modal-save"
+              onClick={async () => {
+                if (modalPinInput !== modalPinConfirm) {
+                  toast({ title: "PINs do not match", variant: "destructive" });
+                  return;
+                }
+                try {
+                  await setPinMutation.mutateAsync(modalPinInput);
+                  setShowPinSetupModal(false);
+                  setModalPinInput("");
+                  setModalPinConfirm("");
+                } catch {
+                  /* toast handled in mutation */
+                }
+              }}
+            >
+              <KeyRound className="w-3.5 h-3.5 mr-1" />
+              Save PIN
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CanvasHubPage>
   );
 }

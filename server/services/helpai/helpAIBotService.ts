@@ -867,6 +867,28 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
           return { response: 'Session context error. Please start a new chat session.', shouldEscalate: true, shouldClose: false, state: HelpAIState.ASSISTING };
         }
 
+        // Phase 25 — detect staffing requests from client-portal users and
+        // route them into the support-ticket intake pipeline instead of the
+        // generic AI responder.
+        try {
+          const staffingReply = await this.handleClientStaffingIntent({
+            sessionId,
+            workspaceId: session.workspaceId,
+            userId: session.userId,
+            message,
+          });
+          if (staffingReply) {
+            return {
+              response: staffingReply,
+              shouldEscalate: false,
+              shouldClose: false,
+              state: HelpAIState.ASSISTING,
+            };
+          }
+        } catch (err: any) {
+          log.warn('[HelpAI] Staffing intent detection failed (non-fatal):', err?.message);
+        }
+
         const aiResult = await this.generateResponse(message, {
           workspaceId: session.workspaceId,
           userId: session.userId,
@@ -991,6 +1013,80 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
 
     await this.logAction(sessionId, 'safety_code_verify', 'Safety code verification failed', { success: false });
     return false;
+  }
+
+  /**
+   * Phase 25 — detect staffing requests from client-portal users and route them
+   * into the support-ticket intake pipeline. Returns the canned reply when a
+   * staffing request is detected; returns null otherwise so the caller falls
+   * through to the generic AI responder.
+   */
+  private async handleClientStaffingIntent(params: {
+    sessionId: string;
+    workspaceId: string;
+    userId: string;
+    message: string;
+  }): Promise<string | null> {
+    const { sessionId, workspaceId, userId, message } = params;
+
+    const isStaffingRequest =
+      /\b(need|require|request|want|looking for|can you send|we need)\b.{0,30}\b(guard|officer|security|coverage|staff|personnel)\b/i.test(message) ||
+      /\b(open shift|shift.*needed|coverage.*needed|understaffed)\b/i.test(message);
+    if (!isStaffingRequest) return null;
+
+    // Confirm this is a client-portal user (users with a clients row point at them via clients.userId)
+    const clientRow = await pool.query(
+      `SELECT id, company_name FROM clients
+         WHERE user_id = $1 AND workspace_id = $2
+         LIMIT 1`,
+      [userId, workspaceId]
+    ).catch(() => ({ rows: [] as any[] }));
+
+    if (!clientRow.rows.length) return null;
+    const clientId = clientRow.rows[0].id as string;
+
+    // Resolve the provider org's slug for the mailto hint
+    const wsRow = await pool.query(
+      `SELECT company_name, name FROM workspaces WHERE id = $1 LIMIT 1`,
+      [workspaceId]
+    ).catch(() => ({ rows: [] as any[] }));
+    const rawName = (wsRow.rows[0]?.company_name || wsRow.rows[0]?.name || '') as string;
+    const orgSlug = rawName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'your-provider';
+
+    // Create an open staffing_request ticket via raw SQL so we stay decoupled
+    // from schema churn and can always write a minimal row.
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const ticketNumber = `STAFF-${dateStr}-${rand}`;
+    await pool.query(
+      `INSERT INTO support_tickets
+         (workspace_id, client_id, type, subject, description,
+          status, priority, submission_method, ticket_number,
+          created_at, updated_at)
+       VALUES ($1, $2, 'staffing_request', 'Staffing Request via Portal',
+               $3, 'open', 'normal', 'client_portal', $4, NOW(), NOW())`,
+      [workspaceId, clientId, message.slice(0, 500), ticketNumber]
+    );
+
+    await this.logAction(sessionId, 'staffing_intake', 'Client portal staffing request intake', {
+      clientId,
+      excerpt: message.slice(0, 200),
+    });
+
+    return (
+      `I can help you submit a staffing request! To get started, please tell me:\n` +
+      `1. Date and time needed\n` +
+      `2. Location/address\n` +
+      `3. Number of officers needed\n` +
+      `4. Armed or unarmed?\n` +
+      `5. Any special requirements?\n\n` +
+      `You can also email your request directly to ` +
+      `staffing@${orgSlug}.coaileague.com ` +
+      `and Trinity will process it automatically.`
+    );
   }
 
   private async updateSessionState(sessionId: string, newState: HelpAIState): Promise<void> {

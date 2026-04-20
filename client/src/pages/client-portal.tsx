@@ -616,6 +616,11 @@ export default function ClientPortal() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
+  // Phase 25 — client identity PIN
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinInputConfirm, setPinInputConfirm] = useState("");
+
   const { data: invoices = [] } = useQuery<Invoice[]>({ queryKey: ["/api/invoices"] });
   const { data: clients = [] } = useClientLookup();
   const currentClient = clients.find(c => c.email === user?.email);
@@ -758,6 +763,41 @@ export default function ClientPortal() {
       setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword("");
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  // Phase 25 — Client identity PIN (self-service)
+  const { data: pinStatus } = useQuery<{ pinSet: boolean; clientId?: string }>({
+    queryKey: ["/api/identity/pin/client/self/status"],
+    enabled: !!currentClient,
+  });
+
+  const setPinMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/identity/pin/client/self/set", { pin: pinInput }),
+    onSuccess: () => {
+      toast({ title: "PIN Saved", description: "Your client PIN is set. Keep it private." });
+      queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
+      setShowPinDialog(false);
+      setPinInput("");
+      setPinInputConfirm("");
+    },
+    onError: (e: any) => toast({
+      title: "Could not save PIN",
+      description: e?.message || "Please try again.",
+      variant: "destructive",
+    }),
+  });
+
+  const clearPinMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/identity/pin/client/self"),
+    onSuccess: () => {
+      toast({ title: "PIN Removed", description: "Your client PIN has been cleared." });
+      queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
+    },
+    onError: (e: any) => toast({
+      title: "Could not remove PIN",
+      description: e?.message || "Please try again.",
+      variant: "destructive",
+    }),
   });
 
   const downloadPdf = (invoiceId: number) => {
@@ -1757,6 +1797,91 @@ export default function ClientPortal() {
               </CardContent>
             </Card>
 
+            {/* Phase 25 — Client Identity & PIN */}
+            <Card data-testid="card-client-identity">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  Your Client Identity
+                </CardTitle>
+                <CardDescription>
+                  Use your client number when contacting your security provider by phone
+                  or email for verified assistance.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Client Number</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <code
+                      className="px-3 py-2 bg-muted rounded text-sm font-mono flex-1"
+                      data-testid="text-client-number"
+                    >
+                      {(currentClient as any)?.clientNumber ||
+                        (currentClient as any)?.externalId ||
+                        "Not assigned yet"}
+                    </code>
+                    {((currentClient as any)?.clientNumber || (currentClient as any)?.externalId) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid="button-copy-client-number"
+                        onClick={() => {
+                          const n = (currentClient as any)?.clientNumber || (currentClient as any)?.externalId;
+                          if (n) {
+                            navigator.clipboard.writeText(n);
+                            toast({ title: "Copied", description: "Client number copied to clipboard." });
+                          }
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Client PIN</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Set a PIN to verify your identity when calling (866) 464-4151.
+                    Never share your PIN with anyone.
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={pinStatus?.pinSet ? "default" : "secondary"} data-testid="badge-pin-status">
+                      {pinStatus?.pinSet ? "PIN set" : "No PIN set"}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      data-testid="button-set-pin"
+                      onClick={() => {
+                        setPinInput("");
+                        setPinInputConfirm("");
+                        setShowPinDialog(true);
+                      }}
+                    >
+                      {pinStatus?.pinSet ? "Update PIN" : "Set PIN"}
+                    </Button>
+                    {pinStatus?.pinSet && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        data-testid="button-remove-pin"
+                        disabled={clearPinMutation.isPending}
+                        onClick={() => clearPinMutation.mutate()}
+                      >
+                        {clearPinMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        ) : null}
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Password */}
             <Card>
               <CardHeader>
@@ -1854,6 +1979,73 @@ export default function ClientPortal() {
         clientName={currentClient.companyName || `${currentClient.firstName || ""} ${currentClient.lastName || ""}`.trim()}
         clientEmail={currentClient.email || user?.email || ""}
       />
+
+      {/* Phase 25 — Set/Update PIN dialog */}
+      <UniversalModal open={showPinDialog} onOpenChange={setShowPinDialog}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>
+              {pinStatus?.pinSet ? "Update Your Client PIN" : "Set Your Client PIN"}
+            </UniversalModalTitle>
+            <UniversalModalDescription>
+              Choose a 4–8 digit PIN. You'll use it to verify your identity when calling
+              or messaging your security provider.
+            </UniversalModalDescription>
+          </UniversalModalHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>New PIN</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="new-password"
+                maxLength={8}
+                value={pinInput}
+                onChange={e => setPinInput(e.target.value.replace(/[^0-9]/g, ""))}
+                data-testid="input-client-pin"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Confirm PIN</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="new-password"
+                maxLength={8}
+                value={pinInputConfirm}
+                onChange={e => setPinInputConfirm(e.target.value.replace(/[^0-9]/g, ""))}
+                data-testid="input-client-pin-confirm"
+              />
+            </div>
+          </div>
+          <UniversalModalFooter>
+            <Button variant="ghost" onClick={() => setShowPinDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              data-testid="button-save-client-pin"
+              disabled={
+                setPinMutation.isPending ||
+                pinInput.length < 4 ||
+                pinInput.length > 8 ||
+                pinInput !== pinInputConfirm
+              }
+              onClick={() => {
+                if (pinInput !== pinInputConfirm) {
+                  toast({ title: "PINs do not match", variant: "destructive" });
+                  return;
+                }
+                setPinMutation.mutate();
+              }}
+            >
+              {setPinMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Save PIN
+            </Button>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Dialogs */}
       <COIRequestDialog open={coiDialogOpen} onOpenChange={setCoiDialogOpen} />

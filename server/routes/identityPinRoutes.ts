@@ -202,6 +202,85 @@ identityPinRouter.get(
   },
 );
 
+// ─── CLIENT PIN (self-service from client portal) ────────────────────────────
+// A logged-in client portal user may manage the PIN on the clients row linked
+// to their own user account. We resolve the client by user_id and then carry
+// the client's own workspace_id through to setEntityPin/clearEntityPin, whose
+// UPDATE clauses enforce the tenant scope via WHERE workspace_id = $N.
+
+async function resolveSelfClient(
+  req: AuthenticatedRequest,
+): Promise<{ clientId: string; workspaceId: string } | null> {
+  const userId = (req as any).user?.id;
+  if (!userId) return null;
+  const { pool } = await import('../db');
+  const r = await pool.query(
+    `SELECT id, workspace_id FROM clients WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  if (!r.rows.length) return null;
+  return { clientId: r.rows[0].id, workspaceId: r.rows[0].workspace_id };
+}
+
+identityPinRouter.get('/pin/client/self/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const self = await resolveSelfClient(req);
+    if (!self) return res.status(404).json({ error: 'CLIENT_NOT_LINKED' });
+    const status = await getEntityPinStatus({
+      entity: 'client',
+      entityId: self.clientId,
+      workspaceId: self.workspaceId,
+    });
+    return res.json({ ...status, clientId: self.clientId });
+  } catch (err: any) {
+    log.error('[ClientPin] self-status failed:', err?.message);
+    return res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
+
+identityPinRouter.post('/pin/client/self/set', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const self = await resolveSelfClient(req);
+    if (!self) return res.status(404).json({ error: 'CLIENT_NOT_LINKED' });
+    const actorUserId = (req as any).user?.id;
+    const { pin } = req.body || {};
+    await setEntityPin({
+      entity: 'client',
+      entityId: self.clientId,
+      pin,
+      workspaceId: self.workspaceId,
+      actorUserId,
+      actorPlatformRole: (req as any).platformRole ?? null,
+    });
+    return res.json({ success: true, message: 'Client PIN saved' });
+  } catch (err: any) {
+    const msg = err?.message || 'Failed to set client PIN';
+    if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
+    if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
+    log.error('[ClientPin] self-set failed:', msg);
+    return res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
+
+identityPinRouter.delete('/pin/client/self', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const self = await resolveSelfClient(req);
+    if (!self) return res.status(404).json({ error: 'CLIENT_NOT_LINKED' });
+    const actorUserId = (req as any).user?.id;
+    await clearEntityPin({
+      entity: 'client',
+      entityId: self.clientId,
+      workspaceId: self.workspaceId,
+      actorUserId,
+      actorPlatformRole: (req as any).platformRole ?? null,
+    });
+    return res.json({ success: true, message: 'Client PIN cleared' });
+  } catch (err: any) {
+    log.error('[ClientPin] self-clear failed:', err?.message);
+    return res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
+
 // ─── COMBINED IDENTITY + PIN VERIFY (Trinity / HelpAI) ───────────────────────
 // No workspace auth required — this is the entry point for inbound channels
 // where the caller only has the universal code + PIN. Rate-limited to prevent

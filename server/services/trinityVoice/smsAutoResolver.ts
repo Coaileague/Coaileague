@@ -552,6 +552,47 @@ async function handleEmployeeNumberVerification(
 
 // ─── Main Resolver ─────────────────────────────────────────────────────────
 
+/**
+ * Phase 25 — audit every inbound SMS resolution so the "who did what when"
+ * of Trinity's SMS brain is replayable. Writes to the same sms_attempt_log
+ * table used for outbound attempts; inbound rows are distinguished by
+ * messageType = `inbound_sms:<method>`. Best-effort only (never throws).
+ */
+async function logInboundResolution(params: {
+  fromPhone: string;
+  body: string;
+  result: SmsResolverResult;
+}): Promise<void> {
+  try {
+    const { fromPhone, body, result } = params;
+    const messageType = `inbound_sms:${result.method}`.slice(0, 100);
+    const reason = result.caseNumber
+      ? `case:${result.caseNumber}`
+      : (result.resolved ? null : 'escalated');
+
+    // user_id column expects a users.id — we only have employeeId here, which
+    // is a different table. Store null and use phone_number + workspace_id for
+    // replay instead of forcing a semantic mismatch.
+    await pool.query(
+      `INSERT INTO sms_attempt_log
+         (workspace_id, user_id, phone_number, message_type, sent,
+          consent_verified, reason_not_sent, sent_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+      [
+        result.workspaceId ?? null,
+        null,
+        (fromPhone || '').slice(0, 20),
+        messageType,
+        result.resolved,
+        true,
+        reason ? reason.slice(0, 200) : null,
+      ]
+    );
+  } catch (logErr: any) {
+    log.warn('[SmsAutoResolver] Audit log failed (non-fatal):', logErr?.message);
+  }
+}
+
 export async function resolveInboundSms(params: {
   fromPhone: string;
   message: string;
@@ -561,6 +602,21 @@ export async function resolveInboundSms(params: {
   const upper = trimmed.toUpperCase();
 
   log.info(`[SmsAutoResolver] Inbound from ${fromPhone}: "${trimmed.slice(0, 80)}"`);
+
+  const result = await resolveInboundSmsInner({ fromPhone, message });
+  // Phase 25 — write the audit trail row. Non-fatal on failure so resolver
+  // behavior is unchanged when the audit table is unavailable.
+  await logInboundResolution({ fromPhone, body: trimmed, result });
+  return result;
+}
+
+async function resolveInboundSmsInner(params: {
+  fromPhone: string;
+  message: string;
+}): Promise<SmsResolverResult> {
+  const { fromPhone, message } = params;
+  const trimmed = message.trim();
+  const upper = trimmed.toUpperCase();
 
   // Detect inbound language early — used as a fallback when the employee
   // has no stored preferred_language.
