@@ -4037,6 +4037,139 @@ export function startAutonomousScheduler() {
   });
   log.info('Trinity Weekly Intelligence Scan registered', { schedule: '0 7 * * 1', description: 'Monday weekly: OT risk, open shifts, compliance 30d, workforce summary, SLA check' });
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // TRINITY DREAM CYCLE — Nightly cognitive overnight processing (2–5:30 AM)
+  // ════════════════════════════════════════════════════════════════════════════
+  // While the org sleeps, Trinity's brain continues working: memory consolidation,
+  // social graph recalculation, incubation problem solving, temporal arc updates,
+  // and narrative self-reflection. The insights produced flow into the first
+  // user interaction of the day via buildMorningBrief().
+
+  const loadActiveWorkspaceIds = async (): Promise<string[]> => {
+    const rows = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(and(
+        eq(workspaces.isSuspended, false),
+        eq(workspaces.isFrozen, false),
+        eq(workspaces.isLocked, false),
+        ne(workspaces.subscriptionStatus, 'cancelled'),
+      ))
+      .catch(() => []);
+    return rows.map(r => r.id).filter((id): id is string => typeof id === 'string');
+  };
+
+  // 2:00 AM — Memory consolidation (compression, decay, pattern surfacing)
+  registerJobInfo(
+    'Trinity Memory Consolidation',
+    '0 2 * * *',
+    'Nightly memory compression, decay, and pattern surfacing for all workspaces',
+    true,
+  );
+  cron.schedule('0 2 * * *', () => {
+    trackJobExecution('Trinity Memory Consolidation', async () => {
+      const { trinityMemoryOptimizer } = await import('./ai-brain/trinityMemoryOptimizer');
+      const workspaceIds = await loadActiveWorkspaceIds();
+      let processed = 0;
+      for (const wsId of workspaceIds) {
+        await trinityMemoryOptimizer.runNightlyConsolidation(wsId)
+          .then(() => { processed++; })
+          .catch((e) => log.warn('DreamCycle memory consolidation failed', { wsId, error: e?.message ?? e }));
+      }
+      log.info('Trinity Memory Consolidation complete', { workspacesProcessed: processed });
+    });
+  });
+
+  // 2:30 AM — Social graph recalculation (influence, isolation risk, connectors)
+  registerJobInfo(
+    'Trinity Social Graph Recalculation',
+    '30 2 * * *',
+    'Rebuild team relationship graphs, isolation risk, and influence scores for all workspaces',
+    true,
+  );
+  cron.schedule('30 2 * * *', () => {
+    trackJobExecution('Trinity Social Graph Recalculation', async () => {
+      const { trinitySocialGraphEngine } = await import('./ai-brain/trinitySocialGraphEngine');
+      const workspaceIds = await loadActiveWorkspaceIds();
+      let totalInsights = 0;
+      for (const wsId of workspaceIds) {
+        const insights = await trinitySocialGraphEngine.recalculateWorkspaceGraph(wsId)
+          .catch((e) => {
+            log.warn('DreamCycle social graph recalc failed', { wsId, error: e?.message ?? e });
+            return [] as any[];
+          });
+        totalInsights += insights.length;
+      }
+      log.info('Trinity Social Graph Recalculation complete', { workspaces: workspaceIds.length, totalInsights });
+    });
+  });
+
+  // 3:00 AM — Incubation cycle (Trinity works on hard problems overnight)
+  registerJobInfo(
+    'Trinity Incubation Cycle',
+    '0 3 * * *',
+    'Background problem solving — Trinity approaches queued problems from new angles',
+    true,
+  );
+  cron.schedule('0 3 * * *', () => {
+    trackJobExecution('Trinity Incubation Cycle', async () => {
+      const { trinityIncubationEngine } = await import('./ai-brain/trinityIncubationEngine');
+      const workspaceIds = await loadActiveWorkspaceIds();
+      let totalBreakthroughs = 0;
+      for (const wsId of workspaceIds) {
+        const breakthroughs = await trinityIncubationEngine.runDreamCycle(wsId)
+          .catch((e) => {
+            log.warn('DreamCycle incubation failed', { wsId, error: e?.message ?? e });
+            return [] as any[];
+          });
+        totalBreakthroughs += breakthroughs.length;
+      }
+      log.info('Trinity Incubation Cycle complete', { workspaces: workspaceIds.length, totalBreakthroughs });
+    });
+  });
+
+  // 3:30 AM — Temporal arc updates (officer/client/org trajectories)
+  registerJobInfo(
+    'Trinity Temporal Arc Update',
+    '30 3 * * *',
+    'Update officer, client, and org temporal trajectory arcs for all workspaces',
+    true,
+  );
+  cron.schedule('30 3 * * *', () => {
+    trackJobExecution('Trinity Temporal Arc Update', async () => {
+      const { trinityTemporalConsciousnessEngine } = await import('./ai-brain/trinityTemporalConsciousnessEngine');
+      const workspaceIds = await loadActiveWorkspaceIds();
+      let processed = 0;
+      for (const wsId of workspaceIds) {
+        await trinityTemporalConsciousnessEngine.runNightlyArcUpdate(wsId)
+          .then(() => { processed++; })
+          .catch((e) => log.warn('DreamCycle arc update failed', { wsId, error: e?.message ?? e }));
+      }
+      log.info('Trinity Temporal Arc Update complete', { workspacesProcessed: processed });
+    });
+  });
+
+  // 5:00 AM — Narrative identity update (Trinity writes today's chapter)
+  registerJobInfo(
+    'Trinity Narrative Update',
+    '0 5 * * *',
+    'Trinity reflects on yesterday and writes a daily chapter in her workspace narrative',
+    true,
+  );
+  cron.schedule('0 5 * * *', () => {
+    trackJobExecution('Trinity Narrative Update', async () => {
+      const { trinityNarrativeIdentityEngine } = await import('./ai-brain/trinityNarrativeIdentityEngine');
+      const workspaceIds = await loadActiveWorkspaceIds();
+      let processed = 0;
+      for (const wsId of workspaceIds) {
+        await trinityNarrativeIdentityEngine.writeNightlyChapter(wsId)
+          .then(() => { processed++; })
+          .catch((e) => log.warn('DreamCycle narrative update failed', { wsId, error: e?.message ?? e }));
+      }
+      log.info('Trinity Narrative Update complete', { workspacesProcessed: processed });
+    });
+  });
+
   // Trinity Monthly Business Cycle — 25th of each month at 6am
   registerJobInfo('Trinity Monthly Business Cycle', '0 6 25 * *', 'Monthly 25th: build next month schedule, generate payroll, send invoices, QB sync, executive summary to owner', true);
   cron.schedule('0 6 25 * *', () => {

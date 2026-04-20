@@ -2131,7 +2131,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
         </div>
       )}
 
-      <TrinityThoughtBar priority={wsError ? "high" : "normal"} />
+      <TrinityThoughtBar priority={wsError ? "high" : "normal"} sessionId={roomId} />
 
       <div className="flex-1 overflow-y-auto px-2.5 py-1.5 space-y-px relative chatdock-chat-bg" data-scroll="styled" ref={scrollContainerRef} role="log" aria-live="polite" aria-label="Chat messages">
         {wsMessages.length === 0 ? (

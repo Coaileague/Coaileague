@@ -106,6 +106,58 @@ class TrinityMemoryOptimizer {
     return [...RETENTION_POLICIES];
   }
 
+  /**
+   * Nightly consolidation cycle (2 AM dream-state job).
+   *
+   * Per-workspace light-touch pass:
+   *   - Prune old conversation turns & caches (via memory service)
+   *   - Decay confidence on stale knowledge entries
+   *   - Consolidate duplicate knowledge where detectable
+   *
+   * This is distinct from `runFullOptimization()` which does a global sweep;
+   * here we touch only the things that benefit from nightly consolidation
+   * per workspace and do NOT delete records.
+   */
+  async runNightlyConsolidation(workspaceId: string): Promise<{
+    workspaceId: string;
+    pruned: number;
+    decayed: number;
+    consolidated: number;
+    duration: number;
+  }> {
+    const start = Date.now();
+    let pruned = 0;
+    let decayed = 0;
+    let consolidated = 0;
+
+    try {
+      // Memory service prune (in-memory caches + shared insight decay).
+      const { trinityMemoryService } = await import('./trinityMemoryService');
+      pruned = await trinityMemoryService.pruneOldMemories(workspaceId, 90).catch(() => 0);
+
+      // Decay + consolidation run on a workspace-scoped sampling basis.
+      // We run the global decay/consolidate passes but bail early if another
+      // optimization is already running.
+      if (!this.isOptimizing) {
+        const decayResult = await this.decayKnowledgeConfidence(false).catch(() => null);
+        if (decayResult) decayed = decayResult.recordsDecayed;
+
+        const consolidateResult = await this.consolidateDuplicateKnowledge(false).catch(() => null);
+        if (consolidateResult) consolidated = consolidateResult.recordsConsolidated;
+      }
+    } catch (err: any) {
+      log.warn(`[MemoryOptimizer] Nightly consolidation for ${workspaceId} failed (non-fatal):`, err?.message);
+    }
+
+    return {
+      workspaceId,
+      pruned,
+      decayed,
+      consolidated,
+      duration: Date.now() - start,
+    };
+  }
+
   async runFullOptimization(dryRun = false): Promise<OptimizationResult[]> {
     if (this.isOptimizing) {
       log.info('[MemoryOptimizer] Optimization already in progress, skipping');

@@ -79,6 +79,75 @@ class TrinityNarrativeIdentityEngine {
     log.info(`[NarrativeEngine] Initialized narrative identity for workspace ${workspaceId}`);
   }
 
+  /**
+   * Nightly dream state: append a short daily entry to the narrative thread.
+   * Runs as part of the 5:00 AM dream cycle. Keeps the last 30 daily entries
+   * in `defining_moments` so Trinity always has yesterday's context on first
+   * interaction of the day.
+   */
+  async writeNightlyChapter(workspaceId: string): Promise<void> {
+    const narrative = await this.getNarrative(workspaceId);
+    if (!narrative) {
+      await this.initializeForWorkspace(workspaceId);
+      return;
+    }
+
+    const [calloffData, actionsData, incidentsData] = await Promise.all([
+      db.execute(sql`
+        SELECT COUNT(*) as count FROM shifts
+        WHERE workspace_id = ${workspaceId} AND status = 'no_show'
+          AND start_time >= NOW() - INTERVAL '24 hours'
+      `).catch(() => ({ rows: [{ count: 0 }] })),
+      db.execute(sql`
+        SELECT COUNT(*) as count FROM automation_action_ledger
+        WHERE workspace_id = ${workspaceId}
+          AND created_at >= NOW() - INTERVAL '24 hours'
+      `).catch(() => ({ rows: [{ count: 0 }] })),
+      db.execute(sql`
+        SELECT COUNT(*) as count FROM notifications
+        WHERE workspace_id = ${workspaceId}
+          AND type IN ('incident', 'coverage_gap', 'compliance_warning')
+          AND created_at >= NOW() - INTERVAL '24 hours'
+      `).catch(() => ({ rows: [{ count: 0 }] })),
+    ]);
+
+    const calloffs = parseInt((calloffData.rows as any[])[0]?.count || '0', 10);
+    const actions = parseInt((actionsData.rows as any[])[0]?.count || '0', 10);
+    const incidents = parseInt((incidentsData.rows as any[])[0]?.count || '0', 10);
+
+    if (calloffs === 0 && actions === 0 && incidents === 0) {
+      // Nothing meaningful to log — still touch last_updated so Trinity knows the cycle ran
+      await typedPoolExec(`
+        UPDATE trinity_narrative SET last_updated = NOW() WHERE workspace_id = $1
+      `, [workspaceId]).catch(() => null);
+      return;
+    }
+
+    const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const entry = `${dateStr}: ${actions} automated actions, ${calloffs} no-shows, ${incidents} incidents.`;
+
+    const moments = [...narrative.definingMoments, entry];
+    while (moments.length > 30) moments.shift();
+
+    await typedPoolExec(`
+      UPDATE trinity_narrative
+      SET defining_moments = $1, last_updated = NOW()
+      WHERE workspace_id = $2
+    `, [JSON.stringify(moments), workspaceId]);
+
+    // Monthly chapter rolls over automatically when 30 days have passed
+    const monthsSinceLastChapter = Math.floor(
+      (Date.now() - (narrative.currentChapterStart?.getTime() ?? narrative.lastUpdated.getTime())) / (30 * 86400000)
+    );
+    if (monthsSinceLastChapter >= 1) {
+      await this.writeMonthlyChapter(workspaceId).catch((err) =>
+        log.warn('[NarrativeEngine] Monthly chapter rollover failed:', err?.message ?? err)
+      );
+    }
+
+    log.info(`[NarrativeEngine] Nightly chapter entry written for workspace ${workspaceId}`);
+  }
+
   /** Monthly dream state update: write a new narrative chapter */
   async writeMonthlyChapter(workspaceId: string): Promise<void> {
     const narrative = await this.getNarrative(workspaceId);

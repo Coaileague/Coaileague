@@ -253,6 +253,16 @@ class TrinityIncubationEngine {
     };
   }
 
+  /**
+   * Nightly dream cycle entry point.
+   * Runs the dream-state problem-solving cycle and returns breakthroughs
+   * surfaced during the run for the morning brief.
+   */
+  async runDreamCycle(workspaceId: string, maxProblems = 3): Promise<IncubatingProblem[]> {
+    const processed = await this.processDreamStateCycle(workspaceId, maxProblems);
+    return processed.filter(p => p.status === 'breakthrough');
+  }
+
   /** Get recent breakthroughs for morning briefing */
   async getRecentBreakthroughs(workspaceId: string): Promise<IncubatingProblem[]> {
     // Converted to Drizzle ORM: INTERVAL → sql fragment

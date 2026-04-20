@@ -13,6 +13,10 @@ import { trinityChatService, ConversationMode } from '../services/ai-brain/trini
 import { attachWorkspaceId, AuthenticatedRequest } from '../rbac';
 import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
+import { db } from '../db';
+import { trinityThoughtSignatures } from '@shared/schema';
+import { and, desc, eq, gte } from 'drizzle-orm';
+import { trinityGlobalWorkspace } from '../services/ai-brain/trinityGlobalWorkspace';
 const log = createLogger('TrinityChatRoutes');
 
 
@@ -232,6 +236,71 @@ router.patch('/settings', attachWorkspaceId, requireTrinityAccess, async (req: R
   } catch (error: unknown) {
     log.error('[TrinityChat] Settings update error:', error);
     return res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+/**
+ * GET /api/trinity/chat/thought-stream?sessionId=<id>
+ *
+ * Returns Trinity's active thought phase plus the most recent thought
+ * entries from the thought engine for the session. Used by the
+ * TrinityThoughtBar to render "Reading your message / Considering options /
+ * Forming a plan / Taking action" in real time while a chat request is
+ * in-flight.
+ */
+router.get('/thought-stream', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.workspaceId;
+    const sessionId = typeof req.query.sessionId === 'string' ? req.query.sessionId : null;
+
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace context required' });
+    }
+
+    // Look for thoughts in the last 2 minutes for this session/workspace.
+    const since = new Date(Date.now() - 120_000);
+    const conditions = sessionId
+      ? and(
+          eq(trinityThoughtSignatures.workspaceId, workspaceId),
+          eq(trinityThoughtSignatures.sessionId, sessionId),
+          gte(trinityThoughtSignatures.createdAt, since),
+        )
+      : and(
+          eq(trinityThoughtSignatures.workspaceId, workspaceId),
+          gte(trinityThoughtSignatures.createdAt, since),
+        );
+
+    const rows = await db
+      .select()
+      .from(trinityThoughtSignatures)
+      .where(conditions)
+      .orderBy(desc(trinityThoughtSignatures.createdAt))
+      .limit(8);
+
+    const mostRecent = rows[0] ?? null;
+    // @ts-expect-error — context is jsonb
+    const currentPhase: string | null = mostRecent?.context?.phase ?? null;
+
+    return res.json({
+      sessionId,
+      workspaceId,
+      currentPhase,
+      isThinking: rows.length > 0,
+      lastThoughtAt: mostRecent?.createdAt ?? null,
+      thoughts: rows.map((r: any) => ({
+        id: r.id,
+        thoughtType: r.thoughtType,
+        content: String(r.content ?? '').substring(0, 240),
+        confidence: r.confidence,
+        phase: r.context?.phase ?? null,
+        createdAt: r.createdAt,
+      })),
+      activeSignals: trinityGlobalWorkspace.getSignalSummary(workspaceId),
+    });
+  } catch (error: unknown) {
+    log.error('[TrinityChat] Thought stream error:', error);
+    return res.status(500).json({ error: 'Failed to get thought stream' });
   }
 });
 

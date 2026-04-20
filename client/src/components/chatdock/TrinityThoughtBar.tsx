@@ -35,7 +35,19 @@ interface TrinityThoughtBarProps {
   isProcessing?: boolean;
   priority?: "low" | "normal" | "high" | "urgent" | "critical" | "911_override";
   className?: string;
+  /** Current chat session id, used to stream Trinity's live thought phase. */
+  sessionId?: string;
 }
+
+// ─── Thought stream phase labels ──────────────────────────────────────────
+const THOUGHT_PHASE_LABELS: Record<string, string> = {
+  perception:        "Reading your message…",
+  deliberation:      "Considering options…",
+  planning:          "Forming a plan…",
+  execution:         "Taking action…",
+  reflection:        "Reviewing…",
+  mathVerification:  "Double-checking numbers…",
+};
 
 // ─── Model indicator config ────────────────────────────────────────────────
 
@@ -59,6 +71,7 @@ export function TrinityThoughtBar({
   isProcessing = false,
   priority = "normal",
   className,
+  sessionId,
 }: TrinityThoughtBarProps) {
   const [modelStatus, setModelStatus] = useState<ModelStatus>({
     gpt: "online",
@@ -88,6 +101,30 @@ export function TrinityThoughtBar({
     staleTime: 30_000,
     retry: false,
   });
+
+  // ─── Live thought-phase stream while Trinity is thinking (1s poll) ───────
+  const { data: thoughtStream } = useQuery<{
+    currentPhase: string | null;
+    isThinking: boolean;
+    lastThoughtAt: string | null;
+    thoughts: Array<{ phase: string | null; content: string; confidence: number }>;
+    activeSignals: Record<string, number>;
+  }>({
+    queryKey: ['/api/trinity/chat/thought-stream', sessionId],
+    queryFn: async () => {
+      const qs = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : '';
+      const res = await fetch(`/api/trinity/chat/thought-stream${qs}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('thought-stream fetch failed');
+      return res.json();
+    },
+    refetchInterval: isProcessing ? 1_000 : false,
+    enabled: isProcessing,
+    retry: false,
+  });
+
+  const livePhaseLabel = thoughtStream?.currentPhase
+    ? THOUGHT_PHASE_LABELS[thoughtStream.currentPhase] ?? null
+    : null;
 
   // ─── Bootstrap ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -227,7 +264,7 @@ export function TrinityThoughtBar({
             transition: "opacity 0.3s",
           }}
         >
-          {state === "offline" ? "TRINITY OFFLINE" : phrase}
+          {state === "offline" ? "TRINITY OFFLINE" : (livePhaseLabel ?? phrase)}
         </span>
 
         {/* Dots */}
@@ -291,7 +328,7 @@ export function TrinityThoughtBar({
               textOverflow: "ellipsis",
             }}
           >
-            {state === "offline" ? "TRINITY OFFLINE" : phrase}
+            {state === "offline" ? "TRINITY OFFLINE" : (livePhaseLabel ?? phrase)}
           </div>
         </div>
 

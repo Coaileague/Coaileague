@@ -364,6 +364,11 @@ class TrinityTemporalConsciousnessEngine {
     };
   }
 
+  /** Nightly dream-cycle entry point — scans entire workspace for arc updates. */
+  async runNightlyArcUpdate(workspaceId: string): Promise<void> {
+    await this.scanWorkspace(workspaceId);
+  }
+
   /** Record a significant event that may trigger an immediate arc update */
   async recordSignificantEvent(workspaceId: string, entityId: string, entityType: EntityType, event: string, impactDirection: 'positive' | 'negative' | 'neutral'): Promise<void> {
     const existing = await this.getEntityArc(workspaceId, entityId, entityType);
