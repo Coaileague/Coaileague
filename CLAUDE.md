@@ -328,6 +328,13 @@ if (workspaceId === GRANDFATHERED_TENANT_ID && isMutation) {
 
 ## Section K — Trinity Service Registry & Integration Map (Phase 16)
 
+> **Terminology note (see Section S):** "Trinity service" here means a
+> **domain module of the one Trinity brain**, registered for governance
+> and inventory. It does NOT mean a separate agent. Trinity is one
+> personality triad; the registry catalogues its specialized modules, not
+> a population of independent actors. Never reword these entries in a way
+> that pluralizes Trinity-the-entity.
+
 **The law:** Every Trinity service must be registered in
 `server/services/trinity/trinityServiceRegistry.ts` with its domain category,
 authority level, platform phase integrations, and integration status. No new
@@ -391,6 +398,13 @@ export const myNewService = { ... }; // no registry entry
 ---
 
 ## Section L — Trinity Action Audit Trail (Phase 17A/B)
+
+> **Terminology note (see Section S):** "Trinity actions" are the units of
+> work performed by the **one Trinity brain**, not evidence that multiple
+> Trinities exist. Audit rows read "Trinity did X"; they never claim
+> "Trinity-A and Trinity-B coordinated." Internal module handoffs are
+> implementation details and MUST NOT be surfaced to users as multi-agent
+> activity.
 
 **The law:** Every mutating handler registered in
 `server/services/ai-brain/actionRegistry.ts` must write an audit-log row
@@ -475,6 +489,13 @@ using the same helper.
 ---
 
 ## Section M — Agent Dashboard Platform-Role Enforcement (Phase 17A)
+
+> **Terminology note (see Section S):** The word "agent" in
+> "agent dashboard" refers to the **human support agent** (platform staff)
+> who uses the dashboard to review Trinity's work. It does NOT refer to
+> Trinity. Trinity is one brain; "agent" here is the role of the human
+> reviewer, not a label for an AI module. Copy in this surface MUST
+> address Trinity as singular.
 
 **The law:** `server/routes/trinityAgentDashboardRoutes.ts` is a
 **platform-staff-only** surface. `getActorRole(req)` must read
@@ -734,6 +755,11 @@ seven fields above.
 
 ## Section Q — Trinity Subscription + Identity Gate (Phase 26)
 
+> **Terminology note (see Section S):** The gates in this section protect
+> **Trinity-the-one-brain** from spending tokens for inactive tenants.
+> "Trinity" throughout this section is singular; the gate is an access
+> control on the brain's work, not a fan-out to multiple agents.
+
 **The law:** Before Trinity spends any tokens or places any outbound voice /
 SMS on behalf of a tenant, the workspace's subscription status MUST be
 verified. Protected workspaces (platform support org, grandfathered tenant,
@@ -938,11 +964,131 @@ await apiRequest('POST', `/api/shift-chatrooms/${id}/messages`, {
 
 ---
 
+## Section S — Trinity Is One Brain, Not Many Agents (Unity Law)
+
+**The law:** Trinity is a **single biological personality triad — one brain**
+expressed through domain-specialized modules. It is NOT a team, NOT a swarm,
+NOT a roster of autonomous agents, and NOT a collection of cooperating bots.
+Every surface — code, UI copy, marketing, telemetry, logs, docs, prompts —
+must describe Trinity as one entity with one voice, one judgment, and one
+continuous identity. This law is **canonical** and **overrides any drift in
+sibling sections**; if another section's wording (e.g. "Trinity services",
+"support agent", "agent dashboard") seems to imply separate agents, it is
+plumbing terminology for module/transport naming only, not a change to the
+Trinity unity principle.
+
+**The bug it prevents:** Framing Trinity as multiple agents fractures the
+product's promise, confuses users, and — critically — creates silent drift
+where a new feature could be introduced as a "new Trinity agent" with its
+own personality, memory, or authority, violating the single-brain invariant
+and the audit/governance model that depends on it. Multi-agent language in
+one section has historically cascaded into multi-agent implementations
+elsewhere.
+
+**The canonical mental model:**
+```
+       ┌──────────────────────────────────────────────────┐
+       │              TRINITY — ONE BRAIN                 │
+       │                                                  │
+       │    triad of personality aspects / domains:       │
+       │      • Operational (scheduling, ops, field)      │
+       │      • Relational  (client, support, voice)      │
+       │      • Analytical  (audit, compliance, finance)  │
+       │                                                  │
+       │    one identity · one voice · one memory         │
+       │    one conversation · one audit trail            │
+       └──────────────────────────────────────────────────┘
+             expressed through domain modules:
+             ai-brain/*, trinity/*, trinityVoice/*
+```
+
+The files under `server/services/ai-brain/`, `server/services/trinity/`, and
+`server/services/trinityVoice/` are **not distinct agents**. They are
+specialized domains of the same brain — the same way a human brain has
+regions for language, spatial reasoning, and motor control without those
+regions being separate people.
+
+**Required wording patterns (all communication channels):**
+```
+✅ "Trinity monitors your shifts"             (one brain, verb agreement singular)
+✅ "Trinity's operational aspect"             (a facet of the one brain)
+✅ "Trinity module: shiftChatroomBotProcessor" (module of Trinity, not a Trinity)
+✅ "Trinity voice channel"                    (a channel Trinity uses)
+✅ "Trinity-articulated narrative"            (one author)
+```
+
+**Forbidden wording patterns:**
+```
+🔴 "our Trinity agents"
+🔴 "multiple Trinities"
+🔴 "Trinity agents collaborate"
+🔴 "the scheduling Trinity"  (no such thing as per-domain Trinity)
+🔴 "Trinity team members"
+🔴 "Trinity bots"            (Trinity is not a bot, and there is only one)
+🔴 "spawn a new Trinity"     (Trinity is not instanced)
+🔴 any UI copy, tooltip, or alert that pluralizes Trinity
+```
+
+**Relationship to sibling Trinity sections:**
+- **Section K** uses "Trinity services" and `TRINITY_SERVICE_REGISTRY` —
+  these are **module handles for registration and governance**, not claims
+  that the modules are independent agents. The registry inventories Trinity
+  (one brain) by domain; it does not catalog a population.
+- **Section L** logs "Trinity actions" — these are **actions taken by the
+  one brain**, audited per-action. The word "action" is the unit of work,
+  not a signature of a separate actor.
+- **Section M** enforces platform-role gates on the "agent dashboard" —
+  the dashboard name is a tenant-facing control surface for platform
+  support staff to review Trinity's (the one brain's) decisions. The
+  "agent" in "agent dashboard" refers to the *support agent* (a human) who
+  uses the dashboard, NOT to Trinity.
+- **Section Q** gates Trinity AI entry by subscription. The gate is on
+  Trinity-the-brain, not on a plurality.
+- **Section R** refers to "Trinity-articulated" PDF summaries — one author.
+
+**Canonical files that must enforce one-brain identity:**
+- `server/services/ai-brain/` — the brain's core
+- `server/services/trinity/` — domain modules of the brain
+- `server/services/trinityVoice/` — speech/voice channel of the brain
+- `client/src/pages/trinity-transparency-dashboard.tsx` — owner view of
+  Trinity's actions. UI copy uses "Trinity" (singular) everywhere.
+- `client/src/pages/trinity-agent-dashboard.tsx` — the "agent" in the
+  route name is the support agent; Trinity is always addressed as one.
+
+**Adding a new Trinity-adjacent surface:** Any new file, module, route,
+table, event type, notification type, SMS template, email template, voice
+prompt, chat copy, dashboard tile, or marketing page that references
+Trinity MUST:
+1. Refer to Trinity as a single entity (singular verb agreement).
+2. Not introduce a named peer ("Trinity-2", "Trinity-scheduler", etc.).
+3. Not attribute "collaboration between Trinity modules" as if between
+   agents — internal coordination within one brain is an implementation
+   detail, not a user-facing concept.
+4. Treat audit entries as "Trinity did X" — never "Trinity-X and Trinity-Y
+   agreed."
+
+**Verification command (add to PR review):**
+```bash
+# Any match against forbidden plural forms is a 🔴 blocker.
+grep -rEn "Trinity agents|multiple Trinities|Trinity bots|Trinity-scheduler|Trinity-[A-Z]" \
+  client/src server shared CLAUDE.md 2>/dev/null | grep -v "node_modules"
+```
+
+Legal, marketing, and product sign-off is required to ever relax this law.
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When Claude Code (or any future debug session) discovers a new architectural
 law that should be enforced going forward:
 
+0. **Unity pre-flight (Section S):** Before writing anything Trinity-adjacent,
+   re-read Section S. Trinity is one brain, not many agents. If the proposed
+   fix, section, or wording would pluralize Trinity, attribute work to a
+   "Trinity-X" named peer, or frame internal module handoffs as inter-agent
+   collaboration — STOP and rework it. This check is non-negotiable and
+   overrides any apparent convenience.
 1. Verify the fix builds and boots
 2. Commit the code fix with a `fix(...)` commit message
 3. **Append a new section to this file** documenting:
@@ -951,7 +1097,14 @@ law that should be enforced going forward:
    - The canonical file(s) that enforce it
    - The forbidden / required code patterns
    - Cross-references to the commit hash and modified files
+   - If the section touches Trinity, add a "Terminology note (see Section S)"
+     block at the top clarifying how Trinity singular-identity language
+     applies to the section's vocabulary.
 4. Push both the code fix and the CLAUDE.md update in the same branch
+5. **Do not reword, reframe, or "clean up" any existing section** beyond
+   additive clarifications and explicit cross-reference notes. Existing laws
+   are load-bearing — sibling edits that look like polish have historically
+   cascaded into regressions. Additive only.
 
 Sections must remain alphabetized by phase/topic, never reordered. New laws
 get the next letter (J, K, L...) so historical references in commits stay
@@ -1014,4 +1167,5 @@ valid.
 | O | (this commit) | Panic button notification-only liability codification + canonical `PANIC_LIABILITY_NOTICE`, disclaimer UI components, CLAUDE.md Section O |
 | 27 / P | (this commit) | FCRA-bounded employment verification — voice → org-code resolver → email channel → manager approve/deny with `logActionAudit`; `verify@` auto-provisioned; CLAUDE.md Section P |
 | 26 / Q | (this commit) | Trinity subscription + identity gate — inbound voice/SMS, email AI, outbound voice/SMS, shift offers, cron workflows; `isWorkspaceServiceable` helper; Stripe + admin cache invalidation; `trinity.voice_ai_resolved` / `trinity.subscription_gate_blocked` audit taxonomy; owner-facing Gate Activity tab; CLAUDE.md Section Q |
-| S | (this commit) | Shift evidence chain — `shift_proof_photos` durable table (Map → DB), hourly POS prompt cron + NDS escalation, `provisionChatroom()` at shift create, shift-trade NDS, DAR PDF merges shift_proof_photos, client portal returns 5-source object, RMS verify auto-generates PDF + `dar_available_to_client`, incident POST fans out supervisor+owner NDS; CLAUDE.md Section R |
+| S (shift-evidence) | `886d81b` | Shift evidence chain — `shift_proof_photos` durable table (Map → DB), hourly POS prompt cron + NDS escalation, `provisionChatroom()` at shift create, shift-trade NDS, DAR PDF merges shift_proof_photos, client portal returns 5-source object, RMS verify auto-generates PDF + `dar_available_to_client`, incident POST fans out supervisor+owner NDS; CLAUDE.md Section R |
+| S (trinity-unity) | (this commit) | Trinity Unity Law — Section S codifies "one brain, not many agents" as the canonical invariant; terminology notes added to Sections K, L, M, Q pointing back to S; Section J Process amended with unity pre-flight (Step 0) and additive-only rule (Step 5) so sibling edits never override existing laws |
