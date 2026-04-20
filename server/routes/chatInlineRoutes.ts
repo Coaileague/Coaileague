@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { storage } from '../storage';
-import { db } from '../db';
+import { db, pool } from '../db';
 import {
   chatMacros,
   typingIndicators,
@@ -271,11 +271,32 @@ router.post('/conversations/:id/close', async (req: any, res) => {
   }
 });
 
-const MAIN_ROOM_ID = 'main-chatroom-workforceos';
+const MAIN_ROOM_ID = 'main-chatroom-coaileague';
+const LEGACY_MAIN_ROOM_ID = 'main-chatroom-workforceos';
+
+async function resolveOrMigrateMainRoom() {
+  let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+  if (mainRoom) return mainRoom;
+
+  const legacyRoom = await storage.getChatConversation(LEGACY_MAIN_ROOM_ID);
+  if (legacyRoom) {
+    await pool.query(
+      `UPDATE chat_messages SET conversation_id = $1 WHERE conversation_id = $2`,
+      [MAIN_ROOM_ID, LEGACY_MAIN_ROOM_ID]
+    );
+    await pool.query(
+      `UPDATE chat_conversations SET id = $1 WHERE id = $2`,
+      [MAIN_ROOM_ID, LEGACY_MAIN_ROOM_ID]
+    );
+    log.info('[Chat] Migrated main room ID from workforceos to coaileague');
+    return await storage.getChatConversation(MAIN_ROOM_ID) ?? { ...legacyRoom, id: MAIN_ROOM_ID };
+  }
+  return null;
+}
 
 router.get('/main-room', async (req: AuthenticatedRequest, res) => {
   try {
-    let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+    let mainRoom = await resolveOrMigrateMainRoom();
 
     if (!mainRoom) {
       mainRoom = await storage.createChatConversation({
@@ -301,7 +322,7 @@ router.get('/main-room', async (req: AuthenticatedRequest, res) => {
 
 router.get('/main-room/messages', async (req: AuthenticatedRequest, res) => {
   try {
-    let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+    let mainRoom = await resolveOrMigrateMainRoom();
     if (!mainRoom) {
       mainRoom = await storage.createChatConversation({
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -350,7 +371,7 @@ router.post('/main-room/messages', async (req: AuthenticatedRequest, res) => {
     }
     const user = req.user;
 
-    let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+    let mainRoom = await resolveOrMigrateMainRoom();
     if (!mainRoom) {
       mainRoom = await storage.createChatConversation({
         // @ts-expect-error — TS migration: fix in refactoring sprint

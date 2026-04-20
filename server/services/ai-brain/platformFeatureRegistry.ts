@@ -60,7 +60,7 @@ export type FeatureCategory =
 
 export const PLATFORM_FEATURES: PlatformFeature[] = [
   // ============================================================================
-  // TIME TRACKING (TimeOS)
+  // TIME TRACKING (Smart Time)
   // ============================================================================
   {
     id: 'time_tracking',
@@ -132,7 +132,7 @@ export const PLATFORM_FEATURES: PlatformFeature[] = [
   },
 
   // ============================================================================
-  // SCHEDULING (ScheduleOS)
+  // SCHEDULING (Smart Scheduling)
   // ============================================================================
   {
     id: 'scheduling',
@@ -214,7 +214,7 @@ export const PLATFORM_FEATURES: PlatformFeature[] = [
   },
 
   // ============================================================================
-  // INVOICING (BillOS)
+  // INVOICING (Smart Billing)
   // ============================================================================
   {
     id: 'invoicing',

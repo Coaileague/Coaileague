@@ -1,5 +1,5 @@
 /**
- * AVAILABILITY SERVICE - ScheduleOS™ Integration
+ * AVAILABILITY SERVICE — CoAIleague Smart Scheduling Integration
  * 
  * Manages employee availability patterns, conflict detection, and team scheduling optimization.
  * Integrates with AI Brain for intelligent understaffing detection and schedule suggestions.

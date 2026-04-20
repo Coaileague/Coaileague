@@ -213,8 +213,11 @@ export const CANONICAL_SOURCES = {
   },
 
   // ─── SCHEDULING AI (orchestrated / AI-powered) ────────────────────────────
+  // Canonical feature: CoAIleague Smart Scheduling. The `scheduleos` path
+  // segment and route file are internal names preserved for URL stability;
+  // callers should refer to the feature as Smart Scheduling in user copy.
   schedulingAI: {
-    proposals:     'GET /api/scheduleos/proposals',     // scheduleosRoutes.ts
+    proposals:     'GET /api/scheduleos/proposals',     // scheduleosRoutes.ts (internal route name)
     smartGenerate: 'POST /api/scheduleos/smart-generate',
     // /api/orchestrated-schedule = execution layer; /api/scheduleos = AI decision layer
     service:       'server/routes/scheduleosRoutes.ts',

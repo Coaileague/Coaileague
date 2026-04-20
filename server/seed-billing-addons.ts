@@ -40,7 +40,7 @@ const ADDONS = [
   },
   {
     addonKey: 'scheduleos_ai',
-    name: 'ScheduleOS AI',
+    name: 'CoAIleague Smart Scheduling',
     description: 'Intelligent auto-scheduling with shift optimization, coverage prediction, and employee preference learning',
     category: 'ai_feature',
     pricingType: 'hybrid',

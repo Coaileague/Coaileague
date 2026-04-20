@@ -166,6 +166,7 @@ export interface NotificationPayload {
   targetUserIds?: string[];
   source?: string;
   skipFeatureCheck?: boolean;
+  pushTag?: string;
 }
 
 export class UniversalNotificationEngine {
@@ -479,7 +480,7 @@ export class UniversalNotificationEngine {
           type: payload.type,
           url: payload.actionUrl,
           severity: payload.severity,
-          tag: `notif-${notification.id}`,
+          tag: payload.pushTag || `notif-${notification.id}`,
         });
       } else if (payload.targetRoles && payload.targetRoles.length > 0) {
         // RBAC: Send to all users with specified roles in workspace

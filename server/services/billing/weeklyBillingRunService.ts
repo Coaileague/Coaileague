@@ -22,6 +22,7 @@ import { createLogger } from '../../lib/logger';
 import { isBillingExcluded } from './billingConstants';
 import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
 import { platformEventBus } from '../platformEventBus';
+import { universalAudit } from '../universalAuditService';
 
 const log = createLogger('WeeklyBillingRunService');
 
@@ -749,8 +750,61 @@ class WeeklyBillingRunServiceImpl {
         billingExceptions.push(msg);
       }
 
+      // LAYER 7: Voice/SMS overage — charge Stripe for Twilio usage above tier limits.
+      // Reads accumulated workspace_voice_sms_usage.total_overage_charges_cents,
+      // posts a Stripe invoice item, and zeros the counters so next week bills only the delta.
+      // Closes the trigger→record→charge loop that previously stopped at the DB row.
+      try {
+        const { chargeVoiceSmsOverageFee } = await import('./middlewareTransactionFees');
+        const voiceSmsResult = await chargeVoiceSmsOverageFee({ workspaceId, weekKey });
+        if (voiceSmsResult.amountCents > 0) {
+          log.info(`[WeeklyBilling] Voice/SMS overage: ${voiceSmsResult.description} (success: ${voiceSmsResult.success})`);
+          if (!voiceSmsResult.success) {
+            billingExceptions.push(`Voice/SMS overage failed: ${voiceSmsResult.error || 'unknown'}`);
+          }
+          if (voiceSmsResult.success) {
+            try {
+              const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
+              await recordMiddlewareFeeCharge(workspaceId, 'voice_sms_overage', voiceSmsResult.amountCents, workspaceId);
+            } catch (err: any) {
+              log.warn('[WeeklyBilling] Voice/SMS overage revenue record failed (non-fatal):', err?.message);
+            }
+          }
+        }
+      } catch (voiceSmsErr: any) {
+        const msg = `Voice/SMS overage charge exception: ${voiceSmsErr?.message}`;
+        log.error(`[WeeklyBilling] ${msg}`);
+        billingExceptions.push(msg);
+      }
+
       if (billingExceptions.length > 0) {
         log.error(`[WeeklyBilling] ${billingExceptions.length} billing exception(s) for workspace ${workspaceId}`, { exceptions: billingExceptions });
+      }
+
+      // Audit trail: the full overage cycle has closed for this workspace.
+      // Every overage layer (seat, credit, token, storage, voice_sms) has run
+      // and been persisted; AR ledger entries written via middlewareFeeService.
+      try {
+        await universalAudit.log({
+          workspaceId,
+          actorId: 'system',
+          actorType: 'system',
+          changeType: 'action',
+          action: 'billing.overage_cycle_complete',
+          entityType: 'workspace',
+          entityId: workspaceId,
+          metadata: {
+            runId,
+            weekKey,
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            totalAmount,
+            billingExceptions: billingExceptions.length,
+            overageLayers: ['seat', 'ai_credit', 'ai_token', 'storage', 'voice_sms'],
+          },
+        });
+      } catch (auditErr: any) {
+        log.warn('[WeeklyBilling] overage_cycle_complete audit log failed (non-fatal):', auditErr?.message);
       }
 
       if (totalAmount > 0) {

@@ -609,10 +609,10 @@ export class InvoiceService {
    */
   private formatFeatureName(featureKey: string): string {
     const names: Record<string, string> = {
-      'scheduleos_ai_generation': 'ScheduleOS — AI Schedule Generation',
-      'scheduleos_optimization': 'ScheduleOS — Optimization Engine',
-      'scheduleos_conflict_resolution': 'ScheduleOS — Conflict Resolution',
-      'scheduleos_coverage_analysis': 'ScheduleOS — Coverage Analysis',
+      'scheduleos_ai_generation': 'CoAIleague — Smart Scheduling AI',
+      'scheduleos_optimization': 'CoAIleague — Smart Scheduling Optimization',
+      'scheduleos_conflict_resolution': 'CoAIleague — Smart Scheduling Conflict Resolution',
+      'scheduleos_coverage_analysis': 'CoAIleague — Smart Scheduling Coverage',
       'recordos_search': 'RecordOS — AI Records Search',
       'recordos_ai_query': 'RecordOS — Natural Language Query',
       'recordos_document_extraction': 'RecordOS — Document Extraction',

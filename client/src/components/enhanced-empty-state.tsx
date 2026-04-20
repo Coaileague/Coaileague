@@ -54,7 +54,7 @@ export function EnhancedEmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-12 px-4">
-      {/* WorkforceOS Logo */}
+      {/* CoAIleague Logo */}
       {showLogo && (
         <div className="mb-4">
           <CoAIleagueAFLogo size="sm" variant="icon" animated={false} />

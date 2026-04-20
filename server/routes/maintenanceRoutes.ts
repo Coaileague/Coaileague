@@ -17,6 +17,9 @@ import { trinityMaintenanceOrchestrator, DiagnosticsReport } from '../services/t
 import { requireAuth } from '../auth';
 import { requirePlatformAdmin, requirePlatformStaff } from '../rbac';
 import { createLogger } from '../lib/logger';
+import { db } from '../db';
+import { cronRunLog } from '@shared/schema';
+import { desc } from 'drizzle-orm';
 const log = createLogger('MaintenanceRoutes');
 
 
@@ -255,6 +258,28 @@ router.get('/api/maintenance/orchestrator/next-window', requirePlatformStaff, as
     });
   } catch (error: unknown) {
     log.error('[Maintenance] Next window error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
+// Scheduler health: last 10 executions per job, grouped by jobName, pulled
+// from `cron_run_log`. Consumed by the Platform Ops "Scheduler" tab.
+router.get('/api/maintenance/scheduler/jobs', requirePlatformStaff, async (req, res) => {
+  try {
+    const jobs = await db.select()
+      .from(cronRunLog)
+      .orderBy(desc(cronRunLog.startedAt))
+      .limit(300);
+
+    const grouped: Record<string, typeof jobs> = {};
+    for (const job of jobs) {
+      if (!grouped[job.jobName]) grouped[job.jobName] = [];
+      if (grouped[job.jobName].length < 10) grouped[job.jobName].push(job);
+    }
+
+    res.json({ jobs: grouped, totalJobs: Object.keys(grouped).length });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Scheduler jobs fetch failed:', error);
     res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });

@@ -8,7 +8,7 @@
  * - Auto-replacement triggers when employees fail to show
  * 
  * Integrates with:
- * - ScheduleOS™ for auto-replacement
+ * - CoAIleague Smart Scheduling for auto-replacement
  * - Employee Scoring for point deductions
  * - Notification system for org owner alerts
  * - Trinity orchestration for awareness

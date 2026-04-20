@@ -284,7 +284,7 @@ aiBrainRouter.get('/skills', requireAuth, async (req: Request, res: Response) =>
       skills,
       descriptions: {
         helpos_support: 'AI-powered customer support with FAQ learning',
-        scheduleos_generation: 'AI-powered schedule generation and optimization',
+        scheduleos_generation: 'CoAIleague Smart Scheduling — AI schedule generation',
         intelligenceos_prediction: 'Predictive analytics and forecasting',
         business_insight: 'Business insights for sales, finance, operations, automation, growth',
         platform_recommendation: 'Platform feature recommendations based on user needs',

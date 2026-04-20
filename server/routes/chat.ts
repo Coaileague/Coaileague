@@ -1,7 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import crypto from 'crypto';
 import { Router, type Request, type Response } from "express";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { storage } from "../storage";
 import { requireAuth, requireAnyAuth } from "../auth";
 import { requireManager, type AuthenticatedRequest } from "../rbac";
@@ -273,13 +273,35 @@ const router = Router();
   // LIVE CHATROOM (IRC/MSN Style - Single Room Always Open)
   // ============================================================================
   
-  const MAIN_ROOM_ID = 'main-chatroom-workforceos';
-  
+  const MAIN_ROOM_ID = 'main-chatroom-coaileague';
+  const LEGACY_MAIN_ROOM_ID = 'main-chatroom-workforceos';
+
+  // One-time idempotent migration: re-key legacy workforceos → coaileague.
+  async function resolveOrMigrateMainRoom() {
+    let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+    if (mainRoom) return mainRoom;
+
+    const legacyRoom = await storage.getChatConversation(LEGACY_MAIN_ROOM_ID);
+    if (legacyRoom) {
+      await pool.query(
+        `UPDATE chat_messages SET conversation_id = $1 WHERE conversation_id = $2`,
+        [MAIN_ROOM_ID, LEGACY_MAIN_ROOM_ID]
+      );
+      await pool.query(
+        `UPDATE chat_conversations SET id = $1 WHERE id = $2`,
+        [MAIN_ROOM_ID, LEGACY_MAIN_ROOM_ID]
+      );
+      log.info('[Chat] Migrated main room ID from workforceos to coaileague');
+      return await storage.getChatConversation(MAIN_ROOM_ID) ?? { ...legacyRoom, id: MAIN_ROOM_ID };
+    }
+    return null;
+  }
+
   // Get or create main chatroom
   router.get('/api/chat/main-room', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
-      
+      let mainRoom = await resolveOrMigrateMainRoom();
+
       // Create main room if it doesn't exist
       if (!mainRoom) {
         mainRoom = await storage.createChatConversation({
@@ -295,7 +317,7 @@ const router = Router();
           lastMessageAt: new Date(),
         });
       }
-      
+
       res.json(mainRoom);
     } catch (error) {
       log.error("Error getting main room:", error);
@@ -307,7 +329,7 @@ const router = Router();
   router.get('/api/chat/main-room/messages', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
     try {
       // Ensure room exists first
-      let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+      let mainRoom = await resolveOrMigrateMainRoom();
       if (!mainRoom) {
         mainRoom = await storage.createChatConversation({
           // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -345,7 +367,7 @@ const router = Router();
       const user = req.user!;
       
       // Ensure room exists
-      let mainRoom = await storage.getChatConversation(MAIN_ROOM_ID);
+      let mainRoom = await resolveOrMigrateMainRoom();
       if (!mainRoom) {
         mainRoom = await storage.createChatConversation({
           // @ts-expect-error — TS migration: fix in refactoring sprint

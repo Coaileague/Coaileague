@@ -2,8 +2,8 @@
  * AI Scheduling™ - INTELLIGENT AUTO-SCHEDULING ENGINE
  * 
  * Integrates with ALL CoAIleague™ systems for comprehensive scheduling:
- * - TalentOS™: Performance scores, attendance rates, composite scores
- * - ClockOS™: Tardiness, no-call-no-show, time entry violations
+ * - Officer Intelligence: Performance scores, attendance rates, composite scores
+ * - Smart Clock-In: Tardiness, no-call-no-show, time entry violations
  * - Billing Platform: Automatic client billing from scheduled hours
  * - Geo-Compliance: Location-based assignment (employee address to job site distance)
  * - Availability: Day/time preferences, max hours
@@ -52,13 +52,13 @@ interface EmployeeIntelligence {
   employeeId: string;
   employeeName: string;
   
-  // TalentOS™ Performance Data
+  // Officer Intelligence Performance Data
   performanceScore: number; // 0-100 from latest review
   performanceTier: string; // 'exceptional', 'exceeds', 'meets', 'needs_improvement', 'unsatisfactory'
   attendanceRate: number; // Percentage
-  compositeScore: number; // Overall TalentOS™ score
+  compositeScore: number; // Overall Officer Intelligence score
   
-  // ClockOS™ Attendance & Punctuality
+  // Smart Clock-In Attendance & Punctuality
   tardyCount: number; // Last 90 days
   noCallNoShowCount: number; // Last 90 days
   onTimeClockInRate: number; // Percentage
@@ -139,7 +139,7 @@ export class SchedulingAI {
 
   /**
    * MAIN SCHEDULE GENERATION ENGINE
-   * Pulls from TalentOS™, ClockOS™, Geo-Compliance, and all integrated systems
+   * Pulls from Officer Intelligence, Smart Clock-In, Geo-Compliance, and all integrated systems
    */
   async generateSchedule(request: ScheduleRequest): Promise<ScheduleResult> {
     const startTime = Date.now();
@@ -463,7 +463,7 @@ Analyze the solution quality and provide:
 
   /**
    * GATHER COMPREHENSIVE EMPLOYEE INTELLIGENCE
-   * Pulls from TalentOS™, ClockOS™, Geo-Compliance, Onboarding, and all integrated systems
+   * Pulls from Officer Intelligence, Smart Clock-In, Geo-Compliance, Onboarding, and all integrated systems
    */
   private async gatherEmployeeIntelligence(
     workspaceId: string,
@@ -698,13 +698,13 @@ Analyze the solution quality and provide:
           employeeId: emp.id,
           employeeName: `${emp.firstName} ${emp.lastName}`,
           
-          // TalentOS™ data
+          // Officer Intelligence data
           performanceScore,
           performanceTier: latestReview?.performanceTier || 'meets',
           attendanceRate,
           compositeScore: performanceScore,
           
-          // ClockOS™ data
+          // Smart Clock-In data
           tardyCount,
           noCallNoShowCount,
           onTimeClockInRate,
@@ -834,7 +834,7 @@ Analyze the solution quality and provide:
 You are AI Scheduling™, the world's most advanced AI workforce scheduling system. Generate an optimal schedule using comprehensive employee intelligence data.
 
 ═══════════════════════════════════════════════════════════════════════════════
-EMPLOYEE INTELLIGENCE (Integrated from TalentOS™, ClockOS™, Geo-Compliance)
+EMPLOYEE INTELLIGENCE (Integrated from Officer Intelligence, Smart Clock-In, Geo-Compliance)
 ═══════════════════════════════════════════════════════════════════════════════
 ${employeeIntelligence.map((emp: EmployeeIntelligence, idx: number) => `
 ${idx + 1}. ${emp.employeeName} (ID: ${emp.employeeId})

@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Archive, Database, Flag, Loader2, RefreshCw, Server, Workflow } from "lucide-react";
+import { Activity, Archive, Database, Flag, Loader2, RefreshCw, Server, Workflow, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -94,6 +94,102 @@ function SloTab(): JSX.Element {
               </div>
             </div>
           ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Scheduler tab ───────────────────────────────────────────────────────────
+
+interface SchedulerJobRow {
+  id: string;
+  jobName: string;
+  startedAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+  status: string;
+  errorMessage: string | null;
+  recordsProcessed: number | null;
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+}
+
+function SchedulerTab(): JSX.Element {
+  const { data, isLoading, refetch, isFetching } = useQuery<{
+    jobs: Record<string, SchedulerJobRow[]>;
+    totalJobs: number;
+  }>({
+    queryKey: ["/api/maintenance/scheduler/jobs"],
+    refetchInterval: 60_000,
+  });
+
+  const groups = data?.jobs ?? {};
+  const jobNames = Object.keys(groups).sort();
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <div>
+          <CardTitle className="flex items-center gap-2"><Clock className="h-4 w-4" /> Scheduler health</CardTitle>
+          <CardDescription>
+            Last 10 runs per cron job from `cron_run_log`. Auto-refreshes every 60 seconds.
+          </CardDescription>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-scheduler-refresh">
+          {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : jobNames.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No cron runs logged yet.</p>
+        ) : (
+          jobNames.map((name) => {
+            const rows = groups[name];
+            const last = rows[0];
+            const indicator = last?.status === "completed" ? "✅" : last?.status === "failed" ? "❌" : "⏳";
+            return (
+              <div key={name} data-testid={`scheduler-job-${name}`}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  {indicator} {name}
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-muted-foreground">
+                        <th className="pb-1 pr-3">Last Run</th>
+                        <th className="pb-1 pr-3">Status</th>
+                        <th className="pb-1 pr-3">Duration</th>
+                        <th className="pb-1 pr-3">Records</th>
+                        <th className="pb-1">Error</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => (
+                        <tr key={r.id} className="font-mono">
+                          <td className="py-1 pr-3">{formatDate(r.startedAt)}</td>
+                          <td className={
+                            "py-1 pr-3 " +
+                            (r.status === "completed" ? "text-green-600" :
+                              r.status === "failed" ? "text-red-600" : "text-muted-foreground")
+                          }>{r.status}</td>
+                          <td className="py-1 pr-3">{r.durationMs != null ? `${r.durationMs}ms` : "—"}</td>
+                          <td className="py-1 pr-3">{r.recordsProcessed ?? "—"}</td>
+                          <td className="py-1 truncate max-w-xs">{r.errorMessage ?? ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })
         )}
       </CardContent>
     </Card>
@@ -331,12 +427,14 @@ export default function PlatformOpsPage(): JSX.Element {
         <Tabs defaultValue="slo">
           <TabsList>
             <TabsTrigger value="slo" data-testid="tab-platform-slo">SLO</TabsTrigger>
+            <TabsTrigger value="scheduler" data-testid="tab-platform-scheduler">Scheduler</TabsTrigger>
             <TabsTrigger value="compliance" data-testid="tab-platform-compliance">Compliance</TabsTrigger>
             <TabsTrigger value="retention" data-testid="tab-platform-retention">Retention</TabsTrigger>
             <TabsTrigger value="demo" data-testid="tab-platform-demo">Demo tenant</TabsTrigger>
             <TabsTrigger value="regulatory" data-testid="tab-platform-regulatory">Regulatory</TabsTrigger>
           </TabsList>
           <TabsContent value="slo"><SloTab /></TabsContent>
+          <TabsContent value="scheduler"><SchedulerTab /></TabsContent>
           <TabsContent value="compliance"><ComplianceTab /></TabsContent>
           <TabsContent value="retention"><RetentionTab /></TabsContent>
           <TabsContent value="demo"><DemoTenantTab /></TabsContent>

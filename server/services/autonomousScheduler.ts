@@ -2381,10 +2381,10 @@ export function startAutonomousScheduler() {
   log.info('CoAIleague autonomous scheduler starting');
 
   // 1. Nightly Invoice Generation (2 AM daily)
-  registerJobInfo('Smart Billing (BillOS)', SCHEDULER_CONFIG.invoicing.schedule, SCHEDULER_CONFIG.invoicing.description, SCHEDULER_CONFIG.invoicing.enabled);
+  registerJobInfo('CoAIleague Smart Billing', SCHEDULER_CONFIG.invoicing.schedule, SCHEDULER_CONFIG.invoicing.description, SCHEDULER_CONFIG.invoicing.enabled);
   if (SCHEDULER_CONFIG.invoicing.enabled) {
     cron.schedule(SCHEDULER_CONFIG.invoicing.schedule, () => {
-      trackJobExecution('Smart Billing (BillOS)', async () => {
+      trackJobExecution('CoAIleague Smart Billing', async () => {
         log.debug('Invoice generation triggered', { timestamp: new Date().toISOString() });
         const startTime = Date.now();
         try {
@@ -2395,14 +2395,14 @@ export function startAutonomousScheduler() {
             log.warn('Client timesheet invoice auto-generation failed (non-blocking)', { error: err.message });
           });
           emitAutomationEvent({
-            jobName: 'Smart Billing (BillOS)',
+            jobName: 'CoAIleague Smart Billing',
             category: 'billing',
             success: true,
             duration: Date.now() - startTime,
           });
         } catch (err: any) {
           emitAutomationEvent({
-            jobName: 'Smart Billing (BillOS)',
+            jobName: 'CoAIleague Smart Billing',
             category: 'billing',
             success: false,
             details: { error: (err instanceof Error ? err.message : String(err)) },

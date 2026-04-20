@@ -1796,6 +1796,37 @@ export class PayrollAutomationEngine {
       return run;
     });
 
+    // Audit trail: overtime was calculated from timesheet data (FLSA weekly
+    // threshold = 40 hrs). Records per-employee regular/OT hour split and the
+    // blended rate so future disputes can be reconstructed from the log alone.
+    try {
+      const { universalAudit } = await import('./universalAuditService');
+      await universalAudit.log({
+        workspaceId,
+        actorId: userId || 'system',
+        actorType: 'system',
+        changeType: 'action',
+        action: 'payroll.overtime_calculated',
+        entityType: 'payroll_run',
+        entityId: payrollRun.id,
+        metadata: {
+          payrollRunId: payrollRun.id,
+          employeeCount: calculations.length,
+          totalRegularHours: calculations.reduce((s, c) => s + c.regularHours, 0),
+          totalOvertimeHours: calculations.reduce((s, c) => s + c.overtimeHours, 0),
+          employees: calculations.map(c => ({
+            employeeId: c.employeeId,
+            regularHours: c.regularHours,
+            overtimeHours: c.overtimeHours,
+            hourlyRate: c.hourlyRate,
+            grossPay: c.grossPay,
+          })),
+        },
+      });
+    } catch (auditErr: any) {
+      log.warn('[AI Payroll™] overtime_calculated audit log failed (non-fatal):', auditErr?.message);
+    }
+
     // Emit payroll completion event to Trinity for platform awareness
     trinityPlatformConnector.emitAutomationEvent('payroll', 'payroll_processed', {
       action: `Payroll processed: ${calculations.length} employees, $${totalGrossPay.toFixed(2)} gross`,
@@ -2283,19 +2314,55 @@ export async function executePayrollEntry(
         // Decrypt employee's access token (employee's bank is the credit destination)
         const empAccessToken = plaidDecrypt(empBank.plaidAccessTokenEncrypted);
 
-        // Initiate credit transfer — funds flow from org funding account TO employee bank
-        // GAP-36 FIX: Pass payroll entry ID as idempotency key so Plaid deduplicates
-        // if two concurrent payroll process requests race for the same entry — preventing
-        // a double ACH transfer being issued for the same pay stub.
-        const transfer = await initiateTransfer({
-          accessToken: empAccessToken,
-          accountId: empBank.plaidAccountId,
+        // Compensating-transaction step 1: write PENDING row BEFORE touching Plaid.
+        // If our server dies between the Plaid call and the DB update, this row is
+        // the only record of the in-flight transfer and reconciliation needs it.
+        const { plaidTransferAttempts } = await import('@shared/schema');
+        const [pendingRecord] = await db.insert(plaidTransferAttempts).values({
+          workspaceId,
+          employeeId,
+          payrollRunId: entry.payrollRunId,
+          payrollEntryId: entry.id,
           amount: netPay.toFixed(2),
-          description: `Payroll`,
-          legalName: employeeId, // full name not available here; monitor resolves it
-          type: 'credit',
-          idempotencyKey: `payroll-entry-${entry.id}`,
-        });
+          status: 'pending',
+        } as any).returning().catch(() => [null as any]);
+
+        let transfer: { transferId: string };
+        try {
+          // Initiate credit transfer — funds flow from org funding account TO employee bank
+          // GAP-36 FIX: Pass payroll entry ID as idempotency key so Plaid deduplicates
+          // if two concurrent payroll process requests race for the same entry — preventing
+          // a double ACH transfer being issued for the same pay stub.
+          transfer = await initiateTransfer({
+            accessToken: empAccessToken,
+            accountId: empBank.plaidAccountId,
+            amount: netPay.toFixed(2),
+            description: `Payroll`,
+            legalName: employeeId, // full name not available here; monitor resolves it
+            type: 'credit',
+            idempotencyKey: `payroll-entry-${entry.id}`,
+          });
+
+          // Compensating-transaction step 2: Plaid accepted — mark INITIATED
+          // with the transfer ID. The webhook will later flip this to completed.
+          if (pendingRecord?.id) {
+            await db.update(plaidTransferAttempts).set({
+              status: 'initiated',
+              transferId: transfer.transferId,
+              initiatedAt: new Date(),
+            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
+          }
+        } catch (plaidErr: any) {
+          // Compensating-transaction step 3: Plaid rejected — no money moved,
+          // mark FAILED and preserve the record for reconciliation.
+          if (pendingRecord?.id) {
+            await db.update(plaidTransferAttempts).set({
+              status: 'failed',
+              errorMessage: plaidErr?.message ?? String(plaidErr),
+            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
+          }
+          throw plaidErr;
+        }
 
         // Record transfer ID on the payroll entry using the dedicated Plaid column.
         // Also update any existing payStub linked to this entry so the transfer monitor can find it.

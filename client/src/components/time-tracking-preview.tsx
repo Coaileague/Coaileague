@@ -4,7 +4,7 @@ import { Clock, Play, Square, Calendar } from "lucide-react";
 
 /**
  * Time Tracking Preview Component  
- * Shows real WorkforceOS Time Tracking interface
+ * Shows CoAIleague Smart Time interface
  */
 export function TimeTrackingPreview() {
   const timeEntries = [

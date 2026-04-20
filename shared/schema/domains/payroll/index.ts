@@ -663,3 +663,30 @@ export const insertPayrollTimesheetEntrySchema = createInsertSchema(payrollTimes
 });
 export type InsertPayrollTimesheetEntry = z.infer<typeof insertPayrollTimesheetEntrySchema>;
 export type PayrollTimesheetEntry = typeof payrollTimesheetEntries.$inferSelect;
+
+// Compensating-transaction ledger for Plaid ACH transfers. A pending row is
+// written BEFORE the Plaid API call so that if Plaid returns success but our
+// follow-up DB write dies, reconciliation can still locate the in-flight
+// transfer. Updated to 'initiated' on API success, 'failed' if Plaid rejects,
+// and 'completed' when the Plaid webhook confirms settlement.
+export const plaidTransferAttempts = pgTable("plaid_transfer_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  employeeId: varchar("employee_id").notNull(),
+  payrollRunId: varchar("payroll_run_id"),
+  payrollEntryId: varchar("payroll_entry_id"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  transferId: varchar("transfer_id"),
+  status: varchar("status").notNull().default("pending"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  initiatedAt: timestamp("initiated_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (table) => [
+  index("plaid_transfer_attempts_workspace_idx").on(table.workspaceId),
+  index("plaid_transfer_attempts_employee_idx").on(table.employeeId),
+  index("plaid_transfer_attempts_run_idx").on(table.payrollRunId),
+  index("plaid_transfer_attempts_status_idx").on(table.status),
+]);
+
+export type PlaidTransferAttempt = typeof plaidTransferAttempts.$inferSelect;

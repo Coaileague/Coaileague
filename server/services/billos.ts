@@ -1,5 +1,5 @@
 /**
- * BillOS — Billing Operating System
+ * CoAIleague Smart Billing Service
  * ====================================
  * Central orchestration layer for all billing operations on the CoAIleague platform.
  * This module is the canonical entry point for billing domain logic — it delegates to
@@ -31,7 +31,7 @@ import { typedPool } from '../lib/typedSql';
 import { workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-const log = createLogger('BillOS');
+const log = createLogger('CoAIleague.SmartBilling');
 
 export interface BillingHealthSummary {
   workspaceId: string;
@@ -53,12 +53,12 @@ export interface UsageSnapshot {
   topCategories: { category: string; credits: number }[];
 }
 
-class BillOS {
-  private static instance: BillOS;
+class SmartBillingService {
+  private static instance: SmartBillingService;
 
-  static getInstance(): BillOS {
-    if (!BillOS.instance) BillOS.instance = new BillOS();
-    return BillOS.instance;
+  static getInstance(): SmartBillingService {
+    if (!SmartBillingService.instance) SmartBillingService.instance = new SmartBillingService();
+    return SmartBillingService.instance;
   }
 
   async getWorkspaceBillingHealth(workspaceId: string): Promise<BillingHealthSummary> {
@@ -118,7 +118,7 @@ class BillOS {
     await platformEventBus.publish({
       type: type as any,
       category: 'automation',
-      title: `BillOS: ${type}`,
+      title: `Smart Billing: ${type}`,
       description: `Billing event: ${type}`,
       workspaceId,
       metadata,
@@ -126,4 +126,6 @@ class BillOS {
   }
 }
 
-export const billOS = BillOS.getInstance();
+export const smartBilling = SmartBillingService.getInstance();
+// Backward-compat alias — callers migrated incrementally.
+export const billOS = smartBilling;

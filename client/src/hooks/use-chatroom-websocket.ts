@@ -135,7 +135,7 @@ function isForActiveConversation(
 export function useChatroomWebSocket(
   userId: string | undefined,
   userName: string = 'User',
-  conversationId: string = 'main-chatroom-workforceos',
+  conversationId: string = 'main-chatroom-coaileague',
   onSecureRequest?: SecureRequestCallback,
   onConnectionFailed?: ConnectionFailedCallback
 ) {
