@@ -204,8 +204,9 @@ identityPinRouter.get(
 
 // ─── CLIENT PIN (self-service from client portal) ────────────────────────────
 // A logged-in client portal user may manage the PIN on the clients row linked
-// to their own user account. We resolve the client by (workspace_id, user_id)
-// so the actor can never touch another tenant's client record.
+// to their own user account. We resolve the client by user_id and then carry
+// the client's own workspace_id through to setEntityPin/clearEntityPin, whose
+// UPDATE clauses enforce the tenant scope via WHERE workspace_id = $N.
 
 async function resolveSelfClient(
   req: AuthenticatedRequest,

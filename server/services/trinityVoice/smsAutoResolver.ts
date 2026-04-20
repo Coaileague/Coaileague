@@ -570,14 +570,17 @@ async function logInboundResolution(params: {
       ? `case:${result.caseNumber}`
       : (result.resolved ? null : 'escalated');
 
+    // user_id column expects a users.id — we only have employeeId here, which
+    // is a different table. Store null and use phone_number + workspace_id for
+    // replay instead of forcing a semantic mismatch.
     await pool.query(
       `INSERT INTO sms_attempt_log
          (workspace_id, user_id, phone_number, message_type, sent,
           consent_verified, reason_not_sent, sent_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
       [
-        result.workspaceId || 'platform',
-        result.employeeId || null,
+        result.workspaceId ?? null,
+        null,
         (fromPhone || '').slice(0, 20),
         messageType,
         result.resolved,

@@ -1058,13 +1058,17 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
 
     // Create an open staffing_request ticket via raw SQL so we stay decoupled
     // from schema churn and can always write a minimal row.
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const ticketNumber = `STAFF-${dateStr}-${rand}`;
     await pool.query(
       `INSERT INTO support_tickets
-         (workspace_id, client_id, category, subject, description,
-          status, priority, source, created_at, updated_at)
+         (workspace_id, client_id, type, subject, description,
+          status, priority, submission_method, ticket_number,
+          created_at, updated_at)
        VALUES ($1, $2, 'staffing_request', 'Staffing Request via Portal',
-               $3, 'open', 'normal', 'client_portal', NOW(), NOW())`,
-      [workspaceId, clientId, message.slice(0, 500)]
+               $3, 'open', 'normal', 'client_portal', $4, NOW(), NOW())`,
+      [workspaceId, clientId, message.slice(0, 500), ticketNumber]
     );
 
     await this.logAction(sessionId, 'staffing_intake', 'Client portal staffing request intake', {

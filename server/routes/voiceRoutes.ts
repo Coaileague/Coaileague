@@ -2309,14 +2309,19 @@ async function runTrinityTalkTurn(params: {
   }).catch((e: any) => log.warn('[VoiceRoutes] trinity-talk audit failed:', e?.message));
 
   // Phase 25 — load prior-turn memory from the voice_call_sessions metadata
-  // so Trinity remembers what was already said in this call.
+  // so Trinity remembers what was already said in this call. The sessionId
+  // threaded through the talk URL can be either a voice_call_sessions.id or
+  // the Twilio CallSid (see the `session?.id || CallSid` fallback upstream),
+  // so match on either.
   let conversationHistory = '';
   let priorTurns: Array<{ issue: string; answer: string }> = [];
   if (turn > 1 && sessionId) {
     try {
       const { pool } = await import('../db');
       const r = await pool.query(
-        `SELECT metadata FROM voice_call_sessions WHERE id = $1 LIMIT 1`,
+        `SELECT metadata FROM voice_call_sessions
+          WHERE id = $1 OR twilio_call_sid = $1
+          LIMIT 1`,
         [sessionId]
       );
       const meta = (r.rows[0]?.metadata ?? {}) as Record<string, unknown>;
@@ -2351,7 +2356,7 @@ async function runTrinityTalkTurn(params: {
         `UPDATE voice_call_sessions
             SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('talkHistory', $1::jsonb),
                 updated_at = NOW()
-          WHERE id = $2`,
+          WHERE id = $2 OR twilio_call_sid = $2`,
         [JSON.stringify(nextHistory), sessionId]
       );
     } catch (e: any) {
