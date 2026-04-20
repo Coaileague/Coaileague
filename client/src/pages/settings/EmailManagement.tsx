@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Mail, Users, Building2, BarChart3, CircleDollarSign, AlertTriangle, CheckCircle, Settings2, Forward, Pen } from "lucide-react";
+import { Mail, Users, Building2, BarChart3, CircleDollarSign, AlertTriangle, CheckCircle, Settings2, Forward, Pen, Bold, Italic, Underline, Link } from "lucide-react";
 
 interface EmailAddress {
   id: string;
@@ -58,6 +58,77 @@ interface ManagementData {
     perSeatMonthlyCents: number;
     fairUseEmailsPerSeat: number;
   };
+}
+
+// ─── Rich Text Signature Editor ──────────────────────────────────────────────
+function RichSignatureEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (html: string, text: string) => void;
+}) {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Initialise editor content once on mount
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = value || '';
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const execFormat = useCallback((command: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, val);
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML, editorRef.current.textContent || '');
+    }
+  }, [onChange]);
+
+  const handleInput = useCallback(() => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML, editorRef.current.textContent || '');
+    }
+  }, [onChange]);
+
+  const handleLink = useCallback(() => {
+    const url = window.prompt('Enter URL:', 'https://');
+    if (url) execFormat('createLink', url);
+  }, [execFormat]);
+
+  return (
+    <div className="border rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring">
+      <div className="flex items-center gap-0.5 p-1.5 border-b bg-muted/30">
+        <Button variant="ghost" size="icon" className="h-7 w-7" type="button"
+          onClick={() => execFormat('bold')} title="Bold" data-testid="button-sig-bold">
+          <Bold className="w-3.5 h-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" type="button"
+          onClick={() => execFormat('italic')} title="Italic" data-testid="button-sig-italic">
+          <Italic className="w-3.5 h-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" type="button"
+          onClick={() => execFormat('underline')} title="Underline" data-testid="button-sig-underline">
+          <Underline className="w-3.5 h-3.5" />
+        </Button>
+        <Separator orientation="vertical" className="h-5 mx-1" />
+        <Button variant="ghost" size="icon" className="h-7 w-7" type="button"
+          onClick={handleLink} title="Insert Link" data-testid="button-sig-link">
+          <Link className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        className="min-h-[100px] p-3 text-sm focus:outline-none"
+        style={{ wordBreak: 'break-word' }}
+        data-testid="editor-signature-html"
+      />
+    </div>
+  );
 }
 
 // ─── Per-Address Settings Dialog ─────────────────────────────────────────────
@@ -213,15 +284,13 @@ function AddressSettingsDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="sig-html" className="text-sm">HTML Signature (optional)</Label>
-                <Textarea
-                  id="sig-html"
-                  placeholder={"<p><strong>John Smith</strong></p>\n<p>VP Sales · Acme Corp</p>"}
-                  className="font-mono text-xs resize-none"
-                  rows={5}
+                <Label className="text-sm">HTML Signature</Label>
+                <RichSignatureEditor
                   value={signatureHtml}
-                  onChange={(e) => setSignatureHtml(e.target.value)}
-                  data-testid="textarea-signature-html"
+                  onChange={(html, text) => {
+                    setSignatureHtml(html);
+                    if (!signatureText) setSignatureText(text);
+                  }}
                 />
                 <p className="text-xs text-muted-foreground">
                   When provided, the HTML signature is appended to outbound emails. Plain text is
@@ -231,10 +300,17 @@ function AddressSettingsDialog({
 
               {(signatureText || signatureHtml) && (
                 <div className="rounded-md border p-3 bg-muted/30">
-                  <p className="text-xs text-muted-foreground mb-1 font-medium">Preview (text):</p>
-                  <pre className="text-xs whitespace-pre-wrap text-foreground">
-                    {signatureText || "(HTML only — no plain-text preview)"}
-                  </pre>
+                  <p className="text-xs text-muted-foreground mb-1 font-medium">Preview:</p>
+                  {signatureHtml ? (
+                    <div
+                      className="text-sm"
+                      dangerouslySetInnerHTML={{ __html: signatureHtml }}
+                    />
+                  ) : (
+                    <pre className="text-xs whitespace-pre-wrap text-foreground">
+                      {signatureText}
+                    </pre>
+                  )}
                 </div>
               )}
             </TabsContent>
