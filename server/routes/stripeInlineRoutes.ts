@@ -33,7 +33,7 @@ function _pruneStripeEventCache() {
 }
 setInterval(_pruneStripeEventCache, 60 * 60 * 1000).unref(); // hourly cleanup
 
-// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
     return (getStripe() as any)[prop];

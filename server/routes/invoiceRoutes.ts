@@ -92,7 +92,7 @@ import { sendInvoiceGeneratedEmail } from "../services/emailCore";
 import { requireAuth } from "../auth";
 import { getStripe, isStripeConfigured } from "../services/billing/stripeClient";
 
-// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
     return (getStripe() as any)[prop];
@@ -1927,7 +1927,7 @@ import { createHash } from "crypto";
         }
       })();
 
-      // Charge middleware processing fee for non-manual invoice payments (awaited per CLAUDE.md §B).
+      // Charge middleware processing fee for non-manual invoice payments (awaited per TRINITY.md §B).
       // Manual payments have no processing fee (no card/ACH network involved).
       // chargeInvoiceMiddlewareFee uses idempotencyKey `invoice_${workspaceId}_${invoiceId}`,
       // so even if this runs twice for the same invoice, Stripe deduplicates the charge.

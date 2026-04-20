@@ -13,7 +13,7 @@
  *   POST /api/finance/contracts/:id/map-revenue  — Map a contract to revenue recognition
  *
  * Access: Manager+ only.
- * Per CLAUDE.md §G: All queries workspace-scoped.
+ * Per TRINITY.md §G: All queries workspace-scoped.
  */
 
 import { Router } from 'express';

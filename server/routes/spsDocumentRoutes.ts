@@ -3,7 +3,7 @@
  * CRUD for employee packets, client contracts, and proposals.
  * Workspace-scoped. All actions audit-logged.
  *
- * WHITE-LABEL (CLAUDE.md §6 White-Label Rule): all tenant-facing email
+ * WHITE-LABEL (TRINITY.md §6 White-Label Rule): all tenant-facing email
  * templates and AI prompts read company name + license + signer email
  * from the calling workspace's record. There are NO hardcoded references
  * to Statewide Protective Services or any other tenant in this file.
@@ -29,7 +29,7 @@ export const spsDocumentRouter = Router();
 
 /**
  * Resolve workspace-level branding for use in tenant-facing email templates.
- * CLAUDE.md §6: white-label means no hardcoded company names anywhere.
+ * TRINITY.md §6: white-label means no hardcoded company names anywhere.
  * This helper reads the workspace row and returns a sanitized branding
  * object every email template can interpolate. License number and state
  * code fall back to neutral phrasing when the workspace row doesn't have
@@ -123,7 +123,7 @@ spsDocumentRouter.post('/', async (req: any, res) => {
       recipientName: input.recipientName,
       recipientEmail: input.recipientEmail,
       // White-label: signer name + email come from the authenticated user.
-      // No hardcoded tenant identity (CLAUDE.md §6).
+      // No hardcoded tenant identity (TRINITY.md §6).
       orgSignerName: (req.user)?.firstName
         ? `${(req.user).firstName} ${(req.user).lastName || ''}`.trim()
         : 'Authorized Signer',
@@ -288,7 +288,7 @@ spsDocumentRouter.post('/:id/send', async (req: any, res) => {
       const portalUrl = `${req.protocol}://${req.get('host')}/sps-packet/${doc.accessToken}`;
 
       // White-label: every customer-facing template reads its branding
-      // from the calling workspace (CLAUDE.md §6). Never hardcode tenant
+      // from the calling workspace (TRINITY.md §6). Never hardcode tenant
       // identity.
       const branding = await getWorkspaceBranding(workspaceId);
 
@@ -366,7 +366,7 @@ spsDocumentRouter.post('/:id/id-verify', async (req: any, res) => {
     if (!existing) return res.status(404).json({ error: 'Document not found' });
 
     // Call Vision AI for ID verification — branding pulled from workspace
-    // (CLAUDE.md §6 white-label rule)
+    // (TRINITY.md §6 white-label rule)
     const verifyBranding = await getWorkspaceBranding(workspaceId);
     let verificationResult: any = null;
     try {

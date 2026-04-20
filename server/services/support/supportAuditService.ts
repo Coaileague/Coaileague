@@ -6,7 +6,7 @@
  * queryable alongside all other audit entries.
  *
  * Callers must `await` this (or handle the returned Promise) — do NOT
- * fire-and-forget per Section B of CLAUDE.md.
+ * fire-and-forget per Section B of TRINITY.md.
  */
 
 import { universalAudit } from '../universalAuditService';

@@ -287,7 +287,7 @@ export function getSession() {
 
   const sessionStore = new FaultTolerantStore(pgStoreInstance, 1500);
 
-  // Production-aware cookie config (CLAUDE.md §A canonical isProduction).
+  // Production-aware cookie config (TRINITY.md §A canonical isProduction).
   // The previous config had sameSite:'strict' + no domain, which broke
   // session sending on Railway with the custom domain because:
   //   1. sameSite:'strict' refused the cookie on subdomain navigations
@@ -330,7 +330,7 @@ export function getSession() {
 const TEST_MODE_SECRET = process.env.DIAG_BYPASS_SECRET || process.env.TEST_MODE_SECRET;
 // Playwright test key for development E2E testing - only works in development
 const PLAYWRIGHT_TEST_KEY = process.env.PLAYWRIGHT_TEST_KEY;
-// Use canonical isProduction() helper (CLAUDE.md Section A) so test-mode
+// Use canonical isProduction() helper (TRINITY.md Section A) so test-mode
 // bypass is correctly disabled on Railway/Cloud Run, not just on Replit.
 const IS_PRODUCTION = isProductionEnv();
 const IS_DEVELOPMENT = !IS_PRODUCTION;

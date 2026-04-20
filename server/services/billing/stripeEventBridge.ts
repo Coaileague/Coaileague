@@ -33,7 +33,7 @@ import { cacheManager } from '../platform/cacheManager';
 
 const log = createLogger('StripeEventBridge');
 
-// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
     return (getStripe() as any)[prop];

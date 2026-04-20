@@ -7,7 +7,7 @@
  *   - Client account health (active, at-risk, churning)
  *   - Seasonal trend factors
  *
- * Per CLAUDE.md §G: All queries workspace-scoped.
+ * Per TRINITY.md §G: All queries workspace-scoped.
  */
 
 import { db } from '../../db';

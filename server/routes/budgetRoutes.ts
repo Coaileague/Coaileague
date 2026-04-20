@@ -147,7 +147,7 @@ router.delete('/:id', requireOwner, async (req: AuthenticatedRequest, res) => {
     const workspaceId = req.workspaceId!;
     const { id } = req.params;
 
-    // CLAUDE.md Section R / Law P1 — soft delete (financial record retained)
+    // TRINITY.md Section R / Law P1 — soft delete (financial record retained)
     const [existing] = await db.select({ id: budgets.id })
       .from(budgets)
       .where(and(eq(budgets.id, id), eq(budgets.workspaceId, workspaceId)))

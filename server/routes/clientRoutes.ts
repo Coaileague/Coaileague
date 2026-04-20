@@ -254,7 +254,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
         // next-best safeguard — but must itself succeed for the system to stay consistent.
         log.error('[Client Creation] Rate creation failed, soft-deleting orphaned client:', rateErr);
         try {
-          // CLAUDE.md Section R / Law P1 — soft delete (audit trail of failed creates retained)
+          // TRINITY.md Section R / Law P1 — soft delete (audit trail of failed creates retained)
           await softDelete({
             table: clients,
             where: and(eq(clients.id, client.id), eq(clients.workspaceId, workspaceId))!,

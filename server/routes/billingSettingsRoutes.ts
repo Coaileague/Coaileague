@@ -314,7 +314,7 @@ router.delete("/clients/:clientId", requireManager, async (req: AuthenticatedReq
 //   - Middleware transaction fees (payroll per-run, invoice processing, payout ACH)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Use canonical lazy Stripe factory (CLAUDE.md §F) — single API version, shared singleton.
+// Use canonical lazy Stripe factory (TRINITY.md §F) — single API version, shared singleton.
 import { getStripe as getCanonicalStripe } from '../services/billing/stripeClient';
 function getStripe(): Stripe {
   return getCanonicalStripe();

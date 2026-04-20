@@ -47,7 +47,7 @@ export type InvoiceWithPaymentTotal = Invoice & {
 // TRINITY (MASCOT) ACCESS TYPES
 // ============================================================================
 // Role types are re-exported from the canonical RBAC SSOT
-// (shared/lib/rbac/roleDefinitions.ts) per CLAUDE.md §8.
+// (shared/lib/rbac/roleDefinitions.ts) per TRINITY.md §8.
 // Previously this file declared its own truncated WorkspaceRole (7 values)
 // which conflicted with the canonical definition (11 values), causing
 // silent type mismatches.

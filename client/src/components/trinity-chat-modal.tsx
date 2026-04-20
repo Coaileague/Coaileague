@@ -1369,7 +1369,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             <div
               className="flex flex-col items-center pt-2 pb-3 shrink-0 cursor-grab active:cursor-grabbing select-none"
               // Was 'none' — changed to 'pan-y' so the drag handle never
-              // blocks vertical scroll on mobile (CLAUDE.md scroll fix v4).
+              // blocks vertical scroll on mobile (TRINITY.md scroll fix v4).
               // Drag still works via pointer events.
               style={{ touchAction: 'pan-y' }}
               onPointerDown={(e) => {

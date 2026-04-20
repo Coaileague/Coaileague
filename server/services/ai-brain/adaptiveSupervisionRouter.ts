@@ -290,7 +290,7 @@ class AdaptiveSupervisionRouter {
     // Store active handoff (in-memory for fast lookup)
     this.activeHandoffs.set(handoffId, request);
 
-    // CLAUDE.md Section R / Law P2: write-through to supervisor_handoffs so
+    // TRINITY.md Section R / Law P2: write-through to supervisor_handoffs so
     // an in-flight handoff that vanishes on restart leaves a row that
     // runStartupRecovery() can mark `interrupted`.
     try {

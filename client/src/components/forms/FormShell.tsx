@@ -17,7 +17,7 @@
  *   - internal   — CoAIleague-branded, for tenant-authenticated flows
  *   - rms        — operations-accented for incident / RMS intake
  *
- * Respects CLAUDE.md §H (footer dark-by-default, mobile scroll).
+ * Respects TRINITY.md §H (footer dark-by-default, mobile scroll).
  */
 
 import { type ReactNode } from "react";

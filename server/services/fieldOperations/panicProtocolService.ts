@@ -19,7 +19,7 @@
  * sole responsibility of the tenant organization and their designated
  * supervisors. Officers in life-threatening situations should call 911 directly.
  *
- * See CLAUDE.md Section O for the verified law. See
+ * See TRINITY.md Section O for the verified law. See
  * `server/services/ops/panicAlertService.ts#PANIC_LIABILITY_NOTICE` for the
  * canonical disclaimer string surfaced on every panic API response.
  * ──────────────────────────────────────────────────────────────────────────────

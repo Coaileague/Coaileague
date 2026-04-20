@@ -288,7 +288,7 @@ class AgentToAgentProtocol {
     queue.push(message);
     this.messageQueues.set(to, queue);
 
-    // CLAUDE.md Section R / Law P2: persist to a2a_messages BEFORE processing
+    // TRINITY.md Section R / Law P2: persist to a2a_messages BEFORE processing
     // so an in-flight message survives a Railway redeploy and can be re-queued
     // by runStartupRecovery() / requeuePendingMessages().
     try {
@@ -351,7 +351,7 @@ class AgentToAgentProtocol {
   }
 
   /**
-   * Mark a persisted A2A message with its final status (CLAUDE.md Section R / Law P2).
+   * Mark a persisted A2A message with its final status (TRINITY.md Section R / Law P2).
    * Non-fatal — DB outage cannot break message processing.
    */
   private async markMessagePersisted(messageId: string, status: 'delivered' | 'processed' | 'failed' | 'expired'): Promise<void> {

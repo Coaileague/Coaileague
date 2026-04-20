@@ -1,7 +1,7 @@
 /**
  * Generic Webhook Idempotency Claim Service
  *
- * Per CLAUDE.md §15 (Idempotency Layer):
+ * Per TRINITY.md §15 (Idempotency Layer):
  *   "Stripe webhooks have idempotency keys. Every other external service
  *    must too. Network failures cause duplicate deliveries. Duplicate
  *    deliveries cause duplicate actions. This is a financial and

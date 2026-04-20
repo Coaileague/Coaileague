@@ -12,11 +12,11 @@ const log = createLogger('AiOrchestratorRoutes');
 // Maps AI Orchestrator task types to the correct TOKEN_COSTS feature key + override amount.
 // Used to ensure contract reviews charge 30 credits, compliance audits 25, etc.
 const TASK_CREDIT_MAP: Record<string, { key: keyof typeof TOKEN_COSTS; amount: number }> = {
-  contract_review:       { key: 'claude_contract_review', amount: 30 },
+  contract_review:       { key: 'trinity_contract_review', amount: 30 },
   rfp_response:          { key: 'rfp_proposal_generation', amount: 30 },
   capability_statement:  { key: 'rfp_proposal_generation', amount: 30 },
-  strategic_planning:    { key: 'claude_strategic',        amount: 30 },
-  risk_assessment:       { key: 'claude_analysis',         amount: 25 },
+  strategic_planning:    { key: 'trinity_strategic',        amount: 30 },
+  risk_assessment:       { key: 'trinity_analysis',         amount: 25 },
   compliance_analysis:   { key: 'compliance_audit',        amount: 25 },
   audit_preparation:     { key: 'compliance_audit',        amount: 25 },
   financial_analysis:    { key: 'pnl_analysis',            amount: 20 },

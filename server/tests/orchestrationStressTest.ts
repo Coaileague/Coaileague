@@ -891,7 +891,7 @@ async function phase13_pwa_manifest() {
   const displayOverride: string[] = manifestJson.display_override || [];
   record({ name: 'Manifest: display_override has tabbed', phase: 'PWA', passed: displayOverride.includes('tabbed'), details: displayOverride.includes('tabbed') ? 'tabbed in display_override' : 'tabbed MISSING', severity: 'high' });
 
-  // Service worker file (canonical name is sw.js per CLAUDE.md notification section)
+  // Service worker file (canonical name is sw.js per TRINITY.md notification section)
   record({ name: 'Service Worker File', phase: 'PWA', passed: fileExists('client/public/sw.js'), details: fileExists('client/public/sw.js') ? 'sw.js present' : 'MISSING', severity: 'critical' });
 
   // Screenshot image files exist

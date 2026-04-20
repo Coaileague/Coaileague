@@ -975,7 +975,7 @@ async function resolveWorkspaceFromCareersAlias(toEmail: string): Promise<string
     if (orgSlug) {
       // Database-side match so we never pull more than the candidate set
       // across the page. Matching global workspaces table without a WHERE
-      // is a cross-tenant enumeration risk (CLAUDE.md §G).
+      // is a cross-tenant enumeration risk (TRINITY.md §G).
       const slug = orgSlug.toLowerCase().replace(/[-_]/g, '');
       if (!slug || slug.length < 2) return null;
 

@@ -307,7 +307,7 @@ export const scheduleTemplates = pgTable("schedule_templates", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  // CLAUDE.md Section R / Law P1 — soft delete (template history retained)
+  // TRINITY.md Section R / Law P1 — soft delete (template history retained)
   deletedAt: timestamp("deleted_at"),
   deletedBy: varchar("deleted_by"),
 }, (table) => [

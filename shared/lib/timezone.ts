@@ -1,7 +1,7 @@
 /**
  * Timezone Utilities — CoAIleague Canonical
  *
- * Per CLAUDE.md §15 ("Timezone Architecture — The Silent Bug Killer"):
+ * Per TRINITY.md §15 ("Timezone Architecture — The Silent Bug Killer"):
  *
  *   "The database stores ALL timestamps in UTC. No exceptions. No local
  *    time in the DB. Every `site` record stores its `timezone` (IANA

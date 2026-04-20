@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import { storage } from '../storage';
 import { usageMeteringService } from '../services/billing/usageMetering';
 
-// LAZY INIT (CLAUDE.md §F module-load crash hardening):
+// LAZY INIT (TRINITY.md §F module-load crash hardening):
 // Module-load OpenAI(...) used to crash boot when AI_INTEGRATIONS_OPENAI_API_KEY
 // was unset. Lazy factory only constructs the SDK on first use, and the Proxy
 // preserves all existing call sites (`openai.chat.completions.create(...)` still

@@ -69,7 +69,7 @@ class ClaudeService {
     const apiKey = this.getApiKey();
 
     const estimatedCredits = this.calculateCreditsForTask(params.taskType || params.task);
-    const featureKey = 'claude_analysis';
+    const featureKey = 'trinity_analysis';
 
     const preAuth = await aiTokenGateway.preAuthorize(
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -196,7 +196,7 @@ class ClaudeService {
       };
     }
     const apiKey = this.getApiKey();
-    const featureKey = 'claude_consultation';
+    const featureKey = 'trinity_consultation';
     const creditsUsed = 5;
 
     const preAuth = await aiTokenGateway.preAuthorize(
@@ -353,20 +353,20 @@ Remember: You and Trinity are partners working together to help this security co
     const taskLower = task.toLowerCase();
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('rfp')) return TOKEN_COSTS.claude_rfp_response || 35;
+    if (taskLower.includes('rfp')) return TOKEN_COSTS.trinity_rfp_response || 35;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('capability')) return TOKEN_COSTS.claude_capability_statement || 30;
+    if (taskLower.includes('capability')) return TOKEN_COSTS.trinity_capability_statement || 30;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('compliance')) return TOKEN_COSTS.claude_analysis || 25;
+    if (taskLower.includes('compliance')) return TOKEN_COSTS.trinity_analysis || 25;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('contract')) return TOKEN_COSTS.claude_analysis || 25;
+    if (taskLower.includes('contract')) return TOKEN_COSTS.trinity_analysis || 25;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('strategic')) return TOKEN_COSTS.claude_strategic || 30;
+    if (taskLower.includes('strategic')) return TOKEN_COSTS.trinity_strategic || 30;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('executive')) return TOKEN_COSTS.claude_executive || 35;
+    if (taskLower.includes('executive')) return TOKEN_COSTS.trinity_executive || 35;
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    return TOKEN_COSTS.claude_analysis || 25;
+    return TOKEN_COSTS.trinity_analysis || 25;
   }
 }
 

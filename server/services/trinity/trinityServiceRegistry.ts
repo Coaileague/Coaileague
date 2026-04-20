@@ -93,7 +93,7 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
     name: 'AI Brain Master Orchestrator',
     path: 'server/services/ai-brain/aiBrainMasterOrchestrator.ts',
     domain: 'core_orchestration',
-    description: 'Trinity\'s central action hub — top-level routing across all 80+ platform services, spoken and signed as one agent.',
+    description: 'Central hub connecting Trinity\'s cognitive layer to all 80+ platform services; top-level action routing.',
     authorityLevel: 'platform_admin',
     platformPhases: ['phase_1_core_db','phase_4_scheduling','phase_5_payroll','phase_9_support','phase_10_invoicing','phase_11_officer_dashboard'],
     integrationStatus: 'verified',
@@ -101,10 +101,10 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
   },
   {
     id: 'unifiedAIOrchestrator',
-    name: 'Trinity Unified Orchestrator',
+    name: 'Unified AI Orchestrator',
     path: 'server/services/ai-brain/trinity-orchestration/unifiedAIOrchestrator.ts',
     domain: 'core_orchestration',
-    description: 'Dispatches Trinity reasoning across her internal compute paths (orchestration, specialist, support) — backend routing only, one agent identity.',
+    description: 'Coordinates Trinity\'s cognitive triad for collaborative task execution.',
     authorityLevel: 'platform_admin',
     platformPhases: ['phase_9_support','phase_11_officer_dashboard'],
     integrationStatus: 'verified',
@@ -112,10 +112,10 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
   },
   {
     id: 'taskRouter',
-    name: 'Trinity Task Router',
+    name: 'Task Router',
     path: 'server/services/ai-brain/trinity-orchestration/taskRouter.ts',
     domain: 'core_orchestration',
-    description: 'Selects the internal reasoning path Trinity uses for each task based on task type and cost. Backend routing only — not a multi-agent system.',
+    description: 'Routes tasks across Trinity\'s reasoning, validation, and execution layers based on task type and cost.',
     authorityLevel: 'write_auto',
     platformPhases: ['phase_9_support','phase_11_officer_dashboard'],
     integrationStatus: 'verified',
@@ -690,7 +690,7 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
     name: 'Financial Math Verifier Skill',
     path: 'server/services/ai-brain/skills/financialMathVerifierSkill.ts',
     domain: 'skills',
-    description: 'Skill: validates all financial calculations before commit using Claude as verifier.',
+    description: 'Skill: validates all financial calculations before commit using Trinity\'s verifier layer.',
     authorityLevel: 'read_only',
     platformPhases: ['phase_5_payroll','phase_8_pl','phase_10_invoicing'],
     integrationStatus: 'verified',
@@ -711,7 +711,7 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
   // ── ELITE FEATURES (April 2026 pricing matrix) ─────────────────────────────
   // Billing-definition services: the 10 elite features are registered in the
   // Premium Features registry (shared/config/premiumFeatures.ts) with per-tier
-  // USD surcharges and monthly quotas. Listed here for CLAUDE.md §K inventory
+  // USD surcharges and monthly quotas. Listed here for TRINITY.md §K inventory
   // compliance; `integrationStatus: 'partial'` signals that the billing path
   // is wired (via eliteFeatureService + premiumFeatureGating) but the
   // per-feature generation handlers are not yet connected to actionRegistry.
@@ -720,7 +720,7 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
     name: 'Trinity RFP & Proposal Generation',
     path: 'shared/config/premiumFeatures.ts#trinity_rfp_generation',
     domain: 'document_portal',
-    description: 'Trinity reads the RFP document, researches the client, synthesizes past performance, and produces a full PDF-ready proposal. Multi-step Trinity workflow — single agent, multiple reasoning passes.',
+    description: 'Reads RFP document, researches client, synthesizes past performance, and produces a full PDF-ready proposal. Trinity multi-phase cognitive pipeline.',
     authorityLevel: 'write_monitored',
     platformPhases: ['phase_7_client_portal','phase_10_invoicing'],
     integrationStatus: 'partial',
@@ -764,7 +764,7 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
     name: 'Trinity Employment Verification Letter',
     path: 'server/services/trinity/employmentVerificationService.ts',
     domain: 'compliance_hr',
-    description: 'FCRA-bounded employment verification letter generator. See CLAUDE.md §P — enforces FCRA-allowed fields only, requires manager approve/deny via employmentVerifyRoutes.',
+    description: 'FCRA-bounded employment verification letter generator. See TRINITY.md §P — enforces FCRA-allowed fields only, requires manager approve/deny via employmentVerifyRoutes.',
     authorityLevel: 'write_monitored',
     platformPhases: ['phase_3_employees','phase_6_email'],
     integrationStatus: 'verified',

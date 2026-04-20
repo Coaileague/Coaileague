@@ -1,24 +1,17 @@
 /**
- * Trinity Orchestration Service — backend compute routing
- *
- * Trinity is one agent with one personality. Under the hood her reasoning
- * runs on multiple interchangeable model backends that we select based on
- * the task profile, cost, and availability. The compute paths are:
- *
- * - operations path   — scheduling, monitoring, payroll, real-time ops
- * - specialist path   — complex reasoning, compliance, RFPs, contracts
- * - creative path     — proposals, sales, strategic writing
- *
- * Callers never address a backend directly — they call Trinity and this
- * service picks the right path internally, transparently fails over to
- * an alternate backend if one is unhealthy, and reports back as Trinity.
- *
+ * AI Orchestra Service - Multi-Model AI Orchestration
+ * 
+ * "Trinity" = 3 AI models working together:
+ * - Gemini (Operations): Scheduling, monitoring, payroll, real-time ops
+ * - Claude (Analysis): Complex reasoning, compliance, RFPs, contracts
+ * - GPT-4 (Creative): Proposals, sales, creative writing, strategic
+ * 
  * Features:
- * - Intelligent path selection based on task type
- * - Fallback chains: if one backend fails → try the next → human handoff
+ * - Intelligent task routing based on task type
+ * - Fallback chains: If model A fails → try model B → try model C → human
  * - Confidence scoring to trigger fallbacks
  * - Credit-based billing with Stripe auto top-off
- * - Full 7-step orchestration logging, all attributed to Trinity
+ * - Full 7-step orchestration logging
  */
 
 import { db } from '../../db';
@@ -32,7 +25,7 @@ import {
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import { openaiClient, type OpenAIResponse } from './providers/openaiClient';
 import { geminiClient } from './providers/geminiClient';
-import { claudeService } from './trinity-orchestration/claudeService';
+import { claudeService } from './trinity-orchestration/trinityValidationService';
 import { resilientAIGateway } from './providers/resilientAIGateway';
 import { AiModel, AiTaskType } from '@shared/schema';
 import { premiumFeatureGating } from '../premiumFeatureGating';
@@ -104,9 +97,9 @@ class AIOrchestrationService {
       await this.seedTaskTypes();
       await this.loadCaches();
       this.initialized = true;
-      log.info('[Trinity] Orchestration initialized — all reasoning paths online');
+      log.info('[AIOrchestra] Initialized with 3 providers: Gemini, Claude, GPT-4');
     } catch (error) {
-      log.error('[Trinity] Orchestration initialization failed:', error);
+      log.error('[AIOrchestra] Initialization failed:', error);
     }
   }
 
@@ -247,7 +240,7 @@ class AIOrchestrationService {
 
       const healthStatus = await this.getModelHealth(model.id);
       if (healthStatus && !healthStatus.isHealthy) {
-        log.info(`[Trinity] Skipping unhealthy model ${model.modelName}`);
+        log.info(`[AIOrchestra] Skipping unhealthy model ${model.modelName}`);
         fallbacksUsed.push(model.modelName);
         continue;
       }
@@ -265,7 +258,7 @@ class AIOrchestrationService {
         result = await this.callModel(model, request, queueEntry.id, attempts);
 
         if (result.confidenceScore && result.confidenceScore < 0.7) {
-          log.info(`[Trinity] Low confidence (${result.confidenceScore}), trying fallback`);
+          log.info(`[AIOrchestra] Low confidence (${result.confidenceScore}), trying fallback`);
           fallbacksUsed.push(model.modelName);
           continue;
         }
@@ -290,7 +283,7 @@ class AIOrchestrationService {
         return result;
 
       } catch (error: any) {
-        log.error(`[Trinity] Model ${model.modelName} failed:`, (error instanceof Error ? error.message : String(error)));
+        log.error(`[AIOrchestra] Model ${model.modelName} failed:`, (error instanceof Error ? error.message : String(error)));
         
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(aiExecutionLog).values({
@@ -560,7 +553,7 @@ class AIOrchestrationService {
 
       await this.checkAutoTopoff(workspaceId);
     } catch (error) {
-      log.error('[Trinity] Failed to charge credits:', error);
+      log.error('[AIOrchestra] Failed to charge credits:', error);
     }
   }
 
@@ -635,7 +628,7 @@ class AIOrchestrationService {
         });
       }
     } catch (error) {
-      log.error('[Trinity] Failed to update model health:', error);
+      log.error('[AIOrchestra] Failed to update model health:', error);
     }
   }
 

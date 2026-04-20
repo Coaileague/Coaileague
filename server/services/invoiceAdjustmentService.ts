@@ -313,7 +313,7 @@ export async function refundInvoice(
   const stripePaymentIntentId: string | null = (invoice as any).paymentIntentId || null;
   if (stripePaymentIntentId) {
     try {
-      // Use canonical lazy Stripe factory (CLAUDE.md §F).
+      // Use canonical lazy Stripe factory (TRINITY.md §F).
       const { getStripe: getLazyStripe, isStripeConfigured: isConfigured } = await import('./billing/stripeClient');
       const stripe = isConfigured() ? getLazyStripe() : null;
 

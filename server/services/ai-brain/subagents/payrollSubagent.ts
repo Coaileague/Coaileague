@@ -249,7 +249,7 @@ class DistributedTracer {
     }
 
     // Phase 17C: persist terminal-state spans to canonical audit_logs
-    // (CLAUDE.md Section L). 'started' rows are skipped to keep durable
+    // (TRINITY.md Section L). 'started' rows are skipped to keep durable
     // log volume bounded.
     if (status !== 'started' && action.startsWith('payroll.')) {
       const wsId = (details as any)?.workspaceId ?? null;

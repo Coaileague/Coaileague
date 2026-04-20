@@ -1,7 +1,7 @@
 /**
  * scheduleNonBlocking — single canonical fire-and-forget helper.
  *
- * CLAUDE.md §B (NotificationDeliveryService Sole Sender / Phase F) bans
+ * TRINITY.md §B (NotificationDeliveryService Sole Sender / Phase F) bans
  * truly silent fire-and-forget patterns. The platform-wide rule is:
  *   "Zero fire-and-forget calls. Every notification logged."
  *

@@ -5,7 +5,7 @@
 // arrays live here. Both server and client code import from this file or
 // from re-export shims that point at it.
 //
-// CLAUDE.md §8: "Single sources of truth: roleDefinitions.ts — Only place
+// TRINITY.md §8: "Single sources of truth: roleDefinitions.ts — Only place
 // roles are defined. If role logic exists anywhere else — inline checks,
 // hardcoded strings, duplicate arrays — that is tech debt. Consolidate it."
 //

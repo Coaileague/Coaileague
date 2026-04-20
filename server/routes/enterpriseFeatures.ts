@@ -170,7 +170,7 @@ enterpriseRouter.delete('/vehicles/:id', async (req: AuthenticatedRequest, res: 
   try {
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
-    // CLAUDE.md Section R / Law P1 — soft delete (vehicle record retained for audit)
+    // TRINITY.md Section R / Law P1 — soft delete (vehicle record retained for audit)
     await softDelete({
       table: vehicles,
       where: and(eq(vehicles.id, req.params.id), eq(vehicles.workspaceId, wsId))!,
@@ -311,7 +311,7 @@ enterpriseRouter.delete('/weapons/:id', async (req: AuthenticatedRequest, res: R
   try {
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
-    // CLAUDE.md Section R / Law P1 — soft delete (armory record retained for audit)
+    // TRINITY.md Section R / Law P1 — soft delete (armory record retained for audit)
     await softDelete({
       table: weapons,
       where: and(eq(weapons.id, req.params.id), eq(weapons.workspaceId, wsId))!,

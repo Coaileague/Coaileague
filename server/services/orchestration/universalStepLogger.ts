@@ -70,7 +70,7 @@ export type OrchestrationDomain =
   | 'hris_sync'
   | 'automation'
   | 'trinity_ai'
-  | 'claude_ai'
+  | 'trinity_cognitive'
   | 'general';
 
 export type FeatureTier = 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';

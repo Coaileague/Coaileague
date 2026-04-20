@@ -5,7 +5,7 @@
  * Messages are customized per user type (tenant_owner, client, employee).
  *
  * Canonical sender: noreply@coaileague.com (per emailCore.ts sender policy)
- * Channel: email via NotificationDeliveryService (per CLAUDE.md §9 — NDS sole sender)
+ * Channel: email via NotificationDeliveryService (per TRINITY.md §9 — NDS sole sender)
  */
 
 import { NotificationDeliveryService } from './notificationDeliveryService';

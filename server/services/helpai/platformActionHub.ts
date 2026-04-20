@@ -37,7 +37,7 @@ import { idempotencyService, registerIdempotencyActions } from '../ai-brain/idem
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { validateBeforeExecution } from '../trinity/preExecutionValidator';
 import { evaluateConscience, logConscienceDecision } from '../ai-brain/trinityConscience';
-import { claudeVerificationService } from '../ai-brain/trinity-orchestration/claudeVerificationService';
+import { claudeVerificationService } from '../ai-brain/trinity-orchestration/trinityVerificationService';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 

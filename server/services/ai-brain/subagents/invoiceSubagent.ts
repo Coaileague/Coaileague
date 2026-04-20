@@ -901,7 +901,7 @@ Provide 2-3 sentences of executive-level recommendations to recover this revenue
     log.info(`[InvoiceSubagent] ${action} ${status}:`, details);
 
     // Phase 17C: also persist completion/failure to canonical audit_logs sink
-    // (CLAUDE.md Section L). 'started' rows are skipped to avoid 2× write
+    // (TRINITY.md Section L). 'started' rows are skipped to avoid 2× write
     // amplification; only the terminal state is persisted.
     if (status !== 'started') {
       const wsId = (details as any)?.workspaceId ?? null;

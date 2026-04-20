@@ -8,7 +8,7 @@
  *      first use, idempotent bootstrap).
  *   2. Compares the new snapshot against the previous one.
  *   3. If the score dropped by >= DROP_THRESHOLD, fires a notification
- *      through NotificationDeliveryService (CLAUDE.md §B sole sender)
+ *      through NotificationDeliveryService (TRINITY.md §B sole sender)
  *      to every org_owner + co_owner in the workspace.
  *
  * Intended to run nightly (cron) or be triggered from the admin

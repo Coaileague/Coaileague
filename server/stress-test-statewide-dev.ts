@@ -638,7 +638,7 @@ function printSummary(): boolean {
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 async function main(): Promise<void> {
-  // Production guard (CLAUDE.md §A)
+  // Production guard (TRINITY.md §A)
   const { isProduction } = await import("./lib/isProduction");
   if (isProduction()) {
     console.log("🛑 [STRESS-TEST] Aborted — production environment detected.");

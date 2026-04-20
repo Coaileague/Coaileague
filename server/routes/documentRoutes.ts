@@ -97,7 +97,7 @@ router.delete("/api/file-cabinet/:employeeId/:fileId", requireAuth, async (req: 
       .limit(1);
 
     if (vaultDoc) {
-      // CLAUDE.md Section R / Law P1 — soft delete (legal docs retained for audit)
+      // TRINITY.md Section R / Law P1 — soft delete (legal docs retained for audit)
       await softDelete({
         table: documentVault,
         where: and(eq(documentVault.id, fileId), eq(documentVault.workspaceId, workspaceId))!,
@@ -118,7 +118,7 @@ router.delete("/api/file-cabinet/:employeeId/:fileId", requireAuth, async (req: 
       .limit(1);
 
     if (empDoc) {
-      // CLAUDE.md Section R / Law P1 — soft delete (HR records retained for compliance)
+      // TRINITY.md Section R / Law P1 — soft delete (HR records retained for compliance)
       await softDelete({
         table: employeeDocuments,
         where: and(eq(employeeDocuments.id, fileId), eq(employeeDocuments.employeeId, employeeId))!,

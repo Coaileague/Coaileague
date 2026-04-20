@@ -144,7 +144,7 @@ export function DraggableFloatingPill({
           top: `${position.y}px`,
           // Was 'none' (would prevent scroll while dragging the pill)
           // — changed to 'pan-y' so the pill never blocks vertical
-          // scroll on mobile (CLAUDE.md scroll fix v4).
+          // scroll on mobile (TRINITY.md scroll fix v4).
           touchAction: 'pan-y',
         }}
         className={cn(

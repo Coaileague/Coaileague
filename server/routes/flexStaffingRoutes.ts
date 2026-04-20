@@ -319,7 +319,7 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any, attac
           if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
       const { id } = req.params;
       
-      // CLAUDE.md Section R / Law P1 — soft delete (gig history retained)
+      // TRINITY.md Section R / Law P1 — soft delete (gig history retained)
       await softDelete({
         table: flexGigs,
         where: and(eq(flexGigs.id, id), eq(flexGigs.workspaceId, workspaceId))!,

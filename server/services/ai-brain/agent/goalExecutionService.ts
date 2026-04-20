@@ -174,7 +174,7 @@ class GoalExecutionService {
     
     this.activeExecutions.set(executionId, goal);
 
-    // CLAUDE.md Section R / Law P2: write-through to trinity_goal_executions
+    // TRINITY.md Section R / Law P2: write-through to trinity_goal_executions
     // so a Railway redeploy mid-run leaves a row that runStartupRecovery()
     // can mark `interrupted` and notify the workspace owner.
     try {
@@ -596,7 +596,7 @@ class GoalExecutionService {
 
     } finally {
       this.activeExecutions.delete(executionId);
-      // CLAUDE.md Section R / Law P2: mark execution complete in DB
+      // TRINITY.md Section R / Law P2: mark execution complete in DB
       try {
         await db.update(trinityGoalExecutions)
           .set({

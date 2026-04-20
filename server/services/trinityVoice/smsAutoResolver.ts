@@ -781,7 +781,7 @@ async function resolveInboundSmsInner(params: {
     log.info(`[SmsAutoResolver] AI resolved for ${fromPhone} (lang=${lang})`);
 
     // Record AI-resolved SMS for billing/metering. Awaited with a non-fatal
-    // try/catch per CLAUDE.md §B — no fire-and-forget. The carrier cost of
+    // try/catch per TRINITY.md §B — no fire-and-forget. The carrier cost of
     // the outbound Trinity reply is recorded separately by the SMS sender,
     // so twilioCostCents=0 here. The synthetic messageSid lets the row be
     // inserted before Twilio returns the real SID.

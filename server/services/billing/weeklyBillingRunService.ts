@@ -601,7 +601,7 @@ class WeeklyBillingRunServiceImpl {
           billingExceptions.push(`Middleware fee failed: ${feeResult.error || 'unknown'}`);
         }
         if (feeResult.success && feeResult.amountCents > 0) {
-          // Platform revenue tracking: write to platform_revenue (awaited per CLAUDE.md §B)
+          // Platform revenue tracking: write to platform_revenue (awaited per TRINITY.md §B)
           try {
             const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
             await recordMiddlewareFeeCharge(workspaceId, 'invoice_processing', feeResult.amountCents, invoice.id);
@@ -700,7 +700,7 @@ class WeeklyBillingRunServiceImpl {
         const { overageChargesCents } = await aiMeteringService.calculatePeriodOverage(workspaceId, periodStart);
 
         if (overageChargesCents > 0) {
-          // Use canonical lazy Stripe factory (CLAUDE.md §F) — never instantiate inline.
+          // Use canonical lazy Stripe factory (TRINITY.md §F) — never instantiate inline.
           const { getStripe: getLazyStripe } = await import('./stripeClient');
           const stripeClient = getLazyStripe();
           const stripeCustomerId = workspace[0].stripeCustomerId;

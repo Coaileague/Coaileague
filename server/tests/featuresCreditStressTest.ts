@@ -127,7 +127,7 @@ async function phase2_credit_costs_defined() {
     'ai_chat_query', 'schedule_optimization',
     'trinity_chat', 'trinity_thought', 'trinity_insight',
     'email_transactional', 'sms_notification',
-    'claude_analysis', 'claude_strategic', 'claude_executive',
+    'trinity_analysis', 'trinity_strategic', 'trinity_executive',
     'advanced_analytics', 'incident_management', 'client_billing'
   ];
 
@@ -156,7 +156,7 @@ async function phase2_credit_costs_defined() {
     'guard_tour_scan', 'equipment_checkout', 'equipment_return', 'equipment_maintenance',
     'document_signing_send', 'document_signing_verify',
     'employee_behavior_scoring', 'bot_interaction', 'push_notification',
-    'ai_scheduling', 'ai_invoice_generation', 'claude_analysis',
+    'ai_scheduling', 'ai_invoice_generation', 'trinity_analysis',
     'advanced_analytics', 'incident_management', 'client_billing'
   ];
 
@@ -767,13 +767,13 @@ async function phase12_credit_deduction_math() {
   }
 
   const premiumMultiplier = 2;
-  const claudeBase = (TOKEN_COSTS as any)['claude_analysis'];
-  const claudeStrategic = (TOKEN_COSTS as any)['claude_strategic'];
+  const claudeBase = (TOKEN_COSTS as any)['trinity_analysis'];
+  const claudeStrategic = (TOKEN_COSTS as any)['trinity_strategic'];
   record({
     name: 'Premium AI Features Have Higher Costs',
     phase: 'DEDUCTION_MATH',
     passed: claudeStrategic > claudeBase && claudeBase >= 10,
-    details: `claude_analysis=${claudeBase}, claude_strategic=${claudeStrategic} (premium AI costs more)`,
+    details: `trinity_analysis=${claudeBase}, trinity_strategic=${claudeStrategic} (premium AI costs more)`,
     severity: 'high'
   });
 

@@ -377,7 +377,7 @@ router.patch('/master-keys/organizations/:id', async (req: AuthenticatedRequest,
           const { TIER_PRICING } = await import('../services/billing/subscriptionManager');
 
 
-          // Get current subscription (using lazy Stripe factory per CLAUDE.md §F)
+          // Get current subscription (using lazy Stripe factory per TRINITY.md §F)
           const subscription = await getStripe().subscriptions.retrieve(existingWorkspace.stripeSubscriptionId);
 
           // SECURITY: Check subscription status before updating

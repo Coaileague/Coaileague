@@ -1848,7 +1848,7 @@ router.delete(
           return res.status(403).json({ error: "Only workspace admins can clean up orphaned rooms" });
         }
         if (resolved.roomType === 'org') {
-          // CLAUDE.md Section R / Law P1 — soft delete (room history retained)
+          // TRINITY.md Section R / Law P1 — soft delete (room history retained)
           await softDelete({
             table: organizationRoomMembers,
             where: eq(organizationRoomMembers.roomId, roomId),

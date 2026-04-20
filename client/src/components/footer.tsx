@@ -15,7 +15,7 @@ interface FooterProps {
   variant?: "light" | "dark";
 }
 
-// Default variant is "dark" to match CLAUDE.md §11 platform aesthetic
+// Default variant is "dark" to match TRINITY.md §11 platform aesthetic
 // (Dark navy command-center). Pages on a light background must opt in
 // explicitly with variant="light" — otherwise dark text would render
 // invisibly on the dark navy chrome.

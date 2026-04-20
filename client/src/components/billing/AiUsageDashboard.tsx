@@ -161,9 +161,9 @@ export function AiUsageDashboard() {
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Primary AI", value: data.geminiTokensK, testId: "card-primary-ai-tokens" },
-          { label: "Judge AI", value: data.claudeTokensK, testId: "card-judge-ai-tokens" },
-          { label: "Backbone AI", value: data.gptTokensK, testId: "card-backbone-ai-tokens" },
+          { label: "Trinity Execution", value: data.geminiTokensK, testId: "card-execution-tokens" },
+          { label: "Trinity Validation", value: data.claudeTokensK, testId: "card-validation-tokens" },
+          { label: "Trinity Reasoning", value: data.gptTokensK, testId: "card-reasoning-tokens" },
         ].map((item) => (
           <Card key={item.label} data-testid={item.testId}>
             <CardContent className="pt-4 pb-3">
