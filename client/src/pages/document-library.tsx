@@ -577,6 +577,33 @@ export default function DocumentLibrary() {
     enabled: !!selectedDoc?.id,
   });
 
+  const generateMutation = useMutation({
+    mutationFn: async (rfpId: string) => {
+      const r = await apiRequest('POST', `/api/sales/rfps/${rfpId}/generate`, {});
+      return r.json();
+    },
+    onSuccess: (data: { rfpId: string }) => {
+      toast({ title: 'Generating AI proposal…', description: 'Trinity is drafting your proposal sections.' });
+      // Poll until aiSummary is populated (generation complete)
+      const poll = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/sales/rfps/${data.rfpId}`, { credentials: 'include' });
+          const rfp = await res.json();
+          if (rfp?.aiSummary || rfp?.requirements?.aiGeneratedSections) {
+            clearInterval(poll);
+            queryClient.invalidateQueries({ queryKey: ['/api/sales/rfps'] });
+            toast({ title: 'Proposal generated', description: 'AI content is ready to review.' });
+          }
+        } catch { /* ignore poll errors */ }
+      }, 2000);
+      // Safety cutoff after 60 s
+      setTimeout(() => clearInterval(poll), 60_000);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Generation failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const uploadMutation = useMutation({
     mutationFn: (data: any) => apiRequest('POST', '/api/documents', data),
     onSuccess: () => {

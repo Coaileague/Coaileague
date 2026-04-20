@@ -22,6 +22,7 @@ interface ProposalData {
   total_value: string | null;
   valid_until: string | null;
   sections: any[] | null;
+  ai_generated_content: Array<{ title: string; content: string; order: number }> | null;
   line_items: any[] | null;
   terms_and_conditions: string | null;
   status: string;
@@ -183,6 +184,30 @@ export async function generateProposalPdf(proposalId: string, workspaceId: strin
         renderSectionTitle(doc, section.title?.toUpperCase() || 'SECTION');
         doc.fontSize(10).fillColor('#111827').text(section.content || '', { width: 512 });
         doc.moveDown(0.5);
+      }
+    }
+
+    // Render AI-generated sections when present (Trinity-drafted proposal content)
+    if (proposal.ai_generated_content && Array.isArray(proposal.ai_generated_content)) {
+      const aiSections = [...proposal.ai_generated_content].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const navyBlue = '#1e3a5f';
+      const goldAccent = '#b8962e';
+      for (const section of aiSections) {
+        if (doc.y > 600) doc.addPage();
+        doc
+          .moveDown(1)
+          .fontSize(13)
+          .fillColor(navyBlue)
+          .font('Helvetica-Bold')
+          .text(section.title || 'Section');
+        const underlineY = doc.y;
+        doc.moveTo(50, underlineY).lineTo(562, underlineY).strokeColor(goldAccent).lineWidth(1).stroke();
+        doc
+          .moveDown(0.4)
+          .fontSize(10)
+          .fillColor('#1f2937')
+          .font('Helvetica')
+          .text(section.content || '', { align: 'justify', lineGap: 4, width: 512 });
       }
     }
 

@@ -2920,6 +2920,38 @@ export function initializeTrinityEventSubscriptions(): void {
     },
   });
 
+  // ── contract_executed: record business win in thalamic_log ──────────────────
+  platformEventBus.subscribe('contract_executed', {
+    name: 'TrinityProactive-ContractWin',
+    handler: async (event) => {
+      const { workspaceId, payload } = event;
+      if (!workspaceId) return;
+      try {
+        const { thalamiclogs } = await import('@shared/schema');
+        const crypto = await import('crypto');
+        await db.insert(thalamiclogs).values({
+          signalId: crypto.randomUUID(),
+          arrivedAt: new Date(),
+          signalType: 'business_win',
+          source: 'contract_pipeline',
+          sourceTrustTier: 'workspace',
+          workspaceId,
+          priorityScore: 9,
+          signalPayload: {
+            type: 'contract_won',
+            contractId: payload?.contractId,
+            title: payload?.title,
+            clientName: payload?.clientName,
+            wonAt: new Date().toISOString(),
+          },
+        });
+        log.info(`[TrinityEvents] contract_executed win logged for workspace ${workspaceId}: ${payload?.title}`);
+      } catch (err: any) {
+        log.warn(`[TrinityEvents] contract_executed thalamic_log insert failed: ${err?.message}`);
+      }
+    },
+  });
+
   log.info('[TrinityEvents] Trinity event subscriptions initialized');
 }
 

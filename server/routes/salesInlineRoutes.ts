@@ -470,22 +470,137 @@ Return ONLY valid JSON array with this exact structure:
   router.post("/rfps", async (req, res) => {
     try {
       const { workspaceId } = req;
-      
+
       // Validate request body with Zod
       const validatedData = insertRfpSchema.parse(req.body);
-      
+
       const newRfp = await db.insert(rfps).values({
         ...validatedData,
         // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
       }).returning();
-      res.json(newRfp[0]);
+      const rfpRecord = newRfp[0];
+      const rfpId = rfpRecord.id;
+
+      // Fire AI proposal generation (non-blocking — don't make client wait)
+      // Uses documentGeneratorSkill → unifiedGeminiClient to draft response sections
+      if (workspaceId && rfpId) {
+        (async () => {
+          try {
+            const { documentGeneratorSkill } = await import('../services/ai-brain/skills/documentGeneratorSkill');
+            const userId = (req as any).user?.id ?? 'system';
+
+            const result = await documentGeneratorSkill.execute(
+              { userId, workspaceId },
+              {
+                documentType: 'analysis',
+                title: `RFP Response: ${rfpRecord.title}`,
+                workspaceId,
+                sections: [
+                  'Executive Summary',
+                  'Understanding of Requirements',
+                  'Proposed Approach & Methodology',
+                  'Staffing Plan & Qualifications',
+                  'Relevant Experience',
+                  'Pricing Overview',
+                ],
+              },
+            );
+
+            if (result.success && result.data?.sections?.length) {
+              await db.update(rfps).set({
+                // Store AI-generated sections in requirements jsonb under aiGeneratedSections key
+                requirements: { aiGeneratedSections: result.data.sections },
+                aiSummary: result.data.sections[0]?.content ?? null,
+                status: 'draft',
+                updatedAt: new Date(),
+              // @ts-expect-error — TS migration: fix in refactoring sprint
+              }).where(eq(rfps.id, rfpId));
+              log.info(`[RFP] AI content generated for RFP ${rfpId}`);
+            }
+          } catch (err: any) {
+            log.warn(`[RFP] AI generation failed (non-blocking): ${err.message}`);
+          }
+        })();
+      }
+
+      res.json({ ...rfpRecord, status: 'generating' });
     } catch (error) {
       log.error("Error creating RFP:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid RFP data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create RFP" });
+    }
+  });
+
+  // Re-trigger AI generation for an existing RFP
+  router.post("/rfps/:id/generate", async (req, res) => {
+    try {
+      const { workspaceId } = req;
+      const { id } = req.params;
+      if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+
+      const existing = await db.select().from(rfps)
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        .where(and(eq(rfps.id, id), eq(rfps.workspaceId, workspaceId)))
+        .limit(1);
+
+      if (!existing.length) return res.status(404).json({ error: 'RFP not found' });
+
+      // Clear stale AI content so polling detects fresh generation
+      await db.update(rfps).set({
+        requirements: null,
+        aiSummary: null,
+        status: 'active',
+        updatedAt: new Date(),
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      }).where(and(eq(rfps.id, id), eq(rfps.workspaceId, workspaceId)));
+
+      const rfpRecord = existing[0];
+      const userId = (req as any).user?.id ?? 'system';
+
+      // Non-blocking AI generation — same pattern as creation
+      (async () => {
+        try {
+          const { documentGeneratorSkill } = await import('../services/ai-brain/skills/documentGeneratorSkill');
+
+          const result = await documentGeneratorSkill.execute(
+            { userId, workspaceId },
+            {
+              documentType: 'analysis',
+              title: `RFP Response: ${rfpRecord.title}`,
+              workspaceId,
+              sections: [
+                'Executive Summary',
+                'Understanding of Requirements',
+                'Proposed Approach & Methodology',
+                'Staffing Plan & Qualifications',
+                'Relevant Experience',
+                'Pricing Overview',
+              ],
+            },
+          );
+
+          if (result.success && result.data?.sections?.length) {
+            await db.update(rfps).set({
+              requirements: { aiGeneratedSections: result.data.sections },
+              aiSummary: result.data.sections[0]?.content ?? null,
+              status: 'draft',
+              updatedAt: new Date(),
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            }).where(and(eq(rfps.id, id), eq(rfps.workspaceId, workspaceId)));
+            log.info(`[RFP] AI content regenerated for RFP ${id}`);
+          }
+        } catch (err: any) {
+          log.warn(`[RFP] AI regeneration failed (non-blocking): ${err.message}`);
+        }
+      })();
+
+      res.json({ success: true, rfpId: id, status: 'generating' });
+    } catch (error) {
+      log.error("Error triggering RFP generation:", error);
+      res.status(500).json({ message: "Failed to trigger AI generation" });
     }
   });
 

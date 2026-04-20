@@ -1024,13 +1024,36 @@ class ContractPipelineService {
       }
     }
 
+    // ── Generate executed PDF + store to GCS ─────────────────────────────────
+    let gcsObjectPath: string | null = null;
+    try {
+      const { generateExecutedContractPdf } = await import('./contractPdfGenerator');
+      const { uploadFileToObjectStorage } = await import('../../objectStorage');
+      const pdfBuffer = await generateExecutedContractPdf(contractId);
+      gcsObjectPath = `contracts/${contract.workspaceId}/${contractId}/executed.pdf`;
+      await uploadFileToObjectStorage({
+        objectPath: gcsObjectPath,
+        buffer: pdfBuffer,
+        workspaceId: contract.workspaceId,
+        storageCategory: 'documents',
+        metadata: {
+          contentType: 'application/pdf',
+          metadata: { contractId, executedAt: new Date().toISOString() },
+        },
+      });
+      log.info(`[ContractPipeline] Executed PDF stored to GCS: ${gcsObjectPath}`);
+    } catch (pdfErr: any) {
+      log.warn(`[ContractPipeline] Executed PDF generation/upload failed (non-fatal): ${pdfErr.message}`);
+    }
+
+    // ── Bridge to org_documents library ──────────────────────────────────────
     try {
       await db.insert(orgDocuments).values({
         workspaceId: contract.workspaceId,
         uploadedBy: (auditContext as any).userId,
         category: 'client_contract',
         fileName: `${contract.title || 'Contract'} - ${contract.clientName || 'Client'}.pdf`,
-        filePath: `contracts://${contractId}`,
+        filePath: gcsObjectPath ?? `contracts://${contractId}`,
         fileType: 'pdf',
         description: `Executed contract: ${contract.title}. Client: ${contract.clientName}. Executed on ${new Date().toISOString().split('T')[0]}.`,
         requiresSignature: false,
@@ -1041,7 +1064,85 @@ class ContractPipelineService {
     } catch (bridgeError) {
       log.error(`[ContractPipeline] Failed to bridge contract to org_documents:`, bridgeError);
     }
-    
+
+    // ── Send executed copy to all parties ────────────────────────────────────
+    (async () => {
+      try {
+        const signers = await loadSignersFromDB(contractId);
+        const APP_URL = process.env.APP_BASE_URL || 'https://app.coaileague.com';
+        const contractUrl = `${APP_URL}/documents?category=contracts_pipeline`;
+        const recipients = signers.filter(s => s.signerEmail);
+        // Also notify client if not already in signers list
+        if (contract.clientEmail && !recipients.some(s => s.signerEmail === contract.clientEmail)) {
+          recipients.push({
+            id: 'client',
+            contractId,
+            signerRole: 'client',
+            signerName: contract.clientName || 'Client',
+            signerEmail: contract.clientEmail,
+            order: 0,
+            status: 'signed',
+            reminderCount: 0,
+          } as any);
+        }
+        for (const signer of recipients) {
+          await NotificationDeliveryService.send({
+            type: 'contract_executed',
+            workspaceId: contract.workspaceId,
+            recipientUserId: signer.signerEmail,
+            channel: 'email',
+            body: {
+              to: signer.signerEmail,
+              subject: `Your executed agreement is ready — ${contract.title}`,
+              html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#ffffff;">
+<h2 style="color:#1a1a2e;">Agreement Fully Executed</h2>
+<p style="color:#374151;">Hello ${signer.signerName || 'there'},</p>
+<p style="color:#374151;">Your agreement has been fully signed by all parties and is now in effect:</p>
+<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;">
+  <strong style="color:#111827;font-size:16px;">${contract.title}</strong>
+  <p style="color:#6b7280;margin:8px 0 0;">Execution Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+</div>
+<p style="color:#374151;">You can view and download your executed agreement from the document center:</p>
+<div style="text-align:center;margin:32px 0;">
+  <a href="${contractUrl}" style="background:#4f46e5;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;display:inline-block;">View Executed Agreement</a>
+</div>
+<p style="color:#6b7280;font-size:12px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">
+  This agreement was executed via CoAIleague's secure e-signature platform.
+</p>
+</div>`,
+            },
+          }).catch((emailErr: any) => log.warn(`[ContractPipeline] Executed copy email failed for ${signer.signerEmail}: ${emailErr?.message}`));
+        }
+      } catch (emailErr: any) {
+        log.warn(`[ContractPipeline] Failed to send executed copy emails: ${emailErr.message}`);
+      }
+    })();
+
+    // ── QuickBooks invoice (non-blocking, only if QB connected) ───────────────
+    if (contract.totalValue) {
+      (async () => {
+        try {
+          const [ws] = await db.select().from(workspaces)
+            .where(eq(workspaces.id, contract.workspaceId))
+            .limit(1);
+          if ((ws as any)?.qbAccessTokenEncrypted) {
+            const { ensureQuickBooksRecord } = await import('../integrations/quickbooksLazySync');
+            if (contract.clientName) {
+              await ensureQuickBooksRecord({
+                workspaceId: contract.workspaceId,
+                entityType: 'customer',
+                entityName: contract.clientName,
+                email: contract.clientEmail || undefined,
+              } as any);
+            }
+            log.info(`[ContractPipeline] QB customer ensured for contract ${contractId}`);
+          }
+        } catch (qbErr: any) {
+          log.warn(`[ContractPipeline] QB sync failed (non-fatal): ${qbErr.message}`);
+        }
+      })();
+    }
+
     return executed;
   }
   
