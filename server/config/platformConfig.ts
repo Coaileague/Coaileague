@@ -353,7 +353,6 @@ export const CRON = {
   idempotencyCleanup: process.env.CRON_IDEMPOTENCY_CLEANUP || '0 4 * * *',
   chatAutoClose: process.env.CRON_CHAT_AUTO_CLOSE || '*/5 * * * *',
   wsCleanup: process.env.CRON_WS_CLEANUP || '*/5 * * * *',
-  monthlyCreditReset: process.env.CRON_MONTHLY_CREDIT_RESET || '0 0 1 * *',
   monthlyInfraBilling: process.env.CRON_MONTHLY_INFRA_BILLING || '0 1 1 * *',
   trialExpiry: process.env.CRON_TRIAL_EXPIRY || '0 6 * * *',
   billingExceptionQueue: process.env.CRON_BILLING_EXCEPTIONS || '0 5 * * *',

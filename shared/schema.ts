@@ -254,7 +254,6 @@ import {
   disputes,
   paymentReminders,
   billingAddons,
-  aiTokenWallets,
   subscriptionInvoices,
   subscriptionLineItems,
   subscriptionPayments,
@@ -266,9 +265,6 @@ import {
   billingPolicyProfiles,
   usageAggregates,
   commitmentLedger,
-  trinityCreditPackages,
-  trinityCredits,
-  trinityCreditCosts,
   quickbooksSyncReceipts,
   billingServices,
   evvBillingCodes,
@@ -319,7 +315,6 @@ import {
   aiSubagentDefinitions,
   trinityAccessControl,
   subagentTelemetry,
-  trinityUnlockCodes,
   automationActionLedger,
   trinityConversationSessions,
   trinityConversationTurns,
@@ -357,7 +352,6 @@ import {
   metaCognitionLogs,
   durableJobQueue,
   trinityKnowledgeBase,
-  trinityCreditTransactions,
   trinityMeetingRecordings,
 } from './schema/domains/trinity';
 
@@ -3364,15 +3358,6 @@ export type AiUsageDailyRollup = typeof aiUsageDailyRollups.$inferSelect;
 
 // AI token wallets - prepaid credit balance for AI features
 
-export const insertAiTokenWalletSchema = createInsertSchema(aiTokenWallets).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertAiTokenWallet = z.infer<typeof insertAiTokenWalletSchema>;
-export type AiTokenWallet = typeof aiTokenWallets.$inferSelect;
-
 // Subscription Invoices - weekly platform billing aggregation
 
 export const insertSubscriptionInvoiceSchema = createInsertSchema(subscriptionInvoices).omit({
@@ -4847,54 +4832,10 @@ export type InsertSupportSessionElevation = z.infer<typeof insertSupportSessionE
 export type SupportSessionElevation = typeof supportSessionElevations.$inferSelect;
 
 // ============================================================================
-// TRINITY CREDITS & FEATURE GATING SYSTEM
+// TRINITY FEATURE GATING SYSTEM
+// (Credit packages / per-workspace credit balances / unlock codes retired —
+//  Trinity/AI Brain usage is metered via tokenUsageLog + tokenUsageMonthly.)
 // ============================================================================
-
-/**
- * Credit packages available for purchase - defines pricing and credit amounts
- */
-
-export const insertTrinityCreditPackageSchema = createInsertSchema(trinityCreditPackages).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertTrinityCreditPackage = z.infer<typeof insertTrinityCreditPackageSchema>;
-export type TrinityCreditPackage = typeof trinityCreditPackages.$inferSelect;
-
-/**
- * Workspace credit balance - tracks credits for Trinity/AI Brain usage per workspace
- */
-
-export const insertTrinityCreditSchema = createInsertSchema(trinityCredits).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertTrinityCredit = z.infer<typeof insertTrinityCreditSchema>;
-export type TrinityCredit = typeof trinityCredits.$inferSelect;
-
-/**
- * Credit transactions - audit trail for all credit movements
- */
-
-export const insertTrinityCreditTransactionSchema = createInsertSchema(trinityCreditTransactions).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertTrinityCreditTransaction = z.infer<typeof insertTrinityCreditTransactionSchema>;
-export type TrinityCreditTransaction = typeof trinityCreditTransactions.$inferSelect;
-
-/**
- * Unlock codes - system-generated codes to reactivate features
- */
-
-export const insertTrinityUnlockCodeSchema = createInsertSchema(trinityUnlockCodes).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertTrinityUnlockCode = z.infer<typeof insertTrinityUnlockCodeSchema>;
-export type TrinityUnlockCode = typeof trinityUnlockCodes.$inferSelect;
 
 /**
  * Workspace feature states - tracks locked/unlocked status per feature per workspace
@@ -4924,17 +4865,6 @@ export type WorkspaceFeatureState = {
   updatedAt: Date | null;
 };
 
-/**
- * Credit cost configuration - defines how many credits each action costs
- */
-
-export const insertTrinityCreditCostSchema = createInsertSchema(trinityCreditCosts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertTrinityCreditCost = z.infer<typeof insertTrinityCreditCostSchema>;
-export type TrinityCreditCost = typeof trinityCreditCosts.$inferSelect;
 
 // ============================================================================
 // AUTOMATION GOVERNANCE SYSTEM
@@ -6554,8 +6484,7 @@ export type InsertAiTaskQueue = z.infer<typeof insertAiTaskQueueSchema>;
 export type AiTaskQueue = typeof aiTaskQueue.$inferSelect;
 
 // 4. AI Execution Log - Detailed log of every AI execution attempt
-// MERGED: aiCreditSettings → aiTokenWallets (table dropped, Mar 2026)
-export const aiCreditSettings = aiTokenWallets;
+// aiCreditSettings / aiTokenWallets removed — see tokenUsageMonthly.
 
 // 8. AI Model Health - Real-time health status of each model
 

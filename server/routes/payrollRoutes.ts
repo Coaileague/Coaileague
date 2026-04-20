@@ -1004,10 +1004,10 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
       // LAYER 2: Credits from org balance — AI token usage at cost (no markup)
       try {
-        const { creditManager, CREDIT_COSTS } = await import('../services/billing/creditManager');
+        const { tokenManager, TOKEN_COSTS } = await import('../services/billing/tokenManager');
 
-        const sessionFee = CREDIT_COSTS['payroll_session_fee'] || 35;
-        await creditManager.deductCredits({
+        const sessionFee = TOKEN_COSTS['payroll_session_fee'] || 35;
+        await tokenManager.recordUsage({
           workspaceId,
           userId: userId || 'system',
           featureKey: 'payroll_session_fee',
@@ -1538,8 +1538,8 @@ router.get('/tax-filing/guide/:formType', async (req: AuthenticatedRequest, res)
 
     if (workspaceId) {
       try {
-        const { creditManager } = await import('../services/billing/creditManager');
-        await creditManager.deductCredits({
+        const { tokenManager } = await import('../services/billing/tokenManager');
+        await tokenManager.recordUsage({
           workspaceId,
           userId: req.user?.id || 'system',
           featureKey: 'tax_filing_assistance',
@@ -2017,8 +2017,8 @@ router.post('/tax-forms/941', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
-      await creditManager.deductCredits({
+      const { tokenManager } = await import('../services/billing/tokenManager');
+      await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
         featureKey: 'tax_prep_941',
@@ -2128,10 +2128,10 @@ router.post('/tax-forms/generate', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
+      const { tokenManager } = await import('../services/billing/tokenManager');
       const creditKey = formType === 'w2' ? 'tax_prep_w2' : 'tax_prep_1099';
       const formLabel = formType === 'w2' ? 'W-2 Employee Tax Form' : '1099-NEC Contractor Tax Form';
-      await creditManager.deductCredits({
+      await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
         featureKey: creditKey,
@@ -2219,8 +2219,8 @@ router.post('/tax-forms/940', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
-      await creditManager.deductCredits({
+      const { tokenManager } = await import('../services/billing/tokenManager');
+      await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
         featureKey: 'tax_prep_940',
@@ -2360,8 +2360,8 @@ router.post('/runs/:id/execute-internal', async (req: AuthenticatedRequest, res)
 
       if (result.processedEntries > 0) {
         try {
-          const { creditManager } = await import('../services/billing/creditManager');
-          await creditManager.deductCredits({
+          const { tokenManager } = await import('../services/billing/tokenManager');
+          await tokenManager.recordUsage({
             workspaceId,
             userId: userId || 'system',
             featureKey: 'ai_payroll_processing',

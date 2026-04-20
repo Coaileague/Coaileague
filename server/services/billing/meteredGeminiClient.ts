@@ -22,7 +22,7 @@
 
 import { createLogger } from '../../lib/logger';
 import { GoogleGenerativeAI, GenerativeModel, GenerationConfig } from '@google/generative-ai';
-import { aiCreditGateway } from './aiCreditGateway';
+import { aiTokenGateway } from './aiTokenGateway';
 import { usageMeteringService } from './usageMetering';
 
 const log = createLogger('meteredGeminiClient');
@@ -115,7 +115,7 @@ class MeteredGeminiClient {
     log.info(`[MeteredGemini] Request: workspace=${workspaceId}, feature=${featureKey}`);
 
     // Step 1: Pre-authorize the request
-    const authResult = await aiCreditGateway.preAuthorize(
+    const authResult = await aiTokenGateway.preAuthorize(
       workspaceId,
       userId,
       featureKey
@@ -180,7 +180,7 @@ class MeteredGeminiClient {
       const totalTokens = inputTokens + outputTokens;
 
       // Step 4: Finalize billing
-      const billingResult = await aiCreditGateway.finalizeBilling(
+      const billingResult = await aiTokenGateway.finalizeBilling(
         workspaceId,
         userId,
         featureKey,
@@ -194,7 +194,7 @@ class MeteredGeminiClient {
         }
       );
 
-      log.info(`[MeteredGemini] SUCCESS: ${totalTokens} tokens, ${billingResult.creditsDeducted} credits charged`);
+      log.info(`[MeteredGemini] SUCCESS: ${totalTokens} tokens, ${billingResult.tokensUsed} credits charged`);
 
       if (workspaceId) {
         import('./aiMeteringService').then(({ aiMeteringService }) => {
@@ -222,7 +222,7 @@ class MeteredGeminiClient {
         billing: {
           authorized: true,
           charged: billingResult.charged,
-          creditsDeducted: billingResult.creditsDeducted,
+          creditsDeducted: billingResult.tokensUsed,
           tier: authResult.classification.tier
         }
       };
@@ -269,7 +269,7 @@ class MeteredGeminiClient {
     tier: string;
     estimatedCredits: number;
   } {
-    const summary = aiCreditGateway.getBillingSummary(featureKey);
+    const summary = aiTokenGateway.getBillingSummary(featureKey);
     return {
       isFree: (summary as any).isFree,
       tier: (summary as any).tier,

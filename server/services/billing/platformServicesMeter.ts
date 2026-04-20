@@ -25,7 +25,7 @@ import {
   workspaces,
 } from '@shared/schema';
 import { eq, sql, and, gte } from 'drizzle-orm';
-import { creditManager, CREDIT_COSTS } from './creditManager';
+import { tokenManager, TOKEN_COSTS } from './tokenManager';
 import { automationOrchestration } from '../orchestration/automationOrchestration';
 import { isBillingExcluded } from './billingConstants';
 
@@ -213,7 +213,7 @@ export class PlatformServicesMeter {
           try {
             const infraFees = this.calculateInfrastructureFees(workspace.subscriptionTier || 'starter');
             
-            const chargeResult = await creditManager.deductCredits(
+            const chargeResult = await tokenManager.recordUsage(
               workspace.id,
               // @ts-expect-error — TS migration: fix in refactoring sprint
               'SYSTEM',
@@ -250,8 +250,8 @@ export class PlatformServicesMeter {
   private calculateInfrastructureFees(tier: string): { total: number; breakdown: string } {
     // Base fees for all tiers
     const baseFees = {
-      domain: CREDIT_COSTS.platform_domain_fee,           // 25 credits
-      emailDomain: CREDIT_COSTS.platform_email_domain,    // 50 credits
+      domain: TOKEN_COSTS.platform_domain_fee,           // 25 credits
+      emailDomain: TOKEN_COSTS.platform_email_domain,    // 50 credits
     };
 
     // Tier-specific additions
@@ -299,7 +299,7 @@ export class PlatformServicesMeter {
         const serviceBreakdown: Record<string, number> = {};
 
         for (const record of records) {
-          const creditCost = CREDIT_COSTS[record.serviceType as keyof typeof CREDIT_COSTS] || 1;
+          const creditCost = TOKEN_COSTS[record.serviceType as keyof typeof TOKEN_COSTS] || 1;
           const cost = creditCost * record.quantity;
           totalCredits += cost;
           
@@ -312,7 +312,7 @@ export class PlatformServicesMeter {
             .map(([service, credits]) => `${service}: ${credits}`)
             .join(', ');
 
-          await creditManager.deductCredits(
+          await tokenManager.recordUsage(
             workspaceId,
             // @ts-expect-error — TS migration: fix in refactoring sprint
             'SYSTEM',
@@ -379,10 +379,10 @@ export class PlatformServicesMeter {
    * Check if workspace has sufficient credits for a service
    */
   async canUseService(workspaceId: string, serviceType: PlatformServiceType): Promise<boolean> {
-    const creditCost = CREDIT_COSTS[serviceType as keyof typeof CREDIT_COSTS] || 1;
+    const creditCost = TOKEN_COSTS[serviceType as keyof typeof TOKEN_COSTS] || 1;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    const check = await creditManager.checkCredits(workspaceId, null, creditCost);
-    return check.hasEnoughCredits;
+    const check = await tokenManager.checkTokens(workspaceId, null, creditCost);
+    return check.hasAllowance;
   }
 }
 

@@ -165,14 +165,14 @@ export default function AiUsageDashboard() {
               </CardContent>
             </Card>
 
-            <Card data-testid="stat-credits-used">
+            <Card data-testid="stat-tokens-used">
               <CardHeader className="flex flex-row items-center justify-between gap-1 pb-1 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Credits Used</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Tokens Used</CardTitle>
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{(data?.summary.totalCredits ?? 0).toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">Billed to workspace</p>
+                <p className="text-xs text-muted-foreground mt-1">This month</p>
               </CardContent>
             </Card>
 

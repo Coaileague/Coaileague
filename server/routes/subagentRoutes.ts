@@ -299,19 +299,18 @@ router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedR
     }
 
     // Import credit manager for unified tracking
-    const { creditManager } = await import('../services/billing/creditManager');
+    const { tokenManager } = await import('../services/billing/tokenManager');
     
     // Get credit balance and account info
-    const creditsAccount = await creditManager.getCreditsAccount(workspaceId as string);
+    const creditsAccount = await tokenManager.getWorkspaceState(workspaceId as string);
     
     // Get monthly usage breakdown by feature
-    const monthlyBreakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId as string);
+    const monthlyBreakdown = await tokenManager.getMonthlyBreakdown(workspaceId as string);
     
-    // Get recent transaction history
-    const recentTransactions = await creditManager.getTransactionHistory(
-      workspaceId as string, 
-      20,  // Last 20 transactions
-      0
+    // Get recent token usage history
+    const recentTransactions = await tokenManager.getUsageHistory(
+      workspaceId as string,
+      20,
     );
 
     // Get self-correction metrics (which now includes credit tracking)
@@ -333,9 +332,8 @@ router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedR
       if (!creditsByDomain[domain]) {
         creditsByDomain[domain] = { credits: 0, operations: 0 };
       }
-      creditsByDomain[domain].credits += Number(breakdown.totalCredits) || 0;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      creditsByDomain[domain].operations += Number(breakdown.operationCount) || 0;
+      creditsByDomain[domain].credits += Number(breakdown.tokensUsed) || 0;
+      creditsByDomain[domain].operations += Number(breakdown.requestCount) || 0;
     }
 
     res.json({ 
@@ -347,16 +345,16 @@ router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedR
           percentUsed: creditsAccount?.monthlyAllocation 
             ? Math.round(((creditsAccount.monthlyAllocation - (creditsAccount?.currentBalance || 0)) / creditsAccount.monthlyAllocation) * 100)
             : 0,
-          isSuspended: creditsAccount?.isSuspended || false,
-          nextResetAt: creditsAccount?.nextResetAt || null,
+          isSuspended: false,
+          nextResetAt: creditsAccount?.periodEnd || null,
         },
         monthlyBreakdown,
         byDomain: creditsByDomain,
         recentTransactions: recentTransactions.slice(0, 10).map(t => ({
           id: t.id,
-          type: (t as any).transactionType,
-          amount: t.amount,
-          feature: (t as any).featureName,
+          type: 'token_usage',
+          amount: t.tokensUsed,
+          feature: t.featureName,
           timestamp: t.createdAt,
         })),
         selfCorrectionMetrics: {

@@ -1067,7 +1067,7 @@ export default function AdminHelpAI() {
                       {/* Meta */}
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-2 border-t">
                         <span>{selectedReport.conversationTurns} conversation turns</span>
-                        <span>{selectedReport.creditsUsed} credits used</span>
+                        <span>{selectedReport.creditsUsed} tokens used</span>
                         <span>Submitted {new Date(selectedReport.createdAt).toLocaleDateString()}</span>
                         {selectedReport.acknowledgedAt && (
                           <span>Acknowledged {new Date(selectedReport.acknowledgedAt).toLocaleDateString()}</span>

@@ -5,7 +5,7 @@
  * 1. Upsell Service — depletion tracking, tier suggestions, addon plans
  * 2. Feature Addons — activate, allotment priority, deduction, cancel, reset
  * 3. Identity Lookup — supportLookupFull with UUID, email, external ID
- * 4. creditManager addon integration — addon checked before main pool
+ * 4. tokenManager addon integration — addon checked before main pool
  * 5. End-to-end flow: depletion → upsell event → suggestion created
  *
  * Uses direct DB access only — no service layer that could cause timeouts.

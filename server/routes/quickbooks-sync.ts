@@ -6,7 +6,7 @@ import { eq, and, isNull, desc, gte } from 'drizzle-orm';
 import { partnerConnections, partnerSyncLogs, invoices } from '@shared/schema';
 import { requireAuth } from '../auth';
 import { requireProfessional } from '../tierGuards';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { createLogger } from '../lib/logger';
 const log = createLogger('QuickbooksSync');
 
@@ -93,7 +93,7 @@ router.post("/api/quickbooks/sync/initial", requireAuth, requireProfessional, as
       releaseQbSyncLock(workspaceId);
 
       // Deduct 5 credits per QuickBooks sync (99% automated accounting sync)
-      creditManager.deductCredits({
+      tokenManager.recordUsage({
         workspaceId,
         // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: req.user.id,
@@ -180,7 +180,7 @@ router.post("/api/quickbooks/sync/cdc", requireAuth, requireProfessional, async 
       releaseQbSyncLock(workspaceId);
 
       // Deduct 5 credits per QuickBooks CDC sync
-      creditManager.deductCredits({
+      tokenManager.recordUsage({
         workspaceId,
         // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: req.user.id,

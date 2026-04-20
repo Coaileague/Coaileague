@@ -20,7 +20,7 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
-import { creditManager, CREDIT_COSTS } from '../../billing/creditManager';
+import { tokenManager, TOKEN_COSTS } from '../../billing/tokenManager';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
 import { trinityActionReasoner } from '../trinityActionReasoner';
 import { platformEventBus } from '../../platformEventBus';
@@ -391,9 +391,9 @@ class PayrollSubagentService {
     let retryCount = 0;
     let lastError: Error | null = null;
 
-    const sessionFee = CREDIT_COSTS['payroll_session_fee'] || 35;
+    const sessionFee = TOKEN_COSTS['payroll_session_fee'] || 35;
     try {
-      await creditManager.deductCredits({
+      await tokenManager.recordUsage({
         workspaceId,
         userId: 'payroll-subagent',
         featureKey: 'payroll_session_fee',
@@ -482,9 +482,9 @@ class PayrollSubagentService {
         // Non-blocking: payroll is complete; billing failure is logged, not fatal.
         if (result.success && result.employeeCount > 0) {
           try {
-            const perEmpRate = CREDIT_COSTS['per_payroll_employee'] || 8;
+            const perEmpRate = TOKEN_COSTS['per_payroll_employee'] || 8;
             const totalPerEmp = result.employeeCount * perEmpRate;
-            await creditManager.deductCredits({
+            await tokenManager.recordUsage({
               workspaceId,
               featureKey: 'per_payroll_employee',
               // @ts-expect-error — TS migration: fix in refactoring sprint

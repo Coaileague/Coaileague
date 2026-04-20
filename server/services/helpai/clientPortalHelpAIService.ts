@@ -24,7 +24,7 @@ import {
   type InsertHelpaiSession,
 } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { creditManager } from '../billing/creditManager';
+import { tokenManager } from '../billing/tokenManager';
 import { costOptimizedRouter } from '../ai-brain/costOptimizedRouter';
 import { NotificationDeliveryService } from '../notificationDeliveryService';
 import crypto from 'crypto';
@@ -827,7 +827,7 @@ export class ClientPortalHelpAIService {
    */
   private async deductOrgCredits(orgWorkspaceId: string): Promise<{ success: boolean; remaining: number }> {
     try {
-      const result = await creditManager.deductCredits({
+      const result = await tokenManager.recordUsage({
         workspaceId: orgWorkspaceId,
         featureKey: 'client_portal_helpai_session',
         // @ts-expect-error — TS migration: fix in refactoring sprint

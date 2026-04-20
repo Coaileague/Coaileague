@@ -199,7 +199,7 @@ class AICostMonitorService {
     }
 
     const totalCreditsNeeded = creditsToCharge + tokenCheck.additionalCreditsNeeded;
-    const hasEnoughCredits = currentCredits >= totalCreditsNeeded;
+    const hasAllowance = currentCredits >= totalCreditsNeeded;
 
     if (expectedMargin < 0) {
       return {
@@ -215,7 +215,7 @@ class AICostMonitorService {
       };
     }
 
-    if (!hasEnoughCredits) {
+    if (!hasAllowance) {
       return {
         allowed: false,
         estimatedCost,

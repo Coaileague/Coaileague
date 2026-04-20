@@ -17,7 +17,7 @@ import {
 } from "@shared/schema";
 import { sql, eq, and } from "drizzle-orm";
 import { mutationLimiter } from '../middleware/rateLimiter';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { seedAnchor } from '../services/utils/scheduling';
 import { typedQuery } from '../lib/typedSql';
 import { sumFinancialValues, applyTax, toFinancialString } from '../services/financialCalculator';

@@ -25,7 +25,6 @@ import {
   achievements,
   trinityConversationSessions,
   trinityConversationTurns,
-  trinityCredits,
   auditLogs,
   employeeCertifications,
   platformRoles,
@@ -280,16 +279,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   }, { tier: 'extended', description: 'Intelligent query routing' }),
 
   createQuickCheck('fast_mode', 'Trinity FAST Mode', 'ai_brain', async () => {
-    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
-    const [result] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(trinityCredits)
-      .where(sql`${trinityCredits.balance} > 0`);
-    const accountsWithCredits = Number(result?.count || 0);
-    return { 
-      ok: true, 
-      message: `FAST mode available - ${accountsWithCredits} accounts with credits`,
-      metadata: { accountsWithCredits }
+    // FAST mode is gated by subscription tier, not by a per-workspace credit
+    // balance — the check simply reports availability.
+    return {
+      ok: true,
+      message: 'FAST mode available (tier-gated)',
+      metadata: {},
     };
   }, { tier: 'extended', description: 'Premium parallel execution' }),
 
@@ -481,24 +476,23 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
     };
   }, { tier: 'essential', description: 'Client billing and invoices' }),
 
-  createQuickCheck('credit_system', 'AI Credit System', 'billing', async () => {
+  createQuickCheck('token_system', 'AI Token System', 'billing', async () => {
     const start = Date.now();
-    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
-    const [result] = await db
-      .select({ 
-        totalAccounts: sql<number>`count(*)::int`,
-        totalBalance: sql<number>`coalesce(sum(${trinityCredits.balance}), 0)::int`
-      })
-      .from(trinityCredits);
-    const accounts = Number(result?.totalAccounts || 0);
-    const totalBalance = Number(result?.totalBalance || 0);
-    return { 
-      ok: true, 
-      message: `Credit system active - ${accounts} accounts, ${totalBalance} credits available`,
+    const [row] = await db.execute<{ workspaces: number; tokens: number }>(sql`
+      SELECT COUNT(DISTINCT workspace_id)::int AS workspaces,
+             COALESCE(SUM(total_tokens_used), 0)::bigint AS tokens
+      FROM token_usage_monthly
+      WHERE month_year = TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYYY-MM')
+    `) as any;
+    const workspacesActive = Number(row?.workspaces ?? 0);
+    const tokensUsed = Number(row?.tokens ?? 0);
+    return {
+      ok: true,
+      message: `Token system active - ${workspacesActive} workspaces billed this month, ${tokensUsed} tokens used`,
       latencyMs: Date.now() - start,
-      metadata: { accounts, totalBalance }
+      metadata: { workspacesActive, tokensUsed },
     };
-  }, { tier: 'essential', description: 'AI Brain credit management' }),
+  }, { tier: 'essential', description: 'AI Brain token metering' }),
 
   // ============================================================================
   // ANALYTICS DOMAIN - Real analytics checks

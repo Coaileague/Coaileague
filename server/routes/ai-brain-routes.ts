@@ -15,7 +15,7 @@ import { getModelRouterStatus, getChainForRole, routeByRole, type ModelRole } fr
 import { trinityScanOrchestrator } from '../services/ai-brain/trinityScanOrchestrator';
 import { costOptimizedRouter, classifyTask, getCostRoutingAnalytics } from '../services/ai-brain/costOptimizedRouter';
 import { aiProviderBalanceService } from '../services/ai-brain/aiProviderBalances';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { 
   aiBrainJobs, 
   aiCheckpoints, 
@@ -688,7 +688,7 @@ aiBrainRouter.post('/checkpoints/:id/resume', requireAuth, async (req: Request, 
 
     // Check if workspace has enough credits (aiUsageEvents-backed)
     const creditsNeeded = (checkpoint as any).creditsRequired || 0;
-    const currentBalance = await creditManager.getBalance(workspaceId);
+    const currentBalance = await tokenManager.getBalance(workspaceId);
 
     if (currentBalance < creditsNeeded) {
       return res.status(400).json({ 
@@ -1516,7 +1516,6 @@ aiBrainRouter.post('/routing/execute', requireAuth, async (req: Request, res: Re
           escalated: result.escalated,
           escalationReason: result.escalationReason,
           tokensUsed: result.tokensUsed,
-          creditsCharged: result.creditsCharged,
           latencyMs: result.latencyMs,
         },
       });
@@ -1542,7 +1541,6 @@ aiBrainRouter.post('/routing/execute', requireAuth, async (req: Request, res: Re
         escalated: result.escalated,
         escalationReason: result.escalationReason,
         tokensUsed: result.tokensUsed,
-        creditsCharged: result.creditsCharged,
         latencyMs: result.latencyMs,
       },
     });

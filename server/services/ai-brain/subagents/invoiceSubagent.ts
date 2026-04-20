@@ -20,7 +20,7 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, isNull, inArray } from 'drizzle-orm';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
-import { creditManager, CREDIT_COSTS } from '../../billing/creditManager';
+import { tokenManager, TOKEN_COSTS } from '../../billing/tokenManager';
 import { platformEventBus } from '../../platformEventBus';
 import { broadcastToWorkspace } from '../../../websocket';
 import { trinityActionReasoner } from '../trinityActionReasoner';
@@ -471,9 +471,9 @@ class InvoiceSubagentService {
     const traceId = `batch-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
     this.logAudit(traceId, 'invoice.batch_generate', 'started', { workspaceId });
 
-    const sessionFee = CREDIT_COSTS['invoicing_session_fee'] || 25;
+    const sessionFee = TOKEN_COSTS['invoicing_session_fee'] || 25;
     try {
-      await creditManager.deductCredits({
+      await tokenManager.recordUsage({
         workspaceId,
         userId: 'invoice-subagent',
         featureKey: 'invoicing_session_fee',
@@ -530,8 +530,8 @@ class InvoiceSubagentService {
           // AR admin labor replaced ($15-40/invoice manually) → 50 cr = $0.50/invoice.
           // Non-blocking: invoice is already created; billing failure is logged, not fatal.
           try {
-            const perInvoiceFee = CREDIT_COSTS['ai_invoice_generation'] || 50;
-            await creditManager.deductCredits({
+            const perInvoiceFee = TOKEN_COSTS['ai_invoice_generation'] || 50;
+            await tokenManager.recordUsage({
               workspaceId,
               featureKey: 'ai_invoice_generation',
               // @ts-expect-error — TS migration: fix in refactoring sprint

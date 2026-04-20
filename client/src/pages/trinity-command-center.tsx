@@ -319,7 +319,7 @@ export default function TrinityCommandCenter() {
   });
 
   const { data: creditsData } = useQuery<{ balance: number; used: number; limit: number }>({
-    queryKey: ['/api/credits/balance'],
+    queryKey: ['/api/usage/tokens'],
   });
 
   const { data: reportsData } = useQuery<{ reports: ReportItem[] }>({

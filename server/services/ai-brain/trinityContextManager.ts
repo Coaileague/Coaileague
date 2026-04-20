@@ -29,7 +29,7 @@ import {
 } from '@shared/schema';
 import { trinityMemoryService } from './trinityMemoryService';
 import { TTLCache } from './cacheUtils';
-import { creditManager } from '../billing/creditManager';
+import { tokenManager } from '../billing/tokenManager';
 import { trinityConfidenceTracker } from './trinityConfidenceTracker';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('TrinityContextManager');
@@ -386,7 +386,7 @@ class TrinityContextManager {
    */
   async enrichWorkspaceContextWithCredits(workspaceId: string): Promise<Partial<WorkspaceContext>> {
     try {
-      const creditsAccount = await creditManager.getCreditsAccount(workspaceId);
+      const creditsAccount = await tokenManager.getWorkspaceState(workspaceId);
       
       if (!creditsAccount) {
         return {};

@@ -176,8 +176,8 @@ class AiMeteringServiceImpl {
   }
 
   // ============================================================================
-  // UNIVERSAL PRE-CALL CHECK — fetches tier internally, used by aiCreditGateway
-  // All 5 AI providers call aiCreditGateway.preAuthorize which calls this.
+  // UNIVERSAL PRE-CALL CHECK — fetches tier internally, used by aiTokenGateway
+  // All 5 AI providers call aiTokenGateway.preAuthorize which calls this.
   // This is the single enforcement point for free/trial hard caps.
   // Paid tier workspaces always return allowed:true (soft cap, billed not blocked).
   // ============================================================================

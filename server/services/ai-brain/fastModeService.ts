@@ -15,7 +15,7 @@ import { db } from '../../db';
 import { 
   AiWorkboardTask
 } from '@shared/schema';
-import { creditManager } from '../../services/billing/creditManager';
+import { tokenManager } from '../../services/billing/tokenManager';
 import { eq, sql, desc, and, gte } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { getTrinityVelocityEngine, VelocityExecutionResult } from './trinityVelocityEngine';
@@ -271,7 +271,7 @@ class FastModeService {
     maxConcurrent: number;
   }> {
     // Check credit balance
-    const balance = await creditManager.getBalance(workspaceId);
+    const balance = await tokenManager.getBalance(workspaceId);
     const requiredCredits = Math.ceil(estimatedCredits * FAST_MODE_CONFIG.creditMultiplier);
     
     if (balance < requiredCredits) {
@@ -1036,7 +1036,7 @@ class FastModeService {
     const { workspaceId, content, tier = 'turbo', selectedAgents } = params;
     
     // Get current credit balance
-    const currentBalance = await creditManager.getBalance(workspaceId);
+    const currentBalance = await tokenManager.getBalance(workspaceId);
     const tierConfig = FAST_MODE_TIERS[tier];
     
     // Estimate complexity and agents needed
@@ -1131,12 +1131,8 @@ class FastModeService {
       return duration <= 15000; // 15 second SLA
     }).length;
     
-    // Get refunds issued via creditManager transaction history
-    const allTransactions = await creditManager.getTransactionHistory(workspaceId, 200, 0);
-    const refundTransactions = allTransactions.filter(
-      t => (t as any).transactionType === 'refund' && t.createdAt && new Date(t.createdAt) >= periodStart
-    );
-    const refundsIssued = refundTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    // Credit refunds are retired; there is no balance to refund against.
+    const refundsIssued = 0;
     
     // Top agents used
     const agentCounts: Record<string, number> = {};
@@ -1228,18 +1224,9 @@ class FastModeService {
     const refundAmount = Math.ceil(creditsCharged * refundPercentage);
     
     if (refundAmount > 0) {
-      const refundResult = await creditManager.refundCredits({
-        workspaceId,
-        amount: refundAmount,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        reason: `SLA breach refund for task ${taskId}`,
-        issuedByUserId: 'system',
-        issuedByName: 'FastModeService',
-        relatedEntityType: 'sla_refund',
-        relatedEntityId: taskId,
-      });
-      
-      log.info('[FastModeService] SLA breach refund issued:', { taskId, refundAmount, reason });
+      // Token refunds are logged and reconciled on the monthly invoice rather
+      // than credited to an in-platform balance (credits are retired).
+      log.info('[FastModeService] SLA breach refund queued for monthly invoice credit:', { taskId, workspaceId, refundAmount, reason });
       
       // Broadcast refund notification
       if (wsBroadcaster) {

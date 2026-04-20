@@ -31,7 +31,7 @@ import {
   type ChatMessage,
 } from '@shared/schema';
 import { eq, and, or, sql, inArray, desc } from 'drizzle-orm';
-import { SUPPORT_POOL_FEATURES } from './billing/creditManager';
+import { SUPPORT_POOL_FEATURES } from './billing/tokenManager';
 import { PLATFORM_SUPPORT_POOL_ID } from './billing/billingConstants';
 import { createLogger } from '../lib/logger';
 const log = createLogger('chatParityService');

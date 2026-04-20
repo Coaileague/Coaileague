@@ -36,8 +36,8 @@ function getEmbeddingClient(): OpenAI | null {
 
 async function checkSupportPoolAvailable(): Promise<boolean> {
   try {
-    const { creditManager } = await import('../services/billing/creditManager');
-    return (creditManager as any).checkSupportPoolAvailable();
+    const { tokenManager } = await import('../services/billing/tokenManager');
+    return (tokenManager as any).checkSupportPoolAvailable();
   } catch {
     return true;
   }
@@ -151,8 +151,8 @@ app.post('/api/helpos/faqs', requirePlatformStaff, async (req: AuthenticatedRequ
           input: embeddingText,
         });
         embeddingVector = JSON.stringify(embeddingResponse.data[0].embedding);
-        const { creditManager } = await import('../services/billing/creditManager');
-        await (creditManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Create Embedding', wsId || undefined, req.user?.id);
+        const { tokenManager } = await import('../services/billing/tokenManager');
+        await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Create Embedding', wsId || undefined, req.user?.id);
       } catch (embeddingError) {
         log.error('Error generating embedding:', embeddingError);
       }
@@ -216,8 +216,8 @@ app.patch('/api/helpos/faqs/:id', requirePlatformStaff, async (req: Authenticate
           input: embeddingText,
         });
         embeddingVector = JSON.stringify(embeddingResponse.data[0].embedding);
-        const { creditManager } = await import('../services/billing/creditManager');
-        await (creditManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Update Embedding', wsId || undefined, req.user?.id);
+        const { tokenManager } = await import('../services/billing/tokenManager');
+        await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Update Embedding', wsId || undefined, req.user?.id);
       } catch (embeddingError) {
         log.error('Error generating embedding:', embeddingError);
       }
@@ -365,8 +365,8 @@ app.post('/api/helpos/faqs/search/semantic', readLimiter, requireAuth, async (re
       .slice(0, Number(limit));
 
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
-      await (creditManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Semantic Search Embedding', wsId || undefined);
+      const { tokenManager } = await import('../services/billing/tokenManager');
+      await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Semantic Search Embedding', wsId || undefined);
     } catch (billingErr: unknown) {
       log.error('[FAQ AI] Support pool deduction failed:', billingErr);
     }
@@ -616,8 +616,8 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
 
     if (createdFaqs.length > 0) {
       try {
-        const { creditManager } = await import('../services/billing/creditManager');
-        await (creditManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Bulk Import Embeddings', wsId || undefined);
+        const { tokenManager } = await import('../services/billing/tokenManager');
+        await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Bulk Import Embeddings', wsId || undefined);
       } catch (billingErr: unknown) {
         log.error('[FAQ AI] Support pool deduction failed:', billingErr);
       }
@@ -873,8 +873,8 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
 
     // Bill to shared platform support pool (not individual org)
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
-      await (creditManager as any).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || undefined);
+      const { tokenManager } = await import('../services/billing/tokenManager');
+      await (tokenManager as any).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || undefined);
     } catch (billingErr: unknown) {
       // @ts-expect-error — TS migration: fix in refactoring sprint
       log.warn('[FAQ] Support pool billing failed (non-blocking):', billingErr.message);

@@ -20,7 +20,7 @@
  * 1. ExecutionPipeline (THIS FILE) - General operation execution
  *    - Lightweight 7-step wrapper for any operation
  *    - Logs to executionPipelineLogs table
- *    - Integrates with creditManager for billing
+ *    - Integrates with tokenManager for billing
  *    - Best for: CRUD, feature actions, subagent tasks
  * 
  * 2. UniversalStepLogger - Full orchestration with approval flow
@@ -43,8 +43,8 @@
 import { db } from '../db';
 import { executionPipelineLogs, systemAuditLogs, type InsertExecutionPipelineLog } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { creditManager, CREDIT_COSTS } from './billing/creditManager';
-import { aiCreditGateway } from './billing/aiCreditGateway';
+import { tokenManager, TOKEN_COSTS } from './billing/tokenManager';
+import { aiTokenGateway } from './billing/aiTokenGateway';
 import { platformEventBus } from './platformEventBus';
 // @ts-expect-error — TS migration: fix in refactoring sprint
 import { v4 as uuidv4 } from 'uuid';
@@ -281,7 +281,7 @@ export class ExecutionPipeline {
         
         if (creditCost > 0) {
           // getBalance returns a number directly, not an object
-          const balance = await creditManager.getBalance(options.workspaceId);
+          const balance = await tokenManager.getBalance(options.workspaceId);
           fetchedData.creditBalance = balance || 0;
         }
       }
@@ -454,7 +454,7 @@ export class ExecutionPipeline {
       
       // Deduct credits if applicable
       if (fetchedData.creditCost && fetchedData.creditCost > 0 && options.workspaceId) {
-        await aiCreditGateway.finalizeBilling(
+        await aiTokenGateway.finalizeBilling(
           options.workspaceId,
           options.initiator,
           options.operationName,
@@ -552,7 +552,7 @@ export class ExecutionPipeline {
    */
   private getCreditCost(operationType: OperationType, operationName: string): number {
     // Check if operation has a defined credit cost
-    const cost = CREDIT_COSTS[operationName as keyof typeof CREDIT_COSTS];
+    const cost = TOKEN_COSTS[operationName as keyof typeof TOKEN_COSTS];
     if (cost !== undefined) {
       return cost;
     }

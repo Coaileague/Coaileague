@@ -1121,7 +1121,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         totalTokens: data.usage.totalTokens || data.usage.total_tokens || 0,
         totalCredits: data.usage.totalCredits || data.usage.total_credits || 0,
         balanceRemaining: data.usage.balanceRemaining || data.usage.balance_remaining || 0,
-        unlimitedCredits: data.usage.unlimitedCredits || data.usage.unlimited_credits || false,
+        unlimitedCredits: data.usage.unlimited || data.usage.unlimited_credits || false,
         tier: data.usage.tier || undefined,
         monthlyAllowance: data.usage.monthlyAllowance || data.usage.monthly_allowance || undefined,
         actions: (data.usage.actions || []).map((a: any) => ({

@@ -719,44 +719,6 @@ export const billingAddons = pgTable("billing_addons", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const aiTokenWallets = pgTable("ai_token_wallets", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull().unique(),
-  
-  // Balance tracking
-  currentBalance: decimal("current_balance", { precision: 15, scale: 4 }).notNull().default("0.0000"), // Current credit balance
-  totalPurchased: decimal("total_purchased", { precision: 15, scale: 4 }).notNull().default("0.0000"), // Lifetime purchases
-  totalUsed: decimal("total_used", { precision: 15, scale: 4 }).notNull().default("0.0000"), // Lifetime usage
-  
-  // Monthly included credits (from subscription tier)
-  monthlyIncludedCredits: decimal("monthly_included_credits", { precision: 10, scale: 2 }).default("0.00"),
-  monthlyCreditsUsed: decimal("monthly_credits_used", { precision: 10, scale: 2 }).default("0.00"),
-  monthlyCreditsResetAt: timestamp("monthly_credits_reset_at"), // When monthly credits reset
-  
-  // Auto-recharge settings
-  autoRechargeEnabled: boolean("auto_recharge_enabled").default(false),
-  autoRechargeThreshold: decimal("auto_recharge_threshold", { precision: 10, scale: 2 }), // Recharge when below this
-  autoRechargeAmount: decimal("auto_recharge_amount", { precision: 10, scale: 2 }), // Amount to recharge
-  
-  // Low balance alerts
-  lowBalanceAlertEnabled: boolean("low_balance_alert_enabled").default(true),
-  lowBalanceAlertThreshold: decimal("low_balance_alert_threshold", { precision: 10, scale: 2 }).default("10.00"),
-  lastLowBalanceAlertAt: timestamp("last_low_balance_alert_at"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-
-  creditSettings: jsonb("credit_settings").default('{}'),
-  workspaceCreditsId: varchar("workspace_credits_id"),
-  monthlyBudgetLimit: decimal("monthly_budget_limit"),
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  currentMonthUsage: decimal("current_month_usage").default(0),
-  rfpCreditsRemaining: integer("rfp_credits_remaining").default(0),
-  rfpMonthlyIncluded: integer("rfp_monthly_included").default(0),
-  topoffPaymentMethodId: varchar("topoff_payment_method_id"),
-  lastTopoffAt: timestamp("last_topoff_at"),
-});
-
 export const subscriptionInvoices = pgTable("subscription_invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),
@@ -1148,88 +1110,6 @@ export const commitmentLedger = pgTable("commitment_ledger", {
   index("commitment_resource_idx").on(table.resourceType, table.resourceId),
   index("commitment_status_idx").on(table.status),
   index("commitment_expires_idx").on(table.expiresAt),
-]);
-
-export const trinityCreditPackages = pgTable("trinity_credit_packages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Package details
-  name: varchar("name", { length: 100 }).notNull(), // 'Starter Pack', 'Pro Pack', 'Enterprise Pack'
-  description: text("description"),
-  credits: integer("credits").notNull(), // Number of credits in package
-  priceUsd: decimal("price_usd", { precision: 10, scale: 2 }).notNull(), // Price in USD
-  
-  // Package type
-  packageType: varchar("package_type", { length: 30 }).default("one_time"), // 'one_time', 'subscription', 'enterprise'
-  isActive: boolean("is_active").default(true),
-  sortOrder: integer("sort_order").default(0),
-  
-  // Bonus credits for larger packages
-  bonusCredits: integer("bonus_credits").default(0),
-  
-  // Tier restrictions (which subscription tiers can buy this)
-  allowedTiers: text("allowed_tiers").array().default(sql`ARRAY['starter', 'professional', 'enterprise']::text[]`),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const trinityCredits = pgTable("trinity_credits", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull().unique(),
-  
-  // Balance
-  balance: integer("balance").notNull().default(0), // Current credit balance
-  lifetimePurchased: integer("lifetime_purchased").default(0), // Total credits ever purchased
-  lifetimeUsed: integer("lifetime_used").default(0), // Total credits ever consumed
-  lifetimeBonuses: integer("lifetime_bonuses").default(0), // Total bonus credits received
-  
-  // Status
-  isActive: boolean("is_active").default(true), // Whether credits can be used
-  lowBalanceThreshold: integer("low_balance_threshold").default(50), // Alert when below this
-  lastLowBalanceAlert: timestamp("last_low_balance_alert"),
-  
-  // Tracking
-  lastUsedAt: timestamp("last_used_at"),
-  lastPurchasedAt: timestamp("last_purchased_at"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-
-  unlockData: jsonb("unlock_data").default('{}'),
-  confidenceData: jsonb("confidence_data").default('{}'),
-}, (table) => [
-  index("trinity_credits_workspace_idx").on(table.workspaceId),
-  index("trinity_credits_balance_idx").on(table.balance),
-]);
-
-export const trinityCreditCosts = pgTable("trinity_credit_costs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Action identification
-  actionKey: varchar("action_key", { length: 100 }).notNull().unique(), // Maps to AI Brain action keys
-  actionCategory: varchar("action_category", { length: 50 }).notNull(), // 'trinity_command', 'automation', 'ai_analysis', etc.
-  
-  // Cost
-  credits: integer("credits").notNull().default(1), // Credits consumed per use
-  
-  // Tier adjustments (some tiers may get discounts)
-  freeMultiplier: decimal("free_multiplier", { precision: 4, scale: 2 }).default("1.0"),
-  starterMultiplier: decimal("starter_multiplier", { precision: 4, scale: 2 }).default("1.0"),
-  professionalMultiplier: decimal("professional_multiplier", { precision: 4, scale: 2 }).default("0.8"),
-  enterpriseMultiplier: decimal("enterprise_multiplier", { precision: 4, scale: 2 }).default("0.5"),
-  
-  // Display
-  displayName: varchar("display_name", { length: 100 }),
-  description: text("description"),
-  
-  isActive: boolean("is_active").default(true),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("trinity_credit_costs_action_idx").on(table.actionKey),
-  index("trinity_credit_costs_category_idx").on(table.actionCategory),
 ]);
 
 export const quickbooksSyncReceipts = pgTable("quickbooks_sync_receipts", {

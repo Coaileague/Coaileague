@@ -19,7 +19,6 @@ import {
   timeEntries,
   workspaces,
   subscriptions,
-  trinityCreditTransactions,
 } from '@shared/schema';
 import { eq, and, gte, lte, count, sql, desc, sum } from 'drizzle-orm';
 import { subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';

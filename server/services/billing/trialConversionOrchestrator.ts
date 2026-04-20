@@ -19,7 +19,7 @@ import { workspaces, subscriptions, users, notifications } from '@shared/schema'
 import { eq, and, lte, gte, isNotNull, isNull } from 'drizzle-orm';
 import { trialManager } from './trialManager';
 import { subscriptionManager, type SubscriptionTier, type BillingCycle } from './subscriptionManager';
-import { CreditManager } from './creditManager';
+import { TokenManager } from './tokenManager';
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { PLATFORM } from '../../config/platformConfig';
@@ -53,10 +53,10 @@ interface TrialExpiryCheck {
 
 class TrialConversionOrchestrator {
   private static instance: TrialConversionOrchestrator;
-  private creditManager: CreditManager;
+  private tokenManager: TokenManager;
 
   private constructor() {
-    this.creditManager = new CreditManager();
+    this.tokenManager = new TokenManager();
   }
 
   static getInstance(): TrialConversionOrchestrator {
@@ -379,13 +379,7 @@ class TrialConversionOrchestrator {
       .set({ subscriptionStatus: 'active', subscriptionTier: 'free', isSuspended: false })
       .where(eq(workspaces.id, workspaceId));
 
-    // Reset credits to free-tier allowance
-    try {
-      const { CreditManager } = await import('./creditManager');
-      await (CreditManager as any).getInstance().initializeCredits(workspaceId, 'free');
-    } catch (err) {
-      log.warn('Credit reset failed during free-tier downgrade', { workspaceId, err });
-    }
+    // Free-tier token allowance applies automatically once subscriptionTier is 'free'.
 
     await platformEventBus.publish({
       type: 'workspace_downgraded',
@@ -570,8 +564,7 @@ class TrialConversionOrchestrator {
         plan: tier,
       }).where(eq(subscriptions.workspaceId, workspaceId));
 
-      // Initialize credits for the new tier
-      await this.creditManager.initializeCredits(workspaceId, tier);
+      // Token allowance is derived from subscriptionTier; no per-tier init call required.
 
       await platformEventBus.publish({
         type: 'workspace_reactivated',

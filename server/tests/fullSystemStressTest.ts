@@ -413,7 +413,7 @@ async function phase5_billing_credits() {
     });
   } catch (e: any) { record({ name: 'Credit Transaction History', phase: 'BILLING', passed: false, details: e.message, severity: 'high' }); }
 
-  const cmSrc = fs.readFileSync('server/services/billing/creditManager.ts', 'utf-8');
+  const cmSrc = fs.readFileSync('server/services/billing/tokenManager.ts', 'utf-8');
 
   const hasAtomicDeduct = cmSrc.includes('currentBalance') && cmSrc.includes('>=');
   record({

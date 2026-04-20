@@ -23,7 +23,7 @@ import {
   billingAuditLog,
 } from '@shared/schema';
 import { eq, and, desc, count } from 'drizzle-orm';
-import { CreditManager, TIER_CREDIT_ALLOCATIONS } from './creditManager';
+import { TokenManager, TIER_TOKEN_ALLOCATIONS } from './tokenManager';
 import { createLogger } from '../../lib/logger';
 import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
 import { universalAudit } from '../universalAuditService';
@@ -48,7 +48,7 @@ export const TIER_PRICING = {
     yearlyPrice: BILLING.tiers.free.yearlyPrice,
     stripePriceId: null,
     stripeYearlyPriceId: null,
-    credits: TIER_CREDIT_ALLOCATIONS.free,
+    credits: TIER_TOKEN_ALLOCATIONS.free,
     maxEmployees: BILLING.tiers.free.maxEmployees,
     maxManagers: BILLING.tiers.free.maxManagers,
     adminReplacementValue: BILLING.tiers.free.adminReplacementValue,
@@ -59,7 +59,7 @@ export const TIER_PRICING = {
     stripePriceId: process.env.STRIPE_PRICE_STARTER_MONTHLY || process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_PRICE_STARTER_ANNUAL || process.env.STRIPE_STARTER_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_STARTER_ANNUAL,
     seatOveragePriceId: process.env.STRIPE_PRICE_STARTER_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
-    credits: TIER_CREDIT_ALLOCATIONS.starter,
+    credits: TIER_TOKEN_ALLOCATIONS.starter,
     maxEmployees: BILLING.tiers.starter.maxEmployees,
     maxManagers: BILLING.tiers.starter.maxManagers,
     adminReplacementValue: BILLING.tiers.starter.adminReplacementValue,
@@ -70,7 +70,7 @@ export const TIER_PRICING = {
     stripePriceId: process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY || process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL || process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_PROFESSIONAL_ANNUAL,
     seatOveragePriceId: process.env.STRIPE_PRICE_PROFESSIONAL_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
-    credits: TIER_CREDIT_ALLOCATIONS.professional,
+    credits: TIER_TOKEN_ALLOCATIONS.professional,
     maxEmployees: BILLING.tiers.professional.maxEmployees,
     maxManagers: BILLING.tiers.professional.maxManagers,
     adminReplacementValue: BILLING.tiers.professional.adminReplacementValue,
@@ -81,7 +81,7 @@ export const TIER_PRICING = {
     stripePriceId: process.env.STRIPE_PRICE_BUSINESS_MONTHLY || process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_PRICE_BUSINESS_ANNUAL || process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_BUSINESS_ANNUAL,
     seatOveragePriceId: process.env.STRIPE_PRICE_BUSINESS_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
-    credits: TIER_CREDIT_ALLOCATIONS.business,
+    credits: TIER_TOKEN_ALLOCATIONS.business,
     maxEmployees: BILLING.tiers.business.maxEmployees,
     maxManagers: BILLING.tiers.business.maxManagers,
     adminReplacementValue: BILLING.tiers.business.adminReplacementValue,
@@ -92,7 +92,7 @@ export const TIER_PRICING = {
     stripePriceId: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_ENTERPRISE_ANNUAL,
     seatOveragePriceId: process.env.STRIPE_PRICE_ENTERPRISE_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
-    credits: TIER_CREDIT_ALLOCATIONS.enterprise,
+    credits: TIER_TOKEN_ALLOCATIONS.enterprise,
     maxEmployees: BILLING.tiers.enterprise.maxEmployees,
     maxManagers: BILLING.tiers.enterprise.maxManagers,
     adminReplacementValue: BILLING.tiers.enterprise.adminReplacementValue,
@@ -102,7 +102,7 @@ export const TIER_PRICING = {
     yearlyPrice: 0,
     stripePriceId: process.env.STRIPE_STRATEGIC_MONTHLY_PRICE_ID || null,
     stripeYearlyPriceId: null,
-    credits: TIER_CREDIT_ALLOCATIONS.strategic,
+    credits: TIER_TOKEN_ALLOCATIONS.strategic,
     maxEmployees: 0,
     maxManagers: 0,
     adminReplacementValue: 0,
@@ -127,10 +127,10 @@ export interface SubscriptionResult {
 }
 
 export class SubscriptionManager {
-  private creditManager: CreditManager;
+  private tokenManager: TokenManager;
 
   constructor() {
-    this.creditManager = new CreditManager();
+    this.tokenManager = new TokenManager();
   }
 
   /**
@@ -207,8 +207,7 @@ export class SubscriptionManager {
           })
           .where(eq(workspaces.id, workspaceId));
 
-        // Initialize free tier credits
-        await this.creditManager.initializeCredits(workspaceId, 'free');
+        // Token tracking is event-driven — no initialization needed.
 
         return { success: true };
       }
@@ -264,11 +263,7 @@ export class SubscriptionManager {
         })
         .where(eq(workspaces.id, workspaceId));
 
-      // Upgrade credit allocation to the new paid tier. The workspace already
-      // has a credits record from free-tier initialization, so we use
-      // updateTierAllocation (safe UPDATE) rather than initializeCredits
-      // (plain INSERT that would throw a unique constraint violation).
-      await this.creditManager.updateTierAllocation(workspaceId, tier);
+      // Token allowance is derived from subscriptionTier via TIER_TOKEN_ALLOCATIONS.
 
       // Extract client secret for payment confirmation
       let clientSecret: string | undefined;
@@ -335,10 +330,7 @@ export class SubscriptionManager {
           })
           .where(eq(workspaces.id, workspaceId));
 
-        // Downgrade credits to free tier — preserves purchased credit packs.
-        // Uses downgradeCreditsOnCancellation (safe UPDATE) rather than
-        // initializeCredits (plain INSERT that throws if record already exists).
-        await this.creditManager.downgradeCreditsOnCancellation(workspaceId);
+        // Free-tier token allowance applies automatically once subscriptionTier is 'free'.
 
         platformEventBus.publish({
           type: 'workspace_downgraded',
@@ -399,10 +391,7 @@ export class SubscriptionManager {
         })
         .where(eq(workspaces.id, workspaceId));
 
-      // Update credit allocation to new tier. Safe UPDATE — does not disturb
-      // currentBalance or purchasedCreditsBalance. The next monthly reset will
-      // apply the new monthlyAllocation as the refresh ceiling.
-      await this.creditManager.updateTierAllocation(workspaceId, newTier);
+      // Token allowance is derived from subscriptionTier via TIER_TOKEN_ALLOCATIONS.
 
       // Phase 30: Tier change audit record (non-blocking)
       universalAudit.log({
@@ -524,8 +513,7 @@ export class SubscriptionManager {
           });
         });
 
-        // Downgrade to free tier — preserves purchased credit packs.
-        await this.creditManager.downgradeCreditsOnCancellation(workspaceId);
+        // Free-tier token allowance applies automatically once subscriptionTier is 'free'.
 
         platformEventBus.publish({
           type: 'subscription_cancelled',
@@ -733,11 +721,7 @@ export class SubscriptionManager {
             })
             .where(eq(workspaces.id, workspaceId));
 
-          // Safe UPDATE path — workspace already has a credits record; initializeCredits
-          // (plain INSERT) would throw a unique constraint violation here.
-          if (status === 'active' || status === 'trial') {
-            await this.creditManager.updateTierAllocation(workspaceId, tier, tx);
-          }
+          // Token allowance is derived from subscriptionTier.
         });
         break;
       }
@@ -760,8 +744,7 @@ export class SubscriptionManager {
             })
             .where(eq(workspaces.id, workspaceId));
 
-          // Downgrade to free tier — preserves purchased credit packs.
-          await this.creditManager.downgradeCreditsOnCancellation(workspaceId, tx);
+          // Free-tier token allowance applies automatically once subscriptionTier is 'free'.
         });
 
         // Platform event is a non-DB side-effect — intentionally outside the transaction.
@@ -836,7 +819,7 @@ export class SubscriptionManager {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const creditBalance = await this.creditManager.getBalance(workspaceId);
+    const creditBalance = await this.tokenManager.getBalance(workspaceId);
     
     // Weekly overage billing is handled separately via credit purchases
     // Stripe webhooks for credit_pack purchases already handle payment
@@ -871,7 +854,7 @@ export class SubscriptionManager {
       }
     }
 
-    const creditBalance = await this.creditManager.getBalance(workspaceId);
+    const creditBalance = await this.tokenManager.getBalance(workspaceId);
 
     let trialEndsAt: Date | null = null;
     let trialStartedAt: Date | null = null;

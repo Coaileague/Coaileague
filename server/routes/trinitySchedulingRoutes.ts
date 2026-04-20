@@ -4,7 +4,7 @@ import { db } from "../db";
 import { shifts, employees, clients, supportTickets } from "@shared/schema";
 import { storage } from "../storage";
 import { eq, and, gte, lte, isNull, sql, inArray } from "drizzle-orm";
-import { aiCreditGateway } from "../services/billing/aiCreditGateway";
+import { aiTokenGateway } from "../services/billing/aiTokenGateway";
 import { trinitySchedulerWithSLA } from "../services/trinity/trinitySchedulerWithSLA";
 import { createLogger } from '../lib/logger';
 const log = createLogger('TrinitySchedulingRoutes');

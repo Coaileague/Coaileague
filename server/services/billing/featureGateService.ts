@@ -9,7 +9,7 @@ import {
   type WorkspaceFeatureState
 } from '@shared/schema';
 import { eq, and, gt, sql, or } from 'drizzle-orm';
-import { creditManager, CREDIT_COSTS } from './creditManager';
+import { tokenManager, TOKEN_COSTS } from './tokenManager';
 import { platformEventBus } from '../platformEventBus';
 import { BILLING, TierKey } from '@shared/billingConfig';
 import { SUPPORT_ROLES } from '@shared/platformConfig';
@@ -600,7 +600,7 @@ class FeatureGateService {
 
     const tier = (workspace.subscriptionTier || 'free') as TierKey;
     const tierConfig = BILLING.tiers[tier];
-    const balance = await creditManager.getBalance(workspaceId);
+    const balance = await tokenManager.getBalance(workspaceId);
 
     // Hard stop: insufficient credits — block execution, notify owner, return structured error
     if (balance < creditsNeeded) {

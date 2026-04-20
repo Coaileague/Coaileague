@@ -15,7 +15,7 @@ import {
   platformRoles,
 } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
-import { creditManager } from './billing/creditManager';
+import { tokenManager } from './billing/tokenManager';
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import { 
   safeOrgCode, 
@@ -916,7 +916,7 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
 
         // Credit balance (backed by aiUsageEvents since workspace_credits dropped)
         try {
-          const credits = await creditManager.getCreditsAccount(wsId);
+          const credits = await tokenManager.getWorkspaceState(wsId);
           if (credits) {
             record.creditBalance = credits.currentBalance;
             record.monthlyAllocation = credits.monthlyAllocation || undefined;

@@ -16,7 +16,7 @@ import {
   workspaces,
   users
 } from '@shared/schema';
-import { creditManager } from '../../services/billing/creditManager';
+import { tokenManager } from '../../services/billing/tokenManager';
 import { eq, and, sql, desc, gte } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { createLogger } from '../../lib/logger';
@@ -200,7 +200,7 @@ class SubagentBanker {
   }): Promise<CreditQuote> {
     const { workspaceId, userId, simulation, validityMinutes = 5 } = params;
     
-    const currentBalance = await creditManager.getBalance(workspaceId);
+    const currentBalance = await tokenManager.getBalance(workspaceId);
     const balanceAfter = currentBalance - simulation.totalCredits;
     const canProceed = balanceAfter >= 0;
     const insufficientBy = canProceed ? 0 : Math.abs(balanceAfter);
@@ -254,7 +254,7 @@ class SubagentBanker {
       };
     }
     
-    const freshBalance = await creditManager.getBalance(quote.workspaceId);
+    const freshBalance = await tokenManager.getBalance(quote.workspaceId);
     
     if (freshBalance < quote.simulation.totalCredits) {
       return { 
@@ -315,7 +315,7 @@ class SubagentBanker {
       return { success: true, creditsDeducted: 0, newBalance: 0 };
     }
     
-    const deductResult = await creditManager.deductCredits({
+    const deductResult = await tokenManager.recordUsage({
       workspaceId: reservation.workspaceId,
       userId: reservation.userId,
       featureKey: 'ai_general',
@@ -364,7 +364,7 @@ class SubagentBanker {
   }): Promise<{ success: boolean; newBalance: number; error?: string }> {
     const { workspaceId, userId, credits, actionType, actionId, description } = params;
     
-    const deductResult = await creditManager.deductCredits({
+    const deductResult = await tokenManager.recordUsage({
       workspaceId,
       userId,
       featureKey: 'ai_general',
@@ -393,7 +393,13 @@ class SubagentBanker {
   /**
    * Refill credits (purchase or bonus)
    */
-  async refillCredits(params: {
+  /**
+   * Credit-balance refills are retired. CoAIleague does not sell credits
+   * or hold a per-workspace purchased-credit balance — AI usage is metered
+   * as tokens and overage is billed on the monthly Stripe invoice. The
+   * method is kept as a 410-style stub so legacy callers fail loudly.
+   */
+  async refillCredits(_params: {
     workspaceId: string;
     userId: string;
     credits: number;
@@ -402,70 +408,12 @@ class SubagentBanker {
     packageId?: string;
     description?: string;
   }): Promise<RefillResult> {
-    const { workspaceId, userId, credits, source, stripePaymentId, packageId, description } = params;
-    
-    try {
-      let result;
-      
-      if (source === 'refund') {
-        result = await creditManager.refundCredits({
-          workspaceId,
-          amount: credits,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          reason: description || `Credit refund: ${credits} credits`,
-          issuedByUserId: userId,
-          issuedByName: 'SubagentBanker',
-        });
-      } else {
-        result = await creditManager.addPurchasedCredits({
-          workspaceId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          userId,
-          amount: credits,
-          creditPackId: packageId || `${source}_pack`,
-          stripePaymentIntentId: stripePaymentId || `${source}_${Date.now()}`,
-          amountPaid: 0,
-          description: description || `Credit ${source}: ${credits} credits`,
-        });
-      }
-      
-      if (!result.success) {
-        return {
-          success: false,
-          creditsAdded: 0,
-          newBalance: result.newBalance,
-          error: result.errorMessage || 'Failed to add credits'
-        };
-      }
-      
-      platformEventBus.publish({
-        type: 'announcement',
-        category: 'feature',
-        title: 'Credits Added',
-        description: `${credits} credits added to your account`,
-        workspaceId,
-        userId,
-        metadata: { credits, source, newBalance: result.newBalance }
-      }).catch((err) => log.warn('[subagentBanker] Fire-and-forget failed:', err));
-      
-      log.info(`[SubagentBanker] Refilled ${credits} credits (${source}) for workspace ${workspaceId}. New balance: ${result.newBalance}`);
-      
-      return {
-        success: true,
-        creditsAdded: credits,
-        newBalance: result.newBalance,
-        transactionId: result.transactionId || undefined
-      };
-      
-    } catch (error) {
-      log.error('[SubagentBanker] Refill error:', error);
-      return {
-        success: false,
-        creditsAdded: 0,
-        newBalance: 0,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    return {
+      success: false,
+      creditsAdded: 0,
+      newBalance: 0,
+      error: 'Credit refills are retired. Apply a Stripe invoice credit instead.',
+    };
   }
 
   /**
@@ -485,20 +433,20 @@ class SubagentBanker {
       createdAt: Date;
     }>;
   }> {
-    const creditsAccount = await creditManager.getCreditsAccount(workspaceId);
-    const recentTx = await creditManager.getTransactionHistory(workspaceId, 10, 0);
+    const creditsAccount = await tokenManager.getWorkspaceState(workspaceId);
+    const recentTx = await tokenManager.getUsageHistory(workspaceId, 10);
     
     return {
       balance: creditsAccount?.currentBalance || 0,
-      lifetimePurchased: creditsAccount?.totalCreditsEarned || 0,
-      lifetimeUsed: creditsAccount?.totalCreditsSpent || 0,
+      lifetimePurchased: creditsAccount?.monthlyAllocation || 0,
+      lifetimeUsed: creditsAccount?.totalTokensUsed || 0,
       lifetimeBonuses: 0,
-      isActive: creditsAccount ? !creditsAccount.isSuspended : true,
-      lowBalanceWarning: (creditsAccount?.currentBalance || 0) < (creditsAccount?.lowBalanceAlertThreshold || 50),
+      isActive: true,
+      lowBalanceWarning: (creditsAccount?.currentBalance || 0) < Math.max(50, Math.floor((creditsAccount?.monthlyAllocation || 0) * 0.1)),
       recentTransactions: recentTx.map(tx => ({
-        type: (tx as any).transactionType,
-        credits: tx.amount,
-        description: (tx as any).description || '',
+        type: 'token_usage',
+        credits: tx.tokensUsed,
+        description: tx.description || '',
         createdAt: tx.createdAt || new Date()
       }))
     };
@@ -523,7 +471,7 @@ class SubagentBanker {
   }> {
     const { workspaceId, limit = 50, offset = 0, startDate } = params;
     
-    const transactions = await creditManager.getTransactionHistory(workspaceId, limit, offset);
+    const transactions = await tokenManager.getUsageHistory(workspaceId, limit);
     
     let filteredTransactions = transactions;
     if (startDate) {
@@ -534,13 +482,13 @@ class SubagentBanker {
       id: tx.id,
       workspaceId: tx.workspaceId,
       userId: (tx as any).userId,
-      type: tx.amount >= 0 ? 'credit' : 'debit',
-      amount: Math.abs(tx.amount),
-      balanceAfter: tx.balanceAfter,
-      category: (tx as any).featureKey || (tx as any).transactionType,
-      description: (tx as any).description || '',
-      taskId: (tx as any).relatedEntityId || undefined,
-      metadata: (tx as any).metadata as Record<string, any> | undefined,
+      type: 'debit',
+      amount: tx.tokensUsed,
+      balanceAfter: 0,
+      category: tx.featureKey || tx.featureName || 'token_usage',
+      description: tx.description || '',
+      taskId: undefined,
+      metadata: undefined,
       createdAt: tx.createdAt || new Date()
     }));
     

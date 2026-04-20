@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
-import { creditManager } from "../services/billing/creditManager";
+import { tokenManager } from "../services/billing/tokenManager";
 import type { PoolClient } from "pg";
 import { createLogger } from '../lib/logger';
 const log = createLogger('EquipmentRoutes');
@@ -128,7 +128,7 @@ async function processEquipmentAssignment(req: import("express").Request, res: i
     await db.update(equipmentItems).set({ status: "assigned", updatedAt: new Date() })
       .where(and(eq(equipmentItems.id, validated.equipmentItemId), eq(equipmentItems.workspaceId, workspaceId)));
 
-    creditManager.deductCredits({
+    tokenManager.recordUsage({
       workspaceId, userId: userId || 'system', featureKey: 'equipment_checkout',
       // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: 'Equipment Checkout', description: `Equipment item ${validated.equipmentItemId} checked out`,
@@ -205,7 +205,7 @@ async function processEquipmentReturn(
 
     await client.query('COMMIT');
 
-    creditManager.deductCredits({
+    tokenManager.recordUsage({
       workspaceId, userId: userId || 'system', featureKey: 'equipment_return',
       // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: 'Equipment Return', description: `Equipment item ${assignment.equipment_item_id} returned`,

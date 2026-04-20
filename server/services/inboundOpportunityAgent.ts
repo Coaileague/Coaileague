@@ -35,7 +35,7 @@ import { eq, and, desc, gte, isNull, inArray, sql } from 'drizzle-orm';
 import { APPROVER_ROLES, MANAGER_ROLES } from '@shared/platformConfig';
 import { executionPipeline, type PipelineContext } from './executionPipeline';
 import { meteredGemini } from './billing/meteredGeminiClient';
-import { creditManager } from './billing/creditManager';
+import { tokenManager } from './billing/tokenManager';
 import { emailService } from './emailService';
 import { clientProspectService } from './clientProspectService';
 import { staffingClaimService } from './staffingClaimService';

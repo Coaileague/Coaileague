@@ -5,7 +5,7 @@
  * Trinity's proposed actions before execution, providing a safety net.
  */
 
-import { aiCreditGateway } from '../../billing/aiCreditGateway';
+import { aiTokenGateway } from '../../billing/aiTokenGateway';
 import { aiActionLogger, type AIActionContext } from './aiActionLogger';
 import { type ConfidenceScore, type TrinityOperation } from './trinityConfidenceScorer';
 import { createLogger } from '../../../lib/logger';
@@ -59,7 +59,7 @@ class ClaudeVerificationService {
     const featureKey = 'claude_verification';
     const creditsForVerification = 15;
 
-    const preAuth = await aiCreditGateway.preAuthorize(
+    const preAuth = await aiTokenGateway.preAuthorize(
       // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
@@ -107,7 +107,7 @@ class ClaudeVerificationService {
       const verification = this.parseVerificationResponse(verificationText);
       const creditsUsed = creditsForVerification;
 
-      await aiCreditGateway.finalizeBilling(
+      await aiTokenGateway.finalizeBilling(
         // @ts-expect-error — TS migration: fix in refactoring sprint
         params.context.workspaceId,
         params.context.userId,

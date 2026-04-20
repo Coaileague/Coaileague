@@ -16,7 +16,7 @@ import {
   InsertAiWorkboardTask, 
   AiWorkboardTask,
 } from '@shared/schema';
-import { creditManager } from '../../services/billing/creditManager';
+import { tokenManager } from '../../services/billing/tokenManager';
 import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { publishPlatformUpdate } from '../platformEventBus';
@@ -189,7 +189,7 @@ class WorkboardService {
    */
   private async checkFastModeCredits(workspaceId: string, requiredCredits?: number): Promise<{ hasCredits: boolean; balance: number }> {
     try {
-      const balance = await creditManager.getBalance(workspaceId);
+      const balance = await tokenManager.getBalance(workspaceId);
       const minRequired = requiredCredits ?? FAST_MODE_CONFIG.minCreditsRequired;
       const hasCredits = balance >= minRequired;
 
@@ -454,7 +454,7 @@ class WorkboardService {
         .where(eq(aiWorkboardTasks.id, taskId));
 
       // Step 4: Deduct credits
-      await this.deductCredits(task.workspaceId, (task as any).userId, routingResult.estimatedTokens, taskId);
+      await this.recordUsage(task.workspaceId, (task as any).userId, routingResult.estimatedTokens, taskId);
 
       // Step 5: Update to in_progress
       await this.updateTaskStatus(taskId, 'in_progress', routingResult.assignedAgent);
@@ -635,16 +635,16 @@ class WorkboardService {
   }
 
   /**
-   * Deduct credits for task execution
+   * Record token usage for task execution.
    */
-  private async deductCredits(
+  private async recordUsage(
     workspaceId: string, 
     userId: string, 
     tokens: number,
     taskId: string
   ): Promise<boolean> {
     try {
-      const result = await creditManager.deductCredits({
+      const result = await tokenManager.recordUsage({
         workspaceId,
         userId,
         featureKey: 'ai_general',
@@ -892,7 +892,7 @@ class WorkboardService {
       taskCreated = true;
 
       // Step 3: Deduct credits - Trinity uses credits for convenience
-      const creditDeducted = await this.deductCredits(
+      const creditDeducted = await this.recordUsage(
         workspaceId, 
         userId, 
         routingResult.estimatedTokens, 

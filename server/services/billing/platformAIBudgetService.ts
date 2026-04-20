@@ -16,7 +16,7 @@
 
 import { pool } from '../../db';
 import { createLogger } from '../../lib/logger';
-import { creditManager } from './creditManager';
+import { tokenManager } from './tokenManager';
 import { typedPoolExec } from '../../lib/typedSql';
 
 const log = createLogger('platformAIBudgetService');
