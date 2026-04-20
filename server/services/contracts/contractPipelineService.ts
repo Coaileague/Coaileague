@@ -1439,3 +1439,105 @@ class ContractPipelineService {
 
 // Export singleton
 export const contractPipelineService = new ContractPipelineService();
+
+/**
+ * Daily job — chases pending signatures. Scans all contracts in `sent`/`viewed`/
+ * `partially_signed` state, calculates age since last activity, and emails the
+ * client portal link again at 3/7/14 days. Skips contracts that have hit their
+ * token expiry or are already fully executed / declined.
+ *
+ * Runs via autonomousScheduler cron — safe to invoke manually for testing.
+ */
+export async function sendContractSigningReminders(): Promise<{ scanned: number; sent: number }> {
+  const now = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const reminderAges = [3, 7, 14]; // days
+
+  // Fetch all contracts that still need a signature
+  const pending = await db
+    .select({
+      id: clientContracts.id,
+      workspaceId: clientContracts.workspaceId,
+      title: clientContracts.title,
+      clientEmail: clientContracts.clientEmail,
+      clientName: clientContracts.clientName,
+      status: clientContracts.status,
+      sentAt: clientContracts.sentAt,
+      statusChangedAt: clientContracts.statusChangedAt,
+    })
+    .from(clientContracts)
+    .where(
+      or(
+        eq(clientContracts.status, 'sent'),
+        eq(clientContracts.status, 'viewed'),
+        eq(clientContracts.status, 'partially_signed'),
+      )!,
+    );
+
+  let sent = 0;
+  for (const contract of pending) {
+    if (!contract.clientEmail) continue;
+    const baseline = contract.statusChangedAt || contract.sentAt;
+    if (!baseline) continue;
+    const ageDays = Math.floor((now - new Date(baseline).getTime()) / DAY_MS);
+    if (!reminderAges.includes(ageDays)) continue;
+
+    // Find the latest active access token for this contract so the reminder
+    // link lands on the correct portal URL.
+    const [token] = await db
+      .select({ token: clientContractAccessTokens.token, expiresAt: clientContractAccessTokens.expiresAt })
+      .from(clientContractAccessTokens)
+      .where(eq(clientContractAccessTokens.contractId, contract.id))
+      .orderBy(desc(clientContractAccessTokens.createdAt))
+      .limit(1);
+
+    if (!token?.token) continue;
+    if (token.expiresAt && new Date(token.expiresAt).getTime() < now) continue;
+
+    const baseUrl = process.env.APP_URL || process.env.APP_BASE_URL || 'https://app.coaileague.com';
+    const fullPortalUrl = `${baseUrl}/contract-portal/${token.token}`;
+
+    try {
+      await NotificationDeliveryService.send({
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        type: 'contract_signing_reminder',
+        workspaceId: contract.workspaceId || 'system',
+        recipientUserId: contract.clientEmail,
+        channel: 'email',
+        body: {
+          to: contract.clientEmail,
+          subject: `Reminder: Please Sign — ${contract.title}`,
+          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#ffffff;">
+            <h2 style="color:#1a1a2e;margin-bottom:8px;">Signature Reminder</h2>
+            <p style="color:#374151;font-size:15px;">${contract.clientName ? `Hello ${contract.clientName},` : 'Hello,'}</p>
+            <p style="color:#374151;font-size:15px;">This is a friendly reminder that the following document is still awaiting your signature:</p>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;">
+              <strong style="color:#111827;font-size:16px;">${contract.title}</strong>
+              <p style="color:#6b7280;font-size:13px;margin:8px 0 0 0;">Sent ${ageDays} days ago.</p>
+            </div>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${fullPortalUrl}" style="background:#4f46e5;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;display:inline-block;">Review &amp; Sign Document</a>
+            </div>
+            <p style="color:#6b7280;font-size:12px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">If you have already completed this action, please disregard this reminder.</p>
+          </div>`,
+        },
+        idempotencyKey: `contract-reminder-${contract.id}-${ageDays}d`,
+      });
+      sent++;
+
+      platformEventBus.publish({
+        type: 'contract_signing_reminder_sent',
+        category: 'automation',
+        title: `Signing Reminder Sent: ${contract.title}`,
+        description: `Day-${ageDays} reminder emailed to ${contract.clientEmail}`,
+        workspaceId: contract.workspaceId,
+        metadata: { contractId: contract.id, ageDays },
+      }).catch(err => log.warn('[ContractReminder] event publish failed:', err?.message));
+    } catch (err: any) {
+      log.error(`[ContractReminder] Failed to send reminder for contract ${contract.id}:`, err?.message);
+    }
+  }
+
+  log.info(`[ContractReminder] Scanned ${pending.length} pending contracts, sent ${sent} reminders`);
+  return { scanned: pending.length, sent };
+}

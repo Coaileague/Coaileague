@@ -2723,6 +2723,39 @@ export function startAutonomousScheduler() {
   });
   log.info('Terminated Access Expiry registered', { schedule: '30 4 * * *' });
 
+  // 4b-2. Contract Signing Reminder (Daily 10 AM UTC)
+  // Scans pending contract signatures and sends chase emails at D+3/7/14 with
+  // the portal link. Idempotent via idempotencyKey so reruns are safe.
+  registerJobInfo('Contract Signing Reminder', '0 10 * * *', 'Email pending contract signers at D+3/7/14', true);
+  cron.schedule('0 10 * * *', () => {
+    trackJobExecution('Contract Signing Reminder', async () => {
+      const startTime = Date.now();
+      try {
+        const { sendContractSigningReminders } = await import(
+          './contracts/contractPipelineService'
+        );
+        const result = await sendContractSigningReminders();
+        emitAutomationEvent({
+          jobName: 'Contract Signing Reminder',
+          category: 'automation',
+          success: true,
+          duration: Date.now() - startTime,
+          recordsProcessed: result.sent,
+          details: { scanned: result.scanned, sent: result.sent },
+        });
+      } catch (err: unknown) {
+        emitAutomationEvent({
+          jobName: 'Contract Signing Reminder',
+          category: 'automation',
+          success: false,
+          details: { error: err instanceof Error ? err.message : String(err) },
+        });
+        throw err;
+      }
+    });
+  });
+  log.info('Contract Signing Reminder registered', { schedule: '0 10 * * *' });
+
   // 4c. Hourly Proof-of-Service Prompt (Every 15 minutes)
   // Scans active shift chatrooms and nudges officers who have gone >60 min
   // without submitting a GPS photo. Escalates to supervisors at >120 min.

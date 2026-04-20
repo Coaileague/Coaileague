@@ -2145,6 +2145,69 @@ function EmailWorkflowProgress({
   );
 }
 
+// Built-in email templates for security staffing companies. These fill the
+// {{vars}} with known values from the compose context at paste time.
+const BUILT_IN_EMAIL_TEMPLATES: Array<{
+  id: string;
+  name: string;
+  category: string;
+  subject: string;
+  body: string;
+}> = [
+  {
+    id: 'calloff_ack',
+    name: 'Call-Off Acknowledgment',
+    category: 'Operations',
+    subject: 'Calloff Received — {{shift_date}}',
+    body: `Hi {{officer_name}},\n\nWe received your calloff for your shift on {{shift_date}} at {{site_name}}. Trinity is finding coverage now.\n\nYou will receive a confirmation once coverage is arranged.\n\nThank you,\n{{org_name}} Operations`,
+  },
+  {
+    id: 'shift_offer',
+    name: 'Shift Offer',
+    category: 'Scheduling',
+    subject: 'Shift Available — {{site_name}} on {{shift_date}}',
+    body: `Hi {{officer_name}},\n\nA shift is available at {{site_name}} on {{shift_date}} ({{shift_start}} – {{shift_end}}).\n\nPay: {{hourly_rate}}/hr\nArmed: {{is_armed}}\n\nReply YES to accept. First response wins.\n\n{{org_name}} Scheduling`,
+  },
+  {
+    id: 'client_incident',
+    name: 'Incident Notification',
+    category: 'Client',
+    subject: 'Incident Report — {{site_name}} — {{incident_date}}',
+    body: `Dear {{client_name}},\n\nAn incident occurred at {{site_name}} on {{incident_date}} at {{incident_time}}.\n\nType: {{incident_type}}\nSummary: {{incident_summary}}\n\nA full report is available in your client portal.\n\n{{org_name}} Security`,
+  },
+  {
+    id: 'proposal_cover',
+    name: 'Proposal Cover Letter',
+    category: 'Business Development',
+    subject: 'Security Services Proposal — {{org_name}}',
+    body: `Dear {{prospect_name}},\n\nThank you for the opportunity to submit our proposal for security services at {{location}}.\n\nWe are a licensed Texas security provider (PSB License {{license_number}}) with {{years}} years of experience.\n\nPlease find our attached proposal for your review.\n\nBest regards,\n{{sender_name}}\n{{org_name}}`,
+  },
+  {
+    id: 'onboarding_welcome',
+    name: 'New Officer Welcome',
+    category: 'HR',
+    subject: 'Welcome to {{org_name}} — Onboarding Steps',
+    body: `Hi {{officer_name}},\n\nWelcome to {{org_name}}! We are excited to have you on the team.\n\nYour onboarding link: {{onboarding_url}}\n\nPlease complete your profile, upload your guard card, and review your post orders before your first shift on {{first_shift_date}}.\n\n{{org_name}} HR`,
+  },
+  {
+    id: 'contract_reminder',
+    name: 'Contract Renewal Reminder',
+    category: 'Client',
+    subject: 'Contract Renewal Due — {{site_name}}',
+    body: `Dear {{client_name}},\n\nYour security services contract for {{site_name}} expires on {{expiry_date}}.\n\nTo ensure uninterrupted service, please review and renew your contract:\n{{renewal_url}}\n\n{{org_name}} Accounts`,
+  },
+];
+
+interface ComposeAttachment { name: string; url: string; size: number; type: string }
+
+interface UserEmailAddress {
+  id: string;
+  address: string;
+  display_name: string | null;
+  signature_text: string | null;
+  signature_html: string | null;
+}
+
 function ComposeCanvas({
   onClose,
   onSend,
@@ -2168,7 +2231,7 @@ function ComposeCanvas({
   const [to, setTo] = useState(replyTo?.fromAddress || '');
   const [cc, setCc] = useState('');
   const [subject, setSubject] = useState(
-    replyTo ? `Re: ${replyTo.subject}` : 
+    replyTo ? `Re: ${replyTo.subject}` :
     forwardFrom ? `Fwd: ${forwardFrom.subject}` : ''
   );
   const [body, setBody] = useState(
@@ -2178,6 +2241,32 @@ function ComposeCanvas({
   const [originalBody, setOriginalBody] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [enhanceTone, setEnhanceTone] = useState<'professional' | 'casual' | 'friendly'>('professional');
+  const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [signatureApplied, setSignatureApplied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch user's platform email addresses to surface signatures and
+  // populate the From field with real data.
+  const { data: myAddresses } = useQuery<{ addresses: UserEmailAddress[] }>({
+    queryKey: ['/api/email/addresses/mine'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const primaryAddress = myAddresses?.addresses?.[0];
+
+  // Auto-append the user's signature to the body on first compose of a new
+  // message. We skip replies/forwards (those already have contextual content)
+  // and only apply once so edits aren't clobbered.
+  useEffect(() => {
+    if (signatureApplied) return;
+    if (replyTo || forwardFrom) { setSignatureApplied(true); return; }
+    const sig = primaryAddress?.signature_text;
+    if (sig && sig.trim()) {
+      setBody(prev => prev + (prev ? '\n\n' : '') + '-- \n' + sig);
+      setSignatureApplied(true);
+    }
+  }, [primaryAddress, replyTo, forwardFrom, signatureApplied]);
 
   const handleEnhance = async (tone?: string) => {
     if (!body.trim()) {
@@ -2186,7 +2275,7 @@ function ComposeCanvas({
     }
     setIsEnhancing(true);
     setOriginalBody(body);
-    
+
     try {
       const res = await apiRequest('POST', '/api/external-emails/enhance', { subject, body, tone: tone || enhanceTone });
       const data = await res.json();
@@ -2203,12 +2292,51 @@ function ComposeCanvas({
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      files.forEach(f => formData.append('files', f));
+      const res = await fetch('/api/email-attachments/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+      const data = await res.json();
+      if (Array.isArray(data.attachments)) {
+        setAttachments(prev => [...prev, ...data.attachments]);
+        toast({ title: `Attached ${data.attachments.length} file${data.attachments.length === 1 ? '' : 's'}` });
+      }
+    } catch (err: any) {
+      toast({ title: 'Attachment upload failed', description: err?.message || 'Unknown error', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const applyTemplate = (tpl: typeof BUILT_IN_EMAIL_TEMPLATES[number]) => {
+    // Fill {{vars}} with the user's known context where possible — everything
+    // else is left as a placeholder so the sender can fill it in.
+    const substitutions: Record<string, string> = {
+      org_name: primaryAddress?.display_name?.split(' — ')?.[0] || 'Our Agency',
+      sender_name: primaryAddress?.display_name || '',
+    };
+    const fill = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_m, k) => substitutions[k] ?? `{{${k}}}`);
+    setSubject(fill(tpl.subject));
+    setBody(fill(tpl.body));
+    toast({ title: `Template applied: ${tpl.name}` });
+  };
+
   const handleSend = () => {
     if (!to.trim() || !subject.trim()) {
       toast({ title: 'Please fill in recipient and subject', variant: 'destructive' });
       return;
     }
-    onSend({ to, cc, subject, body });
+    onSend({ to, cc, subject, body, attachments });
   };
 
   return (
@@ -2353,6 +2481,46 @@ function ComposeCanvas({
               >
                 <Link2 className="w-3.5 h-3.5" />
               </Button>
+              <div className="w-px h-5 bg-border mx-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                title="Attach File"
+                disabled={isUploading}
+                className="h-8 w-8 text-muted-foreground"
+                data-testid="button-attach-file"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    title="Templates"
+                    className="h-8 w-8 text-muted-foreground"
+                    data-testid="button-templates"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-72">
+                  {BUILT_IN_EMAIL_TEMPLATES.map(tpl => (
+                    <DropdownMenuItem
+                      key={tpl.id}
+                      onClick={() => applyTemplate(tpl)}
+                      data-testid={`template-${tpl.id}`}
+                      className="flex flex-col items-start gap-0.5 py-2"
+                    >
+                      <span className="font-medium text-sm">{tpl.name}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{tpl.category}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <div className="flex-1" />
               <Button
                 variant="ghost"
@@ -2369,6 +2537,40 @@ function ComposeCanvas({
                 )}
                 Enhance with AI
               </Button>
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            data-testid="input-email-attachment"
+          />
+
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2" data-testid="compose-attachment-list">
+              {attachments.map((att, idx) => (
+                <div
+                  key={`${att.url}-${idx}`}
+                  className="flex items-center gap-1.5 bg-muted rounded px-2 py-1 text-xs"
+                  data-testid={`compose-attachment-${idx}`}
+                >
+                  <Paperclip className="w-3 h-3" />
+                  <span className="truncate max-w-[180px]" title={att.name}>{att.name}</span>
+                  <span className="text-muted-foreground">{(att.size / 1024).toFixed(0)}KB</span>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                    data-testid={`button-remove-attachment-${idx}`}
+                    aria-label="Remove attachment"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
           
@@ -3243,22 +3445,22 @@ export function EmailHubCanvas() {
   const [showWorkflowProgress, setShowWorkflowProgress] = useState(false);
 
   const sendEmailMutation = useMutation({
-    mutationFn: async (data: { to: string; cc: string; subject: string; body: string }) => {
+    mutationFn: async (data: { to: string; cc: string; subject: string; body: string; attachments?: Array<{ name: string; url: string; size: number; type: string }> }) => {
       // Reset workflow state
       setSendingError(null);
       setShowWorkflowProgress(true);
-      
+
       // Step 1: TRIGGER - Initiating send request
       setSendingStep(0);
       await new Promise(r => setTimeout(r, 200));
-      
+
       const recipients = data.to.split(',').map(e => e.trim()).filter(Boolean);
       const isExternal = recipients.some(r => !r.endsWith('@coaileague.internal'));
-      
+
       // Step 2: FETCH - Loading mailbox data
       setSendingStep(1);
       await new Promise(r => setTimeout(r, 200));
-      
+
       // Step 3: VALIDATE - Checking recipients and content
       setSendingStep(2);
       if (recipients.length === 0) {
@@ -3268,11 +3470,11 @@ export function EmailHubCanvas() {
         throw new Error('Subject is required');
       }
       await new Promise(r => setTimeout(r, 200));
-      
+
       // Step 4: PROCESS - Preparing email for delivery
       setSendingStep(3);
       await new Promise(r => setTimeout(r, 200));
-      
+
       let result;
       if (isExternal) {
         const res = await apiRequest('POST', '/api/external-emails', {
@@ -3280,6 +3482,7 @@ export function EmailHubCanvas() {
           ccEmails: data.cc.split(',').map(e => e.trim()).filter(Boolean),
           subject: data.subject,
           bodyHtml: `<div style="white-space: pre-wrap;">${data.body}</div>`,
+          attachments: data.attachments,
         });
         const resData = await res.json();
 
@@ -3300,6 +3503,7 @@ export function EmailHubCanvas() {
           subject: data.subject,
           bodyText: data.body,
           bodyHtml: `<div style="white-space: pre-wrap;">${data.body}</div>`,
+          attachments: data.attachments,
         });
         result = await res.json();
       }
