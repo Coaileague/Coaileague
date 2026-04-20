@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { supportActionsService } from '../services/supportActionsService';
 import { requireAuth } from '../auth';
 import { getUserPlatformRole, getPlatformRoleLevel, PLATFORM_ROLE_HIERARCHY } from '../rbac';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { z } from 'zod';
 import { createLogger } from '../lib/logger';
 import { executeSupportAction, listSupportActions, SupportActionType } from '../services/helpai/supportActionRegistry';
@@ -192,97 +192,21 @@ const issueDiscountSchema = z.object({
   reason: z.string().min(3, 'Reason is required').max(500),
 });
 
-router.post('/api/support/actions/refund-credits', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const executorLevel = (req as any).executorLevel || 0;
-    const executorRole = (req as any).executorPlatformRole;
-
-    if (executorLevel < 5) {
-      return res.status(403).json({ success: false, error: 'Only Root Admin and Deputy Admin can refund credits' });
-    }
-
-    const parsed = refundCreditsSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
-
-    const executorId = (req as any).supportExecutorId;
-    const result = await creditManager.refundCredits({
-      workspaceId: parsed.data.workspaceId,
-      amount: parsed.data.amount,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      reason: parsed.data.reason,
-      issuedByUserId: executorId,
-      issuedByName: `${executorRole}`,
-    });
-
-    res.json(result);
-  } catch (error) {
-    log.error('[SupportActions API] Refund credits error:', error);
-    res.status(500).json({ success: false, error: 'Failed to refund credits' });
-  }
+router.post('/api/support/actions/refund-credits', requireAuth, requireSupportRole, async (_req: AuthenticatedRequest, res: Response) => {
+  res.status(410).json({
+    success: false,
+    error: 'Credit refunds are retired. Apply a Stripe invoice credit or billing adjustment on the next monthly invoice instead.',
+  });
 });
 
-// ── TIERED CREDIT TOP-OFF ────────────────────────────────────────────────────
-// support_agent (level 2):   up to  2,000 credits
-// support_manager (level 3): up to 10,000 credits
-// root/deputy (level 5):     up to 50,000 credits
-
-const topoffCreditsSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
-  amount: z.number().int().min(1, 'Amount must be at least 1 credit').max(50000, 'Maximum top-off is 50,000 credits'),
-  reason: z.string().min(5, 'Reason is required (min 5 characters)').max(500),
-});
-
-router.post('/api/support/actions/topoff-credits', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const executorLevel = (req as any).executorLevel || 0;
-    const executorRole = (req as any).executorPlatformRole;
-
-    const parsed = topoffCreditsSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
-
-    const { amount, workspaceId, reason } = parsed.data;
-
-    // Tiered caps by platform role level
-    const CAP_BY_LEVEL: Record<number, number> = {
-      2: 2000,   // support_agent
-      3: 10000,  // support_manager
-      4: 50000,  // deputy_admin / sysop
-      5: 50000,  // root_admin
-    };
-
-    const cap = CAP_BY_LEVEL[executorLevel] ?? (executorLevel >= 5 ? 50000 : 0);
-    if (cap === 0 || executorLevel < 2) {
-      return res.status(403).json({ success: false, error: 'Insufficient permissions to top off credits' });
-    }
-
-    if (amount > cap) {
-      return res.status(403).json({
-        success: false,
-        error: `Your role (${executorRole}) can top off a maximum of ${cap.toLocaleString()} credits per action. Requested: ${amount.toLocaleString()}.`,
-        cap,
-      });
-    }
-
-    const executorId = (req as any).supportExecutorId;
-    const result = await creditManager.refundCredits({
-      workspaceId,
-      amount,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      reason: `[Top-off by ${executorRole}] ${reason}`,
-      issuedByUserId: executorId,
-      issuedByName: executorRole,
-    });
-
-    res.json({
-      ...result,
-      topoffAmount: amount,
-      appliedCap: cap,
-      executorRole,
-    });
-  } catch (error) {
-    log.error('[SupportActions API] Top-off credits error:', error);
-    res.status(500).json({ success: false, error: 'Failed to top off credits' });
-  }
+// Credit top-off is retired. AI usage is billed as token overage on the
+// monthly Stripe invoice; goodwill gestures should be applied as a Stripe
+// invoice credit rather than a balance top-off.
+router.post('/api/support/actions/topoff-credits', requireAuth, requireSupportRole, async (_req: AuthenticatedRequest, res: Response) => {
+  res.status(410).json({
+    success: false,
+    error: 'Credit top-off is retired. Apply a Stripe invoice credit for goodwill gestures.',
+  });
 });
 
 router.post('/api/support/actions/issue-discount', requireAuth, requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
@@ -327,17 +251,17 @@ router.get('/api/support/actions/credit-history/:workspaceId', requireAuth, requ
   try {
     const executorLevel = (req as any).executorLevel || 0;
     if (executorLevel < 5) {
-      return res.status(403).json({ error: 'Insufficient permissions to view credit history' });
+      return res.status(403).json({ error: 'Insufficient permissions to view token usage history' });
     }
 
     const { workspaceId } = req.params;
-    const history = await (creditManager as any).getRefundHistory(workspaceId);
-    const balance = await creditManager.getBalance(workspaceId);
+    const usage = await tokenManager.getUsageHistory(workspaceId, 200);
+    const balance = await tokenManager.getBalance(workspaceId);
 
-    res.json({ history, currentBalance: balance });
+    res.json({ history: usage, currentBalance: balance });
   } catch (error) {
-    log.error('[SupportActions API] Credit history error:', error);
-    res.status(500).json({ error: 'Failed to get credit history' });
+    log.error('[SupportActions API] Token usage history error:', error);
+    res.status(500).json({ error: 'Failed to get token usage history' });
   }
 });
 

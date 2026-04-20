@@ -13,7 +13,7 @@ import { db } from '../../db';
 import { workspaces, users, subscriptions } from '@shared/schema';
 import { eq, and, lte, isNotNull, isNull } from 'drizzle-orm';
 import { BILLING } from '@shared/billingConfig';
-import { CreditManager } from './creditManager';
+import { TokenManager } from './tokenManager';
 import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
 import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
 import { PLATFORM } from '../../config/platformConfig';
@@ -32,10 +32,10 @@ export interface TrialStatus {
 }
 
 export class TrialManager {
-  private creditManager: CreditManager;
+  private tokenManager: TokenManager;
 
   constructor() {
-    this.creditManager = new CreditManager();
+    this.tokenManager = new TokenManager();
   }
 
   /**
@@ -117,8 +117,7 @@ export class TrialManager {
         })
         .where(eq(workspaces.id, workspaceId));
 
-      // Initialize free tier credits
-      await this.creditManager.initializeCredits(workspaceId, 'free');
+      // Token tracking is event-driven — no initialization needed.
 
       log.info(`[TrialManager] Started trial for workspace ${workspaceId}, ends ${trialEndsAt.toISOString()}`);
 

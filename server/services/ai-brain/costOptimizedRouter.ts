@@ -29,7 +29,7 @@
 import { meteredGptClient, GPT_CREDIT_COSTS } from '../billing/meteredGptClient';
 import { meteredGemini } from '../billing/meteredGeminiClient';
 import { claudeService } from './dualai/claudeService';
-import { creditManager, CREDIT_COSTS } from '../billing/creditManager';
+import { tokenManager, TOKEN_COSTS } from '../billing/tokenManager';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('costOptimizedRouter');
 

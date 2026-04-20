@@ -24,7 +24,7 @@ import {
 import { eq, and, isNull, or, gte } from 'drizzle-orm';
 import { geminiClient, GEMINI_MODELS } from '../providers/geminiClient';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
-import { creditManager } from '../../billing/creditManager';
+import { tokenManager } from '../../billing/tokenManager';
 import { createLogger } from '../../../lib/logger';
 const log = createLogger('dataMigrationAgent');
 
@@ -622,7 +622,7 @@ Only include arrays that have data. If no data found for a category, omit that a
       const hasActiveSubscription = !!subscription;
       
       // Check credits availability for migration operations
-      const creditCheck = await creditManager.checkCredits(
+      const creditCheck = await tokenManager.checkTokens(
         workspaceId, 
         'ai_general', // DMS uses ai_general tier
         userId
@@ -633,7 +633,7 @@ Only include arrays that have data. If no data found for a category, omit that a
       const perRecordCredits = 0.5;
       const estimatedCredits = baseCredits + (migrationConfig.expectedRecordCount || 10) * perRecordCredits;
       
-      const hasCredits = creditCheck.unlimitedCredits || creditCheck.currentBalance >= estimatedCredits;
+      const hasCredits = creditCheck.unlimited || creditCheck.currentBalance >= estimatedCredits;
       
       checks.push({
         name: 'tas_subscription',
@@ -647,7 +647,7 @@ Only include arrays that have data. If no data found for a category, omit that a
       checks.push({
         name: 'tas_credits',
         passed: hasCredits,
-        message: creditCheck.unlimitedCredits 
+        message: creditCheck.unlimited 
           ? 'Unlimited credits (support/owner bypass)'
           : hasCredits 
             ? `Sufficient credits: ${creditCheck.currentBalance} available, ~${estimatedCredits} estimated`

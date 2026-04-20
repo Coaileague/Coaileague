@@ -26,16 +26,11 @@ export interface CreditBalance {
   // Legacy-compat fields (mapped from token data)
   currentBalance: number;
   monthlyAllocation: number;
-  totalCreditsEarned: number;
-  totalCreditsSpent: number;
-  totalCreditsPurchased: number;
   lastResetAt: string | null;
   nextResetAt: string | null;
-  isActive: boolean;
-  isSuspended: boolean;
   tier: string;
   subscriptionTier: string;
-  unlimitedCredits?: boolean;
+  unlimited?: boolean;
   creditsUsedThisPeriod?: number;
 }
 
@@ -49,7 +44,7 @@ export interface CreditAlert {
 const WARNING_THRESHOLD = 0.8;   // 80% token allowance used
 const OVERAGE_THRESHOLD = 1.0;   // 100% = overage begins
 
-export function useCreditMonitor() {
+export function useTokenMonitor() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -60,7 +55,7 @@ export function useCreditMonitor() {
   const alertShownRef = useRef<{ warning: boolean; overage: boolean }>({ warning: false, overage: false });
 
   const { data: balance, isLoading, refetch } = useQuery<CreditBalance>({
-    queryKey: ['/api/credits/balance'],
+    queryKey: ['/api/usage/tokens'],
     enabled: !!user,
     refetchInterval: 60000,
     staleTime: 15000,
@@ -70,7 +65,7 @@ export function useCreditMonitor() {
   const tokensUsed = balance?.tokensUsed ?? balance?.creditsUsedThisPeriod ?? 0;
   const tokensAllowance = balance?.tokensAllowance ?? (balance?.monthlyAllocation !== -1 ? balance?.monthlyAllocation : null) ?? null;
 
-  const isUnlimited = balance?.unlimitedCredits === true ||
+  const isUnlimited = balance?.unlimited === true ||
     balance?.monthlyAllocation === -1 ||
     tokensAllowance === null ||
     (balance?.monthlyAllocation && balance.monthlyAllocation > 999_999_999);
@@ -100,9 +95,9 @@ export function useCreditMonitor() {
     const unsubConnect = bus.subscribe('__ws_connected', sendJoin);
 
     const handleUsageUpdate = (message: any) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/credits/usage-breakdown'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/credits/transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/usage/tokens'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/usage/token-breakdown'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/usage/token-log'] });
       queryClient.invalidateQueries({ queryKey: ['/api/billing/trinity-credits/status'] });
 
       if (message.data?.tokensUsed !== undefined) {

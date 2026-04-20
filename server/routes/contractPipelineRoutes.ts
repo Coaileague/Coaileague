@@ -11,7 +11,7 @@ import { contractPipelineService } from '../services/contracts/contractPipelineS
 import { z } from 'zod';
 import { requireAuth } from '../auth';
 import { hasManagerAccess } from '../rbac';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { requirePlan } from '../tierGuards';
 import { createLogger } from '../lib/logger';
 const log = createLogger('ContractPipelineRoutes');
@@ -333,7 +333,7 @@ router.post('/:id/send', async (req: AuthenticatedRequest, res: Response) => {
     // Deduct 3 credits per document sent for e-signature (contract pipeline)
     const workspaceId = req.workspaceId;
     if (workspaceId) {
-      creditManager.deductCredits({
+      tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
         featureKey: 'document_signing_send',

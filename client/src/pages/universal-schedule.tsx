@@ -567,7 +567,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/usage/tokens', workspaceId] });
       if (data?.orchestrationId) {
         setActiveOrchestrationId(data.orchestrationId);
         setTimeout(() => setActiveOrchestrationId(null), 30000);
@@ -1078,7 +1078,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/usage/tokens', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats', workspaceId] });
       if (data?.orchestrationId) {
         setActiveOrchestrationId(data.orchestrationId);
@@ -1144,7 +1144,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats', workspaceId] });
       queryClient.refetchQueries({ queryKey: ['/api/shifts', workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/usage/tokens', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/billing/usage/summary', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });

@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
 import { eq, and, desc } from "drizzle-orm";
-import { creditManager } from "../services/billing/creditManager";
+import { tokenManager } from "../services/billing/tokenManager";
 import { createLogger } from '../lib/logger';
 const log = createLogger('GuardTourRoutes');
 
@@ -225,7 +225,7 @@ router.post("/scans", async (req: AuthenticatedRequest, res) => {
 
     // Deduct 1 credit per checkpoint scan (GPS/QR/NFC patrol verification)
     // Best-effort — never block a scan on a credit error
-    creditManager.deductCredits({
+    tokenManager.recordUsage({
       workspaceId,
       userId: (req as AuthenticatedRequest).user?.id || 'system',
       featureKey: 'guard_tour_scan',

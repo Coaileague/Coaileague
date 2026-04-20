@@ -21,12 +21,11 @@ import {
   metaCognitionService
 } from '../services/ai-brain/aiOrchestraService';
 import { db } from '../db';
-import { creditManager } from '../services/billing/creditManager';
-import { 
-  aiModels, 
-  aiTaskTypes, 
-  aiTaskQueue, 
-  aiCreditSettings, 
+import { tokenManager } from '../services/billing/tokenManager';
+import {
+  aiModels,
+  aiTaskTypes,
+  aiTaskQueue,
   aiModelHealth,
   workspaces,
 } from '@shared/schema';
@@ -115,7 +114,7 @@ router.get('/task-types', requireAuth, async (req: Request, res: Response) => {
 
     // Get credit balance for credit-based access checking (aiUsageEvents-backed)
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    const availableCredits = await creditManager.getBalance(workspaceId);
+    const availableCredits = await tokenManager.getBalance(workspaceId);
 
     // Fetch all task types from the system
     // NOTE: aiTaskTypes is system reference data (not workspace-specific)
@@ -225,82 +224,20 @@ router.get('/tasks', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/credit-settings', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { workspaceId } = req.session!;
-
-    const [settings] = await db.select()
-      .from(aiCreditSettings)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      .where(eq(aiCreditSettings.workspaceId, workspaceId));
-
-    return res.json({
-      success: true,
-      settings: settings || {
-        autoTopoffEnabled: false,
-        topoffThreshold: 10,
-        topoffAmount: 50,
-        monthlyBudgetLimit: null,
-        currentMonthUsage: 0,
-      },
-    });
-  } catch (error: unknown) {
-    log.error('[AIOrchestra] Get credit settings error:', error);
-    return res.status(500).json({ success: false, error: sanitizeError(error) });
-  }
+// Credit auto-topoff / budget-limit settings are retired. Overage is billed
+// automatically on the monthly Stripe invoice — no per-workspace topoff knobs.
+router.get('/credit-settings', requireAuth, async (_req: Request, res: Response) => {
+  return res.status(410).json({
+    success: false,
+    error: 'Credit auto-topoff settings are retired. Token usage is billed as monthly overage.',
+  });
 });
 
-router.put('/credit-settings', requireOwner, async (req: Request, res: Response) => {
-  try {
-    const schema = z.object({
-      autoTopoffEnabled: z.boolean(),
-      topoffThreshold: z.number().positive().optional(),
-      topoffAmount: z.number().positive().optional(),
-      monthlyBudgetLimit: z.number().positive().optional(),
-      topoffPaymentMethodId: z.string().optional(),
-    });
-
-    const data = schema.parse(req.body);
-    const { workspaceId } = req.session!;
-    const { autoTopoffEnabled, topoffThreshold, topoffAmount, monthlyBudgetLimit, topoffPaymentMethodId } = data;
-
-    const [existing] = await db.select()
-      .from(aiCreditSettings)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      .where(eq(aiCreditSettings.workspaceId, workspaceId));
-
-    if (existing) {
-      await db.update(aiCreditSettings)
-        .set({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          autoTopoffEnabled,
-          topoffThreshold: topoffThreshold?.toString(),
-          topoffAmount: topoffAmount?.toString(),
-          monthlyBudgetLimit: monthlyBudgetLimit?.toString(),
-          topoffPaymentMethodId,
-          updatedAt: new Date(),
-        })
-        .where(eq(aiCreditSettings.id, existing.id));
-    } else {
-      await db.insert(aiCreditSettings).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        workspaceId,
-        autoTopoffEnabled,
-        topoffThreshold: topoffThreshold?.toString(),
-        topoffAmount: topoffAmount?.toString(),
-        monthlyBudgetLimit: monthlyBudgetLimit?.toString(),
-        topoffPaymentMethodId,
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Credit settings updated',
-    });
-  } catch (error: unknown) {
-    log.error('[AIOrchestra] Update credit settings error:', error);
-    return res.status(400).json({ success: false, error: sanitizeError(error) });
-  }
+router.put('/credit-settings', requireOwner, async (_req: Request, res: Response) => {
+  return res.status(410).json({
+    success: false,
+    error: 'Credit auto-topoff settings are retired. Token usage is billed as monthly overage.',
+  });
 });
 
 router.get('/providers/status', requireAuth, async (_req: Request, res: Response) => {

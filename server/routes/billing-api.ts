@@ -9,7 +9,7 @@ import {
   accountStateService,
   featureToggleService,
 } from '../services/billing';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { featureGateService } from '../services/billing/featureGateService';
 import { db, pool } from '../db';
 import { TOKEN_ALLOWANCES, TOKEN_OVERAGE_RATE_CENTS_PER_100K } from '../../shared/billingConfig';
@@ -130,7 +130,7 @@ billingRouter.get('/subscription', async (req: AuthenticatedRequest, res: Respon
       ? await db.select().from(subscriptionTiers).where(eq(subscriptionTiers.id, sub.tierId)).limit(1)
       : [];
 
-    const credits = await creditManager.getCreditsAccount(workspaceId);
+    const credits = await tokenManager.getWorkspaceState(workspaceId);
 
     const [empRow] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -361,7 +361,7 @@ billingRouter.get('/usage/summary', async (req: AuthenticatedRequest, res: Respo
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const currentBalance = await creditManager.getBalance(workspaceId);
+    const currentBalance = await tokenManager.getBalance(workspaceId);
     
     const startDate = new Date();
     startDate.setDate(1);
@@ -461,15 +461,16 @@ billingRouter.get('/credits', async (req: AuthenticatedRequest, res: Response, n
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const credits = await creditManager.getCreditsAccount(workspaceId);
-    
-    if (!credits) {
-      // Initialize if not exists
-      const newCredits = await creditManager.initializeCredits(workspaceId, 'free');
-      return res.json(newCredits);
-    }
-
-    res.json(credits);
+    const state = await tokenManager.getWorkspaceState(workspaceId);
+    res.json(state ?? {
+      workspaceId,
+      currentBalance: 0,
+      monthlyAllocation: 0,
+      totalTokensUsed: 0,
+      inOverage: false,
+      overageTokens: 0,
+      overageDollars: 0,
+    });
   } catch (error: unknown) {
     log.error('Failed to get credits:', error);
     res.status(500).json({ error: sanitizeError(error) });
@@ -487,7 +488,7 @@ billingRouter.get('/credits/balance', async (req: AuthenticatedRequest, res: Res
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const account = await creditManager.getCreditsAccount(workspaceId);
+    const account = await tokenManager.getWorkspaceState(workspaceId);
     const currentBalance = account?.currentBalance || 0;
 
     res.json({
@@ -522,7 +523,7 @@ billingRouter.get('/transactions', async (req: AuthenticatedRequest, res: Respon
       offset: z.string().transform(s => parseInt(s) || 0).optional(),
     }).parse(req.query);
     
-    const transactions = await creditManager.getTransactionHistory(workspaceId, limit, offset);
+    const transactions = await tokenManager.getUsageHistory(workspaceId, limit);
 
     res.json(transactions);
   } catch (error: unknown) {
@@ -553,7 +554,7 @@ billingRouter.get('/credits/auto-recharge', async (req: AuthenticatedRequest, re
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const config = await (creditManager as any).getAutoRechargeConfig(workspaceId);
+    const config = await (tokenManager as any).getAutoRechargeConfig(workspaceId);
     res.json({ success: true, config });
   } catch (error: unknown) {
     log.error('Failed to get auto-recharge config:', error);
@@ -595,7 +596,7 @@ billingRouter.post('/credits/auto-recharge', async (req: AuthenticatedRequest, r
       creditPackId: z.string().optional(),
     }).parse(req.body);
 
-    const updated = await (creditManager as any).configureAutoRecharge(
+    const updated = await (tokenManager as any).configureAutoRecharge(
       workspaceId,
       input.enabled,
       input.threshold,
@@ -1524,11 +1525,7 @@ billingRouter.get('/trinity-credits/transactions', async (req: AuthenticatedRequ
     const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 50), 500);
     const offset = parseInt(req.query.offset as string) || 0;
 
-    const transactions = await creditManager.getTransactionHistory(
-      workspaceId,
-      limit,
-      offset
-    );
+    const transactions = await tokenManager.getUsageHistory(workspaceId, limit);
     res.json({ success: true, transactions });
   } catch (error: unknown) {
     log.error('Failed to get transactions:', error);
@@ -1559,7 +1556,7 @@ billingRouter.post('/trinity-credits/redeem-code', async (req: AuthenticatedRequ
       code: z.string().min(4),
     }).parse(req.body);
 
-    const result = await (creditManager as any).redeemUnlockCode(
+    const result = await (tokenManager as any).redeemUnlockCode(
       workspaceId,
       input.code,
       userId
@@ -1755,7 +1752,7 @@ billingRouter.post('/trinity-credits/generate-code', async (req: AuthenticatedRe
       maxRedemptions: z.number().optional(),
     }).parse(req.body);
 
-    const code = await (creditManager as any).generateUnlockCode(
+    const code = await (tokenManager as any).generateUnlockCode(
       input.codeType,
       userId,
       input

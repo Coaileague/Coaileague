@@ -184,8 +184,8 @@ export class IntelligentSchedulerSkill extends BaseSkill {
       });
 
       try {
-        const { creditManager } = await import('../../../services/billing/creditManager');
-        await creditManager.deductCredits({
+        const { tokenManager } = await import('../../../services/billing/tokenManager');
+        await tokenManager.recordUsage({
           workspaceId: context.workspaceId,
           userId: context.userId || 'ai-brain',
           featureKey: 'ai_shift_matching',

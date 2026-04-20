@@ -14,8 +14,8 @@ import {
 } from '../helpai/platformActionHub';
 import { serviceController, featureToggleManager, consoleCommandExecutor, endUserBotSupport, supportStaffAssistant } from './orchestratorCapabilities';
 import { db } from '../../db';
-import { aiCreditGateway } from '../billing/aiTokenGateway';
-import { CREDIT_COSTS } from '../billing/creditManager';
+import { aiTokenGateway } from '../billing/aiTokenGateway';
+import { TOKEN_COSTS } from '../billing/tokenManager';
 import { FAST_MODE_TIERS, type FastModeTier } from './fastModeService';
 import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm';
 import {
@@ -443,7 +443,7 @@ class AIBrainActionRegistry {
         try {
           // Determine execution mode and credit multiplier
           const executionMode = (request.payload?.executionMode as FastModeTier | 'normal') || 'normal';
-          const baseCost = CREDIT_COSTS.ai_open_shift_fill;
+          const baseCost = TOKEN_COSTS.ai_open_shift_fill;
           let creditMultiplier = 1.0;
           
           if (executionMode !== 'normal' && FAST_MODE_TIERS[executionMode as FastModeTier]) {
@@ -453,7 +453,7 @@ class AIBrainActionRegistry {
           const totalCredits = Math.ceil(baseCost * creditMultiplier);
           
           // Check and deduct credits before proceeding (with multiplier for FAST modes)
-          const creditAuth = await aiCreditGateway.preAuthorize(request.workspaceId!, request.userId, 'ai_open_shift_fill');
+          const creditAuth = await aiTokenGateway.preAuthorize(request.workspaceId!, request.userId, 'ai_open_shift_fill');
           
           if (!creditAuth.authorized) {
             return createResult(request.actionId, false, 
@@ -477,7 +477,7 @@ class AIBrainActionRegistry {
           }).returning();
 
           // Bill AFTER shift is created — credits are only deducted on successful mutation
-          await aiCreditGateway.finalizeBilling(request.workspaceId!, request.userId, 'ai_open_shift_fill', totalCredits);
+          await aiTokenGateway.finalizeBilling(request.workspaceId!, request.userId, 'ai_open_shift_fill', totalCredits);
           log.info(`[ActionRegistry] Charged ${totalCredits} credits for open shift fill (${executionMode} mode)`);
           const { UsageMeteringService } = await import('../billing/usageMetering');
           const usageMeteringService = new UsageMeteringService();

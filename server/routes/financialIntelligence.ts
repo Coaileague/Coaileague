@@ -4,7 +4,7 @@
  * P&L Dashboard and Financial Analytics endpoints
  * 
  * Access Control: Owner and Finance Admin roles only
- * Billing: AI operations charged to workspace via creditManager
+ * Billing: AI operations charged to workspace via tokenManager
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
@@ -114,7 +114,7 @@ router.get('/pl/summary', requireOwner, async (req: Request, res: Response, next
 /**
  * GET /api/finance/pl/insights
  * Generate AI-powered insights for P&L data
- * Billed to workspace via creditManager
+ * Billed to workspace via tokenManager
  */
 router.get('/pl/insights', requireOwner, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -448,7 +448,7 @@ router.get('/pl/consolidated', requireOwner, async (req: Request, res: Response,
 /**
  * GET /api/finance/pl/client/:clientId/recommendation
  * Get AI recommendation for specific client
- * Billed to workspace via creditManager
+ * Billed to workspace via tokenManager
  */
 router.get('/pl/client/:clientId/recommendation', requireOwner, async (req: Request, res: Response, next: NextFunction) => {
   try {

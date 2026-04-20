@@ -21,7 +21,6 @@ import {
   employees,
   workspaces,
   aiSuggestions,
-  trinityCreditTransactions,
 } from '@shared/schema';
 import { TTLCache } from './cacheUtils';
 import crypto from 'crypto';
@@ -694,22 +693,19 @@ class SwarmCommanderService {
           gte(aiWorkboardTasks.createdAt, startDate)
         ));
       
-      // Get real API costs from credit transactions for accurate ROI
+      // Get real API costs from token usage log for accurate ROI.
       let realApiCost = 0;
       try {
-        const [creditSum] = await db
-          .select({
-            total: sql<number>`COALESCE(SUM(ABS(${(trinityCreditTransactions as any).amount})), 0)`,
-          })
-          .from(trinityCreditTransactions)
-          .where(and(
-            eq(trinityCreditTransactions.workspaceId, workspaceId),
-            eq(trinityCreditTransactions.transactionType, 'debit'),
-            gte(trinityCreditTransactions.createdAt, startDate)
-          ));
-        realApiCost = (creditSum?.total || 0) * 0.01; // Convert credits to dollars
+        const rows = await db.execute<{ total: number }>(sql`
+          SELECT COALESCE(SUM(tokens_total), 0)::int AS total
+          FROM token_usage_log
+          WHERE workspace_id = ${workspaceId}
+            AND timestamp >= ${startDate.toISOString()}
+        `);
+        const total = Number((rows as any)?.rows?.[0]?.total ?? 0);
+        realApiCost = total * 0.01; // 1 token-unit = $0.01
       } catch {
-        // Credit query failed - continue with zero cost
+        // Non-fatal — fall through with zero cost.
       }
 
       // Calculate metrics per category

@@ -559,10 +559,10 @@ async function phase7_credit_chain() {
   console.log('PHASE 7: Credit Consumption Chain');
   console.log('════════════════════════════════════════');
 
-  const creditMgrContent = readFile('server/services/billing/creditManager.ts');
+  const creditMgrContent = readFile('server/services/billing/tokenManager.ts');
 
-  // CREDIT_COSTS export
-  record({ name: 'CREDIT_COSTS Map Exported', phase: 'CREDITS', passed: creditMgrContent.includes('CREDIT_COSTS'), details: 'CREDIT_COSTS constant found', severity: 'critical' });
+  // TOKEN_COSTS export
+  record({ name: 'TOKEN_COSTS Map Exported', phase: 'CREDITS', passed: creditMgrContent.includes('TOKEN_COSTS'), details: 'TOKEN_COSTS constant found', severity: 'critical' });
 
   // deductCredits function (actual name in codebase)
   record({ name: 'deductCredits Function', phase: 'CREDITS', passed: creditMgrContent.includes('deductCredits'), details: 'Credit deduction function present', severity: 'critical' });
@@ -570,8 +570,8 @@ async function phase7_credit_chain() {
   // getBalance function
   record({ name: 'getBalance Function', phase: 'CREDITS', passed: creditMgrContent.includes('getBalance'), details: 'Balance query function present', severity: 'high' });
 
-  // TIER_CREDIT_ALLOCATIONS
-  record({ name: 'TIER_CREDIT_ALLOCATIONS Defined', phase: 'CREDITS', passed: creditMgrContent.includes('TIER_CREDIT_ALLOCATIONS'), details: 'Tier credit mapping present', severity: 'high' });
+  // TIER_TOKEN_ALLOCATIONS
+  record({ name: 'TIER_TOKEN_ALLOCATIONS Defined', phase: 'CREDITS', passed: creditMgrContent.includes('TIER_TOKEN_ALLOCATIONS'), details: 'Tier credit mapping present', severity: 'high' });
 
   // Credit transaction log
   try {
@@ -589,7 +589,7 @@ async function phase7_credit_chain() {
       name: `Credit Cost: ${feat}`,
       phase: 'CREDITS',
       passed: creditMgrContent.includes(feat),
-      details: creditMgrContent.includes(feat) ? 'Cost defined' : 'MISSING from CREDIT_COSTS',
+      details: creditMgrContent.includes(feat) ? 'Cost defined' : 'MISSING from TOKEN_COSTS',
       severity: 'high',
     });
   }
@@ -911,7 +911,7 @@ async function phase14_name_consistency() {
 
   const premFeatContent = readFile('shared/config/premiumFeatures.ts');
   const billingConfigContent = readFile('shared/billingConfig.ts');
-  const creditMgrContent = readFile('server/services/billing/creditManager.ts');
+  const creditMgrContent = readFile('server/services/billing/tokenManager.ts');
 
   // Key features in premiumFeatures AND billingConfig
   const featureChecks: Array<{ name: string; premFeat: string; billingConfig: string }> = [

@@ -11,7 +11,7 @@ import {
   workspaces,
   aiWorkboardTasks,
 } from '@shared/schema';
-import { creditManager } from "./billing/creditManager";
+import { tokenManager } from "./billing/tokenManager";
 import { eq, and, gte, lte, sql, count, sum, avg, desc, asc, ne } from "drizzle-orm";
 
 export interface CreditUsageSummary {
@@ -143,7 +143,7 @@ class AdvancedUsageAnalyticsService {
   }
 
   async getCreditSummary(workspaceId: string): Promise<CreditUsageSummary> {
-    const creditRecord = await creditManager.getCreditsAccount(workspaceId);
+    const creditRecord = await tokenManager.getWorkspaceState(workspaceId);
 
     if (!creditRecord) {
       return {
@@ -171,11 +171,11 @@ class AdvancedUsageAnalyticsService {
 
     return {
       currentBalance: creditRecord.currentBalance,
-      lifetimePurchased: creditRecord.totalCreditsEarned || 0,
-      lifetimeUsed: creditRecord.totalCreditsSpent || 0,
+      lifetimePurchased: creditRecord.monthlyAllocation || 0,
+      lifetimeUsed: creditRecord.totalTokensUsed || 0,
       averageDailyUsage: Math.round(averageDailyUsage * 10) / 10,
       projectedDaysRemaining,
-      lowBalanceWarning: creditRecord.currentBalance < (creditRecord.lowBalanceAlertThreshold || 50),
+      lowBalanceWarning: creditRecord.currentBalance < Math.max(50, Math.floor((creditRecord.monthlyAllocation || 0) * 0.1)),
       lastPurchaseDate: null,
       lastUsageDate: (creditRecord as any).lastUsedAt?.toISOString() || null
     };
@@ -319,7 +319,7 @@ class AdvancedUsageAnalyticsService {
   }
 
   async getRecentTransactions(workspaceId: string, limit: number = 20): Promise<CreditTransaction[]> {
-    const history = await creditManager.getTransactionHistory(workspaceId, limit);
+    const history = await tokenManager.getUsageHistory(workspaceId, limit);
     return history.map(t => ({
       id: t.id,
       type: (t as any).transactionType || 'deduction',

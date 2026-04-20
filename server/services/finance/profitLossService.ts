@@ -10,7 +10,7 @@
  * - Integration with existing TrinityQuickBooksSnapshot
  * - Caching via financialSnapshots table
  * 
- * Credit Billing: All AI operations use creditManager with workspace billing
+ * Credit Billing: All AI operations use tokenManager with workspace billing
  */
 
 import { db } from '../../db';

@@ -23,7 +23,7 @@ import {
 } from '@shared/schema';
 import { usageMeteringService } from '../billing/usageMetering';
 import { meteredGemini } from '../billing/meteredGeminiClient';
-import { aiCreditGateway } from '../billing/aiTokenGateway';
+import { aiTokenGateway } from '../billing/aiTokenGateway';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('aiExpenseCategorizationService');
 
@@ -124,7 +124,7 @@ class AIExpenseCategorizationService {
     }
 
     try {
-      const authResult = await aiCreditGateway.preAuthorize(
+      const authResult = await aiTokenGateway.preAuthorize(
         // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
         userId,
@@ -160,7 +160,7 @@ If any field cannot be determined, use null. Focus on accuracy over completeness
 
       const ocrUsage = response.usageMetadata;
       const totalTokens = (ocrUsage?.promptTokenCount || 0) + (ocrUsage?.candidatesTokenCount || 0);
-      await aiCreditGateway.finalizeBilling(
+      await aiTokenGateway.finalizeBilling(
         // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
         userId,

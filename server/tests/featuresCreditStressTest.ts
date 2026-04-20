@@ -1,9 +1,9 @@
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
-import { PREMIUM_FEATURES, CREDIT_PACKAGES, canAccessFeature, getFeatureCreditCost, isPremiumFeature, isEliteFeature, isFeatureIncludedInTier, getMonthlyLimit } from '@shared/config/premiumFeatures';
+import { PREMIUM_FEATURES, CREDIT_PACKAGES, canAccessFeature, getFeatureTokenCost, isPremiumFeature, isEliteFeature, isFeatureIncludedInTier, getMonthlyLimit } from '@shared/config/premiumFeatures';
 import { BILLING } from '@shared/billingConfig';
 // @ts-expect-error — TS migration: fix in refactoring sprint
-import { CREDIT_COSTS, TIER_CREDIT_ALLOCATIONS, CREDIT_EXEMPT_FEATURES, SUPPORT_POOL_FEATURES, PER_UNIT_FEATURES } from '../services/billing/creditManager';
+import { TOKEN_COSTS, TIER_TOKEN_ALLOCATIONS, TOKEN_FREE_FEATURES, SUPPORT_POOL_FEATURES, PER_UNIT_FEATURES } from '../services/billing/tokenManager';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { typedQuery } from '../lib/typedSql';
 
@@ -109,10 +109,10 @@ async function phase2_credit_costs_defined() {
   console.log('PHASE 2: Credit Costs Completeness');
   console.log('════════════════════════════════════════');
 
-  const creditCostKeys = Object.keys(CREDIT_COSTS);
+  const creditCostKeys = Object.keys(TOKEN_COSTS);
   record({
     name: 'Credit Costs Table Has Entries',
-    phase: 'CREDIT_COSTS',
+    phase: 'TOKEN_COSTS',
     passed: creditCostKeys.length >= 50,
     details: `${creditCostKeys.length} credit cost entries (minimum 50 expected)`,
     severity: 'critical'
@@ -131,10 +131,10 @@ async function phase2_credit_costs_defined() {
     'advanced_analytics', 'incident_management', 'client_billing'
   ];
 
-  const missingKeys = requiredCreditKeys.filter(k => !(k in CREDIT_COSTS));
+  const missingKeys = requiredCreditKeys.filter(k => !(k in TOKEN_COSTS));
   record({
     name: 'Required Credit Cost Keys Present',
-    phase: 'CREDIT_COSTS',
+    phase: 'TOKEN_COSTS',
     passed: missingKeys.length === 0,
     details: missingKeys.length === 0
       ? `All ${requiredCreditKeys.length} required credit cost keys found`
@@ -146,7 +146,7 @@ async function phase2_credit_costs_defined() {
   const billingKeys = Object.keys(billingCreditCosts);
   record({
     name: 'billingConfig.ts creditCosts Has Entries',
-    phase: 'CREDIT_COSTS',
+    phase: 'TOKEN_COSTS',
     passed: billingKeys.length >= 20,
     details: `${billingKeys.length} entries in billingConfig.creditCosts`,
     severity: 'high'
@@ -162,26 +162,26 @@ async function phase2_credit_costs_defined() {
 
   let syncMismatches: string[] = [];
   for (const key of sharedKeys) {
-    const cmCost = (CREDIT_COSTS as any)[key];
+    const cmCost = (TOKEN_COSTS as any)[key];
     const bcCost = billingCreditCosts[key];
     if (cmCost !== undefined && bcCost !== undefined && cmCost !== bcCost) {
-      syncMismatches.push(`${key}: creditManager=${cmCost} vs billingConfig=${bcCost}`);
+      syncMismatches.push(`${key}: tokenManager=${cmCost} vs billingConfig=${bcCost}`);
     }
   }
 
   record({
     name: 'Credit Costs Sync Between Files',
-    phase: 'CREDIT_COSTS',
+    phase: 'TOKEN_COSTS',
     passed: syncMismatches.length === 0,
     details: syncMismatches.length === 0
-      ? 'creditManager.ts and billingConfig.ts credit costs are in sync'
+      ? 'tokenManager.ts and billingConfig.ts credit costs are in sync'
       : `Mismatches: ${syncMismatches.join('; ')}`,
     severity: 'high'
   });
 
   let zeroCostFeatures = 0;
   let paidFeatures = 0;
-  for (const [key, cost] of Object.entries(CREDIT_COSTS)) {
+  for (const [key, cost] of Object.entries(TOKEN_COSTS)) {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     if (cost === 0) zeroCostFeatures++;
     else paidFeatures++;
@@ -189,7 +189,7 @@ async function phase2_credit_costs_defined() {
 
   record({
     name: 'Credit Cost Distribution',
-    phase: 'CREDIT_COSTS',
+    phase: 'TOKEN_COSTS',
     passed: paidFeatures > zeroCostFeatures,
     details: `${paidFeatures} paid features, ${zeroCostFeatures} included ($0) features`,
     severity: 'info'
@@ -223,9 +223,9 @@ async function phase3_subscription_tiers() {
     });
   }
 
-  const tierAllocations = TIER_CREDIT_ALLOCATIONS;
+  const tierAllocations = TIER_TOKEN_ALLOCATIONS;
   record({
-    name: 'TIER_CREDIT_ALLOCATIONS Match billingConfig',
+    name: 'TIER_TOKEN_ALLOCATIONS Match billingConfig',
     phase: 'SUBSCRIPTION_TIERS',
     // @ts-expect-error — TS migration: fix in refactoring sprint
     passed: tierAllocations.free === 250 && tierAllocations.starter === 2500 && tierAllocations.professional === 10000 && tierAllocations.enterprise === 50000,
@@ -543,8 +543,8 @@ async function phase9_exemptions_and_pool() {
   record({
     name: 'Credit Exempt Features Minimal',
     phase: 'EXEMPTIONS',
-    passed: CREDIT_EXEMPT_FEATURES.size <= 5,
-    details: `${CREDIT_EXEMPT_FEATURES.size} exempt features (should be minimal): ${[...CREDIT_EXEMPT_FEATURES].join(', ')}`,
+    passed: TOKEN_FREE_FEATURES.size <= 5,
+    details: `${TOKEN_FREE_FEATURES.size} exempt features (should be minimal): ${[...TOKEN_FREE_FEATURES].join(', ')}`,
     severity: 'high'
   });
 
@@ -556,7 +556,7 @@ async function phase9_exemptions_and_pool() {
     severity: 'medium'
   });
 
-  const exemptNotInPool = [...CREDIT_EXEMPT_FEATURES].filter(f => SUPPORT_POOL_FEATURES.has(f));
+  const exemptNotInPool = [...TOKEN_FREE_FEATURES].filter(f => SUPPORT_POOL_FEATURES.has(f));
   record({
     name: 'Exempt Features Not Double-Listed in Pool',
     phase: 'EXEMPTIONS',
@@ -722,19 +722,19 @@ async function phase11_per_unit_billing_validation() {
   let allPerUnitHaveCost = true;
   let perUnitNoCost: string[] = [];
   for (const key of perUnitKeys) {
-    if (!((key in CREDIT_COSTS) && (CREDIT_COSTS as any)[key] >= 0)) {
+    if (!((key in TOKEN_COSTS) && (TOKEN_COSTS as any)[key] >= 0)) {
       allPerUnitHaveCost = false;
       perUnitNoCost.push(key);
     }
   }
 
   record({
-    name: 'All Per-Unit Features Have CREDIT_COSTS Entry',
+    name: 'All Per-Unit Features Have TOKEN_COSTS Entry',
     phase: 'PER_UNIT_BILLING',
     passed: allPerUnitHaveCost,
     details: allPerUnitHaveCost
       ? `All ${perUnitKeys.length} per-unit features have credit cost defined`
-      : `Missing CREDIT_COSTS: ${perUnitNoCost.join(', ')}`,
+      : `Missing TOKEN_COSTS: ${perUnitNoCost.join(', ')}`,
     severity: 'critical'
   });
 }
@@ -745,17 +745,17 @@ async function phase12_credit_deduction_math() {
   console.log('════════════════════════════════════════');
 
   const testCases = [
-    { feature: 'ai_scheduling', units: 5, expectedCost: (CREDIT_COSTS as any)['ai_scheduling'] * 5, label: '5 shifts scheduled' },
-    { feature: 'ai_payroll_processing', units: 10, expectedCost: (CREDIT_COSTS as any)['ai_payroll_processing'] * 10, label: '10 employees payroll' },
-    { feature: 'guard_tour_scan', units: 20, expectedCost: (CREDIT_COSTS as any)['guard_tour_scan'] * 20, label: '20 checkpoint scans' },
-    { feature: 'document_signing_send', units: 3, expectedCost: (CREDIT_COSTS as any)['document_signing_send'] * 3, label: '3 docs sent' },
-    { feature: 'equipment_checkout', units: 1, expectedCost: (CREDIT_COSTS as any)['equipment_checkout'] * 1, label: '1 equipment checkout' },
-    { feature: 'equipment_return', units: 1, expectedCost: (CREDIT_COSTS as any)['equipment_return'] * 1, label: '1 equipment return' },
-    { feature: 'employee_behavior_scoring', units: 15, expectedCost: (CREDIT_COSTS as any)['employee_behavior_scoring'] * 15, label: '15 employees scored' },
+    { feature: 'ai_scheduling', units: 5, expectedCost: (TOKEN_COSTS as any)['ai_scheduling'] * 5, label: '5 shifts scheduled' },
+    { feature: 'ai_payroll_processing', units: 10, expectedCost: (TOKEN_COSTS as any)['ai_payroll_processing'] * 10, label: '10 employees payroll' },
+    { feature: 'guard_tour_scan', units: 20, expectedCost: (TOKEN_COSTS as any)['guard_tour_scan'] * 20, label: '20 checkpoint scans' },
+    { feature: 'document_signing_send', units: 3, expectedCost: (TOKEN_COSTS as any)['document_signing_send'] * 3, label: '3 docs sent' },
+    { feature: 'equipment_checkout', units: 1, expectedCost: (TOKEN_COSTS as any)['equipment_checkout'] * 1, label: '1 equipment checkout' },
+    { feature: 'equipment_return', units: 1, expectedCost: (TOKEN_COSTS as any)['equipment_return'] * 1, label: '1 equipment return' },
+    { feature: 'employee_behavior_scoring', units: 15, expectedCost: (TOKEN_COSTS as any)['employee_behavior_scoring'] * 15, label: '15 employees scored' },
   ];
 
   for (const tc of testCases) {
-    const baseCost = (CREDIT_COSTS as any)[tc.feature];
+    const baseCost = (TOKEN_COSTS as any)[tc.feature];
     const calculated = baseCost * tc.units;
     record({
       name: `Deduction Math: ${tc.label}`,
@@ -767,8 +767,8 @@ async function phase12_credit_deduction_math() {
   }
 
   const premiumMultiplier = 2;
-  const claudeBase = (CREDIT_COSTS as any)['claude_analysis'];
-  const claudeStrategic = (CREDIT_COSTS as any)['claude_strategic'];
+  const claudeBase = (TOKEN_COSTS as any)['claude_analysis'];
+  const claudeStrategic = (TOKEN_COSTS as any)['claude_strategic'];
   record({
     name: 'Premium AI Features Have Higher Costs',
     phase: 'DEDUCTION_MATH',
@@ -777,8 +777,8 @@ async function phase12_credit_deduction_math() {
     severity: 'high'
   });
 
-  const tierBudgets = TIER_CREDIT_ALLOCATIONS;
-  const schedulingCostPer = (CREDIT_COSTS as any)['ai_scheduling'] || 3;
+  const tierBudgets = TIER_TOKEN_ALLOCATIONS;
+  const schedulingCostPer = (TOKEN_COSTS as any)['ai_scheduling'] || 3;
   const freeShifts = Math.floor(tierBudgets.free / schedulingCostPer);
   const starterShifts = Math.floor(tierBudgets.starter / schedulingCostPer);
   const proShifts = Math.floor(tierBudgets.professional / schedulingCostPer);
@@ -881,13 +881,13 @@ async function phase13_tier_escalation_paths() {
   });
 
   for (const tier of tiers) {
-    const monthlyCredits = TIER_CREDIT_ALLOCATIONS[tier];
+    const monthlyCredits = TIER_TOKEN_ALLOCATIONS[tier];
     const tierConfig = (BILLING as any).tiers[tier];
     record({
       name: `${tier} Credits Match Between Sources`,
       phase: 'TIER_ESCALATION',
       passed: monthlyCredits === tierConfig.monthlyCredits,
-      details: `TIER_CREDIT_ALLOCATIONS=${monthlyCredits}, billingConfig=${tierConfig.monthlyCredits}`,
+      details: `TIER_TOKEN_ALLOCATIONS=${monthlyCredits}, billingConfig=${tierConfig.monthlyCredits}`,
       severity: 'critical'
     });
   }
@@ -921,10 +921,10 @@ async function phase14_feature_to_billing_traceability() {
   });
 
   record({
-    name: 'CREDIT_COSTS Entry Count ≥ 50',
+    name: 'TOKEN_COSTS Entry Count ≥ 50',
     phase: 'TRACEABILITY',
-    passed: Object.keys(CREDIT_COSTS).length >= 50,
-    details: `${Object.keys(CREDIT_COSTS).length} entries in CREDIT_COSTS`,
+    passed: Object.keys(TOKEN_COSTS).length >= 50,
+    details: `${Object.keys(TOKEN_COSTS).length} entries in TOKEN_COSTS`,
     severity: 'critical'
   });
 

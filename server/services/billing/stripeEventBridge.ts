@@ -255,27 +255,11 @@ class StripeEventBridge {
       .set({ status: 'active' })
       .where(eq(subscriptions.workspaceId, workspace.id));
 
-    // CREDIT RESET — fires on subscription renewal events only.
-    // Guarantees credits reset is tied to actual Stripe payment, not just a cron date.
-    // 'subscription_cycle' = renewal; 'subscription_create' = first payment (no reset yet).
+    // Token allowance is tracked per calendar month via token_usage_monthly —
+    // no renewal-triggered reset needed (a fresh row is created at the start
+    // of each billing period automatically).
     const billingReason = (invoice as any).billing_reason as string | undefined;
     const isRenewal = billingReason === 'subscription_cycle';
-    if (isRenewal) {
-      try {
-        const { resetCreditsNow } = await import('./creditResetCron');
-        await resetCreditsNow(workspace.id);
-        log.info('[StripeEventBridge] Credit reset triggered on subscription renewal', {
-          workspaceId: workspace.id,
-          invoiceId: invoice.id,
-          billingReason,
-        });
-      } catch (resetErr: any) {
-        log.warn('[StripeEventBridge] Credit reset failed on invoice.paid — cron fallback will handle on 1st of month', {
-          workspaceId: workspace.id,
-          error: resetErr.message,
-        });
-      }
-    }
 
     await platformEventBus.publish({
       type: 'invoice_paid',
@@ -447,9 +431,7 @@ class StripeEventBridge {
       .set({ status: 'canceled' })
       .where(eq(subscriptions.workspaceId, workspace.id));
 
-    // GAP-10 FIX: Clear credits on cancellation
-    const { creditManager } = await import('./creditManager');
-    await creditManager.downgradeCreditsOnCancellation(workspace.id);
+    // Free-tier token allowance applies automatically once subscriptionTier is 'free'.
 
     await platformEventBus.publish({
       type: 'subscription_canceled',

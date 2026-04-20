@@ -1,9 +1,9 @@
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import * as fs from 'fs';
-import { PREMIUM_FEATURES, CREDIT_PACKAGES, canAccessFeature, getFeatureCreditCost, isFeatureIncludedInTier, getMonthlyLimit } from '@shared/config/premiumFeatures';
+import { PREMIUM_FEATURES, CREDIT_PACKAGES, canAccessFeature, getFeatureTokenCost, isFeatureIncludedInTier, getMonthlyLimit } from '@shared/config/premiumFeatures';
 import { BILLING } from '@shared/billingConfig';
-import { CREDIT_COSTS, TIER_CREDIT_ALLOCATIONS } from '../services/billing/creditManager';
+import { TOKEN_COSTS, TIER_TOKEN_ALLOCATIONS } from '../services/billing/tokenManager';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { typedQuery } from '../lib/typedSql';
 
@@ -31,7 +31,7 @@ async function phase1_single_source_of_truth() {
   const billingConfigSrc = fs.readFileSync('shared/billingConfig.ts', 'utf-8');
   const premiumFeaturesSrc = fs.readFileSync('shared/config/premiumFeatures.ts', 'utf-8');
   const stripeConfigSrc = fs.readFileSync('server/stripe-config.ts', 'utf-8');
-  const creditManagerSrc = fs.readFileSync('server/services/billing/creditManager.ts', 'utf-8');
+  const creditManagerSrc = fs.readFileSync('server/services/billing/tokenManager.ts', 'utf-8');
 
   record({
     name: 'shared/billingConfig.ts Is In shared/ Directory',
@@ -58,13 +58,13 @@ async function phase1_single_source_of_truth() {
   });
 
   record({
-    name: 'creditManager.ts Tier Allocations Match billingConfig',
+    name: 'tokenManager.ts Tier Allocations Match billingConfig',
     phase: 'SSOT',
-    passed: TIER_CREDIT_ALLOCATIONS.free === BILLING.tiers.free.monthlyCredits &&
-      TIER_CREDIT_ALLOCATIONS.starter === BILLING.tiers.starter.monthlyCredits &&
-      TIER_CREDIT_ALLOCATIONS.professional === BILLING.tiers.professional.monthlyCredits &&
-      TIER_CREDIT_ALLOCATIONS.enterprise === BILLING.tiers.enterprise.monthlyCredits,
-    details: `CM: free=${TIER_CREDIT_ALLOCATIONS.free}, starter=${TIER_CREDIT_ALLOCATIONS.starter}, pro=${TIER_CREDIT_ALLOCATIONS.professional}, ent=${TIER_CREDIT_ALLOCATIONS.enterprise} | BC: free=${BILLING.tiers.free.monthlyCredits}, starter=${BILLING.tiers.starter.monthlyCredits}, pro=${BILLING.tiers.professional.monthlyCredits}, ent=${BILLING.tiers.enterprise.monthlyCredits}`,
+    passed: TIER_TOKEN_ALLOCATIONS.free === BILLING.tiers.free.monthlyCredits &&
+      TIER_TOKEN_ALLOCATIONS.starter === BILLING.tiers.starter.monthlyCredits &&
+      TIER_TOKEN_ALLOCATIONS.professional === BILLING.tiers.professional.monthlyCredits &&
+      TIER_TOKEN_ALLOCATIONS.enterprise === BILLING.tiers.enterprise.monthlyCredits,
+    details: `CM: free=${TIER_TOKEN_ALLOCATIONS.free}, starter=${TIER_TOKEN_ALLOCATIONS.starter}, pro=${TIER_TOKEN_ALLOCATIONS.professional}, ent=${TIER_TOKEN_ALLOCATIONS.enterprise} | BC: free=${BILLING.tiers.free.monthlyCredits}, starter=${BILLING.tiers.starter.monthlyCredits}, pro=${BILLING.tiers.professional.monthlyCredits}, ent=${BILLING.tiers.enterprise.monthlyCredits}`,
     severity: 'critical'
   });
 
@@ -200,19 +200,19 @@ async function phase3_pricing_display_sync() {
   }
 
   const tierCredits = [
-    { tier: 'starter', display: '2,500', configCredits: BILLING.tiers.starter.monthlyCredits, cmCredits: TIER_CREDIT_ALLOCATIONS.starter },
-    { tier: 'professional', display: '10,000', configCredits: BILLING.tiers.professional.monthlyCredits, cmCredits: TIER_CREDIT_ALLOCATIONS.professional },
-    { tier: 'enterprise', display: '50,000', configCredits: BILLING.tiers.enterprise.monthlyCredits, cmCredits: TIER_CREDIT_ALLOCATIONS.enterprise },
+    { tier: 'starter', display: '2,500', configCredits: BILLING.tiers.starter.monthlyCredits, cmCredits: TIER_TOKEN_ALLOCATIONS.starter },
+    { tier: 'professional', display: '10,000', configCredits: BILLING.tiers.professional.monthlyCredits, cmCredits: TIER_TOKEN_ALLOCATIONS.professional },
+    { tier: 'enterprise', display: '50,000', configCredits: BILLING.tiers.enterprise.monthlyCredits, cmCredits: TIER_TOKEN_ALLOCATIONS.enterprise },
   ];
 
   for (const tc of tierCredits) {
     const displayMatch = showcaseSrc.includes(tc.display);
     const configCmMatch = tc.configCredits === tc.cmCredits;
     record({
-      name: `${tc.tier} 3-Way Credits Sync (Display ↔ Config ↔ CreditManager)`,
+      name: `${tc.tier} 3-Way Credits Sync (Display ↔ Config ↔ TokenManager)`,
       phase: 'PRICE_SYNC',
       passed: displayMatch && configCmMatch,
-      details: `Display: ${tc.display}, Config: ${tc.configCredits}, CreditManager: ${tc.cmCredits}`,
+      details: `Display: ${tc.display}, Config: ${tc.configCredits}, TokenManager: ${tc.cmCredits}`,
       severity: 'critical'
     });
   }
@@ -244,7 +244,7 @@ async function phase4_credit_cost_every_feature() {
 
   for (const [id, feature] of Object.entries(PREMIUM_FEATURES)) {
     const registryCost = feature.creditCost;
-    const hasInCM = Object.keys(CREDIT_COSTS).some(k =>
+    const hasInCM = Object.keys(TOKEN_COSTS).some(k =>
       k.includes(id.replace(/_/g, '_')) || id.includes(k.replace(/_/g, '_'))
     );
 
@@ -271,7 +271,7 @@ async function phase4_credit_cost_every_feature() {
   ];
 
   for (const pair of criticalSyncPairs) {
-    const cmCost = (CREDIT_COSTS as any)[pair.creditKey];
+    const cmCost = (TOKEN_COSTS as any)[pair.creditKey];
     const bcCost = billingCreditCosts[pair.creditKey];
     const regCost = PREMIUM_FEATURES[pair.registryField]?.creditCost;
 
@@ -280,7 +280,7 @@ async function phase4_credit_cost_every_feature() {
       name: `${pair.feature}: 3-Source Cost Sync (Registry/CM/BC)`,
       phase: 'CREDIT_SYNC',
       passed: cmBcMatch && regCost !== undefined,
-      details: `Registry=${regCost}, CreditManager=${cmCost}, BillingConfig=${bcCost}`,
+      details: `Registry=${regCost}, TokenManager=${cmCost}, BillingConfig=${bcCost}`,
       severity: 'critical'
     });
   }
@@ -994,7 +994,7 @@ async function phase15_handler_imports_shared_config() {
     billingApiSrc.includes('BILLING') ||
     billingApiSrc.includes('premiumFeatures') ||
     billingApiSrc.includes('PREMIUM_FEATURES') ||
-    billingApiSrc.includes('creditManager');
+    billingApiSrc.includes('tokenManager');
 
   record({
     name: 'billing-api.ts Imports From Shared/Service Config',
@@ -1004,8 +1004,8 @@ async function phase15_handler_imports_shared_config() {
     severity: 'critical'
   });
 
-  const creditImportsConfig = creditRoutesSrc.includes('creditManager') ||
-    creditRoutesSrc.includes('CREDIT_COSTS') ||
+  const creditImportsConfig = creditRoutesSrc.includes('tokenManager') ||
+    creditRoutesSrc.includes('TOKEN_COSTS') ||
     creditRoutesSrc.includes('billingConfig') ||
     creditRoutesSrc.includes('CREDIT_PACKAGES') ||
     creditRoutesSrc.includes('premiumFeatures');
@@ -1058,7 +1058,7 @@ async function phase16_data_path_tracing() {
 
   const registryFeatureIds = new Set(Object.keys(PREMIUM_FEATURES));
   const matrixFeatureIds = new Set(Object.keys(BILLING.featureMatrix));
-  const creditCostIds = new Set(Object.keys(CREDIT_COSTS));
+  const creditCostIds = new Set(Object.keys(TOKEN_COSTS));
 
   record({
     name: 'Registry Features Fully Covered by Credit System',
@@ -1080,7 +1080,7 @@ async function phase16_data_path_tracing() {
     name: 'Credit System Covers All Paid Features',
     phase: 'DATA_PATH',
     passed: creditCostIds.size >= creditKeysUsedByRegistry.size,
-    details: `CREDIT_COSTS has ${creditCostIds.size} entries, ${creditKeysUsedByRegistry.size} features need billing`,
+    details: `TOKEN_COSTS has ${creditCostIds.size} entries, ${creditKeysUsedByRegistry.size} features need billing`,
     severity: 'critical'
   });
 
@@ -1131,12 +1131,12 @@ async function phase16_data_path_tracing() {
 
   const getFeatureCostResults: Record<string, boolean> = {};
   for (const id of registryFeatureIds) {
-    const r1 = getFeatureCreditCost(id);
-    const r2 = getFeatureCreditCost(id);
+    const r1 = getFeatureTokenCost(id);
+    const r2 = getFeatureTokenCost(id);
     if (r1 !== r2) getFeatureCostResults[id] = false;
   }
   record({
-    name: 'getFeatureCreditCost Is Deterministic',
+    name: 'getFeatureTokenCost Is Deterministic',
     phase: 'DATA_PATH',
     passed: Object.values(getFeatureCostResults).every(v => v !== false),
     details: `${registryFeatureIds.size} cost lookups all deterministic`,

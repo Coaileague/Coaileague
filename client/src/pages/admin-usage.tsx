@@ -9,20 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
-import { useCreditMonitor } from "@/hooks/use-credit-monitor";
+import { useTokenMonitor } from "@/hooks/use-token-monitor";
 
 interface CreditBalance {
   currentBalance: number;
   monthlyAllocation: number;
-  totalCreditsEarned: number;
-  totalCreditsSpent: number;
-  totalCreditsPurchased: number;
+  totalTokensUsed?: number;
   lastResetAt: string;
   nextResetAt: string;
   subscriptionTier: string;
-  unlimitedCredits?: boolean;
+  unlimited?: boolean;
   creditsUsedThisPeriod?: number;
-  // Token fields
+  // Token fields (authoritative)
   tokensUsed?: number;
   tokensAllowance?: number | null;
   overageTokens?: number;
@@ -97,22 +95,22 @@ function formatShortDate(dateStr: string): string {
 
 export default function AdminUsage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { balance: liveBalance, isUnlimited, daysUntilReset } = useCreditMonitor();
+  const { balance: liveBalance, isUnlimited, daysUntilReset } = useTokenMonitor();
   const [txPage, setTxPage] = useState(0);
   const txLimit = 20;
 
   const { data: balance, isLoading: balanceLoading } = useQuery<CreditBalance>({
-    queryKey: ['/api/credits/balance'],
+    queryKey: ['/api/usage/tokens'],
     enabled: isAuthenticated,
   });
 
   const { data: usage } = useQuery<CreditUsageBreakdown[]>({
-    queryKey: ['/api/credits/usage-breakdown'],
+    queryKey: ['/api/usage/token-breakdown'],
     enabled: isAuthenticated,
   });
 
   const { data: transactions, isLoading: txLoading } = useQuery<CreditTransaction[]>({
-    queryKey: ['/api/credits/transactions', { limit: txLimit, offset: txPage * txLimit }],
+    queryKey: ['/api/usage/token-log', { limit: txLimit, offset: txPage * txLimit }],
     enabled: isAuthenticated,
   });
 
@@ -125,7 +123,7 @@ export default function AdminUsage() {
   }
 
   const effectiveBalance = liveBalance || balance;
-  const isUnlimitedUser = isUnlimited || effectiveBalance?.unlimitedCredits === true ||
+  const isUnlimitedUser = isUnlimited || effectiveBalance?.unlimited === true ||
     (effectiveBalance?.monthlyAllocation && effectiveBalance.monthlyAllocation > 999_999_999);
 
   // Token-based values (authoritative) with fallback to legacy credit fields

@@ -17,7 +17,7 @@ import { sql } from 'drizzle-orm';
 import { requireAuth } from '../auth';
 import { storage } from '../storage';
 import { migrateEmployeeIdsToNewOrgCode } from '../services/identityService';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { platformEventBus } from '../services/platformEventBus';
 import { sendWorkspaceWelcomeEmail } from '../services/emailCore';
 import { sendWelcomeOrgNotification } from '../services/notificationService';
@@ -182,14 +182,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       log.error(`[Workspace Create] Failed to attach external ID:`, extIdError.message);
     }
 
-    try {
-      // Use 'trial' tier — gives 10 officers + 500 AI interactions per the 2026 pricing
-      await creditManager.initializeCredits(workspace.id, 'trial');
-    } catch (creditError: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      log.error(`[Workspace Create] Credit init failed (non-blocking):`, creditError.message);
-      // Non-blocking: workspace still usable; billing will self-heal on first login
-    }
+    // Token tracking is event-driven (token_usage_monthly creates a row on
+    // first usage) — no per-workspace initialization is required.
 
     // OMEGA L1:836 — Create trial subscription record so trialConversionOrchestrator can find this workspace
     try {

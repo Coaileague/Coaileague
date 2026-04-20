@@ -54,7 +54,7 @@ export const ADDON_PLANS: Record<string, {
 };
 
 // ============================================================================
-// ADDON ALLOTMENT (checked before main credit pool in creditManager)
+// ADDON ALLOTMENT (checked before main credit pool in tokenManager)
 // ============================================================================
 
 /**
@@ -115,7 +115,7 @@ export async function deductFromAddon(addonId: string, amount: number): Promise<
 // ============================================================================
 
 /**
- * Called by creditManager after a failed deduction (insufficient credits).
+ * Called by tokenManager after a failed deduction (insufficient credits).
  * Logs the depletion event and checks if upsell thresholds are met.
  */
 export async function onCreditDepletion(
@@ -141,7 +141,7 @@ export async function onCreditDepletion(
 }
 
 /**
- * Called by creditManager after a low-balance check (balance < threshold).
+ * Called by tokenManager after a low-balance check (balance < threshold).
  * Proactively suggests upgrades before orgs hit 0.
  */
 export async function onLowBalance(

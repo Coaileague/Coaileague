@@ -21,7 +21,7 @@ import { employees, auditLogs } from '@shared/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { createNotification } from '../services/notificationService';
 import { platformEventBus } from '../services/platformEventBus';
-import { withCredits } from '../services/billing/creditWrapper';
+import { withTokens } from '../services/billing/tokenWrapper';
 import { ComplianceMonitoringService } from '../services/complianceMonitoring';
 import { shiftMonitoringService } from '../services/automation/shiftMonitoringService';
 import { loneWorkerSafetyService } from '../services/automation/loneWorkerSafetyService';
@@ -137,7 +137,7 @@ automationRouter.post('/schedule/generate', requireAuth, async (req: any, res: R
     );
 
     // Call automation engine WITH CREDIT DEDUCTION
-    const creditResult = await withCredits(
+    const creditResult = await withTokens(
       {
         workspaceId: (req.workspaceId || (req as any).user?.currentWorkspaceId),
         featureKey: 'ai_scheduling',
@@ -211,7 +211,7 @@ automationRouter.post('/schedule/generate', requireAuth, async (req: any, res: R
       confidence: result.decision.overallConfidence,
       shifts: result.decision.shifts,
       conflicts: result.decision.conflicts,
-      creditsDeducted: creditResult.creditsDeducted,
+      creditsDeducted: creditResult.tokensUsed,
     });
 
   } catch (error) {
@@ -329,7 +329,7 @@ automationRouter.post('/invoice/generate', requireAuth, async (req: any, res: Re
     }
 
     // Generate invoice WITH CREDIT DEDUCTION
-    const creditResult = await withCredits(
+    const creditResult = await withTokens(
       {
         workspaceId: (req.workspaceId || (req as any).user?.currentWorkspaceId),
         featureKey: 'ai_invoice_generation',
@@ -403,7 +403,7 @@ automationRouter.post('/invoice/generate', requireAuth, async (req: any, res: Re
       confidence: result.decision.confidence,
       total: result.decision.total,
       anomalies: result.decision.anomalies,
-      creditsDeducted: creditResult.creditsDeducted,
+      creditsDeducted: creditResult.tokensUsed,
     });
 
   } catch (error) {
@@ -581,7 +581,7 @@ automationRouter.post('/payroll/generate', requireAuth, async (req: any, res: Re
     }
 
     // Generate payroll WITH CREDIT DEDUCTION
-    const creditResult = await withCredits(
+    const creditResult = await withTokens(
       {
         workspaceId: (req.workspaceId || (req as any).user?.currentWorkspaceId),
         featureKey: 'ai_payroll_processing',
@@ -655,7 +655,7 @@ automationRouter.post('/payroll/generate', requireAuth, async (req: any, res: Re
       confidence: result.decision.confidence,
       netPay: result.decision.netPay,
       warnings: result.decision.warnings,
-      creditsDeducted: creditResult.creditsDeducted,
+      creditsDeducted: creditResult.tokensUsed,
     });
 
   } catch (error) {
@@ -947,7 +947,7 @@ automationRouter.post('/compliance/scan', requireAuth, async (req: any, res: Res
     }
 
     // Run compliance scan WITH CREDIT DEDUCTION
-    const creditResult = await withCredits(
+    const creditResult = await withTokens(
       {
         workspaceId: (req.workspaceId || (req as any).user?.currentWorkspaceId),
         featureKey: 'ai_general', // Use general AI feature for now

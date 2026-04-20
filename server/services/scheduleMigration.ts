@@ -7,7 +7,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { usageMeteringService } from './billing/usageMetering';
-import { aiCreditGateway } from './billing/aiTokenGateway';
+import { aiTokenGateway } from './billing/aiTokenGateway';
 import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
 import { z } from 'zod';
 import { createLogger } from '../lib/logger';
@@ -82,7 +82,7 @@ export async function extractScheduleFromFile(
     throw new Error(`Schedule migration validation failed: ${validation.errors.join(', ')}`);
   }
 
-  const authResult = await aiCreditGateway.preAuthorize(
+  const authResult = await aiTokenGateway.preAuthorize(
     request.workspaceId,
     request.userId,
     'ai_migration'
@@ -179,7 +179,7 @@ export async function extractScheduleFromFile(
     const usage = response.usageMetadata;
     const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
 
-    await aiCreditGateway.finalizeBilling(
+    await aiTokenGateway.finalizeBilling(
       (authResult as any).effectiveWorkspaceId,
       request.userId,
       'ai_migration',

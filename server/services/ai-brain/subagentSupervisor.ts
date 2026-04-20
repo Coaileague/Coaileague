@@ -34,8 +34,8 @@ import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from './aiBrainAuthorizationService';
 import { aiBrainService } from './aiBrainService';
-import { CREDIT_COSTS } from '../billing/creditManager';
-import { aiCreditGateway } from '../billing/aiTokenGateway';
+import { TOKEN_COSTS } from '../billing/tokenManager';
+import { aiTokenGateway } from '../billing/aiTokenGateway';
 import { subagentConfidenceMonitor } from './subagentConfidenceMonitor';
 import { modelRoutingEngine, getSubagentModelConfigs, recordModelResult, SubagentModelConfig } from './modelRoutingEngine';
 import { GeminiModelTier } from './providers/geminiClient';
@@ -45,7 +45,7 @@ import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 const log = createLogger('SubagentSupervisor');
 
 // Domain-to-credit-feature mapping for cost estimation
-const DOMAIN_CREDIT_COSTS: Record<SubagentDomain, keyof typeof CREDIT_COSTS> = {
+const DOMAIN_CREDIT_COSTS: Record<SubagentDomain, keyof typeof TOKEN_COSTS> = {
   scheduling: 'ai_scheduling',
   payroll: 'ai_payroll_processing',
   invoicing: 'ai_invoice_generation',
@@ -2159,7 +2159,7 @@ class SubagentSupervisor {
 
     // CREDIT-GATED EXECUTION: Check credits before allowing execution
     const featureKey = DOMAIN_CREDIT_COSTS[domain] || 'ai_general';
-    const creditAuth = await aiCreditGateway.preAuthorize(workspaceId, userId, featureKey);
+    const creditAuth = await aiTokenGateway.preAuthorize(workspaceId, userId, featureKey);
     
     if (!creditAuth.authorized) {
       log.info(`[SubagentSupervisor] Credit-gated: ${domain} blocked - ${creditAuth.reason}`);
@@ -2288,7 +2288,7 @@ class SubagentSupervisor {
       this.activeExecutions.delete(executionId);
 
       // CREDIT DEDUCTION: Deduct credits after successful execution
-      const billingResult = await aiCreditGateway.finalizeBilling(
+      const billingResult = await aiTokenGateway.finalizeBilling(
         workspaceId,
         userId,
         featureKey,
@@ -2296,7 +2296,7 @@ class SubagentSupervisor {
         { entityType: 'subagent_execution', entityId: executionId }
       );
 
-      const creditsUsed = billingResult.charged ? billingResult.creditsDeducted : 0;
+      const creditsUsed = billingResult.charged ? billingResult.tokensUsed : 0;
       const finalBalance = billingResult.newBalance;
 
       if (!billingResult.charged) {

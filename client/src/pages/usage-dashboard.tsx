@@ -19,18 +19,16 @@ import {
   Zap
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useCreditMonitor } from "@/hooks/use-credit-monitor";
+import { useTokenMonitor } from "@/hooks/use-token-monitor";
 
 interface CreditBalance {
   currentBalance: number;
   monthlyAllocation: number;
-  totalCreditsEarned: number;
-  totalCreditsSpent: number;
-  totalCreditsPurchased: number;
+  totalTokensUsed?: number;
   lastResetAt: string;
   nextResetAt: string;
   subscriptionTier: string;
-  unlimitedCredits?: boolean;
+  unlimited?: boolean;
   creditsUsedThisPeriod?: number;
   tokensUsed?: number;
   tokensAllowance?: number | null;
@@ -117,22 +115,22 @@ function formatDate(dateStr: string): string {
 export default function UsageDashboard() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { workspaceRole, isLoading: accessLoading } = useWorkspaceAccess();
-  const { balance: liveBalance, isUnlimited, daysUntilReset } = useCreditMonitor();
+  const { balance: liveBalance, isUnlimited, daysUntilReset } = useTokenMonitor();
   const [txPage, setTxPage] = useState(0);
   const txLimit = 15;
 
   const { data: balance, isLoading } = useQuery<CreditBalance>({
-    queryKey: ['/api/credits/balance'],
+    queryKey: ['/api/usage/tokens'],
     enabled: isAuthenticated,
   });
 
   const { data: usage } = useQuery<CreditUsageBreakdown[]>({
-    queryKey: ['/api/credits/usage-breakdown'],
+    queryKey: ['/api/usage/token-breakdown'],
     enabled: isAuthenticated,
   });
 
   const { data: transactions, isLoading: txLoading } = useQuery<CreditTransaction[]>({
-    queryKey: ['/api/credits/transactions', { limit: txLimit, offset: txPage * txLimit }],
+    queryKey: ['/api/usage/token-log', { limit: txLimit, offset: txPage * txLimit }],
     enabled: isAuthenticated,
   });
 
@@ -163,7 +161,7 @@ export default function UsageDashboard() {
   }
 
   const effectiveBalance = liveBalance || balance;
-  const isUnlimitedUser = isUnlimited || effectiveBalance?.unlimitedCredits === true;
+  const isUnlimitedUser = isUnlimited || effectiveBalance?.unlimited === true;
 
   // Token-based values (authoritative)
   const tokensUsed = effectiveBalance?.tokensUsed ?? effectiveBalance?.creditsUsedThisPeriod ?? 0;

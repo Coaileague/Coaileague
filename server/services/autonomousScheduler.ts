@@ -41,11 +41,10 @@ import { storage } from '../storage';
 import { executeIdempotencyCheck, updateIdempotencyResult } from './autonomy/helpers';
 import { runWebSocketConnectionCleanup } from './wsConnectionCleanup';
 import { runShiftCompletionBridge } from './automation/shiftCompletionBridge';
-import { resetMonthlyCredits } from './billing/creditResetCron';
 import { platformServicesMeter } from './billing/platformServicesMeter';
 import crypto from 'crypto';
 import { createNotification } from './notificationService';
-import { withCredits } from './billing/creditWrapper';
+import { withTokens } from './billing/tokenWrapper';
 import { sendMonitoringAlert } from './externalMonitoring';
 import { syncInvoiceToQuickBooks, syncPayrollToQuickBooks } from './quickbooksClientBillingSync';
 import { checkDatabase, checkChatWebSocket, checkStripe } from './healthCheck';
@@ -663,11 +662,6 @@ const SCHEDULER_CONFIG = {
     enabled: true,
     schedule: '*/5 * * * *', // Every 5 minutes
     description: 'Auto-close orphaned WebSocket connections (>5min) and purge stale records (>24h)'
-  },
-  creditReset: {
-    enabled: true,
-    schedule: '0 0 1 * *', // Midnight on 1st of every month
-    description: 'Monthly token allowance reset (no-op — token_usage_monthly auto-creates per month)'
   },
   visualQa: {
     enabled: true,
@@ -1319,8 +1313,8 @@ async function runWeeklyScheduleGeneration() {
                     const owner = workspaceEmployees.find(e => e.workspaceRole === 'org_owner');
                     const ownerUserId = owner?.userId || undefined;
                     
-                    // Call AI Brain WITH CREDIT DEDUCTION
-                    const creditResult = await withCredits(
+                    // Call AI Brain WITH TOKEN USAGE TRACKING
+                    const creditResult = await withTokens(
                       {
                         workspaceId: workspace.id,
                         featureKey: 'ai_scheduling',
@@ -1401,7 +1395,7 @@ async function runWeeklyScheduleGeneration() {
                       // AI Brain processes job immediately and returns result
                       if (result.status === 'completed') {
                         shiftsGenerated = result.output?.assignments?.length || 0;
-                        log.info('AI Brain generated shift assignments', { shiftsGenerated, creditsDeducted: creditResult.creditsDeducted });
+                        log.info('AI Brain generated shift assignments', { shiftsGenerated, creditsDeducted: creditResult.tokensUsed });
                       } else if (result.status === 'failed') {
                         log.error('AI Brain job failed', { error: result.error });
                       }
@@ -2360,7 +2354,6 @@ export function startAutonomousScheduler() {
     cleanup: { enabled: true, schedule: CRON.idempotencyCleanup, description: 'Idempotency key cleanup' },
     roomAutoClose: { enabled: true, schedule: CRON.chatAutoClose, description: 'Room auto-close' },
     wsConnectionCleanup: { enabled: true, schedule: CRON.wsCleanup, description: 'WebSocket cleanup' },
-    creditReset: { enabled: true, schedule: CRON.monthlyCreditReset, description: 'Monthly token allowance reset' },
     visualQa: { enabled: true, schedule: CRON.visualQa, description: 'Daily visual QA scanning' },
     autoClockOut: { enabled: true, schedule: '*/30 * * * *', description: 'Auto clock-out officers whose shift ended >30 minutes ago with no clock-out' },
     shiftCompletionBridge: { enabled: true, schedule: '*/30 * * * *', description: 'Create pending time entries for assigned shifts with no clock-in/out recorded' },
@@ -2748,19 +2741,9 @@ export function startAutonomousScheduler() {
     log.info('WebSocket Connection Cleanup registered', { schedule: SCHEDULER_CONFIG.wsConnectionCleanup.schedule, description: SCHEDULER_CONFIG.wsConnectionCleanup.description });
   }
 
-  // 7. Monthly Token Allowance Reset (1st of month at midnight)
-  // Token allowances reset naturally via token_usage_monthly (new row per month).
-  // This cron is retained as a heartbeat/no-op — it does not touch any tables.
-  registerJobInfo('Monthly Token Allowance Reset', SCHEDULER_CONFIG.creditReset.schedule, SCHEDULER_CONFIG.creditReset.description, SCHEDULER_CONFIG.creditReset.enabled);
-  if (SCHEDULER_CONFIG.creditReset.enabled) {
-    cron.schedule(SCHEDULER_CONFIG.creditReset.schedule, () => {
-      trackJobExecution('Monthly Token Allowance Reset', async () => {
-        log.debug('Monthly token allowance heartbeat', { timestamp: new Date().toISOString() });
-        await resetMonthlyCredits();
-      });
-    });
-    log.info('Monthly Token Allowance Reset registered', { schedule: SCHEDULER_CONFIG.creditReset.schedule, description: SCHEDULER_CONFIG.creditReset.description });
-  }
+  // Token allowance resets naturally via token_usage_monthly (a new row is
+  // created on the 1st of each month as soon as the first AI call of the
+  // month runs) — no dedicated cron is required.
 
   // 7b. Monthly Platform Infrastructure Billing (1st of month at 1 AM)
   registerJobInfo('Platform Infrastructure Billing', CRON.monthlyInfraBilling, 'Cost recovery for email, domain, and infrastructure', true);
@@ -4362,7 +4345,6 @@ export const manualTriggers = {
   roomAutoClose: runRoomAutoClose,
   wsConnectionCleanup: runWebSocketConnectionCleanup,
   compliance: checkExpiringCertifications,
-  creditReset: resetMonthlyCredits,
   gamificationWeeklyReset: async () => {
     await gamificationService.resetWeeklyPoints();
     return { success: true, resetType: 'weekly', resetAt: new Date().toISOString() };
@@ -4385,10 +4367,6 @@ export const manualTriggers = {
   engagementAlerts: async (workspaceId: string) => {
     const { checkEngagementAlertsForWorkspace } = await import('./engagementCalculations');
     return checkEngagementAlertsForWorkspace(workspaceId);
-  },
-  resetCreditsNow: async (workspaceId: string) => {
-    const { resetCreditsNow } = await import('./billing/creditResetCron');
-    return resetCreditsNow(workspaceId);
   },
   trinityProactiveScan: async () => {
     const { aiAnalyticsEngine } = await import('./ai-brain/aiAnalyticsEngine');

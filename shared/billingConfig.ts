@@ -761,7 +761,7 @@ export const BILLING = {
   },
 
   // ==========================================================================
-  // CREDIT COSTS PER FEATURE (Synced with creditManager.ts - Jan 2026)
+  // CREDIT COSTS PER FEATURE (Synced with tokenManager.ts - Jan 2026)
   // 1 credit = $0.01 | Gemini 3 Pro vs Flash model usage with 4x margin
   // ==========================================================================
   creditCosts: {
@@ -776,7 +776,7 @@ export const BILLING = {
 
     // =========================================================================
     // AI Scheduling — PER-SHIFT BILLING (Mar 2026 Rebalance)
-    // Cost is per shift scheduled/optimized by Trinity AI. Multiplied by quantity in creditManager.
+    // Cost is per shift scheduled/optimized by Trinity AI. Multiplied by quantity in tokenManager.
     // $0.20/shift is 1-3% of typical shift revenue — massive value for automation.
     // =========================================================================
     ai_scheduling: 20,             // 20 credits ($0.20) per shift scheduled — replaces $150-250/week scheduling labor

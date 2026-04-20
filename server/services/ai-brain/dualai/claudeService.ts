@@ -8,7 +8,7 @@
  * - Strategic planning and recommendations
  */
 
-import { aiCreditGateway } from '../../billing/aiTokenGateway';
+import { aiTokenGateway } from '../../billing/aiTokenGateway';
 import { aiActionLogger, type AIActionContext } from './aiActionLogger';
 import { createLogger } from '../../../lib/logger';
 const log = createLogger('claudeService');
@@ -71,7 +71,7 @@ class ClaudeService {
     const estimatedCredits = this.calculateCreditsForTask(params.taskType || params.task);
     const featureKey = 'claude_analysis';
 
-    const preAuth = await aiCreditGateway.preAuthorize(
+    const preAuth = await aiTokenGateway.preAuthorize(
       // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
@@ -122,7 +122,7 @@ class ClaudeService {
       const outputTokens = data.usage?.output_tokens || 0;
       const tokensUsed = inputTokens + outputTokens;
 
-      await aiCreditGateway.finalizeBilling(
+      await aiTokenGateway.finalizeBilling(
         // @ts-expect-error — TS migration: fix in refactoring sprint
         params.context.workspaceId,
         params.context.userId,
@@ -199,7 +199,7 @@ class ClaudeService {
     const featureKey = 'claude_consultation';
     const creditsUsed = 5;
 
-    const preAuth = await aiCreditGateway.preAuthorize(
+    const preAuth = await aiTokenGateway.preAuthorize(
       // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
@@ -243,7 +243,7 @@ Keep your response focused and under 500 words.`;
     const data = await response.json();
     const content = data.content?.[0]?.text || '';
 
-    await aiCreditGateway.finalizeBilling(
+    await aiTokenGateway.finalizeBilling(
       // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
@@ -353,20 +353,20 @@ Remember: You and Trinity are partners working together to help this security co
     const taskLower = task.toLowerCase();
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('rfp')) return CREDIT_COSTS.claude_rfp_response || 35;
+    if (taskLower.includes('rfp')) return TOKEN_COSTS.claude_rfp_response || 35;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('capability')) return CREDIT_COSTS.claude_capability_statement || 30;
+    if (taskLower.includes('capability')) return TOKEN_COSTS.claude_capability_statement || 30;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('compliance')) return CREDIT_COSTS.claude_analysis || 25;
+    if (taskLower.includes('compliance')) return TOKEN_COSTS.claude_analysis || 25;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('contract')) return CREDIT_COSTS.claude_analysis || 25;
+    if (taskLower.includes('contract')) return TOKEN_COSTS.claude_analysis || 25;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('strategic')) return CREDIT_COSTS.claude_strategic || 30;
+    if (taskLower.includes('strategic')) return TOKEN_COSTS.claude_strategic || 30;
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (taskLower.includes('executive')) return CREDIT_COSTS.claude_executive || 35;
+    if (taskLower.includes('executive')) return TOKEN_COSTS.claude_executive || 35;
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    return CREDIT_COSTS.claude_analysis || 25;
+    return TOKEN_COSTS.claude_analysis || 25;
   }
 }
 

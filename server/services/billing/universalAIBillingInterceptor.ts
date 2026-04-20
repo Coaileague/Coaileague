@@ -4,18 +4,18 @@
  * ZERO TOKEN LOSS ENFORCEMENT (Feb 2026)
  * 
  * This interceptor ensures every OpenAI call across the platform is tracked and billed.
- * Routes ALL billing through the single aiCreditGateway for consistent enforcement.
+ * Routes ALL billing through the single aiTokenGateway for consistent enforcement.
  * 
  * CALL FLOW:
- * Service → getMeteredOpenAICompletion() → aiCreditGateway.preAuthorize()
- *         → OpenAI API call → aiCreditGateway.finalizeBilling()
+ * Service → getMeteredOpenAICompletion() → aiTokenGateway.preAuthorize()
+ *         → OpenAI API call → aiTokenGateway.finalizeBilling()
  * 
- * No direct creditManager calls. No bypass. No silent failures.
+ * No direct tokenManager calls. No bypass. No silent failures.
  */
 
 import { createLogger } from '../../lib/logger';
 import OpenAI from 'openai';
-import { aiCreditGateway } from './aiTokenGateway';
+import { aiTokenGateway } from './aiTokenGateway';
 
 const log = createLogger('universalAIBillingInterceptor');
 let _openaiClient: OpenAI | null = null;
@@ -59,7 +59,7 @@ export interface MeteredOpenAIResponse {
 
 /**
  * METERED OpenAI completion - the ONLY way to call OpenAI with billing enforcement.
- * Routes through aiCreditGateway for consistent billing.
+ * Routes through aiTokenGateway for consistent billing.
  * 
  * Accepts optional workspaceId - if missing, cost is tracked to PLATFORM_COST_CENTER.
  * Callers do NOT need to handle billing separately - this function handles everything.
@@ -81,7 +81,7 @@ export async function getMeteredOpenAICompletion(
   const effectiveWorkspaceId = workspaceId || undefined;
 
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  const authResult = await aiCreditGateway.preAuthorize(effectiveWorkspaceId, userId, featureKey);
+  const authResult = await aiTokenGateway.preAuthorize(effectiveWorkspaceId, userId, featureKey);
   if (!authResult.authorized) {
     log.warn(`[BillingGate] BLOCKED OpenAI ${featureKey}: ${authResult.reason}`);
     return {
@@ -141,7 +141,7 @@ export async function getMeteredOpenAICompletion(
     const tokensUsed = inputTokens + outputTokens;
     const latencyMs = Date.now() - startTime;
 
-    await aiCreditGateway.finalizeBilling(
+    await aiTokenGateway.finalizeBilling(
       // @ts-expect-error — TS migration: fix in refactoring sprint
       effectiveWorkspaceId,
       userId,
@@ -158,7 +158,7 @@ export async function getMeteredOpenAICompletion(
       tokensUsed,
       inputTokens,
       outputTokens,
-      creditsCharged: authResult.classification.creditCost,
+      creditsCharged: authResult.classification.tokenCost,
       model,
     };
   } catch (error: any) {

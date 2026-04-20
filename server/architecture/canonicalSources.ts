@@ -21,7 +21,7 @@ export const CANONICAL_SOURCES = {
     // NOTE: /api/billing/credits* and /api/billing/subscription.credits are
     // derived views for the billing UI only. They MUST NOT be used by widgets,
     // dashboard cards, or any component that displays a credit number to the user.
-    service:       'server/services/billing/creditManager.ts',
+    service:       'server/services/billing/tokenManager.ts',
   },
 
   // ─── SUBSCRIPTIONS ────────────────────────────────────────────────────────

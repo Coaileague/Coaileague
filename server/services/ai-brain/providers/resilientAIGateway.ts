@@ -16,8 +16,8 @@
 
 import { db } from '../../../db';
 import { auditLogs } from '@shared/schema';
-import { CREDIT_COSTS, isUnlimitedCreditUser, creditManager } from '../../billing/creditManager';
-import { aiCreditGateway } from '../../billing/aiTokenGateway';
+import { TOKEN_COSTS, isUnlimitedTokenUser, tokenManager } from '../../billing/tokenManager';
+import { aiTokenGateway } from '../../billing/aiTokenGateway';
 import { platformEventBus } from '../../platformEventBus';
 import { createLogger } from '../../../lib/logger';
 
@@ -303,7 +303,7 @@ class ResilientAIGateway {
 
   /**
    * Get the appropriate Claude feature key based on operation type
-   * Maps to CREDIT_COSTS for accurate billing
+   * Maps to TOKEN_COSTS for accurate billing
    */
   private getClaudeFeatureKey(operationType?: string, domain?: string): string {
     // Map operation types to specific Claude feature keys
@@ -339,14 +339,14 @@ class ResilientAIGateway {
     estimatedCredits: number = 25
   ): Promise<{ allowed: boolean; reason?: string; alert?: string }> {
     // Check if user has unlimited access (enterprise tier or platform staff)
-    const hasUnlimited = await isUnlimitedCreditUser(userId || '', workspaceId);
+    const hasUnlimited = await isUnlimitedTokenUser(userId || '', workspaceId);
     if (hasUnlimited) {
       return { allowed: true };
     }
 
     // Check credit balance BEFORE making the call using the SAME feature key
     // that will be used for billing to ensure consistent enforcement
-    const creditAuth = await aiCreditGateway.preAuthorize(
+    const creditAuth = await aiTokenGateway.preAuthorize(
       workspaceId,
       userId,
       featureKey
@@ -360,8 +360,8 @@ class ResilientAIGateway {
       };
     }
 
-    const balance = await creditManager.getBalance(workspaceId);
-    const creditCost = creditAuth.classification.creditCost;
+    const balance = await tokenManager.getBalance(workspaceId);
+    const creditCost = creditAuth.classification.tokenCost;
 
     if (balance > 0 && creditCost > 0) {
       const creditsAfterCall = balance - creditCost;
@@ -404,7 +404,7 @@ class ResilientAIGateway {
 
     // Get the appropriate feature key for this operation
     const featureKey = this.getClaudeFeatureKey(request.operationType, request.domain);
-    const estimatedCredits = CREDIT_COSTS[featureKey as keyof typeof CREDIT_COSTS] || 25;
+    const estimatedCredits = TOKEN_COSTS[featureKey as keyof typeof TOKEN_COSTS] || 25;
 
     // RUNTIME ENFORCEMENT: Check guardrails BEFORE making API call
     // Uses the same feature key for both enforcement and billing
@@ -463,7 +463,7 @@ class ResilientAIGateway {
       const totalTokens = inputTokens + outputTokens;
       
       if (totalTokens > 0) {
-        await aiCreditGateway.finalizeBilling(
+        await aiTokenGateway.finalizeBilling(
           request.workspaceId,
           request.userId,
           featureKey,

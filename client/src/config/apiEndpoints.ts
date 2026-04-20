@@ -222,9 +222,10 @@ export const API_ENDPOINTS = {
     features: "/api/me/workspace-features",
   },
 
-  credits: {
-    balance: "/api/credits/balance",
-    usage: "/api/credits/usage-breakdown",
+  tokens: {
+    balance: "/api/usage/tokens",
+    breakdown: "/api/usage/token-breakdown",
+    log: "/api/usage/token-log",
   },
 
   benefits: {

@@ -23,7 +23,7 @@
  *  Data Table        → client/src/components/universal/UniversalTable.tsx
  *  Page Layout       → client/src/components/workspace-layout.tsx
  *  Canvas Hub Page   → client/src/components/canvas-hub/index.ts
- *  Plan Status      → client/src/components/credit-balance.tsx (exports CreditBalanceBadge, CreditBalanceCard)
+ *  Plan Status      → client/src/components/plan-status.tsx (exports CreditBalanceBadge, CreditBalanceCard)
  *  Card              → client/src/components/universal/UniversalCard.tsx
  *  Button            → client/src/components/universal/UniversalButton.tsx
  *  Badge             → client/src/components/universal/UniversalBadge.tsx
@@ -68,8 +68,8 @@ export { UniversalSheet } from './UniversalSheet';
 export { UniversalTable } from './UniversalTable';
 export type { ColumnDef } from './UniversalTable';
 
-// ── Credits ──────────────────────────────────────────────────────────────
-export { CreditBalanceBadge, CreditBalanceCard } from '../credit-balance';
+// ── Plan status (legacy-named exports retained) ──────────────────────────
+export { CreditBalanceBadge, CreditBalanceCard } from '../plan-status';
 
 // ── Primitives ────────────────────────────────────────────────────────────
 export { UniversalCard } from './UniversalCard';

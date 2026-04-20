@@ -1182,7 +1182,7 @@ export function isEliteFeature(featureId: string): boolean {
   return PREMIUM_FEATURES[featureId]?.featureType === 'elite';
 }
 
-export function getFeatureCreditCost(featureId: string): number {
+export function getFeatureTokenCost(featureId: string): number {
   return PREMIUM_FEATURES[featureId]?.creditCost ?? 0;
 }
 

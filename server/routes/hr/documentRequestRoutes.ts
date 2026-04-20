@@ -24,7 +24,7 @@ import { requireAuth } from '../../auth';
 import { requireManager } from '../../rbac';
 import { emailService } from '../../services/emailService';
 import { NotificationDeliveryService } from '../../services/notificationDeliveryService';
-import { creditManager } from '../../services/billing/creditManager';
+import { tokenManager } from '../../services/billing/tokenManager';
 import { createNotification } from '../../services/notificationService';
 import { createLogger } from '../../lib/logger';
 import { PLATFORM } from '../../config/platformConfig';
@@ -313,7 +313,7 @@ router.post('/send', requireAuth, requireManager, async (req: any, res) => {
     }
 
     // Pre-authorize credits
-    const creditCheck = await creditManager.deductCredits({
+    const creditCheck = await tokenManager.recordUsage({
       workspaceId,
       userId,
       featureKey: 'hr_document_request',

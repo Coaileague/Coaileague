@@ -19,7 +19,7 @@ const log = createLogger('schemaParityService');
 
 // Phase 16: Legacy credit tables intentionally dropped — skip in parity check so
 // the auto-fixer does not recreate them. Keep entries here while imports still exist
-// in creditManager.ts / shared/schema.ts for backward-compat type references.
+// in tokenManager.ts / shared/schema.ts for backward-compat type references.
 const DEPRECATED_TABLES = new Set([
   'workspace_credit_balance',
   'voice_wallet',

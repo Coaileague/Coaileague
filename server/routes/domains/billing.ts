@@ -23,7 +23,7 @@ import quickbooksPhase3Router from "../quickbooksPhase3Routes";
 import financialIntelligenceRouter from "../financialIntelligence";
 import financeNewRouter, { icalPublicRouter } from "../financeRoutes";
 import stripeInlineRouter from "../stripeInlineRoutes";
-import creditRouter from "../creditRoutes";
+import usageRouter from "../usageRoutes";
 import revenueRecognitionRouter from "../financialReporting/revenueRecognitionRoutes";
 import { billingReconciliation } from "../../services/billing/billingReconciliation";
 import { orgBillingService } from "../../services/billing/orgBillingService";
@@ -155,10 +155,10 @@ export function mountBillingRoutes(app: Express): void {
   // before it ever reaches the router. Registering it first ensures the webhook
   // matches and responds before the generic /api auth guards run.
   app.use("/api/stripe", stripeInlineRouter);
-  // Canonical token-usage prefix (GET /api/usage/tokens, /token-breakdown, /token-log).
-  // /api/credits/* remains mounted for legacy clients; /purchase and /packs return 410 Gone.
-  app.use("/api/usage", creditRouter);
-  app.use("/api/credits", creditRouter);
+  // Canonical token-usage prefix. /api/credits/* is retained as a thin alias
+  // for legacy frontend bundles and returns 410 on /purchase and /packs.
+  app.use("/api/usage", usageRouter);
+  app.use("/api/credits", usageRouter);
 
   app.use("/api", requireAuth, ensureWorkspaceAccess, financeInlineRouter);
   app.use("/api/timesheet-invoices", requireAuth, ensureWorkspaceAccess, timesheetInvoiceRouter);

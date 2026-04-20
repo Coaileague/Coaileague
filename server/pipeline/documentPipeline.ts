@@ -13,7 +13,7 @@
  * Related services:
  * - documentUnderstandingPipeline.ts: AI-powered OCR/extraction for onboarding (uses meteredGemini)
  * - documentExtraction.ts: AI extraction for business migration workflows (uses meteredGemini)
- * Both AI services are properly metered through creditManager for billing.
+ * Both AI services are properly metered through tokenManager for billing.
  */
 
 import { randomUUID } from 'crypto';

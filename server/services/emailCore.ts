@@ -1602,7 +1602,7 @@ export async function sendPayStubEmail(
 
 // ============================================================================
 // CREDIT WARNING — Track A
-// Trigger: creditManager.ts PHASE 16 — 25% and 10% thresholds
+// Trigger: tokenManager.ts PHASE 16 — 25% and 10% thresholds
 // To: org_owner
 // ============================================================================
 export async function sendCreditWarningEmail(

@@ -24,7 +24,7 @@ import { NotificationsPopover } from '@/components/notifications-popover';
 import { SimpleModeToggle } from '@/components/SimpleModeToggle';
 import { performLogout, setLogoutTransitionLoader } from '@/lib/logoutHandler';
 import { useTransitionLoaderIfMounted } from '@/components/canvas-hub';
-import { CreditBalanceBadge } from '@/components/credit-balance';
+import { CreditBalanceBadge } from '@/components/plan-status';
 import {
   DropdownMenu,
   DropdownMenuContent,

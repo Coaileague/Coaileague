@@ -348,7 +348,7 @@ export default function OrgManagement() {
       setRefundAmount('');
       setRefundReason('');
       queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/credits'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/usage'] });
     },
     onError: (error: Error) => {
       toast({ title: 'Refund Failed', description: error.message, variant: 'destructive' });

@@ -863,7 +863,7 @@ async function phase15_comprehensive_service_coverage() {
     { name: 'Trinity Outreach', path: '../services/trinityOutreachService.ts' },
     { name: 'Abuse Detection', path: '../services/abuseDetection.ts' },
     { name: 'Employee Behavior Scoring', path: '../services/employeeBehaviorScoring.ts' },
-    { name: 'Credit Manager', path: '../services/billing/creditManager.ts' },
+    { name: 'Credit Manager', path: '../services/billing/tokenManager.ts' },
     { name: 'Stripe Webhooks', path: '../services/billing/stripeWebhooks.ts' },
     { name: 'AI Brain Service', path: '../services/ai-brain/aiBrainService.ts' },
     { name: 'Claude Service', path: '../services/ai-brain/dualai/claudeService.ts' },

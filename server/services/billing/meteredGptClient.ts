@@ -21,7 +21,7 @@
 
 import { createLogger } from '../../lib/logger';
 import OpenAI from 'openai';
-import { aiCreditGateway } from './aiTokenGateway';
+import { aiTokenGateway } from './aiTokenGateway';
 
 const log = createLogger('meteredGptClient');
 // GPT model tiers for cost optimization
@@ -134,7 +134,7 @@ class MeteredGptClient {
     const client = getOpenAIClient();
 
     try {
-      const preAuth = await aiCreditGateway.preAuthorize(
+      const preAuth = await aiTokenGateway.preAuthorize(
         request.workspaceId,
         request.userId,
         featureKey
@@ -169,7 +169,7 @@ class MeteredGptClient {
       const tokensUsed = inputTokens + outputTokens;
       const latencyMs = Date.now() - startTime;
 
-      await aiCreditGateway.finalizeBilling(
+      await aiTokenGateway.finalizeBilling(
         request.workspaceId,
         request.userId,
         featureKey,

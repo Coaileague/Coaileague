@@ -4,14 +4,14 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { requireAuth } from '../auth';
 import { unifiedAIOrchestrator, aiActionLogger, taskRouter, claudeVerificationService, trinityConfidenceScorer, claudeService } from "../services/ai-brain/dualai";
-import { creditManager, CREDIT_COSTS } from '../services/billing/creditManager';
+import { tokenManager, TOKEN_COSTS } from '../services/billing/tokenManager';
 import { createLogger } from '../lib/logger';
 const log = createLogger('AiOrchestratorRoutes');
 
 
-// Maps AI Orchestrator task types to the correct CREDIT_COSTS feature key + override amount.
+// Maps AI Orchestrator task types to the correct TOKEN_COSTS feature key + override amount.
 // Used to ensure contract reviews charge 30 credits, compliance audits 25, etc.
-const TASK_CREDIT_MAP: Record<string, { key: keyof typeof CREDIT_COSTS; amount: number }> = {
+const TASK_CREDIT_MAP: Record<string, { key: keyof typeof TOKEN_COSTS; amount: number }> = {
   contract_review:       { key: 'claude_contract_review', amount: 30 },
   rfp_response:          { key: 'rfp_proposal_generation', amount: 30 },
   capability_statement:  { key: 'rfp_proposal_generation', amount: 30 },
@@ -91,8 +91,8 @@ router.post("/process", requireAuth, async (req: Request, res: Response) => {
     });
 
     // Deduct credits based on task type — unifiedAIOrchestrator has no internal billing
-    const creditInfo = TASK_CREDIT_MAP[taskType || ''] || { key: 'ai_general' as keyof typeof CREDIT_COSTS, amount: CREDIT_COSTS['ai_general'] };
-    creditManager.deductCredits({
+    const creditInfo = TASK_CREDIT_MAP[taskType || ''] || { key: 'ai_general' as keyof typeof TOKEN_COSTS, amount: TOKEN_COSTS['ai_general'] };
+    tokenManager.recordUsage({
       workspaceId,
       userId: user?.id || 'system',
       featureKey: creditInfo.key,
@@ -145,8 +145,8 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
 
     // Infer task type from the task string and charge the correct credit rate
     const inferredTaskType = taskRouter.inferTaskType(task);
-    const consultCreditInfo = TASK_CREDIT_MAP[inferredTaskType] || { key: 'ai_general' as keyof typeof CREDIT_COSTS, amount: CREDIT_COSTS['ai_general'] };
-    creditManager.deductCredits({
+    const consultCreditInfo = TASK_CREDIT_MAP[inferredTaskType] || { key: 'ai_general' as keyof typeof TOKEN_COSTS, amount: TOKEN_COSTS['ai_general'] };
+    tokenManager.recordUsage({
       workspaceId,
       userId: user?.id || 'system',
       featureKey: consultCreditInfo.key,

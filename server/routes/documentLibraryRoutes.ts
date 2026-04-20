@@ -6,7 +6,7 @@ import { orgDocuments, orgDocumentAccess, orgDocumentSignatures, users } from '@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import '../types';
 import { documentSigningService } from '../services/documentSigningService';
-import { creditManager } from '../services/billing/creditManager';
+import { tokenManager } from '../services/billing/tokenManager';
 import { createLogger } from '../lib/logger';
 const log = createLogger('DocumentLibraryRoutes');
 
@@ -287,7 +287,7 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
 
       // Deduct 3 credits per document sent for e-signature (replaces DocuSign at $500+/year)
       if (workspaceId) {
-        creditManager.deductCredits({
+        tokenManager.recordUsage({
           workspaceId,
           userId: userId || 'system',
           featureKey: 'document_signing_send',
