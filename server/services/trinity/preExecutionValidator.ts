@@ -280,7 +280,11 @@ export async function validateBeforeExecution(
   } catch (err: any) {
     log.warn('[PreExecutionValidator] Check failed (non-blocking):', err?.message);
     const fallthrough = PASSED;
-    await logValidationDecision(actionId, workspaceId, { ...fallthrough, checkName: 'error_fallthrough' }).catch(() => {});
+    try {
+      await logValidationDecision(actionId, workspaceId, { ...fallthrough, checkName: 'error_fallthrough' });
+    } catch (auditErr: any) {
+      log.warn('[PreExecutionValidator] Audit log write failed (non-fatal):', auditErr?.message);
+    }
     return fallthrough;
   }
 }

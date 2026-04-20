@@ -209,9 +209,11 @@ export async function handleWellnessReply(params: {
       language: 'en',
     });
     caseId = sc.case_number;
-    notifyHumanAgents({ supportCase: sc, workspaceId: params.workspaceId }).catch((e: any) =>
-      log.warn('[officerWellness] notify agents failed (non-fatal):', e?.message),
-    );
+    try {
+      await notifyHumanAgents({ supportCase: sc, workspaceId: params.workspaceId });
+    } catch (e: any) {
+      log.warn('[officerWellness] notify agents failed (non-fatal):', e?.message);
+    }
   } catch (err: any) {
     log.warn('[officerWellness] support case create failed:', err?.message);
   }

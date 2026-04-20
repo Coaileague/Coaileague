@@ -403,23 +403,28 @@ async function processIncident(
       log.warn(`[TrinityInboundEmail] Incident attachment rejected — email quota exceeded for workspace ${workspaceId} (att: ${att.filename}, size: ${attBytes})`);
       continue;
     }
-    await db.insert(documentVault).values({
-      workspaceId,
-      title: att.filename || 'Incident Attachment',
-      category: 'incident_evidence',
-      fileUrl: att.url!,
-      mimeType: att.contentType,
-      fileSizeBytes: attBytes,
-      relatedEntityType: 'incident_report',
-      relatedEntityId: report.id,
-      uploadedBy: sender.id,
-    } as any).then(() => {
+    try {
+      await db.insert(documentVault).values({
+        workspaceId,
+        title: att.filename || 'Incident Attachment',
+        category: 'incident_evidence',
+        fileUrl: att.url!,
+        mimeType: att.contentType,
+        fileSizeBytes: attBytes,
+        relatedEntityType: 'incident_report',
+        relatedEntityId: report.id,
+        uploadedBy: sender.id,
+      } as any);
       if (attBytes > 0) {
-        recordStorageUsage(workspaceId, 'email', attBytes).catch(() => null);
+        try {
+          await recordStorageUsage(workspaceId, 'email', attBytes);
+        } catch (err) {
+          log.warn('[TrinityInboundEmail] Storage usage record failed (non-fatal):', err instanceof Error ? err.message : String(err));
+        }
       }
-    }).catch((err: unknown) => {
+    } catch (err: unknown) {
       log.warn('[TrinityInboundEmail] Vault insert for incident attachment failed (non-blocking):', err instanceof Error ? err.message : String(err));
-    });
+    }
   }
 
   // NOTIFY: route to supervisor
@@ -522,7 +527,11 @@ async function processDocs(
     if (vaultEntry) {
       vaultIds.push(vaultEntry.id);
       if (attBytes > 0) {
-        recordDocStorage(workspaceId, 'email', attBytes).catch(() => null);
+        try {
+          await recordDocStorage(workspaceId, 'email', attBytes);
+        } catch (err) {
+          log.warn('[TrinityInboundEmail] Doc storage record failed (non-fatal):', err instanceof Error ? err.message : String(err));
+        }
       }
     }
   }

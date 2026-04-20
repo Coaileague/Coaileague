@@ -265,23 +265,27 @@ class TrinityOrchestrationGateway {
 
       const auditableEntries = toFlush.filter(r => r.wasBlocked && r.workspaceId);
       if (auditableEntries.length > 0) {
-        universalAudit.logBatch(auditableEntries.map(r => ({
-          workspaceId: r.workspaceId!,
-          actorId: r.userId || null,
-          actorType: 'trinity' as const,
-          action: r.wasBlocked ? 'trinity.request_blocked' : 'trinity.request_tracked',
-          entityType: r.requestType || 'api_request',
-          entityId: r.endpoint || r.featureKey || null,
-          changeType: 'action' as const,
-          metadata: {
-            blockReason: r.blockReason,
-            tier: r.tierAtRequest,
-            featureKey: r.featureKey,
-            endpoint: r.endpoint,
-            method: r.method,
-          },
-          sourceRoute: r.endpoint || undefined,
-        }))).catch((err) => log.warn('[trinityOrchestrationGateway] Fire-and-forget failed:', err));
+        try {
+          await universalAudit.logBatch(auditableEntries.map(r => ({
+            workspaceId: r.workspaceId!,
+            actorId: r.userId || null,
+            actorType: 'trinity' as const,
+            action: r.wasBlocked ? 'trinity.request_blocked' : 'trinity.request_tracked',
+            entityType: r.requestType || 'api_request',
+            entityId: r.endpoint || r.featureKey || null,
+            changeType: 'action' as const,
+            metadata: {
+              blockReason: r.blockReason,
+              tier: r.tierAtRequest,
+              featureKey: r.featureKey,
+              endpoint: r.endpoint,
+              method: r.method,
+            },
+            sourceRoute: r.endpoint || undefined,
+          })));
+        } catch (err: any) {
+          log.warn('[trinityOrchestrationGateway] Audit batch write failed (non-fatal):', err?.message ?? err);
+        }
       }
     } catch (error: any) {
       // Detailed error logging — Postgres errors carry code/detail/
