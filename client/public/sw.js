@@ -1,6 +1,12 @@
 /**
- * CoAIleague Service Worker v3.9.0
- * APK-ready with IndexedDB offline queue, SW update prompts, and enhanced caching
+ * CoAIleague Service Worker v4.6.0
+ * APK-ready with IndexedDB offline queue, SW update prompts, and enhanced caching.
+ *
+ * Canonical registration: navigator.serviceWorker.register('/sw.js').
+ * notificationclick handlers MUST stay in sync with NOTIFICATION_ACTION_MAP in
+ * server/services/notificationDeliveryService.ts. Supported actions:
+ *   accept, decline, approve, view, sign, clock_in, reply, acknowledge,
+ *   respond, dismiss.
  * 
  * Features:
  * - IndexedDB-backed offline queue (survives app restarts)
@@ -15,9 +21,9 @@
  * - Cache versioning with automatic stale data purge on SW update
  */
 
-const CACHE_VERSION = 10;
-const CACHE_NAME = 'coaileague-v4.5';
-const STATIC_CACHE = 'coaileague-static-v4.5';
+const CACHE_VERSION = 11;
+const CACHE_NAME = 'coaileague-v4.6';
+const STATIC_CACHE = 'coaileague-static-v4.6';
 const API_CACHE = 'coaileague-api-v' + CACHE_VERSION;
 const offlineFallbackPage = '/offline.html';
 
@@ -100,7 +106,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v4.5.0 — purging ALL old caches + standalone HTML bypass');
+  console.log('[SW] Activating service worker v4.6.0 — purging ALL old caches + standalone HTML bypass');
   event.waitUntil(
     Promise.all([
       // Delete ALL caches that aren't the current valid set — this purges any stale Vite module caches
@@ -139,7 +145,7 @@ self.addEventListener('activate', (event) => {
           // navigate() forces a full reload, bypassing any stale in-memory modules
           c.navigate(c.url).catch(() => {
             // fallback: postMessage if navigate fails
-            c.postMessage({ type: 'SW_UPDATED', version: 'v4.3.0' });
+            c.postMessage({ type: 'SW_UPDATED', version: 'v4.6.0' });
           });
         });
       });
@@ -608,11 +614,22 @@ self.addEventListener('notificationclick', (event) => {
   let targetUrl = notificationData.url || '/';
 
   switch (event.action) {
-    case 'clock-in':
-      targetUrl = '/worker';
+    case 'clock_in':
+      targetUrl = notificationData.url || '/worker';
+      break;
+    case 'accept':
+      notifyClientOfAction(notificationData, 'accepted');
+      targetUrl = notificationData.url || '/schedule';
+      break;
+    case 'decline':
+      notifyClientOfAction(notificationData, 'declined');
+      return;
+    case 'sign':
+      targetUrl = notificationData.url || '/documents/signatures';
       break;
     case 'approve':
-      targetUrl = '/workflow-approvals';
+      notifyClientOfAction(notificationData, 'approved');
+      targetUrl = notificationData.url || '/workflow-approvals';
       break;
     case 'reply':
       targetUrl = notificationData.url || '/chatrooms';
@@ -621,14 +638,14 @@ self.addEventListener('notificationclick', (event) => {
       targetUrl = notificationData.url || '/universal-inbox';
       break;
     case 'acknowledge':
-      notifyClientOfAction(notificationData.notificationId, 'acknowledged');
+      notifyClientOfAction(notificationData, 'acknowledged');
       targetUrl = notificationData.url || '/universal-inbox';
       break;
     case 'respond':
       targetUrl = notificationData.url || '/worker-incidents';
       break;
     case 'dismiss':
-      notifyClientOfAction(notificationData.notificationId, 'dismissed');
+      notifyClientOfAction(notificationData, 'dismissed');
       return;
   }
 
@@ -649,14 +666,23 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-function notifyClientOfAction(notificationId, action) {
-  if (!notificationId) return;
-  self.clients.matchAll({ type: 'window' }).then((clients) => {
+function notifyClientOfAction(notificationData, action) {
+  const data = notificationData || {};
+  if (!data.notificationId) return;
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
     clients.forEach((client) => {
       client.postMessage({
         type: 'NOTIFICATION_ACTION',
-        notificationId,
-        action
+        notificationId: data.notificationId,
+        notificationType: data.type,
+        action,
+        url: data.url,
+        offerId: data.offerId,
+        shiftId: data.shiftId,
+        documentId: data.documentId,
+        approvalId: data.approvalId,
+        entityId: data.entityId,
+        entityType: data.entityType,
       });
     });
   });
@@ -719,7 +745,7 @@ self.addEventListener('message', (event) => {
   }
 
   if (event.data?.type === 'GET_VERSION') {
-    event.source?.postMessage({ type: 'SW_VERSION', version: 'v4.3.0' });
+    event.source?.postMessage({ type: 'SW_VERSION', version: 'v4.6.0' });
   }
 
   if (event.data?.type === 'CLEAR_ALL_CACHES') {
@@ -756,4 +782,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[SW] Service Worker loaded - v4.2.0 (APK-Ready + IndexedDB Offline Queue + Rich Push Notifications + Safari-Compatible + Stale-While-Revalidate API Caching)');
+console.log('[SW] Service Worker loaded - v4.6.0 (Unified sw.js + accept/decline/sign/clock_in handlers for NOTIFICATION_ACTION_MAP)');

@@ -550,9 +550,12 @@ if (!configValid && isProductionEnv()) {
   process.exit(1);
 }
 
-// Service Worker handling - proper headers for PWA detection
-// This ensures PWABuilder and browsers can properly detect the service worker
-app.get('/service-worker.js', (req, res, next) => {
+// Service Worker handling - proper headers for PWA detection.
+// /sw.js is the canonical SW (registered by client/src/main.tsx). The
+// /service-worker.js path is kept as a header passthrough so legacy clients
+// that still have the old SW URL cached can fetch a 404 with the correct
+// content-type / scope headers and unregister cleanly.
+app.get(['/sw.js', '/service-worker.js'], (req, res, next) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Service-Worker-Allowed', '/');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

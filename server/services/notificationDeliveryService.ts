@@ -113,8 +113,9 @@ export const CRITICAL_NOTIFICATION_TYPES: NotificationDeliveryType[] = [
 ];
 
 // Action buttons rendered on web-push notifications. The service worker
-// (public/sw.js) handles "accept", "decline", "approve", "view", "sign",
-// "clock_in" click targets; entries here must match those handlers.
+// (client/public/sw.js) handles "accept", "decline", "approve", "view", "sign",
+// "clock_in", "reply", "acknowledge", "respond", "dismiss" click targets;
+// entries here must match those handlers.
 export const NOTIFICATION_ACTION_MAP: Partial<Record<NotificationDeliveryType, Array<{ action: string; title: string }>>> = {
   shift_offer_notification: [
     { action: 'accept', title: 'Accept Shift' },
@@ -419,7 +420,20 @@ export class NotificationDeliveryService {
       body: String(payload.body ?? payload.message ?? record.subject ?? ''),
       type: record.notificationType,
       url: String(payload.url ?? payload.actionUrl ?? '/'),
-      data: { workspaceId: record.workspaceId, type: record.notificationType, notificationId: record.id },
+      data: {
+        workspaceId: record.workspaceId,
+        type: record.notificationType,
+        notificationId: record.id,
+        // Entity refs so the client-side use-service-worker-messages hook can
+        // fire the right mutation when the user taps an action button. Only
+        // the fields present on the payload are forwarded.
+        ...(payload.offerId ? { offerId: payload.offerId } : {}),
+        ...(payload.shiftId ? { shiftId: payload.shiftId } : {}),
+        ...(payload.documentId ? { documentId: payload.documentId } : {}),
+        ...(payload.approvalId ? { approvalId: payload.approvalId } : {}),
+        ...(payload.entityId ? { entityId: payload.entityId } : {}),
+        ...(payload.entityType ? { entityType: payload.entityType } : {}),
+      },
       ...(actions && actions.length ? { actions } : {}),
     });
   }

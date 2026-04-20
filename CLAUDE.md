@@ -873,6 +873,7 @@ valid.
 | Notification delivery | `server/services/notificationDeliveryService.ts` | — |
 | Env validation | `server/startup/validateEnvironment.ts` | runs at startServer() |
 | Mobile scroll guarantee | `client/src/index.css` (Phase Q block) | CSS load |
+| Service worker (single canonical file) | `client/public/sw.js` — registered by `client/index.html:680` and `client/src/main.tsx:150`, pointed at by `client/public/manifest.json:serviceworker.src`. notificationclick handlers MUST stay in sync with `NOTIFICATION_ACTION_MAP` in `server/services/notificationDeliveryService.ts`. Never re-introduce `/service-worker.js` — it is retained only as a legacy header passthrough in `server/index.ts` so stale clients can unregister cleanly. | served by Vite (dev) and `express.static` (prod) from `dist/public/sw.js` |
 | Trinity service inventory | `server/services/trinity/trinityServiceRegistry.ts` | — |
 | Trinity transparency API | `server/routes/trinityTransparencyRoutes.ts` | `/api/trinity/transparency/*` |
 | Trinity agent dashboard API | `server/routes/trinityAgentDashboardRoutes.ts` | `/api/trinity/agent-dashboard/*` |

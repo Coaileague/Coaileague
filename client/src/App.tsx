@@ -92,6 +92,7 @@ import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import { OfflineIndicator } from "@/components/ui/offline-indicator";
 import { ConnectionStatusBanner } from "@/components/connection-status";
 import { SWUpdateBanner } from "@/components/ui/sw-update-notice";
+import { ServiceWorkerMessageListener } from "@/components/sw-notification-listener";
 import { listenForTabEvents } from "@/lib/tabSync";
 import { SessionTimeoutWarning } from "@/components/session-timeout-warning";
 import { SplashScreen } from "@/components/SplashScreen";
@@ -2411,6 +2412,7 @@ export default function App() {
                           <ConnectionStatusBanner />
                           <OfflineIndicator />
                           <SWUpdateBanner />
+                          <ServiceWorkerMessageListener />
                           <ChatroomNotificationListener />
                           <LanguageSync />
                           <Suspense fallback={<PageLoader />}>

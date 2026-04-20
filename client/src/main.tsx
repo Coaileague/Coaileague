@@ -143,7 +143,10 @@ createRoot(document.getElementById("root")!).render(
   </RootErrorBoundary>
 );
 
-// Register service worker for PWA support (push notifications, offline, caching)
+// Register service worker for PWA support (push notifications, offline, caching).
+// /sw.js is the canonical CoAIleague service worker — its notificationclick
+// handlers match NOTIFICATION_ACTION_MAP in notificationDeliveryService.ts.
+// The legacy /service-worker.js (AutoForce-branded) was retired; do not re-register it.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker

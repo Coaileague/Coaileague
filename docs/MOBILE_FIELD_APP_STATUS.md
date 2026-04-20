@@ -14,12 +14,12 @@ block with specific file:line references and effort estimates.
 
 | Feature | Status | Reference |
 |---------|:------:|-----------|
-| PWA (manifest + service worker) | PART | `client/public/manifest.json:1-272`, `client/public/service-worker.js:1-760`. Install prompt `client/src/components/pwa-install-prompt.tsx`. **Gap:** end-to-end DAR/incident photo sync untested under offline conditions. |
+| PWA (manifest + service worker) | PART | `client/public/manifest.json:1-272`, `client/public/sw.js:1-770`. Install prompt `client/src/components/pwa-install-prompt.tsx`. **Gap:** end-to-end DAR/incident photo sync untested under offline conditions. |
 | Officer mobile dashboard | DONE | `client/src/components/mobile/MobileWorkerLayout.tsx:199-300` (5-tab nav + haptics), `client/src/pages/worker-dashboard.tsx`. |
 | Mobile clock-in/out (GPS + photo) | PART | Endpoints + GPS + photo all wired. **Gap:** geofence perimeter definition is server-side only; client approval flow (UniversalFAB geofence modal) doesn't handle its endpoint being missing. See bug #1. |
 | Mobile incident report | DONE | `client/src/pages/worker-incidents.tsx:71-300+` with auto-location, photo attach, severity routing to `incidentRoutingService`. |
 | Mobile DAR (daily report) | PART | Route + template loader exist (`client/src/pages/field-reports.tsx:1-120+`). **Gap:** dynamic template fields aren't bound to `onChange` → submission loses field values. See bug #2. |
-| Offline queue (guaranteed delivery) | DONE | IndexedDB queue + service-worker sync (`client/public/service-worker.js:281-391`, `client/src/lib/offlineQueue.ts`). |
+| Offline queue (guaranteed delivery) | DONE | IndexedDB queue + service-worker sync (`client/public/sw.js:281-391`, `client/src/lib/offlineQueue.ts`). |
 | Panic / duress button | MISS | Haptics entry + CAD-console reference exist, but no dedicated mobile endpoint or component surfaces a panic action. Not mounted in `MobileWorkerLayout`. |
 | Shift acceptance from mobile | PART | `client/src/components/ShiftOfferSheet.tsx:33-90` accept/decline mutations work. **Gap:** sheet not surfaced in worker nav or push notification actions. |
 | Guard tour QR scan | MISS | Guard-tour route points to desktop-only view. No QR scanner component in the mobile surface. |
