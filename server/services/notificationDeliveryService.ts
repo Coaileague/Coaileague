@@ -99,7 +99,14 @@ export type NotificationDeliveryType =
   | 'email_fair_use_warning'
   | 'client_portal_report'
   | 'client_portal_dispute'
-  | 'trinity_welcome_email';
+  | 'trinity_welcome_email'
+  | 'proof_of_service_prompt'
+  | 'shift_trade_request'
+  | 'shift_trade_accepted'
+  | 'shift_trade_declined'
+  | 'incident_submitted'
+  | 'incident_high_severity'
+  | 'dar_delivered';
 
 export type NotificationDeliveryChannel = 'email' | 'sms' | 'websocket' | 'in_app' | 'push';
 

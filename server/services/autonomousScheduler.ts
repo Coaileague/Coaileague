@@ -2723,6 +2723,40 @@ export function startAutonomousScheduler() {
   });
   log.info('Terminated Access Expiry registered', { schedule: '30 4 * * *' });
 
+  // 4c. Hourly Proof-of-Service Prompt (Every 15 minutes)
+  // Scans active shift chatrooms and nudges officers who have gone >60 min
+  // without submitting a GPS photo. Escalates to supervisors at >120 min.
+  registerJobInfo(
+    'Hourly Proof-of-Service Prompt',
+    '*/15 * * * *',
+    'Prompts officers in active shifts to submit GPS photo if none in last 60 min',
+    true,
+  );
+  cron.schedule('*/15 * * * *', () => {
+    trackJobExecution('Hourly Proof-of-Service Prompt', async () => {
+      try {
+        const { promptOverdueShiftPhotos } = await import('./automation/shiftPhotoPromptService');
+        const result = await promptOverdueShiftPhotos();
+        emitAutomationEvent({
+          jobName: 'Hourly Proof-of-Service Prompt',
+          category: 'scheduling',
+          success: true,
+          recordsProcessed: result.prompted,
+          details: { checked: result.checked, prompted: result.prompted, supervisorAlerts: result.supervisorAlerts },
+        });
+      } catch (err: any) {
+        log.error('[PhotoPrompt] cron failed', { error: err instanceof Error ? err.message : String(err) });
+        emitAutomationEvent({
+          jobName: 'Hourly Proof-of-Service Prompt',
+          category: 'scheduling',
+          success: false,
+          details: { error: err instanceof Error ? err.message : String(err) },
+        });
+      }
+    });
+  });
+  log.info('Hourly Proof-of-Service Prompt registered', { schedule: '*/15 * * * *' });
+
   // 5. Chat Workroom Auto-Close (Every 5 minutes)
   registerJobInfo('Room Auto-Close', SCHEDULER_CONFIG.roomAutoClose.schedule, SCHEDULER_CONFIG.roomAutoClose.description, SCHEDULER_CONFIG.roomAutoClose.enabled);
   if (SCHEDULER_CONFIG.roomAutoClose.enabled) {

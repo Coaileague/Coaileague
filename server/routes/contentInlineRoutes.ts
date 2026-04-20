@@ -56,23 +56,29 @@ router.get("/client-reports", requireAuth, async (req: any, res) => {
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
-    
+
     const clients = await storage.getClientsByWorkspace(workspaceId);
     const matchingClient = clients.find(c => c.userId === userId);
-    
+
     if (!matchingClient) {
-      return res.json([]);
+      return res.json({
+        reports: [],
+        guardTours: [],
+        dars: [],
+        incidents: [],
+        transparencyPdfs: [],
+      });
     }
-    
+
     const clientId = matchingClient.id;
-    
+
+    // 1. Existing report submissions (approved/delivered only)
     const allReports = await storage.getReportSubmissions(workspaceId);
-    const clientReports = allReports.filter(r => 
-      r.clientId === clientId && 
+    const reportsForClient = allReports.filter(r =>
+      r.clientId === clientId &&
       (r.status === 'approved' || r.status === 'delivered')
     );
-    
-    const enrichedReports = await Promise.all(clientReports.map(async (report) => {
+    const reports = await Promise.all(reportsForClient.map(async (report) => {
       let employeeName = 'Employee';
       if (report.employeeId) {
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -81,13 +87,117 @@ router.get("/client-reports", requireAuth, async (req: any, res) => {
           employeeName = `${employee.firstName} ${employee.lastName}`.trim() || 'Employee';
         }
       }
-      return {
-        ...report,
-        employeeName,
-      };
+      return { ...report, employeeName };
     }));
-    
-    res.json(enrichedReports);
+
+    // Resolve site IDs for this client — every downstream query is filtered
+    // by workspace_id + siteId set so other tenants' data is never surfaced.
+    const siteRows = await db.execute(sql`
+      SELECT id FROM sites
+       WHERE workspace_id = ${workspaceId}
+         AND client_id = ${clientId}
+    `);
+    const clientSiteIds: string[] = ((siteRows as any).rows || []).map((r: any) => r.id);
+
+    // Helper: produce a SQL array literal for inArray-style filters without
+    // dropping down to the dynamic drizzle `inArray` builder.
+    const hasSites = clientSiteIds.length > 0;
+    const sitesLiteral = sql.raw(
+      `ARRAY[${clientSiteIds.map((id) => `'${String(id).replace(/'/g, "''")}'`).join(',') || "''"}]::text[]`
+    );
+
+    // 2. Completed guard tours for this client's sites (via shift→site linkage,
+    //    since guard_tours doesn't carry site_id directly in current schema).
+    const guardTours = hasSites
+      ? ((await db.execute(sql`
+          SELECT pt.id,
+                 gt.name AS tour_name,
+                 sh.site_id AS site_id,
+                 pt.status,
+                 pt.completed_at,
+                 pt.completion_percentage,
+                 emp.first_name || ' ' || COALESCE(emp.last_name, '') AS officer_name
+            FROM patrol_tours pt
+            LEFT JOIN guard_tours gt ON gt.id = pt.patrol_route_id
+            LEFT JOIN shifts sh ON sh.id = pt.shift_id
+            LEFT JOIN employees emp ON emp.id = pt.officer_id
+           WHERE pt.workspace_id = ${workspaceId}
+             AND pt.status = 'completed'
+             AND sh.site_id = ANY(${sitesLiteral})
+           ORDER BY pt.completed_at DESC NULLS LAST
+           LIMIT 50
+        `)) as any).rows
+      : [];
+
+    // 3. Approved DARs for this client's sites — includes pdf_url.
+    const dars = hasSites
+      ? ((await db.execute(sql`
+          SELECT dar.id,
+                 dar.id AS report_number,
+                 s.name AS site_name,
+                 dar.shift_start_time AS shift_date,
+                 dar.employee_name,
+                 dar.status,
+                 dar.pdf_url,
+                 dar.verified_at AS approved_at,
+                 dar.photo_count,
+                 dar.created_at
+            FROM dar_reports dar
+            LEFT JOIN shifts sh ON sh.id = dar.shift_id
+            LEFT JOIN sites s ON s.id = sh.site_id
+           WHERE dar.workspace_id = ${workspaceId}
+             AND dar.status IN ('verified', 'sent')
+             AND sh.site_id = ANY(${sitesLiteral})
+           ORDER BY dar.created_at DESC
+           LIMIT 100
+        `)) as any).rows
+      : [];
+
+    // 4. Incidents — client-safe subset only (no internal investigation notes).
+    const incidents = hasSites
+      ? ((await db.execute(sql`
+          SELECT ir.id,
+                 ir.title,
+                 ir.incident_type,
+                 ir.severity,
+                 ir.occurred_at,
+                 ir.location_address AS location,
+                 ir.status,
+                 ir.site_id,
+                 emp.first_name || ' ' || COALESCE(emp.last_name, '') AS officer_name
+            FROM incident_reports ir
+            LEFT JOIN employees emp ON emp.id::text = ir.reported_by
+           WHERE ir.workspace_id = ${workspaceId}
+             AND ir.status IN ('submitted', 'under_review', 'closed')
+             AND ir.site_id::text = ANY(${sitesLiteral})
+           ORDER BY ir.occurred_at DESC NULLS LAST
+           LIMIT 50
+        `)) as any).rows
+      : [];
+
+    // 5. Shift transparency PDFs — the client's primary proof-of-service.
+    const transparencyPdfs = hasSites
+      ? ((await db.execute(sql`
+          SELECT dar.id,
+                 dar.id AS report_number,
+                 s.name AS site_name,
+                 dar.shift_start_time AS shift_date,
+                 dar.employee_name,
+                 dar.pdf_url,
+                 dar.photo_count,
+                 dar.status
+            FROM dar_reports dar
+            LEFT JOIN shifts sh ON sh.id = dar.shift_id
+            LEFT JOIN sites s ON s.id = sh.site_id
+           WHERE dar.workspace_id = ${workspaceId}
+             AND dar.pdf_url IS NOT NULL
+             AND sh.site_id = ANY(${sitesLiteral})
+           ORDER BY dar.created_at DESC
+           LIMIT 30
+        `)) as any).rows
+      : [];
+
+    res.json({ reports, guardTours, dars, incidents, transparencyPdfs });
   } catch (error) {
     log.error("Error fetching client reports:", error);
     res.status(500).json({ message: "Failed to fetch client reports" });

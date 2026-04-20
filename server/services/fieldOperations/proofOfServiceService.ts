@@ -2,19 +2,27 @@
  * Proof of Service (POS) Photo Service
  * Captures, processes, and verifies proof of service photos
  * with GPS verification, overlay, compliance flags, and chain of custody
+ *
+ * Persistence: every photo is written to the `shift_proof_photos` table so it
+ * survives server restarts and is queryable for the chronological shift
+ * transparency PDF. The full ProofOfServicePhoto object is stored in
+ * `device_meta.fullPayload` so reads return the exact same object shape
+ * that was captured — preserving chain of custody integrity.
  */
 
 import crypto from 'crypto';
-import { 
+import { and, asc, eq, gte, lte } from 'drizzle-orm';
+import {
   ProofOfServicePhoto,
   GPSCoordinates,
   DeviceInfo,
   ComplianceFlag,
   CustodyEvent,
   POSComplianceStatus,
-  ComplianceFlagType
 } from '@shared/types/fieldOperations';
 import { fieldOpsConfigRegistry } from '@shared/config/fieldOperationsConfig';
+import { db } from '../../db';
+import { shiftProofPhotos } from '@shared/schema/domains/scheduling';
 import { createLogger } from '../../lib/logger';
 import { PLATFORM } from '../../config/platformConfig';
 const log = createLogger('proofOfServiceService');
@@ -22,6 +30,9 @@ const log = createLogger('proofOfServiceService');
 
 interface CaptureParams {
   shiftId: string;
+  workspaceId?: string;
+  chatroomId?: string;
+  messageId?: string;
   officerId: string;
   officerName: string;
   orgId: string;
@@ -36,15 +47,8 @@ interface CaptureParams {
   imageData: Buffer;
   deviceMeta: DeviceInfo & { deviceTimestamp: string };
   gps: GPSCoordinates;
-}
-
-interface OverlayData {
-  officerName: string;
-  postName: string;
-  dateTime: string;
-  coordinates: string;
-  address: string;
-  shiftInfo: string;
+  photoType?: string;
+  notes?: string;
 }
 
 interface FlagParams {
@@ -60,36 +64,35 @@ interface FlagParams {
 }
 
 class ProofOfServiceService {
-  private photos: Map<string, ProofOfServicePhoto> = new Map();
-  
   async capturePhoto(params: CaptureParams): Promise<ProofOfServicePhoto> {
-    const { 
-      shiftId, officerId, officerName, orgId, postId, clientId,
+    const {
+      shiftId, workspaceId, chatroomId, messageId, officerId, officerName,
+      orgId, postId, clientId,
       postName, postLatitude, postLongitude, postRadius, postTimezone,
-      shiftName, imageData, deviceMeta, gps 
+      shiftName, imageData, deviceMeta, gps, photoType, notes,
     } = params;
-    
+
     const config = fieldOpsConfigRegistry.getConfig(orgId, postId);
     const serverTimestamp = new Date();
     const deviceTimestamp = new Date(deviceMeta.deviceTimestamp);
     const timeDrift = Math.abs(serverTimestamp.getTime() - deviceTimestamp.getTime()) / 1000;
-    
+
     const distanceFromPost = this.calculateDistance(
       gps.latitude, gps.longitude,
       postLatitude, postLongitude
     );
     const withinGeofence = distanceFromPost <= postRadius;
-    
+
     const originalHash = this.hashImage(imageData);
     const mockLocationDetected = this.detectMockLocation(deviceMeta);
-    
+
     const dateTime = this.formatDateTime(serverTimestamp, postTimezone);
     const coordinates = `${gps.latitude.toFixed(6)}°, ${gps.longitude.toFixed(6)}°`;
     const address = await this.reverseGeocode(gps.latitude, gps.longitude);
-    
+
     const imageUrl = `pos/${orgId}/${clientId}/${shiftId}/${Date.now()}.jpg`;
     const thumbnailUrl = `pos/${orgId}/${clientId}/${shiftId}/${Date.now()}_thumb.jpg`;
-    
+
     const flags = this.generateComplianceFlags({
       withinGeofence,
       distanceFromPost,
@@ -98,24 +101,27 @@ class ProofOfServiceService {
       mockLocationDetected,
       deviceMeta,
       shiftStartTime: new Date(),
-      shiftEndTime: new Date()
+      shiftEndTime: new Date(),
     });
-    
+
     const status: POSComplianceStatus = flags.some(f => f.severity === 'critical') ? 'flagged' : 'valid';
-    
+
+    const id = this.generateId();
+    const genesisSignature = this.generateCustodySignature(null, originalHash);
+
     const pos: ProofOfServicePhoto = {
-      id: this.generateId(),
+      id,
       shiftId,
       officerId,
       orgId,
       postId,
       clientId,
-      
+
       imageUrl,
       thumbnailUrl,
       originalHash,
       fileSize: imageData.length,
-      
+
       capture: {
         serverTimestamp,
         deviceTimestamp,
@@ -127,14 +133,14 @@ class ProofOfServiceService {
           accuracy: gps.accuracy,
           altitude: gps.altitude,
           heading: gps.heading,
-          speed: gps.speed
+          speed: gps.speed,
         },
         geofence: {
           postLatitude,
           postLongitude,
           postRadius,
           distanceFromPost,
-          withinGeofence
+          withinGeofence,
         },
         device: {
           platform: deviceMeta.platform,
@@ -142,10 +148,10 @@ class ProofOfServiceService {
           appVersion: deviceMeta.appVersion,
           osVersion: deviceMeta.osVersion,
           ipAddress: deviceMeta.ipAddress,
-          networkType: deviceMeta.networkType
-        }
+          networkType: deviceMeta.networkType,
+        },
       },
-      
+
       overlay: {
         enabled: config.pos.overlayEnabled,
         position: config.pos.overlayPosition,
@@ -155,15 +161,12 @@ class ProofOfServiceService {
           dateTime,
           coordinates,
           address,
-          shiftInfo: shiftName
-        }
+          shiftInfo: shiftName,
+        },
       },
-      
-      compliance: {
-        status,
-        flags
-      },
-      
+
+      compliance: { status, flags },
+
       chainOfCustody: [
         {
           timestamp: serverTimestamp,
@@ -172,193 +175,334 @@ class ProofOfServiceService {
           actorType: 'officer',
           details: `Photo captured via ${deviceMeta.platform} app`,
           ipAddress: deviceMeta.ipAddress,
-          signature: this.generateCustodySignature(null, originalHash)
-        }
+          signature: genesisSignature,
+        },
       ],
-      
+
       capturedAt: serverTimestamp,
       uploadedAt: serverTimestamp,
-      processedAt: new Date()
+      processedAt: new Date(),
     };
-    
-    this.photos.set(pos.id, pos);
-    
+
+    try {
+      await db.insert(shiftProofPhotos).values({
+        id,
+        workspaceId: workspaceId ?? orgId,
+        shiftId,
+        chatroomId: chatroomId ?? null,
+        employeeId: officerId,
+        messageId: messageId ?? null,
+        photoUrl: imageUrl,
+        thumbnailUrl,
+        gpsLat: String(gps.latitude),
+        gpsLng: String(gps.longitude),
+        gpsAddress: address ?? null,
+        gpsAccuracy: gps.accuracy !== undefined ? String(gps.accuracy) : null,
+        capturedAt: serverTimestamp,
+        photoType: photoType ?? 'hourly_proof',
+        notes: notes ?? null,
+        deviceMeta: { fullPayload: pos, device: deviceMeta },
+        isAuditProtected: true,
+        chainOfCustodyHash: genesisSignature,
+      });
+    } catch (err: any) {
+      log.error(`[POS] Failed to persist photo ${id}:`, err?.message);
+      throw err;
+    }
+
     log.info(`[POS] Photo captured: ${pos.id} for shift ${shiftId}, status: ${status}`);
-    
+
     if (status === 'flagged') {
       await this.notifyFlaggedPOS(pos);
     }
-    
+
     return pos;
   }
-  
+
   async get(id: string): Promise<ProofOfServicePhoto | undefined> {
-    return this.photos.get(id);
+    const [row] = await db.select()
+      .from(shiftProofPhotos)
+      .where(eq(shiftProofPhotos.id, id))
+      .limit(1);
+    return row ? this.rowToPos(row) : undefined;
   }
-  
+
   async getByShift(shiftId: string): Promise<ProofOfServicePhoto[]> {
-    return Array.from(this.photos.values()).filter(p => p.shiftId === shiftId);
+    const rows = await db.select()
+      .from(shiftProofPhotos)
+      .where(eq(shiftProofPhotos.shiftId, shiftId))
+      .orderBy(asc(shiftProofPhotos.capturedAt));
+    return rows.map(r => this.rowToPos(r)).filter((p): p is ProofOfServicePhoto => !!p);
   }
-  
+
   async getByPost(postId: string, startDate: Date, endDate: Date): Promise<ProofOfServicePhoto[]> {
-    return Array.from(this.photos.values()).filter(p => 
-      p.postId === postId &&
-      p.capturedAt >= startDate &&
-      p.capturedAt <= endDate
-    );
+    // postId is embedded in the stored fullPayload; we filter after fetch.
+    const rows = await db.select()
+      .from(shiftProofPhotos)
+      .where(and(
+        gte(shiftProofPhotos.capturedAt, startDate),
+        lte(shiftProofPhotos.capturedAt, endDate),
+      ));
+    return rows
+      .map(r => this.rowToPos(r))
+      .filter((p): p is ProofOfServicePhoto => !!p && p.postId === postId);
   }
-  
+
   async countForShift(shiftId: string): Promise<number> {
-    return (await this.getByShift(shiftId)).length;
+    const rows = await db.select({ id: shiftProofPhotos.id })
+      .from(shiftProofPhotos)
+      .where(eq(shiftProofPhotos.shiftId, shiftId));
+    return rows.length;
   }
-  
+
   async addCustodyEvent(posId: string, event: Omit<CustodyEvent, 'signature'>): Promise<void> {
-    const pos = this.photos.get(posId);
-    if (!pos) throw new Error(`POS photo not found: ${posId}`);
-    
+    const [row] = await db.select()
+      .from(shiftProofPhotos)
+      .where(eq(shiftProofPhotos.id, posId))
+      .limit(1);
+    if (!row) throw new Error(`POS photo not found: ${posId}`);
+
+    const pos = this.rowToPos(row);
+    if (!pos) throw new Error(`POS photo payload corrupt: ${posId}`);
+
     const lastEvent = pos.chainOfCustody[pos.chainOfCustody.length - 1];
-    
     const newEvent: CustodyEvent = {
       ...event,
-      signature: this.generateCustodySignature(lastEvent.signature || null, JSON.stringify(event))
+      signature: this.generateCustodySignature(lastEvent.signature || null, JSON.stringify(event)),
     };
-    
     pos.chainOfCustody.push(newEvent);
-    this.photos.set(posId, pos);
-    
+
+    const deviceMeta = (row.deviceMeta ?? {}) as Record<string, any>;
+    await db.update(shiftProofPhotos)
+      .set({
+        deviceMeta: { ...deviceMeta, fullPayload: pos },
+        chainOfCustodyHash: newEvent.signature ?? row.chainOfCustodyHash,
+      })
+      .where(eq(shiftProofPhotos.id, posId));
+
     log.info(`[POS] Custody event added: ${event.action} by ${event.actor}`);
   }
-  
+
   async verifyCustodyChain(posId: string): Promise<{ valid: boolean; brokenAt?: number }> {
-    const pos = this.photos.get(posId);
-    if (!pos) throw new Error(`POS photo not found: ${posId}`);
-    
+    const [row] = await db.select()
+      .from(shiftProofPhotos)
+      .where(eq(shiftProofPhotos.id, posId))
+      .limit(1);
+    if (!row) throw new Error(`POS photo not found: ${posId}`);
+
+    const pos = this.rowToPos(row);
+    if (!pos) throw new Error(`POS photo payload corrupt: ${posId}`);
+
     for (let i = 1; i < pos.chainOfCustody.length; i++) {
       const prev = pos.chainOfCustody[i - 1];
       const curr = pos.chainOfCustody[i];
-      
-      const currWithoutSig = { ...curr };
-      delete (currWithoutSig as any).signature;
-      
+      const currWithoutSig: any = { ...curr };
+      delete currWithoutSig.signature;
       const expectedSig = this.generateCustodySignature(
         prev.signature || null,
         JSON.stringify(currWithoutSig)
       );
-      
       if (curr.signature !== expectedSig) {
         return { valid: false, brokenAt: i };
       }
     }
-    
     return { valid: true };
   }
-  
-  async reviewPhoto(posId: string, reviewerId: string, reviewerName: string, approved: boolean, notes?: string): Promise<void> {
-    const pos = this.photos.get(posId);
-    if (!pos) throw new Error(`POS photo not found: ${posId}`);
-    
+
+  async reviewPhoto(posId: string, reviewerId: string, reviewerName: string, approved: boolean, reviewNotes?: string): Promise<void> {
+    const [row] = await db.select()
+      .from(shiftProofPhotos)
+      .where(eq(shiftProofPhotos.id, posId))
+      .limit(1);
+    if (!row) throw new Error(`POS photo not found: ${posId}`);
+
+    const pos = this.rowToPos(row);
+    if (!pos) throw new Error(`POS photo payload corrupt: ${posId}`);
+
     pos.compliance.status = approved ? 'valid' : 'rejected';
     pos.compliance.reviewedBy = reviewerName;
     pos.compliance.reviewedAt = new Date();
-    pos.compliance.reviewNotes = notes;
-    
-    await this.addCustodyEvent(posId, {
+    pos.compliance.reviewNotes = reviewNotes;
+
+    const lastEvent = pos.chainOfCustody[pos.chainOfCustody.length - 1];
+    const reviewEvent: CustodyEvent = {
       timestamp: new Date(),
       action: 'verified',
       actor: reviewerName,
       actorType: 'supervisor',
-      details: `Photo ${approved ? 'approved' : 'rejected'}${notes ? `: ${notes}` : ''}`
-    });
-    
-    this.photos.set(posId, pos);
+      details: `Photo ${approved ? 'approved' : 'rejected'}${reviewNotes ? `: ${reviewNotes}` : ''}`,
+    };
+    reviewEvent.signature = this.generateCustodySignature(
+      lastEvent.signature || null,
+      JSON.stringify(reviewEvent)
+    );
+    pos.chainOfCustody.push(reviewEvent);
+
+    const deviceMeta = (row.deviceMeta ?? {}) as Record<string, any>;
+    await db.update(shiftProofPhotos)
+      .set({
+        deviceMeta: { ...deviceMeta, fullPayload: pos },
+        chainOfCustodyHash: reviewEvent.signature ?? row.chainOfCustodyHash,
+      })
+      .where(eq(shiftProofPhotos.id, posId));
   }
-  
+
+  /**
+   * Rehydrate a ProofOfServicePhoto from its DB row. If the stored fullPayload
+   * is missing, reconstruct a minimal object from the denormalized columns
+   * so callers still get a usable object.
+   */
+  private rowToPos(row: typeof shiftProofPhotos.$inferSelect): ProofOfServicePhoto | undefined {
+    const deviceMeta = row.deviceMeta as any;
+    const full = deviceMeta?.fullPayload;
+    if (full) {
+      // Dates arrive as ISO strings from jsonb — revive them.
+      return this.revivePosDates(full);
+    }
+    // Minimal fallback (used only for partial/legacy rows):
+    const lat = Number(row.gpsLat);
+    const lng = Number(row.gpsLng);
+    return {
+      id: row.id,
+      shiftId: row.shiftId,
+      officerId: row.employeeId,
+      orgId: row.workspaceId,
+      postId: '',
+      clientId: '',
+      imageUrl: row.photoUrl,
+      thumbnailUrl: row.thumbnailUrl ?? '',
+      originalHash: row.chainOfCustodyHash ?? '',
+      fileSize: 0,
+      capture: {
+        serverTimestamp: row.serverReceivedAt ?? row.capturedAt,
+        deviceTimestamp: row.capturedAt,
+        timeDrift: 0,
+        timeDriftFlag: false,
+        gps: { latitude: lat, longitude: lng, accuracy: Number(row.gpsAccuracy ?? 0) },
+        geofence: {
+          postLatitude: 0, postLongitude: 0, postRadius: 0,
+          distanceFromPost: 0, withinGeofence: true,
+        },
+        device: deviceMeta?.device ?? {
+          platform: 'web', deviceId: 'unknown', appVersion: '0',
+          osVersion: '0', ipAddress: '', networkType: 'wifi',
+        },
+      },
+      overlay: { enabled: false, position: 'bottom', data: {
+        officerName: '', postName: '', dateTime: '',
+        coordinates: `${lat}, ${lng}`, address: row.gpsAddress ?? '', shiftInfo: '',
+      }},
+      compliance: { status: 'valid', flags: [] },
+      chainOfCustody: [],
+      capturedAt: row.capturedAt,
+      uploadedAt: row.serverReceivedAt ?? row.capturedAt,
+      processedAt: row.serverReceivedAt ?? row.capturedAt,
+    };
+  }
+
+  private revivePosDates(payload: any): ProofOfServicePhoto {
+    const toDate = (v: any) => (v ? new Date(v) : v);
+    return {
+      ...payload,
+      capture: {
+        ...payload.capture,
+        serverTimestamp: toDate(payload.capture?.serverTimestamp),
+        deviceTimestamp: toDate(payload.capture?.deviceTimestamp),
+      },
+      compliance: {
+        ...payload.compliance,
+        reviewedAt: payload.compliance?.reviewedAt ? toDate(payload.compliance.reviewedAt) : undefined,
+      },
+      chainOfCustody: (payload.chainOfCustody || []).map((e: any) => ({
+        ...e, timestamp: toDate(e.timestamp),
+      })),
+      capturedAt: toDate(payload.capturedAt),
+      uploadedAt: toDate(payload.uploadedAt),
+      processedAt: toDate(payload.processedAt),
+    };
+  }
+
   private generateComplianceFlags(params: FlagParams): ComplianceFlag[] {
     const flags: ComplianceFlag[] = [];
-    
+
     if (!params.withinGeofence) {
       flags.push({
         type: 'outside_geofence',
         severity: 'critical',
-        message: `Photo taken ${Math.round(params.distanceFromPost)}m from post`
+        message: `Photo taken ${Math.round(params.distanceFromPost)}m from post`,
       });
     }
-    
+
     if (params.timeDrift > 60) {
       flags.push({
         type: 'time_drift',
         severity: 'warning',
-        message: `Device clock differs from server by ${Math.round(params.timeDrift)} seconds`
+        message: `Device clock differs from server by ${Math.round(params.timeDrift)} seconds`,
       });
     }
-    
+
     if (params.mockLocationDetected) {
       flags.push({
         type: 'mock_location',
         severity: 'critical',
-        message: 'GPS spoofing or mock location app detected'
+        message: 'GPS spoofing or mock location app detected',
       });
     }
-    
+
     if (params.gpsAccuracy > 100) {
       flags.push({
         type: 'low_gps_accuracy',
         severity: 'warning',
-        message: `GPS accuracy is ${Math.round(params.gpsAccuracy)}m (recommended: <50m)`
+        message: `GPS accuracy is ${Math.round(params.gpsAccuracy)}m (recommended: <50m)`,
       });
     }
-    
+
     if (params.scheduledPOSTime) {
       const diffMinutes = (Date.now() - params.scheduledPOSTime.getTime()) / 60000;
-      
       if (diffMinutes > 15) {
         flags.push({
           type: 'late_submission',
           severity: 'warning',
-          message: `Photo submitted ${Math.round(diffMinutes)} minutes after scheduled time`
+          message: `Photo submitted ${Math.round(diffMinutes)} minutes after scheduled time`,
         });
       } else if (diffMinutes < -15) {
         flags.push({
           type: 'early_submission',
           severity: 'info',
-          message: `Photo submitted ${Math.abs(Math.round(diffMinutes))} minutes early`
+          message: `Photo submitted ${Math.abs(Math.round(diffMinutes))} minutes early`,
         });
       }
     }
-    
+
     return flags;
   }
-  
+
   private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371000;
     const dLat = this.toRad(lat2 - lat1);
     const dLon = this.toRad(lon2 - lon1);
-    const a = 
+    const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
-  
-  private toRad(deg: number): number {
-    return deg * (Math.PI / 180);
-  }
-  
+
+  private toRad(deg: number): number { return deg * (Math.PI / 180); }
+
   private hashImage(imageData: Buffer): string {
     return crypto.createHash('sha256').update(imageData).digest('hex');
   }
-  
+
   private detectMockLocation(deviceMeta: DeviceInfo): boolean {
     const suspiciousSignals: string[] = [];
 
-    // 1. Explicit mock/GPS override flags from device metadata
     if ((deviceMeta as any).isMockProvider === true) suspiciousSignals.push('explicit_mock_provider');
     if ((deviceMeta as any).isFromMockProvider === true) suspiciousSignals.push('is_from_mock_provider');
     if ((deviceMeta as any).locationProvider === 'mock') suspiciousSignals.push('location_provider_mock');
     if ((deviceMeta as any).mockLocationsEnabled === true) suspiciousSignals.push('mock_locations_enabled');
 
-    // 2. Known emulator/virtual device identifiers
     const model = ((deviceMeta as any).model || '').toLowerCase();
     const manufacturer = ((deviceMeta as any).manufacturer || '').toLowerCase();
     const EMULATOR_PATTERNS = ['sdk_gphone', 'android sdk', 'emulator', 'genymotion', 'bluestacks', 'nox', 'memu', 'ldplayer', 'youwave'];
@@ -366,8 +510,6 @@ class ProofOfServiceService {
       suspiciousSignals.push('known_emulator_device');
     }
 
-    // 3. GPS accuracy anomaly — real device GPS typically has 3–30m accuracy
-    // Perfect 0m accuracy or suspiciously high (>200m) without wifi/cell tower mode
     const accuracy = (deviceMeta as any).accuracy;
     if (accuracy !== undefined) {
       if (accuracy === 0) suspiciousSignals.push('perfect_zero_accuracy');
@@ -376,13 +518,11 @@ class ProofOfServiceService {
       }
     }
 
-    // 4. Speed sanity check — impossible real-world velocity (>250 mph / ~400 kph)
     const speed = (deviceMeta as any).speed;
-    if (speed !== undefined && speed > 111) { // 111 m/s ≈ 250 mph
+    if (speed !== undefined && speed > 111) {
       suspiciousSignals.push('impossible_velocity');
     }
 
-    // 5. Known GPS spoofing app packages (Android)
     const installedApps: string[] = (deviceMeta as any).installedApps || [];
     const GPS_SPOOF_PACKAGES = ['com.lexa.fakegps', 'com.incorporateapps.fakegps', 'com.blogspot.newapphorizons.fakegps',
       'com.incorporateapps.fakegpslocation', 'com.rosteam.gpsemulator', 'com.theappninjas.gpsspooferpro'];
@@ -390,17 +530,15 @@ class ProofOfServiceService {
       suspiciousSignals.push('gps_spoofing_app_detected');
     }
 
-    // 6. Developer options / mock locations setting
     if ((deviceMeta as any).developerMode === true && (deviceMeta as any).allowMockLocations === true) {
       suspiciousSignals.push('developer_mock_locations_active');
     }
 
-    // Flag if 2+ suspicious signals or any single definitive signal
     const definitiveSignals = ['explicit_mock_provider', 'is_from_mock_provider', 'gps_spoofing_app_detected', 'location_provider_mock'];
     const hasDefinitive = suspiciousSignals.some(s => definitiveSignals.includes(s));
     return hasDefinitive || suspiciousSignals.length >= 2;
   }
-  
+
   private formatDateTime(date: Date, timezone: string): string {
     try {
       return date.toLocaleString('en-US', {
@@ -411,13 +549,13 @@ class ProofOfServiceService {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: true
+        hour12: true,
       });
     } catch {
       return date.toISOString();
     }
   }
-  
+
   private async reverseGeocode(lat: number, lng: number): Promise<string> {
     try {
       const controller = new AbortController();
@@ -433,7 +571,6 @@ class ProofOfServiceService {
       if (response.ok) {
         const data = await response.json() as any;
         if (data?.display_name) {
-          // Build a concise address: "123 Main St, New York, NY 10001"
           const a = data.address || {};
           const parts = [
             a.house_number && a.road ? `${a.house_number} ${a.road}` : (a.road || a.pedestrian || a.footway),
@@ -447,21 +584,20 @@ class ProofOfServiceService {
     } catch {
       // Network error or timeout — fall through to coordinate fallback
     }
-    // Fallback: human-readable coordinate string
     const latDir = lat >= 0 ? 'N' : 'S';
     const lngDir = lng >= 0 ? 'E' : 'W';
     return `${Math.abs(lat).toFixed(4)}°${latDir}, ${Math.abs(lng).toFixed(4)}°${lngDir}`;
   }
-  
+
   private generateCustodySignature(previousSignature: string | null, data: string): string {
     const content = `${previousSignature || 'GENESIS'}:${data}`;
     return crypto.createHash('sha256').update(content).digest('hex');
   }
-  
+
   private generateId(): string {
-    return `pos_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
+    return crypto.randomUUID();
   }
-  
+
   private async notifyFlaggedPOS(pos: ProofOfServicePhoto): Promise<void> {
     log.info(`[POS] Flagged photo notification: ${pos.id}, flags: ${pos.compliance.flags.map(f => f.type).join(', ')}`);
   }

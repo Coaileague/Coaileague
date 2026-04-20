@@ -697,6 +697,21 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         log.warn('[Shifts] Failed to log webhook error to audit log', { error: webhookErr.message });
       }
 
+      // Pre-provision a pending shift chatroom so manager↔officer messaging
+      // works the moment the shift hits the schedule — before clock-in.
+      // Awaited try/catch (non-fatal): per CLAUDE.md §B no fire-and-forget.
+      try {
+        const { shiftChatroomWorkflowService } = await import('../services/shiftChatroomWorkflowService');
+        await shiftChatroomWorkflowService.provisionChatroom({
+          shiftId: shift.id,
+          workspaceId,
+          siteId: shift.siteId ?? undefined,
+          assignedEmployeeId: shift.employeeId ?? undefined,
+        });
+      } catch (provisionErr: any) {
+        log.warn('[ShiftChatroom] provisionChatroom failed (non-blocking):', provisionErr?.message);
+      }
+
       // Notify assigned employees about new shift
       try {
         // @ts-expect-error — TS migration: fix in refactoring sprint

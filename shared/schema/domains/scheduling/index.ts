@@ -1069,6 +1069,54 @@ export const shiftChatroomMessages = pgTable("shift_chatroom_messages", {
   index("shift_chatroom_messages_created_idx").on(table.createdAt),
 ]);
 
+// ═══════════════════════════════════════════════════════════════
+// Proof of Service Photos — persistent storage (Gap 1)
+// Every GPS-stamped photo submitted during a shift is persisted here
+// so it survives server restarts and is queryable for the chronological
+// shift transparency PDF. Chain of custody + audit-protected by default.
+// ═══════════════════════════════════════════════════════════════
+export const shiftProofPhotos = pgTable("shift_proof_photos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  shiftId: varchar("shift_id").notNull(),
+  chatroomId: varchar("chatroom_id"),
+  employeeId: varchar("employee_id").notNull(),
+  messageId: varchar("message_id"),
+
+  // Photo storage
+  photoUrl: varchar("photo_url", { length: 1000 }).notNull(),
+  thumbnailUrl: varchar("thumbnail_url", { length: 1000 }),
+
+  // GPS — required, not nullable
+  gpsLat: decimal("gps_lat", { precision: 10, scale: 7 }).notNull(),
+  gpsLng: decimal("gps_lng", { precision: 10, scale: 7 }).notNull(),
+  gpsAddress: text("gps_address"),
+  gpsAccuracy: decimal("gps_accuracy", { precision: 8, scale: 2 }),
+
+  // Timestamps — server-set, not client-supplied
+  capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+  serverReceivedAt: timestamp("server_received_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+
+  // Metadata
+  deviceMeta: jsonb("device_meta"),
+  // photoType values: 'hourly_proof' | 'incident' | 'patrol_checkpoint' | 'post_orders' | 'manual'
+  photoType: varchar("photo_type", { length: 50 }).default("hourly_proof"),
+  notes: text("notes"),
+
+  // Audit integrity — immutable once set
+  isAuditProtected: boolean("is_audit_protected").default(true).notNull(),
+  chainOfCustodyHash: varchar("chain_of_custody_hash", { length: 64 }),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("shift_proof_photos_shift_idx").on(table.shiftId),
+  index("shift_proof_photos_workspace_idx").on(table.workspaceId),
+  index("shift_proof_photos_employee_idx").on(table.employeeId),
+  index("shift_proof_photos_captured_idx").on(table.capturedAt),
+]);
+
 export const shiftCoverageRequests = pgTable("shift_coverage_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),

@@ -839,6 +839,105 @@ if (!serviceable) {
 
 ---
 
+## Section R — Shift Evidence Must Be Persistent + Chronological (Phase S)
+
+**The law:** Every GPS-stamped proof-of-service photo submitted during a shift
+must be persisted to a durable database table — not kept in RAM — and every
+shift must produce a chronological PDF that merges photos, text updates,
+incidents, and patrol tours into an hour-by-hour timeline. In-memory `Map`
+stores are forbidden for evidence data because Railway deploys drop them.
+
+**The bug it prevents:** `proofOfServiceService.ts` stored photos in a
+private `Map<string, ProofOfServicePhoto>`. A deploy, crash, or pod rotation
+discarded every photo for every in-progress shift. The entire proof-of-
+service chain of custody vanished without audit trail. A client asking
+"where was the officer at 14:00?" had no answer the moment Railway rolled
+the container.
+
+**The canonical files:**
+- `shared/schema/domains/scheduling/index.ts#shiftProofPhotos` — the durable
+  table. Every photo row includes `workspaceId`, `shiftId`, `employeeId`,
+  `gpsLat`/`gpsLng` (NOT NULL), `capturedAt`, `serverReceivedAt`,
+  `chainOfCustodyHash`, and a `deviceMeta.fullPayload` JSONB that carries
+  the full `ProofOfServicePhoto` object for lossless round-trip.
+- `server/services/fieldOperations/proofOfServiceService.ts` — reads and
+  writes the table. The private `Map` is retired. `capturePhoto()`,
+  `get()`, `getByShift()`, `getByPost()`, `countForShift()`,
+  `addCustodyEvent()`, `verifyCustodyChain()`, and `reviewPhoto()` all
+  hit the DB.
+- `server/services/automation/shiftPhotoPromptService.ts` — scans every
+  active chatroom every 15 minutes. If no `photo` message in the last 60
+  min, post a chatroom system prompt + NDS push. If >120 min, escalate
+  to supervisors via NDS.
+- `server/services/autonomousScheduler.ts` — registers the
+  `Hourly Proof-of-Service Prompt` job with `*/15 * * * *`.
+- `server/services/darPdfService.ts#generateShiftTransparencyPdf` —
+  merges `shift_proof_photos` rows with chatroom photo messages (de-duped
+  by `messageId`) and feeds `groupMessagesByHour()` for the chronological
+  Section 1 of the PDF.
+- `server/services/shiftChatroomWorkflowService.ts#provisionChatroom` —
+  pre-provisions a pending chatroom at shift creation so manager↔officer
+  messaging is live before clock-in. `startShift()` activates the pending
+  room in-place instead of creating a second one.
+- `server/routes/shiftRoutes.ts` — calls `provisionChatroom()` after the
+  shift-create transaction commits.
+- `server/routes/shiftTradingRoutes.ts` — every trade request/accept/
+  decline now also sends through `NotificationDeliveryService` so delivery
+  is logged (CLAUDE.md §B) in addition to the legacy `createNotification`.
+- `server/routes/rmsRoutes.ts` — `/dars/:id/verify` auto-generates the PDF
+  if missing, publishes `dar_available_to_client`, and sends an email if
+  the workspace has `automation_policy_blob.auto_send_dars_to_client =
+  true`. `/incidents` POST fans out NDS alerts to supervisors and (on
+  high/critical severity) org owners.
+- `server/routes/contentInlineRoutes.ts` — `/client-reports` now returns
+  `{ reports, guardTours, dars, incidents, transparencyPdfs }` — five
+  independent sources all WHERE-scoped to the client's own site IDs
+  (CLAUDE.md §G).
+- `client/src/pages/client-portal.tsx` — the Reports tab renders the
+  five sections in priority order (transparency PDFs first).
+
+**Required pattern (new evidence surface):**
+```ts
+// ✅ Durable, audit-protected, GPS-stamped.
+await db.insert(shiftProofPhotos).values({
+  id, workspaceId, shiftId, employeeId,
+  photoUrl, gpsLat: String(lat), gpsLng: String(lng),
+  capturedAt: new Date(),
+  isAuditProtected: true,
+  chainOfCustodyHash,
+  deviceMeta: { fullPayload: posObject },
+});
+```
+
+**Forbidden patterns:**
+```ts
+// 🔴 forbidden — in-memory evidence store
+private photos: Map<string, ProofOfServicePhoto> = new Map();
+this.photos.set(id, pos);
+
+// 🔴 forbidden — photo message without GPS
+await apiRequest('POST', `/api/shift-chatrooms/${id}/messages`, {
+  messageType: 'photo', attachmentUrl: url, // no metadata.gps
+});
+
+// 🔴 forbidden — shift chatroom only created at clock-in
+// (manager can't message the officer before the shift starts)
+// Must pre-provision via provisionChatroom() on shift create.
+
+// 🔴 forbidden — cross-tenant client surface
+// /client-reports must filter every downstream query by the
+// client's resolved site ID set. Never surface another tenant's
+// DARs/incidents/tours even if the query appears limited.
+```
+
+**Notification types added (Phase S):**
+- `proof_of_service_prompt` — hourly photo nag + 2h escalation
+- `shift_trade_request` / `shift_trade_accepted` / `shift_trade_declined`
+- `incident_submitted` / `incident_high_severity`
+- `dar_delivered`
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When Claude Code (or any future debug session) discovers a new architectural
@@ -915,3 +1014,4 @@ valid.
 | O | (this commit) | Panic button notification-only liability codification + canonical `PANIC_LIABILITY_NOTICE`, disclaimer UI components, CLAUDE.md Section O |
 | 27 / P | (this commit) | FCRA-bounded employment verification — voice → org-code resolver → email channel → manager approve/deny with `logActionAudit`; `verify@` auto-provisioned; CLAUDE.md Section P |
 | 26 / Q | (this commit) | Trinity subscription + identity gate — inbound voice/SMS, email AI, outbound voice/SMS, shift offers, cron workflows; `isWorkspaceServiceable` helper; Stripe + admin cache invalidation; `trinity.voice_ai_resolved` / `trinity.subscription_gate_blocked` audit taxonomy; owner-facing Gate Activity tab; CLAUDE.md Section Q |
+| S | (this commit) | Shift evidence chain — `shift_proof_photos` durable table (Map → DB), hourly POS prompt cron + NDS escalation, `provisionChatroom()` at shift create, shift-trade NDS, DAR PDF merges shift_proof_photos, client portal returns 5-source object, RMS verify auto-generates PDF + `dar_available_to_client`, incident POST fans out supervisor+owner NDS; CLAUDE.md Section R |

@@ -626,10 +626,26 @@ export default function ClientPortal() {
   const currentClient = clients.find(c => c.email === user?.email);
 
   interface ClientReport { id: number; title: string; reportType: string; status: string; employeeName?: string; createdAt: string; data: Record<string, any>; }
-  const { data: clientReports = [], isLoading: reportsLoading } = useQuery<ClientReport[]>({
+  interface ClientGuardTour { id: string; tour_name?: string; status: string; completed_at?: string; completion_percentage?: string; officer_name?: string; }
+  interface ClientDar { id: string; report_number?: string; site_name?: string; shift_date?: string; employee_name?: string; status?: string; pdf_url?: string; photo_count?: number; }
+  interface ClientIncident { id: string; title: string; incident_type?: string; severity?: string; occurred_at?: string; location?: string; status?: string; site_id?: string; officer_name?: string; }
+  interface ClientTransparencyPdf { id: string; report_number?: string; site_name?: string; shift_date?: string; employee_name?: string; pdf_url?: string; photo_count?: number; status?: string; }
+  interface ClientReportsResponse {
+    reports: ClientReport[];
+    guardTours: ClientGuardTour[];
+    dars: ClientDar[];
+    incidents: ClientIncident[];
+    transparencyPdfs: ClientTransparencyPdf[];
+  }
+  const { data: clientReportsData, isLoading: reportsLoading } = useQuery<ClientReportsResponse>({
     queryKey: ["/api/client-reports"],
     enabled: !!currentClient,
   });
+  const clientReports: ClientReport[] = clientReportsData?.reports ?? [];
+  const clientGuardTours: ClientGuardTour[] = clientReportsData?.guardTours ?? [];
+  const clientDars: ClientDar[] = clientReportsData?.dars ?? [];
+  const clientIncidents: ClientIncident[] = clientReportsData?.incidents ?? [];
+  const clientTransparencyPdfs: ClientTransparencyPdf[] = clientReportsData?.transparencyPdfs ?? [];
 
   interface Contract { id: string; title: string; status: string; clientEmail: string; createdAt: string; expiresAt?: string; docType?: string; }
   const { data: contractsData } = useQuery<{ contracts: Contract[] }>({
@@ -877,7 +893,11 @@ export default function ClientPortal() {
               <TabsTrigger value="payments" data-testid="tab-payments">Payments</TabsTrigger>
               <TabsTrigger value="reports" data-testid="tab-reports">
                 Reports
-                {clientReports.length > 0 && <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">{clientReports.length}</Badge>}
+                {(clientReports.length + clientTransparencyPdfs.length + clientDars.length) > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+                    {clientReports.length + clientTransparencyPdfs.length + clientDars.length}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="contracts" data-testid="tab-contracts">
                 Contracts
@@ -1150,17 +1170,138 @@ export default function ClientPortal() {
           </TabsContent>
 
           {/* ── FIELD REPORTS ────────────────────────────────────────────── */}
-          <TabsContent value="reports" className="mt-6">
+          <TabsContent value="reports" className="mt-6 space-y-6">
+            {/* 1. Shift Transparency Reports — chronological proof-of-service PDFs */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-indigo-500" /> Field Reports</CardTitle>
-                <CardDescription>View approved field reports from your service team</CardDescription>
+                <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-indigo-500" /> Shift Transparency Reports</CardTitle>
+                <CardDescription>Chronological proof-of-service with GPS-stamped photos for every hour of every shift at your sites.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {reportsLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+                ) : clientTransparencyPdfs.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">No shift reports yet — generated automatically at the end of each shift.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {clientTransparencyPdfs.map(pdf => (
+                      <div key={pdf.id} className="flex items-center justify-between gap-3 p-3 rounded-md border" data-testid={`card-transparency-${pdf.id}`}>
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{pdf.site_name || 'Site'} — {pdf.shift_date ? formatDate(pdf.shift_date) : ''}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Officer: {pdf.employee_name || 'On-Duty Officer'} · {pdf.photo_count ?? 0} photos
+                          </p>
+                        </div>
+                        {pdf.pdf_url && (
+                          <Button asChild size="sm" variant="outline" data-testid={`button-transparency-pdf-${pdf.id}`}>
+                            <a href={pdf.pdf_url} target="_blank" rel="noreferrer"><Download className="h-3.5 w-3.5 mr-1" /> Download PDF</a>
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 2. Guard Patrol Tours — completion rates */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-indigo-500" /> Guard Patrol Tours</CardTitle>
+                <CardDescription>Patrol completion for your sites — missed checkpoints flagged.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {clientGuardTours.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">No completed patrol tours yet.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {clientGuardTours.map(tour => {
+                      const pct = Number(tour.completion_percentage ?? 0);
+                      const complete = pct >= 100;
+                      return (
+                        <div key={tour.id} className="flex items-center justify-between gap-3 p-3 rounded-md border" data-testid={`card-tour-${tour.id}`}>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{tour.tour_name || 'Patrol Tour'}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {tour.completed_at ? formatDate(tour.completed_at) : 'In progress'} · {tour.officer_name || 'Officer'}
+                            </p>
+                          </div>
+                          <Badge variant={complete ? 'secondary' : 'destructive'}>
+                            {Math.round(pct)}% complete
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 3. Daily Activity Reports */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-indigo-500" /> Daily Activity Reports</CardTitle>
+                <CardDescription>Supervisor-reviewed DARs for every shift at your sites.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {clientDars.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">No DARs yet.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {clientDars.map(dar => (
+                      <div key={dar.id} className="flex items-center justify-between gap-3 p-3 rounded-md border" data-testid={`card-dar-${dar.id}`}>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{dar.site_name || 'Site'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {dar.shift_date ? formatDate(dar.shift_date) : ''} · {dar.employee_name || 'Officer'}
+                          </p>
+                        </div>
+                        {dar.pdf_url && (
+                          <Button asChild size="sm" variant="ghost" data-testid={`button-dar-pdf-${dar.id}`}>
+                            <a href={dar.pdf_url} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5 mr-1" /> View PDF</a>
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 4. Incident Reports (client-safe view) */}
+            {clientIncidents.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-red-500" /> Incident Reports</CardTitle>
+                  <CardDescription>Incidents at your sites — client-safe view only (no internal investigation notes).</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {clientIncidents.map(inc => (
+                      <div key={inc.id} className="p-3 rounded-md border border-l-4 border-l-red-400" data-testid={`card-incident-${inc.id}`}>
+                        <p className="font-medium">{inc.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {inc.incident_type || 'incident'} · {inc.occurred_at ? formatDate(inc.occurred_at) : 'time unknown'}
+                          {inc.status ? <> · <Badge variant={inc.status === 'closed' ? 'outline' : 'secondary'} className="ml-1">{inc.status}</Badge></> : null}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 5. Field Report Submissions — legacy reports view */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-indigo-500" /> Field Report Submissions</CardTitle>
+                <CardDescription>Approved field reports from your service team.</CardDescription>
               </CardHeader>
               <CardContent>
                 {reportsLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
                 ) : clientReports.length === 0 ? (
-                  <div className="text-center py-12"><ClipboardCheck className="h-12 w-12 text-muted-foreground mx-auto mb-3" /><p className="text-muted-foreground">No reports submitted yet</p></div>
+                  <div className="text-center py-8 text-sm text-muted-foreground">No field reports yet.</div>
                 ) : clientReports.map(r => {
                   const cfg = reportTypeConfig[r.reportType] || reportTypeConfig.other;
                   const Icon = cfg.icon;

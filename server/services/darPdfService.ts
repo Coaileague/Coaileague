@@ -975,6 +975,41 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
     return p;
   });
 
+  // Merge persistent proof-of-service photos from shift_proof_photos
+  // (survives restarts + guarantees every GPS-stamped photo is in the report).
+  if (dar.shift_id) {
+    try {
+      const posRows = await q(
+        `SELECT id, photo_url, thumbnail_url, gps_lat, gps_lng, gps_address, gps_accuracy,
+                captured_at, employee_id, photo_type, message_id, notes
+           FROM shift_proof_photos
+          WHERE shift_id = $1 AND workspace_id = $2
+          ORDER BY captured_at ASC`,
+        [dar.shift_id, workspaceId]
+      );
+      const seenMessageIds = new Set(photos.map(p => p.messageId).filter(Boolean));
+      for (const r of posRows as any[]) {
+        // De-dupe: if we already have this photo via a chatroom message, skip it.
+        if (r.message_id && seenMessageIds.has(r.message_id)) continue;
+        photos.push({
+          timestamp: new Date(r.captured_at).toISOString(),
+          url: r.photo_url,
+          caption: r.notes || 'GPS proof-of-service photo',
+          messageId: r.message_id ?? r.id,
+          uploaderName: dar.employee_name || 'Officer',
+          attachmentType: 'image/jpeg',
+          attachmentSize: 0,
+          gpsLat: r.gps_lat !== null ? Number(r.gps_lat) : null,
+          gpsLng: r.gps_lng !== null ? Number(r.gps_lng) : null,
+          gpsAddress: r.gps_address ?? null,
+          gpsAccuracy: r.gps_accuracy !== null ? Number(r.gps_accuracy) : null,
+        } as PhotoManifestEntry);
+      }
+    } catch (err) {
+      log.error('[DarPDF] shift_proof_photos merge failed (non-fatal):', err);
+    }
+  }
+
   // Sort photos chronologically
   photos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
