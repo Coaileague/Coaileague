@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { apiFetch } from "@/lib/apiError";
 import { BillingInvoiceListResponse, UsageSummaryResponse, AddonPlanListResponse } from "@shared/schemas/responses/billing";
+import { PREMIUM_FEATURES } from "@shared/config/premiumFeatures";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1261,6 +1262,63 @@ export default function Billing() {
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
                           Professional tier: 15% discount on middleware fees. Business: 20%. Enterprise: 25%. Strategic: 30%.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Elite Feature Fee Schedule — April 2026 */}
+                  <div className="p-4 rounded-md border bg-muted/30 space-y-3" data-testid="elite-fee-schedule">
+                    <div className="flex items-start gap-3">
+                      <Crown className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                      <div className="w-full">
+                        <p className="text-sm font-semibold mb-1">Elite Feature Fee Schedule</p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Each elite feature includes a monthly quota at your tier. Additional uses are billed at the per-use rate shown. Enterprise: all elite features unlimited.
+                        </p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-border/50 text-muted-foreground">
+                                <th className="text-left py-1.5 pr-2 font-medium">Feature</th>
+                                <th className="text-right py-1.5 px-2 font-medium">Starter</th>
+                                <th className="text-right py-1.5 px-2 font-medium">Professional</th>
+                                <th className="text-right py-1.5 px-2 font-medium">Business</th>
+                                <th className="text-right py-1.5 pl-2 font-medium">Enterprise</th>
+                              </tr>
+                            </thead>
+                            <tbody className="font-mono">
+                              {Object.values(PREMIUM_FEATURES)
+                                .filter(f => f.featureType === 'elite' && f.eliteSurchargeCents)
+                                .map(f => {
+                                  const s = f.eliteSurchargeCents!;
+                                  const fmt = (cents: number | undefined) => {
+                                    if (cents === undefined) return '—';
+                                    if (cents === 0) return 'Included';
+                                    const d = cents / 100;
+                                    return d >= 1 && d === Math.floor(d) ? `$${d.toFixed(0)}` : `$${d.toFixed(2)}`;
+                                  };
+                                  const limit = (v: number | undefined) => {
+                                    if (v === undefined) return '';
+                                    if (v === -1) return ' (∞)';
+                                    if (v === 0) return '';
+                                    return ` (${v} free)`;
+                                  };
+                                  return (
+                                    <tr key={f.id} className="border-b border-border/30 last:border-0" data-testid={`elite-fee-row-${f.id}`}>
+                                      <td className="text-left py-1.5 pr-2 font-sans text-foreground">{f.name}</td>
+                                      <td className="text-right py-1.5 px-2">{fmt(s.starter)}{limit(f.monthlyLimits.starter)}</td>
+                                      <td className="text-right py-1.5 px-2">{fmt(s.professional)}{limit(f.monthlyLimits.professional)}</td>
+                                      <td className="text-right py-1.5 px-2">{fmt(s.business)}{limit(f.monthlyLimits.business)}</td>
+                                      <td className="text-right py-1.5 pl-2">{fmt(s.enterprise)}{limit(f.monthlyLimits.enterprise)}</td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-3">
+                          Pricing is anchored to human professional cost (attorneys, consultants, RFP firms). Trinity delivers the same output at 4–8% of the human price.
                         </p>
                       </div>
                     </div>

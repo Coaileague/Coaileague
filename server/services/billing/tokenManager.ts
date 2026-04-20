@@ -221,8 +221,12 @@ export const TOKEN_COSTS = {
   // Domain Operations
   'log_analysis': 3,
 
-  // RFP & Ethics
-  'rfp_proposal_generation': 30,
+  // RFP & Ethics - High-value document generation
+  // Elite monetization is the per-proposal USD surcharge on trinity_rfp_generation
+  // (see shared/config/premiumFeatures.ts eliteSurchargeCents). This token value
+  // covers only the raw Claude/Gemini token cost of the research → draft → validate
+  // → refine pipeline so the elite USD surcharge is net value, not tokens.
+  'rfp_proposal_generation': 10,  // token-cost only (was 30 pre-Apr-2026)
   'ethics_triage': 5,
 
   // RMS & DAR
