@@ -299,6 +299,42 @@ async function signObjectURL({
  * Omitting workspaceId/storageCategory skips quota enforcement (system-generated files,
  * DAR PDFs, pay stubs, etc. that are already gated elsewhere).
  */
+export type StorageCategory = 'email' | 'documents' | 'media' | 'audit_reserve';
+
+export const STORAGE_CATEGORY_MAP: Record<string, StorageCategory> = {
+  'application/pdf':                                                      'documents',
+  'application/msword':                                                   'documents',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'documents',
+  'application/vnd.ms-excel':                                             'documents',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':   'documents',
+  'text/plain':                                                           'documents',
+  'text/csv':                                                             'documents',
+  'image/jpeg':                                                           'media',
+  'image/png':                                                            'media',
+  'image/webp':                                                           'media',
+  'image/gif':                                                            'media',
+  'image/svg+xml':                                                        'media',
+  'video/mp4':                                                            'media',
+  'video/webm':                                                           'media',
+  'video/quicktime':                                                      'media',
+  'video/x-msvideo':                                                      'media',
+  'audio/mpeg':                                                           'media',
+  'audio/wav':                                                            'media',
+  'audio/ogg':                                                            'media',
+  'audio/webm':                                                           'media',
+  'audio/mp4':                                                            'media',
+  'audio/aac':                                                            'media',
+  'message/rfc822':                                                       'email',
+  'application/mbox':                                                     'email',
+} as const;
+
+export function getStorageCategoryForMime(mimeType: string): StorageCategory {
+  if (STORAGE_CATEGORY_MAP[mimeType]) return STORAGE_CATEGORY_MAP[mimeType];
+  const prefix = mimeType.split('/')[0];
+  if (prefix === 'image' || prefix === 'video' || prefix === 'audio') return 'media';
+  return 'documents';
+}
+
 export class StorageQuotaError extends Error {
   readonly statusCode = 507;
   constructor(message: string) {

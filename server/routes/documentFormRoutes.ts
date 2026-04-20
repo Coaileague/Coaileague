@@ -15,7 +15,7 @@
 import { Router } from "express";
 import { db } from "../db";
 import { customFormSubmissions } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth, type AuthenticatedRequest } from "../rbac";
 import { getTemplate, getAllTemplates, TEMPLATE_REGISTRY } from "../services/documents/templateRegistry";
@@ -298,9 +298,14 @@ router.post("/submit", async (req: AuthenticatedRequest, res) => {
       .values(submissionData)
       .returning();
 
-    // Delete any existing drafts
+    // Archive existing drafts — never hard-delete submission history
     await db
-      .delete(customFormSubmissions)
+      .update(customFormSubmissions)
+      .set({
+        status: "archived",
+        updatedAt: new Date(),
+        formData: sql`form_data || ${JSON.stringify({ __archivedAt: new Date().toISOString() })}::jsonb`,
+      })
       .where(
         and(
           eq(customFormSubmissions.workspaceId, workspaceId),

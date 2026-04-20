@@ -17,6 +17,8 @@ import { eq, and, or } from "drizzle-orm";
 import { UPLOADS } from '../config/platformConfig';
 import { platformEventBus } from '../services/platformEventBus';
 import { broadcastToWorkspace } from '../websocket';
+import { getStorageCategoryForMime } from '../objectStorage';
+import { checkCategoryQuota, recordStorageUsage } from '../services/storage/storageQuotaService';
 import { typedPool, typedPoolExec } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 const log = createLogger('ChatUploads');
@@ -186,15 +188,26 @@ router.post(
       const bucket = storage.bucket(BUCKET_ID!);
       
       for (const file of files) {
+        // Pre-upload quota enforcement
+        const storageCategory = getStorageCategoryForMime(file.mimetype);
+        const quotaResult = await checkCategoryQuota(workspaceId, storageCategory, file.size);
+        if (!quotaResult.allowed) {
+          return res.status(413).json({
+            error: 'Storage quota exceeded',
+            detail: quotaResult.reason,
+            upgradeRequired: true,
+          });
+        }
+
         // PRESERVE original filename for audit trail
         const originalFilename = file.originalname;
-        
+
         // Generate sanitized filename for storage
         const sanitizedName = sanitizeFilename(originalFilename);
         const storagePath = isPublic === "true"
           ? `public/chat-uploads/${workspaceId}/${sanitizedName}`
           : `${PRIVATE_DIR}/chat-uploads/${workspaceId}/${sanitizedName}`;
-        
+
         // Upload to object storage
         const blob = bucket.file(storagePath);
         const blobStream = blob.createWriteStream({
@@ -214,7 +227,11 @@ router.post(
           blobStream.on("finish", resolve);
           blobStream.end(file.buffer);
         });
-        
+
+        // Record storage usage after successful upload
+        recordStorageUsage(workspaceId, storageCategory, file.size)
+          .catch(e => log.warn('[ChatUploads] Usage recording failed:', e.message));
+
         // Generate public URL if public file
         const storageUrl = isPublic === "true"
           ? `https://storage.googleapis.com/${BUCKET_ID}/${storagePath}`
