@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { sanitizeRichHtml } from "@/lib/sanitize";
 import { Mail, Users, Building2, BarChart3, CircleDollarSign, AlertTriangle, CheckCircle, Settings2, Forward, Pen, Bold, Italic, Underline, Link } from "lucide-react";
 
 interface EmailAddress {
@@ -70,27 +71,30 @@ function RichSignatureEditor({
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Initialise editor content once on mount
+  // Initialise editor content once on mount — sanitize server-supplied value
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = value || '';
+      editorRef.current.innerHTML = sanitizeRichHtml(value || '');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const execFormat = useCallback((command: string, val?: string) => {
-    editorRef.current?.focus();
-    document.execCommand(command, false, val);
+  const syncChange = useCallback(() => {
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML, editorRef.current.textContent || '');
+      const clean = sanitizeRichHtml(editorRef.current.innerHTML);
+      onChange(clean, editorRef.current.textContent || '');
     }
   }, [onChange]);
 
+  const execFormat = useCallback((command: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, val);
+    syncChange();
+  }, [syncChange]);
+
   const handleInput = useCallback(() => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML, editorRef.current.textContent || '');
-    }
-  }, [onChange]);
+    syncChange();
+  }, [syncChange]);
 
   const handleLink = useCallback(() => {
     const url = window.prompt('Enter URL:', 'https://');
@@ -304,7 +308,7 @@ function AddressSettingsDialog({
                   {signatureHtml ? (
                     <div
                       className="text-sm"
-                      dangerouslySetInnerHTML={{ __html: signatureHtml }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(signatureHtml) }}
                     />
                   ) : (
                     <pre className="text-xs whitespace-pre-wrap text-foreground">
