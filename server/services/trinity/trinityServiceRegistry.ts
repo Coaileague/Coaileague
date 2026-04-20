@@ -707,6 +707,102 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
     integrationStatus: 'partial',
     exports: ['DocumentGeneratorSkill'],
   },
+
+  // ── ELITE FEATURES (April 2026 pricing matrix) ─────────────────────────────
+  // Billing-definition services: the 10 elite features are registered in the
+  // Premium Features registry (shared/config/premiumFeatures.ts) with per-tier
+  // USD surcharges and monthly quotas. Listed here for CLAUDE.md §K inventory
+  // compliance; `integrationStatus: 'partial'` signals that the billing path
+  // is wired (via eliteFeatureService + premiumFeatureGating) but the
+  // per-feature generation handlers are not yet connected to actionRegistry.
+  {
+    id: 'trinity_rfp_generation',
+    name: 'Trinity RFP & Proposal Generation',
+    path: 'shared/config/premiumFeatures.ts#trinity_rfp_generation',
+    domain: 'document_portal',
+    description: 'Reads RFP document, researches client, synthesizes past performance, and produces a full PDF-ready proposal. Claude + Gemini multi-phase.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_7_client_portal','phase_10_invoicing'],
+    integrationStatus: 'partial',
+    exports: ['PREMIUM_FEATURES.trinity_rfp_generation'],
+  },
+  {
+    id: 'trinity_compliance_audit_report',
+    name: 'Trinity Compliance Audit Report',
+    path: 'shared/config/premiumFeatures.ts#trinity_compliance_audit_report',
+    domain: 'compliance_hr',
+    description: 'Scans licenses, certs, training, and incidents; cross-references against Texas PSB + state requirements; produces audit-readiness report with score and exhibit index.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_3_employees','phase_9_support'],
+    integrationStatus: 'partial',
+    exports: ['PREMIUM_FEATURES.trinity_compliance_audit_report'],
+  },
+  {
+    id: 'trinity_regulatory_filing_packet',
+    name: 'Trinity Regulatory Filing Packet',
+    path: 'shared/config/premiumFeatures.ts#trinity_regulatory_filing_packet',
+    domain: 'compliance_hr',
+    description: 'Compiles complete evidence package for PSB/TCOLE/state regulatory audit: cover memo, TOC, compliance narrative.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_3_employees','phase_9_support'],
+    integrationStatus: 'partial',
+    exports: ['PREMIUM_FEATURES.trinity_regulatory_filing_packet'],
+  },
+  {
+    id: 'trinity_incident_investigation_report',
+    name: 'Trinity Incident Investigation Report',
+    path: 'shared/config/premiumFeatures.ts#trinity_incident_investigation_report',
+    domain: 'compliance_hr',
+    description: 'Reads incident record, officer notes, witness statements, GPS, and camera data; produces legally-structured narrative with timeline, root cause, and conduct assessment.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_9_support','phase_11_officer_dashboard'],
+    integrationStatus: 'partial',
+    exports: ['PREMIUM_FEATURES.trinity_incident_investigation_report'],
+  },
+  {
+    id: 'trinity_employment_verification_letter',
+    name: 'Trinity Employment Verification Letter',
+    path: 'server/services/trinity/employmentVerificationService.ts',
+    domain: 'compliance_hr',
+    description: 'FCRA-bounded employment verification letter generator. See CLAUDE.md §P — enforces FCRA-allowed fields only, requires manager approve/deny via employmentVerifyRoutes.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_3_employees','phase_6_email'],
+    integrationStatus: 'verified',
+    exports: ['handleEmploymentVerificationEmail', 'PREMIUM_FEATURES.trinity_employment_verification_letter'],
+  },
+  {
+    id: 'trinity_officer_performance_review',
+    name: 'Trinity Officer Performance Review',
+    path: 'shared/config/premiumFeatures.ts#trinity_officer_performance_review',
+    domain: 'compliance_hr',
+    description: 'Analyzes 12 months of shift, attendance, incident, compliance, and client-feedback data; produces structured review narrative with development recommendations.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_3_employees','phase_11_officer_dashboard'],
+    integrationStatus: 'partial',
+    exports: ['PREMIUM_FEATURES.trinity_officer_performance_review'],
+  },
+  {
+    id: 'trinity_document_deep_analysis',
+    name: 'Trinity Document Deep Analysis',
+    path: 'shared/config/premiumFeatures.ts#trinity_document_deep_analysis',
+    domain: 'document_portal',
+    description: 'Reads contracts, insurance certs, licenses, and inspection reports; extracts data, flags issues, and produces structured action-item summary.',
+    authorityLevel: 'read_only',
+    platformPhases: ['phase_7_client_portal','phase_9_support'],
+    integrationStatus: 'partial',
+    exports: ['PREMIUM_FEATURES.trinity_document_deep_analysis'],
+  },
+  {
+    id: 'trinity_client_profitability_analysis',
+    name: 'Trinity Client Profitability Analysis',
+    path: 'shared/config/premiumFeatures.ts#trinity_client_profitability_analysis',
+    domain: 'financial_intelligence',
+    description: 'Calculates per-client profitability (guard cost, overhead, OT, travel, equipment, AR collection). Recommends repricing, scope adjustment, or exit.',
+    authorityLevel: 'read_only',
+    platformPhases: ['phase_7_client_portal','phase_8_pl','phase_10_invoicing'],
+    integrationStatus: 'partial',
+    exports: ['PREMIUM_FEATURES.trinity_client_profitability_analysis'],
+  },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────

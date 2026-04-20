@@ -431,6 +431,14 @@ export const PREMIUM_FEATURES: Record<string, PremiumFeatureDefinition> = {
 
   "trinity_employment_verification_letter": {
     id: "trinity_employment_verification_letter",
+    // IMPORTANT (CLAUDE.md §P): Employment verification is a legally regulated
+    // disclosure channel. This premium-feature definition is the BILLING
+    // surface — monthly quotas + per-letter USD surcharges — and must NEVER
+    // block or gate the FCRA approve/deny workflow itself. The canonical
+    // workflow lives in server/routes/employmentVerifyRoutes.ts and
+    // server/services/trinity/employmentVerificationService.ts; it does not
+    // call premiumFeatureGating.checkAccess and must not start doing so in
+    // a way that could deny a legally-mandated disclosure.
     name: "Trinity Employment Verification Letter",
     description: "Generates an FCRA-compliant employment verification letter with correct disclosures, FCRA-allowed data only, and an employer signature block. Routes to management for approve/deny. Delivers a formatted PDF. See CLAUDE.md §P for the bounded disclosure contract.",
     category: "hr",
@@ -1426,6 +1434,25 @@ export const ADDON_KEY_TO_FEATURE_MAP: Record<string, string> = {
   'vault_security': 'security_compliance_vault',     // Vault addon maps to security vault
   'staffingos': 'trinity_staffing',                  // StaffingOS addon maps to Trinity Staffing
   'trinity_voice': 'trinity_voice',                  // Trinity Voice Phone System
+
+  // Elite Features (April 2026 pricing matrix) — direct addon entitlement mapping
+  'trinity_rfp_generation': 'trinity_rfp_generation',
+  'trinity_compliance_audit_report': 'trinity_compliance_audit_report',
+  'trinity_regulatory_filing_packet': 'trinity_regulatory_filing_packet',
+  'trinity_incident_investigation_report': 'trinity_incident_investigation_report',
+  'trinity_employment_verification_letter': 'trinity_employment_verification_letter',
+  'trinity_officer_performance_review': 'trinity_officer_performance_review',
+  'trinity_document_deep_analysis': 'trinity_document_deep_analysis',
+  'trinity_client_profitability_analysis': 'trinity_client_profitability_analysis',
+  // Legacy / alternate addon key aliases
+  'rfp_os': 'trinity_rfp_generation',
+  'complianceos': 'trinity_compliance_audit_report',
+  'regulatoryos': 'trinity_regulatory_filing_packet',
+  'incidentos': 'trinity_incident_investigation_report',
+  'verifyos': 'trinity_employment_verification_letter',
+  'reviewos': 'trinity_officer_performance_review',
+  'docos': 'trinity_document_deep_analysis',
+  'profitos': 'trinity_client_profitability_analysis',
 };
 
 /**

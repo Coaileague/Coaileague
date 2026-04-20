@@ -45,6 +45,7 @@ import {
 } from './orchestration/universalStepLogger';
 import { createLogger } from '../lib/logger';
 import { creditManager } from './billing/creditManager';
+import { calculateEliteCharge } from './billing/eliteFeatureService';
 const log = createLogger('premiumFeatureGating');
 
 
@@ -58,6 +59,13 @@ export interface PremiumAccessResult {
   requiresUpgrade?: boolean;
   suggestedTier?: SubscriptionTier;
   suggestedAddon?: string;
+  // Elite per-tier USD surcharge (cents) owed for units beyond the monthly quota.
+  // Populated by the elite billing path; `billableUnits` is the slice of `units`
+  // that lands outside the included cap. Consumers (e.g. actionRegistry handlers)
+  // must charge this via Stripe off-session before running the elite action.
+  eliteSurchargeCents?: number;
+  eliteBillableUnits?: number;
+  eliteSurchargePerUnitCents?: number;
 }
 
 export interface CreditDeductionResult {
@@ -231,28 +239,51 @@ class PremiumFeatureGatingService {
 
       // STEP 4: PROCESS - Calculate access decision
       await this.logStep(orchContext, 'PROCESS', 'started', { tier, credits, currentUsage, units });
-      
+
+      // Elite per-tier USD surcharge: when a tenant blows past the monthly
+      // included quota on an elite feature, charge `eliteSurchargeCents[tier]`
+      // per additional use instead of deducting credits. This is the primary
+      // monetization path for the Apr-2026 elite pricing matrix.
+      const eliteCharge = feature.featureType === 'elite'
+        ? calculateEliteCharge({ featureId, tier, currentUsage, requestedUnits: units })
+        : null;
+      const hasEliteSurcharge = eliteCharge !== null && eliteCharge.billableUnits > 0;
+
       const accessCheck = canAccessFeature(featureId, tier, currentUsage, credits, units, purchasedAddons);
-      
-      await this.logStep(orchContext, 'PROCESS', 'completed', {}, { 
-        allowed: accessCheck.allowed, 
+
+      await this.logStep(orchContext, 'PROCESS', 'completed', {}, {
+        allowed: accessCheck.allowed,
         creditsRequired: accessCheck.creditsRequired,
-        tierEligible: accessCheck.tierEligible
+        tierEligible: accessCheck.tierEligible,
+        eliteSurchargeCents: eliteCharge?.totalCents,
+        eliteBillableUnits: eliteCharge?.billableUnits,
       });
 
       // STEP 5: MUTATE - Skip for read-only access check
       await this.logStep(orchContext, 'MUTATE', 'skipped', {}, { reason: 'read_only_check' });
 
       // STEP 6: CONFIRM - Return access result
-      if (accessCheck.allowed) {
+      // If the tier is eligible for the elite feature and a per-use USD surcharge
+      // is configured for the tier, the request is allowed regardless of credit
+      // balance — the caller charges the surcharge via Stripe off-session.
+      const eliteAllowsOverage = accessCheck.tierEligible === true && hasEliteSurcharge;
+
+      if (accessCheck.allowed || eliteAllowsOverage) {
         const result: PremiumAccessResult = {
           allowed: true,
           creditCost: accessCheck.creditsRequired || 0,
           remainingCredits: credits - (accessCheck.creditsRequired || 0),
           usageThisMonth: currentUsage,
           monthlyLimit,
+          eliteSurchargeCents: eliteCharge?.totalCents ?? 0,
+          eliteBillableUnits: eliteCharge?.billableUnits ?? 0,
+          eliteSurchargePerUnitCents: eliteCharge?.surchargeCents ?? 0,
         };
-        await this.logStep(orchContext, 'CONFIRM', 'completed', {}, { allowed: true, creditCost: result.creditCost });
+        await this.logStep(orchContext, 'CONFIRM', 'completed', {}, {
+          allowed: true,
+          creditCost: result.creditCost,
+          eliteSurchargeCents: result.eliteSurchargeCents,
+        });
         await this.logStep(orchContext, 'NOTIFY', 'skipped', {}, { reason: 'access_granted' });
         return result;
       }
