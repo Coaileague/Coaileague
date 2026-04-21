@@ -1,4 +1,4 @@
-import { Calendar, Clock, MessageSquare, Menu, Home, CheckCircle, Mail, type LucideIcon } from "lucide-react";
+import { Calendar, Clock, Menu, Home, CheckCircle, Mail, FileText, type LucideIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -133,7 +133,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
     { icon: Home, label: "Home", href: "/dashboard" },
     { icon: Calendar, label: "Schedule", href: "/schedule" },
     { icon: Clock, label: "Clock", href: "/time-tracking" },
-    { icon: MessageSquare, label: "Chat", href: "/chatrooms" },
+    { icon: FileText, label: "Reports", href: "/field-reports" },
   ];
 
   const isActive = (href: string) => {

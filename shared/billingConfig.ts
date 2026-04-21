@@ -37,16 +37,15 @@ export const BILLING = {
       yearlyPrice: 0,
       maxEmployees: 5,
       maxManagers: 1,
-      monthlyCredits: 500, // Trial credits — enough to genuinely experience Trinity before converting (was 150)
+      monthlyTokens: 500, // Trial tokens — enough to genuinely experience Trinity before converting (was 150)
       trialDays: 14,
       adminReplacementValue: 0,
-      allowCreditOverage: false, // Must upgrade to continue
       features: [
         "Up to 5 employees, 1 manager",
         "Basic scheduling (manual, no AI optimization)",
         "Basic time tracking (no GPS)",
         "Dashboard access",
-        "500 AI credits for trial",
+        "500 AI tokens for trial",
         "Email support only",
       ],
       limitations: [
@@ -67,10 +66,9 @@ export const BILLING = {
       yearlyPrice: 287040, // $2,870.40/year ($239.20/mo - 20% savings)
       maxEmployees: 10,
       maxManagers: 2,
-      monthlyCredits: 5000, // 5,000 AI interactions/month; hard cap at 8,000
+      monthlyTokens: 5000, // 5,000 AI tokens/month; hard cap at 8,000
       adminReplacementValue: 32600, // Saves ~$2,716/mo = $32,592/year in admin replacement
       overagePerEmployee: 2500, // $25/employee after 10
-      allowCreditOverage: false, // Must upgrade or purchase add-on
       roiMetrics: {
         humansReplaced: "Part-time scheduler ($2,166/mo) + Admin ($400/mo) + Payroll ($150/mo)",
         monthlyLaborSaved: 2716, // $2,716/month in labor costs replaced
@@ -91,7 +89,7 @@ export const BILLING = {
         "Basic equipment checkout (50 items - prevents $4K/year losses)",
         "QuickBooks export (for payroll)",
         "Basic invoicing",
-        "5,000 AI credits/month (hard cap — covers full monthly ops)",
+        "5,000 AI tokens/month (hard cap)",
         "Email support (48hr response)",
       ],
       excludedFeatures: [
@@ -118,12 +116,9 @@ export const BILLING = {
       yearlyPrice: 959040, // $9,590.40/year ($799.20/mo - 20% savings)
       maxEmployees: 100,
       maxManagers: 5,
-      monthlyCredits: 20000, // 20,000 AI interactions/month; hard cap at 35,000; overage at $0.12/interaction
+      monthlyTokens: 20000, // 20,000 AI tokens/month; hard cap at 35,000; overages billed monthly
       adminReplacementValue: 184200, // Saves ~$15,351/mo = $184,212/year in labor replacement
       overagePerEmployee: 2500, // $25/employee after 100
-      allowCreditOverage: true, // Auto-charge $29/2,000 credits
-      creditOveragePackPrice: 2900, // $29 per 2,000 additional credits
-      creditOveragePackAmount: 2000, // 2,000 credits per pack
       roiMetrics: {
         humansReplaced: "Full scheduler ($5,000) + Admin ($3,000) + Compliance ($3,500) + Equipment mgr ($3,000) + Payroll ($600)",
         monthlyLaborSaved: 17350, // $17,350/month in labor costs replaced
@@ -158,9 +153,9 @@ export const BILLING = {
         "CLIENT MANAGEMENT:",
         "Client portal (real-time GPS, incidents)",
         "Contract pipeline + E-signatures",
-        "TRINITY PREMIUM AI (uses 2x credits):",
+        "TRINITY PREMIUM AI (uses 2x tokens):",
         "RFP responses, proposals, capability statements",
-        "10,000 AI credits/month (soft cap — overages at $0.01/credit)",
+        "10,000 AI tokens/month (soft cap — overages billed monthly)",
         "Priority support (24hr response)",
       ],
       addonsAvailable: [
@@ -168,7 +163,7 @@ export const BILLING = {
         "ai_cfo_insights",
         "multi_location",
         "fleet_management",
-        "ai_credits",
+        "ai_tokens",
       ],
       popular: true,
     },
@@ -181,12 +176,9 @@ export const BILLING = {
       yearlyPrice: 2879040, // $28,790.40/year ($2,399.20/mo - 20% savings)
       maxEmployees: 300,
       maxManagers: 15,
-      monthlyCredits: 60000, // 60,000 AI interactions/month; hard cap at 120,000; overage at $0.10/interaction
+      monthlyTokens: 60000, // 60,000 AI tokens/month; hard cap at 120,000; overages billed monthly
       adminReplacementValue: 360000, // Saves ~$30,000/mo in labor
       overagePerEmployee: 2500, // $25/employee after 300
-      allowCreditOverage: true,
-      creditOveragePackPrice: 2900,
-      creditOveragePackAmount: 2000,
       roiMetrics: {
         humansReplaced: "2× Schedulers ($10,000) + Ops Manager ($7,000) + Compliance ($6,000) + Finance ($4,500) + Payroll ($3,000)",
         monthlyLaborSaved: 30500,
@@ -216,13 +208,12 @@ export const BILLING = {
       yearlyPrice: 7679040, // $76,790.40/year ($6,399.20/mo - 20% savings)
       maxEmployees: 1000, // Enterprise base cap — designed for Securitas/Allied/GuardWorld scale
       maxManagers: 100,
-      monthlyCredits: 200000, // 200,000 AI interactions/month; hard cap 400,000; overage $0.08/interaction
+      monthlyTokens: 200000, // 200,000 AI tokens/month; hard cap 400,000; overages at $0.08/1,000 tokens
       adminReplacementValue: 500000, // Saves ~$50,250/mo = $603,000/year in labor replacement
       isContactSales: false,
       startsAt: 799900, // Starts at $7,999/month base
       perEmployeePrice: 2500, // $25/employee after 1,000
       overagePerEmployee: 2500,
-      allowCreditOverage: true,
       roiMetrics: {
         humansReplaced: "2× Schedulers ($10,000) + Ops Director ($8,000) + 2× Admin ($6,000) + Compliance ($6,000) + Equipment/Fleet ($5,000) + HR ($4,500) + Payroll Mgr ($5,000)",
         monthlyLaborSaved: 50250,
@@ -252,7 +243,7 @@ export const BILLING = {
         "Advanced onboarding workflows",
         "Custom integrations (ADP, Workday, Paychex)",
         "ENTERPRISE AI (200,000 interactions/month):",
-        "200,000 AI interactions monthly (hard cap 400K — overages at $0.08/interaction)",
+        "200,000 AI tokens/month (soft cap — overages at $0.08/1,000 tokens)",
         "ENTERPRISE FEATURES:",
         "White-label options",
         "Full API access",
@@ -275,9 +266,8 @@ export const BILLING = {
       startsAt: 1500000, // $15,000/month minimum in cents
       maxEmployees: 0, // Custom — 300+ officers
       maxManagers: 0, // Custom
-      monthlyCredits: 0, // Custom AI allocation
+      monthlyTokens: 0, // Custom AI allocation
       adminReplacementValue: 0, // Custom ROI analysis provided
-      allowCreditOverage: true,
       roiMetrics: {
         humansReplaced: "Custom analysis provided by dedicated implementation team",
         monthlyLaborSaved: 0,
@@ -309,13 +299,13 @@ export const BILLING = {
     claude_premium_unlimited: {
       id: "addon_claude_unlimited",
       name: "Trinity Premium Unlimited",
-      description: "High-volume Trinity Premium credits for RFPs, proposals, and contract reviews",
+      description: "High-volume Trinity Premium tokens for RFPs, proposals, and contract reviews",
       monthlyPrice: 69900, // $699/month - VALUE-BASED: Replaces $20K+/mo consultants
       isRecurring: true,
       availableTiers: ["professional"],
       // COST PROTECTION GUARDRAILS (Jan 2026)
       // Prevents runaway API costs while maintaining value proposition
-      monthlyClaudeCredits: 2000, // 2,000 premium credits/month (~65-80 operations)
+      monthlyClaudeTokens: 2000, // 2,000 premium tokens/month (~65-80 operations)
       softCap: 1500, // Alert admin at 75% usage
       hardCap: 2500, // Hard stop at 2,500 (allows some buffer)
       costAlertThreshold: 50000, // Alert admin if actual API cost exceeds $500/month
@@ -326,11 +316,11 @@ export const BILLING = {
         roiPercent: 23247, // 23,247% ROI even with limits
       },
       features: [
-        "2,000 Trinity Premium credits/month (High-Volume)",
+        "2,000 Trinity Premium tokens/month (High-Volume)",
         "~65-80 RFP responses, proposals, or contract reviews",
         "Priority processing (faster API response)",
         "Advanced reasoning for complex documents",
-        "Additional credits available at $59/5,000 pack",
+        "Additional tokens available at $59/5,000 pack",
       ],
     },
     ai_cfo_insights: {
@@ -399,31 +389,31 @@ export const BILLING = {
         "Cost per vehicle analytics",
       ],
     },
-    ai_credits: {
-      id: "addon_ai_credits_5000",
-      name: "Additional AI Credits Pack",
-      description: "5,000 credits added immediately to account balance",
+    ai_tokens: {
+      id: "addon_ai_tokens_5000",
+      name: "Additional AI Tokens Pack",
+      description: "5,000 tokens added immediately to account balance",
       price: 5900, // $59 one-time
-      credits: 5000,
+      tokens: 5000,
       isRecurring: false, // One-time purchase
       availableTiers: ["starter", "professional"],
     },
-    claude_credits_pack: {
-      id: "addon_claude_credits_25",
-      name: "Trinity Premium Credits Pack (25)",
-      description: "25 Trinity Premium credits for RFPs, proposals, contract reviews",
+    claude_tokens_pack: {
+      id: "addon_claude_tokens_25",
+      name: "Trinity Premium Tokens Pack (25)",
+      description: "25 Trinity Premium tokens for RFPs, proposals, contract reviews",
       price: 69900, // $699 one-time
-      credits: 25,
+      tokens: 25,
       isRecurring: false, // One-time purchase
       availableTiers: ["professional"],
-      valuePerCredit: 500, // Each credit worth ~$500 in consultant fees
+      valuePerToken: 500, // Each token worth ~$500 in consultant fees
     },
   },
 
   // ==========================================================================
   // SUB-ORGANIZATION (BRANCH) BILLING
   // Org owners operating in multiple states can add sub-orgs under their main org.
-  // Sub-orgs share the parent's subscription tier, credit pool, and caps.
+  // Sub-orgs share the parent's subscription tier, token pool, and caps.
   // Each sub-org is billed as a recurring addon to the parent's invoice.
   // ==========================================================================
   subOrgBilling: {
@@ -431,7 +421,7 @@ export const BILLING = {
     perSubOrgYearlyPrice: 199000, // $1,990/year per sub-org ($166/mo, 17% savings)
     includedSubOrgs: 0, // No sub-orgs included by default (all are addons)
     maxSubOrgs: 50, // Maximum sub-orgs per parent org
-    creditPoolModel: 'shared', // 'shared' = sub-orgs draw from parent pool | 'split' = each gets allocation
+    tokenPoolModel: 'shared', // 'shared' = sub-orgs draw from parent pool | 'split' = each gets allocation
     overageModel: 'parent', // 'parent' = all overages billed to parent invoice
     availableTiers: ['professional', 'enterprise'], // Tiers that can create sub-orgs
     tierDiscounts: {
@@ -444,7 +434,7 @@ export const BILLING = {
       'Per-branch employee/client management',
       'State-specific compliance settings',
       'Consolidated billing to parent org',
-      'Shared credit pool (draws from parent)',
+      'Shared token pool (draws from parent)',
       'Cross-branch resource visibility for owners',
     ],
   },
@@ -703,49 +693,49 @@ export const BILLING = {
     // Intentionally priced at $0.0118/credit — above the $0.01 overage rate
     // to incentivize tier upgrades over repeated pack purchases.
     // =========================================================================
-    ai_credits: {
+    ai_tokens: {
       id: "credits_ai_5000",
-      name: "AI Credits Pack",
-      credits: 5000,
+      name: "AI Tokens Pack",
+      tokens: 5000,
       price: 5900, // $59 in cents
-      pricePerCredit: 1.18, // cents per credit ($0.0118)
+      pricePerToken: 1.18, // cents per token ($0.0118)
       popular: true,
       neverExpire: true,
-      description: "5,000 AI credits — never expire. Use for scheduling, invoicing, and payroll automation.",
+      description: "5,000 AI tokens — never expire. Use for scheduling, invoicing, and payroll automation.",
     },
     starter: {
       id: "credits_5000",
-      name: "5,000 Credits",
-      credits: 5000,
+      name: "5,000 Tokens",
+      tokens: 5000,
       price: 4900, // $49 in cents
-      pricePerCredit: 0.98, // cents per credit
+      pricePerToken: 0.98, // cents per token
       popular: false,
       description: "Light automation use",
     },
     standard: {
       id: "credits_25000",
-      name: "25,000 Credits",
-      credits: 25000,
+      name: "25,000 Tokens",
+      tokens: 25000,
       price: 19900, // $199 in cents
-      pricePerCredit: 0.80,
+      pricePerToken: 0.80,
       popular: true,
       description: "Standard business operations",
     },
     professional: {
       id: "credits_100000",
-      name: "100,000 Credits",
-      credits: 100000,
+      name: "100,000 Tokens",
+      tokens: 100000,
       price: 64900, // $649 in cents
-      pricePerCredit: 0.65,
+      pricePerToken: 0.65,
       popular: false,
       description: "Heavy AI usage for larger teams",
     },
     enterprise: {
       id: "credits_500000",
-      name: "500,000 Credits",
-      credits: 500000,
+      name: "500,000 Tokens",
+      tokens: 500000,
       price: 249900, // $2,499 in cents
-      pricePerCredit: 0.50,
+      pricePerToken: 0.50,
       popular: false,
       description: "Enterprise-scale automation",
     },

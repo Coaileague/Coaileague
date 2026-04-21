@@ -167,7 +167,7 @@ function AcceptInvitePage() {
   if (inviteError) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-        <Card className="w-full max-w-xs border-white/10 bg-white/5 text-white">
+        <Card className="w-full max-w-xs border-white/10 bg-card/5 text-white">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-3">
               <AlertTriangle className="h-12 w-12 text-amber-400" />
@@ -185,7 +185,7 @@ function AcceptInvitePage() {
             )}
             <Button
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-white/20 text-white hover:bg-card/10"
               onClick={() => setLocation("/login")}
               data-testid="button-go-to-login"
             >
@@ -200,7 +200,7 @@ function AcceptInvitePage() {
   if (success) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-        <Card className="w-full max-w-xs border-white/10 bg-white/5 text-white text-center">
+        <Card className="w-full max-w-xs border-white/10 bg-card/5 text-white text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
             <CheckCircle className="h-14 w-14 text-emerald-400 mx-auto" />
             <h2 className="text-xl font-semibold text-white">Welcome aboard!</h2>
@@ -228,7 +228,7 @@ function AcceptInvitePage() {
           <p className="text-white/50 text-sm">Workforce Intelligence Platform</p>
         </div>
 
-        <Card className="border-white/10 bg-white/5">
+        <Card className="border-white/10 bg-card/5">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2 mb-1">
               <Building2 className="h-4 w-4 text-[#ffc83c]" />
@@ -256,7 +256,7 @@ function AcceptInvitePage() {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="First"
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                  className="bg-card/10 border-white/20 text-white placeholder:text-white/30"
                   data-testid="input-first-name"
                   aria-required="true"
                   aria-describedby="firstName-error"
@@ -272,7 +272,7 @@ function AcceptInvitePage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Last"
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                  className="bg-card/10 border-white/20 text-white placeholder:text-white/30"
                   data-testid="input-last-name"
                   aria-required="true"
                   aria-describedby="lastName-error"
@@ -291,7 +291,7 @@ function AcceptInvitePage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 readOnly={!!invite?.inviteeEmail}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30 disabled:opacity-60"
+                className="bg-card/10 border-white/20 text-white placeholder:text-white/30 disabled:opacity-60"
                 data-testid="input-email"
                 aria-required="true"
                 aria-describedby="email-error"
@@ -308,7 +308,7 @@ function AcceptInvitePage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 8 characters"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                className="bg-card/10 border-white/20 text-white placeholder:text-white/30"
                 data-testid="input-password"
                 aria-required="true"
                 aria-describedby="password-error"
@@ -325,7 +325,7 @@ function AcceptInvitePage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat password"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                className="bg-card/10 border-white/20 text-white placeholder:text-white/30"
                 data-testid="input-confirm-password"
                 onKeyDown={(e) => { if (e.key === "Enter") registerMutation.mutate(); }}
                 aria-required="true"

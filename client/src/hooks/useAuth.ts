@@ -27,7 +27,7 @@ interface AuthResponse {
 }
 
 export function useAuth() {
-  const { data, isLoading, error } = useQuery<AuthResponse | null>({
+  const { data, isLoading, isFetching, error } = useQuery<AuthResponse | null>({
     queryKey: ["/api/auth/me"],
     // Retry up to 8 times for server errors (5xx / network) — DB may be briefly unavailable
     // on startup. 503 specifically means the circuit breaker or DB is not yet warmed up.
@@ -112,6 +112,7 @@ export function useAuth() {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     user: data?.user ?? null,
     isLoading,
+    isFetching,
     // Only truly "authenticated" when we have a user AND the org is not suspended
     // @ts-expect-error — TS migration: fix in refactoring sprint
     isAuthenticated: !!data?.user && !data?.orgInactive && !data?.paymentRequired,

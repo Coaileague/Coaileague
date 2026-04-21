@@ -231,7 +231,7 @@ export default function TrinityTransparencyDashboard() {
                 <span className="text-xs text-white/50">Actions Today</span>
               </div>
               {overviewLoading ? (
-                <Skeleton className="h-8 w-16 bg-white/10" />
+                <Skeleton className="h-8 w-16 bg-card/10" />
               ) : (
                 <>
                   <div className="text-3xl font-bold">
@@ -253,7 +253,7 @@ export default function TrinityTransparencyDashboard() {
                 <span className="text-xs text-white/50">Succeeded</span>
               </div>
               {overviewLoading ? (
-                <Skeleton className="h-8 w-16 bg-white/10" />
+                <Skeleton className="h-8 w-16 bg-card/10" />
               ) : (
                 <>
                   <div className="text-3xl font-bold text-green-400">
@@ -275,7 +275,7 @@ export default function TrinityTransparencyDashboard() {
                 <span className="text-xs text-white/50">Pending Escalations</span>
               </div>
               {overviewLoading ? (
-                <Skeleton className="h-8 w-16 bg-white/10" />
+                <Skeleton className="h-8 w-16 bg-card/10" />
               ) : (
                 <>
                   <div className="text-3xl font-bold text-yellow-400">
@@ -295,7 +295,7 @@ export default function TrinityTransparencyDashboard() {
                 <span className="text-xs text-white/50">Cost This Month</span>
               </div>
               {overviewLoading ? (
-                <Skeleton className="h-8 w-24 bg-white/10" />
+                <Skeleton className="h-8 w-24 bg-card/10" />
               ) : (
                 <>
                   <div className="text-3xl font-bold text-purple-400">
@@ -341,7 +341,7 @@ export default function TrinityTransparencyDashboard() {
                 {actionsLoading ? (
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-10 w-full bg-white/10" />
+                      <Skeleton key={i} className="h-10 w-full bg-card/10" />
                     ))}
                   </div>
                 ) : (
@@ -351,7 +351,7 @@ export default function TrinityTransparencyDashboard() {
                         {(actionsData?.actions ?? []).map(action => (
                           <div
                             key={action.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                            className="flex items-center justify-between p-3 rounded-lg bg-card/5 hover:bg-card/10 transition-colors"
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
@@ -431,7 +431,7 @@ export default function TrinityTransparencyDashboard() {
                 {decisionsLoading ? (
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full bg-white/10" />
+                      <Skeleton key={i} className="h-16 w-full bg-card/10" />
                     ))}
                   </div>
                 ) : (
@@ -440,7 +440,7 @@ export default function TrinityTransparencyDashboard() {
                       {(decisionsData?.decisions ?? []).map(d => (
                         <div
                           key={d.id}
-                          className="p-3 rounded-lg bg-white/5 border border-white/10"
+                          className="p-3 rounded-lg bg-card/5 border border-white/10"
                         >
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div>
@@ -527,7 +527,7 @@ export default function TrinityTransparencyDashboard() {
                     {costsLoading ? (
                       <div className="space-y-2">
                         {[...Array(5)].map((_, i) => (
-                          <Skeleton key={i} className="h-8 w-full bg-white/10" />
+                          <Skeleton key={i} className="h-8 w-full bg-card/10" />
                         ))}
                       </div>
                     ) : (
@@ -570,7 +570,7 @@ export default function TrinityTransparencyDashboard() {
                     {costsLoading ? (
                       <div className="space-y-2">
                         {[...Array(4)].map((_, i) => (
-                          <Skeleton key={i} className="h-8 w-full bg-white/10" />
+                          <Skeleton key={i} className="h-8 w-full bg-card/10" />
                         ))}
                       </div>
                     ) : (
@@ -625,32 +625,32 @@ export default function TrinityTransparencyDashboard() {
                 {trinityActivityLoading ? (
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-10 w-full bg-white/10" />
+                      <Skeleton key={i} className="h-10 w-full bg-card/10" />
                     ))}
                   </div>
                 ) : (
                   <>
                     {/* Summary counters */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className="rounded-lg bg-white/5 p-3">
+                      <div className="rounded-lg bg-card/5 p-3">
                         <div className="text-xs text-white/40">AI Resolved</div>
                         <div className="text-2xl font-bold text-[#4FC3F7]">
                           {trinityActivityData?.summary.byAction?.['trinity.voice_ai_resolved'] ?? 0}
                         </div>
                       </div>
-                      <div className="rounded-lg bg-white/5 p-3">
+                      <div className="rounded-lg bg-card/5 p-3">
                         <div className="text-xs text-white/40">Gate Blocks</div>
                         <div className="text-2xl font-bold text-amber-400">
                           {trinityActivityData?.summary.byAction?.['trinity.subscription_gate_blocked'] ?? 0}
                         </div>
                       </div>
-                      <div className="rounded-lg bg-white/5 p-3">
+                      <div className="rounded-lg bg-card/5 p-3">
                         <div className="text-xs text-white/40">Voice Events</div>
                         <div className="text-2xl font-bold text-white">
                           {trinityActivityData?.summary.byChannel?.voice ?? 0}
                         </div>
                       </div>
-                      <div className="rounded-lg bg-white/5 p-3">
+                      <div className="rounded-lg bg-card/5 p-3">
                         <div className="text-xs text-white/40">SMS Events</div>
                         <div className="text-2xl font-bold text-white">
                           {trinityActivityData?.summary.byChannel?.sms ?? 0}
@@ -667,7 +667,7 @@ export default function TrinityTransparencyDashboard() {
                           return (
                             <div
                               key={row.id}
-                              className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                              className="flex items-center justify-between p-3 rounded-lg bg-card/5 hover:bg-card/10 transition-colors"
                             >
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">
@@ -739,7 +739,7 @@ function ServiceRegistryPanel() {
     return (
       <div className="space-y-2">
         {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full bg-white/10" />
+          <Skeleton key={i} className="h-10 w-full bg-card/10" />
         ))}
       </div>
     );
@@ -782,7 +782,7 @@ function ServiceRegistryPanel() {
             {Object.entries(data?.serviceCountByDomain ?? {}).map(([domain, count]) => (
               <div
                 key={domain}
-                className="p-2 rounded bg-white/5 text-center"
+                className="p-2 rounded bg-card/5 text-center"
               >
                 <div className="text-lg font-bold text-[#4FC3F7]">{count}</div>
                 <div className="text-xs text-white/50 truncate capitalize">
@@ -813,7 +813,7 @@ function ServiceRegistryPanel() {
                   <div className="w-36 shrink-0 text-xs text-white/60">
                     {phaseLabels[phase] ?? phase}
                   </div>
-                  <div className="flex-1 bg-white/10 rounded-full h-2">
+                  <div className="flex-1 bg-card/10 rounded-full h-2">
                     <div
                       className="bg-green-500 h-2 rounded-full"
                       style={{ width: `${pct}%` }}

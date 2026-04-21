@@ -656,7 +656,7 @@ class ContractPipelineService {
           documentTitle: contract.title,
           portalUrl: fullPortalUrl,
           expiryDays,
-          workspaceName: contract.companyName || undefined,
+          workspaceName: undefined,
         });
         await NotificationDeliveryService.send({ type: 'document_requires_signature', workspaceId: contract.workspaceId || 'system', recipientUserId: contract.clientEmail, channel: 'email', body: { to: contract.clientEmail, subject: sigEmail.subject, html: sigEmail.html } });
       } catch (emailErr: any) {
@@ -1101,10 +1101,10 @@ class ContractPipelineService {
             contractTitle: contract.title,
             viewUrl: contractUrl,
             executionDate,
-            workspaceName: contract.companyName || undefined,
+            workspaceName: undefined,
           });
           await NotificationDeliveryService.send({
-            type: 'contract_executed',
+            type: 'contract_notification',
             workspaceId: contract.workspaceId,
             recipientUserId: signer.signerEmail,
             channel: 'email',
@@ -1125,13 +1125,8 @@ class ContractPipelineService {
             .limit(1);
           if ((ws as any)?.qbAccessTokenEncrypted) {
             const { ensureQuickBooksRecord } = await import('../integrations/quickbooksLazySync');
-            if (contract.clientName) {
-              await ensureQuickBooksRecord({
-                workspaceId: contract.workspaceId,
-                entityType: 'customer',
-                entityName: contract.clientName,
-                email: contract.clientEmail || undefined,
-              } as any);
+            if (contract.clientName && contract.clientId) {
+              await ensureQuickBooksRecord('customer', contract.clientId, contract.workspaceId);
             }
             log.info(`[ContractPipeline] QB customer ensured for contract ${contractId}`);
           }

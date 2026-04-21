@@ -10,7 +10,7 @@
  * - Desktop: 2-column command center layout
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { markCoreActionPerformed, markCoreActionAndAutoSubscribe } from "@/lib/pushNotifications";
@@ -337,11 +337,12 @@ function ShiftStatusCard({ todayShifts, clockStatus, isLoading }: { todayShifts:
   );
 }
 
-function QuickActionStrip({ isClockedIn, onClockAction, clockingIn, navigate, eligibility }: {
+function QuickActionStrip({ isClockedIn, onClockAction, clockingIn, navigate, onPhotoCapture, eligibility }: {
   isClockedIn: boolean;
   onClockAction: () => void;
   clockingIn: boolean;
   navigate: (path: string) => void;
+  onPhotoCapture: () => void;
   eligibility?: ShiftEligibility;
 }) {
   const clockIcon = isClockedIn ? LogOut : LogIn;
@@ -391,16 +392,23 @@ function QuickActionStrip({ isClockedIn, onClockAction, clockingIn, navigate, el
     {
       icon: Camera,
       label: "Site Photo",
-      onClick: () => navigate("/chatrooms"),
+      onClick: onPhotoCapture,
       primary: false,
       testId: "button-quick-photo",
     },
     {
-      icon: ClipboardList,
-      label: "Reports",
-      onClick: () => navigate("/reports"),
+      icon: FileText,
+      label: "DAR",
+      onClick: () => navigate("/field-reports"),
       primary: false,
-      testId: "button-quick-reports",
+      testId: "button-quick-dar",
+    },
+    {
+      icon: ClipboardList,
+      label: "Post Orders",
+      onClick: () => navigate("/post-orders"),
+      primary: false,
+      testId: "button-quick-post-orders",
     },
   ];
 
@@ -501,6 +509,7 @@ export default function WorkerDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [clockingIn, setClockingIn] = useState(false);
   const [showLateConfirm, setShowLateConfirm] = useState(false);
@@ -653,6 +662,85 @@ export default function WorkerDashboard() {
     : "Employee";
   const currentDate = format(new Date(), "EEEE, MMMM d");
   const nextShift = todayShifts?.find(s => s.status === "upcoming") || upcomingShifts?.[0];
+  const activeShiftId = todayShifts?.find(s => s.status === "active")?.id;
+
+  const handlePhotoCapture = useCallback(async (file: File) => {
+    if (!activeShiftId) {
+      toast({
+        title: "No active shift",
+        description: "Clock in to submit proof photos.",
+      });
+      return;
+    }
+
+    try {
+      const coords = await new Promise<GeolocationCoordinates | null>((resolve) => {
+        if (!navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve(position.coords),
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 4000, maximumAge: 5000 },
+        );
+      });
+
+      const uploadFormData = new FormData();
+      uploadFormData.append("files", file);
+      if (coords) {
+        uploadFormData.append("gpsLat", String(coords.latitude));
+        uploadFormData.append("gpsLng", String(coords.longitude));
+        uploadFormData.append("gpsAccuracy", String(coords.accuracy));
+      }
+
+      const uploadResponse = await fetch("/api/chat/upload", {
+        method: "POST",
+        credentials: "include",
+        body: uploadFormData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Photo upload failed");
+      }
+
+      const uploadPayload = await uploadResponse.json();
+      const photoUrl = uploadPayload?.uploads?.[0]?.url;
+      if (!photoUrl) {
+        throw new Error("Missing uploaded photo URL");
+      }
+
+      await apiRequest("POST", `/api/shifts/${activeShiftId}/proof-of-service`, {
+        photoUrl,
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
+        capturedAt: new Date().toISOString(),
+      });
+
+      toast({
+        title: "Photo submitted",
+        description: "Proof of service recorded.",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Could not submit proof photo.";
+      toast({
+        title: "Photo submission failed",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  }, [activeShiftId, toast]);
+
+  const handleQuickPhotoClick = useCallback(() => {
+    photoInputRef.current?.click();
+  }, []);
+
+  const handleQuickPhotoFileSelect = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    handlePhotoCapture(file);
+    event.target.value = "";
+  }, [handlePhotoCapture]);
 
   // Page config
   const pageConfig: CanvasPageConfig = {
@@ -827,7 +915,17 @@ export default function WorkerDashboard() {
               onClockAction={handleClockAction}
               clockingIn={clockingIn}
               navigate={setLocation}
+              onPhotoCapture={handleQuickPhotoClick}
               eligibility={clockStatus?.shiftEligibility}
+            />
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleQuickPhotoFileSelect}
+              className="hidden"
+              data-testid="input-quick-photo-upload"
             />
           </div>
 

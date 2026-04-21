@@ -227,7 +227,7 @@ const DroppableEmployeeRow = ({ employeeId, children, isDropTarget }: {
       {isDropTarget && (
         <div className="absolute inset-0 z-40 pointer-events-none border-2 border-dashed schedule-drop-zone-active transition-all duration-150" data-testid={`inline-drop-indicator-${employeeId}`}>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[11px] font-bold text-primary bg-white/95 dark:bg-slate-800/95 px-3 py-1.5 rounded-md shadow-sm ring-1 ring-primary/20">
+            <span className="text-[11px] font-bold text-primary bg-card/95 dark:bg-slate-800/95 px-3 py-1.5 rounded-md shadow-sm ring-1 ring-primary/20">
               Reassign here
             </span>
           </div>
@@ -2331,9 +2331,9 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                   
                   return (
                     <DroppableEmployeeRow key={emp.id} employeeId={emp.id} isDropTarget={dropTargetEmployeeId === emp.id}>
-                    <div className={`flex border-b border-slate-200/60 dark:border-slate-700/60 transition-colors group ${empIndex % 2 === 0 ? 'bg-white/70 dark:bg-slate-900/50 schedule-zebra-even' : 'bg-slate-50/80 dark:bg-slate-800/40 schedule-zebra-odd'} ${isRowHighlighted ? 'schedule-row-hovered' : ''}`} style={{ minHeight: `${dynamicRowHeight}px` }}>
+                    <div className={`flex border-b border-slate-200/60 dark:border-slate-700/60 transition-colors group ${empIndex % 2 === 0 ? 'bg-card/70 dark:bg-slate-900/50 schedule-zebra-even' : 'bg-slate-50/80 dark:bg-slate-800/40 schedule-zebra-odd'} ${isRowHighlighted ? 'schedule-row-hovered' : ''}`} style={{ minHeight: `${dynamicRowHeight}px` }}>
                       <div 
-                        className="w-[200px] min-w-[200px] px-3 py-2.5 border-r border-slate-200/60 dark:border-slate-600/60 bg-slate-50/90 dark:bg-slate-800/80 flex items-center gap-2.5 cursor-pointer hover:bg-white dark:hover:bg-slate-700/80 flex-shrink-0 transition-colors"
+                        className="w-[200px] min-w-[200px] px-3 py-2.5 border-r border-slate-200/60 dark:border-slate-600/60 bg-slate-50/90 dark:bg-slate-800/80 flex items-center gap-2.5 cursor-pointer hover:bg-card dark:hover:bg-slate-700/80 flex-shrink-0 transition-colors"
                         onClick={() => setSelectedEmployee(emp)}
                         data-testid={`employee-row-${emp.id}`}
                       >
@@ -2713,7 +2713,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                             </div>
                             <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                               {(shift.status === 'published' || shift.status === 'scheduled') && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold bg-white/25 text-white px-1 py-0.5 rounded" data-testid={`badge-published-${shift.id}`}>
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold bg-card/25 text-white px-1 py-0.5 rounded" data-testid={`badge-published-${shift.id}`}>
                                   <CheckCircle2 className="w-2.5 h-2.5" />
                                   Published
                                 </span>
@@ -2724,7 +2724,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                                 </span>
                               )}
                               {shift.aiGenerated && (
-                                <span className="inline-flex items-center text-[9px] bg-white/25 text-white px-1 py-0.5 rounded">
+                                <span className="inline-flex items-center text-[9px] bg-card/25 text-white px-1 py-0.5 rounded">
                                   <Bot className="w-2.5 h-2.5" />
                                 </span>
                               )}

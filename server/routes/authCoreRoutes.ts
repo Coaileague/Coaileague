@@ -407,17 +407,17 @@ router.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Root admin / sysop accounts must have MFA enabled before session establishment.
+    // Platform-critical roles must have MFA enabled at account level.
+    // Enforced before session establishment to block non-MFA admin logins.
     const userPlatformRoles = await db.select().from(platformRoles).where(eq(platformRoles.userId, user.id));
     const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
-    if (activePlatformRole?.role && ['root_admin', 'sysop'].includes(activePlatformRole.role)) {
-      if (!user.mfaEnabled) {
-        return res.status(403).json({
-          error: 'MFA_REQUIRED',
-          message: 'Root admin accounts must have MFA enabled. Please set up MFA before continuing.',
-          setupUrl: '/settings?tab=security&action=mfa',
-        });
-      }
+    const mustEnforceAdminMfa = activePlatformRole && ['root_admin', 'sysop'].includes(activePlatformRole.role);
+    if (mustEnforceAdminMfa && !user.mfaEnabled) {
+      return res.status(403).json({
+        error: 'MFA_REQUIRED',
+        message: 'Root admin accounts must have MFA enabled. Please set up MFA before continuing.',
+        setupUrl: '/settings?tab=security&action=mfa',
+      });
     }
 
     // ── PHASE 53: MFA / Device Trust Gate ───────────────────────────────────

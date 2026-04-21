@@ -21,16 +21,18 @@ const homepageConfig: CanvasPageConfig = {
 };
 
 export default function Homepage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isFetching } = useAuth();
   const [, setLocation] = useLocation();
 
   // Redirect authenticated users straight to their dashboard —
   // landing page is only for unauthenticated visitors.
+  // Wait for isFetching to be false so stale React Query cache doesn't cause a
+  // premature redirect that ends up at /login when the session is actually expired.
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && !isFetching && isAuthenticated) {
       setLocation('/dashboard');
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading, isFetching, setLocation]);
 
   useEffect(() => {
     const loader = document.getElementById('initial-loader');
@@ -43,7 +45,7 @@ export default function Homepage() {
   }, []);
 
   // Show a loading indicator while redirecting authenticated users to dashboard
-  if (!isLoading && isAuthenticated) {
+  if (!isLoading && !isFetching && isAuthenticated) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
         <UniversalSpinner size="md" label="Redirecting to your dashboard…" />

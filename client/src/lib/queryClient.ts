@@ -74,8 +74,15 @@ export async function apiRequest(
 
     if (res.status === 401) {
       const path = typeof window !== "undefined" ? window.location.pathname : "";
-      const isOnAuthPage = path === "/login" || path === "/register" || path === "/forgot-password" || path === "/reset-password" || path.startsWith("/onboarding/");
-      if (typeof window !== "undefined" && !isOnAuthPage) {
+      const isOnPublicOrAuthPage = path === "/" || path === "/login" || path === "/register" ||
+        path === "/forgot-password" || path === "/reset-password" ||
+        path === "/pricing" || path === "/features" || path === "/trinity-features" ||
+        path === "/contact" || path === "/support" || path === "/terms" || path === "/privacy" ||
+        path === "/homepage" || path === "/compare" || path === "/roi-calculator" ||
+        path.startsWith("/onboarding/") || path.startsWith("/regulatory") ||
+        path.startsWith("/client-portal/") || path.startsWith("/forms/") ||
+        path.startsWith("/jobs/") || path.startsWith("/pay-invoice/");
+      if (typeof window !== "undefined" && !isOnPublicOrAuthPage) {
         window.location.href = "/login";
       }
     }
@@ -156,10 +163,17 @@ export const getQueryFn: <T>(options: {
     }
 
     if (res.status === 401) {
-      // Redirect to login if not already on an auth/public page
+      // Redirect to login only when on a protected (non-public) route
       const path = typeof window !== "undefined" ? window.location.pathname : "";
-      const isOnAuthPage = path === "/login" || path === "/register" || path === "/forgot-password" || path === "/reset-password" || path.startsWith("/onboarding/");
-      if (typeof window !== "undefined" && !isOnAuthPage) {
+      const isOnPublicOrAuthPage = path === "/" || path === "/login" || path === "/register" ||
+        path === "/forgot-password" || path === "/reset-password" ||
+        path === "/pricing" || path === "/features" || path === "/trinity-features" ||
+        path === "/contact" || path === "/support" || path === "/terms" || path === "/privacy" ||
+        path === "/homepage" || path === "/compare" || path === "/roi-calculator" ||
+        path.startsWith("/onboarding/") || path.startsWith("/regulatory") ||
+        path.startsWith("/client-portal/") || path.startsWith("/forms/") ||
+        path.startsWith("/jobs/") || path.startsWith("/pay-invoice/");
+      if (typeof window !== "undefined" && !isOnPublicOrAuthPage) {
         window.location.href = "/login";
       }
     }

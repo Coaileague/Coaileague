@@ -46,6 +46,13 @@ html body[data-scroll-locked] {
   }
 }
 
+@layer utilities {
+  .font-display {
+    font-family: var(--ds-font-display, 'Rajdhani', sans-serif);
+    letter-spacing: 0.02em;
+  }
+}
+
 /* ============================================================================
    WORKSPACE SHELL - Universal 7-Step Containment System
    CRITICAL: Never use 100vw (includes scrollbar width on Windows ~15-17px)

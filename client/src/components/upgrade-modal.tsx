@@ -73,7 +73,7 @@ const PRICING_TIERS = [
       'AI Records™ - Natural language search',
       'AI Analytics™ - AI analytics & predictions',
       'Predictive scheduling & cost optimization',
-      '$150/mo AI credits included',
+      '$150/mo AI tokens included',
       '$12/employee/mo overages',
       'Priority support (8hr)',
     ],
@@ -89,7 +89,7 @@ const PRICING_TIERS = [
       'Everything in Professional',
       'Unlimited employees',
       'Premium AI features & insights',
-      '$500/mo AI credits included',
+      '$500/mo AI tokens included',
       'White-label branding',
       'API access & custom webhooks',
       '$10/employee/mo overages',
@@ -107,10 +107,10 @@ export function UpgradeModal({ isOpen, onClose, feature }: UpgradeModalProps) {
   const [workspaceId] = useState(user?.workspace_id || '');
 
   const PRICE_MAP: Record<string, string> = {
-    basic: process.env.VITE_STRIPE_BASIC_PRICE || 'price_basic_test',
-    starter: process.env.VITE_STRIPE_STARTER_PRICE || 'price_starter_test',
-    professional: process.env.VITE_STRIPE_PROFESSIONAL_PRICE || 'price_professional_test',
-    enterprise: process.env.VITE_STRIPE_ENTERPRISE_PRICE || 'price_enterprise_test',
+    starter:      import.meta.env.VITE_STRIPE_STARTER_MONTHLY_PRICE_ID || '',
+    professional: import.meta.env.VITE_STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID || '',
+    business:     import.meta.env.VITE_STRIPE_BUSINESS_MONTHLY_PRICE_ID || '',
+    enterprise:   import.meta.env.VITE_STRIPE_ENTERPRISE_MONTHLY_PRICE_ID || '',
   };
 
   const handleUpgrade = async () => {

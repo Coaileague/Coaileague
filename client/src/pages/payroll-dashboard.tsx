@@ -7,6 +7,7 @@ import { PayrollRunListResponse, PayrollRunDetailResponse } from "@shared/schema
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +58,7 @@ interface PayrollRun {
   processedBy: string | null;
   processedAt: string | null;
   createdAt: string;
+  anomalyFlags?: Array<{ id: string; description: string }>;
 }
 
 interface PayrollEntry {
@@ -630,6 +632,20 @@ export default function PayrollDashboard() {
                                         </div>
                                       </div>
 
+                                      {runDetails.anomalyFlags && runDetails.anomalyFlags.length > 0 && (
+                                        <Alert variant="destructive" data-testid="alert-anomaly-flags">
+                                          <AlertCircle className="h-4 w-4" />
+                                          <AlertTitle>Anomalies Detected — Review Before Approving</AlertTitle>
+                                          <AlertDescription>
+                                            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+                                              {runDetails.anomalyFlags.map(flag => (
+                                                <li key={flag.id}>{flag.description}</li>
+                                              ))}
+                                            </ul>
+                                          </AlertDescription>
+                                        </Alert>
+                                      )}
+
                                       <div className="flex justify-end gap-2 pt-4 border-t">
                                         {runDetails.status === 'pending' && (
                                           <Button
@@ -826,6 +842,20 @@ export default function PayrollDashboard() {
                                       ))}
                                     </div>
                                   </div>
+
+                                  {runDetails.anomalyFlags && runDetails.anomalyFlags.length > 0 && (
+                                    <Alert variant="destructive" data-testid="alert-anomaly-flags-mobile">
+                                      <AlertCircle className="h-4 w-4" />
+                                      <AlertTitle>Anomalies Detected — Review Before Approving</AlertTitle>
+                                      <AlertDescription>
+                                        <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+                                          {runDetails.anomalyFlags.map(flag => (
+                                            <li key={flag.id}>{flag.description}</li>
+                                          ))}
+                                        </ul>
+                                      </AlertDescription>
+                                    </Alert>
+                                  )}
 
                                   <div className="flex justify-end gap-2 pt-4 border-t">
                                     {runDetails.status === 'pending' && (

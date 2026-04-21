@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PushSubscription {
   id: string;
@@ -10,11 +11,19 @@ interface PushSubscription {
   createdAt: string;
 }
 
-export function usePushNotifications() {
+const PUSH_REG_KEY = "push_registered_v2";
+
+interface PushNotificationOptions {
+  autoRegister?: boolean;
+}
+
+export function usePushNotifications(options: PushNotificationOptions = {}) {
+  const { autoRegister = false } = options;
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isSupported, setIsSupported] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     setIsSupported("Notification" in window && "serviceWorker" in navigator && "PushManager" in window);
@@ -184,6 +193,54 @@ export function usePushNotifications() {
   const sendTest = useCallback(() => {
     testMutation.mutate();
   }, [testMutation]);
+
+  useEffect(() => {
+    if (!autoRegister) return;
+    if (!isAuthenticated || !user?.id) return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+
+    const idValue = user.id;
+    if (typeof idValue !== "string" && typeof idValue !== "number") return;
+    const userId = String(idValue);
+    if (sessionStorage.getItem(PUSH_REG_KEY) === userId) return;
+
+    (async () => {
+      try {
+        const keyRes = await apiRequest("GET", "/api/push/vapid-public-key");
+        const keyPayload = await keyRes.json();
+        const publicKey = keyPayload?.publicKey;
+        if (!publicKey) return;
+
+        const registration = await navigator.serviceWorker.ready;
+        let nextPermission = Notification.permission;
+        if (nextPermission !== "granted") {
+          nextPermission = await Notification.requestPermission();
+          setPermission(nextPermission);
+        }
+        if (nextPermission !== "granted") return;
+
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          });
+        }
+
+        await apiRequest("POST", "/api/push/subscribe", {
+          subscription: subscription.toJSON(),
+          deviceInfo: {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+          },
+        });
+
+        sessionStorage.setItem(PUSH_REG_KEY, userId);
+      } catch (error) {
+        console.warn("[Push] Registration failed:", error);
+      }
+    })();
+  }, [autoRegister, isAuthenticated, user?.id]);
 
   return {
     isSupported,

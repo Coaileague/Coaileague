@@ -112,6 +112,70 @@ export function mountAuditRoutes(app: Express): void {
     } catch (error: unknown) { res.status(500).json({ error: sanitizeError(error) }); }
   });
 
+  // Compliance export for workspace audit history.
+  // GET /api/audit/export?start=&end=&format=csv|json
+  app.get("/api/audit/export", requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+
+      const format = String(req.query.format || "csv").toLowerCase();
+      const startDate = req.query.start ? new Date(String(req.query.start)) : undefined;
+      const endDate = req.query.end ? new Date(String(req.query.end)) : undefined;
+
+      if (startDate && Number.isNaN(startDate.getTime())) {
+        return res.status(400).json({ error: "Invalid start date" });
+      }
+      if (endDate && Number.isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: "Invalid end date" });
+      }
+      if (!['csv', 'json'].includes(format)) {
+        return res.status(400).json({ error: "format must be csv or json" });
+      }
+
+      // universalAudit.getWorkspaceHistory caps to 500; page through up to 10k.
+      const logs: any[] = [];
+      const pageSize = 500;
+      const maxRows = 10_000;
+      for (let offset = 0; offset < maxRows; offset += pageSize) {
+        const batch = await universalAudit.getWorkspaceHistory(workspaceId, {
+          startDate,
+          endDate,
+          limit: pageSize,
+          offset,
+        });
+        logs.push(...batch);
+        if (batch.length < pageSize) break;
+      }
+
+      if (format === 'json') {
+        return res.json({ count: logs.length, logs });
+      }
+
+      const escapeCsv = (value: unknown): string => {
+        const stringValue = value == null ? '' : String(value);
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      };
+
+      const header = 'timestamp,action,actorType,actorId,entityType,entityId,payload\n';
+      const rows = logs.map((logEntry: any) => ([
+        escapeCsv(logEntry.createdAt),
+        escapeCsv(logEntry.action),
+        escapeCsv(logEntry.actorType),
+        escapeCsv(logEntry.actorId),
+        escapeCsv(logEntry.entityType),
+        escapeCsv(logEntry.entityId),
+        escapeCsv(JSON.stringify(logEntry.payload ?? {})),
+      ].join(','))).join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="audit-trail-export.csv"');
+      return res.send(header + rows);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: sanitizeError(error) });
+    }
+  });
+
   app.use("/api/dashboard", requireAuth, ensureWorkspaceAccess, dashboardRoutes);
   app.use("/api/infrastructure", requireAuth, infrastructureRoutes);
   app.use("/api/sandbox", sandboxRoutes);

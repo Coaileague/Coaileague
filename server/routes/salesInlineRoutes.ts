@@ -514,7 +514,6 @@ Return ONLY valid JSON array with this exact structure:
                 aiSummary: result.data.sections[0]?.content ?? null,
                 status: 'draft',
                 updatedAt: new Date(),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               }).where(eq(rfps.id, rfpId));
               log.info(`[RFP] AI content generated for RFP ${rfpId}`);
             }
@@ -542,7 +541,6 @@ Return ONLY valid JSON array with this exact structure:
       if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
       const existing = await db.select().from(rfps)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(and(eq(rfps.id, id), eq(rfps.workspaceId, workspaceId)))
         .limit(1);
 
@@ -554,7 +552,6 @@ Return ONLY valid JSON array with this exact structure:
         aiSummary: null,
         status: 'active',
         updatedAt: new Date(),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       }).where(and(eq(rfps.id, id), eq(rfps.workspaceId, workspaceId)));
 
       const rfpRecord = existing[0];
@@ -588,7 +585,6 @@ Return ONLY valid JSON array with this exact structure:
               aiSummary: result.data.sections[0]?.content ?? null,
               status: 'draft',
               updatedAt: new Date(),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             }).where(and(eq(rfps.id, id), eq(rfps.workspaceId, workspaceId)));
             log.info(`[RFP] AI content regenerated for RFP ${id}`);
           }

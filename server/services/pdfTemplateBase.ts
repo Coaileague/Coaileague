@@ -12,7 +12,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import type PDFDocumentType from 'pdfkit';
+import PDFDocument from 'pdfkit';
+type PDFDocumentType = InstanceType<typeof PDFDocument>;
 
 /** Canonical platform color tokens — do not override per-tenant. */
 export const PDF = {
@@ -56,9 +57,9 @@ export const PAGE = {
 /** Horizontal rule across content width */
 export function hlinePdf(
   doc: PDFDocumentType,
-  color = PDF.grayLight,
-  x1 = PAGE.ML,
-  x2 = PAGE.W - PAGE.MR,
+  color: string = PDF.grayLight,
+  x1: number = PAGE.ML,
+  x2: number = PAGE.W - PAGE.MR,
 ): void {
   doc.moveTo(x1, doc.y).lineTo(x2, doc.y).strokeColor(color).lineWidth(0.5).stroke();
   doc.moveDown(0.4);
@@ -80,9 +81,9 @@ export function fieldPair(
   doc: PDFDocumentType,
   label: string,
   value: string,
-  x = PAGE.ML,
+  x: number = PAGE.ML,
   y?: number,
-  width = 220,
+  width: number = 220,
 ): void {
   const yPos = y ?? doc.y;
   doc.fontSize(7.5).fillColor(PDF.gray).font('Helvetica')

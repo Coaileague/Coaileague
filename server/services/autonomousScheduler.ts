@@ -2754,6 +2754,43 @@ export function startAutonomousScheduler() {
   });
   log.info('Contract Signing Reminder registered', { schedule: '0 10 * * *' });
 
+  // 4b-3. Overdue Collections Sweep (9 AM daily)
+  // Scans all workspaces for overdue invoices and escalates through the three
+  // collection tiers (reminder → demand → escalation). Registered here because
+  // runOverdueCollectionsSweep() existed in overdueCollectionsService but was
+  // never wired to a cron schedule.
+  registerJobInfo('Overdue Collections Sweep', '0 9 * * *', 'Daily AR sweep — sends tiered collection notices for overdue invoices', true);
+  cron.schedule('0 9 * * *', () => {
+    trackJobExecution('Overdue Collections Sweep', async () => {
+      const startTime = Date.now();
+      try {
+        const { runOverdueCollectionsSweep } = await import('./billing/overdueCollectionsService');
+        const result = await runOverdueCollectionsSweep();
+        emitAutomationEvent({
+          jobName: 'Overdue Collections Sweep',
+          category: 'billing',
+          success: true,
+          duration: Date.now() - startTime,
+          recordsProcessed: result.workspacesScanned,
+          details: {
+            tier1Sent: result.tier1Sent,
+            tier2Sent: result.tier2Sent,
+            tier3Sent: result.tier3Sent,
+          },
+        });
+      } catch (err: unknown) {
+        emitAutomationEvent({
+          jobName: 'Overdue Collections Sweep',
+          category: 'billing',
+          success: false,
+          details: { error: err instanceof Error ? err.message : String(err) },
+        });
+        throw err;
+      }
+    });
+  });
+  log.info('Overdue Collections Sweep registered', { schedule: '0 9 * * *' });
+
   // 4c. Hourly Proof-of-Service Prompt (Every 15 minutes)
   // Scans active shift chatrooms and nudges officers who have gone >60 min
   // without submitting a GPS photo. Escalates to supervisors at >120 min.
