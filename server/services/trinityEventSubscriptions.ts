@@ -639,6 +639,23 @@ async function ensureUniqueSlug(pool: any, baseSlug: string, currentWorkspaceId:
 }
 
 /**
+ * Fetch all active managers/owners for a workspace — used by batch event handlers
+ * to fan-out notifications to all relevant decision-makers.
+ */
+async function getWorkspaceManagers(workspaceId: string) {
+  return db
+    .select({ userId: employees.userId })
+    .from(employees)
+    .where(
+      and(
+        eq(employees.workspaceId, workspaceId),
+        eq(employees.isActive, true),
+        sql`${employees.workspaceRole} IN ('org_owner','co_owner','org_admin','org_manager','manager','department_manager')`,
+      )
+    );
+}
+
+/**
  * Initialize all Trinity event subscriptions
  */
 export function initializeTrinityEventSubscriptions(): void {
@@ -3111,6 +3128,495 @@ export function initializeTrinityEventSubscriptions(): void {
       const { workspaceId, metadata } = event;
       if (!workspaceId) return;
       log.warn(`[TrinityEvents] hris.provider_disconnected — workspace=${workspaceId} provider=${metadata?.provider}`);
+    },
+  });
+
+  // ─── BATCH 1: OFFICER SAFETY ─────────────────────────────────────────────────
+
+  platformEventBus.subscribe('lone_worker_missed_checkin', {
+    name: 'TrinityEvents-LoneWorkerMissedCheckin',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { employeeId, missedCount, level, requiresImmediateResponse } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: requiresImmediateResponse ? 'critical_alert' : 'system_alert',
+            title: `⚠️ Lone Worker Missed Check-In${requiresImmediateResponse ? ' — URGENT' : ''}`,
+            message: event.description || `Officer has missed ${missedCount ?? 1} check-in(s). Escalation level: ${level ?? 1}.`,
+            actionUrl: '/safety-hub',
+            relatedEntityType: 'employee',
+            relatedEntityId: employeeId,
+            priority: requiresImmediateResponse ? 'urgent' : 'high',
+          });
+        }
+        const { broadcastToWorkspace } = await import('../websocket');
+        broadcastToWorkspace(workspaceId, { type: 'safety_alert', event: 'lone_worker_missed_checkin', metadata });
+      } catch (err: any) {
+        log.warn('[TrinityEvents] lone_worker_missed_checkin handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('lone_worker_session_started', {
+    name: 'TrinityEvents-LoneWorkerSessionStarted',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        log.info(`[TrinityEvents] lone_worker_session_started: employee=${metadata?.employeeId} session=${metadata?.sessionId} ws=${workspaceId}`);
+      } catch (err: any) {
+        log.warn('[TrinityEvents] lone_worker_session_started handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('lone_worker_session_ended', {
+    name: 'TrinityEvents-LoneWorkerSessionEnded',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        log.info(`[TrinityEvents] lone_worker_session_ended: ws=${workspaceId} duration=${metadata?.durationMinutes}min`);
+      } catch (err: any) {
+        log.warn('[TrinityEvents] lone_worker_session_ended handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('panic_alert_resolved', {
+    name: 'TrinityEvents-PanicAlertResolved',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { alertId, resolvedBy } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'system',
+            title: '✅ Panic Alert Resolved',
+            message: `Emergency SOS alert has been resolved${resolvedBy ? ` by ${resolvedBy}` : ''}.`,
+            actionUrl: '/safety-hub',
+            relatedEntityType: 'panic_alert',
+            relatedEntityId: alertId,
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] panic_alert_resolved handler error:', err?.message);
+      }
+    },
+  });
+
+  // ─── BATCH 2: COMPLIANCE ──────────────────────────────────────────────────────
+
+  platformEventBus.subscribe('compliance_cert_expired', {
+    name: 'TrinityEvents-ComplianceCertExpired',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { employeeId } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'compliance_alert',
+            title: '🔴 Certification Expired',
+            message: event.description || 'An officer certification has expired. Officer marked non-compliant.',
+            actionUrl: employeeId ? `/compliance/employee-detail/${employeeId}` : '/compliance',
+            relatedEntityType: 'employee',
+            relatedEntityId: employeeId,
+            priority: 'urgent',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] compliance_cert_expired handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('training_expired', {
+    name: 'TrinityEvents-TrainingExpired',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { employeeId } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'compliance',
+            title: '⚠️ Training Certification Expired',
+            message: event.description || "An officer's training certification has expired.",
+            actionUrl: '/training-compliance',
+            relatedEntityType: 'employee',
+            relatedEntityId: employeeId,
+            priority: 'high',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] training_expired handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('training_expiring', {
+    name: 'TrinityEvents-TrainingExpiring',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'deadline_approaching',
+            title: '📅 Training Expiring Soon',
+            message: event.description || 'An officer training certification expires soon.',
+            actionUrl: '/training-compliance',
+            priority: 'normal',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] training_expiring handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('compliance_onboarding_overdue', {
+    name: 'TrinityEvents-ComplianceOnboardingOverdue',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { employeeId } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'action_required',
+            title: '⏰ Onboarding Overdue',
+            message: event.description || 'An employee has overdue onboarding requirements.',
+            actionUrl: '/employee-onboarding-dashboard',
+            relatedEntityType: 'employee',
+            relatedEntityId: employeeId,
+            priority: 'high',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] compliance_onboarding_overdue handler error:', err?.message);
+      }
+    },
+  });
+
+  // ─── BATCH 3: SHIFT & SCHEDULING ─────────────────────────────────────────────
+
+  platformEventBus.subscribe('shift_calloff_escalated', {
+    name: 'TrinityEvents-ShiftCalloffEscalated',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { shiftId, siteName } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'staffing_critical_escalation',
+            title: '🚨 Calloff Uncovered — Needs Attention',
+            message: `Shift at ${siteName || 'unknown site'} is uncovered. No replacement found within SLA.`,
+            actionUrl: '/universal-schedule',
+            relatedEntityType: 'shift',
+            relatedEntityId: shiftId,
+            priority: 'urgent',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] shift_calloff_escalated handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('shift_swap_approved', {
+    name: 'TrinityEvents-ShiftSwapApproved',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { requestingEmployeeId, shiftId } = metadata || {};
+        if (!requestingEmployeeId) return;
+        const [emp] = await db.select({ userId: employees.userId })
+          .from(employees).where(eq(employees.id, requestingEmployeeId)).limit(1);
+        if (!emp?.userId) return;
+        const { createNotification } = await import('./notificationService');
+        await createNotification({
+          workspaceId,
+          userId: emp.userId,
+          type: 'request_approved',
+          title: '✅ Shift Swap Approved',
+          message: 'Your shift swap request has been approved.',
+          actionUrl: '/universal-schedule',
+          relatedEntityType: 'shift',
+          relatedEntityId: shiftId,
+        });
+      } catch (err: any) {
+        log.warn('[TrinityEvents] shift_swap_approved handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('shift_swap_denied', {
+    name: 'TrinityEvents-ShiftSwapDenied',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { requestingEmployeeId, shiftId } = metadata || {};
+        if (!requestingEmployeeId) return;
+        const [emp] = await db.select({ userId: employees.userId })
+          .from(employees).where(eq(employees.id, requestingEmployeeId)).limit(1);
+        if (!emp?.userId) return;
+        const { createNotification } = await import('./notificationService');
+        await createNotification({
+          workspaceId,
+          userId: emp.userId,
+          type: 'request_denied',
+          title: '❌ Shift Swap Denied',
+          message: 'Your shift swap request was not approved.',
+          actionUrl: '/universal-schedule',
+          relatedEntityType: 'shift',
+          relatedEntityId: shiftId,
+        });
+      } catch (err: any) {
+        log.warn('[TrinityEvents] shift_swap_denied handler error:', err?.message);
+      }
+    },
+  });
+
+  // ─── BATCH 4: BILLING ─────────────────────────────────────────────────────────
+
+  platformEventBus.subscribe('subscription_canceled', {
+    name: 'TrinityEvents-SubscriptionCanceled',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId } = event;
+        if (!workspaceId) return;
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'subscription_cancelled',
+            title: '📋 Subscription Canceled',
+            message: 'Your CoAIleague subscription has been canceled. Access continues until the billing period ends.',
+            actionUrl: '/billing',
+            priority: 'high',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] subscription_canceled handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('invoice_overdue_escalated', {
+    name: 'TrinityEvents-InvoiceOverdueEscalated',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { invoiceId, clientName, amount, daysOverdue } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'invoice_overdue_alert',
+            title: `⚠️ Invoice ${daysOverdue ?? '30'}+ Days Overdue`,
+            message: `${clientName || 'Client'} invoice${amount ? ` for $${amount}` : ''} is now ${daysOverdue ?? ''} days past due.`,
+            actionUrl: '/invoices',
+            relatedEntityType: 'invoice',
+            relatedEntityId: invoiceId,
+            priority: 'high',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] invoice_overdue_escalated handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('trial_ending_soon', {
+    name: 'TrinityEvents-TrialEndingSoon',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { daysLeft } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'trial_expiry_warning',
+            title: `⏳ Trial Ending in ${daysLeft ?? 'a few'} Days`,
+            message: 'Your free trial is ending soon. Upgrade to keep your data and features.',
+            actionUrl: '/billing',
+            priority: 'high',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] trial_ending_soon handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('plaid_bank_connected', {
+    name: 'TrinityEvents-PlaidBankConnected',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId } = event;
+        if (!workspaceId) return;
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'payroll_payment_method',
+            title: '🏦 Bank Account Connected',
+            message: 'A bank account has been successfully connected for payroll direct deposit.',
+            actionUrl: '/payroll-dashboard',
+            priority: 'normal',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] plaid_bank_connected handler error:', err?.message);
+      }
+    },
+  });
+
+  // ─── BATCH 5: DOCUMENTS & CONTRACTS ──────────────────────────────────────────
+
+  platformEventBus.subscribe('contract_renewal_due', {
+    name: 'TrinityEvents-ContractRenewalDue',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { contractId, clientName, daysUntilExpiry } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'deadline_approaching',
+            title: `📋 Contract Renewal Due in ${daysUntilExpiry ?? '?'} Days`,
+            message: `Contract with ${clientName || 'client'} expires soon. Begin renewal process.`,
+            actionUrl: '/contract-renewals',
+            relatedEntityType: 'contract',
+            relatedEntityId: contractId,
+            priority: 'high',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] contract_renewal_due handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('dar_submitted', {
+    name: 'TrinityEvents-DarSubmitted',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { darId, officerName, siteName } = metadata || {};
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: 'dar_required',
+            title: '📄 Daily Activity Report Submitted',
+            message: `${officerName || 'Officer'} submitted a DAR${siteName ? ` for ${siteName}` : ''}.`,
+            actionUrl: '/rms-hub',
+            relatedEntityType: 'dar',
+            relatedEntityId: darId,
+            priority: 'low',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] dar_submitted handler error:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('incident_created', {
+    name: 'TrinityEvents-IncidentCreatedNotify',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const { incidentId, severity, incidentType } = metadata || {};
+        if (!severity || !['critical', 'high'].includes(severity)) return;
+        const { createNotification } = await import('./notificationService');
+        const managers = await getWorkspaceManagers(workspaceId);
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            workspaceId,
+            userId: mgr.userId,
+            type: severity === 'critical' ? 'critical_alert' : 'system_alert',
+            title: `🚨 ${severity === 'critical' ? 'CRITICAL' : 'HIGH'} Incident Reported`,
+            message: `${incidentType || 'Incident'} reported. Immediate review required.`,
+            actionUrl: '/rms-hub',
+            relatedEntityType: 'incident',
+            relatedEntityId: incidentId,
+            priority: severity === 'critical' ? 'urgent' : 'high',
+          });
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] incident_created (notify) handler error:', err?.message);
+      }
     },
   });
 
