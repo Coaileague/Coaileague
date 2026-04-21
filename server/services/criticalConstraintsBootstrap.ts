@@ -45,6 +45,37 @@ interface CriticalConstraint {
 }
 
 const constraints: CriticalConstraint[] = [
+  // ── Support login OTP table ──────────────────────────────────────────────
+  // Stores daily-rotating SMS PINs for platform support role logins.
+  // Created here (not in Drizzle schema) so it boots idempotently in all
+  // environments without a separate migration step.
+  {
+    name: 'support_login_otps_table',
+    rationale: 'Daily-rotating SMS OTP table for platform support logins — not expressible in Drizzle DSL without enum changes',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'support_login_otps'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS support_login_otps (
+          id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id     VARCHAR     NOT NULL,
+          otp_hash    VARCHAR     NOT NULL,
+          expires_at  TIMESTAMP   NOT NULL,
+          used_at     TIMESTAMP,
+          created_at  TIMESTAMP   DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS support_login_otps_user_idx
+          ON support_login_otps (user_id);
+        CREATE INDEX IF NOT EXISTS support_login_otps_expires_idx
+          ON support_login_otps (expires_at);
+      `);
+    },
+  },
   {
     name: 'btree_gist_extension',
     rationale: 'Required by no_overlapping_employee_shifts gist exclusion constraint',

@@ -19,6 +19,11 @@ import {
   adminResetUserMfa,
 } from '../services/auth/twoFactorSessionService';
 import { verifyMfaToken } from '../services/auth/mfa';
+import {
+  SUPPORT_PLATFORM_ROLES,
+  generateAndSendSupportOtp,
+  verifySupportOtp,
+} from '../services/auth/supportSmsOtpService';
 import { requireAuth } from '../auth';
 import { isProduction } from '../lib/isProduction';
 
@@ -439,6 +444,31 @@ router.post("/api/auth/login", async (req, res) => {
     // Mandatory MFA advisory (org_owner / platform_staff without MFA flagged in response)
     const mfaMandatory = isMfaMandatory(user.role || '');
     const mfaAdvisory = (mfaMandatory && !user.mfaEnabled) ? 'mfa_setup_required' : undefined;
+
+    // ── SMS OTP Gate for Platform Support Roles ───────────────────────────
+    // Platform staff (root_admin, deputy_admin, sysop, support_manager, etc.)
+    // must verify a daily-rotating SMS PIN in addition to password (+ TOTP).
+    // This gate only activates when Twilio is configured and the user has a
+    // phone on file.  If either is missing, login continues with a warning.
+    if (activePlatformRole && SUPPORT_PLATFORM_ROLES.has(activePlatformRole.role)) {
+      if (user.phone) {
+        const pendingToken = issuePendingMfaToken(user.id);
+        const maskedPhone = user.phone.replace(
+          /(\+?\d{1,3})(\d+)(\d{4})$/,
+          (_: string, cc: string, mid: string, last4: string) => `${cc}${'*'.repeat(mid.length)}${last4}`
+        );
+        return res.status(202).json({
+          smsPinRequired: true,
+          pendingSmsPinToken: pendingToken,
+          phoneHint: maskedPhone,
+          message: 'A daily PIN will be sent to your registered number. Use POST /api/auth/sms-otp/request to receive it, then POST /api/auth/sms-otp/verify to complete login.',
+        });
+      } else {
+        // No phone on file — log security gap but do not block login so the
+        // account owner can still access settings to add a phone number.
+        log.warn(`[Auth] SECURITY: Platform-role user ${user.id} (${activePlatformRole.role}) has no phone for SMS OTP gate`);
+      }
+    }
 
     // FIX [SESSION FIXATION]: Rotate the session ID before assigning the authenticated
     // userId. Without regenerate(), an attacker who planted a pre-login session cookie
@@ -1633,6 +1663,174 @@ router.patch("/api/auth/language-preference", async (req, res) => {
 router.get("/api/auth/capabilities", (_req, res) => {
   const devLoginEnabled = !isProduction();
   res.json({ devLoginEnabled });
+});
+
+// ============================================================================
+// SMS OTP — Support / Platform Role Second Factor
+//
+// Two-step flow after a successful password check for platform roles:
+//   1. POST /api/auth/sms-otp/request  — generate + send PIN (or resend)
+//   2. POST /api/auth/sms-otp/verify   — verify PIN, complete session
+//
+// Both endpoints accept `pendingSmsPinToken` (same encrypted token that
+// carries `userId` through the login pause, issued by the login route).
+// Rate-limited to 3 send-attempts per 10 min per IP.
+// ============================================================================
+
+const smsPinRequestSchema = z.object({
+  pendingSmsPinToken: z.string(),
+});
+
+router.post("/api/auth/sms-otp/request", async (req, res) => {
+  try {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    if (!_checkIpRateLimit(ip, 'sms-otp-request', 3, 10 * 60 * 1000)) {
+      return res.status(429).json({ message: "Too many PIN requests. Please wait a few minutes." });
+    }
+
+    const { pendingSmsPinToken } = smsPinRequestSchema.parse(req.body);
+
+    let userId: string;
+    try {
+      userId = validatePendingMfaToken(pendingSmsPinToken);
+    } catch {
+      return res.status(401).json({ message: "Session expired. Please log in again." });
+    }
+
+    const [user] = await db.select({ id: users.id, phone: users.phone }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) return res.status(401).json({ message: "User not found." });
+    if (!user.phone) {
+      return res.status(400).json({ message: "No phone number on file. Please add a phone number in your account settings." });
+    }
+
+    const result = await generateAndSendSupportOtp(userId, user.phone);
+    if (!result.success) {
+      if (result.notConfigured) {
+        return res.status(503).json({ message: "SMS service not configured. Contact platform administrator." });
+      }
+      return res.status(500).json({ message: "Failed to send PIN. Please try again." });
+    }
+
+    const maskedPhone = user.phone.replace(
+      /(\+?\d{1,3})(\d+)(\d{4})$/,
+      (_: string, cc: string, mid: string, last4: string) => `${cc}${'*'.repeat(mid.length)}${last4}`
+    );
+
+    return res.json({
+      success: true,
+      message: `PIN sent to ${maskedPhone}. Valid until midnight UTC.`,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid request", errors: error.errors });
+    }
+    log.error("[SMS OTP Request] error:", error);
+    return res.status(500).json({ message: "Failed to send PIN" });
+  }
+});
+
+const smsPinVerifySchema = z.object({
+  pendingSmsPinToken: z.string(),
+  pin: z.string().length(6).regex(/^\d{6}$/, "PIN must be exactly 6 digits"),
+});
+
+router.post("/api/auth/sms-otp/verify", async (req, res) => {
+  try {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    if (!_checkIpRateLimit(ip, 'sms-otp-verify', 10, 15 * 60 * 1000)) {
+      return res.status(429).json({ message: "Too many verification attempts. Please wait 15 minutes." });
+    }
+
+    const data = smsPinVerifySchema.parse(req.body);
+
+    let userId: string;
+    try {
+      userId = validatePendingMfaToken(data.pendingSmsPinToken);
+    } catch {
+      return res.status(401).json({ message: "Session expired. Please log in again." });
+    }
+
+    const isValid = await verifySupportOtp(userId, data.pin);
+    if (!isValid) {
+      recordIpAuthFailure(ip);
+      return res.status(401).json({ message: "Invalid or expired PIN. Request a new one if needed." });
+    }
+
+    // PIN verified — complete the login session
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) return res.status(401).json({ message: "User not found." });
+
+    const { checkAccountLocked: _checkLock, recordSuccessfulLogin: _recordSuccessful } = await import('../auth');
+    const lockStatus = await _checkLock(userId);
+    if (lockStatus.locked) return res.status(403).json({ message: lockStatus.message });
+    await _recordSuccessful(userId);
+
+    const ipAddr = ip;
+    const ua = req.get('user-agent') || '';
+
+    // Session fixation protection
+    const priorSessionData = { ...req.session };
+    delete (priorSessionData as any).cookie;
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+    Object.assign(req.session, priorSessionData);
+    req.session.userId = userId;
+
+    // Issue auth_token cookie
+    try {
+      const { authService } = await import('../services/authService');
+      const sessionResult = await authService.createSessionToken(userId, ipAddr, ua);
+      if (sessionResult.sessionToken) {
+        res.cookie('auth_token', sessionResult.sessionToken, authCookieOptions());
+      }
+    } catch (tokenErr) {
+      log.warn('[SMS OTP Verify] Failed to create auth_token cookie:', tokenErr);
+    }
+
+    // Resolve workspace
+    let workspaceId = user.currentWorkspaceId;
+    if (!workspaceId) {
+      const [emp] = await db.select().from(employees).where(eq(employees.userId, userId)).limit(1);
+      if (emp) {
+        workspaceId = emp.workspaceId;
+        await db.update(users).set({ currentWorkspaceId: workspaceId, updatedAt: new Date() }).where(eq(users.id, userId));
+      }
+    }
+
+    if (workspaceId) {
+      const { resolveAndCacheWorkspaceContext } = await import('../services/session/sessionWorkspaceService');
+      await resolveAndCacheWorkspaceContext(req, userId, workspaceId);
+    }
+    const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
+    await saveSessionAsync(req);
+
+    await registerSession(userId, req.session.id, ipAddr, ua);
+
+    const userPlatformRoles = await db.select().from(platformRoles).where(eq(platformRoles.userId, userId));
+    const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
+
+    return res.json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        emailVerified: user.emailVerified,
+        mfaEnabled: user.mfaEnabled ?? false,
+        platformRole: activePlatformRole?.role || null,
+        currentWorkspaceId: workspaceId,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Validation error", errors: error.errors });
+    }
+    log.error("[SMS OTP Verify] error:", error);
+    return res.status(500).json({ message: "SMS PIN verification failed" });
+  }
 });
 
 export default router;

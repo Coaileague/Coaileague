@@ -31,15 +31,19 @@ export async function runDataCorrections(): Promise<void> {
   console.log('🔧 Data Corrections Service: Starting...');
 
   try {
+    // Use ROOT_ADMIN_EMAIL env var so the root email can be configured without a deploy.
+    // Defaults to admin@coaileague.com if not set.
+    const rootAdminEmail = process.env.ROOT_ADMIN_EMAIL || 'admin@coaileague.com';
     // CATEGORY C — Raw SQL retained: Production seed data correction | Tables: users | Verified: 2026-03-23
     await typedExec(sql`
       UPDATE users
-      SET email = 'admin@coaileague.com',
+      SET email = ${rootAdminEmail},
           login_attempts = 0,
+          locked_until = NULL,
           email_verified = TRUE
       WHERE id = 'root-user-00000000'
     `);
-    console.log('🔧 Data Correction: root admin email set to admin@coaileague.com');
+    console.log(`🔧 Data Correction: root admin email set to ${rootAdminEmail}`);
   } catch (err) {
     console.log('🔧 Data Correction: root admin email fix skipped:', (err as any)?.message);
   }
