@@ -815,17 +815,36 @@ router.post('/bulk-notify', async (req: AuthenticatedRequest, res) => {
 router.post('/', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
-    
+
     if (!workspaceId) {
       return res.status(400).json({ message: "Workspace ID is required" });
     }
-    
+
     const workspace = await storage.getWorkspace(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
     const userId = req.user?.id || req.user?.id;
+
+    // ── S5: REQUIRE MANAGER+ TO CREATE EMPLOYEES ───────────────────────────
+    // Previously the only gates were requireAuth + ensureWorkspaceAccess at
+    // the mount. That let any authenticated user (officer, supervisor)
+    // create employees. Platform staff still bypass via platform role.
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    {
+      const { hasManagerAccess: _hasManagerAccess } = await import('../rbac');
+      const platRole = req.platformRole || await getUserPlatformRole(userId);
+      const isPlatformStaff = !!platRole && platRole !== 'none';
+      if (!isPlatformStaff) {
+        const requesterEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
+        if (!_hasManagerAccess(requesterEmployee?.workspaceRole as string)) {
+          return res.status(403).json({ message: 'Only managers and owners can create employees' });
+        }
+      }
+    }
     const { platformRole: rawPlatformRole, workspaceId: _, ...employeeData } = req.body;
     const platformRole = rawPlatformRole && rawPlatformRole.trim() !== '' ? rawPlatformRole : undefined;
 
@@ -844,7 +863,6 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
 
     if (platformRole) {
       const { getUserPlatformRole: getPlatRole } = await import('../rbac');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const callerPlatRole = await getPlatRole(userId);
       const isPlatformStaffCaller = callerPlatRole && callerPlatRole !== 'none';
       

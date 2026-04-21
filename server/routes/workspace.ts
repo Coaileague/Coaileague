@@ -443,10 +443,13 @@ router.post('/org-code/claim', requireAuth, async (req: AuthenticatedRequest, re
       return res.status(400).json({ message: "No workspace selected" });
     }
 
-    // Check user has permission (owner or manager)
+    // ── S12: OWNER-ONLY on org-code claim ──────────────────────────────────
+    // Org code drives email provisioning (calloffs@/incidents@/...) and
+    // is an org-identity action. Previously allowed manager+; restrict to
+    // owners only to match the role matrix in the audit.
     const userRole = req.user?.workspaceRole;
-    if (!['org_owner', 'co_owner', 'org_admin', 'manager'].includes(userRole || '')) {
-      return res.status(403).json({ message: "Only workspace owners and managers can claim org codes" });
+    if (!['org_owner', 'co_owner'].includes(userRole || '')) {
+      return res.status(403).json({ message: "Only workspace owners can claim org codes" });
     }
 
     const result = await claimOrgCode(workspaceId, code);

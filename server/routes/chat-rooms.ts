@@ -369,86 +369,91 @@ router.post(
         });
       }
 
-      // Create the conversation
-      const [conversation] = await db
-        .insert(chatConversations)
-        .values({
-          workspaceId,
-          subject: roomName,
-          conversationType: req.body.conversationType || conversationType || 'open_chat',
-          visibility: visibility || 'workspace',
-          status: 'active',
-          shiftId: shiftId || null,
-          autoCloseAt: req.body.autoCloseAt || autoCloseAt || null,
-          helpdeskTicketId: helpdeskTicketId || null,
-          customerId: userId, // Creator
-          customerName: userName,
-        })
-        .returning();
-
-      // Create organization chat room wrapper for org-isolated persistence
-      const roomSlug = roomName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'room';
-      const uniqueSlug = `${roomSlug}-${conversation.id.slice(0, 8)}`;
-      
-      await db.insert(organizationChatRooms).values({
-        workspaceId,
-        roomName,
-        roomSlug: uniqueSlug,
-        conversationId: conversation.id,
-        status: 'active',
-        createdBy: userId,
-      });
-
-      // Add creator as room owner
-      await db.insert(chatParticipants).values({
-        conversationId: conversation.id,
-        workspaceId,
-        participantId: userId,
-        participantName: userName,
-        participantEmail: authReq.user?.email,
-        participantRole: 'owner',
-        canSendMessages: true,
-        canViewHistory: true,
-        canInviteOthers: true,
-        joinedAt: new Date(),
-        isActive: true,
-      });
-
-      // Add additional participants if provided
+      // Pre-resolve additional participant users OUTSIDE the transaction (read-only).
+      let additionalParticipantRecords: any[] = [];
       if (participants && Array.isArray(participants) && participants.length > 0) {
         const participantRecords = await Promise.all(
           participants.map(async (participantId: string) => {
-            // Get participant info
             const [user] = await db
               .select()
               .from(users)
               .where(eq(users.id, participantId))
               .limit(1);
-
             if (!user) return null;
-
-            return {
-              conversationId: conversation.id,
-              workspaceId,
-              participantId: user.id,
-              participantName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email!,
-              participantEmail: user.email,
-              participantRole: 'member',
-              canSendMessages: true,
-              canViewHistory: true,
-              canInviteOthers: false,
-              invitedBy: userId,
-              joinedAt: new Date(),
-              isActive: true,
-            };
+            return user;
           })
         );
-
-        const validParticipants = participantRecords.filter(p => p !== null);
-        if (validParticipants.length > 0) {
-          await db.insert(chatParticipants).values(validParticipants);
-        }
+        additionalParticipantRecords = participantRecords.filter((u: any) => u !== null);
       }
+
+      // D04: Atomic room creation — conversation + wrapper + creator-owner participant
+      // + additional participants must all succeed together. Otherwise the room
+      // is created but unreachable/unowned.
+      const conversation = await db.transaction(async (tx) => {
+        const [conv] = await tx
+          .insert(chatConversations)
+          .values({
+            workspaceId,
+            subject: roomName,
+            conversationType: req.body.conversationType || conversationType || 'open_chat',
+            visibility: visibility || 'workspace',
+            status: 'active',
+            shiftId: shiftId || null,
+            autoCloseAt: req.body.autoCloseAt || autoCloseAt || null,
+            helpdeskTicketId: helpdeskTicketId || null,
+            customerId: userId,
+            customerName: userName,
+          })
+          .returning();
+
+        // Create organization chat room wrapper for org-isolated persistence
+        const roomSlug = roomName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'room';
+        const uniqueSlug = `${roomSlug}-${conv.id.slice(0, 8)}`;
+
+        await tx.insert(organizationChatRooms).values({
+          workspaceId,
+          roomName,
+          roomSlug: uniqueSlug,
+          conversationId: conv.id,
+          status: 'active',
+          createdBy: userId,
+        });
+
+        // Add creator as room owner
+        await tx.insert(chatParticipants).values({
+          conversationId: conv.id,
+          workspaceId,
+          participantId: userId,
+          participantName: userName,
+          participantEmail: authReq.user?.email,
+          participantRole: 'owner',
+          canSendMessages: true,
+          canViewHistory: true,
+          canInviteOthers: true,
+          joinedAt: new Date(),
+          isActive: true,
+        });
+
+        if (additionalParticipantRecords.length > 0) {
+          const validParticipants = additionalParticipantRecords.map((user: any) => ({
+            conversationId: conv.id,
+            workspaceId,
+            participantId: user.id,
+            participantName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email!,
+            participantEmail: user.email,
+            participantRole: 'member',
+            canSendMessages: true,
+            canViewHistory: true,
+            canInviteOthers: false,
+            invitedBy: userId,
+            joinedAt: new Date(),
+            isActive: true,
+          }));
+          await tx.insert(chatParticipants).values(validParticipants);
+        }
+
+        return conv;
+      });
 
       // Send welcome system message for the new room
       const roomDisplayName = conversation.subject || roomName;

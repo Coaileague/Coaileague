@@ -93,7 +93,7 @@ router.get("/i9-records/:employeeId", requireAuth, async (req: AuthenticatedRequ
   }
 });
 
-router.post("/manager-assignments", requireOwner, async (req: AuthenticatedRequest, res) => {
+router.post("/manager-assignments", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
 

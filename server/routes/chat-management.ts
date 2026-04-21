@@ -225,48 +225,51 @@ router.post(
         return res.status(403).json({ error: "Not a participant of this conversation" });
       }
 
-      await db
-        .insert(conversationUserState)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        .values({
-          conversationId,
-          userId,
-          workspaceId,
-          hasLeft: true,
-          isHidden: true,
-          leftAt: new Date(),
-          hiddenAt: new Date(),
-        })
-        .onConflictDoUpdate({
-          target: [conversationUserState.conversationId, conversationUserState.userId],
-          set: {
+      // D04: Atomic leave-conversation — state flag + participant mark + audit event
+      await db.transaction(async (tx) => {
+        await tx
+          .insert(conversationUserState)
+          // @ts-expect-error — TS migration: fix in refactoring sprint
+          .values({
+            conversationId,
+            userId,
+            workspaceId,
             hasLeft: true,
             isHidden: true,
             leftAt: new Date(),
             hiddenAt: new Date(),
-            updatedAt: new Date(),
-          },
+          })
+          .onConflictDoUpdate({
+            target: [conversationUserState.conversationId, conversationUserState.userId],
+            set: {
+              hasLeft: true,
+              isHidden: true,
+              leftAt: new Date(),
+              hiddenAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+        await tx
+          .update(chatParticipants)
+          .set({ isActive: false, leftAt: new Date() })
+          .where(
+            and(
+              eq(chatParticipants.conversationId, conversationId),
+              eq(chatParticipants.participantId, userId)
+            )
+          );
+
+        await tx.insert(roomEvents).values({
+          // @ts-expect-error — TS migration: fix in refactoring sprint
+          workspaceId,
+          conversationId,
+          actorId: userId,
+          actorName: userName,
+          actorRole: "member",
+          eventType: "user_left",
+          description: `${userName} left the conversation`,
         });
-
-      await db
-        .update(chatParticipants)
-        .set({ isActive: false, leftAt: new Date() })
-        .where(
-          and(
-            eq(chatParticipants.conversationId, conversationId),
-            eq(chatParticipants.participantId, userId)
-          )
-        );
-
-      await db.insert(roomEvents).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        workspaceId,
-        conversationId,
-        actorId: userId,
-        actorName: userName,
-        actorRole: "member",
-        eventType: "user_left",
-        description: `${userName} left the conversation`,
       });
 
       try {
@@ -720,27 +723,30 @@ router.post(
         return res.status(404).json({ error: "New owner must be an active participant in the room" });
       }
 
-      if (currentOwner) {
-        await db
+      // D04: Atomic ownership transfer — demote, promote, audit log all-or-nothing
+      await db.transaction(async (tx) => {
+        if (currentOwner) {
+          await tx
+            .update(chatParticipants)
+            .set({ participantRole: "admin" })
+            .where(eq(chatParticipants.id, currentOwner.id));
+        }
+
+        await tx
           .update(chatParticipants)
-          .set({ participantRole: "admin" })
-          .where(eq(chatParticipants.id, currentOwner.id));
-      }
+          .set({ participantRole: "owner" })
+          .where(eq(chatParticipants.id, newOwnerParticipant.id));
 
-      await db
-        .update(chatParticipants)
-        .set({ participantRole: "owner" })
-        .where(eq(chatParticipants.id, newOwnerParticipant.id));
-
-      await db.insert(roomEvents).values({
-        workspaceId,
-        conversationId: roomId,
-        actorId: userId,
-        actorName: userName,
-        actorRole: "owner",
-        eventType: "ownership_transferred",
-        description: `${userName} transferred ownership to ${newOwnerParticipant.participantName}`,
-        eventPayload: JSON.stringify({ newOwnerId, previousOwnerId: userId }),
+        await tx.insert(roomEvents).values({
+          workspaceId,
+          conversationId: roomId,
+          actorId: userId,
+          actorName: userName,
+          actorRole: "owner",
+          eventType: "ownership_transferred",
+          description: `${userName} transferred ownership to ${newOwnerParticipant.participantName}`,
+          eventPayload: JSON.stringify({ newOwnerId, previousOwnerId: userId }),
+        });
       });
 
       res.json({ success: true, message: "Ownership transferred" });
@@ -802,26 +808,29 @@ router.post(
         return res.status(403).json({ error: "Only room owner/admin or workspace admin can update roles" });
       }
 
-      await db
-        .update(chatParticipants)
-        .set({ participantRole: role, updatedAt: new Date() })
-        .where(
-          and(
-            eq(chatParticipants.conversationId, roomId),
-            eq(chatParticipants.participantId, participantId),
-            eq(chatParticipants.isActive, true)
-          )
-        );
+      // D04: Atomic role update — role change + audit log must succeed together
+      await db.transaction(async (tx) => {
+        await tx
+          .update(chatParticipants)
+          .set({ participantRole: role, updatedAt: new Date() })
+          .where(
+            and(
+              eq(chatParticipants.conversationId, roomId),
+              eq(chatParticipants.participantId, participantId),
+              eq(chatParticipants.isActive, true)
+            )
+          );
 
-      await db.insert(roomEvents).values({
-        workspaceId,
-        conversationId: roomId,
-        actorId: userId,
-        actorName: userName,
-        actorRole: requester?.participantRole || "admin",
-        eventType: "role_updated",
-        description: `${userName} updated role to ${role}`,
-        eventPayload: JSON.stringify({ participantId, newRole: role }),
+        await tx.insert(roomEvents).values({
+          workspaceId,
+          conversationId: roomId,
+          actorId: userId,
+          actorName: userName,
+          actorRole: requester?.participantRole || "admin",
+          eventType: "role_updated",
+          description: `${userName} updated role to ${role}`,
+          eventPayload: JSON.stringify({ participantId, newRole: role }),
+        });
       });
 
       res.json({ success: true, message: `Role updated to ${role}` });
@@ -965,47 +974,53 @@ router.post(
         return res.json({ success: true, conversationId: existingDMs[0].id, existing: true });
       }
 
-      const [newConversation] = await db
-        .insert(chatConversations)
-        .values({
-          workspaceId,
-          customerId: userId,
-          customerName: userName,
-          supportAgentId: recipientId,
-          supportAgentName: recipientName,
-          subject: `DM: ${userName} & ${recipientName}`,
-          status: "active",
-          conversationType: "dm_user",
-          visibility: "private",
-        })
-        .returning();
+      // D04: Atomic DM creation — conversation + both participants must succeed together.
+      // Without both participants, the conversation is unreachable.
+      const newConversation = await db.transaction(async (tx) => {
+        const [conv] = await tx
+          .insert(chatConversations)
+          .values({
+            workspaceId,
+            customerId: userId,
+            customerName: userName,
+            supportAgentId: recipientId,
+            supportAgentName: recipientName,
+            subject: `DM: ${userName} & ${recipientName}`,
+            status: "active",
+            conversationType: "dm_user",
+            visibility: "private",
+          })
+          .returning();
 
-      await db.insert(chatParticipants).values([
-        {
-          conversationId: newConversation.id,
-          workspaceId,
-          participantId: userId,
-          participantName: userName,
-          participantRole: "owner",
-          canSendMessages: true,
-          canViewHistory: true,
-          canInviteOthers: false,
-          isActive: true,
-          joinedAt: new Date(),
-        },
-        {
-          conversationId: newConversation.id,
-          workspaceId,
-          participantId: recipientId,
-          participantName: recipientName,
-          participantRole: "member",
-          canSendMessages: true,
-          canViewHistory: true,
-          canInviteOthers: false,
-          isActive: true,
-          joinedAt: new Date(),
-        },
-      ]);
+        await tx.insert(chatParticipants).values([
+          {
+            conversationId: conv.id,
+            workspaceId,
+            participantId: userId,
+            participantName: userName,
+            participantRole: "owner",
+            canSendMessages: true,
+            canViewHistory: true,
+            canInviteOthers: false,
+            isActive: true,
+            joinedAt: new Date(),
+          },
+          {
+            conversationId: conv.id,
+            workspaceId,
+            participantId: recipientId,
+            participantName: recipientName,
+            participantRole: "member",
+            canSendMessages: true,
+            canViewHistory: true,
+            canInviteOthers: false,
+            isActive: true,
+            joinedAt: new Date(),
+          },
+        ]);
+
+        return conv;
+      });
 
       res.json({ success: true, conversationId: newConversation.id, existing: false });
     } catch (error: unknown) {
@@ -1076,24 +1091,27 @@ router.post(
         return res.json({ success: true, message: "Conversation is already closed" });
       }
 
-      await db
-        .update(chatConversations)
-        .set({
-          status: "closed",
-          closedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(chatConversations.id, conversationId));
-
+      // D04: Atomic close — state flip + system message together
       const closerName = `${authReq.user?.firstName || ""} ${authReq.user?.lastName || ""}`.trim() || "Support";
-      await db.insert(chatMessages).values({
-        conversationId,
-        senderId: userId,
-        senderName: "System",
-        senderType: "system",
-        message: `This conversation was closed by ${closerName}. No further messages can be sent.`,
-        isSystemMessage: true,
-        isEncrypted: false,
+      await db.transaction(async (tx) => {
+        await tx
+          .update(chatConversations)
+          .set({
+            status: "closed",
+            closedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(chatConversations.id, conversationId));
+
+        await tx.insert(chatMessages).values({
+          conversationId,
+          senderId: userId,
+          senderName: "System",
+          senderType: "system",
+          message: `This conversation was closed by ${closerName}. No further messages can be sent.`,
+          isSystemMessage: true,
+          isEncrypted: false,
+        });
       });
 
       res.json({ success: true, message: "DM conversation closed successfully" });
@@ -1145,53 +1163,61 @@ router.post(
         });
       }
 
-      const [newConversation] = await db
-        .insert(chatConversations)
-        .values({
-          workspaceId,
-          customerId: userId,
-          customerName: userName,
-          subject: name.trim(),
-          status: "active",
-          conversationType: "open_chat",
-          visibility: "workspace",
-        })
-        .returning();
-
       const allParticipantIds = [userId, ...(participantIds || [])];
       const uniqueIds = [...new Set(allParticipantIds)];
 
+      // Pre-resolve participant user rows before the transaction (read-only).
       const participantUsers = await db
         .select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email })
         .from(users)
         .where(inArray(users.id, uniqueIds));
 
-      const participantValues = participantUsers.map((u) => ({
-        conversationId: newConversation.id,
-        workspaceId,
-        participantId: u.id,
-        participantName: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || "User",
-        participantRole: u.id === userId ? "owner" : "member",
-        canSendMessages: true,
-        canViewHistory: true,
-        canInviteOthers: u.id === userId,
-        isActive: true,
-        joinedAt: new Date(),
-      }));
+      // D04: Atomic room creation — conversation + participants + audit event all-or-nothing.
+      // Without participants, the room is unreachable; without the audit event,
+      // the timeline is inconsistent.
+      const newConversation = await db.transaction(async (tx) => {
+        const [conv] = await tx
+          .insert(chatConversations)
+          .values({
+            workspaceId,
+            customerId: userId,
+            customerName: userName,
+            subject: name.trim(),
+            status: "active",
+            conversationType: "open_chat",
+            visibility: "workspace",
+          })
+          .returning();
 
-      if (participantValues.length > 0) {
-        await db.insert(chatParticipants).values(participantValues as any);
-      }
+        const participantValues = participantUsers.map((u) => ({
+          conversationId: conv.id,
+          workspaceId,
+          participantId: u.id,
+          participantName: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || "User",
+          participantRole: u.id === userId ? "owner" : "member",
+          canSendMessages: true,
+          canViewHistory: true,
+          canInviteOthers: u.id === userId,
+          isActive: true,
+          joinedAt: new Date(),
+        }));
 
-      await db.insert(roomEvents).values({
-        workspaceId,
-        conversationId: newConversation.id,
-        actorId: userId,
-        actorName: userName,
-        actorRole: "owner",
-        eventType: "room_created",
-        description: `${userName} created room "${name.trim()}"`,
-        eventPayload: JSON.stringify({ participantCount: uniqueIds.length }),
+        if (participantValues.length > 0) {
+          await tx.insert(chatParticipants).values(participantValues as any);
+        }
+
+        await tx.insert(roomEvents).values({
+          workspaceId,
+          conversationId: conv.id,
+          actorId: userId,
+          actorName: userName,
+          actorRole: "owner",
+          eventType: "room_created",
+          description: `${userName} created room "${name.trim()}"`,
+          eventPayload: JSON.stringify({ participantCount: uniqueIds.length }),
+        });
+
+        return conv;
       });
 
       res.json({
@@ -1718,24 +1744,26 @@ router.post(
       }
 
       const isPinned = msg.formattedContent === "pinned";
-
-      await db
-        .update(chatMessages)
-        .set({ formattedContent: isPinned ? null : "pinned" })
-        .where(eq(chatMessages.id, messageId));
-
       const user = authReq.user;
       // @ts-expect-error — TS migration: fix in refactoring sprint
       const userName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User";
 
-      await db.insert(roomEvents).values({
-        workspaceId: workspaceId || "system",
-        conversationId: msg.conversationId,
-        actorId: userId,
-        actorName: userName,
-        actorRole: "member",
-        eventType: isPinned ? "message_unpinned" : "message_pinned",
-        description: `${userName} ${isPinned ? "unpinned" : "pinned"} a message`,
+      // D04: Atomic pin toggle — message update + audit event together
+      await db.transaction(async (tx) => {
+        await tx
+          .update(chatMessages)
+          .set({ formattedContent: isPinned ? null : "pinned" })
+          .where(eq(chatMessages.id, messageId));
+
+        await tx.insert(roomEvents).values({
+          workspaceId: workspaceId || "system",
+          conversationId: msg.conversationId,
+          actorId: userId,
+          actorName: userName,
+          actorRole: "member",
+          eventType: isPinned ? "message_unpinned" : "message_pinned",
+          description: `${userName} ${isPinned ? "unpinned" : "pinned"} a message`,
+        });
       });
 
       res.json({ success: true, pinned: !isPinned });

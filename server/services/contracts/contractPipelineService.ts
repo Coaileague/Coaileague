@@ -1209,31 +1209,31 @@ class ContractPipelineService {
   /**
    * Validate access token and return contract if valid
    */
-  async validateAccessToken(token: string): Promise<{ valid: boolean; contract?: ClientContract; error?: string }> {
+  async validateAccessToken(token: string): Promise<{ valid: boolean; contract?: ClientContract; recipientEmail?: string | null; error?: string }> {
     const [accessToken] = await db
       .select()
       .from(clientContractAccessTokens)
       .where(eq(clientContractAccessTokens.token, token));
-    
+
     if (!accessToken) {
       return { valid: false, error: 'Invalid access token' };
     }
-    
+
     // @ts-expect-error — TS migration: fix in refactoring sprint
     if (accessToken.isRevoked) {
       return { valid: false, error: 'Access token has been revoked' };
     }
-    
+
     // @ts-expect-error — TS migration: fix in refactoring sprint
     if (new Date() > accessToken.expiresAt) {
       return { valid: false, error: 'Access token has expired' };
     }
-    
+
     // @ts-expect-error — TS migration: fix in refactoring sprint
     if (accessToken.maxUses && accessToken.useCount! >= (accessToken as any).maxUses) {
       return { valid: false, error: 'Access token has exceeded maximum uses' };
     }
-    
+
     // Increment use count
     await db
       .update(clientContractAccessTokens)
@@ -1242,14 +1242,15 @@ class ContractPipelineService {
         lastUsedAt: new Date(),
       })
       .where(eq(clientContractAccessTokens.id, accessToken.id));
-    
+
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const contract = await this.getContract(accessToken.contractId);
     if (!contract) {
       return { valid: false, error: 'Contract not found' };
     }
-    
-    return { valid: true, contract };
+
+    // ── S7: expose recipientEmail so sign routes can bind token↔signer ───────
+    return { valid: true, contract, recipientEmail: (accessToken as any).recipientEmail ?? null };
   }
   
   /**
@@ -1369,15 +1370,27 @@ class ContractPipelineService {
     return loadSignersFromDB(contractId);
   }
 
-  async canSignerSign(contractId: string, signerEmail: string): Promise<{ canSign: boolean; reason?: string; currentOrder?: number }> {
+  async canSignerSign(contractId: string, signerEmail: string, tokenRecipientEmail?: string | null): Promise<{ canSign: boolean; reason?: string; currentOrder?: number }> {
     const signers = await loadSignersFromDB(contractId);
     if (signers.length === 0) {
       return { canSign: true };
     }
 
+    // ── S7: TOKEN ↔ SIGNER EMAIL BINDING ───────────────────────────────────
+    // If the caller supplies the access token's recipientEmail, it must
+    // match the claimed signerEmail. This prevents a valid-but-shared token
+    // from being used to sign as a different listed signer.
+    if (tokenRecipientEmail && signerEmail
+        && tokenRecipientEmail.toLowerCase() !== signerEmail.toLowerCase()) {
+      return { canSign: false, reason: 'Access token does not match the claimed signer email' };
+    }
+
     const signer = signers.find(s => s.signerEmail.toLowerCase() === signerEmail.toLowerCase());
     if (!signer) {
-      return { canSign: true };
+      // ── S7: if the contract has a signer list, only listed signers can sign.
+      // Previously returning canSign:true here meant an unlisted email with a
+      // valid token could sign — the exact gap the audit flagged.
+      return { canSign: false, reason: 'Signer email is not on the contract signer list' };
     }
 
     if (signer.status === 'signed') {
