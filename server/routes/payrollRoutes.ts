@@ -20,6 +20,7 @@ import {
   stagedShifts,
   employeePayrollInfo,
   employeeBankAccounts,
+  employeeOnboardingProgress,
   timeEntries,
   billingAuditLog,
   payrollRunLocks,
@@ -3518,6 +3519,54 @@ router.post('/employees/:employeeId/bank-accounts', async (req: AuthenticatedReq
       addedBy: userId,
       notes: notes || null,
     }).returning();
+
+    await db.update(employeeOnboardingProgress)
+      .set({
+        stepsCompleted: sql`CASE
+          WHEN NOT (${employeeOnboardingProgress.stepsCompleted} @> '["direct_deposit"]'::jsonb)
+          THEN ${employeeOnboardingProgress.stepsCompleted} || '["direct_deposit"]'::jsonb
+          ELSE ${employeeOnboardingProgress.stepsCompleted}
+        END`,
+        directDepositComplete: true,
+        status: sql`CASE
+          WHEN ${employeeOnboardingProgress.overallProgressPct} >= 100 THEN 'complete'
+          ELSE ${employeeOnboardingProgress.status}
+        END`,
+        lastUpdatedAt: new Date(),
+      } as any)
+      .where(
+        and(
+          eq(employeeOnboardingProgress.workspaceId, workspaceId),
+          eq(employeeOnboardingProgress.employeeId, employeeId),
+        )
+      );
+
+    const [progress] = await db.select()
+      .from(employeeOnboardingProgress)
+      .where(
+        and(
+          eq(employeeOnboardingProgress.workspaceId, workspaceId),
+          eq(employeeOnboardingProgress.employeeId, employeeId),
+        )
+      )
+      .limit(1);
+
+    if (progress && ((progress.overallProgressPct || 0) >= 100 || progress.status === 'complete')) {
+      const [employee] = await db.select({
+        firstName: employees.firstName,
+        lastName: employees.lastName,
+      })
+        .from(employees)
+        .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+        .limit(1);
+
+      platformEventBus.emit('employee_onboarding_completed', {
+        workspaceId,
+        employeeId,
+        employeeName: employee ? `${employee.firstName} ${employee.lastName}`.trim() : 'Employee',
+        completedAt: new Date().toISOString(),
+      });
+    }
 
     storage.createAuditLog({
       workspaceId, userId, userEmail: req.user?.email || 'unknown', userRole: req.user?.role || 'user',

@@ -16,8 +16,8 @@ import { createLogger } from '../../lib/logger';
 const log = createLogger('automationTriggerService');
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { approvalGateEnforcementService } from './approvalGateEnforcement';
-import { employees, workspaces, timeEntries, invoices, payrollEntries, automationTriggers } from '@shared/schema';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { employees, workspaces, timeEntries, invoices, payrollEntries, automationTriggers, thalamiclogs } from '@shared/schema';
+import { eq, and, isNull, sql, inArray, isNotNull } from 'drizzle-orm';
 import { generateWeeklyInvoices, processDelinquentInvoices } from '../billingAutomation';
 import { runOverdueCollectionsSweep } from '../billing/overdueCollectionsService';
 import { autonomousSchedulingDaemon } from '../scheduling/autonomousSchedulingDaemon';
@@ -227,49 +227,53 @@ class AutomationTriggerService {
       log.info(`[AutomationTrigger] invoice_overdue — status updated + collections sweep triggered for ${workspaceId}`);
     }});
 
-    // employee_onboarding_completed → mark shift-eligible + notify managers
     platformEventBus.subscribe('employee_onboarding_completed', {
       name: 'AutomationTrigger-OnboardingComplete',
       handler: async (event) => {
-        const { workspaceId, payload } = event;
-        if (!workspaceId || !payload?.employeeId) return;
-        const { employeeId } = payload;
-        log.info(`[AutomationTrigger] employee_onboarding_completed — employeeId=${employeeId}`);
+        const workspaceId = event.workspaceId || event.payload?.workspaceId || event.metadata?.workspaceId;
+        const employeeId = event.payload?.employeeId || event.metadata?.employeeId;
+        const employeeName = event.payload?.employeeName || event.metadata?.employeeName || 'Employee';
+        if (!workspaceId || !employeeId) return;
 
-        try {
-          // Mark employee as onboarding complete
-          await db.update(employees)
-            .set({ onboardingStatus: 'completed', updatedAt: new Date() } as any)
-            .where(eq(employees.id, employeeId));
+        await db.update(employees)
+          .set({
+            onboardingStatus: 'completed',
+            updatedAt: new Date(),
+          } as any)
+          .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
 
-          // Notify workspace managers
-          const managers = await db.select({ userId: employees.userId, firstName: employees.firstName, lastName: employees.lastName })
-            .from(employees)
-            .where(
-              and(
-                eq(employees.workspaceId, workspaceId),
-                sql`${employees.workspaceRole} IN ('org_owner', 'co_owner', 'org_admin', 'manager')`
-              )
-            );
+        const managers = await db.select({
+          userId: employees.userId,
+        })
+          .from(employees)
+          .where(and(
+            eq(employees.workspaceId, workspaceId),
+            inArray(employees.workspaceRole, ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager'] as any),
+            isNotNull(employees.userId),
+          ));
 
-          const { createNotification } = await import('../notificationService');
-          for (const mgr of managers) {
-            if (!mgr.userId) continue;
-            await createNotification({
-              workspaceId,
-              userId: mgr.userId,
-              type: 'onboarding_complete',
-              title: `${event.title}`,
-              message: 'They are now eligible to be scheduled. Trinity will include them in auto-scheduling.',
-              priority: 'normal',
-              actionUrl: `/employees/${employeeId}`,
-            } as any).catch(() => null);
-          }
-
-          log.info(`[AutomationTrigger] employee_onboarding_completed — marked shift-eligible, notified ${managers.length} manager(s)`);
-        } catch (err: any) {
-          log.warn('[AutomationTrigger] employee_onboarding_completed handler error:', err?.message);
+        const { createNotification } = await import('../notificationService');
+        for (const mgr of managers) {
+          if (!mgr.userId) continue;
+          await createNotification({
+            userId: mgr.userId,
+            workspaceId,
+            type: 'system',
+            title: `${employeeName} completed onboarding`,
+            message: 'They are now eligible to be scheduled. Trinity will include them in auto-scheduling.',
+            actionUrl: `/employees/${employeeId}`,
+          } as any).catch(() => null);
         }
+
+        await db.insert(thalamiclogs).values({
+          signalId: `employee-ready-${employeeId}-${Date.now()}`,
+          signalType: 'employee_ready',
+          workspaceId,
+          priorityScore: 70,
+          source: 'automation_trigger_service',
+          sourceTrustTier: 'workspace',
+          signalPayload: { employeeId, employeeName, readyAt: new Date().toISOString() },
+        } as any);
       },
     });
 

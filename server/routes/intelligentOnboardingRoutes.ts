@@ -24,10 +24,12 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { db } from '../db';
-import { employees, workspaces } from '@shared/schema';
+import { complianceAlerts, employees, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth } from '../auth';
 import crypto from 'crypto';
+import { format } from 'date-fns';
+import { employeeDocumentOnboardingService } from '../services/employeeDocumentOnboardingService';
 import { createLogger } from '../lib/logger';
 const log = createLogger('IntelligentOnboardingRoutes');
 
@@ -43,6 +45,20 @@ function getWorkspaceId(req: any): string | null {
 async function query(sql: string, params?: any[]): Promise<any[]> {
   const result = await (db.$client as any).query(sql, params);
   return result.rows || [];
+}
+
+function validateTxGuardCardNumber(cardNumber: string): {
+  valid: boolean; format: string; message: string
+} {
+  const pattern = /^[A-Z]-?\d{7,9}$/i;
+  const clean = (cardNumber || '').replace(/[-\s]/g, '').toUpperCase();
+  return {
+    valid: pattern.test(clean) || /^\d{7,9}$/.test(clean),
+    format: 'TX PSB: Letter + 7-9 digits (e.g., B12345678)',
+    message: pattern.test(clean) || /^\d{7,9}$/.test(clean)
+      ? 'Format valid — pending expiry check'
+      : 'Invalid format — Texas PSB numbers are 7-9 digits',
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -235,6 +251,43 @@ intelligentOnboardingRouter.get('/steps/employee', async (req: any, res) => {
     const steps = await query(`SELECT * FROM employee_onboarding_steps ORDER BY step_number`);
     res.json({ success: true, steps });
   } catch (err: unknown) {
+    res.status(500).json({ error: sanitizeError(err) });
+  }
+});
+
+intelligentOnboardingRouter.get('/required-documents', async (req: any, res) => {
+  const workspaceId = getWorkspaceId(req);
+  if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
+
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const empRows = await query(
+      `SELECT id
+       FROM employees
+       WHERE user_id = $1 AND workspace_id = $2
+       LIMIT 1`,
+      [userId, workspaceId]
+    );
+    const emp = empRows[0];
+    if (!emp) return res.json([]);
+
+    const status = await employeeDocumentOnboardingService.getEmployeeOnboardingStatus(emp.id);
+    if (!status) return res.json([]);
+
+    const result = status.requirements.map((item) => ({
+      id: item.requirement.id,
+      displayName: item.requirement.name || item.requirement.documentType,
+      category: item.requirement.category,
+      required: true,
+      status: item.status === 'approved' ? 'approved' : 'pending',
+      uploadRoute: `/onboarding-forms?step=${item.requirement.id}`,
+    }));
+
+    res.json(result);
+  } catch (err: unknown) {
+    log.error('[SmartOnboarding] required-documents error:', err);
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
@@ -544,6 +597,34 @@ intelligentOnboardingRouter.post('/documents', async (req: any, res) => {
     return res.status(400).json({ error: 'entityId, documentType, and title are required' });
   }
   try {
+    const metadataObj = metadata || {};
+    if (String(documentType).toLowerCase().includes('guard_card')) {
+      const guardCardNumber = req.body.guardCardNumber || metadataObj.guardCardNumber;
+      const guardCardExpiry = req.body.guardCardExpiry || metadataObj.guardCardExpiry || expirationDate;
+
+      const validation = validateTxGuardCardNumber(String(guardCardNumber || ''));
+      if (!validation.valid) {
+        return res.status(400).json({
+          error: 'Invalid guard card format',
+          detail: validation.message,
+          expectedFormat: validation.format,
+        });
+      }
+
+      if (guardCardExpiry && new Date(guardCardExpiry) < new Date()) {
+        await db.insert(complianceAlerts).values({
+          workspaceId,
+          employeeId: entityId,
+          alertType: 'guard_card_expired',
+          severity: 'critical',
+          title: 'Guard card expired',
+          message: `Guard card expired on ${format(new Date(guardCardExpiry), 'MMM d, yyyy')}. Employee cannot be scheduled until renewed.`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+
     const hash = content ? crypto.createHash('sha256').update(content).digest('hex') : null;
     const rows = await query(
       `INSERT INTO onboarding_documents
@@ -557,7 +638,7 @@ intelligentOnboardingRouter.post('/documents', async (req: any, res) => {
         documentCategory || 'identity', title, description || '',
         fileType || 'pdf', generatedBy || 'manager',
         hash, content || '',
-        JSON.stringify(metadata || {}),
+        JSON.stringify(metadataObj),
       ]
     );
     const row = rows[0];

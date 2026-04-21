@@ -61,6 +61,7 @@ import { runScheduledClientInvoiceAutoGeneration } from './timesheetInvoiceServi
 import { runPayrollAutoClose, detectOrphanedPayrollRuns } from './billing/payrollAutoCloseService';
 import { platformEventBus, PlatformEvent, EventCategory, EventVisibility } from './platformEventBus';
 import { trinityOrchestrationGovernance } from './ai-brain/trinityOrchestrationGovernance';
+import { scanOverdueI9s } from './ai-brain/trinityDocumentActions';
 import { weeklyPlatformAudit } from './trinity/weeklyPlatformAudit';
 import { gamificationService } from './gamification/gamificationService';
 import { createLogger } from '../lib/logger';
@@ -3002,7 +3003,11 @@ export function startAutonomousScheduler() {
       checkExpiringCertifications(),
       scanShiftLicenseConflicts(),
       import('./compliance/officerComplianceScoreService').then(m => m.checkAuditReadinessReminders()),
-    ]).then(([certResult, shiftConflictResult, readinessResult]) => {
+      db.select({ id: workspaces.id })
+        .from(workspaces)
+        .where(and(eq(workspaces.isSuspended, false), eq(workspaces.isLocked, false)))
+        .then((rows) => Promise.all(rows.map((ws) => scanOverdueI9s(ws.id)))),
+    ]).then(([certResult, shiftConflictResult, readinessResult, overdueI9Result]) => {
       const certValue = certResult.status === 'fulfilled' ? certResult.value : null;
       const conflictsFound = shiftConflictResult.status === 'fulfilled' ? shiftConflictResult.value.conflictsFound : 0;
       const readiness = readinessResult.status === 'fulfilled' ? readinessResult.value : null;
@@ -3011,6 +3016,9 @@ export function startAutonomousScheduler() {
       }
       if (readinessResult.status === 'rejected') {
         log.error('Audit readiness reminder error', { error: readinessResult.reason?.message });
+      }
+      if (overdueI9Result.status === 'rejected') {
+        log.error('Overdue I-9 scan error', { error: overdueI9Result.reason?.message });
       }
       emitAutomationEvent({
         jobName: 'Compliance Certification Check',
