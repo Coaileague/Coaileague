@@ -1302,6 +1302,15 @@ async function initializeBackgroundServices(): Promise<void> {
       log.info('Autonomous Scheduling Daemon ACTIVE — running every 60 min, autoFill + templateGen + alerts enabled');
     }),
 
+    // S14: Coverage Escalation — scans shift_coverage_requests for blown SLAs
+    // and emits shift_calloff_escalated so org_owner/managers get paged.
+    timedInit('Coverage Escalation Service', async () => {
+      const { coverageEscalationService } = await import('./services/scheduling/coverageEscalationService');
+      coverageEscalationService.start(5); // every 5 minutes
+      registerDaemon('CoverageEscalationService', () => coverageEscalationService.stop());
+      log.info('Coverage Escalation Service ACTIVE — scanning coverage SLA every 5 min');
+    }),
+
     deferredTimedInit('Trinity Automation Bootstrap', 5000, async () => {
       const { automationTriggerService } = await import('./services/orchestration/automationTriggerService');
       // Bootstrap default triggers for every active workspace so invoices/payroll/scheduling

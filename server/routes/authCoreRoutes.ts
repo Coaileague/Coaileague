@@ -497,6 +497,53 @@ router.post("/api/auth/login", async (req, res) => {
       }
     }
 
+    // ── S4: PER-WORKSPACE is_active GATE ───────────────────────────────────
+    // Before: login did not consult employees.is_active, so a deactivated
+    // officer in workspace A could still authenticate and (pre-S1 session
+    // kill) stay in A. After S1 deactivation sets a grace window, a user
+    // whose grace window has expired must not be silently logged into the
+    // deactivated workspace. If they have ANOTHER workspace where they are
+    // active, switch currentWorkspaceId to that one. Otherwise 403.
+    if (workspaceId) {
+      try {
+        const [currentEmp] = await db.select({
+          id: employees.id,
+          isActive: employees.isActive,
+          documentAccessExpiresAt: sql<string | null>`"employees"."document_access_expires_at"`,
+        })
+          .from(employees)
+          .where(and(eq(employees.userId, user.id), eq(employees.workspaceId, workspaceId)))
+          .limit(1);
+
+        const now = Date.now();
+        const graceExpired = !!(currentEmp && currentEmp.isActive === false
+          && currentEmp.documentAccessExpiresAt
+          && new Date(currentEmp.documentAccessExpiresAt).getTime() < now);
+
+        if (graceExpired) {
+          // Look for any active workspace membership to swap into.
+          const activeEmployments = await db.select({ workspaceId: employees.workspaceId })
+            .from(employees)
+            .where(and(eq(employees.userId, user.id), eq(employees.isActive, true)))
+            .limit(1);
+
+          if (activeEmployments.length > 0) {
+            workspaceId = activeEmployments[0].workspaceId;
+            await db.update(users).set({ currentWorkspaceId: workspaceId, updatedAt: new Date() }).where(eq(users.id, user.id));
+            log.info(`[Auth] User ${user.id} suspended in prior workspace; switched currentWorkspaceId to ${workspaceId}`);
+          } else {
+            log.warn(`[Auth] Login blocked: user ${user.id} has no active workspace membership`);
+            return res.status(403).json({
+              error: 'ACCOUNT_SUSPENDED',
+              message: 'Your account has been deactivated and your record-access grace period has expired. Contact your employer if this is in error.',
+            });
+          }
+        }
+      } catch (activeCheckErr: unknown) {
+        log.warn('[Auth] Per-workspace is_active check failed (fail-open):', (activeCheckErr as any)?.message || String(activeCheckErr));
+      }
+    }
+
     // Resolve platform role for response (needed for frontend routing)
 
     // Cache workspace/org context in session to avoid redundant DB lookups

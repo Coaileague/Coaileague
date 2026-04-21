@@ -434,6 +434,52 @@ router.patch('/:id/status', requireAuth, async (req: any, res) => {
       .set(updateData)
       .where(and(eq(hrDocumentRequests.id, id), eq(hrDocumentRequests.workspaceId, workspaceId)));
 
+    // ── S10: I-9 COMPLETION → COMPLIANCE STATE ─────────────────────────────
+    // When an I-9 document request is marked completed, update the employee
+    // row's i9_on_file flag and emit a Trinity event so the compliance
+    // engine + onboarding dashboard reflect the state immediately.
+    if (status === 'completed') {
+      try {
+        const [request] = await db.select().from(hrDocumentRequests)
+          .where(and(eq(hrDocumentRequests.id, id), eq(hrDocumentRequests.workspaceId, workspaceId)))
+          .limit(1);
+
+        if (request?.documentType === 'i9' && request.employeeId) {
+          // Update the employees row. Column may be named differently across
+          // environments (i9_on_file vs i9OnFile). Use raw SQL to stay
+          // schema-agnostic and non-fatal if missing.
+          try {
+            const { sql: drizzleSql } = await import('drizzle-orm');
+            await db.execute(drizzleSql`
+              UPDATE employees
+                 SET i9_on_file = TRUE, updated_at = NOW()
+               WHERE id = ${request.employeeId} AND workspace_id = ${workspaceId}
+            `);
+          } catch (colErr: any) {
+            // Column may not exist in this workspace's schema snapshot;
+            // fall back silently rather than block the status update.
+            log.warn('[DocRequest] i9_on_file update skipped (column may not exist):', colErr?.message);
+          }
+
+          try {
+            const { platformEventBus } = await import('../../services/platformEventBus');
+            await platformEventBus.publish({
+              type: 'i9_submitted',
+              category: 'compliance',
+              title: 'I-9 submitted',
+              description: `${request.employeeName} submitted their I-9.`,
+              workspaceId,
+              metadata: { employeeId: request.employeeId, documentRequestId: id },
+            });
+          } catch (evErr: any) {
+            log.warn('[DocRequest] i9_submitted event publish failed:', evErr?.message);
+          }
+        }
+      } catch (i9Err: any) {
+        log.warn('[DocRequest] I-9 compliance hook failed (non-fatal):', i9Err?.message);
+      }
+    }
+
     res.json({ success: true });
   } catch (err: unknown) {
     res.status(400).json({ error: sanitizeError(err) || 'Failed to update status' });

@@ -485,6 +485,21 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
               ineligibleEmployees.push(`${empName}: ${certCheck.blockReason || 'Missing required certifications for this post'}`);
             }
           }
+          // ── S8: ARMED-SHIFT EMPLOYEE FLAG CHECK ──────────────────────────
+          // Armed posts must be assigned to employees flagged `is_armed=true`
+          // with a manager-verified armed license. The Layer 3 certification
+          // check above validates credentials; this adds a direct check on
+          // the employee's armed-worker flag so an officer with the "armed"
+          // cert but isArmed=false (e.g. opted out) cannot be scheduled.
+          if (validated.isArmed === true) {
+            if (!(emp as any).isArmed) {
+              const empName = `${emp.firstName} ${emp.lastName}`;
+              ineligibleEmployees.push(`${empName}: Not flagged as an armed officer. Armed shifts require employees.is_armed = true.`);
+            } else if (!(emp as any).armedLicenseVerified) {
+              const empName = `${emp.firstName} ${emp.lastName}`;
+              ineligibleEmployees.push(`${empName}: Armed license is not yet manager-verified.`);
+            }
+          }
         }
         if (ineligibleEmployees.length > 0) {
           return res.status(422).json({

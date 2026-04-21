@@ -217,21 +217,27 @@ router.post('/verify-totp', async (req: Request, res: Response) => {
     const periodStart = auditPeriodStart ? new Date(auditPeriodStart) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     const periodEnd = auditPeriodEnd ? new Date(auditPeriodEnd) : new Date();
 
-    const [session] = await db.insert(sraAuditSessions).values({
-      sraAccountId: account.id,
-      workspaceId: workspaceId || 'unspecified',
-      stateCode: account.stateCode,
-      auditPeriodStart: periodStart,
-      auditPeriodEnd: periodEnd,
-      status: 'active',
-      sessionToken,
-      tokenExpiresAt,
-    }).returning();
+    // D04: Atomic session start — session record + account last-login update.
+    // If the session insert succeeds but lastLoginAt update fails, the audit
+    // trail is inconsistent; rollback prevents that.
+    const session = await db.transaction(async (tx) => {
+      const [s] = await tx.insert(sraAuditSessions).values({
+        sraAccountId: account.id,
+        workspaceId: workspaceId || 'unspecified',
+        stateCode: account.stateCode,
+        auditPeriodStart: periodStart,
+        auditPeriodEnd: periodEnd,
+        status: 'active',
+        sessionToken,
+        tokenExpiresAt,
+      }).returning();
 
-    // Update last login
-    await db.update(sraAccounts)
-      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
-      .where(eq(sraAccounts.id, account.id));
+      await tx.update(sraAccounts)
+        .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+        .where(eq(sraAccounts.id, account.id));
+
+      return s;
+    });
 
     // Log the login
     await logSraAction(session.id, account.id, workspaceId || 'unspecified', 'login', {

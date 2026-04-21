@@ -142,9 +142,32 @@ async function applyAutomationUpdate(params: {
               return res.status(403).json({ message: 'Access denied to this workspace' });
             }
           }
+        } else {
+          // ── S4: block switching into a workspace where grace window has expired
+          // If the employee is deactivated AND their documentAccessExpiresAt is
+          // past, they have no legitimate reason to be in this workspace.
+          // Terminated/deactivated officers within grace period are still
+          // allowed in so they can download records (terminatedEmployeeGuard
+          // enforces read-only + path allow-list).
+          if (employee.isActive === false) {
+            const [empExpiry] = await db.select({
+              documentAccessExpiresAt: sql<string | null>`"employees"."document_access_expires_at"`,
+            })
+              .from(employees)
+              .where(and(eq(employees.id, employee.id), eq(employees.workspaceId, workspaceId)))
+              .limit(1);
+            const expiresAt = empExpiry?.documentAccessExpiresAt;
+            const graceExpired = expiresAt && new Date(expiresAt).getTime() < Date.now();
+            if (graceExpired) {
+              return res.status(403).json({
+                error: 'WORKSPACE_ACCESS_EXPIRED',
+                message: 'Your access to this workspace has ended.',
+              });
+            }
+          }
         }
       }
-      
+
       await storage.updateUser(userId, {
         currentWorkspaceId: workspaceId,
       });

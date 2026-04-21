@@ -587,35 +587,35 @@ router.post("/api/webhooks/resend", async (req, res) => {
             log.error('[Resend] Failed to suppress bounced address:', email, (err instanceof Error ? err.message : String(err)));
           }
         }
-        // Update emailEvents record so delivery status reflects the actual outcome
-        if (bounceResendId) {
+        // D04: Atomic bounce status sync — emailEvents + notificationDeliveries
+        // must reflect the same bounce outcome. Webhook is retried on failure,
+        // so all-or-nothing is safe.
+        if (bounceResendId || bouncedAddresses.length > 0) {
           try {
-            await db.update(emailEvents)
-              .set({ status: 'bounced', updatedAt: new Date() })
-              .where(eq(emailEvents.resendId, bounceResendId));
+            await db.transaction(async (tx) => {
+              if (bounceResendId) {
+                await tx.update(emailEvents)
+                  .set({ status: 'bounced', updatedAt: new Date() })
+                  .where(eq(emailEvents.resendId, bounceResendId));
+              }
+              if (bouncedAddresses.length > 0) {
+                await tx.update(notificationDeliveries)
+                  .set({
+                    status: 'failed',
+                    lastError: `Hard bounce reported by Resend — email ID: ${bounceResendId}`,
+                    updatedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      inArray(notificationDeliveries.recipientUserId, bouncedAddresses),
+                      eq(notificationDeliveries.channel, 'email'),
+                      inArray(notificationDeliveries.status, ['sent', 'pending'])
+                    )
+                  );
+              }
+            });
           } catch (err: unknown) {
-            log.error('[Resend] Failed to update emailEvents on bounce:', bounceResendId, (err instanceof Error ? err.message : String(err)));
-          }
-        }
-        // GAP-S30-01 FIX: Sync bounce outcome back to notification_deliveries (Phase 27 delivery tracking)
-        // Marks any 'sent' or 'pending' email channel delivery records for these recipients as failed.
-        if (bouncedAddresses.length > 0) {
-          try {
-            await db.update(notificationDeliveries)
-              .set({
-                status: 'failed',
-                lastError: `Hard bounce reported by Resend — email ID: ${bounceResendId}`,
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  inArray(notificationDeliveries.recipientUserId, bouncedAddresses),
-                  eq(notificationDeliveries.channel, 'email'),
-                  inArray(notificationDeliveries.status, ['sent', 'pending'])
-                )
-              );
-          } catch (err: unknown) {
-            log.error('[Resend] Failed to sync bounce to notification_deliveries:', (err instanceof Error ? err.message : String(err)));
+            log.error('[Resend] Failed to sync bounce (rolled back):', bounceResendId, (err instanceof Error ? err.message : String(err)));
           }
         }
         // Fire-and-forget rate check — logs CRITICAL alert if 24h bounce rate > threshold
@@ -644,34 +644,34 @@ router.post("/api/webhooks/resend", async (req, res) => {
             log.error('[Resend] Failed to suppress complained address:', email, (err instanceof Error ? err.message : String(err)));
           }
         }
-        // Update emailEvents record so delivery status reflects the actual outcome
-        if (complaintResendId) {
+        // D04: Atomic complaint status sync — emailEvents + notificationDeliveries
+        // must reflect the same complaint outcome. Webhook retries on failure.
+        if (complaintResendId || complainedAddresses.length > 0) {
           try {
-            await db.update(emailEvents)
-              .set({ status: 'complained', updatedAt: new Date() })
-              .where(eq(emailEvents.resendId, complaintResendId));
+            await db.transaction(async (tx) => {
+              if (complaintResendId) {
+                await tx.update(emailEvents)
+                  .set({ status: 'complained', updatedAt: new Date() })
+                  .where(eq(emailEvents.resendId, complaintResendId));
+              }
+              if (complainedAddresses.length > 0) {
+                await tx.update(notificationDeliveries)
+                  .set({
+                    status: 'failed',
+                    lastError: `Spam complaint reported by Resend — email ID: ${complaintResendId}`,
+                    updatedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      inArray(notificationDeliveries.recipientUserId, complainedAddresses),
+                      eq(notificationDeliveries.channel, 'email'),
+                      inArray(notificationDeliveries.status, ['sent', 'pending'])
+                    )
+                  );
+              }
+            });
           } catch (err: unknown) {
-            log.error('[Resend] Failed to update emailEvents on complaint:', complaintResendId, (err instanceof Error ? err.message : String(err)));
-          }
-        }
-        // GAP-S30-01 FIX: Sync complaint outcome back to notification_deliveries (Phase 27 delivery tracking)
-        if (complainedAddresses.length > 0) {
-          try {
-            await db.update(notificationDeliveries)
-              .set({
-                status: 'failed',
-                lastError: `Spam complaint reported by Resend — email ID: ${complaintResendId}`,
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  inArray(notificationDeliveries.recipientUserId, complainedAddresses),
-                  eq(notificationDeliveries.channel, 'email'),
-                  inArray(notificationDeliveries.status, ['sent', 'pending'])
-                )
-              );
-          } catch (err: unknown) {
-            log.error('[Resend] Failed to sync complaint to notification_deliveries:', (err instanceof Error ? err.message : String(err)));
+            log.error('[Resend] Failed to sync complaint (rolled back):', (err instanceof Error ? err.message : String(err)));
           }
         }
         // Fire-and-forget rate check — logs CRITICAL alert if 24h complaint rate > threshold

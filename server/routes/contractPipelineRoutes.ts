@@ -325,6 +325,15 @@ router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
 
 router.post('/:id/send', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // ── S6: REQUIRE MANAGER+ TO SEND CONTRACTS ─────────────────────────────
+    // Mount-level gates only require auth + workspace access; sending a
+    // contract that gates invoicing and signer liability should be a
+    // manager-or-above action.
+    const role = (req.user as any)?.workspaceRole || (req as any).workspaceRole;
+    if (!hasManagerAccess(role)) {
+      return res.status(403).json({ error: 'Only managers and owners can send contracts for signature' });
+    }
+
     const result = await contractPipelineService.sendProposal(
       req.params.id,
       getAuditContext(req)
@@ -665,7 +674,14 @@ publicPortalRouter.post('/:token/sign', async (req: Request, res: Response) => {
     const input = schema.parse(req.body);
     const { clientInitials, governmentIdData, governmentIdType, ...sigInput } = input;
 
-    const signerCheck = await contractPipelineService.canSignerSign(result.contract!.id, input.signerEmail);
+    // ── S7: pass the access token's bound recipientEmail so canSignerSign
+    // can reject cases where a shared/leaked token is used to sign as a
+    // different listed signer.
+    const signerCheck = await contractPipelineService.canSignerSign(
+      result.contract!.id,
+      input.signerEmail,
+      result.recipientEmail,
+    );
     if (!signerCheck.canSign) {
       return res.status(403).json({ error: signerCheck.reason || 'Not allowed to sign at this time' });
     }
