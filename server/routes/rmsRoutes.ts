@@ -204,6 +204,26 @@ rmsRouter.post("/incidents", requireAuth as any, ensureWorkspaceAccess as any, a
       log.warn('[Incident] notification pipeline failed (non-fatal):', err?.message);
     }
 
+    // Immutable audit entry for RMS submission chain-of-custody.
+    try {
+      await q(
+        `INSERT INTO billing_audit_log
+           (workspace_id, event_type, event_category, actor_type, actor_id,
+            description, related_entity_type, related_entity_id, metadata, created_at, updated_at)
+         VALUES
+           ($1, 'incident_submitted', 'rms', 'user', $2, $3, 'incident_report', $4, $5::jsonb, NOW(), NOW())`,
+        [
+          workspaceId,
+          resolvedReportedBy || null,
+          `Incident #${incidentNumber} submitted — ${resolvedIncidentType}${siteName ? ` at ${siteName}` : ''}`,
+          id,
+          JSON.stringify({ incidentId: id, incidentNumber, incidentType: resolvedIncidentType, severity: resolvedSeverity, siteId: siteId || null }),
+        ],
+      );
+    } catch (auditErr: any) {
+      log.warn('[Incident] audit log write failed (non-fatal):', auditErr?.message);
+    }
+
     const result = rows[0];
     // Store in idempotency cache for 5 minutes
     if (idemKey) rmsIdempotencyCache.set(`${workspaceId}:${idemKey}`, { result, expiresAt: Date.now() + 5 * 60 * 1000 });

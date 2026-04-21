@@ -5,7 +5,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router, type Request } from "express";
 import multer from "multer";
 import path from "path";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { db, pool } from "../db";
 import { chatUploads, roomEvents, chatConversations, chatParticipants } from "../../shared/schema";
 import { requireAuth } from "../auth";
@@ -310,21 +310,37 @@ router.post(
             // First, check if this conversationId is a shift chatroom
             // CATEGORY C — Raw SQL retained: LIMIT | Tables: shift_chatrooms | Verified: 2026-03-23
             const chatroomResult = await typedPool(
-              `SELECT id FROM shift_chatrooms WHERE id = $1 LIMIT 1`,
+              `SELECT id, shift_id, assigned_employee_id FROM shift_chatrooms WHERE id = $1 LIMIT 1`,
               [conversationId]
             ).catch(() => [] as any[]);
-            const isShiftChatroom = (chatroomResult as any).length > 0;
+            const chatroomRows = Array.isArray(chatroomResult)
+              ? chatroomResult
+              : ((chatroomResult as any)?.rows || []);
+            const isShiftChatroom = chatroomRows.length > 0;
+            const shiftChatroom = isShiftChatroom ? chatroomRows[0] : null;
 
             // If shift chatroom, insert photo messages with GPS metadata
             if (isShiftChatroom) {
+              let senderEmployeeId: string | null = shiftChatroom?.assigned_employee_id ?? null;
+              try {
+                const employeeRows = await typedPool(
+                  `SELECT id FROM employees WHERE user_id = $1 AND workspace_id = $2 LIMIT 1`,
+                  [userId, workspaceId]
+                );
+                if (employeeRows?.rows?.[0]?.id) senderEmployeeId = String(employeeRows.rows[0].id);
+              } catch {
+                // non-fatal fallback to assigned_employee_id
+              }
+
               for (const f of imageUploads) {
                 const msgMeta: Record<string, any> = {};
                 if (gpsData) msgMeta.gps = gpsData;
                 // CATEGORY C — Raw SQL retained: ::jsonb | Tables: shift_chatroom_messages | Verified: 2026-03-23
-                await typedPoolExec(
+                const insertedMessageRows = await typedPool(
                   `INSERT INTO shift_chatroom_messages
-                   (id, workspace_id, chatroom_id, user_id, content, message_type, attachment_url, attachment_type, attachment_size, metadata, created_at, updated_at)
-                   VALUES (gen_random_uuid(), $1, $2, $3, $4, 'photo', $5, $6, $7, $8::jsonb, NOW(), NOW())`,
+                    (id, workspace_id, chatroom_id, user_id, content, message_type, attachment_url, attachment_type, attachment_size, metadata, created_at, updated_at)
+                    VALUES (gen_random_uuid(), $1, $2, $3, $4, 'photo', $5, $6, $7, $8::jsonb, NOW(), NOW())
+                    RETURNING id`,
                   [
                     workspaceId, conversationId, userId,
                     caption || `Photo uploaded by ${userName}`,
@@ -332,6 +348,54 @@ router.post(
                     JSON.stringify(Object.keys(msgMeta).length ? msgMeta : {}),
                   ]
                 );
+                const messageId = insertedMessageRows?.rows?.[0]?.id;
+
+                // Persist GPS-tagged photo evidence to shift_proof_photos (critical durability).
+                const gpsLatRaw = (gpsData as any)?.lat ?? (gpsData as any)?.latitude;
+                const gpsLngRaw = (gpsData as any)?.lng ?? (gpsData as any)?.longitude;
+                const gpsLat = gpsLatRaw !== undefined && gpsLatRaw !== null ? Number(gpsLatRaw) : NaN;
+                const gpsLng = gpsLngRaw !== undefined && gpsLngRaw !== null ? Number(gpsLngRaw) : NaN;
+                if (
+                  shiftChatroom?.shift_id &&
+                  senderEmployeeId &&
+                  messageId &&
+                  Number.isFinite(gpsLat) &&
+                  Number.isFinite(gpsLng)
+                ) {
+                  const capturedAt = new Date();
+                  const chainOfCustodyHash = createHash('sha256')
+                    .update(`${shiftChatroom.shift_id}:${messageId}:${f.url}:${gpsLat}:${gpsLng}:${capturedAt.toISOString()}`)
+                    .digest('hex');
+                  await typedPoolExec(
+                    `INSERT INTO shift_proof_photos
+                       (id, workspace_id, shift_id, chatroom_id, employee_id, message_id,
+                        photo_url, thumbnail_url, gps_lat, gps_lng, gps_address, gps_accuracy,
+                        captured_at, device_meta, photo_type, notes, is_audit_protected, chain_of_custody_hash, created_at)
+                     VALUES
+                       (gen_random_uuid(),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16,$17,NOW())`,
+                    [
+                      workspaceId,
+                      shiftChatroom.shift_id,
+                      conversationId,
+                      senderEmployeeId,
+                      messageId,
+                      f.url,
+                      null,
+                      String(gpsLat),
+                      String(gpsLng),
+                      gpsData?.address || null,
+                      gpsData?.accuracy !== undefined ? String(gpsData.accuracy) : null,
+                      capturedAt.toISOString(),
+                      JSON.stringify({ source: 'chat_upload', uploadedBy: userId }),
+                      'hourly_proof',
+                      caption || null,
+                      true,
+                      chainOfCustodyHash,
+                    ]
+                  );
+                } else if (!messageId) {
+                  log.warn('[ChatUploads] shift_chatroom_messages insert returned no id; skipped shift_proof_photos insert');
+                }
               }
 
               // Trigger ReportBot photo acknowledgment non-blocking

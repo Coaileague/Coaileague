@@ -22,6 +22,7 @@ import {
   shiftChatrooms, 
   shiftChatroomMembers, 
   shiftChatroomMessages,
+  shiftProofPhotos,
   darReports,
   trinityMeetingRecordings,
   shifts,
@@ -641,32 +642,92 @@ class ShiftChatroomWorkflowService {
       }
 
       const messageId = crypto.randomUUID();
+      await db.transaction(async (tx) => {
+        await tx.insert(shiftChatroomMessages).values({
+          id: messageId,
+          chatroomId,
+          userId,
+          content: message.content,
+          messageType: message.messageType,
+          attachmentUrl: message.attachmentUrl,
+          attachmentType: message.attachmentType,
+          attachmentSize: message.attachmentSize,
+          metadata: message.metadata,
+          isAuditProtected: message.messageType === 'photo' || message.messageType === 'report',
+        });
 
-      await db.insert(shiftChatroomMessages).values({
-        id: messageId,
-        chatroomId,
-        userId,
-        content: message.content,
-        messageType: message.messageType,
-        attachmentUrl: message.attachmentUrl,
-        attachmentType: message.attachmentType,
-        attachmentSize: message.attachmentSize,
-        metadata: message.metadata,
-        isAuditProtected: message.messageType === 'photo' || message.messageType === 'report',
+        await tx.update(shiftChatroomMembers)
+          .set({
+            lastActiveAt: new Date(),
+            messageCount: sql`${shiftChatroomMembers.messageCount} + 1`,
+            photoCount: message.messageType === 'photo'
+              ? sql`${shiftChatroomMembers.photoCount} + 1`
+              : shiftChatroomMembers.photoCount,
+          })
+          .where(and(
+            eq(shiftChatroomMembers.chatroomId, chatroomId),
+            eq(shiftChatroomMembers.userId, userId)
+          ));
+
+        // Persist every GPS-tagged shift photo to shift_proof_photos so it
+        // survives restarts and is available to transparency PDFs.
+        if (message.messageType === 'photo' && chatroom.shiftId && message.attachmentUrl) {
+          const rawGps = (message.metadata as any)?.gps ?? {};
+          const latRaw = rawGps.lat ?? rawGps.latitude;
+          const lngRaw = rawGps.lng ?? rawGps.longitude;
+          const lat = latRaw !== undefined && latRaw !== null ? Number(latRaw) : NaN;
+          const lng = lngRaw !== undefined && lngRaw !== null ? Number(lngRaw) : NaN;
+
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            const [senderEmployee] = await tx.select({ id: employees.id })
+              .from(employees)
+              .where(and(
+                eq(employees.userId, userId),
+                eq(employees.workspaceId, chatroom.workspaceId),
+              ))
+              .limit(1);
+
+            const [shiftAssignment] = await tx.select({ employeeId: shifts.employeeId })
+              .from(shifts)
+              .where(eq(shifts.id, chatroom.shiftId))
+              .limit(1);
+
+            // Precedence: sender employee mapping is most accurate for multi-officer rooms;
+            // fallback to shift assignment when sender lookup is unavailable.
+            const employeeIdForPhoto = senderEmployee?.id || shiftAssignment?.employeeId || null;
+            if (employeeIdForPhoto) {
+              const capturedAtRaw = (message.metadata as any)?.capturedAt;
+              const capturedAt = capturedAtRaw ? new Date(capturedAtRaw) : new Date();
+              const safeCapturedAt = Number.isNaN(capturedAt.getTime()) ? new Date() : capturedAt;
+              const chainOfCustodyHash = crypto
+                .createHash('sha256')
+                .update(`${chatroom.shiftId}:${messageId}:${message.attachmentUrl}:${lat}:${lng}:${safeCapturedAt.toISOString()}`)
+                .digest('hex');
+
+              await tx.insert(shiftProofPhotos).values({
+                id: crypto.randomUUID(),
+                workspaceId: chatroom.workspaceId,
+                shiftId: chatroom.shiftId,
+                chatroomId,
+                employeeId: employeeIdForPhoto,
+                messageId,
+                photoUrl: message.attachmentUrl,
+                thumbnailUrl: null,
+                gpsLat: String(lat),
+                gpsLng: String(lng),
+                gpsAddress: rawGps.address ?? null,
+                gpsAccuracy: rawGps.accuracy !== undefined && rawGps.accuracy !== null ? String(rawGps.accuracy) : null,
+                capturedAt: safeCapturedAt,
+                deviceMeta: (message.metadata as any)?.deviceMeta ?? null,
+                photoType: (message.metadata as any)?.photoType ?? 'hourly_proof',
+                notes: message.content || null,
+                isAuditProtected: true,
+                chainOfCustodyHash,
+              });
+            }
+          }
+        }
       });
-
-      await db.update(shiftChatroomMembers)
-        .set({
-          lastActiveAt: new Date(),
-          messageCount: sql`${shiftChatroomMembers.messageCount} + 1`,
-          photoCount: message.messageType === 'photo'
-            ? sql`${shiftChatroomMembers.photoCount} + 1`
-            : shiftChatroomMembers.photoCount,
-        })
-        .where(and(
-          eq(shiftChatroomMembers.chatroomId, chatroomId),
-          eq(shiftChatroomMembers.userId, userId)
-        ));
 
       // ── ReportBot: process officer message non-blocking ───────────────────
       if (message.messageType !== 'system' && userId !== 'reportbot') {

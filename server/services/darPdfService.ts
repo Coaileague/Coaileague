@@ -94,6 +94,47 @@ interface VisitorRecord {
   checked_out_at: string;
 }
 
+interface IncidentRecord {
+  id: string;
+  incident_number?: string | null;
+  incident_type?: string | null;
+  severity?: string | null;
+  title?: string | null;
+  raw_description?: string | null;
+  polished_description?: string | null;
+  occurred_at?: string | null;
+  status?: string | null;
+  supervisor_signoff_name?: string | null;
+  supervisor_signed_at?: string | null;
+}
+
+interface KeyControlRecord {
+  key_identifier?: string | null;
+  key_description?: string | null;
+  checked_out_by_name?: string | null;
+  checked_out_at?: string | null;
+  returned_at?: string | null;
+  purpose?: string | null;
+}
+
+interface LostFoundRecord {
+  item_number?: string | null;
+  item_description?: string | null;
+  status?: string | null;
+  found_by_name?: string | null;
+  found_at?: string | null;
+  stored_location?: string | null;
+}
+
+interface ShiftOperationalSnapshot {
+  weather_conditions?: string | null;
+  patrol_rounds_completed?: number | null;
+  equipment_checked?: boolean | null;
+  equipment_notes?: string | null;
+  post_orders_followed?: boolean | null;
+  post_orders_notes?: string | null;
+}
+
 interface HourBucket {
   hourLabel: string;
   hourStart: Date;
@@ -126,6 +167,16 @@ function safeFullDate(val: any): string {
 
 function safeDateTime(val: any): string {
   return safeFormat(val, 'MMM dd, yyyy hh:mm a');
+}
+
+function haversineDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 // ─── Photo fetcher ───────────────────────────────────────────────────────────
@@ -638,6 +689,104 @@ function renderVisitorTable(doc: PDFKit.PDFDocument, visitors: VisitorRecord[]) 
   doc.moveDown(0.5);
 }
 
+function renderIncidentsSection(doc: PDFKit.PDFDocument, incidents: IncidentRecord[]) {
+  ensureSpace(doc, 70);
+  sectionTitle(doc, 'INCIDENTS');
+  if (incidents.length === 0) {
+    doc.fontSize(9).fillColor(C.gray).text('No incidents recorded for this shift window.', { width: 512 });
+    doc.moveDown(0.4);
+    return;
+  }
+
+  incidents.forEach((incident, idx) => {
+    ensureSpace(doc, 58);
+    const boxY = doc.y;
+    doc.rect(50, boxY, 512, 50).fillColor(C.grayLight).fill();
+    doc.rect(50, boxY, 512, 50).strokeColor(C.grayBorder).lineWidth(0.4).stroke();
+    doc.lineWidth(1);
+    const label = incident.incident_number || `INC-${idx + 1}`;
+    const headline = `${label} — ${incident.incident_type || 'Incident'}${incident.severity ? ` (${incident.severity})` : ''}`;
+    doc.fontSize(9).fillColor(C.dark).font('Helvetica-Bold').text(headline, 58, boxY + 6, { width: 498 });
+    doc.font('Helvetica');
+    const when = incident.occurred_at ? safeDateTime(incident.occurred_at) : 'Time unavailable';
+    const status = incident.status || 'submitted';
+    doc.fontSize(8).fillColor(C.gray).text(`${when} • status: ${status}`, 58, boxY + 20, { width: 498 });
+    const narrative = incident.polished_description || incident.raw_description || incident.title || 'No narrative provided.';
+    doc.fontSize(8.5).fillColor(C.dark).text(narrative, 58, boxY + 30, { width: 498, ellipsis: true });
+    doc.y = boxY + 56;
+  });
+  doc.moveDown(0.2);
+}
+
+function renderComplianceSection(doc: PDFKit.PDFDocument, snapshot: ShiftOperationalSnapshot) {
+  ensureSpace(doc, 90);
+  sectionTitle(doc, 'POST ORDERS + EQUIPMENT COMPLIANCE');
+  const y = doc.y;
+  labelValue(doc, 'Patrol Rounds Completed', String(snapshot.patrol_rounds_completed ?? 0), 50, y);
+  labelValue(doc, 'Post Orders Followed', snapshot.post_orders_followed === false ? 'No' : 'Yes', 306, y);
+  doc.y = y + 32;
+  const y2 = doc.y;
+  labelValue(doc, 'Equipment Checked', snapshot.equipment_checked === false ? 'No' : 'Yes', 50, y2);
+  labelValue(doc, 'Weather Conditions', snapshot.weather_conditions || 'Not recorded', 306, y2);
+  doc.y = y2 + 32;
+  if (snapshot.post_orders_notes) {
+    doc.fontSize(8).fillColor(C.gray).text('Post orders notes', 50, doc.y);
+    doc.fontSize(9).fillColor(C.dark).text(snapshot.post_orders_notes, 50, doc.y + 10, { width: 512 });
+    doc.moveDown(0.5);
+  }
+  if (snapshot.equipment_notes) {
+    doc.fontSize(8).fillColor(C.gray).text('Equipment notes', 50, doc.y);
+    doc.fontSize(9).fillColor(C.dark).text(snapshot.equipment_notes, 50, doc.y + 10, { width: 512 });
+    doc.moveDown(0.5);
+  }
+}
+
+function renderKeyControlLostFoundSection(
+  doc: PDFKit.PDFDocument,
+  keyLogs: KeyControlRecord[],
+  lostFoundItems: LostFoundRecord[],
+) {
+  ensureSpace(doc, 90);
+  sectionTitle(doc, 'KEY CONTROL + VISITOR LOG + LOST & FOUND');
+  doc.fontSize(8.5).fillColor(C.gray).text(
+    `Key control entries: ${keyLogs.length} • Lost & Found entries: ${lostFoundItems.length}`,
+    { width: 512 }
+  );
+  doc.moveDown(0.3);
+
+  keyLogs.slice(0, 8).forEach((k) => {
+    const when = k.checked_out_at ? safeDateTime(k.checked_out_at) : 'Unknown time';
+    const returned = k.returned_at ? `returned ${safeTime(k.returned_at)}` : 'not yet returned';
+    doc.fontSize(8.5).fillColor(C.dark).text(
+      `• Key ${k.key_identifier || '—'} (${k.key_description || 'n/a'}) — ${k.checked_out_by_name || 'Officer'} at ${when}, ${returned}`,
+      { width: 512 }
+    );
+  });
+
+  if (lostFoundItems.length > 0) {
+    doc.moveDown(0.2);
+    lostFoundItems.slice(0, 8).forEach((item) => {
+      const when = item.found_at ? safeDateTime(item.found_at) : 'Unknown time';
+      doc.fontSize(8.5).fillColor(C.dark).text(
+        `• ${item.item_number || 'Item'} — ${item.item_description || 'No description'} (${item.status || 'found'}) at ${when}`,
+        { width: 512 }
+      );
+    });
+  }
+  doc.moveDown(0.4);
+}
+
+function renderAuditFooterSection(doc: PDFKit.PDFDocument, reportId: string, chainOfCustodyHash: string | null) {
+  ensureSpace(doc, 70);
+  sectionTitle(doc, 'AUDIT FOOTER');
+  const immutableAt = new Date();
+  doc.fontSize(8.5).fillColor(C.dark).text('Generated by: Trinity AI (CoAIleague Platform)', { width: 512 });
+  doc.fontSize(8.5).fillColor(C.dark).text(`Immutable from: ${safeDateTime(immutableAt)}`, { width: 512 });
+  doc.fontSize(8.5).fillColor(C.dark).text(`Report ID: ${reportId}`, { width: 512 });
+  doc.fontSize(8.5).fillColor(C.dark).text(`Chain of custody: ${chainOfCustodyHash || 'Not available'}`, { width: 512 });
+  doc.moveDown(0.4);
+}
+
 // ─── Signature block ─────────────────────────────────────────────────────────
 
 function renderSignatureBlock(doc: PDFKit.PDFDocument, officerName: string, supervisorName: string) {
@@ -910,10 +1059,20 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
 
   // Resolve site name from shift
   let siteName = 'Assigned Location';
+  let siteIdForLookup: string | null = null;
   if (dar.shift_id) {
     try {
-      const shiftRows = await q(`SELECT s.name AS site_name FROM shifts sh LEFT JOIN sites s ON s.id = sh.site_id WHERE sh.id=$1`, [dar.shift_id]);
-      if (shiftRows.length && (shiftRows[0] as any).site_name) siteName = (shiftRows[0] as any).site_name;
+      const shiftRows = await q(
+        `SELECT sh.site_id, s.name AS site_name
+           FROM shifts sh
+      LEFT JOIN sites s ON s.id = sh.site_id
+          WHERE sh.id=$1`,
+        [dar.shift_id]
+      );
+      if (shiftRows.length) {
+        siteIdForLookup = (shiftRows[0] as any).site_id || null;
+        if ((shiftRows[0] as any).site_name) siteName = (shiftRows[0] as any).site_name;
+      }
     } catch (err) {
       log.error('[DarPDF] siteName fetch failed:', err);
     }
@@ -1018,15 +1177,22 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
 
   const hourlyBuckets = groupMessagesByHour(textMessages, photos);
 
+  // Cover metric: start-to-end displacement using first/last GPS point
+  // (not cumulative patrol path distance).
+  const gpsPoints = photos.filter((p) => p.gpsLat !== null && p.gpsLat !== undefined && p.gpsLng !== null && p.gpsLng !== undefined);
+  const gpsDistanceKm = gpsPoints.length >= 2
+    ? haversineDistanceKm(
+      Number(gpsPoints[0].gpsLat),
+      Number(gpsPoints[0].gpsLng),
+      Number(gpsPoints[gpsPoints.length - 1].gpsLat),
+      Number(gpsPoints[gpsPoints.length - 1].gpsLng),
+    )
+    : 0;
+
   // Visitors
   let visitors: VisitorRecord[] = [];
   if (dar.shift_start_time) {
     try {
-      let siteIdForLookup: string | null = null;
-      if (dar.shift_id) {
-        const sRows = await q(`SELECT site_id FROM shifts WHERE id=$1`, [dar.shift_id]);
-        siteIdForLookup = (sRows[0] as any)?.site_id || null;
-      }
       const shiftStart = new Date(dar.shift_start_time);
       const dayStart = new Date(shiftStart); dayStart.setHours(0, 0, 0, 0);
       const shiftEnd = dar.shift_end_time ? new Date(dar.shift_end_time) : addHours(shiftStart, 12);
@@ -1039,6 +1205,90 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
       }
     } catch (err) {
       log.error('[DarPDF] transparency visitors fetch failed:', err);
+    }
+  }
+
+  // Pull associated daily activity snapshot for compliance fields.
+  let shiftOpsSnapshot: ShiftOperationalSnapshot = {};
+  if (dar.shift_id) {
+    try {
+      const dailyRows = await q(
+        `SELECT weather_conditions, patrol_rounds_completed, equipment_checked,
+                equipment_notes, post_orders_followed, post_orders_notes
+           FROM daily_activity_reports
+          WHERE workspace_id=$1 AND shift_id=$2
+          ORDER BY submitted_at DESC NULLS LAST, created_at DESC
+          LIMIT 1`,
+        [workspaceId, dar.shift_id]
+      );
+      shiftOpsSnapshot = (dailyRows[0] as ShiftOperationalSnapshot) || {};
+    } catch (err) {
+      log.error('[DarPDF] daily activity snapshot fetch failed:', err);
+    }
+  }
+
+  // Incident rollup for this shift/site window.
+  let incidents: IncidentRecord[] = [];
+  try {
+    const shiftStart = dar.shift_start_time ? new Date(dar.shift_start_time) : null;
+    const shiftEnd = dar.shift_end_time
+      ? new Date(dar.shift_end_time)
+      : (shiftStart ? addHours(shiftStart, 12) : null);
+    incidents = await q(
+      `SELECT id, incident_number, incident_type, severity, title, raw_description, polished_description,
+              occurred_at, status, supervisor_signoff_name, supervisor_signed_at
+         FROM incident_reports
+        WHERE workspace_id = $1
+          AND (
+            ($2::text IS NOT NULL AND shift_id::text = $2::text)
+            OR (
+              $3::text IS NOT NULL
+              AND site_id::text = $3::text
+              AND ($4::timestamptz IS NULL OR occurred_at >= $4::timestamptz)
+              AND ($5::timestamptz IS NULL OR occurred_at <= $5::timestamptz)
+            )
+          )
+        ORDER BY occurred_at ASC
+        LIMIT 50`,
+      [
+        workspaceId,
+        dar.shift_id || null,
+        siteIdForLookup,
+        shiftStart ? shiftStart.toISOString() : null,
+        shiftEnd ? shiftEnd.toISOString() : null,
+      ]
+    ) as unknown as IncidentRecord[];
+  } catch (err) {
+    log.error('[DarPDF] incidents fetch failed:', err);
+  }
+
+  // Key control and lost/found records for the same shift window.
+  let keyControlLogs: KeyControlRecord[] = [];
+  let lostFoundItems: LostFoundRecord[] = [];
+  if (siteIdForLookup && dar.shift_start_time) {
+    try {
+      const shiftStart = new Date(dar.shift_start_time);
+      const shiftEnd = dar.shift_end_time ? new Date(dar.shift_end_time) : addHours(shiftStart, 12);
+      keyControlLogs = await q(
+        `SELECT key_identifier, key_description, checked_out_by_name, checked_out_at, returned_at, purpose
+           FROM key_control_logs
+          WHERE workspace_id=$1 AND site_id=$2
+            AND checked_out_at >= $3 AND checked_out_at <= $4
+          ORDER BY checked_out_at ASC
+          LIMIT 100`,
+        [workspaceId, siteIdForLookup, shiftStart.toISOString(), shiftEnd.toISOString()]
+      ) as unknown as KeyControlRecord[];
+      lostFoundItems = await q(
+        `SELECT item_number, item_description, status, found_by_name, found_at, stored_location
+           FROM lost_found_items
+          WHERE workspace_id=$1 AND site_id=$2
+            AND found_at >= $3 AND found_at <= $4
+          ORDER BY found_at ASC
+          LIMIT 100`,
+        [workspaceId, siteIdForLookup, shiftStart.toISOString(), shiftEnd.toISOString()]
+      ) as unknown as LostFoundRecord[];
+    } catch (err) {
+      log.error('[DarPDF] key/lost-found fetch failed:', err);
     }
   }
 
@@ -1092,6 +1342,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
           trinityArticulated: !!dar.trinity_articulated,
           messageCount: chatMessages.length,
           photoCount: photos.length,
+          patrolCount: shiftOpsSnapshot.patrol_rounds_completed ?? undefined,
         });
 
         footer(doc, dar.id, orgName);
@@ -1115,6 +1366,12 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
         labelValue(doc, 'Actual Clock In', dar.actual_clock_in ? safeDateTime(dar.actual_clock_in) : 'Not recorded', 50, iy4);
         labelValue(doc, 'Actual Clock Out', dar.actual_clock_out ? safeDateTime(dar.actual_clock_out) : 'Not recorded', 306, iy4);
         doc.y = iy4 + 32;
+        const iy5 = doc.y;
+        labelValue(doc, 'Total Hours', dar.actual_clock_in && dar.actual_clock_out
+          ? `${((new Date(dar.actual_clock_out).getTime() - new Date(dar.actual_clock_in).getTime()) / 3600000).toFixed(2)}h`
+          : 'Not recorded', 50, iy5);
+        labelValue(doc, 'GPS Distance (start→end)', gpsDistanceKm > 0 ? `${gpsDistanceKm.toFixed(2)} km` : 'Insufficient GPS points', 306, iy5);
+        doc.y = iy5 + 32;
 
         if (dar.summary) {
           sectionTitle(doc, dar.trinity_articulated ? 'TRINITY AI SHIFT SUMMARY' : 'SHIFT SUMMARY');
@@ -1132,8 +1389,13 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
         // Hourly chronological activity log
         await renderHourlyLog(doc, hourlyBuckets, dar.id, orgName);
 
+        renderComplianceSection(doc, shiftOpsSnapshot);
+        renderIncidentsSection(doc, incidents);
+
         // Visitor log
         renderVisitorTable(doc, visitors);
+        renderKeyControlLostFoundSection(doc, keyControlLogs, lostFoundItems);
+        renderAuditFooterSection(doc, dar.id, (dar as any).content_hash || null);
 
         // Signature block
         renderSignatureBlock(doc, dar.employee_name || 'Officer', supervisorName);
