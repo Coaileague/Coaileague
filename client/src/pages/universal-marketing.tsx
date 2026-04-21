@@ -71,13 +71,13 @@ export default function UniversalMarketing() {
                   <span className="truncate">{MARKETING.landing.hero.badge}</span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight text-foreground dark:text-gray-100">
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">
                     {MARKETING.landing.hero.headline}
                   </span>
                 </h1>
 
-                <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                <p className="text-sm sm:text-base md:text-lg text-muted-foreground dark:text-gray-400 max-w-2xl mx-auto">
                   {MARKETING.landing.hero.subheadline}
                 </p>
 
@@ -116,7 +116,7 @@ export default function UniversalMarketing() {
                 {MARKETING.landing.stats.map((stat) => (
                   <div key={stat.label} className="space-y-2">
                     <div className="text-3xl md:text-4xl font-bold text-primary">{stat.number}</div>
-                    <div className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-100">{stat.label}</div>
+                    <div className="text-sm md:text-base font-medium text-foreground dark:text-gray-100">{stat.label}</div>
                     <div className="text-xs md:text-sm text-muted-foreground">{stat.context}</div>
                   </div>
                 ))}
@@ -152,7 +152,7 @@ export default function UniversalMarketing() {
           </section>
 
           {/* Social Proof */}
-          <section className="py-6 md:py-16 bg-gray-50 dark:bg-gray-900/50 px-3 sm:px-4 md:px-6 mobile-compact-p">
+          <section className="py-6 md:py-16 bg-muted/30 dark:bg-gray-900/50 px-3 sm:px-4 md:px-6 mobile-compact-p">
             <div className="container mx-auto max-w-7xl">
               <h2 className="text-xl md:text-3xl font-bold text-center mb-6 md:mb-12">Trusted by Industry Leaders</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-cols-1 mobile-gap-4">
@@ -429,7 +429,7 @@ export default function UniversalMarketing() {
       )}
 
       {/* Navigation Buttons */}
-      <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-1 sm:gap-2 bg-white dark:bg-slate-900 rounded-lg shadow-md p-1.5 sm:p-2 border z-50">
+      <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-1 sm:gap-2 bg-card dark:bg-slate-900 rounded-lg shadow-md p-1.5 sm:p-2 border z-50">
         <Button
           variant={section === 'landing' ? 'default' : 'ghost'}
           size="sm"

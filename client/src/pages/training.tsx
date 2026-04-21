@@ -375,7 +375,7 @@ function SessionDetailView({
               
               {(session.status === 'scheduled' || session.status === 'in_progress') && (
                 <div className="bg-muted p-4 rounded-lg w-full flex flex-col items-center gap-3">
-                  <div className="bg-white p-2 rounded shadow-sm">
+                  <div className="bg-card p-2 rounded shadow-sm">
                     <QrCode className="h-24 w-24" />
                   </div>
                   <div className="text-center w-full">

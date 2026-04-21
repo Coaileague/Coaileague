@@ -841,7 +841,7 @@ function ContractDialog({ contract }: { contract: SpsDocument }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-8 text-sm p-4 bg-white text-black print:p-0">
+        <div className="space-y-8 text-sm p-4 bg-card text-foreground print:p-0">
           {/* Header */}
           <div className="text-center space-y-2 mb-10">
             <h1 className="text-2xl font-bold uppercase tracking-tight">Security Services Agreement</h1>

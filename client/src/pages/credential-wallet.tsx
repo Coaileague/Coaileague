@@ -180,7 +180,7 @@ function QRDialog({ credential, open, onClose }: { credential: Credential | null
           </UniversalModalTitle>
         </UniversalModalHeader>
         <div className="flex flex-col items-center gap-4 py-4">
-          <div className="bg-white p-4 rounded-md">
+          <div className="bg-card p-4 rounded-md">
             <img
               src={qrImageUrl}
               alt="Verification QR Code"

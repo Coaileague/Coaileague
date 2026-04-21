@@ -119,7 +119,7 @@ function SignaturePad({
           data-testid="input-typed-signature"
         />
       ) : (
-        <div className="border-2 border-dashed rounded-md bg-white dark:bg-slate-900 relative overflow-hidden h-32">
+        <div className="border-2 border-dashed rounded-md bg-card dark:bg-slate-900 relative overflow-hidden h-32">
           <canvas
             ref={canvasRef}
             width={600}
@@ -165,7 +165,7 @@ function SectionHeader({
   return (
     <div className="bg-[#2563EB] text-white p-4 rounded-t-lg flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <span className="bg-white text-[#2563EB] w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm">
+        <span className="bg-card text-[#2563EB] w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm">
           {number}
         </span>
         <h3 className="font-semibold text-lg">{title}</h3>
@@ -473,7 +473,7 @@ export default function SpsPacketPortal() {
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col">
       {/* Top Progress Bar */}
-      <div className="bg-white dark:bg-slate-950 border-b sticky top-0 z-50">
+      <div className="bg-card dark:bg-slate-950 border-b sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -823,7 +823,7 @@ export default function SpsPacketPortal() {
           <Card className="border-none shadow-lg">
             <SectionHeader number={7} title="Offer of Employment" complete={validateStep(7)} />
             <CardContent className="p-6 space-y-6">
-              <div className="bg-white border p-6 text-sm space-y-4 shadow-inner overflow-y-auto max-h-[400px]">
+              <div className="bg-card border p-6 text-sm space-y-4 shadow-inner overflow-y-auto max-h-[400px]">
                 <div className="text-center font-bold text-lg mb-4">EMPLOYMENT OFFER & TERMS</div>
                 <p><strong>Position:</strong> {doc.position || "Security Officer"}</p>
                 <p><strong>Pay Rate:</strong> ${doc.payRate || "0.00"} per hour</p>
@@ -898,7 +898,7 @@ export default function SpsPacketPortal() {
           <Card className="border-none shadow-lg">
             <SectionHeader number={9} title="Drug-Free Workplace Policy" complete={validateStep(9)} />
             <CardContent className="p-6 space-y-6">
-              <div className="bg-white border p-6 text-sm italic">
+              <div className="bg-card border p-6 text-sm italic">
                 "{orgName} maintains a zero-tolerance policy for illegal drug use. 
                 Employees may be subject to pre-employment, random, post-accident, and reasonable-suspicion testing. 
                 A positive test result or refusal to test is grounds for immediate termination."
@@ -1107,7 +1107,7 @@ export default function SpsPacketPortal() {
       </main>
 
       {/* Footer Legal */}
-      <footer className="bg-white dark:bg-slate-950 border-t py-6">
+      <footer className="bg-card dark:bg-slate-950 border-t py-6">
         <div className="max-w-3xl mx-auto px-4 text-center space-y-2">
           <p className="text-xs text-muted-foreground">
             Document Execution Engine — Powered by Trinity AI

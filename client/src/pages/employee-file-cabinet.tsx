@@ -572,7 +572,7 @@ export default function EmployeeFileCabinet() {
             </UniversalModalDescription>
           </UniversalModalHeader>
           <div className="space-y-4">
-            <div className="border rounded-lg p-2 bg-white dark:bg-gray-900">
+            <div className="border rounded-lg p-2 bg-card dark:bg-gray-900">
               <canvas
                 id="employee-sign-canvas"
                 width={400}

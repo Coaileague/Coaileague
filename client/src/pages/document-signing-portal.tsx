@@ -188,7 +188,7 @@ function SignatureCanvas({ onSignatureChange }: { onSignatureChange: (data: stri
 
   return (
     <div className="space-y-2">
-      <div className="relative border-2 border-dashed rounded-md bg-white" style={{ height: 190 }}>
+      <div className="relative border-2 border-dashed rounded-md bg-card" style={{ height: 190 }}>
         <canvas
           ref={canvasRef}
           className="w-full h-full cursor-crosshair touch-none rounded-md"

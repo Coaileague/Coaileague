@@ -1300,7 +1300,7 @@ import { createHash } from "crypto";
     }
   });
 
-  router.patch('/:id', async (req: any, res) => {
+  router.patch('/:id', mutationLimiter, async (req: any, res) => {
     try {
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });

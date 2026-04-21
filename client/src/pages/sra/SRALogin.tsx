@@ -87,7 +87,7 @@ export default function SRALogin() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
+        <div className="bg-card rounded-lg shadow-2xl overflow-hidden">
           {/* Step indicator */}
           <div className="bg-[#1a3a6b] px-6 py-3 flex items-center gap-3">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === "credentials" ? "bg-[#d4aa3b] text-[#0f1e3d]" : "bg-green-500 text-white"}`}>
@@ -114,7 +114,7 @@ export default function SRALogin() {
               <form onSubmit={handleCredentials} className="space-y-5">
                 <div>
                   <h2 className="text-lg font-semibold text-[#1a3a6b] mb-1">Government Credentials</h2>
-                  <p className="text-gray-500 text-sm">Enter your official government email and password.</p>
+                  <p className="text-muted-foreground text-sm">Enter your official government email and password.</p>
                 </div>
 
                 <div className="space-y-1">
@@ -146,7 +146,7 @@ export default function SRALogin() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(p => !p)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-muted-foreground"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -215,7 +215,7 @@ export default function SRALogin() {
               <form onSubmit={handleTotp} className="space-y-5">
                 <div>
                   <h2 className="text-lg font-semibold text-[#1a3a6b] mb-1">Two-Factor Authentication</h2>
-                  <p className="text-gray-500 text-sm">Open your authenticator app and enter the 6-digit code for the SRA Portal.</p>
+                  <p className="text-muted-foreground text-sm">Open your authenticator app and enter the 6-digit code for the SRA Portal.</p>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3">
@@ -255,7 +255,7 @@ export default function SRALogin() {
                 <button
                   type="button"
                   onClick={() => { setStep("credentials"); setError(""); setTotpCode(""); }}
-                  className="w-full text-gray-500 text-sm hover:text-gray-700"
+                  className="w-full text-muted-foreground text-sm hover:text-gray-700"
                 >
                   Back to credentials
                 </button>
