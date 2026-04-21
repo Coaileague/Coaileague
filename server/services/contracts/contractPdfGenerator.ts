@@ -51,7 +51,7 @@ export async function generateExecutedContractPdf(contractId: string): Promise<B
     renderPdfHeader(doc, {
       title: contract.title || 'Service Agreement',
       subtitle: 'Fully Executed Agreement',
-      workspaceName: contract.companyName || 'CoAIleague',
+      workspaceName: 'CoAIleague',
       tenantLogoBuffer: tenantLogo,
       refLabel: `ID: ${contractId.slice(0, 8).toUpperCase()}`,
       generatedLabel: `Executed: ${executed}`,
@@ -61,7 +61,7 @@ export async function generateExecutedContractPdf(contractId: string): Promise<B
     sectionBar(doc, 'Parties to this Agreement');
 
     const partyY = doc.y + 6;
-    fieldPair(doc, 'Service Provider', contract.companyName || 'Service Provider', PAGE.ML, partyY, 220);
+    fieldPair(doc, 'Service Provider', 'Service Provider', PAGE.ML, partyY, 220);
     fieldPair(doc, 'Client', contract.clientName || 'Client', PAGE.MID + 12, partyY, 220);
     doc.y = partyY + 36;
 
@@ -121,7 +121,7 @@ export async function generateExecutedContractPdf(contractId: string): Promise<B
       .lineTo(PAGE.ML + 210, sigY + 22)
       .strokeColor(PDF.grayBorder).lineWidth(0.75).stroke();
     doc.fontSize(8).fillColor(PDF.gray)
-      .text(contract.companyName || 'Service Provider', PAGE.ML, sigY + 28);
+      .text('Service Provider', PAGE.ML, sigY + 28);
     doc.fontSize(8).fillColor(PDF.gray)
       .text(`Date: ${executed}`, PAGE.ML, sigY + 38);
 
@@ -150,7 +150,7 @@ export async function generateExecutedContractPdf(contractId: string): Promise<B
     renderPdfFooter(doc, {
       docId: contractId.slice(0, 8).toUpperCase(),
       docType: 'Executed Contract',
-      workspaceName: contract.companyName || 'CoAIleague',
+      workspaceName: 'CoAIleague',
     });
 
     doc.end();
