@@ -182,7 +182,9 @@ router.get('/incidents', requireSRAAuth, async (req: SRARequest, res: Response) 
   if (!sraSession) return res.status(401).json({ success: false });
 
   try {
-    const periodStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    // Use the session's declared audit period; fall back to 90 days before today
+    const periodStart = sraSession.auditPeriodStart
+      ?? new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
     const incidentList = await db.select({
       id: securityIncidents.id,
