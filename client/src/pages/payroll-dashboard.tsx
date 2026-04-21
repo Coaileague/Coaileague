@@ -223,20 +223,44 @@ export default function PayrollDashboard() {
     }
   });
 
+  const runPtoAccrualMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/hr/pto-accrual/run', {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/pto'] });
+      toast({ title: '✅ PTO Accrual Run Complete', description: 'All employee PTO balances updated.' });
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'PTO Accrual Failed', description: error.message || 'Failed to run PTO accrual. Please try again.' });
+    },
+  });
+
   const actionButton = (
-    <Button
-      onClick={() => createRunMutation.mutate()}
-      disabled={createRunMutation.isPending}
-      className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-sm shadow-cyan-500/25 border-0"
-      data-testid="button-create-payroll"
-    >
-      {createRunMutation.isPending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Zap className="mr-2 h-4 w-4" />
-      )}
-      Create Payroll Run
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        onClick={() => runPtoAccrualMutation.mutate()}
+        disabled={runPtoAccrualMutation.isPending}
+        data-testid="button-run-pto-accrual"
+      >
+        {runPtoAccrualMutation.isPending ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : null}
+        {runPtoAccrualMutation.isPending ? 'Running…' : 'Run PTO Accrual'}
+      </Button>
+      <Button
+        onClick={() => createRunMutation.mutate()}
+        disabled={createRunMutation.isPending}
+        className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-sm shadow-cyan-500/25 border-0"
+        data-testid="button-create-payroll"
+      >
+        {createRunMutation.isPending ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Zap className="mr-2 h-4 w-4" />
+        )}
+        Create Payroll Run
+      </Button>
+    </div>
   );
 
   const pageConfig: CanvasPageConfig = {

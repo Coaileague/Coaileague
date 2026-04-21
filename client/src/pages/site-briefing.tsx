@@ -335,6 +335,7 @@ export default function SiteBriefingPage() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBriefing, setEditingBriefing] = useState<SiteBriefing | undefined>();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { data: briefings = [], isLoading } = useQuery<SiteBriefing[]>({
     queryKey: ["/api/site-briefings"],
@@ -410,7 +411,7 @@ export default function SiteBriefingPage() {
                 key={b.id}
                 briefing={b}
                 onEdit={() => handleEdit(b)}
-                onDelete={() => deleteMutation.mutate(b.id)}
+                onDelete={() => setDeleteConfirmId(b.id)}
               />
             ))}
           </div>
@@ -423,6 +424,29 @@ export default function SiteBriefingPage() {
             <UniversalModalTitle>{editingBriefing ? "Edit Site Briefing" : "New Site Briefing"}</UniversalModalTitle>
           </UniversalModalHeader>
           <BriefingForm briefing={editingBriefing} onClose={handleClose} />
+        </UniversalModalContent>
+      </UniversalModal>
+
+      <UniversalModal open={!!deleteConfirmId} onOpenChange={v => !v && setDeleteConfirmId(null)}>
+        <UniversalModalContent className="max-w-sm">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Site Briefing?
+            </UniversalModalTitle>
+          </UniversalModalHeader>
+          <p className="text-sm text-muted-foreground">This will permanently delete this site briefing. This action cannot be undone.</p>
+          <UniversalModalFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { if (deleteConfirmId) { deleteMutation.mutate(deleteConfirmId); setDeleteConfirmId(null); } }}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete-briefing"
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete Briefing"}
+            </Button>
+          </UniversalModalFooter>
         </UniversalModalContent>
       </UniversalModal>
     </CanvasHubPage>

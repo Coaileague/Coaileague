@@ -855,6 +855,7 @@ export default function ProposalBuilderPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProposal, setEditingProposal] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [portalModal, setPortalModal] = useState<{ open: boolean; url: string; contractId: string } | null>(null);
   const [orgSignModal, setOrgSignModal] = useState<{ open: boolean; contract: any } | null>(null);
   const [orgSignerName, setOrgSignerName] = useState("");
@@ -1106,7 +1107,7 @@ export default function ProposalBuilderPage() {
                   setEditingProposal(p);
                   setDialogOpen(true);
                 }}
-                onDelete={() => deleteMutation.mutate(p.id)}
+                onDelete={() => setDeleteConfirmId(p.id)}
                 onDownload={() => handleDownloadPdf(p.id)}
                 onDuplicate={() => duplicateMutation.mutate(p)}
                 onSendPortal={() => sendPortalMutation.mutate(p)}
@@ -1218,6 +1219,29 @@ export default function ProposalBuilderPage() {
             </Button>
           </UniversalModalContent>
         )}
+      </UniversalModal>
+
+      <UniversalModal open={!!deleteConfirmId} onOpenChange={v => !v && setDeleteConfirmId(null)} className="max-w-sm">
+        <UniversalModalContent className="space-y-4">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete Proposal?
+            </UniversalModalTitle>
+          </UniversalModalHeader>
+          <p className="text-sm text-muted-foreground">This will permanently delete this proposal. This action cannot be undone.</p>
+          <UniversalModalFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { if (deleteConfirmId) { deleteMutation.mutate(deleteConfirmId); setDeleteConfirmId(null); } }}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete-proposal"
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete Proposal"}
+            </Button>
+          </UniversalModalFooter>
+        </UniversalModalContent>
       </UniversalModal>
     </CanvasHubPage>
   );

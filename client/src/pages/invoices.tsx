@@ -886,6 +886,27 @@ export default function Invoices() {
     onError: (error: Error) => toast({ title: "Auto-Generate Failed", description: error.message || "Failed to auto-generate invoices.", variant: "destructive" }),
   });
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const bulkResendMutation = useMutation({
+    mutationFn: (ids: string[]) => apiRequest("POST", "/api/invoices/bulk-resend", { ids }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
+      setSelectedIds([]);
+      toast({ title: "✅ Invoices resent", description: "Selected invoices have been resent to clients." });
+    },
+    onError: (error: Error) => toast({ title: "Resend Failed", description: error.message || "Failed to resend invoices.", variant: "destructive" }),
+  });
+
+  const sendAllDraftsMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/invoices/send-all-drafts", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
+      toast({ title: "✅ All draft invoices sent", description: "All draft invoices have been sent to clients." });
+    },
+    onError: (error: Error) => toast({ title: "Send Failed", description: error.message || "Failed to send draft invoices.", variant: "destructive" }),
+  });
+
   const handleGenerateFromHours = () => {
     generateFromHoursMutation.mutate({
       clientId: hoursFormData.clientId,
@@ -969,8 +990,28 @@ export default function Invoices() {
             <p className="text-muted-foreground">Manage your receivables and billing operations</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button 
-              variant="outline" 
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => bulkResendMutation.mutate(selectedIds)}
+              disabled={selectedIds.length === 0 || bulkResendMutation.isPending}
+              data-testid="button-bulk-resend"
+            >
+              {bulkResendMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+              Resend Selected ({selectedIds.length})
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => sendAllDraftsMutation.mutate()}
+              disabled={sendAllDraftsMutation.isPending}
+              data-testid="button-send-all-drafts"
+            >
+              {sendAllDraftsMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+              Send All Drafts
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => autoGenerateMutation.mutate()}
               disabled={autoGenerateMutation.isPending}
               data-testid="button-auto-generate"
