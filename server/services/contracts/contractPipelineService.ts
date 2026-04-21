@@ -23,6 +23,7 @@ import {
   clientContractAuditLog,
   clientContractPipelineUsage,
   clients,
+  invoices,
   users,
   workspaces,
   InsertClientContract,
@@ -1116,10 +1117,67 @@ class ContractPipelineService {
       }
     })();
 
-    // ── QuickBooks invoice (non-blocking, only if QB connected) ───────────────
-    if (contract.totalValue) {
+    // ── S9: AUTO-CREATE INVOICE ON EXECUTION ─────────────────────────────────
+    // Previously only ensureQuickBooksRecord('customer') fired — no invoice
+    // was actually created. Now we create a local invoices row (status=draft
+    // → sent) so:
+    //   1. The client-portal payment link works immediately
+    //   2. QB sync (syncInvoicesToQuickBooks) picks it up on the next run
+    //   3. Overdue collections service sees it for aging
+    // Non-blocking: any failure here logs a warning; the contract remains
+    // executed.
+    if (contract.totalValue && contract.clientId) {
       (async () => {
         try {
+          // Skip if an invoice already exists for this contract (idempotent
+          // against replay/re-executions of the same contract).
+          const existing = await db.select({ id: invoices.id })
+            .from(invoices)
+            .where(and(
+              eq(invoices.workspaceId, contract.workspaceId),
+              eq(invoices.notes, `Auto-generated from contract ${contractId}`),
+            ))
+            .limit(1);
+          if (existing.length > 0) {
+            log.info(`[ContractPipeline] Invoice already exists for contract ${contractId}; skipping auto-create`);
+            return;
+          }
+
+          const { generateTrinityInvoiceNumber } = await import('../trinityInvoiceNumbering');
+          const invoiceNumber = await generateTrinityInvoiceNumber(contract.workspaceId, 'client');
+          const total = String(contract.totalValue);
+          const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // net-30
+
+          // @ts-expect-error — TS migration: fix in refactoring sprint
+          const [invoice] = await db.insert(invoices).values({
+            workspaceId: contract.workspaceId,
+            clientId: contract.clientId,
+            invoiceNumber,
+            issueDate: new Date(),
+            dueDate,
+            subtotal: total,
+            taxRate: '0.00',
+            taxAmount: '0.00',
+            total,
+            status: 'sent',
+            sentAt: new Date(),
+            notes: `Auto-generated from contract ${contractId}`,
+          }).returning();
+
+          log.info(`[ContractPipeline] Auto-invoice ${invoiceNumber} created for contract ${contractId} (amount ${total})`);
+
+          // Emit event so billing + NDS + QB sync subscribers can process it.
+          await platformEventBus.publish({
+            type: 'invoice_created',
+            category: 'billing',
+            title: `Invoice ${invoiceNumber} created`,
+            description: `Auto-generated from executed contract ${contract.title || contractId}`,
+            workspaceId: contract.workspaceId,
+            metadata: { invoiceId: invoice?.id, invoiceNumber, contractId, clientId: contract.clientId, amount: total },
+          }).catch((evErr: any) => log.warn(`[ContractPipeline] invoice_created event publish failed: ${evErr?.message}`));
+
+          // Ensure the QB customer record exists so the sync run can create
+          // the invoice on the QB side without a missing-customer error.
           const [ws] = await db.select().from(workspaces)
             .where(eq(workspaces.id, contract.workspaceId))
             .limit(1);
@@ -1128,10 +1186,9 @@ class ContractPipelineService {
             if (contract.clientName && contract.clientId) {
               await ensureQuickBooksRecord('customer', contract.clientId, contract.workspaceId);
             }
-            log.info(`[ContractPipeline] QB customer ensured for contract ${contractId}`);
           }
-        } catch (qbErr: any) {
-          log.warn(`[ContractPipeline] QB sync failed (non-fatal): ${qbErr.message}`);
+        } catch (invErr: any) {
+          log.warn(`[ContractPipeline] Auto-invoice creation failed (non-fatal): ${invErr.message}`);
         }
       })();
     }

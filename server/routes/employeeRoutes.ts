@@ -686,6 +686,97 @@ router.patch('/:employeeId/access', async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// ── S10: MANAGER GUARD-CARD VERIFICATION ─────────────────────────────────────
+// Manager flips guardCardVerified=true after physically confirming the
+// uploaded card matches the officer's name + license number. Emits a Trinity
+// event so the compliance engine clears any "unverified guard card" flag and
+// the officer becomes eligible for armed/armed-site shifts (combined with
+// S8's employees.is_armed check).
+router.patch('/:employeeId/guard-card/verify', async (req: AuthenticatedRequest, res) => {
+  try {
+    const { employeeId } = req.params;
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+    if (!userId || !workspaceId) {
+      return res.status(401).json({ message: 'User + workspace context required' });
+    }
+
+    const schema = z.object({
+      verified: z.boolean().default(true),
+      guardCardNumber: z.string().optional(),
+      guardCardExpiryDate: z.union([z.date(), z.string().transform(v => new Date(v))]).optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.issues });
+    }
+    const { verified, guardCardNumber, guardCardExpiryDate } = parsed.data;
+
+    const { hasManagerAccess: _hasManagerAccess } = await import('../rbac');
+    const platRole = req.platformRole || await getUserPlatformRole(userId);
+    const isPlatformStaff = !!platRole && platRole !== 'none';
+    if (!isPlatformStaff) {
+      const requesterEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
+      if (!_hasManagerAccess(requesterEmployee?.workspaceRole as string)) {
+        return res.status(403).json({ message: 'Only managers and owners can verify guard cards' });
+      }
+    }
+
+    const targetEmployee = await storage.getEmployee(employeeId, workspaceId);
+    if (!targetEmployee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    const updatePayload: any = { guardCardVerified: verified, updatedAt: new Date() };
+    if (guardCardNumber) updatePayload.guardCardNumber = guardCardNumber;
+    if (guardCardExpiryDate) updatePayload.guardCardExpiryDate = guardCardExpiryDate;
+
+    const [updated] = await db.update(employees)
+      .set(updatePayload)
+      .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+      .returning();
+
+    // Audit + Trinity event (non-blocking)
+    try {
+      await db.insert(systemAuditLogs).values({
+        workspaceId,
+        userId,
+        userEmail: req.user?.email || 'system',
+        userRole: 'manager',
+        action: 'update',
+        entityType: 'employee',
+        entityId: employeeId,
+        changes: {
+          action: verified ? 'guard_card_verified' : 'guard_card_unverified',
+          guardCardNumber: guardCardNumber || undefined,
+          guardCardExpiryDate: guardCardExpiryDate || undefined,
+        },
+      });
+    } catch (auditErr: any) {
+      log.warn('[EmployeeRoutes] guard-card verify audit failed (non-blocking):', auditErr?.message);
+    }
+
+    try {
+      const { platformEventBus } = await import('../services/platformEventBus');
+      await platformEventBus.publish({
+        type: verified ? 'guard_card_verified' : 'guard_card_unverified',
+        category: 'compliance',
+        title: verified ? 'Guard card verified' : 'Guard card verification revoked',
+        description: `${updated?.firstName || ''} ${updated?.lastName || ''}`.trim() || employeeId,
+        workspaceId,
+        metadata: { employeeId, verifiedBy: userId, guardCardNumber: guardCardNumber || updated?.guardCardNumber },
+      });
+    } catch (evErr: any) {
+      log.warn('[EmployeeRoutes] guard-card event publish failed (non-blocking):', evErr?.message);
+    }
+
+    res.json({ success: true, employee: updated });
+  } catch (error: unknown) {
+    log.error('Error verifying guard card:', error);
+    res.status(500).json({ message: (error instanceof Error ? sanitizeError(error) : null) || 'Failed to verify guard card' });
+  }
+});
+
 router.get('/', async (req: AuthenticatedRequest, res) => {
   const startTime = Date.now();
   try {
