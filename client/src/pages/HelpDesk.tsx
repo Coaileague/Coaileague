@@ -165,7 +165,7 @@ function HDFormattedMessage({ text, className }: { text: string; className?: str
  switch (part.type) {
  case "bold": return <strong key={i}>{part.content}</strong>;
  case "italic": return <em key={i}>{part.content}</em>;
- case "code": return <code key={i} className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[12px] font-mono">{part.content}</code>;
+ case "code": return <code key={i} className="px-1 py-0.5 bg-black/10 dark:bg-card/10 rounded text-[12px] font-mono">{part.content}</code>;
  case "link": return <a key={i} href={part.href} target="_blank" rel="noopener noreferrer" className="underline break-all">{part.content}</a>;
  case "text":
  default: return <span key={i}>{part.content}</span>;
@@ -1795,7 +1795,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <Button
  size="icon"
  variant="ghost"
- className="text-white hover:bg-white/20"
+ className="text-white hover:bg-card/20"
  onClick={() =>navigate("/dashboard")}
  data-testid="button-back-home"
  aria-label="Back to dashboard"
@@ -1803,13 +1803,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <ChevronLeft className="h-5 w-5" />
  </Button>
  <div className="text-center">
- <h1 className="font-bold text-base"> Live Chatrooms</h1>
+                          <h1 className="font-bold text-base font-display"> Live Chatrooms</h1>
  <p className="text-xs text-white/70">{isStaff ? 'All platform rooms' : 'Your organization'}</p>
  </div>
  <Button
  size="icon"
  variant="ghost"
- className="text-white hover:bg-white/20"
+ className="text-white hover:bg-card/20"
  onClick={() =>navigate("/dashboard")}
  data-testid="button-home"
  aria-label="Go to dashboard"
@@ -1941,7 +1941,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </Suspense>
  <div>
  <div className="flex items-center gap-2 flex-wrap">
- <h1 className="text-primary-foreground font-semibold text-sm sm:text-base"> Trinity Support</h1>
+                        <h1 className="text-primary-foreground font-semibold text-sm sm:text-base font-display"> Trinity Support</h1>
  {ticketNumber && (
  <span
  className="bg-primary-foreground/20 text-primary-foreground text-xs font-mono px-1.5 py-0.5 rounded"
@@ -2198,7 +2198,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  )}
 
  {parentMessage && (
- <div className="mb-1 p-1.5 rounded bg-black/5 dark:bg-white/5 border-l-2 border-primary/50 text-[11px] text-muted-foreground" data-testid={`reply-preview-${idx}`}>
+ <div className="mb-1 p-1.5 rounded bg-black/5 dark:bg-card/5 border-l-2 border-primary/50 text-[11px] text-muted-foreground" data-testid={`reply-preview-${idx}`}>
  <span className="font-semibold text-primary/80">{parentMessage.senderName}</span>
  <p className="truncate">{parentMessage.message}</p>
  </div>
@@ -3513,16 +3513,16 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  setShowUserProfile(open);
  if (!open) setSelectedUserId(null); // Reset selection when dialog closes
  }}>
- <UniversalModalContent size="lg" className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 [&>button]:text-gray-500 dark:text-gray-400 dark:[&>button]:text-gray-400 [&>button]:opacity-100 [&>button]:hover:text-gray-900 dark:text-gray-100 dark:[&>button]:hover:text-gray-100 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600 dark:[&>button]:focus-visible:ring-blue-500">
+ <UniversalModalContent size="lg" className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 border-2 border-border dark:border-gray-700 text-foreground dark:text-gray-100 [&>button]:text-muted-foreground dark:text-gray-400 dark:[&>button]:text-gray-400 [&>button]:opacity-100 [&>button]:hover:text-foreground dark:text-gray-100 dark:[&>button]:hover:text-gray-100 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600 dark:[&>button]:focus-visible:ring-blue-500">
  <UniversalModalHeader>
- <UniversalModalTitle className="flex items-center gap-3 text-xl text-gray-900 dark:text-gray-100 dark:text-gray-100">
+ <UniversalModalTitle className="flex items-center gap-3 text-xl text-foreground dark:text-gray-100 dark:text-gray-100">
  <UnifiedBrandLogo size="sm" variant="icon" />
  <div className="flex items-center gap-2">
  <Info className="w-5 h-5 text-blue-400" />
  User Profile & Diagnostics
  </div>
  </UniversalModalTitle>
- <UniversalModalDescription className="text-gray-600 dark:text-gray-400 dark:text-gray-400">
+ <UniversalModalDescription className="text-muted-foreground dark:text-gray-400 dark:text-gray-400">
  {isStaff ? 'Complete user information and diagnostics' : 'Basic user information'}
  </UniversalModalDescription>
  </UniversalModalHeader>
@@ -3536,7 +3536,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  {(userContextError as any)?.error || (userContextError as any)?.message || 'User information not available'}
  </p>
  {(userContextError as any)?.suggestion && (
- <p className="text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs mt-2">{(userContextError as any).suggestion}</p>
+ <p className="text-muted-foreground dark:text-gray-400 dark:text-gray-400 text-xs mt-2">{(userContextError as any).suggestion}</p>
  )}
  {selectedUserId && (
  <div className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg p-3">
@@ -3546,7 +3546,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </div>
  )}
  {!isStaff && (
- <p className="text-gray-500 dark:text-gray-400 dark:text-gray-400 text-xs mt-3 italic">
+ <p className="text-muted-foreground dark:text-gray-400 dark:text-gray-400 text-xs mt-3 italic">
  Full user details are only visible to support staff
  </p>
  )}
@@ -3557,13 +3557,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  {(selectedUserId.startsWith('sim-') || selectedUserId.startsWith('demo-')) && userContext.user?.isSimulated ? (
  /* Simulated/Demo user information */
  <div className="space-y-4">
- <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-md">
+ <div className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 rounded-lg p-4 shadow-md">
  <div className="flex items-center gap-3 mb-3">
  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 shadow-md flex items-center justify-center ring-2 ring-blue-200">
  <Users size={24} className="text-white" />
  </div>
  <div>
- <h3 className="text-gray-900 dark:text-gray-100 font-bold text-lg">
+ <h3 className="text-foreground dark:text-gray-100 font-bold text-lg">
  {userContext.user.firstName} {userContext.user.lastName}
  </h3>
  <Badge variant="secondary" className="bg-muted/20 text-primary border-primary/30 mt-1">
@@ -3576,16 +3576,16 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </p>
  <div className="space-y-2 text-xs">
  <div className="flex justify-between gap-2">
- <span className="text-gray-600 dark:text-gray-400 dark:text-gray-400"> Email:</span>
- <span className="text-gray-900 dark:text-gray-100 dark:text-gray-100">{userContext.user.email}</span>
+ <span className="text-muted-foreground dark:text-gray-400 dark:text-gray-400"> Email:</span>
+ <span className="text-foreground dark:text-gray-100 dark:text-gray-100">{userContext.user.email}</span>
  </div>
  <div className="flex justify-between gap-2">
- <span className="text-gray-600 dark:text-gray-400 dark:text-gray-400"> Role:</span>
- <span className="text-gray-900 dark:text-gray-100 dark:text-gray-100">{userContext.user.platformRole}</span>
+ <span className="text-muted-foreground dark:text-gray-400 dark:text-gray-400"> Role:</span>
+ <span className="text-foreground dark:text-gray-100 dark:text-gray-100">{userContext.user.platformRole}</span>
  </div>
  <div className="flex justify-between gap-2">
- <span className="text-gray-600 dark:text-gray-400 dark:text-gray-400"> User ID:</span>
- <span className="text-gray-900 dark:text-gray-100 font-mono text-xs">{userContext.user.id}</span>
+ <span className="text-muted-foreground dark:text-gray-400 dark:text-gray-400"> User ID:</span>
+ <span className="text-foreground dark:text-gray-100 font-mono text-xs">{userContext.user.id}</span>
  </div>
  </div>
  </div>
@@ -3610,7 +3610,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <Sparkles size={24} className="text-white" />
  </div>
  <div>
- <h3 className="text-gray-900 dark:text-gray-100 font-bold text-lg">
+ <h3 className="text-foreground dark:text-gray-100 font-bold text-lg">
  {selectedUserId.startsWith('helpbot') ? 'Trinity Support' : 'System Bot'}
  </h3>
  <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 mt-1">
@@ -3623,27 +3623,27 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </p>
  </div>
 
- <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
- <h4 className="text-gray-900 dark:text-gray-100 font-semibold text-sm mb-3 flex items-center gap-2">
+ <div className="bg-muted/30 dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg p-4">
+ <h4 className="text-foreground dark:text-gray-100 font-semibold text-sm mb-3 flex items-center gap-2">
  <Zap className="w-4 h-4 text-blue-400" />
  Capabilities
  </h4>
  <ul className="space-y-2">
  <li className="flex items-start gap-2">
  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
- <span className="text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs">24/7 instant customer support</span>
+ <span className="text-muted-foreground dark:text-gray-400 dark:text-gray-400 text-xs">24/7 instant customer support</span>
  </li>
  <li className="flex items-start gap-2">
  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
- <span className="text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs"> Automated ticket creation and routing</span>
+ <span className="text-muted-foreground dark:text-gray-400 dark:text-gray-400 text-xs"> Automated ticket creation and routing</span>
  </li>
  <li className="flex items-start gap-2">
  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
- <span className="text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs"> Context-aware responses</span>
+ <span className="text-muted-foreground dark:text-gray-400 dark:text-gray-400 text-xs"> Context-aware responses</span>
  </li>
  <li className="flex items-start gap-2">
  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
- <span className="text-gray-600 dark:text-gray-400 text-xs"> Human escalation when needed</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs"> Human escalation when needed</span>
  </li>
  </ul>
  </div>
@@ -3663,35 +3663,35 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  {isStaff ? (
  /* Full information for support staff */
  <>
- <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
- <h4 className="text-gray-900 dark:text-gray-100 font-semibold text-sm mb-3 flex items-center gap-2">
+ <div className="bg-muted/30 dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg p-4">
+ <h4 className="text-foreground dark:text-gray-100 font-semibold text-sm mb-3 flex items-center gap-2">
  <Info className="w-4 h-4 text-blue-400" />
  User Details
  </h4>
  <div className="space-y-3">
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Full Name</span>
- <span className="text-gray-900 dark:text-gray-100 text-sm font-medium">
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Full Name</span>
+ <span className="text-foreground dark:text-gray-100 text-sm font-medium">
  {userContext.user.firstName} {userContext.user.lastName}
  </span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> User ID</span>
- <span className="text-gray-900 dark:text-gray-100 font-mono text-xs">{userContext.user.id}</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> User ID</span>
+ <span className="text-foreground dark:text-gray-100 font-mono text-xs">{userContext.user.id}</span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Email</span>
- <span className="text-gray-900 dark:text-gray-100 text-sm">{userContext.user.email || 'Not Available'}</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Email</span>
+ <span className="text-foreground dark:text-gray-100 text-sm">{userContext.user.email || 'Not Available'}</span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Platform Role</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Platform Role</span>
  <Badge variant="secondary" className="text-xs">
  {userContext.user.platformRole || 'guest'}
  </Badge>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Account Created</span>
- <span className="text-gray-600 dark:text-gray-400 text-xs">
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Account Created</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs">
  {userContext.user.createdAt ? new Date(userContext.user.createdAt).toLocaleDateString() : 'N/A'}
  </span>
  </div>
@@ -3699,25 +3699,25 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </div>
 
  {userContext.workspace && (
- <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
- <h4 className="text-gray-900 dark:text-gray-100 font-semibold text-sm mb-3"> Workspace Info</h4>
+ <div className="bg-muted/30 dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg p-4">
+ <h4 className="text-foreground dark:text-gray-100 font-semibold text-sm mb-3"> Workspace Info</h4>
  <div className="space-y-3">
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Workspace</span>
- <span className="text-gray-900 dark:text-gray-100 text-sm">{userContext.workspace.name}</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Workspace</span>
+ <span className="text-foreground dark:text-gray-100 text-sm">{userContext.workspace.name}</span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Serial Number</span>
- <span className="text-gray-900 dark:text-gray-100 font-mono text-xs">{userContext.workspace.serialNumber}</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Serial Number</span>
+ <span className="text-foreground dark:text-gray-100 font-mono text-xs">{userContext.workspace.serialNumber}</span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Subscription</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Subscription</span>
  <Badge variant="outline" className="text-xs">
  {userContext.workspace.subscriptionTier || 'Free'}
  </Badge>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Role</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Role</span>
  <Badge variant="secondary" className="text-xs">
  {userContext.workspace.role || 'member'}
  </Badge>
@@ -3727,23 +3727,23 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  )}
 
  {userContext.metrics && (
- <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
- <h4 className="text-gray-900 dark:text-gray-100 font-semibold text-sm mb-3"> Support Metrics</h4>
+ <div className="bg-muted/30 dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg p-4">
+ <h4 className="text-foreground dark:text-gray-100 font-semibold text-sm mb-3"> Support Metrics</h4>
  <div className="grid grid-cols-2 gap-3">
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Total Tickets</span>
- <span className="text-gray-900 dark:text-gray-100 text-lg font-bold">{userContext.metrics.totalTickets || 0}</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Total Tickets</span>
+ <span className="text-foreground dark:text-gray-100 text-lg font-bold">{userContext.metrics.totalTickets || 0}</span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Active</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Active</span>
  <span className="text-blue-600 text-lg font-bold">{userContext.metrics.activeTickets || 0}</span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Resolved</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Resolved</span>
  <span className="text-blue-600 text-lg font-bold">{userContext.metrics.resolvedTickets || 0}</span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Resolution Rate</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Resolution Rate</span>
  <span className="text-blue-600 text-lg font-bold">{userContext.metrics.resolutionRate || 0}%</span>
  </div>
  </div>
@@ -3758,7 +3758,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  });
  setShowUserProfile(false);
  }}
- className="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-gray-900 dark:text-gray-100 dark:text-gray-100"
+ className="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-foreground dark:text-gray-100 dark:text-gray-100"
  data-testid="button-user-history"
  >
  <History className="w-4 h-4 mr-2" />
@@ -3767,17 +3767,17 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </>
  ) : (
  /* Limited information for regular users */
- <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
- <h4 className="text-gray-900 dark:text-gray-100 font-semibold text-sm mb-3"> Basic Info</h4>
+ <div className="bg-muted/30 dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg p-4">
+ <h4 className="text-foreground dark:text-gray-100 font-semibold text-sm mb-3"> Basic Info</h4>
  <div className="space-y-3">
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Name</span>
- <span className="text-gray-900 dark:text-gray-100 text-sm">
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Name</span>
+ <span className="text-foreground dark:text-gray-100 text-sm">
  {userContext.user.firstName} {userContext.user.lastName}
  </span>
  </div>
  <div>
- <span className="text-gray-600 dark:text-gray-400 text-xs block mb-1"> Status</span>
+ <span className="text-muted-foreground dark:text-gray-400 text-xs block mb-1"> Status</span>
  <div className="flex items-center gap-2">
  <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
  <span className="text-primary text-sm"> Online</span>
@@ -3796,8 +3796,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  ) : (
  /* User selected but no data available */
  <div className="text-center py-8">
- <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
- <p className="text-gray-600 dark:text-gray-400 text-sm"> User information unavailable</p>
+ <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-muted-foreground" />
+ <p className="text-muted-foreground dark:text-gray-400 text-sm"> User information unavailable</p>
  </div>
  )}
  </div>
@@ -3807,19 +3807,19 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <Suspense fallback={<div className="w-16 h-16" />}>
  <TrinityArrowMark size={64} />
  </Suspense>
- <p className="text-gray-600 dark:text-gray-400 text-sm font-medium"> Loading user information...</p>
+ <p className="text-muted-foreground dark:text-gray-400 text-sm font-medium"> Loading user information...</p>
  </div>
  ) : (
  /* No user selected or query not enabled */
  <div className="text-center py-8">
- <Info className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
- <p className="text-gray-600 dark:text-gray-400 text-sm"> Select a user to view their information</p>
+ <Info className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-muted-foreground" />
+ <p className="text-muted-foreground dark:text-gray-400 text-sm"> Select a user to view their information</p>
  </div>
  )}
  </div>
  
  <UniversalModalFooter>
- <Button onClick={() =>setShowUserProfile(false)} variant="outline" className="bg-blue-50 text-gray-900 dark:text-gray-100 border-gray-200" data-testid="button-close-profile">
+ <Button onClick={() =>setShowUserProfile(false)} variant="outline" className="bg-blue-50 text-foreground dark:text-gray-100 border-border" data-testid="button-close-profile">
  Close
  </Button>
  </UniversalModalFooter>

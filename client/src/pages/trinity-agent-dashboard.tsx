@@ -185,7 +185,7 @@ function ActionDialog({ item, mode, onClose }: ActionDialogProps) {
         <div className="space-y-3 py-2">
           {/* Parameters preview */}
           {item.parameters && (
-            <div className="rounded bg-white/5 p-3 text-xs font-mono text-white/60 max-h-24 overflow-auto">
+            <div className="rounded bg-card/5 p-3 text-xs font-mono text-white/60 max-h-24 overflow-auto">
               {JSON.stringify(item.parameters, null, 2)}
             </div>
           )}
@@ -213,7 +213,7 @@ function ActionDialog({ item, mode, onClose }: ActionDialogProps) {
                   ? 'Why are you approving this action?'
                   : 'Why are you overriding this action?'
               }
-              className="bg-white/5 border-white/20 text-white placeholder:text-white/30 min-h-[80px]"
+              className="bg-card/5 border-white/20 text-white placeholder:text-white/30 min-h-[80px]"
             />
           </div>
         </div>
@@ -286,7 +286,7 @@ function ReasoningDrawer({
         {isLoading ? (
           <div className="space-y-2 py-4">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full bg-white/10" />
+              <Skeleton key={i} className="h-8 w-full bg-card/10" />
             ))}
           </div>
         ) : (
@@ -294,7 +294,7 @@ function ReasoningDrawer({
             <div className="space-y-4 py-2">
               {/* Decision reasoning */}
               {reasoning?.decision && (
-                <div className="rounded bg-white/5 p-3 space-y-2">
+                <div className="rounded bg-card/5 p-3 space-y-2">
                   <div className="text-xs font-semibold text-[#4FC3F7] uppercase tracking-wider">
                     Decision Reasoning
                   </div>
@@ -324,7 +324,7 @@ function ReasoningDrawer({
 
               {/* Approval context */}
               {reasoning?.approval && (
-                <div className="rounded bg-white/5 p-3 space-y-2">
+                <div className="rounded bg-card/5 p-3 space-y-2">
                   <div className="text-xs font-semibold text-yellow-400 uppercase tracking-wider">
                     Pending Approval Context
                   </div>
@@ -366,7 +366,7 @@ function ReasoningDrawer({
 
               {/* Execution log */}
               {reasoning?.executionLog && (
-                <div className="rounded bg-white/5 p-3 space-y-2">
+                <div className="rounded bg-card/5 p-3 space-y-2">
                   <div className="text-xs font-semibold text-green-400 uppercase tracking-wider">
                     Execution Log
                   </div>
@@ -476,7 +476,7 @@ export default function TrinityAgentDashboard() {
           <div className="flex items-center gap-3">
             <Shield className="w-7 h-7 text-[#4FC3F7]" />
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Trinity Agent Dashboard</h1>
+              <h1 className="text-xl font-bold tracking-tight font-display">Trinity Agent Dashboard</h1>
               <p className="text-xs text-white/50">
                 Approval queue · Override controls · Escalation triage
               </p>
@@ -510,7 +510,7 @@ export default function TrinityAgentDashboard() {
                 <span className="text-xs text-white/50">Pending Approvals</span>
               </div>
               {queueLoading ? (
-                <Skeleton className="h-8 w-12 bg-white/10" />
+                <Skeleton className="h-8 w-12 bg-card/10" />
               ) : (
                 <div className="text-3xl font-bold text-yellow-400">
                   {queueData?.count ?? 0}
@@ -526,7 +526,7 @@ export default function TrinityAgentDashboard() {
                 <span className="text-xs text-white/50">Escalations</span>
               </div>
               {escalationsLoading ? (
-                <Skeleton className="h-8 w-12 bg-white/10" />
+                <Skeleton className="h-8 w-12 bg-card/10" />
               ) : (
                 <div className="text-3xl font-bold text-red-400">
                   {escalationsData?.count ?? 0}
@@ -542,7 +542,7 @@ export default function TrinityAgentDashboard() {
                 <span className="text-xs text-white/50">Recent Actions</span>
               </div>
               {feedLoading ? (
-                <Skeleton className="h-8 w-12 bg-white/10" />
+                <Skeleton className="h-8 w-12 bg-card/10" />
               ) : (
                 <div className="text-3xl font-bold text-green-400">
                   {feedData?.feed?.length ?? 0}
@@ -591,7 +591,7 @@ export default function TrinityAgentDashboard() {
                       value={workspaceFilter}
                       onChange={e => setWorkspaceFilter(e.target.value)}
                       placeholder="Filter by workspace…"
-                      className="pl-8 bg-white/5 border-white/20 text-white text-xs placeholder:text-white/30 h-8"
+                      className="pl-8 bg-card/5 border-white/20 text-white text-xs placeholder:text-white/30 h-8"
                     />
                   </div>
                 </div>
@@ -600,7 +600,7 @@ export default function TrinityAgentDashboard() {
                 {queueLoading ? (
                   <div className="space-y-2">
                     {[...Array(4)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full bg-white/10" />
+                      <Skeleton key={i} className="h-16 w-full bg-card/10" />
                     ))}
                   </div>
                 ) : (
@@ -609,7 +609,7 @@ export default function TrinityAgentDashboard() {
                       {filteredQueue.map(item => (
                         <div
                           key={item.id}
-                          className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+                          className="p-3 rounded-lg bg-card/5 border border-white/10 hover:border-white/20 transition-all"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
@@ -626,7 +626,7 @@ export default function TrinityAgentDashboard() {
                               </div>
                               <div className="flex items-center gap-3 text-xs text-white/40 flex-wrap">
                                 {item.workspace_name && (
-                                  <span className="bg-white/10 rounded px-1.5 py-0.5">
+                                  <span className="bg-card/10 rounded px-1.5 py-0.5">
                                     {item.workspace_name}
                                   </span>
                                 )}
@@ -705,7 +705,7 @@ export default function TrinityAgentDashboard() {
                 {escalationsLoading ? (
                   <div className="space-y-2">
                     {[...Array(4)].map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full bg-white/10" />
+                      <Skeleton key={i} className="h-12 w-full bg-card/10" />
                     ))}
                   </div>
                 ) : (
@@ -740,7 +740,7 @@ export default function TrinityAgentDashboard() {
                               </div>
                               <div className="flex items-center gap-3 text-xs text-white/40">
                                 {e.workspace_name && (
-                                  <span className="bg-white/10 rounded px-1.5 py-0.5">
+                                  <span className="bg-card/10 rounded px-1.5 py-0.5">
                                     {e.workspace_name}
                                   </span>
                                 )}
@@ -795,7 +795,7 @@ export default function TrinityAgentDashboard() {
                 {feedLoading ? (
                   <div className="space-y-2">
                     {[...Array(6)].map((_, i) => (
-                      <Skeleton key={i} className="h-10 w-full bg-white/10" />
+                      <Skeleton key={i} className="h-10 w-full bg-card/10" />
                     ))}
                   </div>
                 ) : (
@@ -804,7 +804,7 @@ export default function TrinityAgentDashboard() {
                       {(feedData?.feed ?? []).map(item => (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between p-2.5 rounded bg-white/5 hover:bg-white/10 transition-colors group"
+                          className="flex items-center justify-between p-2.5 rounded bg-card/5 hover:bg-card/10 transition-colors group"
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">

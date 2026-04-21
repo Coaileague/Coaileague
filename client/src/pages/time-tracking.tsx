@@ -978,7 +978,7 @@ export default function TimeTracking() {
       <>
         <div className="hidden lg:flex rounded-lg p-5 mb-6 items-center gap-3" style={{ background: 'var(--ds-navy-mid)', border: '1px solid var(--ds-border)' }}>
           <Clock className="w-6 h-6" style={{ color: 'var(--ds-gold)' }} />
-          <h1 className="text-xl font-bold" style={{ fontFamily: 'var(--ds-font-display)', color: 'var(--ds-text-primary)' }}>TimeTracker</h1>
+          <h1 className="text-xl font-bold font-display" style={{ color: 'var(--ds-text-primary)' }}>TimeTracker</h1>
         </div>
         <MetricsCardsSkeleton count={3} columns={3} />
         <div className="mt-6">
@@ -1422,7 +1422,7 @@ export default function TimeTracking() {
                         }, 0);
 
                       return (
-                        <div key={emp.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-muted/50 rounded-lg w-full" data-testid={`team-member-${emp.id}`}>
+                        <div key={emp.id} className="flex items-center gap-3 p-3 bg-muted/30 dark:bg-muted/50 rounded-lg w-full" data-testid={`team-member-${emp.id}`}>
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
                             {emp.firstName?.[0]}{emp.lastName?.[0]}
                           </div>
@@ -1436,7 +1436,7 @@ export default function TimeTracking() {
                               <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap shrink-0 ${
                                 status === 'clocked_in' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
                                 status === 'on_break' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                                'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                'bg-muted dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                               }`}>
                                 <div className={`w-1.5 h-1.5 rounded-full ${
                                   status === 'clocked_in' ? 'bg-green-500' :
@@ -1468,7 +1468,7 @@ export default function TimeTracking() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setWeekOffset(weekOffset - 1)}
-                      className="text-white hover:bg-white hover:bg-opacity-20"
+                      className="text-white hover:bg-card hover:bg-opacity-20"
                       data-testid="button-prev-week"
                     >
                       <ChevronLeft className="w-5 h-5" />
@@ -1483,7 +1483,7 @@ export default function TimeTracking() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setWeekOffset(weekOffset + 1)}
-                      className="text-white hover:bg-white hover:bg-opacity-20"
+                      className="text-white hover:bg-card hover:bg-opacity-20"
                       data-testid="button-next-week"
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -1493,7 +1493,7 @@ export default function TimeTracking() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setWeekOffset(0)}
-                        className="text-white hover:bg-white hover:bg-opacity-20 ml-2"
+                        className="text-white hover:bg-card hover:bg-opacity-20 ml-2"
                         data-testid="button-today-week"
                       >
                         Today
@@ -1502,12 +1502,12 @@ export default function TimeTracking() {
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     {/* View Mode Toggle */}
-                    <div className="flex items-center bg-white bg-opacity-20 rounded-lg p-1">
+                    <div className="flex items-center bg-card bg-opacity-20 rounded-lg p-1">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setTimesheetViewMode('grid')}
-                        className={`px-3 py-1 rounded ${timesheetViewMode === 'grid' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400' : 'text-white'}`}
+                        className={`px-3 py-1 rounded ${timesheetViewMode === 'grid' ? 'bg-card dark:bg-gray-800 text-blue-600 dark:text-blue-400' : 'text-white'}`}
                         data-testid="button-view-grid"
                       >
                         <LayoutGrid className="w-4 h-4 mr-1" />
@@ -1517,7 +1517,7 @@ export default function TimeTracking() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setTimesheetViewMode('list')}
-                        className={`px-3 py-1 rounded ${timesheetViewMode === 'list' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400' : 'text-white'}`}
+                        className={`px-3 py-1 rounded ${timesheetViewMode === 'list' ? 'bg-card dark:bg-gray-800 text-blue-600 dark:text-blue-400' : 'text-white'}`}
                         data-testid="button-view-list"
                       >
                         <List className="w-4 h-4 mr-1" />
@@ -1526,7 +1526,7 @@ export default function TimeTracking() {
                     </div>
                     <a
                       href={`/api/timesheets/export/csv?startDate=${gridWeekStart.toISOString()}&endDate=${gridWeekEnd.toISOString()}`}
-                      className="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-card bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
                       data-testid="button-export-csv"
                     >
                       <Download className="w-4 h-4 mr-2" />
@@ -1534,7 +1534,7 @@ export default function TimeTracking() {
                     </a>
                     <a
                       href={`/api/timesheets/export/pdf?startDate=${gridWeekStart.toISOString()}&endDate=${gridWeekEnd.toISOString()}`}
-                      className="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-card bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
                       data-testid="button-export-pdf"
                     >
                       <Download className="w-4 h-4 mr-2" />
@@ -1544,29 +1544,29 @@ export default function TimeTracking() {
                 </div>
 
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4 mt-4 sm:mt-6">
-                  <div className="bg-white bg-opacity-10 rounded-lg p-2.5 sm:p-4">
+                  <div className="bg-card bg-opacity-10 rounded-lg p-2.5 sm:p-4">
                     <p className="text-[10px] sm:text-sm text-blue-100 mb-0.5 sm:mb-1 truncate">Total</p>
                     <p className="text-lg sm:text-3xl font-bold truncate">
                       {employees.reduce((sum, emp) => sum + getEmployeeWeekTotal(emp.id).total, 0).toFixed(1)}h
                     </p>
                   </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-2.5 sm:p-4">
+                  <div className="bg-card bg-opacity-10 rounded-lg p-2.5 sm:p-4">
                     <p className="text-[10px] sm:text-sm text-blue-100 mb-0.5 sm:mb-1 truncate">Regular</p>
                     <p className="text-lg sm:text-3xl font-bold truncate">
                       {Math.min(employees.length * 40, employees.reduce((sum, emp) => sum + getEmployeeWeekTotal(emp.id).total, 0)).toFixed(1)}h
                     </p>
                   </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-2.5 sm:p-4">
+                  <div className="bg-card bg-opacity-10 rounded-lg p-2.5 sm:p-4">
                     <p className="text-[10px] sm:text-sm text-blue-100 mb-0.5 sm:mb-1 truncate">Overtime</p>
                     <p className="text-lg sm:text-3xl font-bold truncate">
                       {employees.reduce((sum, emp) => sum + Math.max(0, getEmployeeWeekTotal(emp.id).total - 40), 0).toFixed(1)}h
                     </p>
                   </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-2.5 sm:p-4">
+                  <div className="bg-card bg-opacity-10 rounded-lg p-2.5 sm:p-4">
                     <p className="text-[10px] sm:text-sm text-blue-100 mb-0.5 sm:mb-1 truncate">Team</p>
                     <p className="text-lg sm:text-3xl font-bold">{employees.length}</p>
                   </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-2.5 sm:p-4">
+                  <div className="bg-card bg-opacity-10 rounded-lg p-2.5 sm:p-4">
                     <p className="text-[10px] sm:text-sm text-blue-100 mb-0.5 sm:mb-1 truncate">Pending</p>
                     <p className="text-lg sm:text-3xl font-bold">
                       {employees.reduce((sum, emp) => sum + (getEmployeeWeekTotal(emp.id).hasPending ? 1 : 0), 0)}
@@ -1654,7 +1654,7 @@ export default function TimeTracking() {
                           const isOvertime = weekData.total > 40;
 
                           return (
-                            <tr key={emp.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isSelected ? 'bg-blue-50' : ''}`} data-testid={`timesheet-row-${emp.id}`}>
+                            <tr key={emp.id} className={`hover:bg-muted/30 dark:hover:bg-gray-800/50 ${isSelected ? 'bg-blue-50' : ''}`} data-testid={`timesheet-row-${emp.id}`}>
                               {/* Bulk select checkbox - Pro View only */}
                               {canApprove && !isSimpleMode && (
                                 <td className="px-3 py-3">
@@ -1685,7 +1685,7 @@ export default function TimeTracking() {
                                   <td 
                                     key={idx} 
                                     className={`px-2 py-3 text-center cursor-pointer hover-elevate transition-colors ${
-                                      isToday ? 'bg-blue-50' : isWeekend ? 'bg-gray-50 dark:bg-gray-800/50' : ''
+                                      isToday ? 'bg-blue-50' : isWeekend ? 'bg-muted/30 dark:bg-gray-800/50' : ''
                                     }`}
                                     onClick={() => {
                                       if (dayData.entries.length > 0) {
@@ -1839,7 +1839,7 @@ export default function TimeTracking() {
                 {/* Desktop Table */}
                 <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-border">
+                    <thead className="bg-muted/30 dark:bg-gray-800/50 border-b border-border">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date</th>
@@ -1854,7 +1854,7 @@ export default function TimeTracking() {
                       {filteredTimeEntries.map((entry: TimeEntry) => {
                         const employee = employees.find((e: Employee) => e.id === entry.employeeId);
                         return (
-                          <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50" data-testid={`entry-row-${entry.id}`}>
+                          <tr key={entry.id} className="hover:bg-muted/30 dark:hover:bg-gray-800/50" data-testid={`entry-row-${entry.id}`}>
                             <td className="px-4 py-3">
                               <div className="font-medium text-foreground">
                                 {employee?.firstName} {employee?.lastName}
@@ -1998,7 +1998,7 @@ export default function TimeTracking() {
 
                           {/* Scheduled vs Actual */}
                           {shift && (
-                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-sm">
+                            <div className="bg-muted/30 dark:bg-gray-800/50 rounded-lg p-3 text-sm">
                               <p className="text-muted-foreground">
                                 <span className="font-medium">Scheduled:</span> {format(new Date(shift.startTime), 'h:mm a')} - {format(new Date(shift.endTime), 'h:mm a')}
                               </p>
@@ -2051,7 +2051,7 @@ export default function TimeTracking() {
 
                           {/* Notes */}
                           {entry.notes && (
-                            <div className="text-sm text-muted-foreground italic bg-gray-50 dark:bg-gray-800/50 rounded p-2">
+                            <div className="text-sm text-muted-foreground italic bg-muted/30 dark:bg-gray-800/50 rounded p-2">
                               {entry.notes}
                             </div>
                           )}
@@ -2270,7 +2270,7 @@ export default function TimeTracking() {
                               </div>
 
                               {entry.notes && (
-                                <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-md">
+                                <div className="mt-3 p-2 bg-muted/30 dark:bg-gray-800/50 rounded-md">
                                   <p className="text-xs text-muted-foreground mb-1">Notes:</p>
                                   <p className="text-sm text-foreground italic">{entry.notes}</p>
                                 </div>
@@ -2503,7 +2503,7 @@ export default function TimeTracking() {
                     <h3 className="font-bold text-foreground">Exceptions</h3>
                   </div>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="flex justify-between items-center gap-2 p-2 bg-muted/30 dark:bg-gray-800/50 rounded-lg">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0" />
                         <span className="text-sm text-foreground">Late Clock-Ins</span>
@@ -2518,7 +2518,7 @@ export default function TimeTracking() {
                         }).length}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="flex justify-between items-center gap-2 p-2 bg-muted/30 dark:bg-gray-800/50 rounded-lg">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
                         <span className="text-sm text-foreground">Flagged Entries</span>
@@ -2527,7 +2527,7 @@ export default function TimeTracking() {
                         {timeEntries.filter(e => e.status === 'rejected' || e.status === 'flagged').length}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="flex justify-between items-center gap-2 p-2 bg-muted/30 dark:bg-gray-800/50 rounded-lg">
                       <div className="flex items-center gap-2">
                         <PlayCircle className="w-4 h-4 text-primary shrink-0" />
                         <span className="text-sm text-foreground">Missing Clock-Outs</span>
@@ -2536,7 +2536,7 @@ export default function TimeTracking() {
                         {timeEntries.filter(e => !e.clockOut && new Date(e.clockIn) < new Date(Date.now() - 12 * 60 * 60 * 1000)).length}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="flex justify-between items-center gap-2 p-2 bg-muted/30 dark:bg-gray-800/50 rounded-lg">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-purple-500 shrink-0" />
                         <span className="text-sm text-foreground">Pending Approvals</span>
@@ -2564,7 +2564,7 @@ export default function TimeTracking() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-border">
+                    <thead className="bg-muted/30 dark:bg-gray-800/50 border-b border-border">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Total Hours</th>
@@ -2582,7 +2582,7 @@ export default function TimeTracking() {
                         const estPay = (regularHours * 18) + (overtimeHours * 27);
                         
                         return (
-                          <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50" data-testid={`report-row-${emp.id}`}>
+                          <tr key={emp.id} className="hover:bg-muted/30 dark:hover:bg-gray-800/50" data-testid={`report-row-${emp.id}`}>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -2625,7 +2625,7 @@ export default function TimeTracking() {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-gray-100 dark:bg-gray-800">
+                    <tfoot className="bg-muted dark:bg-gray-800">
                       <tr>
                         <td className="px-4 py-3 font-bold text-foreground">Totals</td>
                         <td className="px-4 py-3 text-center font-bold text-foreground">
@@ -2692,7 +2692,7 @@ export default function TimeTracking() {
               )}
 
               {/* GPS Status */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <div className="bg-muted/30 dark:bg-gray-800/50 rounded-lg p-4">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center space-x-2">
                     <MapPin className="w-5 h-5 text-primary shrink-0" />
@@ -2744,7 +2744,7 @@ export default function TimeTracking() {
               </div>
 
               {/* Photo Capture */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <div className="bg-muted/30 dark:bg-gray-800/50 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <Camera className="w-5 h-5 text-primary" />
                   <Label>Verification Photo</Label>
@@ -2913,7 +2913,7 @@ export default function TimeTracking() {
             {selectedEntry && (
               <UniversalModalBody className="space-y-4">
                 <div>
-                  <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  <h4 className="font-bold text-foreground dark:text-gray-100 mb-2">
                     {employees.find((e: Employee) => e.id === selectedEntry.employeeId)?.firstName}{' '}
                     {employees.find((e: Employee) => e.id === selectedEntry.employeeId)?.lastName}
                   </h4>
@@ -2977,7 +2977,7 @@ export default function TimeTracking() {
             
             <UniversalModalBody className="space-y-4 overflow-y-auto">
               {/* GPS Status */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <div className="bg-muted/30 dark:bg-gray-800/50 rounded-lg p-4">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center space-x-2">
                     <MapPin className="w-5 h-5 text-primary shrink-0" />
@@ -3029,7 +3029,7 @@ export default function TimeTracking() {
               </div>
 
               {/* Photo Capture */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <div className="bg-muted/30 dark:bg-gray-800/50 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <Camera className="w-5 h-5 text-primary" />
                   <Label>Verification Photo</Label>

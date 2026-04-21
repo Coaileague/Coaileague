@@ -370,7 +370,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-muted/30 dark:bg-gray-800/50 border border-border dark:border-gray-700"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -402,7 +402,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-muted/30 dark:bg-gray-800/50 border border-border dark:border-gray-700"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -434,7 +434,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-muted/30 dark:bg-gray-800/50 border border-border dark:border-gray-700"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -466,7 +466,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-muted/30 dark:bg-gray-800/50 border border-border dark:border-gray-700"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -511,18 +511,18 @@ export default function RootAdminDashboard() {
                     placeholder="Search users (min 3 chars)..."
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="pl-10 bg-white border-2 border-gray-200 h-8 text-sm"
+                    className="pl-10 bg-card border-2 border-border h-8 text-sm"
                     data-testid="input-user-search"
                   />
                 </div>
 
                 {userSearchResults && (userSearchResults as any[]).length > 0 && (
-                  <ScrollArea className="h-[160px] border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 p-2 shadow-sm">
+                  <ScrollArea className="h-[160px] border-2 border-border dark:border-gray-700 rounded-lg bg-muted/30 dark:bg-gray-800/50 p-2 shadow-sm">
                     <div className="space-y-1.5">
                       {(userSearchResults as any[]).map((user: any) => (
                         <div
                           key={user.id}
-                          className="flex items-center justify-between gap-2 p-2 rounded-lg hover-elevate border-2 border-gray-200 bg-white shadow-sm"
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg hover-elevate border-2 border-border bg-card shadow-sm"
                           data-testid={`user-result-${user.id}`}
                         >
                           <div className="flex-1 min-w-0">
@@ -552,7 +552,7 @@ export default function RootAdminDashboard() {
                 )}
 
               {selectedUser && (
-                <div className="border-2 border-gray-200 rounded-lg p-4 bg-white/80 backdrop-blur-sm shadow-md">
+                <div className="border-2 border-border rounded-lg p-4 bg-card/80 backdrop-blur-sm shadow-md">
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <h4 className="text-sm font-semibold text-primary">Managing: {selectedUser.firstName} {selectedUser.lastName}</h4>
                     <Button
@@ -607,18 +607,18 @@ export default function RootAdminDashboard() {
                     placeholder="Search workspaces (min 3 chars)..."
                     value={workspaceSearchQuery}
                     onChange={(e) => setWorkspaceSearchQuery(e.target.value)}
-                    className="pl-10 bg-white border-2 border-gray-200 h-8 text-sm"
+                    className="pl-10 bg-card border-2 border-border h-8 text-sm"
                     data-testid="input-workspace-search"
                   />
                 </div>
 
                 {workspaceSearchResults && (workspaceSearchResults as any[]).length > 0 && (
-                  <ScrollArea className="h-[160px] border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 p-2 shadow-sm">
+                  <ScrollArea className="h-[160px] border-2 border-border dark:border-gray-700 rounded-lg bg-muted/30 dark:bg-gray-800/50 p-2 shadow-sm">
                     <div className="space-y-1.5">
                       {(workspaceSearchResults as any[]).map((workspace: any) => (
                         <div
                           key={workspace.id}
-                          className="flex items-center justify-between gap-2 p-2 rounded-lg hover-elevate border-2 border-gray-200 bg-white shadow-sm"
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg hover-elevate border-2 border-border bg-card shadow-sm"
                           data-testid={`workspace-result-${workspace.id}`}
                         >
                           <div className="flex-1 min-w-0">
@@ -652,7 +652,7 @@ export default function RootAdminDashboard() {
                 )}
 
               {selectedWorkspace && (
-                <div className="border-2 border-gray-200 rounded-lg p-4 bg-white/80 backdrop-blur-sm shadow-md">
+                <div className="border-2 border-border rounded-lg p-4 bg-card/80 backdrop-blur-sm shadow-md">
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <h4 className="text-sm font-semibold text-orange-300">Managing: {selectedWorkspace.name}</h4>
                     <Button
