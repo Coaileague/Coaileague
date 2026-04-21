@@ -91,7 +91,7 @@ function SignatureCanvas({ onChange }: { onChange: (data: string | null) => void
 
   return (
     <div className="space-y-2">
-      <div className="border rounded-md bg-white dark:bg-slate-50 relative overflow-hidden">
+      <div className="border rounded-md bg-card dark:bg-slate-50 relative overflow-hidden">
         <canvas
           ref={canvasRef}
           width={560}

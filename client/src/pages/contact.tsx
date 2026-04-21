@@ -116,15 +116,15 @@ export default function Contact() {
         <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12">
           <div className="flex items-center justify-center gap-2">
             <div className="h-1 w-8 sm:w-12 bg-gradient-to-r from-cyan-600 to-blue-600" />
-            <span className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-mono">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground dark:text-gray-400 font-mono">
               Enterprise Support
             </span>
             <div className="h-1 w-8 sm:w-12 bg-gradient-to-r from-cyan-600 to-blue-600" />
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100 px-2" data-testid="heading-contact">
+          <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight text-foreground dark:text-gray-100 px-2" data-testid="heading-contact">
             Contact Our Team
           </h1>
-          <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-2">
+          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground dark:text-gray-400 max-w-2xl mx-auto px-2">
             Elite-grade support for your workforce operations. Our experts are available 24/7 to ensure your success.
           </p>
         </div>
@@ -148,7 +148,7 @@ export default function Contact() {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-                <div className="text-center p-3 rounded-md bg-white/5 border border-white/10 min-w-[120px]">
+                <div className="text-center p-3 rounded-md bg-card/5 border border-white/10 min-w-[120px]">
                   <div className="flex items-center justify-center gap-1.5 mb-1">
                     <Volume2 className="h-4 w-4 text-amber-400" />
                     <span className="text-xs text-indigo-300 font-medium uppercase tracking-wide">Voice</span>
@@ -162,7 +162,7 @@ export default function Contact() {
                   </a>
                   <p className="text-xs text-indigo-400 mt-0.5">Toll-free · 24/7</p>
                 </div>
-                <div className="text-center p-3 rounded-md bg-white/5 border border-white/10 min-w-[120px]">
+                <div className="text-center p-3 rounded-md bg-card/5 border border-white/10 min-w-[120px]">
                   <div className="flex items-center justify-center gap-1.5 mb-1">
                     <Mail className="h-4 w-4 text-amber-400" />
                     <span className="text-xs text-indigo-300 font-medium uppercase tracking-wide">Email</span>
@@ -191,7 +191,7 @@ export default function Contact() {
                   { num: "5", label: "Emergency", icon: PhoneCall },
                   { num: "6", label: "Careers", icon: Briefcase },
                 ].map(({ num, label, icon: Icon }) => (
-                  <div key={num} className="flex items-center gap-2 p-2 rounded-md bg-white/5 border border-white/10">
+                  <div key={num} className="flex items-center gap-2 p-2 rounded-md bg-card/5 border border-white/10">
                     <span className="h-6 w-6 rounded flex items-center justify-center bg-amber-500/20 text-amber-300 text-xs font-bold flex-shrink-0">
                       {num}
                     </span>
@@ -211,13 +211,13 @@ export default function Contact() {
 
         {/* Support Channels Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-16">
-          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-trinity-phone-channel">
+          <Card className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-trinity-phone-channel">
             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center">
               <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">Trinity Voice</h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground dark:text-gray-100">Trinity Voice</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground dark:text-gray-400">
                 Speak directly to Trinity's AI — available around the clock
               </p>
               <div className="space-y-1 pt-2">
@@ -228,20 +228,20 @@ export default function Contact() {
                 >
                   {import.meta.env.VITE_TRINITY_PHONE || "+1 (866) 464-4151"}
                 </a>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted-foreground dark:text-gray-400">
                   Available 24/7 · Bilingual (EN/ES)
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-email-support">
+          <Card className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-email-support">
             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-violet-50 dark:bg-violet-950/50 flex items-center justify-center">
               <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-violet-600" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">Email Support</h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground dark:text-gray-100">Email Support</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground dark:text-gray-400">
                 Get detailed technical assistance
               </p>
               <div className="space-y-1 pt-2">
@@ -252,20 +252,20 @@ export default function Contact() {
                 >
                   trinity@coaileague.com
                 </a>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted-foreground dark:text-gray-400">
                   Response time: &lt;24 hours
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-live-chat">
+          <Card className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-live-chat">
             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center">
               <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">Live Chat</h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground dark:text-gray-100">Live Chat</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground dark:text-gray-400">
                 Instant answers from our team
               </p>
               <div className="pt-2">
@@ -280,7 +280,7 @@ export default function Contact() {
                     Start Chat
                   </Button>
                 </Link>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-xs text-muted-foreground dark:text-gray-400 mt-2">
                   Available 24/7 for all tiers
                 </p>
               </div>
@@ -289,10 +289,10 @@ export default function Contact() {
         </div>
 
         {/* Support Tiers */}
-        <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md mb-16" data-testid="card-support-tiers">
+        <Card className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 shadow-md mb-16" data-testid="card-support-tiers">
           <div className="p-5 space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Enterprise Support Tiers</h2>
+              <h2 className="text-2xl font-bold text-foreground dark:text-gray-100">Enterprise Support Tiers</h2>
               <p className="text-sm text-muted-foreground">
                 Comprehensive support packages for businesses of all sizes
               </p>
@@ -302,9 +302,9 @@ export default function Contact() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <HeadphonesIcon className="h-5 w-5 text-violet-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Standard Support</h3>
+                  <h3 className="font-semibold text-foreground dark:text-gray-100">Standard Support</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <ul className="space-y-2 text-sm text-muted-foreground dark:text-gray-400">
                   <li className="flex items-start gap-2">
                     <span className="text-violet-600">•</span>
                     Email & chat support
@@ -330,9 +330,9 @@ export default function Contact() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Briefcase className="h-5 w-5 text-indigo-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Priority Support</h3>
+                  <h3 className="font-semibold text-foreground dark:text-gray-100">Priority Support</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <ul className="space-y-2 text-sm text-muted-foreground dark:text-gray-400">
                   <li className="flex items-start gap-2">
                     <span className="text-indigo-600">•</span>
                     Phone, email & chat support
@@ -358,9 +358,9 @@ export default function Contact() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Zap className="h-5 w-5 text-purple-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">White-Glove Support</h3>
+                  <h3 className="font-semibold text-foreground dark:text-gray-100">White-Glove Support</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <ul className="space-y-2 text-sm text-muted-foreground dark:text-gray-400">
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600">•</span>
                     24/7 priority phone support
@@ -592,7 +592,7 @@ export default function Contact() {
                       });
                     }}
                     variant="outline"
-                    className="border-gray-200"
+                    className="border-border"
                     data-testid="button-send-another"
                   >
                     New Ticket
@@ -603,12 +603,12 @@ export default function Contact() {
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-4">
+            <Card className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 shadow-md p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-violet-600" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Business Hours</h3>
+                <h3 className="font-semibold text-foreground dark:text-gray-100">Business Hours</h3>
               </div>
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="space-y-2 text-sm text-muted-foreground dark:text-gray-400">
                 <div className="flex justify-between gap-2">
                   <span>Monday - Friday:</span>
                   <span className="font-mono">6:00 AM - 10:00 PM EST</span>
@@ -617,7 +617,7 @@ export default function Contact() {
                   <span>Saturday - Sunday:</span>
                   <span className="font-mono">8:00 AM - 8:00 PM EST</span>
                 </div>
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-2 border-t border-border dark:border-gray-700">
                   <Badge className="bg-violet-50 dark:bg-violet-950/50 text-violet-600 border-none">
                     24/7 Emergency Support Available
                   </Badge>
@@ -625,18 +625,18 @@ export default function Contact() {
               </div>
             </Card>
 
-            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-4">
+            <Card className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 shadow-md p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <Globe className="h-5 w-5 text-indigo-600" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Online Business</h3>
+                <h3 className="font-semibold text-foreground dark:text-gray-100">Online Business</h3>
               </div>
               <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground dark:text-gray-400">
                   CoAIleague is a fully online platform. All support and communications are handled digitally for maximum efficiency.
                 </p>
                 <div className="pt-2 space-y-2">
                   <div>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">Trinity AI:</p>
+                    <p className="text-xs font-semibold text-foreground dark:text-gray-100">Trinity AI:</p>
                     <a
                       href="mailto:trinity@coaileague.com"
                       className="text-sm font-mono text-amber-600 hover:underline block"
@@ -646,7 +646,7 @@ export default function Contact() {
                     </a>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">General Support:</p>
+                    <p className="text-xs font-semibold text-foreground dark:text-gray-100">General Support:</p>
                     <a
                       href="mailto:support@coaileague.com"
                       className="text-sm font-mono text-violet-600 hover:underline block"
@@ -694,14 +694,14 @@ export default function Contact() {
               </Badge>
             </Card>
 
-            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-2">
+            <Card className="bg-card dark:bg-gray-900 border border-border dark:border-gray-700 shadow-md p-6 space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-10 w-10 rounded-md bg-violet-50 dark:bg-violet-950/50 flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-violet-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Enterprise Inquiries</h3>
+                <h3 className="font-semibold text-foreground dark:text-gray-100">Enterprise Inquiries</h3>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground dark:text-gray-400">
                 Managing 100+ employees? Contact our team for custom pricing and dedicated onboarding.
               </p>
               <Button

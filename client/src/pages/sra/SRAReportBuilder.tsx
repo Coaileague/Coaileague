@@ -193,22 +193,22 @@ export default function SRAReportBuilder() {
     <SRAPortalLayout activeRoute="/regulatory-audit/portal/report-builder">
       <div className="flex h-[calc(100vh-56px)]">
         {/* Left — Chat */}
-        <div className="flex flex-col flex-1 min-w-0 border-r border-gray-200">
+        <div className="flex flex-col flex-1 min-w-0 border-r border-border">
           {/* Chat header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-white flex-shrink-0">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-card flex-shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 bg-[#1a3a6b] rounded-full flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Trinity</p>
+                <p className="text-sm font-semibold text-foreground">Trinity</p>
                 <p className="text-xs text-gray-400">AI Audit Report Builder</p>
               </div>
             </div>
             <button
               data-testid="button-reset-chat"
               onClick={handleReset}
-              className="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-xs"
+              className="text-gray-400 hover:text-muted-foreground flex items-center gap-1 text-xs"
             >
               <RefreshCw className="w-3 h-3" /> New Report
             </button>
@@ -226,13 +226,13 @@ export default function SRAReportBuilder() {
                   msg.role === "user" ? "bg-gray-200" : "bg-[#1a3a6b]"
                 }`}>
                   {msg.role === "user"
-                    ? <User className="w-4 h-4 text-gray-600" />
+                    ? <User className="w-4 h-4 text-muted-foreground" />
                     : <Bot className="w-4 h-4 text-white" />}
                 </div>
                 <div className={`max-w-[75%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
                   msg.role === "user"
                     ? "bg-[#1a3a6b] text-white"
-                    : "bg-gray-100 text-gray-800"
+                    : "bg-muted text-gray-800"
                 }`}>
                   <div
                     className="whitespace-pre-wrap"
@@ -246,7 +246,7 @@ export default function SRAReportBuilder() {
                 <div className="w-7 h-7 rounded-full bg-[#1a3a6b] flex items-center justify-center">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
-                <div className="bg-gray-100 rounded-lg px-4 py-3 flex items-center gap-1.5">
+                <div className="bg-muted rounded-lg px-4 py-3 flex items-center gap-1.5">
                   {[0,1,2].map(i => (
                     <span key={i} className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
@@ -256,7 +256,7 @@ export default function SRAReportBuilder() {
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t border-gray-100 bg-white flex-shrink-0">
+          <div className="p-4 border-t border-gray-100 bg-card flex-shrink-0">
             <div className="flex gap-2">
               <Textarea
                 data-testid="input-chat-message"
@@ -283,7 +283,7 @@ export default function SRAReportBuilder() {
         </div>
 
         {/* Right — Staged Sections */}
-        <div className="w-80 flex-shrink-0 flex flex-col bg-white">
+        <div className="w-80 flex-shrink-0 flex flex-col bg-card">
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-[#1a3a6b]">Report Sections</h2>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -302,7 +302,7 @@ export default function SRAReportBuilder() {
                 <Card
                   key={section.index}
                   data-testid={`section-card-${section.index}`}
-                  className={`border transition-colors ${section.verified ? "border-green-200 bg-green-50/50" : "border-gray-200"}`}
+                  className={`border transition-colors ${section.verified ? "border-green-200 bg-green-50/50" : "border-border"}`}
                 >
                   <CardHeader className="p-3 pb-2">
                     <div className="flex items-start gap-2">
@@ -319,7 +319,7 @@ export default function SRAReportBuilder() {
                     </div>
                   </CardHeader>
                   <CardContent className="px-3 pb-3">
-                    <p className="text-xs text-gray-500 line-clamp-3 leading-relaxed">{section.content}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{section.content}</p>
                     <p className="text-xs mt-2 font-medium" style={{ color: section.verified ? "#16a34a" : "#9ca3af" }}>
                       {section.verified ? "Verified for report" : "Click to verify"}
                     </p>

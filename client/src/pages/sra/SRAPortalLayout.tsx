@@ -53,7 +53,7 @@ export default function SRAPortalLayout({ children, activeRoute }: SRAPortalLayo
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-muted/30 flex">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0f1e3d] transform transition-transform ${navOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:relative md:flex md:flex-col`}>
         {/* Logo */}
@@ -135,11 +135,11 @@ export default function SRAPortalLayout({ children, activeRoute }: SRAPortalLayo
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+        <header className="h-14 bg-card border-b border-border flex items-center px-4 gap-3 flex-shrink-0">
           <button
             data-testid="button-open-nav"
             onClick={() => setNavOpen(true)}
-            className="text-gray-500 md:hidden"
+            className="text-muted-foreground md:hidden"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -152,7 +152,7 @@ export default function SRAPortalLayout({ children, activeRoute }: SRAPortalLayo
           <div className="ml-auto flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 bg-green-500 rounded-full" />
-              <span className="text-xs text-gray-500">Active Session</span>
+              <span className="text-xs text-muted-foreground">Active Session</span>
             </div>
           </div>
         </header>

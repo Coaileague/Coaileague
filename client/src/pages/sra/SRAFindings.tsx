@@ -125,8 +125,8 @@ export default function SRAFindings() {
       <div className="p-6 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Audit Findings</h1>
-            <p className="text-gray-500 text-sm mt-1">Log and track compliance violations, deficiencies, and required actions.</p>
+            <h1 className="text-2xl font-bold text-foreground">Audit Findings</h1>
+            <p className="text-muted-foreground text-sm mt-1">Log and track compliance violations, deficiencies, and required actions.</p>
           </div>
           <Button
             data-testid="button-new-finding"
@@ -140,7 +140,7 @@ export default function SRAFindings() {
         {/* Create Finding Modal */}
         {showForm && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="bg-card rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-5 border-b">
                 <h2 className="text-lg font-semibold text-[#1a3a6b]">New Audit Finding</h2>
                 <button data-testid="button-close-finding-form" onClick={() => setShowForm(false)}>
@@ -260,7 +260,7 @@ export default function SRAFindings() {
               key={s}
               data-testid={`filter-status-${s || "all"}`}
               onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filterStatus === s ? "bg-[#1a3a6b] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filterStatus === s ? "bg-[#1a3a6b] text-white" : "bg-muted text-muted-foreground hover:bg-gray-200"}`}
             >
               {s ? s.replace("_", " ") : "All Statuses"}
             </button>
@@ -294,10 +294,10 @@ export default function SRAFindings() {
                   <div className="flex items-start gap-4 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <Badge className={`${SEVERITY_COLORS[f.severity] || "bg-gray-100 text-gray-600"} text-xs`}>
+                        <Badge className={`${SEVERITY_COLORS[f.severity] || "bg-muted text-muted-foreground"} text-xs`}>
                           {f.severity}
                         </Badge>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[f.status] || "bg-gray-50 text-gray-600"}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[f.status] || "bg-muted/30 text-muted-foreground"}`}>
                           {f.status.replace("_", " ")}
                         </span>
                         <span className="text-xs text-gray-400">
@@ -309,10 +309,10 @@ export default function SRAFindings() {
                       </div>
                       <p className="text-gray-800 text-sm mb-2">{f.description}</p>
                       {f.recommendedAction && (
-                        <p className="text-gray-500 text-xs"><strong>Action:</strong> {f.recommendedAction}</p>
+                        <p className="text-muted-foreground text-xs"><strong>Action:</strong> {f.recommendedAction}</p>
                       )}
                       {f.complianceDeadline && (
-                        <p className="text-gray-500 text-xs mt-1">
+                        <p className="text-muted-foreground text-xs mt-1">
                           <strong>Deadline:</strong> {new Date(f.complianceDeadline).toLocaleDateString()}
                         </p>
                       )}

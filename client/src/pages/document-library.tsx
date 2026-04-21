@@ -1041,7 +1041,7 @@ export default function DocumentLibrary() {
             <UniversalModalDescription>Draw your signature below</UniversalModalDescription>
           </UniversalModalHeader>
           <div className="space-y-4">
-            <div className="border rounded-lg p-2 bg-white">
+            <div className="border rounded-lg p-2 bg-card">
               <canvas
                 ref={canvasRef}
                 width={400}

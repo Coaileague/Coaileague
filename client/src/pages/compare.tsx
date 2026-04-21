@@ -298,7 +298,7 @@ export default function ComparePage() {
             <h2 className="text-2xl font-bold text-white text-center mb-8">What Our Customers Say</h2>
             <div className="grid md:grid-cols-2 gap-6">
               {testimonials.slice(0, 2).map((t, i) => (
-                <Card key={i} className="bg-white/5 backdrop-blur border-white/10">
+                <Card key={i} className="bg-card/5 backdrop-blur border-white/10">
                   <CardContent className="pt-6">
                     <p className="text-slate-300 italic mb-4">"{t.quote}"</p>
                     <div className="flex items-center gap-3">
@@ -320,7 +320,7 @@ export default function ComparePage() {
         <div className="mt-16 max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white text-center mb-8">Why Security Companies Switch to CoAIleague</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="bg-white/5 backdrop-blur border-white/10">
+            <Card className="bg-card/5 backdrop-blur border-white/10">
               <CardContent className="pt-6 text-center">
                 <Brain className="w-12 h-12 text-primary mx-auto mb-4" />
                 <h3 className="font-semibold text-white mb-2">AI-First Design</h3>
@@ -329,7 +329,7 @@ export default function ComparePage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-white/5 backdrop-blur border-white/10">
+            <Card className="bg-card/5 backdrop-blur border-white/10">
               <CardContent className="pt-6 text-center">
                 <DollarSign className="w-12 h-12 text-green-500 mx-auto mb-4" />
                 <h3 className="font-semibold text-white mb-2">Profit Optimization</h3>
@@ -338,7 +338,7 @@ export default function ComparePage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-white/5 backdrop-blur border-white/10">
+            <Card className="bg-card/5 backdrop-blur border-white/10">
               <CardContent className="pt-6 text-center">
                 <Shield className="w-12 h-12 text-blue-500 mx-auto mb-4" />
                 <h3 className="font-semibold text-white mb-2">50-State Compliance</h3>

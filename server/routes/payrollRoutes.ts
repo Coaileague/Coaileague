@@ -828,7 +828,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
     }
   });
 
-  router.post('/runs/:id/approve', async (req: AuthenticatedRequest, res) => {
+  router.post('/runs/:id/approve', mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = checkManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
@@ -955,7 +955,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
     }
   });
 
-  router.post('/runs/:id/process', async (req: AuthenticatedRequest, res) => {
+  router.post('/runs/:id/process', mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = checkManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });

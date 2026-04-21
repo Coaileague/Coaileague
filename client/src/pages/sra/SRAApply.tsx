@@ -67,18 +67,18 @@ export default function SRAApply() {
     return (
       <div className="min-h-screen bg-[#0f1e3d] flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
-          <div className="bg-white rounded-lg shadow-2xl p-8">
+          <div className="bg-card rounded-lg shadow-2xl p-8">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
             </div>
             <h2 className="text-xl font-bold text-[#1a3a6b] mb-2">Application Submitted</h2>
-            <p className="text-gray-600 text-sm mb-6">
+            <p className="text-muted-foreground text-sm mb-6">
               Your application has been received. A CoAIleague administrator will review your credentials within 1-2 business days.
               You will receive confirmation at your government email once your account is verified.
             </p>
-            <p className="text-gray-500 text-xs mb-4">
+            <p className="text-muted-foreground text-xs mb-4">
               After verification, you will receive TOTP setup instructions to configure your authenticator app.
             </p>
             <Button
@@ -108,7 +108,7 @@ export default function SRAApply() {
           <p className="text-blue-300 text-sm mt-1">State Regulatory Auditor — Partner Portal</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-2xl p-8">
+        <div className="bg-card rounded-lg shadow-2xl p-8">
           <button
             onClick={() => setLocation("/regulatory-audit/login")}
             className="flex items-center gap-1 text-[#1a3a6b] text-sm mb-5 hover:underline"

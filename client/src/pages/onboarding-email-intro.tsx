@@ -114,7 +114,7 @@ export default function OnboardingEmailIntro() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
-          className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-8 md:p-12"
+          className="bg-card dark:bg-slate-800 rounded-xl shadow-xl p-8 md:p-12"
         >
           {/* Icon */}
           <div className="flex justify-center mb-6">{currentStepData.icon}</div>
@@ -150,7 +150,7 @@ export default function OnboardingEmailIntro() {
               <div className="text-sm text-slate-600 dark:text-slate-400 mb-2 font-semibold">
                 Trinity's Welcome:
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded p-3 border border-slate-200 dark:border-slate-600">
+              <div className="bg-card dark:bg-slate-800 rounded p-3 border border-slate-200 dark:border-slate-600">
                 <p className="text-sm text-slate-700 dark:text-slate-300">
                   <strong>Subject:</strong> Welcome to your workspace! Meet Trinity.
                 </p>
