@@ -31,6 +31,7 @@ import { calculateStateTax, calculateBonusTaxation } from "../services/taxCalcul
 import { getWorkspaceTier, hasTierAccess, requirePlan } from "../tierGuards";
 import { payrollDeductions } from '@shared/schema';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
+import { requireAuth } from '../auth';
 
 // Plaid compensating-transaction ledger: pending row is written BEFORE the
 // Plaid API call, flipped to initiated / failed after. See payrollAutomation.ts.
@@ -1302,6 +1303,26 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       res.status(500).json({ message: "Failed to fetch paychecks" });
     }
   });
+
+router.get('/pay-stubs/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    // Resolve the employee record for this user so we can scope by employeeId.
+    const userEmployees = await db.select({ id: employees.id })
+      .from(employees)
+      .where(eq(employees.userId, userId));
+    if (!userEmployees.length) return res.status(404).json({ error: 'Pay stub not found' });
+    const employeeIds = userEmployees.map(e => e.id);
+    const [stub] = await db.select().from(payStubs)
+      .where(and(eq(payStubs.id, req.params.id), inArray(payStubs.employeeId, employeeIds)))
+      .limit(1);
+    if (!stub) return res.status(404).json({ error: 'Pay stub not found' });
+    res.json(stub);
+  } catch (error: unknown) {
+    log.error('Error fetching pay stub:', error);
+    res.status(500).json({ error: 'Failed to fetch pay stub' });
+  }
+});
 
 router.get('/my-payroll-info', async (req: AuthenticatedRequest, res) => {
   try {
