@@ -91,6 +91,7 @@ import Stripe from "stripe";
 import { sendInvoiceGeneratedEmail } from "../services/emailCore";
 import { requireAuth } from "../auth";
 import { getStripe, isStripeConfigured } from "../services/billing/stripeClient";
+import { mutationLimiter } from "../middleware/rateLimiter";
 
 // Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
 const stripe = new Proxy({} as Stripe, {
@@ -1002,7 +1003,7 @@ import { createHash } from "crypto";
     }
   });
 
-  router.post('/:id/send', async (req: any, res: any) => {
+  router.post('/:id/send', mutationLimiter, async (req: any, res: any) => {
     try {
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });

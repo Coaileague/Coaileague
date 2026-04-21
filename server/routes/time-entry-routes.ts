@@ -44,6 +44,9 @@ import { checkSchedulingEligibility } from '../services/compliance/trinityCompli
 import { storage } from '../storage';
 import { createLogger } from '../lib/logger';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
+import { loneWorkerSafetyService } from '../services/automation/loneWorkerSafetyService';
+import { shiftHandoffService } from '../services/fieldOperations/shiftHandoffService';
+import { presenceMonitorService } from '../services/fieldOperations/presenceMonitorService';
 const log = createLogger('TimeEntryRoutes');
 
 
@@ -627,6 +630,44 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
     }
 
     const newEntry = txResult.entry!;
+
+    // Auto-start lone worker safety for this officer (non-blocking)
+    loneWorkerSafetyService.startForEmployee(employee.id, workspaceId, newEntry.id)
+      .catch((e: any) => log.warn('[TimeEntry] Lone worker start failed (non-blocking):', e?.message || String(e)));
+
+    // Auto-start presence monitoring for this time entry (non-blocking)
+    presenceMonitorService.startMonitoring(newEntry.id, {
+      id: newEntry.id,
+      shiftId: newEntry.shiftId || newEntry.id,
+      officerId: employee.id,
+      orgId: workspaceId,
+      postId: String((resolvedShift as any)?.siteId || newEntry.shiftId || newEntry.id),
+      clockIn: {
+        timestamp: clockInTime,
+        type: 'in',
+        gps: {
+          latitude: Number(latitude || 0),
+          longitude: Number(longitude || 0),
+          accuracy: Number(accuracy || 999),
+        },
+        withinGeofence: gpsVerificationStatus === 'verified',
+        distanceFromPost: 0,
+        method: trinityAssisted ? 'clockbot' : (latitude && longitude ? 'gps' : 'manual'),
+        deviceId: req.get('x-device-id') || 'web-client',
+        ipAddress: req.ip || '',
+      },
+      presence: {
+        monitoringEnabled: true,
+        checkIntervalMinutes: 5,
+        locationHistory: [],
+        anomalies: [],
+        timeOnSite: 0,
+        timeOffSite: 0,
+        percentOnSite: 100,
+      },
+      discrepancies: [],
+      status: 'active',
+    } as any).catch((e: any) => log.warn('[TimeEntry] Presence monitor start failed (non-blocking):', e?.message || String(e)));
 
     // Create audit event
     await createAuditEvent({
@@ -1224,6 +1265,100 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
         gpsLng: longitude || null,
       },
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+
+    // Auto-stop lone worker safety for this officer (non-blocking)
+    loneWorkerSafetyService.stopForEmployee(employee.id, workspaceId)
+      .catch((e: any) => log.warn('[TimeEntry] Lone worker stop failed (non-blocking):', e?.message || String(e)));
+
+    // Finalize presence monitoring session (non-blocking)
+    presenceMonitorService.finalizeMonitoring(activeEntry.id)
+      .catch((e: any) => log.warn('[TimeEntry] Presence monitor finalize failed (non-blocking):', e?.message || String(e)));
+
+    // Auto-initiate shift handoff when an incoming shift starts within 30 minutes (non-blocking)
+    if (activeEntry.shiftId) {
+      scheduleNonBlocking('time-entry.shift-handoff-initiate', async () => {
+        try {
+          const [endingShift] = await db.select({
+            id: shifts.id,
+            workspaceId: shifts.workspaceId,
+            siteId: shifts.siteId,
+            startTime: shifts.startTime,
+            endTime: shifts.endTime,
+            title: shifts.title,
+            siteName: sites.name,
+          })
+            .from(shifts)
+            .leftJoin(sites, and(eq(sites.id, shifts.siteId), eq(sites.workspaceId, shifts.workspaceId)))
+            .where(and(eq(shifts.id, activeEntry.shiftId as string), eq(shifts.workspaceId, workspaceId)))
+            .limit(1);
+
+          if (!endingShift?.siteId) return;
+
+          const now = new Date();
+          const inThirtyMinutes = new Date(now.getTime() + 30 * 60 * 1000);
+
+          const [incomingShift] = await db.select({
+            id: shifts.id,
+            siteId: shifts.siteId,
+            startTime: shifts.startTime,
+            endTime: shifts.endTime,
+            officerId: employees.id,
+            firstName: employees.firstName,
+            lastName: employees.lastName,
+          })
+            .from(shifts)
+            .innerJoin(employees, eq(employees.id, shifts.employeeId))
+            .where(and(
+              eq(shifts.workspaceId, workspaceId),
+              eq(shifts.siteId, endingShift.siteId),
+              gte(shifts.startTime, now),
+              lte(shifts.startTime, inThirtyMinutes),
+              sql`${shifts.status} = 'scheduled'`,
+            ))
+            .orderBy(shifts.startTime)
+            .limit(1);
+
+          if (!incomingShift) return;
+          if (incomingShift.id === endingShift.id) {
+            log.debug('[TimeEntry] Skipping handoff — incoming shift matched ending shift');
+            return;
+          }
+          if (incomingShift.officerId === employee.id) {
+            log.debug('[TimeEntry] Skipping handoff — incoming officer is same as outgoing officer');
+            return;
+          }
+
+          const outgoingOfficerName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Outgoing Officer';
+          const incomingOfficerName = `${incomingShift.firstName || ''} ${incomingShift.lastName || ''}`.trim() || 'Incoming Officer';
+          const postName = endingShift.siteName || endingShift.title || 'Assigned Post';
+
+          await shiftHandoffService.initiateHandoff(
+            {
+              id: endingShift.id,
+              orgId: workspaceId,
+              postId: String(endingShift.siteId),
+              postName,
+              officerId: employee.id,
+              officerName: outgoingOfficerName,
+              startTime: new Date(endingShift.startTime),
+              endTime: clockOutTime,
+            },
+            {
+              id: incomingShift.id,
+              orgId: workspaceId,
+              postId: String(incomingShift.siteId),
+              postName,
+              officerId: incomingShift.officerId,
+              officerName: incomingOfficerName,
+              startTime: new Date(incomingShift.startTime),
+              endTime: new Date(incomingShift.endTime),
+            }
+          );
+        } catch (handoffErr: any) {
+          log.warn('[TimeEntry] Shift handoff initiation failed (non-blocking):', handoffErr?.message || String(handoffErr));
+        }
+      });
+    }
 
     res.json({ 
       message: 'Clocked out successfully',

@@ -27,6 +27,8 @@ import schedulingInlineRouter from "../schedulingInlineRoutes";
 import schedulesRouter from "../schedulesRoutes";
 import { staffingBroadcastRouter } from "../staffingBroadcastRoutes";
 import shiftTradingRouter, { registerShiftTradingActions } from "../shiftTradingRoutes";
+import { storage } from "../../storage";
+import { shiftHandoffService } from "../../services/fieldOperations/shiftHandoffService";
 import { createLogger } from '../../lib/logger';
 const log = createLogger('SchedulingDomain');
 
@@ -92,6 +94,21 @@ export function mountSchedulingRoutes(app: Express): void {
   app.use("/api/trinity-staffing", requireAuth, ensureWorkspaceAccess, trinityStaffingRouter);
   app.use("/api/public/trinity-staffing", trinityStaffingPublicRouter);
   app.use("/api/trinity/scheduling", requireAuth, ensureWorkspaceAccess, trinitySchedulingRouter);
+  app.get("/api/shift-handoff/pending", requireAuth, ensureWorkspaceAccess, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee?.id) return res.json(null);
+
+      const handoffs = await shiftHandoffService.getPendingForOfficer(employee.id);
+      return res.json(handoffs[0] ?? null);
+    } catch (error: any) {
+      log.error("[ShiftHandoff] Failed to fetch pending handoff:", error?.message || String(error));
+      return res.status(500).json({ message: "Failed to fetch pending handoff" });
+    }
+  });
   app.use("/api/shift-chatrooms", requireAuth, ensureWorkspaceAccess, shiftChatroomRouter);
   app.use("/api/post-orders", requireAuth, ensureWorkspaceAccess, postOrderRouter);
   app.use("/api/scheduling", requireAuth, ensureWorkspaceAccess, schedulingInlineRouter);

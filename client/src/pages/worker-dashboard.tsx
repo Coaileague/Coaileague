@@ -106,6 +106,10 @@ interface Notification {
   read: boolean;
 }
 
+interface PendingHandoff {
+  id: string;
+}
+
 interface AuthUser {
   id: string;
   firstName?: string;
@@ -540,6 +544,11 @@ export default function WorkerDashboard() {
   const { data: notificationsData } = useQuery<{ notifications?: Notification[]; items?: Notification[] } | Notification[]>({
     queryKey: ["/api/notifications"],
   });
+  const { data: pendingHandoff } = useQuery<PendingHandoff | null>({
+    queryKey: ["/api/shift-handoff/pending"],
+    queryFn: () => apiRequest("GET", "/api/shift-handoff/pending").then((r) => r.json()),
+    refetchInterval: 60_000,
+  });
 
   const notifications: Notification[] = Array.isArray(notificationsData)
     ? notificationsData
@@ -793,6 +802,22 @@ export default function WorkerDashboard() {
 
           {/* Readiness Section 15 — pending shift offers (visible only when ≥1) */}
           <PendingOfferBanner />
+
+          {pendingHandoff?.id && (
+            <Card className="border-amber-500/50 bg-amber-950/20 mb-1">
+              <CardContent className="py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-amber-400">Handoff Pending</p>
+                  <p className="text-xs text-muted-foreground">
+                    Review notes from the outgoing officer
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => setLocation(`/shift-handoff/${pendingHandoff.id}`)}>
+                  Review
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Readiness Section 27 #4 — Guard tour check-in link (only while on shift) */}
           {clockStatus?.isClockedIn && (

@@ -170,6 +170,11 @@ body {
   overflow-x: auto;
 }
 
+.font-display {
+  font-family: var(--ds-font-display, 'Rajdhani', sans-serif);
+  letter-spacing: 0.02em;
+}
+
 /* ============================================================================
    CRITICAL: Force main content visibility
    Ensures React content is always visible after mounting

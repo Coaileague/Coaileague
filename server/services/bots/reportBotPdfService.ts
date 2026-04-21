@@ -263,6 +263,91 @@ class ReportBotPdfService {
     }
   }
 
+  async generateGuardTourReport(params: {
+    tourId: string;
+    workspaceId: string;
+    officerId?: string | null;
+    completedAt: Date;
+    scans: Array<any>;
+    checkpoints: Array<any>;
+  }): Promise<string | null> {
+    try {
+      const [workspace, officer] = await Promise.all([
+        storage.getWorkspace(params.workspaceId),
+        params.officerId
+          ? db.select().from(employees).where(eq(employees.id, params.officerId)).limit(1).then((r) => r[0] || null)
+          : Promise.resolve(null),
+      ]);
+
+      const doc = new PDFDocument({ margin: 40, size: 'LETTER' });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      const done = new Promise<Buffer>((resolve, reject) => {
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+      });
+
+      doc.fontSize(18).font('Helvetica-Bold').text('Guard Tour Completion Report');
+      doc.moveDown(0.5);
+      doc.fontSize(10).font('Helvetica');
+      doc.text(`Workspace: ${workspace?.name || params.workspaceId}`);
+      doc.text(`Tour ID: ${params.tourId}`);
+      doc.text(`Officer: ${officer ? `${officer.firstName || ''} ${officer.lastName || ''}`.trim() : 'Unknown'}`);
+      doc.text(`Completed At: ${format(params.completedAt, 'yyyy-MM-dd HH:mm')}`);
+      doc.text(`Checkpoints: ${params.checkpoints.length}`);
+      doc.text(`Scans Recorded: ${params.scans.length}`);
+      doc.moveDown();
+
+      doc.font('Helvetica-Bold').text('Checkpoint Activity');
+      doc.moveDown(0.3);
+      for (const checkpoint of params.checkpoints) {
+        const scan = params.scans.find((s: any) => s.checkpointId === checkpoint.id);
+        const status = scan ? `Scanned at ${format(new Date(scan.scannedAt), 'HH:mm:ss')}` : 'Not scanned';
+        doc.font('Helvetica').fontSize(9).text(`• ${checkpoint.name || checkpoint.id} — ${status}`);
+      }
+
+      doc.end();
+      const pdfBuffer = await done;
+
+      const safeTourId = String(params.tourId).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `GuardTour_${safeTourId}_${format(params.completedAt, 'yyyyMMdd_HHmmss')}.pdf`;
+      const filePath = `guard-tours/${params.workspaceId}/${fileName}`;
+
+      let publicUrl: string | null = null;
+      try {
+        const { Storage } = await import('@google-cloud/storage');
+        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+        if (bucketId) {
+          const gcs = new Storage();
+          const file = gcs.bucket(bucketId).file(filePath);
+          await file.save(pdfBuffer, { contentType: 'application/pdf' });
+          publicUrl = `https://storage.googleapis.com/${bucketId}/${filePath}`;
+        }
+      } catch (storageErr) {
+        log.warn('[ReportBotPDF] Guard tour upload failed (non-blocking):', storageErr);
+      }
+
+      await db.insert(orgDocuments).values({
+        id: randomUUID(),
+        workspaceId: params.workspaceId,
+        uploadedBy: null,
+        category: 'operations',
+        fileName,
+        filePath: publicUrl || filePath,
+        fileSizeBytes: pdfBuffer.length,
+        fileType: 'application/pdf',
+        description: `Guard tour report for ${params.tourId} (${format(params.completedAt, 'yyyy-MM-dd HH:mm')})`,
+        isActive: true,
+        version: 1,
+      });
+
+      return publicUrl || filePath;
+    } catch (err) {
+      log.warn('[ReportBotPDF] Guard tour PDF generation failed (non-blocking):', err);
+      return null;
+    }
+  }
+
   // ── Quality scan via AI ──────────────────────────────────────────────────
 
   private async runQualityScan(

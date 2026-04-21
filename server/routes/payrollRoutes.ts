@@ -126,6 +126,7 @@ import {
 
 import { rateLimitMiddleware } from "../services/infrastructure/rateLimiting";
 import { idempotencyMiddleware } from "../middleware/idempotency";
+import { mutationLimiter } from "../middleware/rateLimiter";
 import { createLogger } from '../lib/logger';
 const log = createLogger('PayrollRoutes');
 
@@ -506,7 +507,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
     }
   });
 
-  router.post('/create-run', idempotencyMiddleware, async (req: AuthenticatedRequest, res) => {
+  router.post('/create-run', mutationLimiter, idempotencyMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = checkManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });

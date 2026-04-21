@@ -10,7 +10,7 @@ import {
   insertGuardTourScanSchema,
 } from "@shared/schema";
 import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { tokenManager } from "../services/billing/tokenManager";
 import { createLogger } from '../lib/logger';
 const log = createLogger('GuardTourRoutes');
@@ -97,6 +97,48 @@ router.patch("/tours/:id", async (req: AuthenticatedRequest, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Tour not found" });
+
+    if ((updateData as any).status === 'completed') {
+      (async () => {
+        try {
+          const { reportBotPdfService } = await import('../services/bots/reportBotPdfService');
+          const [tour] = await db
+            .select()
+            .from(guardTours)
+            .where(and(eq(guardTours.id, req.params.id), eq(guardTours.workspaceId, workspaceId)))
+            .limit(1);
+          if (!tour) return;
+
+          const scans = await db.select()
+            .from(guardTourScans)
+            .where(and(
+              eq(guardTourScans.tourId, req.params.id),
+              eq(guardTourScans.workspaceId, workspaceId),
+            ))
+            .orderBy(asc(guardTourScans.scannedAt));
+
+          const checkpoints = await db.select()
+            .from(guardTourCheckpoints)
+            .where(and(
+              eq(guardTourCheckpoints.tourId, req.params.id),
+              eq(guardTourCheckpoints.workspaceId, workspaceId),
+            ))
+            .orderBy(asc(guardTourCheckpoints.sortOrder));
+
+          await reportBotPdfService.generateGuardTourReport({
+            tourId: req.params.id,
+            workspaceId,
+            scans,
+            checkpoints,
+            completedAt: new Date(),
+            officerId: (tour as any).assignedEmployeeId || null,
+          });
+        } catch (e: any) {
+          log.warn('[GuardTour] PDF generation failed:', e?.message || String(e));
+        }
+      })();
+    }
+
     res.json(updated);
   } catch (error: unknown) {
     log.error("Error updating guard tour:", error);

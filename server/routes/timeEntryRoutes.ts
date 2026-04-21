@@ -10,7 +10,9 @@ import {
   employees,
   stagedShifts,
   clients,
-  insertTimeEntrySchema
+  insertTimeEntrySchema,
+  shifts,
+  sites,
 } from '@shared/schema';
 import { eq, and, desc, gte, lte, inArray, sql, isNull, or, lt } from "drizzle-orm";
 import { z } from "zod";
@@ -611,7 +613,7 @@ const router = Router();
       const { latitude, longitude, accuracy } = req.body;
       if (!latitude || !longitude) return res.status(400).json({ message: "GPS coordinates required" });
 
-      const [activeEntry] = await db.select({ id: timeEntriesTable.id })
+      const [activeEntry] = await db.select({ id: timeEntriesTable.id, shiftId: timeEntriesTable.shiftId })
         .from(timeEntriesTable)
         .where(and(
           eq(timeEntriesTable.workspaceId, workspace.id),
@@ -625,6 +627,37 @@ const router = Router();
       await db.update(timeEntriesTable)
         .set({ lastGpsPingAt: new Date(), lastGpsPingLat: latitude, lastGpsPingLng: longitude })
         .where(eq(timeEntriesTable.id, activeEntry.id));
+
+      if (activeEntry.shiftId) {
+        const [shiftSite] = await db.select({
+          geofenceLat: sites.geofenceLat,
+          geofenceLng: sites.geofenceLng,
+          geofenceRadius: sites.geofenceRadiusMeters,
+        })
+          .from(shifts)
+          .innerJoin(sites, and(eq(sites.id, shifts.siteId), eq(sites.workspaceId, shifts.workspaceId)))
+          .where(and(
+            eq(shifts.id, activeEntry.shiftId),
+            eq(shifts.workspaceId, workspace.id),
+          ))
+          .limit(1);
+
+        if (shiftSite?.geofenceLat && shiftSite?.geofenceLng) {
+          const { presenceMonitorService } = await import('../services/fieldOperations/presenceMonitorService');
+          await presenceMonitorService.processLocationPing(
+            {
+              officerId: employee.id,
+              latitude: Number(latitude),
+              longitude: Number(longitude),
+              accuracy: Number(accuracy || 999),
+              source: 'background',
+            },
+            Number(shiftSite.geofenceLat),
+            Number(shiftSite.geofenceLng),
+            Number(shiftSite.geofenceRadius || 200),
+          ).catch(() => null);
+        }
+      }
 
       res.json({ success: true, pingedAt: new Date().toISOString() });
     } catch (error: unknown) {

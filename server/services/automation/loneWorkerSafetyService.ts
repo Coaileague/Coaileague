@@ -1,6 +1,7 @@
 import { db } from '../../db';
 import { timeEntries, employees, welfareChecks as welfareChecksTable } from '@shared/schema';
 import { eq, and, gte } from 'drizzle-orm';
+import { fieldOpsConfigRegistry } from '@shared/config/fieldOperationsConfig';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { broadcastToWorkspace } from '../../websocket';
 import { createLogger } from '../../lib/logger';
@@ -114,6 +115,65 @@ class LoneWorkerSafetyService {
         hasActiveCheck: !!s.activeWelfareCheck,
       })),
     };
+  }
+
+  async startForEmployee(
+    employeeId: string,
+    workspaceId: string,
+    timeEntryId: string,
+  ): Promise<void> {
+    const config = fieldOpsConfigRegistry.getConfig(workspaceId);
+    if (!config?.presenceMonitoring?.enabled) return;
+
+    const existingSessionKey = this.findSessionKeyByEmployee(employeeId);
+    if (existingSessionKey) return;
+
+    const [employee] = await db.select({
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+    }).from(employees).where(
+      and(
+        eq(employees.id, employeeId),
+        eq(employees.workspaceId, workspaceId),
+      )
+    ).limit(1);
+    if (!employee) return;
+
+    const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Officer';
+    const now = new Date();
+    const sessionKey = `${employeeId}:${timeEntryId}`;
+
+    this.sessions.set(sessionKey, {
+      workspaceId,
+      employeeId,
+      employeeName,
+      shiftId: timeEntryId,
+      startedAt: now,
+      lastCheckIn: now,
+      nextCheckDue: new Date(now.getTime() + WELFARE_CHECK_INTERVAL_MS),
+      activeWelfareCheck: null,
+      missedChecks: 0,
+    });
+
+    log.info(`[LoneWorker] Started monitoring employeeId=${employeeId}`);
+  }
+
+  async stopForEmployee(employeeId: string, workspaceId: string): Promise<void> {
+    const sessionKey = this.findSessionKeyByEmployee(employeeId);
+    if (sessionKey) {
+      this.sessions.delete(sessionKey);
+    }
+
+    for (const [checkId, check] of this.welfareChecks.entries()) {
+      if (check.employeeId !== employeeId || check.workspaceId !== workspaceId) continue;
+      check.resolved = true;
+      check.acknowledged = true;
+      check.acknowledgedAt = new Date();
+      await this.persistCheck(check);
+      this.welfareChecks.delete(checkId);
+    }
+
+    log.info(`[LoneWorker] Stopped monitoring employeeId=${employeeId}`);
   }
 
   // ─── DB persistence helpers ───────────────────────────────────────────────

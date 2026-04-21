@@ -1803,7 +1803,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <ChevronLeft className="h-5 w-5" />
  </Button>
  <div className="text-center">
-                          <h1 className="font-bold text-base font-display"> Live Chatrooms</h1>
+  <h1 className="font-bold text-base font-display">Live Chatrooms</h1>
  <p className="text-xs text-white/70">{isStaff ? 'All platform rooms' : 'Your organization'}</p>
  </div>
  <Button
@@ -1941,7 +1941,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </Suspense>
  <div>
  <div className="flex items-center gap-2 flex-wrap">
-                        <h1 className="text-primary-foreground font-semibold text-sm sm:text-base font-display"> Trinity Support</h1>
+  <h1 className="text-primary-foreground font-semibold text-sm sm:text-base font-display">Trinity Support</h1>
  {ticketNumber && (
  <span
  className="bg-primary-foreground/20 text-primary-foreground text-xs font-mono px-1.5 py-0.5 rounded"

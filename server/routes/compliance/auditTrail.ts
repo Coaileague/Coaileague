@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { pool } from "../../db";
 import { requireAuth } from "../../auth";
-import type { AuthenticatedRequest } from "../../rbac";
+import { requireManager, type AuthenticatedRequest } from "../../rbac";
 import { typedPool } from '../../lib/typedSql';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('AuditTrail');
@@ -10,6 +10,7 @@ const log = createLogger('AuditTrail');
 const router = Router();
 
 const q = (text: string, params?: any[]) => typedPool(text, params);
+const MAX_EXPORT_ROWS = 10_000;
 
 // Actions that are system automation noise — not human compliance records.
 // Filtering these from compliance routes reduces table scan cost dramatically
@@ -58,6 +59,58 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res: Response) =>
   } catch (error) {
     log.error("[Compliance Audit Trail] Error:", error);
     res.status(500).json({ success: false, error: "Failed to fetch audit trail" });
+  }
+});
+
+router.get("/export", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    const { start, end, format = 'csv', limit } = req.query;
+
+    if (!workspaceId) {
+      return res.status(400).json({ success: false, error: "Workspace required" });
+    }
+
+    const params: any[] = [workspaceId];
+    let idx = 2;
+    const conditions = [`workspace_id = $1`];
+    if (start) { conditions.push(`created_at >= $${idx++}`); params.push(new Date(String(start))); }
+    if (end) { conditions.push(`created_at <= $${idx++}`); params.push(new Date(String(end))); }
+
+    const maxRows = Math.min(Math.max(1, Number(limit) || MAX_EXPORT_ROWS), MAX_EXPORT_ROWS);
+    const logs = await q(
+      `SELECT id, created_at, action, user_id, user_email, entity_type, entity_id, metadata
+       FROM audit_logs
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY created_at DESC
+       LIMIT $${idx}`,
+      [...params, maxRows]
+    );
+
+    const logRows = logs as unknown as any[];
+
+    if (String(format).toLowerCase() === 'json') {
+      return res.json({ success: true, count: logRows.length, logs: logRows });
+    }
+
+    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = 'timestamp,action,actorId,actorEmail,entityType,entityId,details\n';
+    const rows = logRows.map((l) => [
+      escapeCsv(l.created_at),
+      escapeCsv(l.action),
+      escapeCsv(l.user_id),
+      escapeCsv(l.user_email),
+      escapeCsv(l.entity_type),
+      escapeCsv(l.entity_id),
+      escapeCsv(JSON.stringify(l.metadata ?? {})),
+    ].join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-trail-${Date.now()}.csv"`);
+    return res.send(header + rows);
+  } catch (error) {
+    log.error("[Compliance Audit Trail] Export error:", error);
+    return res.status(500).json({ success: false, error: "Failed to export audit trail" });
   }
 });
 
