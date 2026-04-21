@@ -12,11 +12,10 @@ const changeEmitter = new EventEmitter();
 // Lazy import to avoid circular dependencies
 let configRegistry: any = null;
 
-function getConfigRegistry() {
+async function getConfigRegistry() {
   if (!configRegistry) {
-    // Dynamic import to break circular dependency
-    // This is safe because configRegistry is accessed at runtime, not at module load time
-    configRegistry = require('../../server/services/configRegistry').configRegistry;
+    const mod = await import('../../server/services/configRegistry');
+    configRegistry = mod.configRegistry;
   }
   return configRegistry;
 }
@@ -25,22 +24,27 @@ function getConfigRegistry() {
  * Get entire feature toggles object
  * Returns current configuration from ConfigRegistry cache
  */
-export function getFeatureToggles() {
-  return getConfigRegistry().getConfig('featureToggles');
+export async function getFeatureToggles() {
+  const registry = await getConfigRegistry();
+  return registry.getConfig('featureToggles');
 }
 
 /**
  * Get specific toggle by path (e.g., 'automation.autoTicketCreation')
  * Returns boolean value or false if path doesn't exist
  */
-export function getFeatureToggle(path: string): boolean {
-  const config = getFeatureToggles();
-  const keys = path.split('.');
-  let value: any = config;
-  for (const key of keys) {
-    value = value?.[key];
+export async function getFeatureToggle(path: string): Promise<boolean> {
+  try {
+    const config = await getFeatureToggles();
+    const keys = path.split('.');
+    let value: any = config;
+    for (const key of keys) {
+      value = value?.[key];
+    }
+    return value ?? false;
+  } catch {
+    return false; // Safe default — feature off if registry unavailable
   }
-  return value ?? false;
 }
 
 /**

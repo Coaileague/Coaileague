@@ -53,6 +53,10 @@ router.get('/pending-agreements', requireAuth, async (req: Request, res: Respons
     );
     res.json(result.rows);
   } catch (err: any) {
+    const msg = err?.message || '';
+    if (msg.includes('does not exist') || msg.includes('relation')) {
+      return res.json([]); // No pending agreements if tables don't exist yet
+    }
     log.error('Failed to fetch pending agreements:', err?.message);
     res.status(500).json({ error: 'Failed to fetch pending agreements' });
   }

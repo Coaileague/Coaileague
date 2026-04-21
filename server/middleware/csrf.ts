@@ -44,6 +44,11 @@ const CSRF_EXEMPT_PATHS: RegExp[] = [
   /^\/health$/,
   /^\/api\/health$/,
 
+  // WebSocket token — called by browser with session cookie, not CSRF-vulnerable
+  // because it only issues a short-lived WS auth token and requires valid session
+  /^\/api\/auth\/ws-token$/,
+  /^\/auth\/ws-token$/,
+
   // Public authentication endpoints (login/register don't have session yet)
   // Support both /api/auth/* and /auth/* patterns (some routes may strip /api prefix)
   /^\/api\/auth\/login$/,

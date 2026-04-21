@@ -214,15 +214,15 @@ export class FeatureToggleManager {
   }> = [];
 
   async getToggle(path: string): Promise<boolean> {
-    return getFeatureToggle(path);
+    return await getFeatureToggle(path);
   }
 
   async getAllToggles(): Promise<Record<string, any>> {
-    return getFeatureToggles();
+    return await getFeatureToggles();
   }
 
   async setToggle(request: FeatureToggleRequest): Promise<{ success: boolean; previousValue: boolean }> {
-    const previousValue = getFeatureToggle(request.featurePath);
+    const previousValue = await getFeatureToggle(request.featurePath);
     
     // Log the change
     this.toggleHistory.push({
@@ -563,7 +563,7 @@ export class ConsoleCommandExecutor {
     const startTime = Date.now();
 
     if (action === 'show') {
-      const toggles = getFeatureToggles();
+      const toggles = await getFeatureToggles();
       return {
         success: true,
         output: JSON.stringify(toggles, null, 2),

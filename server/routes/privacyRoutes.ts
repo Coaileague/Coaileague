@@ -540,6 +540,13 @@ export function registerPrivacyRoutes(app: Express, requireAuth: any) {
         data: rows[0] ?? { essential: true, functional: false, analytics: false, consented_at: null },
       });
     } catch (error: unknown) {
+      const msg = (error as any)?.message || '';
+      if (msg.includes('does not exist') || msg.includes('relation')) {
+        return res.json({
+          success: true,
+          data: { essential: true, functional: false, analytics: false, consented_at: null },
+        });
+      }
       return res.status(500).json({ success: false, error: sanitizeError(error) });
     }
   });
@@ -587,6 +594,15 @@ export function registerPrivacyRoutes(app: Express, requireAuth: any) {
         },
       });
     } catch (error: unknown) {
+      const msg = (error as any)?.message || '';
+      if (msg.includes('does not exist') || msg.includes('relation')) {
+        return res.json({
+          success: true,
+          data: { accepted: false, accepted_at: null,
+                  current_terms_version: CURRENT_TERMS_VERSION,
+                  current_privacy_version: CURRENT_PRIVACY_VERSION },
+        });
+      }
       return res.status(500).json({ success: false, error: sanitizeError(error) });
     }
   });
