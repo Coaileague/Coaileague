@@ -160,7 +160,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     // If either step fails the other is rolled back — prevents orphaned employees
     // or users with a currentWorkspaceId pointing to a workspace they don't own.
     const employee = await db.transaction(async (tx) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [emp] = await tx.insert(employees).values({
         userId: userId,
         workspaceId: workspace.id,

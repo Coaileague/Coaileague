@@ -1314,6 +1314,14 @@ async function runWeeklyScheduleGeneration() {
                     const owner = workspaceEmployees.find(e => e.workspaceRole === 'org_owner');
                     const ownerUserId = owner?.userId || undefined;
                     
+                    // Fetch shifts in outer scope so they're accessible after withTokens returns
+                    const existingShifts = await db.select().from(shifts)
+                      .where(and(
+                        eq(shifts.workspaceId, workspace.id),
+                        gte(shifts.startTime, nextWeekStart),
+                        lte(shifts.startTime, nextWeekEnd),
+                      ));
+
                     // Call AI Brain WITH TOKEN USAGE TRACKING
                     const creditResult = await withTokens(
                       {
@@ -1343,13 +1351,6 @@ async function runWeeklyScheduleGeneration() {
                           arr.push(s.skillName);
                           skillMap.set(s.employeeId, arr);
                         }
-
-                        const existingShifts = await db.select().from(shifts)
-                          .where(and(
-                            eq(shifts.workspaceId, workspace.id),
-                            gte(shifts.startTime, nextWeekStart),
-                            lte(shifts.startTime, nextWeekEnd),
-                          ));
 
                         const aiBrain = new AIBrainService();
                         return await aiBrain.enqueueJob({

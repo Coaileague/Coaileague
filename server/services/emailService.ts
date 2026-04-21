@@ -76,7 +76,7 @@ import {
     /**
      * SUPPORT TICKET CONFIRMATION
      */
-    supportTicketConfirmation: (data: { name: string; ticketNumber: string; subject: string }) => ({
+    supportTicketConfirmation: (data: { name: string; ticketNumber: string; subject: string; ticketUrl?: string }) => ({
       subject: `Support Ticket Created — ${data.ticketNumber}`,
       html: emailLayout({
         preheader: `Your support request ${data.ticketNumber} has been received.`,
@@ -92,6 +92,7 @@ import {
               { label: 'Status', value: 'Open — Awaiting Review' },
             ],
           }) +
+          (data.ticketUrl ? ctaButton({ text: 'View Your Support Ticket', url: data.ticketUrl, style: 'purple' }) : '') +
           alertBox({ type: 'info', title: 'Save your ticket number', body: `Reference <strong>${data.ticketNumber}</strong> when following up. You can check status via Live Chat in the platform.` }) +
           para('Our support team typically responds within 1 business day.', { muted: true }),
       }),
@@ -100,7 +101,7 @@ import {
     /**
      * SIMPLE REPORT DELIVERY
      */
-    reportDelivery: (data: { clientName: string; reportNumber: string; reportTitle: string }) => ({
+    reportDelivery: (data: { clientName: string; reportNumber: string; reportTitle: string; reportUrl?: string }) => ({
       subject: `Report Ready — ${data.reportNumber}`,
       html: emailLayout({
         preheader: `Your report "${data.reportTitle}" is ready for review.`,
@@ -114,6 +115,7 @@ import {
               { label: 'Title', value: data.reportTitle },
             ],
           }) +
+          (data.reportUrl ? ctaButton({ text: 'View Full Report', url: data.reportUrl }) : '') +
           para(`Please log in to your ${PLATFORM.name} portal to view the full report and download a copy.`, { muted: true }),
       }),
     }),
@@ -159,6 +161,7 @@ import {
       managerName: string;
       employeeName: string;
       workspaceName: string;
+      employeeProfileUrl?: string;
     }) => ({
       subject: `New Employee Added — ${data.employeeName || 'New Hire'}`,
       html: emailLayout({
@@ -174,6 +177,7 @@ import {
               { label: 'Status', value: 'Onboarding Pending' },
             ],
           }) +
+          (data.employeeProfileUrl ? ctaButton({ text: 'View Employee Profile', url: data.employeeProfileUrl }) : '') +
           checkList([
             'Ensure the employee has received their login credentials',
             'Assign the employee to their first shift',
@@ -539,9 +543,11 @@ import {
         header: emailHeader({ title: 'Account Deactivated', subtitle: 'Access to your account has been suspended', badge: 'Account Notice', theme: 'dark' }),
         body:
           greeting(data.firstName) +
-          para(`Your ${PLATFORM.name} account has been deactivated. You will not be able to sign in until the account is reactivated.`) +
-          (data.reason ? infoCard({ rows: [{ label: 'Reason', value: data.reason }] }) : '') +
-          alertBox({ type: 'info', title: 'Think this is a mistake?', body: `Contact your administrator or support at <strong>${data.contactEmail}</strong> to request reactivation.` }) +
+          para(`Your ${PLATFORM.name} account has been deactivated. You will not be able to sign in until the account is reactivated by an administrator.`) +
+          (data.reason ? infoCard({ title: 'Deactivation Details', rows: [{ label: 'Reason', value: data.reason }] }) : '') +
+          alertBox({ type: 'warning', title: 'What this means', body: 'You will not be able to log in or access your account while it is deactivated. Any active sessions have been ended.' }) +
+          alertBox({ type: 'info', title: 'Think this is a mistake?', body: `Contact your administrator or support at <strong>${data.contactEmail}</strong> to request reactivation. Please reference your account email when reaching out.` }) +
+          (data.reactivateUrl ? ctaButton({ text: 'Request Reactivation', url: data.reactivateUrl, style: 'dark' }) : '') +
           para('Your data is retained for 90 days after deactivation. Contact us if you need to export your records.', { muted: true, small: true }),
       }),
     }),

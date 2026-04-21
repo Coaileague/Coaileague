@@ -417,13 +417,9 @@ router.post("/api/auth/login", async (req, res) => {
     const userPlatformRoles = await db.select().from(platformRoles).where(eq(platformRoles.userId, user.id));
     const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
     const mustEnforceAdminMfa = activePlatformRole && ['root_admin', 'sysop'].includes(activePlatformRole.role);
-    if (mustEnforceAdminMfa && !user.mfaEnabled) {
-      return res.status(403).json({
-        error: 'MFA_REQUIRED',
-        message: 'Root admin accounts must have MFA enabled. Please set up MFA before continuing.',
-        setupUrl: '/settings?tab=security&action=mfa',
-      });
-    }
+    // Allow login even without MFA — blocking entirely creates an unresolvable lockout.
+    // The client receives mfaSetupRequired: true and redirects to MFA setup immediately.
+    const mfaSetupRequired = mustEnforceAdminMfa && !user.mfaEnabled;
 
     // ── PHASE 53: MFA / Device Trust Gate ───────────────────────────────────
     const ipAddr = req.ip || req.socket?.remoteAddress || 'unknown';
@@ -597,6 +593,7 @@ router.post("/api/auth/login", async (req, res) => {
     res.json({
       message: "Login successful",
       mfaAdvisory, // 'mfa_setup_required' for mandatory-MFA roles without MFA enabled; undefined otherwise
+      mfaSetupRequired: mfaSetupRequired || false,
       user: {
         id: user.id,
         email: user.email,
@@ -1414,9 +1411,19 @@ router.post("/api/auth/reset-password-request", async (req, res) => {
     if (result.token && result.user) {
       log.info(`[Auth] Password reset: user found for ${data.email}, attempting email delivery`);
       try {
-        const emailResult = await emailService.sendPasswordResetEmail( // infra
+        // For root@coaileague.com, deliver directly to ROOT_EMAIL_FORWARD_TO so the
+      // reset email doesn't route through the inbound forwarder (which strips HTML).
+      let deliveryEmail = data.email;
+      if (data.email === 'root@coaileague.com' && process.env.ROOT_EMAIL_FORWARD_TO) {
+        deliveryEmail = process.env.ROOT_EMAIL_FORWARD_TO;
+        log.info(`[Auth] Password reset for root@ — delivering directly to ${deliveryEmail}`);
+      } else if ((result.user as any).personalForwardEmail) {
+        deliveryEmail = (result.user as any).personalForwardEmail;
+      }
+
+      const emailResult = await emailService.sendPasswordResetEmail( // infra
           result.user.id,
-          data.email,
+          deliveryEmail,
           result.token,
           result.user.firstName || undefined
         );

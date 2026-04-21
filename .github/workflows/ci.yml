@@ -14,6 +14,8 @@ jobs:
   typecheck:
     name: TypeScript
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +37,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://unit-test-sentinel/noop
       NODE_ENV: test
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +51,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npx vitest run --project unit --reporter=verbose
+        run: npx vitest run --project unit --reporter=verbose --threads=false
 
       - name: Upload coverage
         if: always()
@@ -64,6 +67,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://unit-test-sentinel/noop
       NODE_ENV: test
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v4
 
@@ -79,4 +83,4 @@ jobs:
       - name: Run integration & regression tests
         # Tests guard themselves with describe.skipIf(() => !serverAvailable),
         # so they skip gracefully when no server is running in CI.
-        run: npx vitest run --project integration --reporter=verbose
+        run: npx vitest run --project integration --reporter=verbose --threads=false

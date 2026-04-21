@@ -150,6 +150,17 @@ export default function CustomLogin() {
         localStorage.removeItem(REMEMBER_ME_KEY);
       }
 
+      if (result.mfaSetupRequired) {
+        toast({
+          title: 'MFA Setup Required',
+          description: 'Root admin accounts require two-factor authentication. Please set up MFA now.',
+        });
+        setTimeout(() => {
+          window.location.href = '/settings?tab=security&action=mfa';
+        }, 1500);
+        return;
+      }
+
       let redirectTo = result.user.currentWorkspaceId ? "/dashboard" : "/onboarding/start";
 
       try {
