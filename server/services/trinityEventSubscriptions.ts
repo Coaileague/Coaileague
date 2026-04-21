@@ -2952,6 +2952,241 @@ export function initializeTrinityEventSubscriptions(): void {
     },
   });
 
+  // ── PHASE A: Previously unconsumed critical events ────────────────────────
+
+  // Security events → notify platform staff + audit log
+  platformEventBus.subscribe('security_threat_detected', {
+    name: 'TrinitySecurityThreatHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      try {
+        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+        const nds = new NotificationDeliveryService();
+        await nds.send({
+          workspaceId,
+          type: 'security_threat',
+          title: '⚠️ Security Threat Detected',
+          message: metadata?.description as string || 'A security threat has been detected on your account.',
+          severity: 'critical',
+          channels: ['in_app', 'email'],
+          metadata: { source: 'security_threat_detected', ...metadata },
+        });
+        log.warn(`[TrinityEvents] security_threat_detected — workspace=${workspaceId}`, metadata);
+      } catch (err: any) {
+        log.error('[TrinityEvents] security_threat_detected handler failed:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('security_blocked_ip_access', {
+    name: 'TrinitySecurityBlockedIPHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.warn(`[TrinityEvents] security_blocked_ip_access — workspace=${workspaceId} ip=${metadata?.ipAddress}`);
+    },
+  });
+
+  // Compliance document events → notify managers
+  platformEventBus.subscribe('compliance_document_approved', {
+    name: 'TrinityComplianceDocApprovedHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      try {
+        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+        const nds = new NotificationDeliveryService();
+        await nds.send({
+          workspaceId,
+          type: 'compliance_document_approved',
+          title: 'Compliance Document Approved',
+          message: `Document "${metadata?.documentName || 'compliance document'}" has been approved.`,
+          severity: 'info',
+          channels: ['in_app'],
+          recipientUserId: metadata?.employeeUserId as string || undefined,
+          metadata,
+        });
+      } catch (err: any) {
+        log.error('[TrinityEvents] compliance_document_approved handler failed:', err?.message);
+      }
+    },
+  });
+
+  platformEventBus.subscribe('compliance_document_rejected', {
+    name: 'TrinityComplianceDocRejectedHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      try {
+        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+        const nds = new NotificationDeliveryService();
+        await nds.send({
+          workspaceId,
+          type: 'compliance_document_rejected',
+          title: 'Compliance Document Rejected',
+          message: `Document "${metadata?.documentName || 'compliance document'}" was rejected. ${metadata?.rejectionReason ? `Reason: ${metadata.rejectionReason}` : 'Please resubmit.'}`,
+          severity: 'warning',
+          channels: ['in_app', 'email'],
+          recipientUserId: metadata?.employeeUserId as string || undefined,
+          metadata,
+        });
+      } catch (err: any) {
+        log.error('[TrinityEvents] compliance_document_rejected handler failed:', err?.message);
+      }
+    },
+  });
+
+  // Evidence events → notify assigned investigator
+  platformEventBus.subscribe('evidence_submitted_pending_review', {
+    name: 'TrinityEvidencePendingHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] evidence_submitted_pending_review — workspace=${workspaceId} caseId=${metadata?.caseId}`);
+    },
+  });
+
+  platformEventBus.subscribe('evidence_rejected', {
+    name: 'TrinityEvidenceRejectedHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] evidence_rejected — workspace=${workspaceId} caseId=${metadata?.caseId}`);
+    },
+  });
+
+  // Dispatch events → log to thalamic brain
+  platformEventBus.subscribe('dispatch.incident_created', {
+    name: 'TrinityDispatchIncidentHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] dispatch.incident_created — workspace=${workspaceId} incidentId=${metadata?.incidentId}`);
+    },
+  });
+
+  platformEventBus.subscribe('dispatch.incident_status_changed', {
+    name: 'TrinityDispatchIncidentStatusHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] dispatch.incident_status_changed — workspace=${workspaceId} status=${metadata?.newStatus}`);
+    },
+  });
+
+  // Schedule events → notify org owner on AI fill completion
+  platformEventBus.subscribe('schedule.ai_fill_complete', {
+    name: 'TrinityScheduleAIFillHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] schedule.ai_fill_complete — workspace=${workspaceId} filledShifts=${metadata?.filledCount}`);
+    },
+  });
+
+  platformEventBus.subscribe('scheduling_override_queued', {
+    name: 'TrinitySchedulingOverrideHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] scheduling_override_queued — workspace=${workspaceId}`, metadata);
+    },
+  });
+
+  // CRM events → track lead pipeline activity in brain
+  platformEventBus.subscribe('crm.lead_created', {
+    name: 'TrinityCRMLeadCreatedHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] crm.lead_created — workspace=${workspaceId} company=${metadata?.companyName}`);
+    },
+  });
+
+  platformEventBus.subscribe('crm.lead_status_changed', {
+    name: 'TrinityCRMLeadStatusHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] crm.lead_status_changed — workspace=${workspaceId} leadId=${metadata?.leadId} status=${metadata?.newStatus}`);
+    },
+  });
+
+  platformEventBus.subscribe('crm.deal_created', {
+    name: 'TrinityCRMDealCreatedHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      log.info(`[TrinityEvents] crm.deal_created — workspace=${workspaceId} deal=${metadata?.dealName}`);
+    },
+  });
+
+  // BOLO match → alert workspace officers (critical safety signal)
+  platformEventBus.subscribe('bolo_match_detected', {
+    name: 'TrinityBOLOMatchHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      try {
+        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+        const nds = new NotificationDeliveryService();
+        await nds.send({
+          workspaceId,
+          type: 'bolo_match',
+          title: '🚨 BOLO Match Detected',
+          message: `Visitor "${metadata?.visitorName}" matched an active BOLO/trespass record at ${metadata?.siteName || 'your site'}.`,
+          severity: 'critical',
+          channels: ['in_app', 'push'],
+          metadata,
+        });
+      } catch (err: any) {
+        log.error('[TrinityEvents] bolo_match_detected handler failed:', err?.message);
+      }
+    },
+  });
+
+  // Feature flag events → inform platform-level audit trail
+  platformEventBus.subscribe('feature_flag.toggled', {
+    name: 'TrinityFeatureFlagHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      log.info(`[TrinityEvents] feature_flag.toggled — workspace=${workspaceId} flag=${metadata?.flagKey} enabled=${metadata?.enabled}`);
+    },
+  });
+
+  platformEventBus.subscribe('feature_flag.rolled_back', {
+    name: 'TrinityFeatureFlagRollbackHandler',
+    handler: async (event) => {
+      const { metadata } = event;
+      log.warn(`[TrinityEvents] feature_flag.rolled_back — flag=${metadata?.flagKey}`);
+    },
+  });
+
+  // HRIS sync events → alert on provider disconnects
+  platformEventBus.subscribe('hris.provider_disconnected', {
+    name: 'TrinityHRISDisconnectHandler',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId) return;
+      try {
+        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+        const nds = new NotificationDeliveryService();
+        await nds.send({
+          workspaceId,
+          type: 'hris_disconnected',
+          title: 'HRIS Provider Disconnected',
+          message: `Your ${metadata?.provider || 'HRIS'} integration has been disconnected. Please reconnect to resume sync.`,
+          severity: 'warning',
+          channels: ['in_app', 'email'],
+          metadata,
+        });
+      } catch (err: any) {
+        log.error('[TrinityEvents] hris.provider_disconnected handler failed:', err?.message);
+      }
+    },
+  });
+
   log.info('[TrinityEvents] Trinity event subscriptions initialized');
 }
 

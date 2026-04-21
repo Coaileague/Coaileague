@@ -5,6 +5,7 @@ import { employees, workspaces, automationActionLedger } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../auth";
 import type { AuthenticatedRequest } from "../rbac";
+import { logActionAudit } from "../services/ai-brain/actionAuditLogger";
 
 const router = Router();
 
@@ -174,6 +175,21 @@ router.post("/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedReq
     }
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const success = await automationGovernanceService.approveLedgerEntry(ledgerEntryId, userId, notes?.substring(0, 500));
+
+    logActionAudit({
+      actionId: 'governance.approve_action',
+      workspaceId: entry.workspaceId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      entityType: 'automation_action_ledger',
+      entityId: ledgerEntryId,
+      success: !!success,
+      message: `Governance approval: ${entry.actionName || ledgerEntryId}`,
+      payload: { notes: notes?.substring(0, 500) },
+      changesBefore: { approvalState: entry.approvalState },
+      changesAfter: { approvalState: 'approved' },
+    }).catch(() => {});
+
     res.json({ success });
   } catch (error: unknown) {
     res.status(500).json({ success: false, error: sanitizeError(error) });
@@ -198,6 +214,21 @@ router.post("/reject/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequ
     }
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const success = await automationGovernanceService.rejectLedgerEntry(ledgerEntryId, userId, reason.substring(0, 500));
+
+    logActionAudit({
+      actionId: 'governance.reject_action',
+      workspaceId: entry.workspaceId,
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      entityType: 'automation_action_ledger',
+      entityId: ledgerEntryId,
+      success: !!success,
+      message: `Governance rejection: ${entry.actionName || ledgerEntryId}`,
+      payload: { reason: reason.substring(0, 500) },
+      changesBefore: { approvalState: entry.approvalState },
+      changesAfter: { approvalState: 'rejected', executionStatus: 'cancelled' },
+    }).catch(() => {});
+
     res.json({ success });
   } catch (error: unknown) {
     res.status(500).json({ success: false, error: sanitizeError(error) });

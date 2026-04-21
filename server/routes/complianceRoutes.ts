@@ -32,6 +32,7 @@ import {
   workspaces,
   workspaces as workspacesTable,
   complianceScoreHistory,
+  complianceAlerts,
 } from '@shared/schema';
 import { eq, and, desc, gte, lte, isNull, sql as drizzleSql } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -277,6 +278,59 @@ router.get('/my-status', async (req: AuthenticatedRequest, res: Response) => {
 
     return res.json(results);
   } catch (err: unknown) {
+    return res.status(500).json({ error: sanitizeError(err) });
+  }
+});
+
+/**
+ * GET /api/compliance/tasks/pending
+ * Returns pending compliance items that require the user's attention.
+ * Used by TrinityTaskWidget (useTrinityTasks hook).
+ */
+router.get('/tasks/pending', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId || req.user?.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const alerts = await db
+      .select({
+        id: complianceAlerts.id,
+        alertType: complianceAlerts.alertType,
+        severity: complianceAlerts.severity,
+        title: complianceAlerts.title,
+        message: complianceAlerts.message,
+        actionRequired: complianceAlerts.actionRequired,
+        actionUrl: complianceAlerts.actionUrl,
+        actionLabel: complianceAlerts.actionLabel,
+        createdAt: complianceAlerts.createdAt,
+      })
+      .from(complianceAlerts)
+      .where(
+        and(
+          eq(complianceAlerts.workspaceId, workspaceId),
+          eq(complianceAlerts.isDismissed, false),
+          eq(complianceAlerts.isResolved, false),
+          eq(complianceAlerts.actionRequired, true),
+        )
+      )
+      .orderBy(desc(complianceAlerts.createdAt))
+      .limit(50);
+
+    const tasks = alerts.map((a) => ({
+      id: a.id,
+      type: a.alertType,
+      severity: a.severity,
+      priority: a.severity === 'critical' ? 'urgent' : a.severity === 'warning' ? 'high' : 'normal',
+      title: a.title,
+      description: a.message,
+      actionUrl: a.actionUrl,
+      actionLabel: a.actionLabel,
+      createdAt: a.createdAt,
+    }));
+
+    return res.json(tasks);
+  } catch (err: unknown) {
+    log.error('[Compliance] tasks/pending error:', err);
     return res.status(500).json({ error: sanitizeError(err) });
   }
 });

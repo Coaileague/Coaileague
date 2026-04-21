@@ -121,13 +121,13 @@ export default function SRAOfficers() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Name</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Role</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Guard Card</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Expires</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Credentials</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Armed</th>
+                    <tr className="bg-muted/50 border-b border-border">
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Name</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Role</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Guard Card</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Expires</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Credentials</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Armed</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -138,7 +138,7 @@ export default function SRAOfficers() {
                         <tr
                           key={officer.id}
                           data-testid={`officer-row-${officer.id}`}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+                          className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                         >
                           <td className="px-4 py-3">
                             <div>

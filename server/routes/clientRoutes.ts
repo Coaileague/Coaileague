@@ -522,29 +522,30 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
     const outstandingCount = outstandingResult?.count ?? 0;
     const outstandingBalance = parseFloat(outstandingResult?.totalOutstanding ?? '0');
 
-    // Deactivate client
-    await db.update(clients)
-      .set({
-        isActive: false,
-        deactivatedAt: new Date(),
-        deactivatedBy: userId || 'unknown',
-        deactivationReason: body.reason,
-        deactivationNotes: body.notes || null,
-        collectionsStatus: body.startCollectionsImmediately ? 'active' : 'none',
-      })
-      .where(and(eq(clients.id, req.params.id), eq(clients.workspaceId, workspaceId)));
-
-    // Cancel all future shifts
+    // Deactivate client and cancel future shifts atomically
     const now = new Date();
-    const closedResult = await db.update(shifts)
-      .set({ status: 'cancelled' })
-      .where(and(
-        eq(shifts.workspaceId, workspaceId),
-        eq(shifts.clientId, req.params.id),
-        gte(shifts.startTime, now),
-        sql`${shifts.status} NOT IN ('cancelled', 'completed')`
-      ))
-      .returning({ id: shifts.id });
+    const closedResult = await db.transaction(async (tx) => {
+      await tx.update(clients)
+        .set({
+          isActive: false,
+          deactivatedAt: now,
+          deactivatedBy: userId || 'unknown',
+          deactivationReason: body.reason,
+          deactivationNotes: body.notes || null,
+          collectionsStatus: body.startCollectionsImmediately ? 'active' : 'none',
+        })
+        .where(and(eq(clients.id, req.params.id), eq(clients.workspaceId, workspaceId)));
+
+      return tx.update(shifts)
+        .set({ status: 'cancelled' })
+        .where(and(
+          eq(shifts.workspaceId, workspaceId),
+          eq(shifts.clientId, req.params.id),
+          gte(shifts.startTime, now),
+          sql`${shifts.status} NOT IN ('cancelled', 'completed')`
+        ))
+        .returning({ id: shifts.id });
+    });
 
     log.info(`[ClientDeactivation] Client ${req.params.id} deactivated by ${userId} — ${closedResult.length} future shifts cancelled`);
 
