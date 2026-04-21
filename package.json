@@ -9,6 +9,8 @@
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
     "test:watch": "vitest",
     "test:readiness": "vitest run tests/unit/readiness-*.test.ts",
     "db:push": "drizzle-kit push",
