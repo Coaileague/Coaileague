@@ -51,6 +51,19 @@ router.patch("/policy/:workspaceId", requireAuth, async (req: AuthenticatedReque
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const policy = await automationGovernanceService.updatePolicy(sanitizedBody);
     if (!policy) return res.status(404).json({ success: false, error: "Policy not found" });
+
+    logActionAudit({
+      actionId: 'governance.update_policy',
+      workspaceId,
+      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      entityType: 'automation_governance_policy',
+      entityId: workspaceId,
+      success: true,
+      message: 'Automation governance policy updated',
+      payload: sanitizedBody,
+      changesAfter: sanitizedBody,
+    }).catch(() => {});
+
     res.json({ success: true, policy });
   } catch (error: unknown) {
     res.status(500).json({ success: false, error: sanitizeError(error) });
@@ -70,6 +83,18 @@ router.post("/consent", requireAuth, async (req: AuthenticatedRequest, res) => {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const consent = await automationGovernanceService.grantUserConsent({ userId, workspaceId, consentType, sourceContext: sourceContext?.substring(0, 500), waiverVersion });
     if (!consent) return res.status(500).json({ success: false, error: "Failed to grant consent" });
+
+    logActionAudit({
+      actionId: 'governance.grant_user_consent',
+      workspaceId,
+      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      entityType: 'automation_user_consent',
+      entityId: (consent as any)?.id,
+      success: true,
+      message: `User consent granted: ${consentType}`,
+      payload: { consentType, waiverVersion },
+    }).catch(() => {});
+
     res.json({ success: true, consent });
   } catch (error: unknown) {
     res.status(500).json({ success: false, error: sanitizeError(error) });
@@ -110,6 +135,19 @@ router.post("/org-consent", requireAuth, async (req: AuthenticatedRequest, res) 
       waiverAccepted: true, waiverVersion: waiverVersion || "1.0",
     });
     if (!policy) return res.status(500).json({ success: false, error: "Failed to record org consent" });
+
+    logActionAudit({
+      actionId: 'governance.grant_org_consent',
+      workspaceId,
+      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      entityType: 'automation_governance_policy',
+      entityId: workspaceId,
+      success: true,
+      message: 'Org-level automation consent granted',
+      payload: { waiverVersion: waiverVersion || '1.0' },
+      changesAfter: { orgOwnerConsent: true, waiverAccepted: true },
+    }).catch(() => {});
+
     res.json({ success: true, policy });
   } catch (error: unknown) {
     res.status(500).json({ success: false, error: sanitizeError(error) });

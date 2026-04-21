@@ -46,6 +46,38 @@ function _isRecentlyHandledPayrollRun(runId: string): boolean {
 }
 
 /**
+ * Append an entry to thalamic_log — Trinity's persistent signal log.
+ * Non-fatal: failures are warned and swallowed so they never break the
+ * triggering event handler.
+ */
+async function writeThalamicSignal(params: {
+  workspaceId: string;
+  signalType: string;
+  source: string;
+  priorityScore: number;
+  signalPayload: Record<string, unknown>;
+  userId?: string | null;
+}): Promise<void> {
+  try {
+    const { thalamiclogs } = await import('@shared/schema');
+    const crypto = await import('crypto');
+    await db.insert(thalamiclogs).values({
+      signalId: crypto.randomUUID(),
+      arrivedAt: new Date(),
+      signalType: params.signalType,
+      source: params.source,
+      sourceTrustTier: 'workspace',
+      workspaceId: params.workspaceId,
+      userId: params.userId ?? null,
+      priorityScore: params.priorityScore,
+      signalPayload: params.signalPayload,
+    });
+  } catch (err: any) {
+    log.warn(`[TrinityEvents] thalamic_log insert failed (${params.signalType}): ${err?.message}`);
+  }
+}
+
+/**
  * Handle schedule published event - notify all affected employees
  */
 async function onSchedulePublished(event: PlatformEvent): Promise<void> {
@@ -3158,6 +3190,14 @@ export function initializeTrinityEventSubscriptions(): void {
         }
         const { broadcastToWorkspace } = await import('../websocket');
         broadcastToWorkspace(workspaceId, { type: 'safety_alert', event: 'lone_worker_missed_checkin', metadata });
+
+        await writeThalamicSignal({
+          workspaceId,
+          signalType: 'lone_worker_missed_checkin',
+          source: 'lone_worker_service',
+          priorityScore: requiresImmediateResponse ? 10 : 8,
+          signalPayload: { employeeId, missedCount, level, requiresImmediateResponse },
+        });
       } catch (err: any) {
         log.warn('[TrinityEvents] lone_worker_missed_checkin handler error:', err?.message);
       }
@@ -3212,6 +3252,14 @@ export function initializeTrinityEventSubscriptions(): void {
             relatedEntityId: alertId,
           });
         }
+
+        await writeThalamicSignal({
+          workspaceId,
+          signalType: 'panic_alert_resolved',
+          source: 'panic_alert_service',
+          priorityScore: 7,
+          signalPayload: { alertId, resolvedBy },
+        });
       } catch (err: any) {
         log.warn('[TrinityEvents] panic_alert_resolved handler error:', err?.message);
       }
@@ -3243,6 +3291,14 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'urgent',
           });
         }
+
+        await writeThalamicSignal({
+          workspaceId,
+          signalType: 'compliance_cert_expired',
+          source: 'compliance_engine',
+          priorityScore: 9,
+          signalPayload: { employeeId, certificationType: (metadata as any)?.certificationType, expiredAt: new Date().toISOString() },
+        });
       } catch (err: any) {
         log.warn('[TrinityEvents] compliance_cert_expired handler error:', err?.message);
       }
@@ -3358,6 +3414,14 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'urgent',
           });
         }
+
+        await writeThalamicSignal({
+          workspaceId,
+          signalType: 'shift_calloff_escalated',
+          source: 'coverage_pipeline',
+          priorityScore: 9,
+          signalPayload: { shiftId, siteName, escalatedAt: new Date().toISOString() },
+        });
       } catch (err: any) {
         log.warn('[TrinityEvents] shift_calloff_escalated handler error:', err?.message);
       }
@@ -3442,6 +3506,14 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
           });
         }
+
+        await writeThalamicSignal({
+          workspaceId,
+          signalType: 'subscription_canceled',
+          source: 'billing',
+          priorityScore: 8,
+          signalPayload: { canceledAt: new Date().toISOString() },
+        });
       } catch (err: any) {
         log.warn('[TrinityEvents] subscription_canceled handler error:', err?.message);
       }
@@ -3471,6 +3543,14 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
           });
         }
+
+        await writeThalamicSignal({
+          workspaceId,
+          signalType: 'invoice_overdue_escalated',
+          source: 'billing',
+          priorityScore: 8,
+          signalPayload: { invoiceId, clientName, amount, daysOverdue },
+        });
       } catch (err: any) {
         log.warn('[TrinityEvents] invoice_overdue_escalated handler error:', err?.message);
       }

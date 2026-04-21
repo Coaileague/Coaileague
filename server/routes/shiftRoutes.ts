@@ -2766,12 +2766,23 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       });
 
       if (!result.success) {
-        return res.status(400).json({ 
-          success: false, 
+        return res.status(400).json({
+          success: false,
           message: result.error,
-          steps: result.steps 
+          steps: result.steps
         });
       }
+
+      // ── LONE WORKER SAFETY MONITORING ───────────────────────────────────────
+      // Start welfare-check session when an officer begins a shift via the
+      // shift-room workflow. Service is idempotent — safe to call alongside
+      // the time-entry clock-in path. Non-blocking.
+      import('../services/automation/loneWorkerSafetyService')
+        .then(({ loneWorkerSafetyService }) =>
+          loneWorkerSafetyService.startForEmployee(employee.id, employee.workspaceId, req.params.shiftId)
+            .catch((err: unknown) => log.warn('[ShiftRoutes] Lone worker start failed (non-blocking):', (err as any)?.message))
+        )
+        .catch((err: unknown) => log.warn('[ShiftRoutes] Lone worker service import failed (non-blocking):', (err as any)?.message));
 
       res.json({
         success: true,
@@ -2810,12 +2821,94 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       }, closureReason);
 
       if (!result.success) {
-        return res.status(400).json({ 
-          success: false, 
+        return res.status(400).json({
+          success: false,
           message: result.error,
-          steps: result.steps 
+          steps: result.steps
         });
       }
+
+      // ── LONE WORKER STOP + SHIFT HANDOFF TRIGGER ────────────────────────────
+      // Stop welfare-check session and, if the next assigned officer is present
+      // on the same post, kick off the handoff briefing. Non-blocking.
+      (async () => {
+        try {
+          const { loneWorkerSafetyService } = await import('../services/automation/loneWorkerSafetyService');
+          await loneWorkerSafetyService.stopForEmployee(employee.id, employee.workspaceId)
+            .catch((err: any) => log.warn('[ShiftRoutes] Lone worker stop failed (non-blocking):', err?.message));
+        } catch (err: unknown) {
+          log.warn('[ShiftRoutes] Lone worker stop import failed (non-blocking):', (err as any)?.message);
+        }
+
+        try {
+          const [endingShift] = await db.select({
+            id: shifts.id,
+            siteId: shifts.siteId,
+            title: shifts.title,
+            startTime: shifts.startTime,
+            endTime: shifts.endTime,
+            siteName: sites.name,
+          })
+            .from(shifts)
+            .leftJoin(sites, eq(shifts.siteId, sites.id))
+            .where(and(eq(shifts.id, req.params.shiftId), eq(shifts.workspaceId, employee.workspaceId)))
+            .limit(1);
+
+          if (!endingShift || !endingShift.siteId) return;
+
+          const [nextShift] = await db.select({
+            id: shifts.id,
+            siteId: shifts.siteId,
+            employeeId: shifts.employeeId,
+            startTime: shifts.startTime,
+            endTime: shifts.endTime,
+            firstName: employees.firstName,
+            lastName: employees.lastName,
+          })
+            .from(shifts)
+            .leftJoin(employees, eq(shifts.employeeId, employees.id))
+            .where(and(
+              eq(shifts.workspaceId, employee.workspaceId),
+              eq(shifts.siteId, endingShift.siteId),
+              gte(shifts.startTime, endingShift.endTime ?? new Date()),
+              ne(shifts.id, endingShift.id),
+            ))
+            .orderBy(asc(shifts.startTime))
+            .limit(1);
+
+          if (!nextShift || !nextShift.employeeId || nextShift.employeeId === employee.id) return;
+
+          const { shiftHandoffService } = await import('../services/fieldOperations/shiftHandoffService');
+          const outgoingName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Outgoing Officer';
+          const incomingName = `${nextShift.firstName || ''} ${nextShift.lastName || ''}`.trim() || 'Incoming Officer';
+          const postName = endingShift.siteName || endingShift.title || 'Assigned Post';
+
+          await shiftHandoffService.initiateHandoff(
+            {
+              id: endingShift.id,
+              orgId: employee.workspaceId,
+              postId: String(endingShift.siteId),
+              postName,
+              officerId: employee.id,
+              officerName: outgoingName,
+              startTime: new Date(endingShift.startTime as any),
+              endTime: new Date(),
+            },
+            {
+              id: nextShift.id,
+              orgId: employee.workspaceId,
+              postId: String(nextShift.siteId),
+              postName,
+              officerId: nextShift.employeeId,
+              officerName: incomingName,
+              startTime: new Date(nextShift.startTime as any),
+              endTime: new Date(nextShift.endTime as any),
+            }
+          );
+        } catch (err: unknown) {
+          log.warn('[ShiftRoutes] Shift handoff initiation failed (non-blocking):', (err as any)?.message);
+        }
+      })();
 
       res.json({
         success: true,

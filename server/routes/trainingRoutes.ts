@@ -448,8 +448,8 @@ router.post('/sessions/:id/complete', requireManager, async (req: AuthenticatedR
     
     // Award TCOLE hours to all attended records and generate certificate URLs
     await db.$client.query(
-      `UPDATE training_attendance 
-       SET tcole_hours_awarded = $1, 
+      `UPDATE training_attendance
+       SET tcole_hours_awarded = $1,
            certificate_url = $2
        WHERE session_id = $3 AND status = 'attended'`,
       [
@@ -458,14 +458,42 @@ router.post('/sessions/:id/complete', requireManager, async (req: AuthenticatedR
         sessionId
       ]
     );
-    
+
     // 2. Mark session as completed
     const updatedSession = await db.$client.query(
-      `UPDATE training_sessions 
+      `UPDATE training_sessions
        SET status = 'completed', updated_at = NOW()
        WHERE id = $1 RETURNING *`,
       [sessionId]
     );
+
+    // 2b. Issue employee_certifications rows for each attendee so the
+    //     compliance dashboard reflects the training credential. 1-year
+    //     validity by default; `certification_type='other'` keeps inside
+    //     the VALID_CERT_TYPES enum for generic training.
+    try {
+      const attended = await db.$client.query(
+        `SELECT DISTINCT employee_id FROM training_attendance
+         WHERE session_id = $1 AND status = 'attended' AND employee_id IS NOT NULL`,
+        [sessionId]
+      );
+      const certName = session.title || session.course_name || 'Training Certificate';
+      const certUrl = `https://certs.${PLATFORM.domain}/training/${sessionId}/certificate`;
+      for (const row of attended.rows) {
+        await db.$client.query(
+          `INSERT INTO employee_certifications
+             (id, workspace_id, employee_id, certification_type, certification_name,
+              issuing_authority, issued_date, expiration_date, status, created_at, updated_at)
+           VALUES (gen_random_uuid(), $1, $2, 'other', $3, $4, NOW(),
+                   NOW() + INTERVAL '1 year', 'active', NOW(), NOW())
+           ON CONFLICT DO NOTHING`,
+          [workspaceId, row.employee_id, certName, 'Training Program']
+        );
+      }
+      log.info(`[Training] ${attended.rows.length} certification record(s) issued for session ${sessionId}`);
+    } catch (certErr: unknown) {
+      log.warn('[Training] Certification insert failed (non-blocking):', (certErr as any)?.message);
+    }
 
     // 3. Fire year-end compliance alerts at 90/60/30-day windows (idempotent per officer/threshold/year).
     //    Fires once per threshold bucket: if daysUntilYearEnd falls in ≤90 but >60, the 90-day alert fires.
