@@ -5,10 +5,27 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: [
-      'tests/unit/**/*.test.ts',
-      'tests/api/**/*.test.ts',
-      'tests/regression/**/*.test.ts',
+    // Split unit vs api/regression so each lane gets the right setup
+    projects: [
+      {
+        test: {
+          name: 'unit',
+          include: ['tests/unit/**/*.test.ts'],
+          setupFiles: ['tests/unit/setup.ts'],
+          environment: 'node',
+          testTimeout: 30000,
+          hookTimeout: 30000,
+        },
+      },
+      {
+        test: {
+          name: 'integration',
+          include: ['tests/api/**/*.test.ts', 'tests/regression/**/*.test.ts'],
+          environment: 'node',
+          testTimeout: 30000,
+          hookTimeout: 30000,
+        },
+      },
     ],
     exclude: ['tests/e2e/**', 'node_modules/**'],
     coverage: {
@@ -22,8 +39,6 @@ export default defineConfig({
         'tests/**',
       ],
     },
-    testTimeout: 30000,
-    hookTimeout: 30000,
     reporter: ['verbose'],
   },
   resolve: {

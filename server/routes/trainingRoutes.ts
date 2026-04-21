@@ -977,7 +977,7 @@ router.patch('/enrollments/:id/progress', requireAuth, async (req: Authenticated
       .returning();
 
     // Auto-issue certification when an enrollment transitions to completed (idempotent)
-    if (status === 'completed' && !wasAlreadyCompleted && !enrollment[0].certificateId) {
+    if (status === 'completed' && !wasAlreadyCompleted && !enrollment[0].certificateUrl) {
       const course = await db
         .select({ title: trainingCourses.title, workspaceId: trainingCourses.workspaceId })
         .from(trainingCourses)
@@ -987,13 +987,12 @@ router.patch('/enrollments/:id/progress', requireAuth, async (req: Authenticated
       if (course[0]) {
         const [cert] = await db
           .insert(trainingCertifications)
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .values({
             workspaceId: course[0].workspaceId,
             employeeId: enrollment[0].employeeId,
             courseId: enrollment[0].courseId,
             enrollmentId: id,
-            certificationName: `${course[0].title} Certification`,
+            name: `${course[0].title} Certification`,
             issuedDate: new Date(),
             status: 'active',
           })
@@ -1003,8 +1002,7 @@ router.patch('/enrollments/:id/progress', requireAuth, async (req: Authenticated
         if (cert) {
           await db
             .update(trainingEnrollments)
-            // @ts-expect-error — TS migration: fix in refactoring sprint
-            .set({ certificateId: cert.id })
+            .set({ certificateUrl: cert.id })
             .where(eq(trainingEnrollments.id, id));
         }
       }

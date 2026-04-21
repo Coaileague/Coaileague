@@ -107,7 +107,12 @@ export type NotificationDeliveryType =
   | 'shift_trade_approved'
   | 'incident_submitted'
   | 'incident_high_severity'
-  | 'dar_delivered';
+  | 'dar_delivered'
+  | 'security_threat'
+  | 'compliance_document_approved'
+  | 'compliance_document_rejected'
+  | 'bolo_match'
+  | 'hris_disconnected';
 
 export type NotificationDeliveryChannel = 'email' | 'sms' | 'websocket' | 'in_app' | 'push';
 

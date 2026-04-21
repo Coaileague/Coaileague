@@ -179,7 +179,6 @@ router.post("/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedReq
     logActionAudit({
       actionId: 'governance.approve_action',
       workspaceId: entry.workspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: typeof userId === 'string' ? userId : (userId as any)?.id,
       entityType: 'automation_action_ledger',
       entityId: ledgerEntryId,
@@ -218,7 +217,6 @@ router.post("/reject/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequ
     logActionAudit({
       actionId: 'governance.reject_action',
       workspaceId: entry.workspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: typeof userId === 'string' ? userId : (userId as any)?.id,
       entityType: 'automation_action_ledger',
       entityId: ledgerEntryId,

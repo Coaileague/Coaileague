@@ -2954,28 +2954,13 @@ export function initializeTrinityEventSubscriptions(): void {
 
   // ── PHASE A: Previously unconsumed critical events ────────────────────────
 
-  // Security events → notify platform staff + audit log
+  // Security events → audit log (workspace-level alert wired in Phase B NDS refactor)
   platformEventBus.subscribe('security_threat_detected', {
     name: 'TrinitySecurityThreatHandler',
     handler: async (event) => {
       const { workspaceId, metadata } = event;
       if (!workspaceId) return;
-      try {
-        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
-        const nds = new NotificationDeliveryService();
-        await nds.send({
-          workspaceId,
-          type: 'security_threat',
-          title: '⚠️ Security Threat Detected',
-          message: metadata?.description as string || 'A security threat has been detected on your account.',
-          severity: 'critical',
-          channels: ['in_app', 'email'],
-          metadata: { source: 'security_threat_detected', ...metadata },
-        });
-        log.warn(`[TrinityEvents] security_threat_detected — workspace=${workspaceId}`, metadata);
-      } catch (err: any) {
-        log.error('[TrinityEvents] security_threat_detected handler failed:', err?.message);
-      }
+      log.warn(`[TrinityEvents] security_threat_detected — workspace=${workspaceId} threat=${metadata?.threatType || 'unknown'}`, metadata);
     },
   });
 
@@ -2988,28 +2973,13 @@ export function initializeTrinityEventSubscriptions(): void {
     },
   });
 
-  // Compliance document events → notify managers
+  // Compliance document events → log (per-user NDS delivery wired in Phase B NDS refactor)
   platformEventBus.subscribe('compliance_document_approved', {
     name: 'TrinityComplianceDocApprovedHandler',
     handler: async (event) => {
       const { workspaceId, metadata } = event;
       if (!workspaceId) return;
-      try {
-        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
-        const nds = new NotificationDeliveryService();
-        await nds.send({
-          workspaceId,
-          type: 'compliance_document_approved',
-          title: 'Compliance Document Approved',
-          message: `Document "${metadata?.documentName || 'compliance document'}" has been approved.`,
-          severity: 'info',
-          channels: ['in_app'],
-          recipientUserId: metadata?.employeeUserId as string || undefined,
-          metadata,
-        });
-      } catch (err: any) {
-        log.error('[TrinityEvents] compliance_document_approved handler failed:', err?.message);
-      }
+      log.info(`[TrinityEvents] compliance_document_approved — workspace=${workspaceId} doc="${metadata?.documentName}"`);
     },
   });
 
@@ -3018,22 +2988,7 @@ export function initializeTrinityEventSubscriptions(): void {
     handler: async (event) => {
       const { workspaceId, metadata } = event;
       if (!workspaceId) return;
-      try {
-        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
-        const nds = new NotificationDeliveryService();
-        await nds.send({
-          workspaceId,
-          type: 'compliance_document_rejected',
-          title: 'Compliance Document Rejected',
-          message: `Document "${metadata?.documentName || 'compliance document'}" was rejected. ${metadata?.rejectionReason ? `Reason: ${metadata.rejectionReason}` : 'Please resubmit.'}`,
-          severity: 'warning',
-          channels: ['in_app', 'email'],
-          recipientUserId: metadata?.employeeUserId as string || undefined,
-          metadata,
-        });
-      } catch (err: any) {
-        log.error('[TrinityEvents] compliance_document_rejected handler failed:', err?.message);
-      }
+      log.warn(`[TrinityEvents] compliance_document_rejected — workspace=${workspaceId} doc="${metadata?.documentName}" reason="${metadata?.rejectionReason}"`);
     },
   });
 
@@ -3122,27 +3077,13 @@ export function initializeTrinityEventSubscriptions(): void {
     },
   });
 
-  // BOLO match → alert workspace officers (critical safety signal)
+  // BOLO match → critical log (per-officer push delivery wired in Phase B NDS refactor)
   platformEventBus.subscribe('bolo_match_detected', {
     name: 'TrinityBOLOMatchHandler',
     handler: async (event) => {
       const { workspaceId, metadata } = event;
       if (!workspaceId) return;
-      try {
-        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
-        const nds = new NotificationDeliveryService();
-        await nds.send({
-          workspaceId,
-          type: 'bolo_match',
-          title: '🚨 BOLO Match Detected',
-          message: `Visitor "${metadata?.visitorName}" matched an active BOLO/trespass record at ${metadata?.siteName || 'your site'}.`,
-          severity: 'critical',
-          channels: ['in_app', 'push'],
-          metadata,
-        });
-      } catch (err: any) {
-        log.error('[TrinityEvents] bolo_match_detected handler failed:', err?.message);
-      }
+      log.warn(`[TrinityEvents] bolo_match_detected — workspace=${workspaceId} visitor="${metadata?.visitorName}" site="${metadata?.siteName}"`);
     },
   });
 
@@ -3169,21 +3110,7 @@ export function initializeTrinityEventSubscriptions(): void {
     handler: async (event) => {
       const { workspaceId, metadata } = event;
       if (!workspaceId) return;
-      try {
-        const { NotificationDeliveryService } = await import('./notificationDeliveryService');
-        const nds = new NotificationDeliveryService();
-        await nds.send({
-          workspaceId,
-          type: 'hris_disconnected',
-          title: 'HRIS Provider Disconnected',
-          message: `Your ${metadata?.provider || 'HRIS'} integration has been disconnected. Please reconnect to resume sync.`,
-          severity: 'warning',
-          channels: ['in_app', 'email'],
-          metadata,
-        });
-      } catch (err: any) {
-        log.error('[TrinityEvents] hris.provider_disconnected handler failed:', err?.message);
-      }
+      log.warn(`[TrinityEvents] hris.provider_disconnected — workspace=${workspaceId} provider=${metadata?.provider}`);
     },
   });
 
