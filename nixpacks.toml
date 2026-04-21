@@ -1,5 +1,9 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "npm-9_x"]
+nixPkgs = ["nodejs_22"]
 
 [variables]
 NPM_CONFIG_PRODUCTION = "false"
+# Give vite + esbuild more heap during the build image step.
+# The 1.6 MB index bundle + 789 KB schema chunk push Railway's default
+# Node heap ceiling and cause the build image step to fail with OOM.
+NODE_OPTIONS = "--max-old-space-size=4096"
