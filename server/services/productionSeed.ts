@@ -54,6 +54,66 @@ export async function runDataCorrections(): Promise<void> {
     console.log('🔧 Data Correction: personal_forward_email migration skipped:', (err as any)?.message);
   }
 
+  // Safe migration: create privacy/legal tables if they don't exist
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS cookie_consent (
+        id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id      TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        workspace_id TEXT,
+        essential    BOOLEAN NOT NULL DEFAULT TRUE,
+        functional   BOOLEAN NOT NULL DEFAULT FALSE,
+        analytics    BOOLEAN NOT NULL DEFAULT FALSE,
+        ip_address   TEXT,
+        user_agent   TEXT,
+        consented_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at   TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS terms_acceptance (
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        workspace_id     TEXT,
+        terms_version    TEXT NOT NULL,
+        privacy_version  TEXT NOT NULL,
+        ip_address       TEXT,
+        accepted_at      TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (user_id, terms_version)
+      )
+    `);
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS legal_agreements (
+        id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        agreement_type              TEXT NOT NULL,
+        version                     TEXT NOT NULL,
+        title                       TEXT NOT NULL,
+        content                     TEXT,
+        effective_date              TIMESTAMPTZ,
+        requires_explicit_signature BOOLEAN DEFAULT FALSE,
+        is_current                  BOOLEAN DEFAULT TRUE,
+        created_at                  TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS user_legal_acceptances (
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        agreement_type   TEXT NOT NULL,
+        version_accepted TEXT NOT NULL,
+        typed_name       TEXT,
+        ip_address       TEXT,
+        user_agent       TEXT,
+        accepted_at      TIMESTAMPTZ DEFAULT NOW(),
+        revoked_at       TIMESTAMPTZ,
+        UNIQUE (user_id, agreement_type, version_accepted)
+      )
+    `);
+    console.log('🔧 Data Correction: privacy/legal tables ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: privacy/legal table migration skipped:', (err as any)?.message);
+  }
+
   // Ensure the Statewide Protective Services workspace and its owner exist
   await runStatewideWorkspaceBootstrap();
 

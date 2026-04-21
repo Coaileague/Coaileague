@@ -81,7 +81,8 @@ function generateTicketNumber(serviceName: string): string {
  */
 async function createHealthCheckTicket(serviceHealth: ServiceHealth): Promise<void> {
   // Check if auto-ticket creation is enabled via feature toggle
-  if (!getFeatureToggle('automation.autoTicketCreation')) {
+  const autoTicketEnabled = await getFeatureToggle('automation.autoTicketCreation');
+  if (!autoTicketEnabled) {
     return;
   }
 
