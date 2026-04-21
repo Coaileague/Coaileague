@@ -108,7 +108,7 @@ export const API_ENDPOINTS = {
     subscribe: "/api/billing/subscribe",
     updateCard: "/api/billing/update-card",
     invoices: "/api/billing/invoices",
-    usage: "/api/billing/usage",
+    usage: "/api/billing/usage/summary",
   },
 
   payroll: {

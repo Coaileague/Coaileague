@@ -34,12 +34,12 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
 
   const { data: vapidKey } = useQuery<{ publicKey: string | null }>({
     queryKey: ["/api/push/vapid-public-key"],
-    enabled: isSupported,
+    enabled: isSupported && isAuthenticated,
   });
 
   const { data: subscriptionsData } = useQuery<{ subscriptions: PushSubscription[] }>({
     queryKey: ["/api/push/subscriptions"],
-    enabled: isSupported && permission === "granted",
+    enabled: isSupported && isAuthenticated && permission === "granted",
   });
 
   const subscribeMutation = useMutation({

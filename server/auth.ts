@@ -600,8 +600,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
     req.user = testUser;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    req.user = testUser.id;
     req.isTestMode = true;
     req.workspaceId = TEST_MODE_WORKSPACE_ID;
     req.workspaceRole = 'org_owner';
@@ -629,8 +627,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     log.info('Trinity bot bypass granted', { endpoint, method, ip: ipAddress });
     // @ts-expect-error — TS migration: fix in refactoring sprint
     req.user = TRINITY_BOT_USER;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    req.user = TRINITY_BOT_USER.id;
     req.platformRole = 'Bot';
     req.workspaceRole = undefined;
     (req as any).isTrinityBot = true;
