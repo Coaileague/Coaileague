@@ -363,6 +363,7 @@ export default function RMSHub() {
   const checkoutVisitor = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/visitors/${id}/checkout`, { checkedOutBy: user?.firstName, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "Visitor checked out" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const preRegisterVisitor = useMutation({
@@ -392,21 +393,25 @@ export default function RMSHub() {
   const createKey = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/rms/key-control", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateKey(false); toast({ title: "Key checked out" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const returnKey = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/key-control/${id}/return`, { returnedTo: user?.firstName, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "Key returned" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createLF = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/rms/lost-found", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateLF(false); toast({ title: "Item logged" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createTrespass = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/rms/trespass", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateTrespass(false); toast({ title: "Trespass notice issued" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createBOLO = useMutation({
@@ -418,6 +423,7 @@ export default function RMSHub() {
   const deactivateBOLO = useMutation({
     mutationFn: (id: string) => apiRequest("PATCH", `/api/rms/bolo/${id}`, { isActive: false, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "BOLO deactivated" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const polishNarrative = useMutation({
@@ -472,6 +478,7 @@ export default function RMSHub() {
 
   const uploadPhoto = useMutation({
     mutationFn: (data: { base64Data: string; fileName: string; category: string }) => apiRequest("POST", "/api/rms/upload-photo", { ...data, workspaceId }),
+    onError: (e: any) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
   });
 
   // Incident form with site selector + GPS + quick templates

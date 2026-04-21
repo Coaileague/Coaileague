@@ -516,8 +516,16 @@ export default function ApiAccess() {
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Key className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">No API keys configured</p>
-                <p className="text-xs mt-1">Generate a key to start using the API programmatically</p>
+                <p className="text-sm font-medium">No API keys configured</p>
+                <p className="text-xs mt-1 mb-4">Generate a key to start using the API programmatically</p>
+                <Button
+                  size="sm"
+                  onClick={() => setDialogOpen(true)}
+                  data-testid="button-empty-generate-key"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Generate API Key
+                </Button>
               </div>
             )}
           </CardContent>

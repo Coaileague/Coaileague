@@ -325,9 +325,14 @@ export default function ArmoryManagement() {
             <div className="text-center py-16 text-muted-foreground">
               <ShieldAlert className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p className="text-lg font-medium">No Weapons Found</p>
-              <p className="text-sm mt-1">
+              <p className="text-sm mt-1 mb-4">
                 {searchQuery ? "Try a different search term" : "Add your first weapon to get started"}
               </p>
+              {!searchQuery && (
+                <Button size="sm" onClick={() => setShowAddDialog(true)} data-testid="button-empty-add-weapon">
+                  Add First Weapon
+                </Button>
+              )}
             </div>
           )}
         </TabsContent>
