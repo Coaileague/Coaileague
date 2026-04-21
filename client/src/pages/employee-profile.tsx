@@ -73,6 +73,51 @@ export default function EmployeeProfile() {
     enabled: !!employee,
   });
 
+  // Manager assignment — eligible managers in the same workspace
+  const workspaceId = employee?.workspaceId || currentUser?.user?.currentWorkspaceId;
+  const { data: managers } = useQuery<any[]>({
+    queryKey: ['/api/employees', workspaceId, 'managers'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/employees?workspaceId=${workspaceId}&role=manager`);
+      const json = await res.json();
+      return (json.data || json || []).filter((m: any) =>
+        ['manager', 'department_manager', 'supervisor', 'org_owner', 'co_owner'].includes(m.workspaceRole)
+      );
+    },
+    enabled: !!workspaceId,
+  });
+
+  const { data: currentAssignment, refetch: refetchAssignment } = useQuery<any[]>({
+    queryKey: ['/api/hr/manager-assignments/employee', employee?.id],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/hr/manager-assignments/employee/${employee?.id}`);
+      return res.json();
+    },
+    enabled: !!employee?.id,
+  });
+
+  const assignManagerMutation = useMutation({
+    mutationFn: async (managerId: string) => {
+      const res = await apiRequest('POST', '/api/hr/manager-assignments', {
+        managerId,
+        employeeId: employee?.id,
+        workspaceId,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to assign manager');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchAssignment();
+      toast({ title: 'Manager assigned successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const [contactInfo, setContactInfo] = useState({
     phone: '',
     address: '',
@@ -603,6 +648,52 @@ export default function EmployeeProfile() {
                   </div>
                 </>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Manager Assignment */}
+        {employee && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                Reporting Manager
+              </CardTitle>
+              <CardDescription>Assign a direct supervisor for this employee</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Assigned Manager</Label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={currentAssignment?.[0]?.managerId || ''}
+                    onValueChange={(managerId) => assignManagerMutation.mutate(managerId)}
+                    disabled={assignManagerMutation.isPending}
+                  >
+                    <SelectTrigger className="w-full" data-testid="select-assigned-manager">
+                      <SelectValue placeholder="No manager assigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No manager</SelectItem>
+                      {(managers || []).map((m: any) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.firstName} {m.lastName}
+                          {m.organizationalTitle ? ` — ${m.organizationalTitle}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {assignManagerMutation.isPending && (
+                    <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground flex-shrink-0" />
+                  )}
+                </div>
+                {currentAssignment?.[0]?.managerName && (
+                  <p className="text-xs text-muted-foreground">
+                    Currently reporting to: {currentAssignment[0].managerName}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}

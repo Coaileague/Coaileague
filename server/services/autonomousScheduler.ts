@@ -1371,6 +1371,10 @@ async function runWeeklyScheduleGeneration() {
                               position: e.position || null,
                               availability: availMap.get(e.id) || [],
                               skills: skillMap.get(e.id) || [],
+                              // Armed officer attributes for scheduling eligibility
+                              isArmed: (e as any).isArmed ?? false,
+                              armedLicenseVerified: (e as any).armedLicenseVerified ?? false,
+                              guardCardExpiryDate: (e as any).guardCardExpiryDate ?? null,
                             })),
                             constraints: {
                               weekStart: nextWeekStart.toISOString(),
@@ -1395,6 +1399,30 @@ async function runWeeklyScheduleGeneration() {
                       
                       // AI Brain processes job immediately and returns result
                       if (result.status === 'completed') {
+                        // Armed shift validation: strip any AI-generated assignment where
+                        // an armed shift was assigned to an unarmed or unverified officer.
+                        const now = new Date();
+                        const empMap = new Map(workspaceEmployees.map(e => [e.id, e]));
+                        if (result.output?.assignments) {
+                          result.output.assignments = result.output.assignments.filter((a: any) => {
+                            const shift = existingShifts.find(s => s.id === a.shiftId);
+                            const isArmedShift = shift && (
+                              String((shift as any).position || '').toLowerCase().includes('armed') ||
+                              String((shift as any).position || '') === 'armed_guard'
+                            );
+                            if (!isArmedShift) return true; // unarmed shifts — always valid
+                            const officer = empMap.get(a.employeeId);
+                            if (!officer) return false;
+                            const isArmedOfficer = (officer as any).isArmed && (officer as any).armedLicenseVerified;
+                            const guardCardExpiry = (officer as any).guardCardExpiryDate;
+                            const licenseExpired = guardCardExpiry && new Date(guardCardExpiry) < now;
+                            if (!isArmedOfficer || licenseExpired) {
+                              log.warn(`[Scheduler] Armed shift ${a.shiftId} — officer ${a.employeeId} ineligible: armed=${(officer as any).isArmed}, verified=${(officer as any).armedLicenseVerified}, expired=${licenseExpired}`);
+                              return false;
+                            }
+                            return true;
+                          });
+                        }
                         shiftsGenerated = result.output?.assignments?.length || 0;
                         log.info('AI Brain generated shift assignments', { shiftsGenerated, creditsDeducted: creditResult.tokensUsed });
                       } else if (result.status === 'failed') {

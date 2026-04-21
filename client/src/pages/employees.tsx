@@ -82,6 +82,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { insertEmployeeSchema, type Employee, type InsertEmployee } from "@shared/schema";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useForm } from "react-hook-form";
@@ -439,6 +440,9 @@ export default function Employees() {
     workspaceRole: "staff", // Default to staff role
     // @ts-expect-error — TS migration: fix in refactoring sprint
     platformRole: "", // Empty = no platform role
+    isArmed: false,
+    workerType: "employee" as "employee" | "contractor",
+    guardCardNumber: "",
   });
   
   // Get messages from config
@@ -533,6 +537,9 @@ export default function Employees() {
         workspaceRole: "staff",
         // @ts-expect-error — TS migration: fix in refactoring sprint
         platformRole: "",
+        isArmed: false,
+        workerType: "employee" as "employee" | "contractor",
+        guardCardNumber: "",
       });
     },
     onError: (error: Error) => {
@@ -591,8 +598,10 @@ export default function Employees() {
       // @ts-expect-error — TS migration: fix in refactoring sprint
       platformRole: formData.platformRole || undefined,
       workspaceId: workspaceId!,
-      isActive: true, // NEW: align with backend expectations for new employees
-      workerType: formData.payType === 'contractor' ? 'contractor' : 'employee',
+      isActive: true,
+      isArmed: formData.isArmed ?? false,
+      workerType: (formData.workerType as "employee" | "contractor") || (formData.payType === 'contractor' ? 'contractor' : 'employee'),
+      guardCardNumber: (formData.guardCardNumber as string) || undefined,
     });
 
     createMutation.mutate(validatedData);
@@ -1149,11 +1158,62 @@ export default function Employees() {
                     </div>
                   </div>
                 </div>
+
+                {/* Officer Classification Section */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Officer Classification</div>
+
+                  {/* Employment Type */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="workerType" className="text-xs">Employment Type</Label>
+                    <Select
+                      value={(formData.workerType as string) || "employee"}
+                      onValueChange={(v) => setFormData({ ...formData, workerType: v as "employee" | "contractor" })}
+                    >
+                      <SelectTrigger id="workerType" className="h-9 text-sm" data-testid="select-worker-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="employee">W-2 Employee</SelectItem>
+                        <SelectItem value="contractor">1099 Contractor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Armed Officer Toggle */}
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <Label htmlFor="isArmed" className="text-xs font-medium">Armed Officer</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">Can carry a firearm. Requires valid armed license.</p>
+                    </div>
+                    <Switch
+                      id="isArmed"
+                      checked={!!(formData.isArmed)}
+                      onCheckedChange={(v) => setFormData({ ...formData, isArmed: v })}
+                      data-testid="switch-is-armed"
+                    />
+                  </div>
+
+                  {/* Guard Card Number — shown only when armed */}
+                  {formData.isArmed && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="guardCardNumber" className="text-xs">Guard Card / License #</Label>
+                      <Input
+                        id="guardCardNumber"
+                        placeholder="B-XXXXXX (unarmed) or A-XXXXXX (armed)"
+                        value={(formData.guardCardNumber as string) || ""}
+                        onChange={(e) => setFormData({ ...formData, guardCardNumber: e.target.value })}
+                        data-testid="input-guard-card-number"
+                        className="h-9 text-sm font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               <UniversalModalFooter className="pt-2">
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="h-9 text-sm">Cancel</Button>
-                <Button 
-                  onClick={handleSubmit} 
+                <Button
+                  onClick={handleSubmit}
                   disabled={createMutation.isPending}
                   data-testid="button-confirm-add"
                   className="h-9 text-sm"
