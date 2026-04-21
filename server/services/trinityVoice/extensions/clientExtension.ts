@@ -125,6 +125,31 @@ export async function handleClientSupport(params: {
       outcome: 'success',
     }).catch((err) => log.warn('[clientExtension] Fire-and-forget failed:', err));
 
+    // Phase 27 — Client vs Guest branching. If we already resolved a client
+    // record (CLI match or passed-through provider context), skip the prompt
+    // and go straight to the AI support flow. Otherwise ask the caller to
+    // identify themselves: existing client (has a provider account) vs guest.
+    const alreadyVerifiedClient = !!(clientId && providerWorkspaceId);
+    if (!alreadyVerifiedClient) {
+      const prompt = lang === 'es'
+        ? 'Para ayudarle mejor, dígame: ¿actualmente recibe servicios de seguridad de un proveedor? Marque 1 si es cliente actual, o marque 2 si no tiene un proveedor asignado y solo tiene preguntas.'
+        : 'So I can help you best, tell me: are you currently receiving security services from a provider? Press 1 if you are a current client, or press 2 if you do not have a provider account and just have questions.';
+      const action = `${baseUrl}/api/voice/client-or-guest?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
+      return twiml(
+        speechGather({ action, timeout: 10, speechTimeout: 'auto', numDigits: 1, hints: lang === 'es' ? 'cliente,actual,no soy,invitado,no tengo,visitante' : 'client,current,guest,no provider,question,complaint' },
+          say(prompt, lang)
+        ) +
+        // Fall through to AI support if they stay silent
+        say(
+          lang === 'es'
+            ? 'Lo tomaré como consulta general. Un momento.'
+            : "I will treat this as a general inquiry. One moment.",
+          lang
+        ) +
+        `<Redirect method="POST">${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}</Redirect>`
+      );
+    }
+
     // Phase 25 — pull tenant-scoped client context for the caller.
     // If the caller was routed through /client-identify, we already know the
     // downstream provider workspace and can fetch their client row there.

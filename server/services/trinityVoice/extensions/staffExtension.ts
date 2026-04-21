@@ -26,6 +26,62 @@ import { scheduleNonBlocking } from '../../../lib/scheduleNonBlocking';
 const log = createLogger('staffExtension');
 
 
+// ─── PIN RETRY + LOCKOUT (voice-clock-in only) ───────────────────────────────
+// Keyed by (workspaceId, employeeNumber). Keeps an in-memory count of recent
+// failed PIN attempts. After MAX_PIN_ATTEMPTS the account is locked for
+// LOCKOUT_MS and all further PIN entries are rejected with a clear message
+// until the window elapses. Successful verification clears the counter.
+const MAX_PIN_ATTEMPTS = 3;
+const LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
+interface PinAttemptState { attempts: number; lockedUntil: number }
+const _pinAttemptState = new Map<string, PinAttemptState>();
+
+function _pinKey(workspaceId: string, employeeNumber: string): string {
+  return `${workspaceId}:${(employeeNumber || '').trim().toLowerCase()}`;
+}
+
+export function getPinAttemptStatus(workspaceId: string, employeeNumber: string): {
+  locked: boolean; remainingAttempts: number; unlocksInSec: number;
+} {
+  const key = _pinKey(workspaceId, employeeNumber);
+  const s = _pinAttemptState.get(key);
+  if (!s) return { locked: false, remainingAttempts: MAX_PIN_ATTEMPTS, unlocksInSec: 0 };
+  const now = Date.now();
+  if (s.lockedUntil > now) {
+    return { locked: true, remainingAttempts: 0, unlocksInSec: Math.ceil((s.lockedUntil - now) / 1000) };
+  }
+  // Lockout expired — clear
+  if (s.lockedUntil > 0 && s.lockedUntil <= now) {
+    _pinAttemptState.delete(key);
+    return { locked: false, remainingAttempts: MAX_PIN_ATTEMPTS, unlocksInSec: 0 };
+  }
+  return { locked: false, remainingAttempts: Math.max(0, MAX_PIN_ATTEMPTS - s.attempts), unlocksInSec: 0 };
+}
+
+export function recordPinFailure(workspaceId: string, employeeNumber: string): PinAttemptState {
+  const key = _pinKey(workspaceId, employeeNumber);
+  const now = Date.now();
+  const cur = _pinAttemptState.get(key) || { attempts: 0, lockedUntil: 0 };
+  cur.attempts += 1;
+  if (cur.attempts >= MAX_PIN_ATTEMPTS) {
+    cur.lockedUntil = now + LOCKOUT_MS;
+  }
+  _pinAttemptState.set(key, cur);
+  return cur;
+}
+
+export function clearPinAttempts(workspaceId: string, employeeNumber: string): void {
+  _pinAttemptState.delete(_pinKey(workspaceId, employeeNumber));
+}
+
+// Periodic cleanup of expired locks so the map doesn't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _pinAttemptState.entries()) {
+    if (v.lockedUntil > 0 && v.lockedUntil <= now) _pinAttemptState.delete(k);
+  }
+}, 10 * 60 * 1000).unref();
+
 const say = (text: string, lang: 'en' | 'es' = 'en') =>
   lang === 'es'
     ? `<Say voice="Polly.Lupe-Neural" language="es-US">${text}</Say>`
@@ -181,8 +237,19 @@ export async function processClockIn(params: {
   lang: 'en' | 'es';
   employeeNumber: string;
   pin: string;
+  baseUrl?: string;
 }): Promise<string> {
-  const { callSid, sessionId, workspaceId, lang, employeeNumber, pin } = params;
+  const { callSid, sessionId, workspaceId, lang, employeeNumber, pin, baseUrl } = params;
+
+  // ── PIN LOCKOUT CHECK ───────────────────────────────────────────────────
+  const lockStatus = getPinAttemptStatus(workspaceId, employeeNumber);
+  if (lockStatus.locked) {
+    const mins = Math.ceil(lockStatus.unlocksInSec / 60);
+    const lockedMsg = lang === 'es'
+      ? `Por seguridad, el acceso ha sido bloqueado temporalmente después de demasiados intentos fallidos. Por favor intente de nuevo en ${mins} minuto${mins === 1 ? '' : 's'}, o contacte a su supervisor. Adiós.`
+      : `For security, access has been temporarily locked after too many failed attempts. Please try again in ${mins} minute${mins === 1 ? '' : 's'}, or contact your supervisor. Goodbye.`;
+    return twiml(say(lockedMsg, lang));
+  }
 
   const logVerification = async (employeeId: string | null, outcome: string, failedAttempts = 0) => {
     await db.insert(voiceVerificationLog).values({
@@ -224,11 +291,44 @@ export async function processClockIn(params: {
   }
 
   if (!pinResult.valid) {
-    await logVerification(pinResult.employee?.id ?? null, 'failure', 1);
-    return lang === 'es'
-      ? twiml(say('PIN incorrecto. Por favor intente de nuevo. Adiós.', 'es'))
-      : twiml(say('Incorrect PIN. Please try again. Goodbye.'));
+    const state = recordPinFailure(workspaceId, employeeNumber);
+    await logVerification(pinResult.employee?.id ?? null, 'failure', state.attempts);
+
+    // Lockout on the N-th failure: announce lockout and hang up
+    if (state.lockedUntil > Date.now()) {
+      const mins = Math.ceil((state.lockedUntil - Date.now()) / 60000);
+      const msg = lang === 'es'
+        ? `Demasiados intentos fallidos. Por seguridad, su acceso ha sido bloqueado durante ${mins} minuto${mins === 1 ? '' : 's'}. Por favor contacte a su supervisor. Adiós.`
+        : `Too many failed attempts. For security, access is locked for ${mins} minute${mins === 1 ? '' : 's'}. Please contact your supervisor. Goodbye.`;
+      return twiml(say(msg, lang));
+    }
+
+    // Still have retries — re-gather the PIN in the same call. Requires baseUrl
+    // so we can re-post to /clock-in-verify. Gracefully fall back to a
+    // terminal message if baseUrl was not supplied by the caller route.
+    const remaining = Math.max(0, MAX_PIN_ATTEMPTS - state.attempts);
+    if (baseUrl && remaining > 0) {
+      const qs = `callSid=${callSid}&sessionId=${sessionId}&workspaceId=${workspaceId}&lang=${lang}&employeeNumber=${encodeURIComponent(employeeNumber)}`;
+      const retryPrompt = lang === 'es'
+        ? `PIN incorrecto. Le quedan ${remaining} intento${remaining === 1 ? '' : 's'}. Por favor vuelva a ingresar su PIN de seis dígitos.`
+        : `Incorrect PIN. You have ${remaining} attempt${remaining === 1 ? '' : 's'} remaining. Please re-enter your six-digit PIN.`;
+      return twiml(
+        gather({ action: `${baseUrl}/api/voice/clock-in-verify?${qs}`, numDigits: 6, timeout: 15 },
+          say(retryPrompt, lang)
+        ) +
+        say(lang === 'es' ? 'No se recibió PIN. Adiós.' : 'No PIN received. Goodbye.', lang)
+      );
+    }
+
+    // No baseUrl passed — legacy behaviour
+    return twiml(say(
+      lang === 'es' ? 'PIN incorrecto. Por favor intente de nuevo. Adiós.' : 'Incorrect PIN. Please try again. Goodbye.',
+      lang
+    ));
   }
+
+  // Success — clear any prior failed attempts
+  clearPinAttempts(workspaceId, employeeNumber);
 
   // PIN verified — resolve full employee record for guard card check and shift lookup
   const [employee] = await db.select({

@@ -105,6 +105,11 @@ import {
 
 export const voiceRouter = Router();
 
+// Applied to every voice route so getLang() can fall back to session.language
+// when Twilio re-requests without the ?lang= query param (timeouts, callbacks).
+// Declared after voiceSessionLangMiddleware + getSession are defined below —
+// attached via voiceRouter.use() near the bottom of module init.
+
 // ─── Table Migration ──────────────────────────────────────────────────────────
 // Creates voice tables if they don't exist yet (safe to run multiple times)
 
@@ -422,8 +427,31 @@ function xmlResponse(res: Response, xml: string): void {
 }
 
 function getLang(req: Request): 'en' | 'es' {
-  const lang = req.query.lang || req.body.lang || 'en';
-  return lang === 'es' ? 'es' : 'en';
+  // Priority: explicit query/body lang → middleware-hydrated session lang → 'en'
+  // The session lang is loaded once per request by voiceSessionLangMiddleware
+  // (registered on voiceRouter), eliminating the "caller picks Spanish, then
+  // Twilio timeout loses ?lang= and flow drops back to English" defect.
+  const explicit = req.query.lang || req.body.lang;
+  if (explicit === 'es') return 'es';
+  if (explicit === 'en') return 'en';
+  const sessionLang = (req as any)._voiceSessionLang as string | undefined;
+  if (sessionLang === 'es') return 'es';
+  return 'en';
+}
+
+// Hydrates req._voiceSessionLang from voice_call_sessions.language when the
+// caller has a known CallSid. Runs after twilioSignatureMiddleware so we
+// don't incur a DB lookup on spoofed webhooks.
+async function voiceSessionLangMiddleware(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    const sid = (req.body?.CallSid as string | undefined) || '';
+    if (!sid) return next();
+    const session = await getSession(sid);
+    if (session?.language === 'es' || session?.language === 'en') {
+      (req as any)._voiceSessionLang = session.language;
+    }
+  } catch { /* fail-open */ }
+  next();
 }
 
 async function getSession(callSid: string): Promise<typeof voiceCallSessions.$inferSelect | null> {
@@ -433,6 +461,11 @@ async function getSession(callSid: string): Promise<typeof voiceCallSessions.$in
     .limit(1);
   return session || null;
 }
+
+// Attach session-language hydration to every voice route so getLang() can
+// honour the caller's previously-selected language even when the ?lang=
+// query param is dropped on Twilio re-requests (timeouts, redirects).
+voiceRouter.use(voiceSessionLangMiddleware);
 
 // ─── 1. INBOUND WEBHOOK ───────────────────────────────────────────────────────
 
@@ -1238,6 +1271,7 @@ voiceRouter.post('/clock-in-verify', twilioSignatureMiddleware, async (req: Requ
 
     const xml = await processClockIn({
       callSid: CallSid, sessionId, workspaceId, lang, employeeNumber, pin: Digits,
+      baseUrl: getBaseUrl(req),
     });
     xmlResponse(res, xml);
   } catch (err: any) {
@@ -1333,7 +1367,8 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
 
 voiceRouter.post('/transcription-done', twilioSignatureMiddleware, async (req: Request, res: Response) => {
   try {
-    const { CallSid, TranscriptionText, TranscriptionStatus, RecordingSid } = req.body;
+    const { CallSid, TranscriptionText, TranscriptionStatus, RecordingSid, RecordingUrl, From } = req.body;
+    const caseType = (req.query.caseType as string) || '';
 
     if (TranscriptionStatus === 'completed' && TranscriptionText && CallSid) {
       await updateCallSession(CallSid, { transcript: TranscriptionText });
@@ -1351,6 +1386,81 @@ voiceRouter.post('/transcription-done', twilioSignatureMiddleware, async (req: R
         if (speakers > 1) await flagMultipleSpeakers({ callSid: CallSid, speakerCount: speakers });
       } catch (e: any) {
         log.warn('[VoiceRoutes] Sentiment/speaker post-processing failed:', e?.message);
+      }
+
+      // Phase 27 — GUEST COMPLAINT INTAKE: persist the transcript as a
+      // platform-level support ticket routed to CoAIleague platform support
+      // for triage. Support agents then decide whether to forward the
+      // complaint to the accused provider (matched on complaint_company) or
+      // handle directly.
+      if (caseType === 'guest_complaint') {
+        try {
+          const { pool } = await import('../db');
+
+          // Gather context we captured in earlier steps
+          const sessRow = await pool.query(
+            `SELECT workspace_id, metadata, caller_number FROM voice_call_sessions WHERE twilio_call_sid = $1 LIMIT 1`,
+            [CallSid],
+          );
+          const meta = (sessRow.rows[0]?.metadata as Record<string, any> | null) || {};
+          const complaintCompany: string = meta.complaint_company || '';
+          const complaintOfficer: string = meta.complaint_officer || '';
+          const callerPhone: string = From || sessRow.rows[0]?.caller_number || '';
+
+          // Pick the CoAIleague platform support workspace as the ticket
+          // owner. Falls back to the resolved workspace if not found.
+          const platformWs = await pool.query(
+            `SELECT id FROM workspaces WHERE name ILIKE '%CoAIleague Support%' OR id = 'coaileague-platform-workspace' LIMIT 1`,
+          );
+          const targetWorkspaceId: string = platformWs.rows[0]?.id
+            || sessRow.rows[0]?.workspace_id
+            || 'coaileague-platform-workspace';
+
+          // Generate a ticket number: TKT-GC-YYYYMMDD-XXXXX
+          const now = new Date();
+          const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+          const ticketNumber = `TKT-GC-${ymd}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+          const subject = complaintOfficer
+            ? `Guest complaint: ${complaintOfficer}${complaintCompany ? ` at ${complaintCompany}` : ''}`.slice(0, 200)
+            : `Guest complaint${complaintCompany ? ` — ${complaintCompany}` : ''}`.slice(0, 200);
+
+          const description = [
+            `Voice-intake guest complaint captured via ${CallSid}.`,
+            `Caller phone: ${callerPhone || 'unknown'}`,
+            `Named company: ${complaintCompany || '(not provided)'}`,
+            `Named officer: ${complaintOfficer || '(not provided)'}`,
+            `Recording: ${RecordingUrl || 'n/a'}`,
+            '',
+            '--- Caller transcript (verbatim) ---',
+            TranscriptionText,
+          ].join('\n');
+
+          await pool.query(
+            `INSERT INTO support_tickets
+              (workspace_id, ticket_number, type, priority, requested_by, subject, description,
+               status, is_escalated, created_at, updated_at)
+             VALUES ($1, $2, 'guest_complaint', 'high', $3, $4, $5, 'open', TRUE, NOW(), NOW())`,
+            [targetWorkspaceId, ticketNumber, callerPhone || 'voice-guest', subject, description],
+          );
+
+          log.info(`[VoiceRoutes] Guest complaint ticket ${ticketNumber} created for ${callerPhone} (company="${complaintCompany}" officer="${complaintOfficer}")`);
+
+          // Emit platform event so NDS / support console can surface it in real time.
+          try {
+            const { platformEventBus } = await import('../services/platformEventBus');
+            await platformEventBus.publish({
+              type: 'support_ticket.created',
+              category: 'support',
+              title: `Guest complaint intake — ${subject}`,
+              description: `Voice-intake complaint from ${callerPhone}. Company: ${complaintCompany || 'unknown'}; Officer: ${complaintOfficer || 'unknown'}.`,
+              workspaceId: targetWorkspaceId,
+              metadata: { ticketNumber, callSid: CallSid, callerPhone, complaintCompany, complaintOfficer, channel: 'voice' },
+            });
+          } catch { /* non-fatal */ }
+        } catch (gcErr: any) {
+          log.error('[VoiceRoutes] Guest complaint persistence failed:', gcErr?.message);
+        }
       }
     } else if (TranscriptionStatus === 'failed') {
       log.warn(`[VoiceRoutes] Transcription failed for callSid=${CallSid} recordingSid=${RecordingSid}`);
@@ -3180,6 +3290,313 @@ mgmtRouter.get('/analytics', async (req: AuthenticatedRequest, res: Response) =>
   } catch (err: any) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── CLIENT-VS-GUEST BRANCHING (Phase 27) ─────────────────────────────────────
+// When a caller hits Ext-2 (client support) without a pre-resolved client
+// context, clientExtension now asks them "are you a current client of a
+// provider, or a guest with general questions?" and POSTs to this endpoint.
+// Digit 1 / speech("client","current") → provider lookup flow
+// Digit 2 / speech("guest","no provider") → guest-intake (limited) flow
+voiceRouter.post('/client-or-guest', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const sessionId = (req.query.sessionId as string) || req.body.CallSid || '';
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const Digits = (req.body.Digits as string) || '';
+    const Speech = ((req.body.SpeechResult as string) || '').toLowerCase();
+
+    const looksLikeClient = Digits === '1'
+      || /\b(client|current|receiving|receive services|customer|provider|contract|yes)\b/i.test(Speech)
+      || /\b(cliente|actual|recibiendo|proveedor|contrato|s[ií])\b/i.test(Speech);
+    const looksLikeGuest = Digits === '2'
+      || /\b(guest|no provider|question|complaint|i don.?t|no)\b/i.test(Speech)
+      || /\b(invitado|visitante|no tengo|queja|pregunta)\b/i.test(Speech);
+
+    if (looksLikeClient) {
+      return xmlResponse(res, twiml(
+        redirect(`${baseUrl}/api/voice/client-provider-lookup?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+      ));
+    }
+    if (looksLikeGuest) {
+      return xmlResponse(res, twiml(
+        redirect(`${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+      ));
+    }
+
+    // Neither matched — treat as guest by default (less token spend than client lookup)
+    const fallbackMsg = lang === 'es'
+      ? 'No entendí su respuesta. Lo tomaré como consulta general.'
+      : "I didn't catch that. I'll treat this as a general inquiry.";
+    return xmlResponse(res, twiml(
+      say(fallbackMsg, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+      redirect(`${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] /client-or-guest error:', err?.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── CLIENT PROVIDER LOOKUP (Phase 27) ────────────────────────────────────────
+// Asks for the provider's account/client code (CLT-XXX-NNNNN) or the company
+// name. Fuzzy-matches against `clients` by external_id / client_number / name
+// or workspaces by name. When a match is found AND the caller's phone is on
+// file, the client is considered verified and redirected into the full client
+// support flow with providerWorkspaceId/clientId populated.
+voiceRouter.post('/client-provider-lookup', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const sessionId = (req.query.sessionId as string) || req.body.CallSid || '';
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const Speech = ((req.body.SpeechResult as string) || '').trim();
+    const Digits = (req.body.Digits as string) || '';
+    const attempt = parseInt((req.query.attempt as string) || '1', 10);
+
+    // First call — prompt for code or company name
+    if (!Speech && !Digits) {
+      const prompt = lang === 'es'
+        ? 'Por favor diga el código de cliente de su proveedor, que comienza con C L T, o el nombre de la empresa que le proporciona servicios de seguridad.'
+        : "Please say your provider's client code — it starts with C L T — or the name of the company providing your security services.";
+      return xmlResponse(res, twiml(
+        `<Gather input="speech dtmf" action="${baseUrl}/api/voice/client-provider-lookup?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&attempt=1" method="POST" timeout="10" speechTimeout="auto" hints="CLT,company,provider,security">` +
+        say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `</Gather>` +
+        redirect(`${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+      ));
+    }
+
+    // Try to resolve: CLT-XXX-NNNNN pattern, then fall back to workspace-name fuzzy match
+    const raw = (Speech || Digits).trim();
+    let matched: { workspaceId: string; clientId?: string; label: string } | null = null;
+    try {
+      const { pool } = await import('../db');
+      const cltPattern = raw.toUpperCase().replace(/[^A-Z0-9\-]/g, '').match(/CLT-?[A-Z0-9]{2,8}-?\d{1,6}/);
+      if (cltPattern) {
+        const r = await pool.query(
+          `SELECT id, workspace_id FROM clients
+           WHERE UPPER(COALESCE(client_number, external_id, '')) = $1
+              OR UPPER(COALESCE(external_id, '')) = $1
+           LIMIT 1`,
+          [cltPattern[0]],
+        );
+        if (r.rows.length) matched = { workspaceId: r.rows[0].workspace_id, clientId: r.rows[0].id, label: cltPattern[0] };
+      }
+      if (!matched) {
+        const cleaned = raw.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 80);
+        if (cleaned.length >= 3) {
+          const r = await pool.query(
+            `SELECT id, name FROM workspaces
+             WHERE LOWER(name) LIKE LOWER($1) AND subscription_status != 'cancelled'
+             LIMIT 1`,
+            [`%${cleaned}%`],
+          );
+          if (r.rows.length) matched = { workspaceId: r.rows[0].id, label: r.rows[0].name };
+        }
+      }
+    } catch (lookupErr: any) {
+      log.warn('[VoiceRoutes] /client-provider-lookup DB error:', lookupErr?.message);
+    }
+
+    if (matched) {
+      // Persist to session metadata so the downstream /main-menu-route case '2'
+      // can enrich the AI context with providerWorkspaceId + clientId.
+      try {
+        const { pool } = await import('../db');
+        await pool.query(
+          `UPDATE voice_call_sessions
+              SET metadata = COALESCE(metadata, '{}'::jsonb) ||
+                             jsonb_build_object('client_provider_workspace_id', $1::text,
+                                                'client_id', $2::text)
+            WHERE twilio_call_sid = $3`,
+          [matched.workspaceId, matched.clientId || null, req.body.CallSid || sessionId],
+        );
+      } catch { /* non-fatal */ }
+
+      const foundMsg = lang === 'es'
+        ? `Encontré a ${matched.label}. Déjeme conectarle con el equipo de soporte.`
+        : `I found ${matched.label}. Let me connect you with the support team.`;
+      return xmlResponse(res, twiml(
+        say(foundMsg, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        redirect(`${baseUrl}/api/voice/main-menu-route?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(matched.workspaceId)}&lang=${lang}&_d=2`)
+      ));
+    }
+
+    // No match — offer one retry, then fall through to guest intake
+    if (attempt < 2) {
+      const retryMsg = lang === 'es'
+        ? 'No encontré ese proveedor. Intente de nuevo, dígame el código C L T o el nombre de la empresa.'
+        : "I didn't find that provider. Please try again — say the C L T code or the company name.";
+      return xmlResponse(res, twiml(
+        `<Gather input="speech dtmf" action="${baseUrl}/api/voice/client-provider-lookup?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&attempt=${attempt + 1}" method="POST" timeout="10" speechTimeout="auto">` +
+        say(retryMsg, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `</Gather>` +
+        redirect(`${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+      ));
+    }
+
+    // After two misses fall back to guest intake — protects AI-token budget
+    const fallMsg = lang === 'es'
+      ? 'No pude encontrar al proveedor. Continuaré con usted como invitado.'
+      : "I couldn't locate the provider. I'll continue with you as a guest.";
+    return xmlResponse(res, twiml(
+      say(fallMsg, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+      redirect(`${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] /client-provider-lookup error:', err?.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── GUEST INTAKE (Phase 27) ──────────────────────────────────────────────────
+// For callers without a provider account. Token-conservative: offers three
+// concrete branches (file a complaint / ask a quick question / leave a message)
+// rather than handing to free-form AI. Each branch has a bounded next step.
+voiceRouter.post('/guest-intake', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const sessionId = (req.query.sessionId as string) || req.body.CallSid || '';
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const Digits = (req.body.Digits as string) || '';
+    const Speech = ((req.body.SpeechResult as string) || '').toLowerCase();
+
+    // If we have a choice, route
+    const isComplaint = Digits === '1' || /\b(complaint|officer|file|report)\b/.test(Speech) || /\b(queja|oficial|reportar)\b/.test(Speech);
+    const isQuestion = Digits === '2' || /\b(question|info|help)\b/.test(Speech) || /\b(pregunta|informaci[oó]n|ayuda)\b/.test(Speech);
+    const isMessage = Digits === '3' || /\b(message|leave|callback)\b/.test(Speech) || /\b(mensaje|dejar|llamar)\b/.test(Speech);
+
+    if (isComplaint) {
+      return xmlResponse(res, twiml(
+        redirect(`${baseUrl}/api/voice/guest-complaint-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+      ));
+    }
+    if (isQuestion) {
+      // One bounded AI turn via existing support-resolve, marked guest
+      return xmlResponse(res, twiml(
+        redirect(`${baseUrl}/api/voice/support-resolve?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&guest=1`)
+      ));
+    }
+    if (isMessage) {
+      return xmlResponse(res, twiml(
+        redirect(`${baseUrl}/api/voice/schedule-callback?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+      ));
+    }
+
+    // First call — present the 3-choice menu
+    const prompt = lang === 'es'
+      ? 'Entendido. Tengo tres opciones rápidas. Marque 1 para presentar una queja sobre un oficial o empresa de seguridad. Marque 2 para una pregunta general. Marque 3 para dejar un mensaje a un humano.'
+      : "Got it. I have three quick options. Press 1 to file a complaint about an officer or security company. Press 2 for a general question. Press 3 to leave a message for a human.";
+    return xmlResponse(res, twiml(
+      `<Gather input="speech dtmf" action="${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}" method="POST" numDigits="1" timeout="10" speechTimeout="auto" hints="complaint,officer,question,message,leave">` +
+      say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+      `</Gather>` +
+      say(lang === 'es' ? 'No recibí ninguna selección. Adiós.' : "I did not receive a selection. Goodbye.", lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US')
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] /guest-intake error:', err?.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── GUEST COMPLAINT INTAKE (Phase 27) ────────────────────────────────────────
+// No attribution required. Two short prompts (company name → officer name) so
+// the complaint has context. Then `<Record>` captures the caller's own words
+// verbatim. Twilio's transcription callback posts to /transcription-done with
+// a `caseType=guest_complaint` param which the downstream handler recognises
+// and persists into support_tickets (workspace = platform support) for human
+// triage.
+voiceRouter.post('/guest-complaint-intake', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const sessionId = (req.query.sessionId as string) || req.body.CallSid || '';
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const step = (req.query.step as string) || 'company';
+    const Speech = ((req.body.SpeechResult as string) || '').trim();
+
+    // Step 1: ask company name
+    if (step === 'company' && !Speech) {
+      const prompt = lang === 'es'
+        ? 'Lamento escuchar esto. Para ayudarle, primero dígame el nombre de la empresa de seguridad involucrada.'
+        : "I'm sorry to hear that. To help, first please tell me the name of the security company involved.";
+      return xmlResponse(res, twiml(
+        `<Gather input="speech" action="${baseUrl}/api/voice/guest-complaint-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=officer" method="POST" timeout="10" speechTimeout="auto">` +
+        say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `</Gather>` +
+        say(lang === 'es' ? 'No recibí el nombre. Adiós.' : "I didn't catch the name. Goodbye.", lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US')
+      ));
+    }
+
+    // Step 2: persist the company name and ask for officer name (optional)
+    if (step === 'officer') {
+      try {
+        const { pool } = await import('../db');
+        await pool.query(
+          `UPDATE voice_call_sessions
+              SET metadata = COALESCE(metadata, '{}'::jsonb) ||
+                             jsonb_build_object('complaint_company', $1::text)
+            WHERE twilio_call_sid = $2`,
+          [Speech.slice(0, 200), req.body.CallSid || sessionId],
+        );
+      } catch { /* non-fatal */ }
+
+      const prompt = lang === 'es'
+        ? 'Gracias. Si conoce el nombre del oficial, dígalo ahora. De lo contrario, solo diga "no lo sé".'
+        : "Thank you. If you know the officer's name, please say it now. Otherwise, just say \"I don't know\".";
+      return xmlResponse(res, twiml(
+        `<Gather input="speech" action="${baseUrl}/api/voice/guest-complaint-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=record" method="POST" timeout="8" speechTimeout="auto">` +
+        say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `</Gather>` +
+        // If no speech, still go to the record step (officer name is optional)
+        redirect(`${baseUrl}/api/voice/guest-complaint-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=record`)
+      ));
+    }
+
+    // Step 3: persist the officer name and <Record> the complaint verbatim
+    if (step === 'record') {
+      if (Speech) {
+        try {
+          const { pool } = await import('../db');
+          await pool.query(
+            `UPDATE voice_call_sessions
+                SET metadata = COALESCE(metadata, '{}'::jsonb) ||
+                               jsonb_build_object('complaint_officer', $1::text)
+              WHERE twilio_call_sid = $2`,
+            [Speech.slice(0, 200), req.body.CallSid || sessionId],
+          );
+        } catch { /* non-fatal */ }
+      }
+
+      const prompt = lang === 'es'
+        ? 'Gracias. Ahora por favor explique lo ocurrido con sus propias palabras. Escuchamos completamente. Cuando termine, presione cualquier tecla o simplemente deje de hablar.'
+        : "Thank you. Now please explain in your own words what happened. We are listening in full. When you're finished, press any key or just stop speaking.";
+      return xmlResponse(res, twiml(
+        say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `<Record ` +
+          `action="${baseUrl}/api/voice/recording-done?caseType=guest_complaint&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}" ` +
+          `method="POST" ` +
+          `maxLength="180" ` +
+          `timeout="3" ` +
+          `finishOnKey="*#0123456789" ` +
+          `transcribe="true" ` +
+          `transcribeCallback="${baseUrl}/api/voice/transcription-done?caseType=guest_complaint&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}" ` +
+          `playBeep="true"` +
+        `/>`
+      ));
+    }
+
+    // Unknown step — redirect back to start
+    return xmlResponse(res, twiml(
+      redirect(`${baseUrl}/api/voice/guest-complaint-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=company`)
+    ));
+  } catch (err: any) {
+    log.error('[VoiceRoutes] /guest-complaint-intake error:', err?.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
 });
 
