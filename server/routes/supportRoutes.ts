@@ -354,15 +354,17 @@ router.post('/tickets', async (req: AuthenticatedRequest, res) => {
     // the ticket is written to the workspace the session is actively scoped to.
     const resolvedWorkspaceId = (req as AuthenticatedRequest).workspaceId || user.currentWorkspaceId;
 
-    const [ticket] = await db.insert(supportTickets).values({
-      ...validated,
-      ticketNumber,
-      workspaceId: resolvedWorkspaceId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }).returning();
+    const [ticket] = await db.transaction(async (tx) => {
+      return tx.insert(supportTickets).values({
+        ...validated,
+        ticketNumber,
+        workspaceId: resolvedWorkspaceId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+    });
 
-    // SLA Clock Start Notification
+    // SLA Clock Start Notification — runs after ticket commit so ticketId is valid
     await notificationEngine.sendNotification({
       workspaceId: resolvedWorkspaceId,
       userId: userId,
@@ -467,17 +469,19 @@ router.post('/tickets/:id/escalate', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ message: "Ticket already escalated" });
     }
 
-    const [updatedTicket] = await db.update(supportTickets)
-      .set({
-        isEscalated: true,
-        escalatedAt: new Date(),
-        escalatedBy: userId,
-        escalatedReason: reason,
-        priority: 'high',
-        updatedAt: new Date(),
-      })
-      .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId)))
-      .returning();
+    const [updatedTicket] = await db.transaction(async (tx) => {
+      return tx.update(supportTickets)
+        .set({
+          isEscalated: true,
+          escalatedAt: new Date(),
+          escalatedBy: userId,
+          escalatedReason: reason,
+          priority: 'high',
+          updatedAt: new Date(),
+        })
+        .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId)))
+        .returning();
+    });
 
     const platformStaff = await db.query.platformRoles.findMany({
       where: inArray(platformRoles.role, [...PLATFORM_SUPPORT_ROLES] as any),

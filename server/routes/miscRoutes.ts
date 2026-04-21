@@ -1061,20 +1061,22 @@ router.post("/api/contact", async (req, res) => {
     const fullDescription = `Contact Form Submission\n\nName: ${name}\nEmail: ${email}\n${company ? `Company: ${company}\n` : ""}${phone ? `Phone: ${phone}\n` : ""}${tier ? `Tier: ${tier}\n` : ""}\n\nMessage:\n${message}`;
 
     // Create ticket locked to Trinity — she works it first before any human sees it
-    const [ticket] = await db
-      .insert(supportTickets)
-      .values({
-        workspaceId: platformWorkspaceId,
-        ticketNumber,
-        type: "support",
-        priority,
-        requestedBy: `${name} <${email}>`,
-        subject,
-        description: fullDescription,
-        status: "in_progress",
-        assignedTo: "trinity-ai",
-      })
-      .returning();
+    const [ticket] = await db.transaction(async (tx) => {
+      return tx
+        .insert(supportTickets)
+        .values({
+          workspaceId: platformWorkspaceId,
+          ticketNumber,
+          type: "support",
+          priority,
+          requestedBy: `${name} <${email}>`,
+          subject,
+          description: fullDescription,
+          status: "in_progress",
+          assignedTo: "trinity-ai",
+        })
+        .returning();
+    });
 
     // Send confirmation to submitter
     // @ts-expect-error — TS migration: fix in refactoring sprint

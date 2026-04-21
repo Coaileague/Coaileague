@@ -219,16 +219,18 @@ router.post("/clients/:clientId", requireManager, async (req: AuthenticatedReque
     const body = { ...req.body, workspaceId, clientId };
     const parsed = insertClientBillingSettingsSchema.parse(body);
 
-    const existing = await db.select().from(clientBillingSettings)
-      .where(and(eq(clientBillingSettings.workspaceId, workspaceId), eq(clientBillingSettings.clientId, clientId))).limit(1);
-
     let settings;
-    if (existing.length > 0) {
-      [settings] = await db.update(clientBillingSettings).set({ ...parsed, updatedAt: new Date() })
-        .where(eq(clientBillingSettings.id, existing[0].id)).returning();
-    } else {
-      [settings] = await db.insert(clientBillingSettings).values(parsed).returning();
-    }
+    await db.transaction(async (tx) => {
+      const existing = await tx.select().from(clientBillingSettings)
+        .where(and(eq(clientBillingSettings.workspaceId, workspaceId), eq(clientBillingSettings.clientId, clientId))).limit(1);
+
+      if (existing.length > 0) {
+        [settings] = await tx.update(clientBillingSettings).set({ ...parsed, updatedAt: new Date() })
+          .where(eq(clientBillingSettings.id, existing[0].id)).returning();
+      } else {
+        [settings] = await tx.insert(clientBillingSettings).values(parsed).returning();
+      }
+    });
 
     res.json({ settings });
   } catch (error: unknown) {

@@ -31,19 +31,16 @@ function requireSupportRole(req: AuthenticatedRequest, res: Response, next: Next
   next();
 }
 
-async function logAdminAction(actorId: string, action: string, details: any) {
-  try {
-    await db.insert(systemAuditLogs).values({
-      userId: actorId,
-      action,
-      entityType: 'workspace',
-      entityId: details.workspaceId || 'unknown',
-      workspaceId: details.workspaceId || undefined,
-      metadata: details,
-    });
-  } catch (error) {
-    log.error('[EndUserControl] Failed to log action:', error);
-  }
+async function logAdminAction(actorId: string, action: string, details: any, tx?: any) {
+  const client = tx ?? db;
+  await client.insert(systemAuditLogs).values({
+    userId: actorId,
+    action,
+    entityType: 'workspace',
+    entityId: details.workspaceId || 'unknown',
+    workspaceId: details.workspaceId || undefined,
+    metadata: details,
+  });
 }
 
 /**
@@ -178,19 +175,17 @@ endUserControlRouter.post('/suspend', requireSupportRole, async (req: Authentica
       return res.status(400).json({ error: 'Workspace ID and reason are required' });
     }
 
-    await db.update(workspaces)
-      .set({
-        isSuspended: true,
-        suspendedReason: reason,
-        suspendedAt: new Date(),
-        suspendedBy: req.user?.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, workspaceId));
-
-    await logAdminAction(req.user?.id || 'system', 'workspace_suspended', {
-      workspaceId,
-      reason,
+    await db.transaction(async (tx) => {
+      await tx.update(workspaces)
+        .set({
+          isSuspended: true,
+          suspendedReason: reason,
+          suspendedAt: new Date(),
+          suspendedBy: req.user?.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, workspaceId));
+      await logAdminAction(req.user?.id || 'system', 'workspace_suspended', { workspaceId, reason }, tx);
     });
 
     res.json({ success: true, message: 'Workspace suspended' });
@@ -212,18 +207,17 @@ endUserControlRouter.post('/unsuspend', requireSupportRole, async (req: Authenti
       return res.status(400).json({ error: 'Workspace ID is required' });
     }
 
-    await db.update(workspaces)
-      .set({
-        isSuspended: false,
-        suspendedReason: null,
-        suspendedAt: null,
-        suspendedBy: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, workspaceId));
-
-    await logAdminAction(req.user?.id || 'system', 'workspace_unsuspended', {
-      workspaceId,
+    await db.transaction(async (tx) => {
+      await tx.update(workspaces)
+        .set({
+          isSuspended: false,
+          suspendedReason: null,
+          suspendedAt: null,
+          suspendedBy: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, workspaceId));
+      await logAdminAction(req.user?.id || 'system', 'workspace_unsuspended', { workspaceId }, tx);
     });
 
     res.json({ success: true, message: 'Workspace unsuspended' });
@@ -249,19 +243,17 @@ endUserControlRouter.post('/toggle-ai-brain', requireSupportRole, async (req: Au
       return res.status(400).json({ error: 'Reason is required when disabling AI Brain' });
     }
 
-    await db.update(workspaces)
-      .set({
-        aiBrainSuspended: !enabled,
-        aiBrainSuspendedReason: enabled ? null : reason,
-        aiBrainSuspendedAt: enabled ? null : new Date(),
-        aiBrainSuspendedBy: enabled ? null : req.user?.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, workspaceId));
-
-    await logAdminAction(req.user?.id || 'system', enabled ? 'ai_brain_enabled' : 'ai_brain_suspended', {
-      workspaceId,
-      reason: reason || null,
+    await db.transaction(async (tx) => {
+      await tx.update(workspaces)
+        .set({
+          aiBrainSuspended: !enabled,
+          aiBrainSuspendedReason: enabled ? null : reason,
+          aiBrainSuspendedAt: enabled ? null : new Date(),
+          aiBrainSuspendedBy: enabled ? null : req.user?.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, workspaceId));
+      await logAdminAction(req.user?.id || 'system', enabled ? 'ai_brain_enabled' : 'ai_brain_suspended', { workspaceId, reason: reason || null }, tx);
     });
 
     res.json({ success: true, message: enabled ? 'AI Brain enabled' : 'AI Brain suspended' });
@@ -308,22 +300,23 @@ endUserControlRouter.patch('/access-config', requireSupportRole, async (req: Aut
       return res.status(404).json({ error: 'User not found in specified workspace' });
     }
 
-    await db.update(users).set(updateData).where(eq(users.id, userId));
+    await db.transaction(async (tx) => {
+      await tx.update(users).set(updateData).where(eq(users.id, userId));
+      await logAdminAction(req.user?.id || 'system', 'access_config_updated', {
+        workspaceId,
+        userId,
+        targetEmail: targetUser.email,
+        updatedFields: Object.keys(updateData),
+        config: updateData,
+      }, tx);
+    });
 
-    // G24-04: If password was reset or account locked/unlocked, invalidate sessions
+    // G24-04: Session invalidation is non-DB — runs after tx commits
     if (updateData.passwordHash || updateData.lockedUntil) {
       const { authService } = await import('../services/authService');
       await authService.logoutAllSessions(userId);
       log.info(`[EndUserControl] Sessions invalidated for user ${userId} due to security update`);
     }
-
-    await logAdminAction(req.user?.id || 'system', 'access_config_updated', {
-      workspaceId,
-      userId,
-      targetEmail: targetUser.email,
-      updatedFields: Object.keys(updateData),
-      config: updateData,
-    });
 
     res.json({ success: true, message: 'Access configuration updated', updatedFields: Object.keys(updateData) });
   } catch (error: unknown) {
@@ -364,20 +357,21 @@ endUserControlRouter.post('/freeze-user', requireSupportRole, requireProtectiveR
       return res.status(404).json({ error: 'User not found in specified workspace' });
     }
 
-    await db.update(users).set({ lockedUntil: new Date('2099-12-31'), loginAttempts: 999 }).where(eq(users.id, userId));
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ lockedUntil: new Date('2099-12-31'), loginAttempts: 999 }).where(eq(users.id, userId));
+      await logAdminAction(req.user?.id || 'system', 'user_frozen', {
+        workspaceId,
+        userId,
+        targetEmail: targetUser.email,
+        reason,
+        frozenBy: req.user?.id,
+        actionType: 'individual_user_freeze',
+      }, tx);
+    });
 
-    // G24-04: Invalidate all sessions for frozen user
+    // G24-04: Session invalidation is non-DB — runs after tx commits
     const { authService } = await import('../services/authService');
     await authService.logoutAllSessions(userId);
-
-    await logAdminAction(req.user?.id || 'system', 'user_frozen', {
-      workspaceId,
-      userId,
-      targetEmail: targetUser.email,
-      reason,
-      frozenBy: req.user?.id,
-      actionType: 'individual_user_freeze',
-    });
 
     res.json({ success: true, message: 'User account frozen', userId, reason });
   } catch (error: unknown) {
@@ -401,14 +395,15 @@ endUserControlRouter.post('/unfreeze-user', requireSupportRole, async (req: Auth
       return res.status(404).json({ error: 'User not found in specified workspace' });
     }
 
-    await db.update(users).set({ lockedUntil: null, loginAttempts: 0 }).where(eq(users.id, userId));
-
-    await logAdminAction(req.user?.id || 'system', 'user_unfrozen', {
-      workspaceId,
-      userId,
-      targetEmail: targetUser.email,
-      unfrozenBy: req.user?.id,
-      actionType: 'individual_user_unfreeze',
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ lockedUntil: null, loginAttempts: 0 }).where(eq(users.id, userId));
+      await logAdminAction(req.user?.id || 'system', 'user_unfrozen', {
+        workspaceId,
+        userId,
+        targetEmail: targetUser.email,
+        unfrozenBy: req.user?.id,
+        actionType: 'individual_user_unfreeze',
+      }, tx);
     });
 
     res.json({ success: true, message: 'User account unfrozen', userId });
@@ -433,23 +428,26 @@ endUserControlRouter.post('/suspend-employee', requireSupportRole, requireProtec
       return res.status(404).json({ error: 'Employee not found in specified workspace' });
     }
 
-    await db.update(employees).set({ isActive: false }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
-
-    // G24-04: Invalidate all sessions for suspended employee
-    const { authService } = await import('../services/authService');
+    // Fetch userId before transaction for session invalidation after commit
     const [empUser] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, employeeId)).limit(1);
+
+    await db.transaction(async (tx) => {
+      await tx.update(employees).set({ isActive: false }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
+      await logAdminAction(req.user?.id || 'system', 'employee_suspended_by_support', {
+        workspaceId,
+        employeeId,
+        employeeName: `${employee[0].firstName} ${employee[0].lastName}`,
+        reason,
+        suspendedBy: req.user?.id,
+        actionType: 'individual_employee_suspend',
+      }, tx);
+    });
+
+    // G24-04: Session invalidation is non-DB — runs after tx commits
     if (empUser?.userId) {
+      const { authService } = await import('../services/authService');
       await authService.logoutAllSessions(empUser.userId);
     }
-
-    await logAdminAction(req.user?.id || 'system', 'employee_suspended_by_support', {
-      workspaceId,
-      employeeId,
-      employeeName: `${employee[0].firstName} ${employee[0].lastName}`,
-      reason,
-      suspendedBy: req.user?.id,
-      actionType: 'individual_employee_suspend',
-    });
 
     res.json({ success: true, message: 'Employee suspended', employeeId, reason });
   } catch (error: unknown) {
@@ -473,14 +471,15 @@ endUserControlRouter.post('/reactivate-employee', requireSupportRole, async (req
       return res.status(404).json({ error: 'Employee not found in specified workspace' });
     }
 
-    await db.update(employees).set({ isActive: true }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
-
-    await logAdminAction(req.user?.id || 'system', 'employee_reactivated_by_support', {
-      workspaceId,
-      employeeId,
-      employeeName: `${employee[0].firstName} ${employee[0].lastName}`,
-      reactivatedBy: req.user?.id,
-      actionType: 'individual_employee_reactivate',
+    await db.transaction(async (tx) => {
+      await tx.update(employees).set({ isActive: true }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
+      await logAdminAction(req.user?.id || 'system', 'employee_reactivated_by_support', {
+        workspaceId,
+        employeeId,
+        employeeName: `${employee[0].firstName} ${employee[0].lastName}`,
+        reactivatedBy: req.user?.id,
+        actionType: 'individual_employee_reactivate',
+      }, tx);
     });
 
     res.json({ success: true, message: 'Employee reactivated', employeeId });

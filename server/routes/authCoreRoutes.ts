@@ -1044,13 +1044,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     if (ownedWorkspace.length > 0) {
       effectiveWorkspaceId = ownedWorkspace[0].id;
       workspaceWasDynamicallyResolved = true;
-      
-      // PERSIST: Update user record with dynamically resolved workspace
-      // This ensures subsequent requests have proper context
-      await db.update(users)
-        .set({ currentWorkspaceId: effectiveWorkspaceId, updatedAt: new Date() })
-        .where(eq(users.id, freshUser.id));
-      log.info(`[Auth] Dynamically linked user ${freshUser.id} to owned workspace ${effectiveWorkspaceId}`);
+      // Workspace link + employee create will be committed atomically below
     }
   }
   
@@ -1091,23 +1085,35 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     if (ownedWorkspace) {
       workspaceRole = 'org_owner';
       
-      // AUTO-CREATE EMPLOYEE RECORD: If owner has no employee record, create one
-      // This ensures org_owners always have proper workspace membership
+      // AUTO-CREATE EMPLOYEE RECORD: If owner has no employee record, create one.
+      // Workspace link + employee create are committed atomically — orphaned state impossible.
       if (!employeeRecord && workspaceWasDynamicallyResolved) {
         try {
-          const [newEmployee] = await db.insert(employees).values({
-            userId: freshUser.id,
-            workspaceId: effectiveWorkspaceId,
-            workspaceRole: 'org_owner',
-            firstName: freshUser.firstName || 'Owner',
-            lastName: freshUser.lastName || '',
-            email: freshUser.email || `${freshUser.id}@coaileague.internal`,
-          }).returning();
-          currentEmployeeRecord = newEmployee;
-          log.info(`[Auth] Created employee record for org_owner ${freshUser.id}`);
+          await db.transaction(async (tx) => {
+            await tx.update(users)
+              .set({ currentWorkspaceId: effectiveWorkspaceId, updatedAt: new Date() })
+              .where(eq(users.id, freshUser.id));
+            const [newEmployee] = await tx.insert(employees).values({
+              userId: freshUser.id,
+              workspaceId: effectiveWorkspaceId,
+              workspaceRole: 'org_owner',
+              firstName: freshUser.firstName || 'Owner',
+              lastName: freshUser.lastName || '',
+              email: freshUser.email || `${freshUser.id}@coaileague.internal`,
+            }).returning();
+            currentEmployeeRecord = newEmployee;
+          });
+          log.info(`[Auth] Linked user ${freshUser.id} to owned workspace ${effectiveWorkspaceId} and created employee record`);
         } catch (createError: any) {
-          log.warn(`[Auth] Failed to create employee record for org_owner:`, createError?.message || createError);
+          log.warn(`[Auth] Failed to link workspace or create employee record for org_owner:`, createError?.message || createError);
         }
+      } else if (workspaceWasDynamicallyResolved) {
+        // Employee record already exists — just persist the workspace link
+        await db.update(users)
+          .set({ currentWorkspaceId: effectiveWorkspaceId, updatedAt: new Date() })
+          .where(eq(users.id, freshUser.id))
+          .catch((err: any) => log.warn('[Auth] Failed to persist workspace link:', err?.message));
+        log.info(`[Auth] Dynamically linked user ${freshUser.id} to owned workspace ${effectiveWorkspaceId}`);
       }
     }
     

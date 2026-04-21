@@ -750,15 +750,17 @@ router.post("/invitations/accept", async (req, res) => {
       return res.status(400).json({ error: "Invitation has expired" });
     }
     
-    // Update invitation status
-    await db.update(orgInvitations)
-      .set({ 
-        status: 'accepted',
-        acceptedAt: new Date(),
-        acceptedBy: userId || null,
-        acceptedWorkspaceId: workspaceId || null,
-      })
-      .where(eq(orgInvitations.id, invitation.id));
+    // Update invitation status — atomic so idempotency constraint is consistent
+    await db.transaction(async (tx) => {
+      await tx.update(orgInvitations)
+        .set({
+          status: 'accepted',
+          acceptedAt: new Date(),
+          acceptedBy: userId || null,
+          acceptedWorkspaceId: workspaceId || null,
+        })
+        .where(eq(orgInvitations.id, invitation.id));
+    });
     
     // Trigger onboarding with Trinity integration
     let onboardingResult = null;

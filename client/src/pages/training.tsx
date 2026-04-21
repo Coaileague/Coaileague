@@ -193,6 +193,9 @@ function SessionDetailView({
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions', sessionId, 'attendance'] });
       toast({ title: "Officer checked in successfully" });
     },
+    onError: (err: any) => {
+      toast({ variant: 'destructive', title: "Check-in failed", description: err?.message ?? "Could not process check-in." });
+    },
   });
 
   const selfCheckInMutation = useMutation({
@@ -226,6 +229,9 @@ function SessionDetailView({
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions', sessionId] });
       toast({ title: "Session completed and hours awarded" });
+    },
+    onError: (err: any) => {
+      toast({ variant: 'destructive', title: "Could not complete session", description: err?.message ?? "Please try again." });
     },
   });
 

@@ -474,6 +474,7 @@ export default function RMSHub() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rms/reports/audit-summary", { workspaceId }] });
     },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const uploadPhoto = useMutation({
