@@ -608,6 +608,8 @@ async function applyAutomationUpdate(params: {
         // Break compliance toggles
         'autoBreakSchedulingEnabled': 'autoBreakSchedulingEnabled',
         'breakComplianceAlerts': 'breakComplianceAlerts',
+        // Email forwarding — all inbound processed emails are also CC'd to this address
+        'inboundEmailForwardTo': 'inboundEmailForwardTo',
       };
       
       const filteredData: any = {};

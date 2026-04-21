@@ -621,11 +621,24 @@ router.put('/org-code', requireAuth, async (req: AuthenticatedRequest, res: Resp
       log.warn(`[Workspace] Migration warnings:`, migrationResult.errors);
     }
 
+    // Provision (or re-provision) all workspace email addresses under the new slug.
+    // Non-blocking — fires after the response so the client isn't delayed.
+    import('../services/email/emailProvisioningService')
+      .then(({ emailProvisioningService }) =>
+        emailProvisioningService.provisionWorkspaceAddresses(workspaceId, orgCodeNormalized)
+      )
+      .catch(err => log.warn('[Workspace] Email provisioning after org-code update failed:', err));
+
     res.json({
       message: `Org code updated to: ${orgCodeNormalized}`,
       orgCode: orgCodeNormalized,
-      emailAddress: `staffing@${orgCodeNormalized}.coaileague.com`,
-      instructions: `Send work requests to: staffing@${orgCodeNormalized}.coaileague.com`,
+      emailAddresses: [
+        `calloffs@${orgCodeNormalized}.coaileague.com`,
+        `incidents@${orgCodeNormalized}.coaileague.com`,
+        `staffing@${orgCodeNormalized}.coaileague.com`,
+        `docs@${orgCodeNormalized}.coaileague.com`,
+        `support@${orgCodeNormalized}.coaileague.com`,
+      ],
       employeesMigrated: migrationResult.migratedCount,
     });
   } catch (error: unknown) {

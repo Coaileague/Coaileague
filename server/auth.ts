@@ -674,8 +674,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       _dbDegraded: true,
     };
     req.user = degradedUser;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    req.user = authenticatedUserId;
     if (wsId && !req.workspaceId) req.workspaceId = wsId;
     log.warn('[requireAuth] DB circuit open — using session-based degraded auth', { userId: authenticatedUserId, path: endpoint });
     return next();

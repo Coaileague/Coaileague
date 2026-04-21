@@ -8,6 +8,8 @@
  * All responses are recorded as threaded messages on the finding with
  * authorType = 'workspace_owner' and logged to sra_audit_log.
  *
+ * GET  /api/sra/company/findings                          — List all findings for this workspace
+ * GET  /api/sra/company/findings/:id                      — Single finding with message thread
  * POST /api/sra/company/findings/:id/acknowledge          — Acknowledge receipt
  * POST /api/sra/company/findings/:id/remediation-evidence — Submit remediation evidence
  * POST /api/sra/company/findings/:id/payment-confirmation — Submit fine payment confirmation
@@ -51,8 +53,7 @@ async function recordCompanyResponse(
   message: string,
   attachments: unknown[],
   actionType: string,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  req: ReturnType<typeof Router>['get'] extends (path: string, ...handlers: infer H) => void ? never : Parameters<Parameters<typeof Router>[0]>[0]
+  req: any
 ): Promise<void> {
   await db.insert(sraFindingMessages).values({
     findingId,
@@ -74,6 +75,63 @@ async function recordCompanyResponse(
   });
 }
 
+// ── GET /api/sra/company/findings ────────────────────────────────────────────
+// List all SRA findings raised against the authenticated workspace.
+
+router.get('/findings', async (req: any, res: Response) => {
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) return res.status(403).json({ success: false, error: 'Workspace context required.' });
+
+  try {
+    const findings = await db.select({
+      id: sraFindings.id,
+      sessionId: sraFindings.sessionId,
+      findingType: sraFindings.findingType,
+      severity: sraFindings.severity,
+      description: sraFindings.description,
+      occupationCodeReference: sraFindings.occupationCodeReference,
+      recommendedAction: sraFindings.recommendedAction,
+      complianceDeadline: sraFindings.complianceDeadline,
+      fineAmount: sraFindings.fineAmount,
+      status: sraFindings.status,
+      createdAt: sraFindings.createdAt,
+      updatedAt: sraFindings.updatedAt,
+    })
+      .from(sraFindings)
+      .where(eq(sraFindings.workspaceId, workspaceId))
+      .orderBy(sraFindings.createdAt);
+
+    return res.json({ success: true, data: findings, count: findings.length });
+  } catch (err) {
+    log.error('[SRA Company] List findings error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to load findings.' });
+  }
+});
+
+// ── GET /api/sra/company/findings/:id ────────────────────────────────────────
+// Get a single finding with its message thread.
+
+router.get('/findings/:id', async (req: any, res: Response) => {
+  const { id: findingId } = req.params;
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) return res.status(403).json({ success: false, error: 'Workspace context required.' });
+
+  try {
+    const finding = await getFindingForWorkspace(findingId, workspaceId);
+    if (!finding) return res.status(404).json({ success: false, error: 'Finding not found.' });
+
+    const messages = await db.select()
+      .from(sraFindingMessages)
+      .where(eq(sraFindingMessages.findingId, findingId))
+      .orderBy(sraFindingMessages.createdAt);
+
+    return res.json({ success: true, data: { ...finding, messages } });
+  } catch (err) {
+    log.error('[SRA Company] Get finding error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to load finding.' });
+  }
+});
+
 // ── POST /api/sra/company/findings/:id/acknowledge ───────────────────────────
 
 router.post('/findings/:id/acknowledge', async (req: any, res: Response) => {
@@ -90,8 +148,7 @@ router.post('/findings/:id/acknowledge', async (req: any, res: Response) => {
     const { acknowledgementNote } = req.body;
     const message = `ACKNOWLEDGEMENT: This workspace acknowledges receipt of finding ID ${findingId}. ${acknowledgementNote ? `Note: ${acknowledgementNote}` : ''}`.trim();
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, [], 'company_acknowledged', req);
+        await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, [], 'company_acknowledged', req);
     return res.json({ success: true, message: 'Finding acknowledged.' });
   } catch (err) {
     log.error('[SRA Company] Acknowledge error:', err);
@@ -118,8 +175,7 @@ router.post('/findings/:id/remediation-evidence', async (req: any, res: Response
     const urlList: string[] = Array.isArray(evidenceUrls) ? evidenceUrls : [];
     const message = `REMEDIATION EVIDENCE SUBMITTED: ${description}. Evidence files: ${urlList.length > 0 ? urlList.join(', ') : 'None attached'}.`;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, urlList, 'company_remediation_submitted', req);
+        await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, urlList, 'company_remediation_submitted', req);
     await db.update(sraFindings)
       .set({ status: 'remediated', updatedAt: new Date() })
       .where(eq(sraFindings.id, findingId));
@@ -148,8 +204,7 @@ router.post('/findings/:id/payment-confirmation', async (req: any, res: Response
 
     const message = `PAYMENT CONFIRMATION: Reference #${paymentReference}. Amount: ${amount ? `$${amount}` : 'Not specified'}. Payment Date: ${paymentDate || 'Not specified'}. Receipt: ${receiptUrl || 'Not attached'}.`;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, receiptUrl ? [receiptUrl] : [], 'company_payment_confirmed', req);
+        await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, receiptUrl ? [receiptUrl] : [], 'company_payment_confirmed', req);
     return res.json({ success: true, message: 'Payment confirmation submitted.' });
   } catch (err) {
     log.error('[SRA Company] Payment confirmation error:', err);
@@ -176,8 +231,7 @@ router.post('/findings/:id/appeal', async (req: any, res: Response) => {
     const docList: string[] = Array.isArray(supportingDocumentUrls) ? supportingDocumentUrls : [];
     const message = `FORMAL APPEAL SUBMITTED: Grounds: ${groundsForAppeal}. Supporting documents: ${docList.length > 0 ? docList.join(', ') : 'None attached'}. This appeal is formally submitted for regulatory review.`;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, docList, 'company_appeal_submitted', req);
+        await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, docList, 'company_appeal_submitted', req);
     await db.update(sraFindings)
       .set({ status: 'appealed', updatedAt: new Date() })
       .where(eq(sraFindings.id, findingId));
@@ -208,8 +262,7 @@ router.post('/findings/:id/extension', async (req: any, res: Response) => {
 
     const message = `EXTENSION REQUEST: Requesting extension of compliance deadline to ${new Date(requestedExtensionDate).toLocaleDateString()}. Justification: ${justification}.`;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, [], 'company_extension_requested', req);
+        await recordCompanyResponse(findingId, finding.sessionId, workspaceId, userId, message, [], 'company_extension_requested', req);
     return res.json({ success: true, message: 'Extension request submitted to the auditor.' });
   } catch (err) {
     log.error('[SRA Company] Extension request error:', err);

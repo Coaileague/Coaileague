@@ -16,22 +16,23 @@ function sraFetch(path: string) {
 export default function SRAPortalDashboard() {
   const [, setLocation] = useLocation();
 
-  const { data: workspaceData, isLoading: isLoadingWorkspace } = useQuery({
+  const { data: workspaceData, isLoading: isLoadingWorkspace, isError: isErrorWorkspace } = useQuery({
     queryKey: ["/api/sra/data/workspace"],
     queryFn: () => sraFetch("/api/sra/data/workspace"),
   });
 
-  const { data: officersData, isLoading: isLoadingOfficers } = useQuery({
+  const { data: officersData, isLoading: isLoadingOfficers, isError: isErrorOfficers } = useQuery({
     queryKey: ["/api/sra/data/officers"],
     queryFn: () => sraFetch("/api/sra/data/officers"),
   });
 
-  const { data: findingsData, isLoading: isLoadingFindings } = useQuery({
+  const { data: findingsData, isLoading: isLoadingFindings, isError: isErrorFindings } = useQuery({
     queryKey: ["/api/sra/findings"],
     queryFn: () => sraFetch("/api/sra/findings"),
   });
 
   const isLoading = isLoadingWorkspace || isLoadingOfficers || isLoadingFindings;
+  const hasError = isErrorWorkspace || isErrorOfficers || isErrorFindings;
 
   const workspace = workspaceData?.data;
   const officers: any[] = officersData?.data || [];
@@ -84,7 +85,7 @@ export default function SRAPortalDashboard() {
     return (
       <SRAPortalLayout activeRoute="/regulatory-audit/portal">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </SRAPortalLayout>
     );
@@ -93,14 +94,19 @@ export default function SRAPortalDashboard() {
   return (
     <SRAPortalLayout activeRoute="/regulatory-audit/portal">
       <div className="p-6 max-w-5xl mx-auto">
+        {hasError && (
+          <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm" data-testid="error-dashboard">
+            One or more data sources failed to load. Some information may be incomplete.
+          </div>
+        )}
         {/* Page header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Audit Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Audit Dashboard</h1>
           {workspace && (
-            <p className="text-gray-500 text-sm mt-1">
-              Reviewing: <span className="font-medium text-gray-700">{workspace.name || workspace.companyName}</span>
+            <p className="text-muted-foreground text-sm mt-1">
+              Reviewing: <span className="font-medium text-foreground">{workspace.name || workspace.companyName}</span>
               {workspace.stateLicenseNumber && (
-                <span className="ml-2 text-gray-400">· License #{workspace.stateLicenseNumber}</span>
+                <span className="ml-2 text-muted-foreground">· License #{workspace.stateLicenseNumber}</span>
               )}
             </p>
           )}
@@ -122,9 +128,9 @@ export default function SRAPortalDashboard() {
                     <div className={`w-8 h-8 ${stat.bg} rounded-md flex items-center justify-center`}>
                       <Icon className={`w-4 h-4 ${stat.color}`} />
                     </div>
-                    <span className="text-2xl font-bold text-gray-900">{stat.value}</span>
+                    <span className="text-2xl font-bold text-foreground">{stat.value}</span>
                   </div>
-                  <p className="text-gray-500 text-xs">{stat.label}</p>
+                  <p className="text-muted-foreground text-xs">{stat.label}</p>
                 </CardContent>
               </Card>
             );
@@ -151,8 +157,8 @@ export default function SRAPortalDashboard() {
                   ["Subscription", workspace.subscriptionTier || "—"],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">{label}</span>
-                    <span className="font-medium text-gray-800 text-right max-w-[55%] truncate">{value}</span>
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium text-foreground text-right max-w-[55%] truncate">{value}</span>
                   </div>
                 ))}
               </CardContent>
@@ -169,12 +175,12 @@ export default function SRAPortalDashboard() {
             </CardHeader>
             <CardContent>
               {findings.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-4">No findings recorded yet.</p>
+                <p className="text-muted-foreground text-sm text-center py-4">No findings recorded yet.</p>
               ) : (
                 <div className="space-y-2">
                   {findings.slice(0, 4).map((f: any) => (
-                    <div key={f.id} data-testid={`finding-row-${f.id}`} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
-                      <span className="text-sm text-gray-700 truncate">{f.description?.slice(0, 45)}...</span>
+                    <div key={f.id} data-testid={`finding-row-${f.id}`} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                      <span className="text-sm text-foreground truncate">{f.description?.slice(0, 45)}...</span>
                       <Badge
                         className={`ml-2 flex-shrink-0 text-xs ${
                           f.severity === "critical" ? "bg-red-100 text-red-700" :
@@ -220,7 +226,7 @@ export default function SRAPortalDashboard() {
                       key={action.label}
                       data-testid={`action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
                       onClick={() => setLocation(action.path)}
-                      className="flex items-center gap-2 p-3 border border-gray-200 rounded-md text-sm text-gray-700 hover-elevate text-left"
+                      className="flex items-center gap-2 p-3 border border-border rounded-md text-sm text-foreground hover-elevate text-left"
                     >
                       <Icon className="w-4 h-4 text-[#1a3a6b] flex-shrink-0" />
                       {action.label}

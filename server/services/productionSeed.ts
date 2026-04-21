@@ -223,6 +223,31 @@ export async function runStatewideWorkspaceBootstrap(): Promise<void> {
     console.error('🏢 [StatewideBootstrap] Employee record upsert failed:', (err as any)?.message);
   }
 
+  // ── 5. Org code + email slug ──────────────────────────────────────────────
+  try {
+    // CATEGORY C — Raw SQL retained: Statewide bootstrap | Tables: workspaces | Verified: 2026-04-21
+    await typedExec(sql`
+      UPDATE workspaces
+      SET org_code        = 'sps',
+          org_code_status = 'active',
+          org_code_claimed_at = COALESCE(org_code_claimed_at, NOW()),
+          updated_at      = NOW()
+      WHERE id = ${WS_ID}
+        AND (org_code IS DISTINCT FROM 'sps' OR org_code_status IS DISTINCT FROM 'active')
+    `);
+    console.log('🏢 [StatewideBootstrap] Org code set to "sps" (active)');
+
+    // Provision all workspace email addresses under the "sps" slug.
+    // Non-blocking so a transient email-service error never blocks startup.
+    import('../services/email/emailProvisioningService')
+      .then(({ emailProvisioningService }) =>
+        emailProvisioningService.provisionWorkspaceAddresses(WS_ID, 'sps')
+      )
+      .catch(err => console.warn('🏢 [StatewideBootstrap] Email provisioning warning:', (err as any)?.message));
+  } catch (err) {
+    console.error('🏢 [StatewideBootstrap] Org code update failed:', (err as any)?.message);
+  }
+
   console.log('🏢 [StatewideBootstrap] Complete — Statewide Protective Services is ready');
 }
 

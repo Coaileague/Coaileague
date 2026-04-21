@@ -51,12 +51,16 @@ export default function ForgotPassword() {
           account_locked: "Account Locked",
           email_failed: "Email Delivery Failed",
         };
-        const title = (result.error && errorTitles[result.error]) || "Error";
-        toast({
-          title,
-          description: result.message || "Failed to send reset email",
-          variant: "destructive",
-        });
+        const errorDescriptions: Record<string, string> = {
+          no_account: "No account exists with that email address. Check for typos or create a new account.",
+          email_unverified: "Your email isn't verified yet. Contact support if you can't access the original verification link.",
+          account_locked: "Too many failed attempts — your account is temporarily locked. Try again in 15 minutes or contact support.",
+          email_failed: "We couldn't deliver the reset email. Verify your address is correct, then try again in a few minutes.",
+        };
+        const code = result.error as string;
+        const title = errorTitles[code] || "Error";
+        const description = errorDescriptions[code] || result.message || "Failed to send reset email";
+        toast({ title, description, variant: "destructive" });
         return;
       }
 

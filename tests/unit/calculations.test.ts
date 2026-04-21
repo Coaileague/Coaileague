@@ -109,7 +109,8 @@ describe('DSR SLA Deadline Calculation', () => {
     const ref = new Date('2026-01-01T00:00:00Z');
     const result = calculateDsrDeadline('access', ref);
     expect(result.deadlineDays).toBe(30);
-    expect(result.deadlineDate.getDate()).toBe(31);
+    // Use getUTCDate: input is a UTC ISO string; local-time getDate() is timezone-dependent
+    expect(result.deadlineDate.getUTCDate()).toBe(31);
   });
 
   it('deletion request has 30-day deadline', () => {

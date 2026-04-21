@@ -26,6 +26,8 @@ export interface SRARequest extends Request {
     workspaceId: string;
     stateCode: string;
     accountStatus: string;
+    auditPeriodStart: Date | null;
+    auditPeriodEnd: Date | null;
   };
 }
 
@@ -89,6 +91,7 @@ export async function requireSRAAuth(
         stateCode: sraAuditSessions.stateCode,
         status: sraAuditSessions.status,
         tokenExpiresAt: sraAuditSessions.tokenExpiresAt,
+        auditPeriodStart: sraAuditSessions.auditPeriodStart,
         auditPeriodEnd: sraAuditSessions.auditPeriodEnd,
         accountStatus: sraAccounts.status,
       })
@@ -129,6 +132,8 @@ export async function requireSRAAuth(
       workspaceId: session.workspaceId,
       stateCode: session.stateCode,
       accountStatus: session.accountStatus,
+      auditPeriodStart: session.auditPeriodStart ? new Date(session.auditPeriodStart) : null,
+      auditPeriodEnd: session.auditPeriodEnd ? new Date(session.auditPeriodEnd) : null,
     };
 
     next();

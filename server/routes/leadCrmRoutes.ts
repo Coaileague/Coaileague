@@ -153,33 +153,37 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
         leadStatus, leadScore, estimatedValue, source, notes, nextFollowUpDate, assignedTo
       } = req.body;
 
-      const [lead] = await db.insert(leads).values({
-        organizationId: workspaceId,
-        companyName,
-        industry,
-        companyWebsite,
-        estimatedEmployees,
-        contactName,
-        contactTitle,
-        contactEmail,
-        contactPhone,
-        leadStatus: leadStatus || 'new',
-        leadScore: leadScore || 0,
-        estimatedValue: estimatedValue ? String(estimatedValue) : undefined,
-        source: source || 'manual',
-        notes,
-        nextFollowUpDate,
-        assignedTo: assignedTo || userId
-      }).returning();
+      const [lead] = await db.transaction(async (tx) => {
+        const [newLead] = await tx.insert(leads).values({
+          organizationId: workspaceId,
+          companyName,
+          industry,
+          companyWebsite,
+          estimatedEmployees,
+          contactName,
+          contactTitle,
+          contactEmail,
+          contactPhone,
+          leadStatus: leadStatus || 'new',
+          leadScore: leadScore || 0,
+          estimatedValue: estimatedValue ? String(estimatedValue) : undefined,
+          source: source || 'manual',
+          notes,
+          nextFollowUpDate,
+          assignedTo: assignedTo || userId
+        }).returning();
 
-      await db.insert(activities).values({
-        organizationId: workspaceId,
-        leadId: lead.id,
-        createdByUserId: userId || 'system',
-        workspaceId,
-        activityType: 'status_change',
-        subject: 'Lead created',
-        newStatus: lead.leadStatus,
+        await tx.insert(activities).values({
+          organizationId: workspaceId,
+          leadId: newLead.id,
+          createdByUserId: userId || 'system',
+          workspaceId,
+          activityType: 'status_change',
+          subject: 'Lead created',
+          newStatus: newLead.leadStatus,
+        });
+
+        return [newLead];
       });
 
       platformEventBus.emit('crm.lead_created', {
@@ -228,23 +232,29 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       if (website !== undefined) safeLeadUpdates.website = website;
       if (address !== undefined) safeLeadUpdates.address = address;
 
-      const [updated] = await db.update(leads)
-        .set(safeLeadUpdates)
-        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)))
-        .returning();
+      const [updated] = await db.transaction(async (tx) => {
+        const [updatedLead] = await tx.update(leads)
+          .set(safeLeadUpdates)
+          .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)))
+          .returning();
+
+        if (leadStatus && leadStatus !== existing.leadStatus) {
+          await tx.insert(activities).values({
+            organizationId: workspaceId,
+            leadId: id,
+            createdByUserId: userId || 'system',
+            workspaceId,
+            activityType: 'status_change',
+            subject: `Status changed from ${existing.leadStatus} to ${leadStatus}`,
+            previousStatus: existing.leadStatus || undefined,
+            newStatus: leadStatus,
+          });
+        }
+
+        return [updatedLead];
+      });
 
       if (leadStatus && leadStatus !== existing.leadStatus) {
-        await db.insert(activities).values({
-          organizationId: workspaceId,
-          leadId: id,
-          createdByUserId: userId || 'system',
-          workspaceId,
-          activityType: 'status_change',
-          subject: `Status changed from ${existing.leadStatus} to ${leadStatus}`,
-          previousStatus: existing.leadStatus || undefined,
-          newStatus: leadStatus,
-        });
-
         platformEventBus.emit('crm.lead_status_changed', {
           workspaceId,
           leadId: id,
@@ -292,21 +302,25 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       
       if (!lead) return res.status(404).json({ error: "Lead not found" });
 
-      const [activity] = await db.insert(activities).values({
-        organizationId: workspaceId,
-        leadId: id,
-        createdByUserId: userId || 'system',
-        workspaceId,
-        activityType,
-        subject: description || activityType,
-        notes: description,
-      }).returning();
+      const [activity] = await db.transaction(async (tx) => {
+        const [newActivity] = await tx.insert(activities).values({
+          organizationId: workspaceId,
+          leadId: id,
+          createdByUserId: userId || 'system',
+          workspaceId,
+          activityType,
+          subject: description || activityType,
+          notes: description,
+        }).returning();
 
-      if (activityType === 'email_sent' || activityType === 'call') {
-        await db.update(leads)
-          .set({ lastContactedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
-      }
+        if (activityType === 'email_sent' || activityType === 'call') {
+          await tx.update(leads)
+            .set({ lastContactedAt: new Date(), updatedAt: new Date() })
+            .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+        }
+
+        return [newActivity];
+      });
 
       res.json({ success: true, data: activity });
     } catch (error: unknown) {

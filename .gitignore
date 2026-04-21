@@ -7,4 +7,3 @@ vite.config.ts.*
 *.tar.gz.parta*
 *.tar.gz.partb*
 workforceos-platform.tar.gz.*
-.github/workflows/

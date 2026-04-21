@@ -341,7 +341,8 @@ router.post('/generate-pdf', requireSRAAuth, async (req: SRARequest, res: Respon
       })),
     });
 
-    // Store PDF reference in enforcement documents
+    // Store PDF reference + base64 payload in enforcement documents so the
+    // download endpoint can serve the file without external blob storage.
     const docId = `sra-report-${sraSession.sessionId.slice(0, 8)}-${Date.now()}`;
     const [enfDoc] = await db.insert(sraEnforcementDocuments).values({
       sessionId: sraSession.sessionId,
@@ -350,7 +351,12 @@ router.post('/generate-pdf', requireSRAAuth, async (req: SRARequest, res: Respon
       documentUrl: `/api/sra/trinity/download/${docId}`,
       sha256Hash,
       issuedBySraId: sraSession.sraAccountId,
-      metadata: { docId, sections: verifiedSections.length, findings: findings.length },
+      metadata: {
+        docId,
+        sections: verifiedSections.length,
+        findings: findings.length,
+        pdfBase64: pdfBuffer.toString('base64'),
+      },
     }).returning();
 
     await logSraAction(sraSession.sessionId, sraSession.sraAccountId, sraSession.workspaceId, 'pdf_generated', {
@@ -369,6 +375,54 @@ router.post('/generate-pdf', requireSRAAuth, async (req: SRARequest, res: Respon
   } catch (err) {
     log.error('[SRA Trinity] PDF generation error:', err);
     return res.status(500).json({ success: false, error: 'Failed to generate PDF report.' });
+  }
+});
+
+/**
+ * GET /api/sra/trinity/download/:docId
+ * Re-download a previously generated audit report PDF.
+ * Only the SRA account that generated the report (or any active SRA session
+ * targeting the same workspace) may retrieve it.
+ */
+router.get('/download/:docId', requireSRAAuth, async (req: SRARequest, res: Response) => {
+  try {
+    const sraSession = req.sraSession!;
+    const { docId } = req.params;
+
+    if (!docId || typeof docId !== 'string' || docId.length > 120) {
+      return res.status(400).json({ success: false, error: 'Invalid document ID.' });
+    }
+
+    // Find the enforcement document by docId stored in metadata
+    const docs = await db.select().from(sraEnforcementDocuments)
+      .where(
+        and(
+          eq(sraEnforcementDocuments.workspaceId, sraSession.workspaceId),
+          eq(sraEnforcementDocuments.documentType, 'audit_report'),
+        )
+      );
+
+    const doc = docs.find(d => (d.metadata as any)?.docId === docId);
+
+    if (!doc) {
+      return res.status(404).json({ success: false, error: 'Document not found.' });
+    }
+
+    const pdfBase64 = (doc.metadata as any)?.pdfBase64 as string | undefined;
+    if (!pdfBase64) {
+      return res.status(404).json({ success: false, error: 'PDF data is not available for this document.' });
+    }
+
+    const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="SRA-Audit-Report-${doc.workspaceId.slice(0, 8)}.pdf"`);
+    res.setHeader('X-SHA256-Hash', doc.sha256Hash);
+    res.setHeader('X-Document-Id', doc.id);
+    res.send(pdfBuffer);
+  } catch (err) {
+    log.error('[SRA Trinity] PDF download error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to retrieve PDF.' });
   }
 });
 

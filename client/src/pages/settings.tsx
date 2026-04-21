@@ -222,6 +222,8 @@ function ProfileTabContent() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [newEmailInput, setNewEmailInput] = useState('');
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [newPin, setNewPin] = useState('');
 
   const { isDirty } = form.formState;
 
@@ -297,6 +299,23 @@ function ProfileTabContent() {
     },
     onError: () => {
       toast({ variant: "destructive", title: "Error", description: "Could not cancel the email change. Please try again." });
+    },
+  });
+
+  const setPinMutation = useMutation({
+    mutationFn: async (pin: string) => {
+      const res = await apiRequest('POST', '/api/employees/me/pin/set', { pin });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to set PIN');
+      return data;
+    },
+    onSuccess: () => {
+      setNewPin('');
+      setShowPinInput(false);
+      toast({ title: 'PIN Updated', description: 'Your clock-in PIN has been saved.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'PIN Error', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -514,6 +533,55 @@ function ProfileTabContent() {
                   </FormItem>
                 )}
               />
+
+              {/* Clock-in PIN (self-service) */}
+              <div className="space-y-2">
+                <Label className="text-xs sm:text-sm">Clock-in PIN</Label>
+                <p className="text-xs text-muted-foreground">Used to clock in via kiosk or voice. 4–8 digits.</p>
+                {showPinInput ? (
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={8}
+                      placeholder="Enter 4–8 digit PIN"
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                      data-testid="input-new-pin"
+                      className="max-w-[160px]"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setPinMutation.mutate(newPin)}
+                      disabled={setPinMutation.isPending || newPin.length < 4}
+                      data-testid="button-save-pin"
+                    >
+                      {setPinMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setShowPinInput(false); setNewPin(''); }}
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowPinInput(true)}
+                    data-testid="button-set-pin"
+                  >
+                    Set / Reset PIN
+                  </Button>
+                )}
+              </div>
+
               <div className="flex justify-end pt-2">
                 <Button
                   type="submit"
@@ -1880,6 +1948,13 @@ export default function Settings() {
   // State for org code editing
   const [editingOrgCode, setEditingOrgCode] = useState(false);
   const [newOrgCode, setNewOrgCode] = useState('');
+  const [forwardEmailValue, setForwardEmailValue] = useState('');
+  // Sync forwardEmailValue from workspace data on load
+  useEffect(() => {
+    if ((workspace as any)?.inboundEmailForwardTo !== undefined) {
+      setForwardEmailValue((workspace as any).inboundEmailForwardTo || '');
+    }
+  }, [workspace]);
 
   // Mutation to update org code
   const updateOrgCodeMutation = useMutation({
@@ -1907,7 +1982,7 @@ export default function Settings() {
       setNewOrgCode('');
       toast({
         title: "Org Code Updated",
-        description: `Your org code is now: ${data.orgCode}`,
+        description: `Your org code is now: ${data.orgCode}. Email addresses provisioned.`,
       });
     },
     onError: (error: any) => {
@@ -1974,6 +2049,29 @@ export default function Settings() {
         description: error.message || "Failed to release generic staffing email",
         variant: "destructive",
       });
+    },
+  });
+
+  const updateForwardEmailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await secureFetch('/api/workspace', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inboundEmailForwardTo: email }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).message || 'Failed to update forwarding email');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      toast({ title: 'Forwarding Email Updated', description: 'Inbound emails will be forwarded to the new address.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -3241,6 +3339,34 @@ export default function Settings() {
                 <p className="text-xs text-muted-foreground">
                   Work requests sent to this email will be automatically processed by Trinity AI and routed to your organization.
                 </p>
+              </div>
+
+              <Separator />
+
+              {/* Inbound Email Forwarding */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Inbound Email Forward Address</Label>
+                <p className="text-xs text-muted-foreground">
+                  Copies of all inbound emails (calloffs, incidents, support) processed by Trinity are forwarded to this address.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={forwardEmailValue}
+                    onChange={(e) => setForwardEmailValue(e.target.value)}
+                    data-testid="input-inbound-forward-email"
+                    className="max-w-xs"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => updateForwardEmailMutation.mutate(forwardEmailValue)}
+                    disabled={updateForwardEmailMutation.isPending}
+                    data-testid="button-save-forward-email"
+                  >
+                    {updateForwardEmailMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
 
               <Separator />

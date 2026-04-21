@@ -130,7 +130,15 @@ export default function CustomLogin() {
           }, 2000);
           return;
         }
-        throw new Error(result.message || "Login failed");
+        const loginErrorMessages: Record<string, string> = {
+          INVALID_CREDENTIALS: "The email or password you entered is incorrect. Please try again.",
+          ACCOUNT_LOCKED: "Your account is temporarily locked after too many failed attempts. Try again in 15 minutes or reset your password.",
+          EMAIL_UNVERIFIED: "Please verify your email address before signing in. Check your inbox for the verification link.",
+          NO_PASSWORD: "This account uses social login. Use 'Forgot password' to set a password for email sign-in.",
+          ORGANIZATION_INACTIVE: "Your organization's account is inactive. Please contact your administrator.",
+          PAYMENT_REQUIRED: "Your organization's subscription has lapsed. Please contact your organization owner.",
+        };
+        throw new Error(loginErrorMessages[result.code as string] || result.message || "Login failed");
       }
 
       authTransition?.setProgress(65);

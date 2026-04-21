@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:5000';
-let serverReachable = false;
+let serverAvailable = false;
 
 beforeAll(async () => {
   try {
-    await fetch(`${BASE_URL}/api/health`);
-    serverReachable = true;
+    const res = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(2000) });
+    serverAvailable = res.status < 600;
   } catch {
-    serverReachable = false;
+    serverAvailable = false;
   }
 });
 
@@ -18,9 +18,8 @@ async function apiPost(path: string, body: unknown, token?: string) {
   return fetch(`${BASE_URL}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
 }
 
-describe('Payroll Run', () => {
+describe.skipIf(() => !serverAvailable)('Payroll Run', () => {
   it('create-run route exists and is guarded', async () => {
-    if (!serverReachable) return;
     const res = await apiPost('/api/payroll/create-run', {
       periodStart: '2026-04-01',
       periodEnd: '2026-04-15',
@@ -31,7 +30,6 @@ describe('Payroll Run', () => {
   });
 
   it('double-processing attempt is rejected or blocked by auth', async () => {
-    if (!serverReachable) return;
     const res = await apiPost('/api/payroll/create-run', {
       periodStart: '2026-04-01',
       periodEnd: '2026-04-15',
@@ -39,4 +37,3 @@ describe('Payroll Run', () => {
     expect([400, 401, 402, 403, 409, 422]).toContain(res.status);
   });
 });
-

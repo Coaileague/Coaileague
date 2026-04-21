@@ -967,13 +967,47 @@ router.patch('/enrollments/:id/progress', requireAuth, async (req: Authenticated
     if (status !== undefined) updateData.status = status;
     if (score !== undefined) updateData.score = score;
     if (status === 'completed') updateData.completedAt = new Date();
-    
+
+    const wasAlreadyCompleted = enrollment[0].status === 'completed';
+
     const [updated] = await db
       .update(trainingEnrollments)
       .set(updateData)
       .where(eq(trainingEnrollments.id, id))
       .returning();
-    
+
+    // Auto-issue certification when an enrollment transitions to completed (idempotent)
+    if (status === 'completed' && !wasAlreadyCompleted && !enrollment[0].certificateUrl) {
+      const course = await db
+        .select({ title: trainingCourses.title, workspaceId: trainingCourses.workspaceId })
+        .from(trainingCourses)
+        .where(eq(trainingCourses.id, enrollment[0].courseId))
+        .limit(1);
+
+      if (course[0]) {
+        const [cert] = await db
+          .insert(trainingCertifications)
+          .values({
+            workspaceId: course[0].workspaceId,
+            employeeId: enrollment[0].employeeId,
+            courseId: enrollment[0].courseId,
+            enrollmentId: id,
+            name: `${course[0].title} Certification`,
+            issuedDate: new Date(),
+            status: 'active',
+          })
+          .onConflictDoNothing()
+          .returning();
+
+        if (cert) {
+          await db
+            .update(trainingEnrollments)
+            .set({ certificateUrl: cert.id })
+            .where(eq(trainingEnrollments.id, id));
+        }
+      }
+    }
+
     res.json(updated);
   } catch (error: unknown) {
     log.error("Error updating enrollment progress:", error);

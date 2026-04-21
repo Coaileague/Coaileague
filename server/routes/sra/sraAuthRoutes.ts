@@ -356,8 +356,8 @@ router.get('/setup-totp/:accountId', async (req: Request, res: Response) => {
   const { accountId } = req.params;
   const { adminToken } = req.query;
 
-  // Simple admin token check (use platform auth in production)
-  if (adminToken !== process.env.SRA_ADMIN_TOKEN && adminToken !== 'sra-setup-token') {
+  const requiredToken = process.env.SRA_ADMIN_TOKEN;
+  if (!requiredToken || adminToken !== requiredToken) {
     return res.status(403).json({ success: false, error: 'Unauthorized.' });
   }
 

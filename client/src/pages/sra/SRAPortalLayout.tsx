@@ -143,7 +143,7 @@ export default function SRAPortalLayout({ children, activeRoute }: SRAPortalLayo
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="hidden md:flex items-center gap-2 text-xs text-gray-400">
+          <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
             <span className="bg-[#1a3a6b] text-white px-2 py-0.5 rounded font-medium">
               {account?.stateCode || "—"}
             </span>

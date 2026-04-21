@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 
 type SWNotificationAction =
   | "accepted"
@@ -60,9 +61,11 @@ async function refreshBadgeFromUnreadCount() {
 
 export function ServiceWorkerMessageListener() {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+    if (!isAuthenticated) return;
 
     const handle = async (event: MessageEvent) => {
       const msg = event.data as SWMessage | undefined;
@@ -152,7 +155,7 @@ export function ServiceWorkerMessageListener() {
     return () => {
       navigator.serviceWorker.removeEventListener("message", handle);
     };
-  }, [toast]);
+  }, [toast, isAuthenticated]);
 
   return null;
 }

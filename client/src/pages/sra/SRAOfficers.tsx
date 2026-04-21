@@ -29,7 +29,7 @@ function CompliancePill({ ok, label }: { ok: boolean; label: string }) {
 export default function SRAOfficers() {
   const [search, setSearch] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["/api/sra/data/officers"],
     queryFn: () => sraFetch("/api/sra/data/officers"),
   });
@@ -55,29 +55,35 @@ export default function SRAOfficers() {
     <SRAPortalLayout activeRoute="/regulatory-audit/portal/officers">
       <div className="p-6 max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Officer Roster</h1>
-          <p className="text-gray-500 text-sm mt-1">Active licensed security officers on file for the audited organization.</p>
+          <h1 className="text-2xl font-bold text-foreground">Officer Roster</h1>
+          <p className="text-muted-foreground text-sm mt-1">Active licensed security officers on file for the audited organization.</p>
         </div>
+
+        {isError && (
+          <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm" data-testid="error-officers">
+            Failed to load officer roster. Please refresh the page.
+          </div>
+        )}
 
         {/* Summary stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            { label: "Total Officers", value: officers.length, icon: Users, color: "text-blue-700", bg: "bg-blue-50" },
-            { label: "Armed", value: officers.filter(o => o.isArmed).length, icon: Shield, color: "text-indigo-700", bg: "bg-indigo-50" },
-            { label: "Expired Credentials", value: expiredCount, icon: XCircle, color: "text-red-700", bg: "bg-red-50" },
-            { label: "Expiring Soon (90d)", value: expiringCount, icon: AlertTriangle, color: "text-amber-700", bg: "bg-amber-50" },
+            { label: "Total Officers", value: officers.length, icon: Users, color: "text-blue-700", bg: "bg-blue-50", testId: "stat-total-officers" },
+            { label: "Armed", value: officers.filter(o => o.isArmed).length, icon: Shield, color: "text-indigo-700", bg: "bg-indigo-50", testId: "stat-armed" },
+            { label: "Expired Credentials", value: expiredCount, icon: XCircle, color: "text-red-700", bg: "bg-red-50", testId: "stat-expired-credentials" },
+            { label: "Expiring Soon (90d)", value: expiringCount, icon: AlertTriangle, color: "text-amber-700", bg: "bg-amber-50", testId: "stat-expiring-soon" },
           ].map(s => {
             const Icon = s.icon;
             return (
-              <Card key={s.label}>
+              <Card key={s.label} data-testid={s.testId}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-1">
                     <div className={`w-7 h-7 ${s.bg} rounded flex items-center justify-center`}>
                       <Icon className={`w-3.5 h-3.5 ${s.color}`} />
                     </div>
-                    <span className="text-xl font-bold text-gray-900">{s.value}</span>
+                    <span className="text-xl font-bold text-foreground">{s.value}</span>
                   </div>
-                  <p className="text-gray-500 text-xs">{s.label}</p>
+                  <p className="text-muted-foreground text-xs">{s.label}</p>
                 </CardContent>
               </Card>
             );
@@ -114,20 +120,20 @@ export default function SRAOfficers() {
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-8 text-center text-gray-400 text-sm">Loading roster...</div>
+              <div className="p-8 text-center text-muted-foreground text-sm">Loading roster...</div>
             ) : filtered.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No officers found.</div>
+              <div className="p-8 text-center text-muted-foreground text-sm">No officers found.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Name</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Role</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Guard Card</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Expires</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Credentials</th>
-                      <th className="text-left px-4 py-3 text-gray-600 font-medium">Armed</th>
+                    <tr className="bg-muted/50 border-b border-border">
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Name</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Role</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Guard Card</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Expires</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Credentials</th>
+                      <th className="text-left px-4 py-3 text-muted-foreground font-medium">Armed</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -138,16 +144,16 @@ export default function SRAOfficers() {
                         <tr
                           key={officer.id}
                           data-testid={`officer-row-${officer.id}`}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+                          className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                         >
                           <td className="px-4 py-3">
                             <div>
-                              <p className="font-medium text-gray-900">{officer.fullLegalName || `${officer.firstName} ${officer.lastName}`}</p>
-                              <p className="text-gray-400 text-xs">{officer.email || "—"}</p>
+                              <p className="font-medium text-foreground">{officer.fullLegalName || `${officer.firstName} ${officer.lastName}`}</p>
+                              <p className="text-muted-foreground text-xs">{officer.email || "—"}</p>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-gray-600">{officer.position || officer.role || "—"}</td>
-                          <td className="px-4 py-3 font-mono text-gray-700 text-xs">{officer.guardCardNumber || "—"}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{officer.position || officer.role || "—"}</td>
+                          <td className="px-4 py-3 font-mono text-foreground text-xs">{officer.guardCardNumber || "—"}</td>
                           <td className="px-4 py-3">
                             {officer.guardCardExpiryDate ? (
                               <span className={`text-xs font-medium ${expired ? "text-red-600" : expiringSoon ? "text-amber-600" : "text-green-600"}`}>
@@ -156,7 +162,7 @@ export default function SRAOfficers() {
                                 {expiringSoon && " (soon)"}
                               </span>
                             ) : (
-                              <span className="text-gray-400 text-xs">Not on file</span>
+                              <span className="text-muted-foreground text-xs">Not on file</span>
                             )}
                           </td>
                           <td className="px-4 py-3">
@@ -168,7 +174,7 @@ export default function SRAOfficers() {
                             {officer.isArmed ? (
                               <Badge className="bg-indigo-100 text-indigo-700 text-xs">Armed</Badge>
                             ) : (
-                              <span className="text-gray-400 text-xs">Unarmed</span>
+                              <span className="text-muted-foreground text-xs">Unarmed</span>
                             )}
                           </td>
                         </tr>

@@ -7,6 +7,9 @@
  *   POST /api/employees/:employeeId/pin/verify — Verify PIN for clock-in (returns employee info)
  *   DELETE /api/employees/:employeeId/pin      — Clear PIN (manager+)
  *   GET  /api/employees/:employeeId/pin/status — Has PIN set? (manager+)
+ *   POST /api/employees/me/pin/set             — Self-service: set own PIN (any active employee)
+ *   DELETE /api/employees/me/pin               — Self-service: clear own PIN
+ *   GET  /api/employees/me/pin/status          — Self-service: check if own PIN is set
  */
 
 import { Router } from 'express';
@@ -206,6 +209,96 @@ clockinPinRouter.get(
     } catch (err: any) {
       log.error('[PIN] status error:', err);
       res.status(500).json({ error: 'Failed to check PIN status' });
+    }
+  },
+);
+
+// ─── SELF-SERVICE: SET OWN PIN ────────────────────────────────────────────────
+// Any active employee can set their own clock-in PIN without manager involvement.
+clockinPinRouter.post(
+  '/me/pin/set',
+  requireAuth,
+  async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.session?.userId;
+      const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+      if (!userId || !workspaceId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { pin } = req.body;
+      const err = validatePin(pin ?? '');
+      if (err) return res.status(400).json({ error: err });
+
+      const empRes = await pool.query(
+        `SELECT id, first_name, last_name, employee_number
+         FROM employees
+         WHERE user_id = $1 AND workspace_id = $2 AND is_active = TRUE
+         LIMIT 1`,
+        [userId, workspaceId],
+      );
+      if (!empRes.rows[0]) {
+        return res.status(404).json({ error: 'No employee record found for your account' });
+      }
+
+      const emp = empRes.rows[0];
+      const hash = await bcrypt.hash(pin.replace(/\D/g, ''), BCRYPT_ROUNDS);
+      await pool.query(
+        `UPDATE employees SET clockin_pin_hash = $1, updated_at = NOW() WHERE id = $2`,
+        [hash, emp.id],
+      );
+
+      res.json({ success: true, message: 'Clock-in PIN updated successfully', employeeNumber: emp.employee_number });
+    } catch (err: any) {
+      log.error('[PIN] self-service set error:', err);
+      res.status(500).json({ error: 'Failed to set PIN' });
+    }
+  },
+);
+
+// ─── SELF-SERVICE: CLEAR OWN PIN ─────────────────────────────────────────────
+clockinPinRouter.delete(
+  '/me/pin',
+  requireAuth,
+  async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.session?.userId;
+      const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+      if (!userId || !workspaceId) return res.status(401).json({ error: 'Unauthorized' });
+
+      await pool.query(
+        `UPDATE employees SET clockin_pin_hash = NULL, updated_at = NOW()
+         WHERE user_id = $1 AND workspace_id = $2`,
+        [userId, workspaceId],
+      );
+      res.json({ success: true, message: 'PIN cleared' });
+    } catch (err: any) {
+      log.error('[PIN] self-service clear error:', err);
+      res.status(500).json({ error: 'Failed to clear PIN' });
+    }
+  },
+);
+
+// ─── SELF-SERVICE: GET OWN PIN STATUS ────────────────────────────────────────
+clockinPinRouter.get(
+  '/me/pin/status',
+  requireAuth,
+  async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.session?.userId;
+      const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+      if (!userId || !workspaceId) return res.status(401).json({ error: 'Unauthorized' });
+
+      const empRes = await pool.query(
+        `SELECT clockin_pin_hash IS NOT NULL AS has_pin
+         FROM employees
+         WHERE user_id = $1 AND workspace_id = $2 AND is_active = TRUE
+         LIMIT 1`,
+        [userId, workspaceId],
+      );
+
+      res.json({ hasPin: empRes.rows[0]?.has_pin ?? false });
+    } catch (err: any) {
+      log.error('[PIN] self-service status error:', err);
+      res.status(500).json({ error: 'Failed to get PIN status' });
     }
   },
 );

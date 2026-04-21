@@ -329,6 +329,7 @@ router.patch('/profile', mutationLimiter, async (req: any, res) => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           updatedAt: new Date(),
+          ...(phone !== undefined && { phone: phone ? phone.trim() : null }),
         };
         await db.update(employees)
           .set(employeeSync)
