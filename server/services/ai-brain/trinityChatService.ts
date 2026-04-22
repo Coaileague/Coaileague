@@ -1739,11 +1739,43 @@ Do NOT skip steps — decompose fully before concluding.`;
         .catch(err => log.warn('[TrinityChatService] encodeEmotionalEpisode failed (non-fatal):', err));
     }
 
+    // ── Trinity Action Dispatcher — execute or queue detected actions ─────────
+    // Non-blocking: if dispatcher fails, Trinity's text response still returns.
+    let dispatchAppend = '';
+    let dispatchMeta: any = null;
+    try {
+      const { dispatchFromChat } = await import('../trinity/trinityActionDispatcher');
+      const dispatchResult = await dispatchFromChat(
+        message,
+        finalResponseText,
+        {
+          workspaceId: workspaceId || '',
+          userId: userId || '',
+          userRole: (request as any).workspaceRole || workspaceRole || 'org_owner',
+          sessionId: session.id,
+          platformRole: (request as any).platformRole,
+        }
+      );
+      if (dispatchResult.appendToResponse) {
+        dispatchAppend = dispatchResult.appendToResponse;
+      }
+      if (dispatchResult.detected) {
+        dispatchMeta = {
+          detected: true,
+          status: dispatchResult.status,
+          actionId: dispatchResult.actionId,
+          approvalId: dispatchResult.approvalId,
+        };
+      }
+    } catch (dispatchErr: any) {
+      log.warn('[TrinityChat] Dispatcher non-fatal error:', dispatchErr?.message);
+    }
+
     return {
       sessionId: session.id,
       response: accConflict?.autoBlocked
         ? `I need to pause before delivering that response. I detected a potential issue: ${accConflict.contradictionDescription}\n\nRecommended next step: ${accConflict.recommendedResolution}`
-        : finalResponseText,
+        : (finalResponseText + dispatchAppend),
       mode,
       usage,
       metadata: {
@@ -1755,10 +1787,10 @@ Do NOT skip steps — decompose fully before concluding.`;
           severity: accConflict.conflictSeverity,
           blocked: accConflict.autoBlocked,
         } : undefined,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+        ...(dispatchMeta ? { dispatch: dispatchMeta } : {}),
         thalamicSignalId: thalamicSignal?.signalId,
         thalamicPriority: thalamicSignal?.priorityScore,
-      },
+      } as any,
     };
   }
 

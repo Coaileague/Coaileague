@@ -11,7 +11,7 @@ import { requireAuth } from '../auth';
 import { broadcastToWorkspace } from '../websocket';
 import type { CreateBroadcastRequest, SubmitFeedbackRequest } from '@shared/types/broadcasts';
 import { platformEventBus } from '../services/platformEventBus';
-import { db } from '../db';
+import { db, pool } from '../db';
 import { employees, platformRoles, broadcasts } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { createLogger } from '../lib/logger';
@@ -194,6 +194,36 @@ router.post('/', requireAuth, requireRole(['org_owner', 'co_owner', 'manager', '
         });
       } catch (e) {
         log.error('[BroadcastRoutes] WebSocket broadcast failed:', e);
+      }
+
+      // ── SMS channel: queue via smsQueueService for rate-limited delivery ──
+      // Opt-in via `smsChannel: true` in the body. For workspace-wide broadcasts
+      // or larger targeting (>10 recipients), Twilio rate limits mandate queuing.
+      try {
+        const smsChannel = (req.body as any)?.smsChannel === true;
+        const smsBody = ((req.body as any)?.smsBody || validated.message || '').toString().slice(0, 320);
+        if (smsChannel && smsBody && !validated.isDraft) {
+          const { rows: recipients } = await pool.query(
+            `SELECT id, phone FROM employees
+              WHERE workspace_id = $1 AND is_active = TRUE AND phone IS NOT NULL AND phone <> ''`,
+            [workspaceId],
+          );
+          if (recipients.length > 10) {
+            const { queueSMS } = await import('../services/sms/smsQueueService');
+            const messages = recipients.map((r: any) => ({
+              workspaceId,
+              to: r.phone,
+              body: smsBody,
+              type: 'broadcast',
+              employeeId: r.id,
+              priority: validated.priority === 'critical' ? 1 : validated.priority === 'high' ? 3 : 5,
+            }));
+            const result = await queueSMS(messages);
+            log.info(`[Broadcast] Queued ${result.queued} SMS messages via outbox`);
+          }
+        }
+      } catch (smsErr: any) {
+        log.warn('[BroadcastRoutes] SMS dispatch failed (non-fatal):', smsErr?.message);
       }
     }
 

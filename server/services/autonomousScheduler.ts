@@ -2905,6 +2905,19 @@ export function startAutonomousScheduler() {
     log.info('WebSocket Connection Cleanup registered', { schedule: SCHEDULER_CONFIG.wsConnectionCleanup.schedule, description: SCHEDULER_CONFIG.wsConnectionCleanup.description });
   }
 
+  // 7. SMS Outbox Worker (every minute) — drains queued broadcast SMS within
+  // Twilio A2P 10DLC rate limits. Non-blocking: skips cleanly if outbox table
+  // is unavailable or no messages are queued.
+  cron.schedule('* * * * *', async () => {
+    try {
+      const { processSMSOutbox } = await import('./sms/smsQueueService');
+      await processSMSOutbox();
+    } catch (err: any) {
+      log.warn('[Cron] SMS outbox worker error:', err?.message);
+    }
+  });
+  log.info('SMS Outbox Worker registered', { schedule: '* * * * * (every minute)' });
+
   // Token allowance resets naturally via token_usage_monthly (a new row is
   // created on the 1st of each month as soon as the first AI call of the
   // month runs) — no dedicated cron is required.
