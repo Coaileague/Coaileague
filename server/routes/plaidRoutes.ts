@@ -1,6 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { requireAuth } from '../auth';
+import { requireOwner } from '../rbac';
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
 import { orgFinanceSettings, payStubs, employeeBankAccounts, employees } from '@shared/schema';
@@ -26,7 +27,7 @@ function getUserId(req: any): string {
   return req.user?.id || '';
 }
 
-router.get('/status', requireAuth, async (req, res) => {
+router.get('/status', requireAuth, requireOwner, async (req, res) => {
   try {
     const configured = isPlaidConfigured();
     const workspaceId = getWorkspaceId(req);
@@ -63,7 +64,7 @@ router.get('/status', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/link-token/org', requireAuth, async (req, res) => {
+router.post('/link-token/org', requireAuth, requireOwner, async (req, res) => {
   try {
     if (!isPlaidConfigured()) {
       return res.status(503).json({ error: 'Plaid is not configured on this server' });
@@ -78,7 +79,7 @@ router.post('/link-token/org', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/exchange/org', requireAuth, async (req, res) => {
+router.post('/exchange/org', requireAuth, requireOwner, async (req, res) => {
   try {
     const { publicToken } = req.body;
     if (!publicToken) return res.status(400).json({ error: 'publicToken required' });
@@ -153,7 +154,7 @@ router.post('/exchange/org', requireAuth, async (req, res) => {
   }
 });
 
-router.delete('/org-bank', requireAuth, async (req, res) => {
+router.delete('/org-bank', requireAuth, requireOwner, async (req, res) => {
   try {
     const workspaceId = getWorkspaceId(req);
     const userId = getUserId(req);

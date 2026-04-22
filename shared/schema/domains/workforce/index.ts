@@ -17,11 +17,13 @@ import {
   feedbackPriorityEnum,
   feedbackStatusEnum,
   feedbackTypeEnum,
+  guardCardStatusEnum,
   operatorCredentialTypeEnum,
   personalityTagCategoryEnum,
   reviewStatusEnum,
   reviewTypeEnum,
   scoringEventTypeEnum,
+  topsVerificationStatusEnum,
   trainingDifficultyEnum,
   workspaceRoleEnum,
 } from '../../enums';
@@ -1398,6 +1400,25 @@ export const employees = pgTable("employees", {
   guardCardNumber: varchar("guard_card_number"),
   guardCardIssueDate: date("guard_card_issue_date"),
   guardCardExpiryDate: date("guard_card_expiry_date"),
+
+  // ─── Guard Card Compliance Tier System (Texas DPS / OC §1702.230) ─────────
+  // Five-tier system that drives clock-in enforcement.
+  guardCardStatus: guardCardStatusEnum("guard_card_status").default('expired_hard_block'),
+  // Tier 3 only — +14 days from application submission. Hard-blocks on expiry.
+  workAuthorizationWindowExpires: timestamp("work_authorization_window_expires"),
+  // Trinity vision verification state for uploaded TOPS screenshots
+  topsVerificationStatus: topsVerificationStatusEnum("tops_verification_status"),
+  topsVerificationDate: timestamp("tops_verification_date"),
+  topsVerificationNotes: text("tops_verification_notes"),
+  // Background check record of conduct — required for Tier 3 provisional work
+  backgroundCheckDate: timestamp("background_check_date"),
+  backgroundCheckType: varchar("background_check_type"),       // 'dps_criminal' | 'commercial'
+  backgroundCheckProvider: varchar("background_check_provider"),
+  sexOffenderRegistryChecked: boolean("sex_offender_registry_checked").default(false),
+  sexOffenderRegistryCheckDate: timestamp("sex_offender_registry_check_date"),
+  noAdverseActionConfirmed: boolean("no_adverse_action_confirmed").default(false),
+  noAdverseActionConfirmedDate: timestamp("no_adverse_action_confirmed_date"),
+  noAdverseActionConfirmedBy: varchar("no_adverse_action_confirmed_by"),
 
   // Security license classification
   licenseType: varchar("license_type"), // 'level2_unarmed' | 'level3_armed' | 'level4_ppo'

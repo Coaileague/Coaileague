@@ -2753,6 +2753,77 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         return res.status(403).json({ message: accessCheck.reason });
       }
 
+      // ── GUARD CARD COMPLIANCE CHECK AT CLOCK-IN ─────────────────────────────
+      // Enforce the 5-tier guardCardStatus system on every clock-in.
+      {
+        const gcStatus = (employee as any).guardCardStatus || 'expired_hard_block';
+        const isArmed = !!(employee as any).isArmed;
+
+        if (gcStatus === 'expired_hard_block') {
+          return res.status(403).json({
+            error: 'clock_in_blocked',
+            code: 'LICENSE_EXPIRED',
+            message:
+              'Your security license has expired or is invalid. You cannot be assigned to shifts until your license is renewed and verified. Please contact your manager.',
+          });
+        }
+
+        if (isArmed && !['licensed_card_on_file', 'licensed_pending_card'].includes(gcStatus)) {
+          return res.status(403).json({
+            error: 'clock_in_blocked',
+            code: 'ARMED_LICENSE_REQUIRED',
+            message:
+              'Armed officers must have an active, verified license on file. Please upload your TOPS screenshot showing ACTIVE status or your physical card.',
+          });
+        }
+
+        if (gcStatus === 'substantially_complete' && (employee as any).workAuthorizationWindowExpires) {
+          const windowExpires = new Date((employee as any).workAuthorizationWindowExpires);
+          if (new Date() > windowExpires) {
+            await db
+              .update(employees)
+              .set({ guardCardStatus: 'expired_hard_block' } as any)
+              .where(eq(employees.id, employee.id))
+              .catch((err: any) =>
+                log.warn('[ClockIn] Failed to auto-escalate expired window:', err?.message),
+              );
+            return res.status(403).json({
+              error: 'clock_in_blocked',
+              code: 'AUTHORIZATION_WINDOW_EXPIRED',
+              message:
+                'Your 14-day provisional work authorization window has expired. Please contact your manager to resolve your license status.',
+            });
+          }
+        }
+      }
+
+      // ── EARLY CLOCK-IN BUFFER: 15 MINUTES BEFORE SHIFT ─────────────────────
+      {
+        const [shiftForBuffer] = await db
+          .select({ startTime: shifts.startTime })
+          .from(shifts)
+          .where(
+            and(
+              eq(shifts.id, req.params.shiftId),
+              eq(shifts.workspaceId, employee.workspaceId),
+            ),
+          )
+          .limit(1);
+        if (shiftForBuffer?.startTime) {
+          const shiftStart = new Date(shiftForBuffer.startTime);
+          const now = new Date();
+          const minutesBefore = (shiftStart.getTime() - now.getTime()) / 60000;
+          if (minutesBefore > 15) {
+            return res.status(400).json({
+              error: 'too_early',
+              code: 'CLOCK_IN_TOO_EARLY',
+              message: `You can clock in up to 15 minutes before your shift. Your shift starts at ${shiftStart.toLocaleTimeString()}.`,
+              minutesUntilEligible: Math.ceil(minutesBefore - 15),
+            });
+          }
+        }
+      }
+
       // ── GPS GEO-FENCE ENFORCEMENT AT SHIFT START ──────────────────────────
       // Directive L3.D: Shift start events require GPS coordinates.
       // Distance > 200m from site geofence = Out-of-Bounds event in audit log +

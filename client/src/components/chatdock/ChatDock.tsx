@@ -651,7 +651,7 @@ function RoomInfoPanel({
                   <span className="text-sm font-medium truncate">{u.name}</span>
                   {isBot && <Badge variant="secondary" className="text-[9px] px-1">Bot</Badge>}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{isBot ? 'AI Assistant' : (u.role || 'Member')}</p>
+                <p className="text-xs text-muted-foreground truncate">{isBot ? (u.id === 'helpai-bot' || u.name === 'HelpAI' ? 'HelpAI' : 'Trinity') : (u.role || 'Member')}</p>
               </div>
             </div>
           );
@@ -2234,7 +2234,11 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                 >
                   {!isOwn && !isGrouped && (
                     <span className="text-[10px] text-muted-foreground mb-0.5 px-2 inline-flex items-center gap-1">
-                      {isBot ? "Trinity" : (msg.senderName || "Unknown")}
+                      {isBot
+                        ? (msg.senderId === 'helpai-bot' || msg.senderName === 'HelpAI'
+                            ? 'HelpAI'
+                            : (msg.senderName || 'Trinity'))
+                        : (msg.senderName || "Unknown")}
                       {(msg as any).bridgeChannelType && (
                         <ChannelIndicator channelType={(msg as any).bridgeChannelType} />
                       )}

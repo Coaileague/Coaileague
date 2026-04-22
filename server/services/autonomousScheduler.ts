@@ -2707,6 +2707,21 @@ export function startAutonomousScheduler() {
     log.info('Invoice Lifecycle Retry Sweep registered', { schedule: (SCHEDULER_CONFIG as any).invoiceLifecycleSweep.schedule });
   }
 
+  // License Expiry Alert Sweep (Daily 6 AM)
+  // Scans expiring guard cards and approaching Tier 3 window endings.
+  registerJobInfo('License Expiry Alerts', '0 6 * * *', 'Daily scan for expiring guard cards + Tier 3 authorization windows', true);
+  cron.schedule('0 6 * * *', () => {
+    trackJobExecution('License Expiry Alerts', async () => {
+      try {
+        const { runLicenseExpiryAlerts } = await import('./trinity/workflows/licenseExpiryWorkflow');
+        await runLicenseExpiryAlerts();
+      } catch (err) {
+        log.warn('[Cron] License expiry sweep failed:', (err as any)?.message);
+      }
+    });
+  });
+  log.info('License Expiry Alert registered', { schedule: '0 6 * * *' });
+
   // 4b. Terminated Employee Access Expiry (Daily 4:30 AM UTC)
   // Finds employees whose document_access_expires_at has passed and
   // ensures their sessions are purged and accounts fully locked.

@@ -17,11 +17,12 @@
  */
 
 import { Router, type Response } from 'express';
-import { requireAuth, requireManager, type AuthenticatedRequest } from '../rbac';
+import { requireAuth, requireManager, requireOwner, type AuthenticatedRequest } from '../rbac';
 import { pool } from '../db';
 import { createLogger } from '../lib/logger';
 import { sendCanSpamCompliantEmail } from '../services/emailCore';
 import { logActionAudit } from '../services/ai-brain/actionAuditLogger';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 
 const log = createLogger('EmploymentVerifyRoutes');
 
@@ -243,6 +244,59 @@ employmentVerifyRouter.get(
         },
       });
 
+      // ── Bill verification fee to workspace (non-blocking) ─────────────────
+      // Billing failure must never prevent the verification response from
+      // being sent to the requester.
+      scheduleNonBlocking('employment-verify.bill', async () => {
+        try {
+          const settingRows = await pool.query(
+            `SELECT verification_fee_cents, verification_enabled
+               FROM workspace_verification_settings
+              WHERE workspace_id = $1 LIMIT 1`,
+            [workspaceId],
+          );
+          const row = settingRows.rows[0] as any;
+          const feeCents: number = row?.verification_fee_cents ?? 100;
+          const enabled: boolean = row?.verification_enabled ?? true;
+
+          if (!enabled) {
+            log.info(`[EmploymentVerify] Billing skipped — disabled for ${workspaceId}`);
+            return;
+          }
+
+          await pool.query(
+            `
+            INSERT INTO platform_service_charges
+              (id, workspace_id, charge_type, description,
+               amount_cents, reference_id, charged_at)
+            VALUES
+              (gen_random_uuid(), $1, 'employment_verification',
+               'Employment verification — Ref ' || $2,
+               $3, $4, NOW())
+            ON CONFLICT DO NOTHING
+          `,
+            [workspaceId, refNum, feeCents, ticket.id],
+          );
+
+          await pool.query(
+            `
+            INSERT INTO workspace_verification_settings
+              (workspace_id, verification_count_this_month, verification_revenue_this_month)
+            VALUES ($1, 1, $2)
+            ON CONFLICT (workspace_id) DO UPDATE
+              SET verification_count_this_month   = workspace_verification_settings.verification_count_this_month + 1,
+                  verification_revenue_this_month = workspace_verification_settings.verification_revenue_this_month + EXCLUDED.verification_revenue_this_month,
+                  updated_at = NOW()
+          `,
+            [workspaceId, feeCents],
+          );
+
+          log.info(`[EmploymentVerify] Billed ${feeCents} cents to ${workspaceId} for ${refNum}`);
+        } catch (billingErr: any) {
+          log.warn('[EmploymentVerify] Billing failed (non-blocking):', billingErr?.message);
+        }
+      });
+
       log.info(`[EmploymentVerify] ${refNum} approved; verification sent to ${requesterEmail}`);
       return res.json({
         success: true,
@@ -361,4 +415,70 @@ employmentVerifyRouter.get(
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
   }
+);
+
+// ── Verification revenue/usage stats (owner + support staff) ─────────────────
+// GET /api/employment-verify/stats
+employmentVerifyRouter.get(
+  '/stats',
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const callerRole = (req as any).workspaceRole || '';
+    const callerPlatformRole = (req as any).platformRole || '';
+    const isOwner = ['org_owner', 'co_owner'].includes(callerRole);
+    const isPlatform = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'].includes(callerPlatformRole);
+    if (!isOwner && !isPlatform) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const { rows } = await pool.query(
+      `SELECT verification_count_this_month AS "countThisMonth",
+              verification_revenue_this_month AS "revenueThisMonth",
+              verification_fee_cents AS "feePerVerification",
+              verification_enabled AS "enabled"
+         FROM workspace_verification_settings
+        WHERE workspace_id = $1`,
+      [workspaceId],
+    );
+    res.json(
+      rows[0] || {
+        countThisMonth: 0,
+        revenueThisMonth: 0,
+        feePerVerification: 100,
+        enabled: true,
+      },
+    );
+  },
+);
+
+// ── Configure verification fee (owner only) ──────────────────────────────────
+// PATCH /api/employment-verify/settings
+employmentVerifyRouter.patch(
+  '/settings',
+  requireAuth,
+  requireOwner,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { feeCents, enabled } = (req.body || {}) as { feeCents?: number; enabled?: boolean };
+
+    if (feeCents !== undefined && (feeCents < 50 || feeCents > 500)) {
+      return res.status(400).json({ error: 'Fee must be between $0.50 and $5.00' });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO workspace_verification_settings
+        (workspace_id, verification_fee_cents, verification_enabled)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (workspace_id) DO UPDATE
+        SET verification_fee_cents = COALESCE($2, workspace_verification_settings.verification_fee_cents),
+            verification_enabled = COALESCE($3, workspace_verification_settings.verification_enabled),
+            updated_at = NOW()
+    `,
+      [req.workspaceId, feeCents ?? null, enabled ?? null],
+    );
+
+    res.json({ success: true });
+  },
 );

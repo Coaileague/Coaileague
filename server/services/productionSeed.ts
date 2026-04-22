@@ -117,6 +117,89 @@ export async function runDataCorrections(): Promise<void> {
   // Ensure the Statewide Protective Services workspace and its owner exist
   await runStatewideWorkspaceBootstrap();
 
+  // ── Compliance + Guest Billing bootstrap (idempotent) ────────────────────
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS workspace_compliance_scores (
+        workspace_id  VARCHAR PRIMARY KEY,
+        score         INTEGER NOT NULL DEFAULT 100,
+        breakdown     JSONB,
+        calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log('🔧 Data Correction: workspace_compliance_scores ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: workspace_compliance_scores skipped:', (err as any)?.message);
+  }
+
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS guest_session_log (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id    VARCHAR NOT NULL,
+        session_id      VARCHAR NOT NULL UNIQUE,
+        guest_type      VARCHAR NOT NULL,
+        channel         VARCHAR NOT NULL,
+        tokens_used     INTEGER NOT NULL DEFAULT 0,
+        token_cap       INTEGER NOT NULL,
+        cost_microcents BIGINT  NOT NULL DEFAULT 0,
+        capped_out      BOOLEAN NOT NULL DEFAULT FALSE,
+        resolved        BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_guest_session_workspace
+        ON guest_session_log (workspace_id, created_at DESC)
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_guest_session_sid
+        ON guest_session_log (session_id)
+    `);
+    console.log('🔧 Data Correction: guest_session_log ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: guest_session_log skipped:', (err as any)?.message);
+  }
+
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS platform_service_charges (
+        id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id  VARCHAR NOT NULL,
+        charge_type   VARCHAR NOT NULL,
+        description   TEXT NOT NULL,
+        amount_cents  INTEGER NOT NULL,
+        reference_id  VARCHAR,
+        charged_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (charge_type, reference_id)
+      )
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_psvc_workspace
+        ON platform_service_charges (workspace_id, charged_at DESC)
+    `);
+    console.log('🔧 Data Correction: platform_service_charges ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: platform_service_charges skipped:', (err as any)?.message);
+  }
+
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS workspace_verification_settings (
+        workspace_id                    VARCHAR PRIMARY KEY,
+        verification_enabled            BOOLEAN NOT NULL DEFAULT TRUE,
+        verification_fee_cents          INTEGER NOT NULL DEFAULT 100,
+        verification_count_this_month   INTEGER NOT NULL DEFAULT 0,
+        verification_revenue_this_month INTEGER NOT NULL DEFAULT 0,
+        updated_at                      TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('🔧 Data Correction: workspace_verification_settings ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: workspace_verification_settings skipped:', (err as any)?.message);
+  }
+
   console.log('🔧 Data Corrections Service: Complete');
 }
 

@@ -283,6 +283,38 @@ router.get('/my-status', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 /**
+ * GET /api/compliance/score
+ * Workspace compliance score (0-100) with deductions breakdown.
+ * Visible to: org_owner, co_owner, platform staff, and auditors.
+ * NON-BLOCKING — low score surfaces alerts/visibility but never blocks ops.
+ */
+router.get('/score', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId || req.user?.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+    const callerRole = (req as any).workspaceRole || '';
+    const callerPlatformRole = (req as any).platformRole || '';
+    const isOwner = ['org_owner', 'co_owner'].includes(callerRole);
+    const isPlatform = ['root_admin', 'deputy_admin', 'sysop',
+      'support_manager', 'support_agent'].includes(callerPlatformRole);
+    const isAuditor = callerRole === 'auditor';
+
+    if (!isOwner && !isPlatform && !isAuditor) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { calculateComplianceScore } = await import(
+      '../services/compliance/workspaceComplianceScore'
+    );
+    const score = await calculateComplianceScore(workspaceId);
+    res.json(score);
+  } catch (err: unknown) {
+    return res.status(500).json({ error: sanitizeError(err) });
+  }
+});
+
+/**
  * GET /api/compliance/tasks/pending
  * Returns pending compliance items that require the user's attention.
  * Used by TrinityTaskWidget (useTrinityTasks hook).

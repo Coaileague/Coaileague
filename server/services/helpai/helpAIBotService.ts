@@ -37,6 +37,64 @@ import { createLogger } from '../../lib/logger';
 const log = createLogger('helpAIBotService');
 
 
+// ─── Cross-channel Identity Gate ────────────────────────────────────────────
+// Mutating actions must require the user to have been identified before
+// execution. Read-only/FAQ actions do not require identification.
+export const IDENTITY_REQUIRED_ACTIONS = new Set<string>([
+  'create_support_ticket',
+  'update_schedule',
+  'send_notification',
+  'create_calloff',
+  'update_timesheet',
+  'request_time_off',
+  'update_profile',
+]);
+
+export const FAQ_ALLOWED_WITHOUT_IDENTITY = new Set<string>([
+  'lookup_faq',
+  'get_company_info',
+  'get_schedule_info',
+  'check_timesheet',
+  'get_contact_info',
+]);
+
+export interface HelpAIActionResult {
+  success: boolean;
+  error?: string;
+  message?: string;
+  requiresIdentification?: boolean;
+  [extra: string]: unknown;
+}
+
+export interface HelpAIActionSession {
+  userId?: string;
+  isIdentified: boolean;
+  workspaceId: string;
+}
+
+/**
+ * Enforces the identity gate before executing a HelpAI action.
+ * Callers should invoke this before performing any mutating action.
+ * Returns null when the action may proceed, or an error result to return
+ * directly to the caller.
+ */
+export function assertIdentityForAction(
+  actionName: string,
+  session: HelpAIActionSession,
+): HelpAIActionResult | null {
+  if (IDENTITY_REQUIRED_ACTIONS.has(actionName) && !session.isIdentified) {
+    return {
+      success: false,
+      error: 'identity_required',
+      message:
+        'I need to verify your identity before I can make any changes. '
+        + 'Please say your employee ID or the last 4 digits of your employee number.',
+      requiresIdentification: true,
+    };
+  }
+  return null;
+}
+
 export enum HelpAIState {
   IDLE = 'idle',
   QUEUED = 'queued',

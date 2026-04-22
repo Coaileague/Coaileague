@@ -2,17 +2,20 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { validatePayRate, canAssignRole, requiresOwnerToAssign, OWNER_ASSIGN_MIN_LEVEL, businessRuleResponse } from '../lib/businessRules';
 import { WORKSPACE_ROLE_HIERARCHY } from '../lib/rbac/roleDefinitions';
 import { Router } from "express";
+import multer from "multer";
 import { storage } from "../storage";
 import { trimStrings } from "../utils/sanitize";
 import { db } from "../db";
 import {
   employees,
+  employeeDocuments,
   users,
   workspaces,
   platformRoles,
   insertEmployeeSchema,
   systemAuditLogs,
 } from "@shared/schema";
+import { objectStorageClient, parseObjectPath } from "../objectStorage";
 import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getUserPlatformRole, getAuthorityLevelForEmployee, canEditEmployeeByPosition, canPromoteEmployeeTo, requireAuth } from "../rbac";
@@ -31,6 +34,34 @@ import {
   filterEmployeesForResponse,
 } from "../utils/sensitiveFieldFilter";
 const router = Router();
+
+// ── Financial-field strip for employee responses ──────────────────────────────
+// Backed by the existing sensitiveFieldFilter utility; this thin wrapper keeps
+// the name-based access-model explicit at the route layer.
+const FINANCIAL_FIELDS_SENSITIVE = [
+  'hourlyRate', 'billRate', 'payRate', 'overtimeRate', 'salaryAmount',
+  'taxWithholdingInfo', 'bankAccountInfo', 'socialSecurityNumber',
+  'directDepositAccount',
+] as const;
+
+function stripFinancialFields(
+  employee: Record<string, any>,
+  callerRole: string,
+  callerPlatformRole: string,
+  callerUserId: string,
+): Record<string, any> {
+  if (!employee) return employee;
+  const isOwnerLevel = ['org_owner', 'co_owner'].includes(callerRole);
+  const isPlatformStaff = ['root_admin', 'deputy_admin', 'sysop',
+    'support_manager', 'support_agent', 'compliance_officer'].includes(callerPlatformRole);
+  const isSelf = employee.userId === callerUserId;
+  if (isOwnerLevel || isPlatformStaff || isSelf) return employee;
+  const sanitized = { ...employee };
+  for (const field of FINANCIAL_FIELDS_SENSITIVE) {
+    delete (sanitized as any)[field];
+  }
+  return sanitized;
+}
 
 router.patch('/:employeeId/role', async (req: AuthenticatedRequest, res) => {
   try {
@@ -776,6 +807,198 @@ router.patch('/:employeeId/guard-card/verify', async (req: AuthenticatedRequest,
     res.status(500).json({ message: (error instanceof Error ? sanitizeError(error) : null) || 'Failed to verify guard card' });
   }
 });
+
+// ── TOPS Screenshot Verification Upload ────────────────────────────────────
+// POST /:employeeId/tops-verification
+// Officer or manager/owner uploads a TOPS screenshot; Trinity vision verifies
+// the screenshot and sets the employee's guardCardStatus tier.
+const topsUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error(`File type not allowed: ${file.mimetype}`));
+    }
+    cb(null, true);
+  },
+});
+
+router.post(
+  '/:employeeId/tops-verification',
+  requireAuth,
+  topsUpload.single('screenshot'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { employeeId } = req.params;
+      const workspaceId = req.workspaceId!;
+      const file = (req as any).file;
+      if (!file) return res.status(400).json({ error: 'Screenshot file required' });
+
+      const employee = await storage.getEmployee(employeeId, workspaceId);
+      if (!employee) return res.status(404).json({ error: 'Employee not found' });
+
+      const { hasManagerAccess } = await import('../rbac');
+      const isSelf = req.user?.id === employee.userId;
+      const isManager = hasManagerAccess(req.workspaceRole as string);
+      if (!isSelf && !isManager) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      // Persist the screenshot to object storage (non-fatal on failure)
+      let objectPath = 'record_only';
+      try {
+        const privateDir = process.env.PRIVATE_OBJECT_DIR;
+        if (privateDir) {
+          objectPath = `${privateDir}/tops-screenshots/${workspaceId}/${employeeId}/${Date.now()}-${(file.originalname || 'screenshot').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const { bucketName, objectName } = parseObjectPath(objectPath);
+          const bucket = objectStorageClient.bucket(bucketName);
+          await bucket.file(objectName).save(file.buffer, {
+            metadata: {
+              contentType: file.mimetype,
+              metadata: {
+                workspaceId,
+                employeeId,
+                uploadedBy: req.user?.id || '',
+                timestamp: new Date().toISOString(),
+              },
+            },
+          });
+        }
+      } catch (storeErr: any) {
+        log.warn('[TOPSUpload] Object storage save failed (non-fatal):', storeErr?.message);
+      }
+
+      // Record the document for audit trail
+      try {
+        await db.insert(employeeDocuments).values({
+          workspaceId,
+          employeeId,
+          documentType: 'tops_screenshot_active',
+          documentName: `TOPS Screenshot — ${new Date().toLocaleDateString()}`,
+          fileUrl: objectPath,
+          fileSize: file.size,
+          fileType: file.mimetype,
+          originalFileName: file.originalname,
+          uploadedBy: req.user?.id || '',
+          uploadedByEmail: req.user?.email || '',
+          uploadedByRole: req.workspaceRole || '',
+          uploadIpAddress: req.ip || '',
+          isComplianceDocument: true,
+          requiresApproval: true,
+          retentionPeriodYears: 7,
+        } as any);
+      } catch (docErr: any) {
+        log.warn('[TOPSUpload] Document record failed (non-fatal):', docErr?.message);
+      }
+
+      // Trinity vision verification
+      const imageBase64 = file.buffer.toString('base64');
+      const { verifyTOPSScreenshot } = await import('../services/trinity/workflows/topsVerificationWorkflow');
+
+      if (file.size < 5 * 1024 * 1024) {
+        const result = await verifyTOPSScreenshot({
+          employeeId,
+          workspaceId,
+          imageBase64,
+          imageMimeType: file.mimetype,
+          uploadedByUserId: req.user?.id || '',
+          isArmed: !!employee.isArmed,
+        });
+        return res.json({ success: true, verification: result });
+      }
+
+      verifyTOPSScreenshot({
+        employeeId,
+        workspaceId,
+        imageBase64,
+        imageMimeType: file.mimetype,
+        uploadedByUserId: req.user?.id || '',
+        isArmed: !!employee.isArmed,
+      }).catch((err: any) =>
+        log.warn('[TOPSUpload] Async verification failed:', err?.message),
+      );
+
+      res.json({
+        success: true,
+        verification: {
+          status: 'processing',
+          notes: 'Verification in progress — you will be notified.',
+        },
+      });
+    } catch (error: unknown) {
+      log.error('[TOPSUpload] Error:', error);
+      res.status(500).json({ error: 'Upload failed' });
+    }
+  },
+);
+
+// ── Background Check Record ────────────────────────────────────────────────
+// POST /:employeeId/background-check — manager/owner records a completed check
+router.post(
+  '/:employeeId/background-check',
+  requireAuth,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { hasManagerAccess } = await import('../rbac');
+      if (!hasManagerAccess(req.workspaceRole as string)) {
+        return res.status(403).json({ error: 'Manager access required' });
+      }
+
+      const { employeeId } = req.params;
+      const workspaceId = req.workspaceId!;
+      const { checkType, provider, sexOffenderChecked, noAdverseAction, notes } = req.body as any;
+
+      if (!['dps_criminal', 'commercial'].includes(checkType)) {
+        return res.status(400).json({ error: 'checkType must be dps_criminal or commercial' });
+      }
+
+      await db.update(employees)
+        .set({
+          backgroundCheckDate: new Date(),
+          backgroundCheckType: checkType,
+          backgroundCheckProvider: provider || null,
+          sexOffenderRegistryChecked: sexOffenderChecked === true,
+          sexOffenderRegistryCheckDate: sexOffenderChecked ? new Date() : null,
+          noAdverseActionConfirmed: noAdverseAction === true,
+          noAdverseActionConfirmedDate: noAdverseAction ? new Date() : null,
+          noAdverseActionConfirmedBy: req.user?.id || null,
+        } as any)
+        .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
+
+      try {
+        await db.insert(employeeDocuments).values({
+          workspaceId,
+          employeeId,
+          documentType: checkType === 'dps_criminal' ? 'background_check_dps' : 'background_check_commercial',
+          documentName: `Background Check — ${provider || 'unknown'} — ${new Date().toLocaleDateString()}`,
+          fileUrl: 'record_only',
+          uploadedBy: req.user?.id || '',
+          uploadedByEmail: req.user?.email || '',
+          uploadedByRole: req.workspaceRole || '',
+          uploadIpAddress: req.ip || '',
+          isComplianceDocument: true,
+          retentionPeriodYears: 7,
+          metadata: {
+            checkType,
+            provider,
+            sexOffenderChecked,
+            noAdverseAction,
+            confirmedBy: req.user?.email,
+            notes,
+          },
+        } as any);
+      } catch (docErr: any) {
+        log.warn('[BackgroundCheck] Document record failed (non-fatal):', docErr?.message);
+      }
+
+      res.json({ success: true });
+    } catch (error: unknown) {
+      log.error('[BackgroundCheck] Error:', error);
+      res.status(500).json({ error: 'Failed to record background check' });
+    }
+  },
+);
 
 router.get('/', async (req: AuthenticatedRequest, res) => {
   const startTime = Date.now();
@@ -1949,6 +2172,19 @@ router.get('/:employeeId/contracts', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { employeeId } = req.params;
+    const callerRole = (req as any).workspaceRole || req.user?.role || '';
+    const callerPlatformRole = (req as any).platformRole || (req.user as any)?.platformRole || '';
+    const isOwnerLevel = ['org_owner', 'co_owner'].includes(callerRole);
+    const isPlatformStaff = ['root_admin','deputy_admin','sysop',
+      'support_manager','support_agent','compliance_officer'].includes(callerPlatformRole);
+
+    if (!isOwnerLevel && !isPlatformStaff) {
+      const selfEmployee = await storage.getEmployeeByUserId(req.user?.id || '', workspaceId);
+      if (!selfEmployee || selfEmployee.id !== employeeId) {
+        return res.status(403).json({ error: 'Access denied — contracts are confidential' });
+      }
+    }
+
     const { contractDocuments } = await import("@shared/schema");
 
     const contracts = await db

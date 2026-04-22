@@ -52,6 +52,14 @@ router.get("/stats", async (req: any, res) => {
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const isPlatformStaff = req.user?.platformRole === "support" || req.user?.platformRole === "admin";
 
+    // ── Financial visibility gate ────────────────────────────────────────────
+    const callerRole = req.workspaceRole || req.user?.role || '';
+    const callerPlatformRole = req.platformRole || req.user?.platformRole || '';
+    const isOwnerLevel = ['org_owner', 'co_owner'].includes(callerRole);
+    const isPlatformStaffFull = ['root_admin', 'deputy_admin', 'sysop',
+      'support_manager', 'support_agent', 'compliance_officer'].includes(callerPlatformRole);
+    const canSeeFinancials = isOwnerLevel || isPlatformStaffFull;
+
     // Each query is wrapped individually so a single failing query (e.g. a
     // table or column not yet present in the live DB) does not crash the entire
     // dashboard stats response.  Failed queries fall back to safe zero-value
@@ -221,7 +229,7 @@ router.get("/stats", async (req: any, res) => {
       }
     }
 
-    res.json({
+    const statsPayload: Record<string, any> = {
       summary: {
         totalWorkspaces,
         totalCustomers: activeClients,
@@ -263,7 +271,31 @@ router.get("/stats", async (req: any, res) => {
         },
         trend: { percentChange: 12, isImproving: true },
       },
-    });
+    };
+
+    // ── Strip financial data for non-owner/non-platform-staff ───────────────
+    if (!canSeeFinancials) {
+      if (statsPayload.summary) {
+        delete statsPayload.summary.monthlyRevenue;
+      }
+      delete statsPayload.revenue;
+      delete statsPayload.currentRevenue;
+      delete statsPayload.prevRevenue;
+      delete statsPayload.revenueDelta;
+      delete statsPayload.billing;
+      delete statsPayload.billingStats;
+      delete statsPayload.profitLoss;
+      delete statsPayload.bankBalance;
+      delete statsPayload.clientRates;
+      delete statsPayload.payrollTotals;
+      // Also strip cost avoidance fields (revenue proxy)
+      if (statsPayload.automation) {
+        delete statsPayload.automation.costAvoidanceMonthly;
+        delete statsPayload.automation.costAvoidanceTotal;
+      }
+    }
+
+    res.json(statsPayload);
   } catch (error: unknown) {
     const err = error as any;
     log.error("[analytics/stats] error:", {

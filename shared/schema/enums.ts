@@ -177,7 +177,30 @@ export const employeeDocumentTypeEnum = pgEnum('employee_document_type', [
   'tax_form', 'policy_acknowledgment', 'firearms_permit',
   'firearms_qualification', 'psychological_evaluation',
   'supervisor_training', 'continuing_education',
-  'manager_card', 'representative_card', 'owner_operator_license'
+  'manager_card', 'representative_card', 'owner_operator_license',
+  // Guard card compliance tier documents
+  'tops_screenshot_active',        // TOPS ACTIVE — pending card (Tier 2)
+  'tops_screenshot_substantial',   // TOPS Substantially Complete (Tier 3)
+  'background_check_dps',          // DPS Criminal History check record
+  'background_check_commercial',   // Commercial background check record
+  'sex_offender_registry_check',   // DPS/NSOPW sex offender check record
+  'training_certificate_level_ii', // Level II course completion cert
+  'training_certificate_level_iii',// Level III armed course cert
+  'firearm_proficiency_cert',      // Annual firearm proficiency (commissioned)
+  'license_application_proof',     // Proof of pending TOPS application
+]);
+
+// Guard card compliance status (5-tier system — Texas DPS / OC §1702.230)
+export const guardCardStatusEnum = pgEnum('guard_card_status', [
+  'licensed_card_on_file',      // Tier 1 — physical card uploaded, valid
+  'licensed_pending_card',      // Tier 2 — TOPS ACTIVE, waiting for physical card
+  'substantially_complete',     // Tier 3 — pre-license, unarmed only, 14-day window
+  'grace_period_renewal',       // Tier 4 — expired ≤90 days, renewal submitted
+  'expired_hard_block',         // Tier 5 — hard block, no shift assignment
+]);
+
+export const topsVerificationStatusEnum = pgEnum('tops_verification_status', [
+  'pending', 'verified', 'suspicious', 'rejected',
 ]);
 
 export const operatorCredentialTypeEnum = pgEnum('operator_credential_type', [

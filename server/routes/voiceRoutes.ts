@@ -1683,6 +1683,37 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
     // across retries so the AI brain keeps it until a resolution is attempted.
     const clientContext = decodeURIComponent((req.query.clientContext as string) || '').slice(0, 300);
 
+    // ── Guest session token cap gate ─────────────────────────────────────────
+    const isGuestSession = req.query.guest === '1';
+    if (isGuestSession) {
+      try {
+        const { isSessionCapped, recordGuestSessionUsage } = await import(
+          '../services/billing/guestSessionService'
+        );
+        const capped = await isSessionCapped(sessionId);
+        if (capped) {
+          const capMsg = lang === 'es'
+            ? 'He alcanzado mi límite para esta sesión. Le conectaré con un agente humano. Adiós.'
+            : "I've reached my session limit. Let me route you to a human agent. Goodbye.";
+          return xmlResponse(res, twiml(
+            (lang === 'es'
+              ? `<Say voice="Polly.Lupe-Neural" language="es-US">${capMsg}</Say>`
+              : `<Say voice="Polly.Joanna-Neural" language="en-US">${capMsg}</Say>`)
+            + `<Hangup />`
+          ));
+        }
+        await recordGuestSessionUsage({
+          workspaceId: workspaceId || PLATFORM_WORKSPACE_ID,
+          sessionId,
+          guestType: 'general_inquiry',
+          channel: 'voice',
+          tokensUsed: 300,
+        }).catch(() => {});
+      } catch (capErr: any) {
+        log.warn('[VoiceGuest] cap check failed (non-blocking):', capErr?.message);
+      }
+    }
+
     const issue = (SpeechResult || '').trim();
 
     const sayEn = (text: string) => `<Say voice="Polly.Joanna-Neural" language="en-US">${text}</Say>`;
@@ -3831,6 +3862,9 @@ voiceRouter.post('/guest-intake', twilioSignatureMiddleware, async (req: Request
     const isComplaint = Digits === '1' || /\b(complaint|officer|file|report)\b/.test(Speech) || /\b(queja|oficial|reportar)\b/.test(Speech);
     const isQuestion = Digits === '2' || /\b(question|info|help)\b/.test(Speech) || /\b(pregunta|informaci[oó]n|ayuda)\b/.test(Speech);
     const isMessage = Digits === '3' || /\b(message|leave|callback)\b/.test(Speech) || /\b(mensaje|dejar|llamar)\b/.test(Speech);
+    const isVerification = Digits === '4' ||
+      /\b(verif|employment|work|hire|hired|work\s*there|still\s*work)\b/.test(Speech) ||
+      /\b(verific|empleo|trabaja|contrat)\b/.test(Speech);
 
     if (isComplaint) {
       return xmlResponse(res, twiml(
@@ -3848,13 +3882,18 @@ voiceRouter.post('/guest-intake', twilioSignatureMiddleware, async (req: Request
         redirect(`${baseUrl}/api/voice/schedule-callback?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
       ));
     }
+    if (isVerification) {
+      return xmlResponse(res, twiml(
+        redirect(`${baseUrl}/api/voice/guest-employment-verify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
+      ));
+    }
 
-    // First call — present the 3-choice menu
+    // First call — present the 4-choice menu
     const prompt = lang === 'es'
-      ? 'Entendido. Tengo tres opciones rápidas. Marque 1 para presentar una queja sobre un oficial o empresa de seguridad. Marque 2 para una pregunta general. Marque 3 para dejar un mensaje a un humano.'
-      : "Got it. I have three quick options. Press 1 to file a complaint about an officer or security company. Press 2 for a general question. Press 3 to leave a message for a human.";
+      ? 'Entendido. Tengo cuatro opciones. Marque 1 para presentar una queja. Marque 2 para una pregunta general. Marque 3 para dejar un mensaje. Marque 4 para verificar empleo.'
+      : "Got it. Four options. Press 1 to file a complaint. Press 2 for a general question. Press 3 to leave a message for a human. Press 4 to verify someone's employment.";
     return xmlResponse(res, twiml(
-      `<Gather input="speech dtmf" action="${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}" method="POST" numDigits="1" timeout="10" speechTimeout="auto" hints="complaint,officer,question,message,leave">` +
+      `<Gather input="speech dtmf" action="${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}" method="POST" numDigits="1" timeout="10" speechTimeout="auto" hints="complaint,officer,question,message,leave,verify,employment,work">` +
       say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
       `</Gather>` +
       say(lang === 'es' ? 'No recibí ninguna selección. Adiós.' : "I did not receive a selection. Goodbye.", lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US')
@@ -3958,6 +3997,119 @@ voiceRouter.post('/guest-complaint-intake', twilioSignatureMiddleware, async (re
     ));
   } catch (err: any) {
     log.error('[VoiceRoutes] /guest-complaint-intake error:', err?.message);
+    xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
+  }
+});
+
+// ─── GUEST EMPLOYMENT VERIFICATION (Voice) ────────────────────────────────────
+// Caller states who they are, who they're verifying, their purpose.
+// Creates an employment_verification support ticket; manager approves/denies via
+// existing /api/employment-verify/approve|deny. Session bills 500-token cap.
+voiceRouter.post('/guest-employment-verify', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const sessionId = (req.query.sessionId as string) || req.body.CallSid || '';
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const step = (req.query.step as string) || 'intro';
+    const Speech = ((req.body.SpeechResult as string) || '').trim();
+
+    if (step === 'intro' && !Speech) {
+      const prompt = lang === 'es'
+        ? 'Para verificar el empleo, necesito su nombre, organización y el propósito de esta verificación. Por favor hable ahora.'
+        : "To verify employment, I need your name, organization, and the purpose of this verification. Please speak now.";
+      return xmlResponse(res, twiml(
+        `<Gather input="speech" action="${baseUrl}/api/voice/guest-employment-verify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=employee" method="POST" timeout="15" speechTimeout="auto">` +
+        say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `</Gather>` +
+        say(lang === 'es' ? 'No recibí respuesta. Adiós.' : "I didn't catch that. Goodbye.",
+          lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US')
+      ));
+    }
+
+    if (step === 'employee') {
+      try {
+        const { pool } = await import('../db');
+        await pool.query(
+          `UPDATE voice_call_sessions
+              SET metadata = COALESCE(metadata, '{}'::jsonb) ||
+                             jsonb_build_object('verify_requester', $1::text, 'guest_type', 'employment_verification')
+            WHERE twilio_call_sid = $2`,
+          [Speech.slice(0, 300), req.body.CallSid || sessionId]
+        ).catch(() => null);
+      } catch { /* non-fatal */ }
+
+      const prompt = lang === 'es'
+        ? 'Gracias. Ahora diga el nombre completo de la persona cuyo empleo desea verificar.'
+        : "Thank you. Now please say the full name of the person whose employment you'd like to verify.";
+      return xmlResponse(res, twiml(
+        `<Gather input="speech" action="${baseUrl}/api/voice/guest-employment-verify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=submit" method="POST" timeout="10" speechTimeout="auto">` +
+        say(prompt, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `</Gather>` +
+        say(lang === 'es' ? 'No recibí el nombre. Adiós.' : "I didn't catch the name. Goodbye.",
+          lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US')
+      ));
+    }
+
+    if (step === 'submit' && Speech) {
+      try {
+        const { pool } = await import('../db');
+        const sessionRow = await pool.query(
+          `SELECT metadata FROM voice_call_sessions WHERE twilio_call_sid = $1 LIMIT 1`,
+          [req.body.CallSid || sessionId]
+        ).catch(() => ({ rows: [] as any[] }));
+        const requesterInfo = sessionRow.rows[0]?.metadata?.verify_requester || 'Unknown caller';
+        const refNum = `VER-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+        await pool.query(`
+          INSERT INTO support_tickets
+            (id, workspace_id, ticket_number, type, subject, description,
+             status, priority, source, created_at, updated_at)
+          VALUES
+            (gen_random_uuid(), $1, $2, 'employment_verification',
+             'Voice Employment Verification Request',
+             $3::text,
+             'open', 'normal', 'voice', NOW(), NOW())
+        `, [
+          workspaceId || PLATFORM_WORKSPACE_ID,
+          refNum,
+          JSON.stringify({
+            requester: { requester_name: requesterInfo, purpose: 'Employment verification via voice' },
+            employeeNameSpoken: Speech.slice(0, 200),
+            channel: 'voice',
+            callSid: req.body.CallSid || sessionId,
+          })
+        ]).catch((e: any) => log.warn('[VoiceVerify] Ticket insert failed:', e?.message));
+
+        // Record guest session token usage (500 cap for verification)
+        const { recordGuestSessionUsage } = await import('../services/billing/guestSessionService');
+        await recordGuestSessionUsage({
+          workspaceId: workspaceId || PLATFORM_WORKSPACE_ID,
+          sessionId,
+          guestType: 'employment_verification',
+          channel: 'voice',
+          tokensUsed: 500,
+        }).catch((e: any) => log.warn('[VoiceVerify] session usage record failed:', e?.message));
+
+      } catch (err: any) {
+        log.warn('[VoiceVerify] Submit path failed:', err?.message);
+      }
+
+      const confirmMsg = lang === 'es'
+        ? `Su solicitud de verificación ha sido enviada. El empleador revisará su solicitud y responderá por correo electrónico. Gracias. Adiós.`
+        : `Your verification request has been submitted. The employer will review and respond by email. Thank you. Goodbye.`;
+      return xmlResponse(res, twiml(
+        say(confirmMsg, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
+        `<Hangup />`
+      ));
+    }
+
+    return xmlResponse(res, twiml(
+      redirect(`${baseUrl}/api/voice/guest-employment-verify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=intro`)
+    ));
+
+  } catch (err: any) {
+    log.error('[VoiceRoutes] /guest-employment-verify error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
 });
