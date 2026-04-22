@@ -2,6 +2,7 @@ import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { SEO, PAGE_SEO } from '@/components/seo';
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 const privacyConfig: CanvasPageConfig = {
   id: 'privacy-policy',
@@ -18,7 +19,7 @@ export default function PrivacyPolicy() {
       <SEO
         title={PAGE_SEO.privacy.title}
         description={PAGE_SEO.privacy.description}
-        canonical="https://www.coaileague.com/privacy"
+        canonical={DOMAINS.privacyUrl}
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />
@@ -266,7 +267,7 @@ export default function PrivacyPolicy() {
             </ul>
 
             <p className="text-foreground/90 mb-4 mt-6">
-              To exercise these rights, contact us at privacy@coaileague.com. We will respond within 30 days.
+              To exercise these rights, contact us at {CONTACTS.privacy}. We will respond within 30 days.
             </p>
           </section>
 
@@ -290,7 +291,7 @@ export default function PrivacyPolicy() {
             <p className="text-foreground/90 mb-4">
               CoAIleague is not intended for use by individuals under 18 years of age. We do not knowingly collect 
               personal information from children under 18. If you believe we have collected information from a child 
-              under 18, please contact us immediately at privacy@coaileague.com.
+              under 18, please contact us immediately at {CONTACTS.privacy}.
             </p>
           </section>
 
@@ -384,7 +385,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
               <li><strong>Reply STOP</strong> (or STOPALL, CANCEL, END, QUIT, or UNSUBSCRIBE) to any text message from CoAIleague. You will receive one confirmation message and no further messages will be sent unless you re-consent.</li>
               <li>Uncheck the SMS consent checkbox in your employee profile settings inside the CoAIleague platform.</li>
-              <li>Email <strong>support@coaileague.com</strong> with your name and phone number requesting removal.</li>
+              <li>Email <strong>{CONTACTS.support}</strong> with your name and phone number requesting removal.</li>
             </ul>
             <p className="text-foreground/90 mb-4">
               After opting out via STOP reply, you will receive exactly one final confirmation: "You have been
@@ -396,7 +397,7 @@ export default function PrivacyPolicy() {
             <p className="text-foreground/90 mb-4">
               Reply <strong>HELP</strong> to any SMS message for program information. You will receive a response
               with a description of the messaging program, opt-out instructions, and our support contact. You may
-              also contact us directly at <strong>support@coaileague.com</strong>.
+              also contact us directly at <strong>{CONTACTS.support}</strong>.
             </p>
 
             <h3 className="text-xl font-semibold mb-3 mt-6">13.7 SMS Data Privacy</h3>
@@ -427,10 +428,10 @@ export default function PrivacyPolicy() {
             </p>
             <ul className="list-none pl-0 mb-4 text-foreground/90">
               <li className="mb-2">
-                <strong>Privacy Team Email:</strong> privacy@coaileague.com
+                <strong>Privacy Team Email:</strong> {CONTACTS.privacy}
               </li>
               <li className="mb-2">
-                <strong>Data Protection Officer:</strong> dpo@coaileague.com
+                <strong>Data Protection Officer:</strong> {CONTACTS.privacy}
               </li>
               <li className="mb-2">
                 <strong>Mailing Address:</strong> [Your Business Address]

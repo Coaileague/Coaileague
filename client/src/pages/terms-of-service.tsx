@@ -2,6 +2,7 @@ import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { SEO, PAGE_SEO } from '@/components/seo';
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 const termsConfig: CanvasPageConfig = {
   id: 'terms-of-service',
@@ -18,7 +19,7 @@ export default function TermsOfService() {
       <SEO
         title={PAGE_SEO.terms.title}
         description={PAGE_SEO.terms.description}
-        canonical="https://www.coaileague.com/terms"
+        canonical={DOMAINS.termsUrl}
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />
@@ -382,7 +383,7 @@ export default function TermsOfService() {
             </p>
             <ul className="list-none pl-0 mb-4 text-foreground/90">
               <li className="mb-2">
-                <strong>Email:</strong> legal@coaileague.com
+                <strong>Email:</strong> {CONTACTS.legal}
               </li>
               <li className="mb-2">
                 <strong>Address:</strong> CoAIleague, Texas, United States

@@ -102,6 +102,7 @@ import { useSimpleMode } from "@/contexts/SimpleModeContext";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { apiFetch } from "@/lib/apiError";
 import { WorkspaceResponse, OnboardingStatusResponse } from "@shared/schemas/responses/workspace";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 const settingsConfig: CanvasPageConfig = {
   id: 'settings',
@@ -640,7 +641,7 @@ function ProfileTabContent() {
             <Label className="text-xs sm:text-sm">Personal Forwarding Email</Label>
             <p className="text-xs text-muted-foreground">
               Copies of emails sent to your platform address (
-              {(currentUser as any)?.platformEmail || `${(currentUser?.firstName || 'u').toLowerCase().charAt(0)}.${(currentUser?.lastName || '').toLowerCase().replace(/[^a-z0-9]/g, '')}@sps.coaileague.com`}
+              {(currentUser as any)?.platformEmail || `${(currentUser?.firstName || 'u').toLowerCase().charAt(0)}.${(currentUser?.lastName || '').toLowerCase().replace(/[^a-z0-9]/g, '')}@sps.${DOMAINS.root}`}
               ) will be forwarded here. Leave blank to disable.
             </p>
             <div className="flex gap-2">
@@ -2068,7 +2069,7 @@ export default function Settings() {
       refetchStaffingEmail();
       toast({
         title: "Generic Email Claimed",
-        description: "Emails to staffing@coaileague.com will now route to your organization",
+        description: `Emails to staffing@${DOMAINS.root} will now route to your organization`,
       });
     },
     onError: (error: any) => {
@@ -3362,7 +3363,7 @@ export default function Settings() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  2-6 alphanumeric characters, lowercase. Your staffing email: staffing@{staffingEmailConfig.orgCode || 'yourcode'}.coaileague.com
+                  2-6 alphanumeric characters, lowercase. Your staffing email: staffing@{staffingEmailConfig.orgCode || 'yourcode'}.{DOMAINS.root}
                 </p>
               </div>
 
@@ -3483,7 +3484,7 @@ export default function Settings() {
                 </div>
                 
                 <p className="text-xs text-muted-foreground">
-                  The generic email (staffing@coaileague.com) routes to whichever organization claims it.
+                  The generic email (staffing@{DOMAINS.root}) routes to whichever organization claims it.
                   Only one organization can claim this at a time.
                 </p>
               </div>

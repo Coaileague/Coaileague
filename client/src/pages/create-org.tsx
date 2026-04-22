@@ -12,6 +12,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { triggerGlobalEmote } from "@/hooks/use-mascot-emotes";
 import { IndustrySelector, type IndustrySelection } from "@/components/industry-selector";
+import { DOMAINS } from "@shared/platformConfig";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -578,7 +579,7 @@ export default function CreateOrg() {
               <div>
                 <Label htmlFor="orgCode">Organization Code *</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  A short unique code (2-6 characters) for your organization. Your staffing email: staffing@<strong>{orgCode || 'code'}</strong>.coaileague.com
+                  A short unique code (2-6 characters) for your organization. Your staffing email: staffing@<strong>{orgCode || 'code'}</strong>.{DOMAINS.root}
                 </p>
                 <div className="relative">
                   <Input
@@ -617,7 +618,7 @@ export default function CreateOrg() {
                     >
                       {suggestedCode}
                     </button>
-                    <span className="ml-1">— your staffing email: staffing@{suggestedCode}.coaileague.com</span>
+                    <span className="ml-1">— your staffing email: staffing@{suggestedCode}.{DOMAINS.root}</span>
                   </p>
                 )}
                 {orgCodeStatus === "available" && (

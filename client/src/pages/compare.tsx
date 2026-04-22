@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { DOMAINS } from "@shared/platformConfig";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -139,7 +140,7 @@ export default function ComparePage() {
         <SEO
           title={PAGE_SEO.compare.title}
           description={PAGE_SEO.compare.description}
-          canonical="https://www.coaileague.com/compare"
+          canonical={DOMAINS.compareUrl}
         />
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16">
         <div className="container mx-auto px-4">
@@ -210,7 +211,7 @@ export default function ComparePage() {
       <SEO
         title={`CoAIleague vs ${competitor.name} — Security Guard Software Comparison`}
         description={`Compare CoAIleague with ${competitor.name} for security guard company workforce management. See feature-by-feature comparison of scheduling, payroll, and compliance tools.`}
-        canonical={`https://www.coaileague.com/compare/${competitorSlug}`}
+        canonical={`${DOMAINS.app}/compare/${competitorSlug}`}
       />
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="container mx-auto px-4 py-12">

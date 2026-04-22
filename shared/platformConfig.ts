@@ -20,6 +20,54 @@ export const PLATFORM = {
 } as const;
 
 // ============================================================================
+// PLATFORM DOMAINS & URLS — single source of truth for all URL construction
+// ============================================================================
+export const DOMAINS = {
+  root: "coaileague.com",
+  www: "www.coaileague.com",
+  api: "api.coaileague.com",
+  docs: "docs.coaileague.com",
+  support: "support.coaileague.com",
+  status: "status.coaileague.com",
+  app: "https://www.coaileague.com",
+  docsUrl: "https://docs.coaileague.com",
+  supportUrl: "https://support.coaileague.com",
+  statusUrl: "https://status.coaileague.com",
+  apiUrl: "https://api.coaileague.com",
+  privacyUrl: "https://www.coaileague.com/privacy",
+  termsUrl: "https://www.coaileague.com/terms",
+  cookiePolicyUrl: "https://www.coaileague.com/cookie-policy",
+  dpaUrl: "https://www.coaileague.com/dpa",
+  aupUrl: "https://www.coaileague.com/legal-aup",
+  compareUrl: "https://www.coaileague.com/compare",
+  featuresUrl: "https://www.coaileague.com/features",
+  contactUrl: "https://www.coaileague.com/contact",
+} as const;
+
+// ============================================================================
+// PLATFORM CONTACTS — all email addresses in one place
+// ============================================================================
+export const CONTACTS = {
+  support: "support@coaileague.com",
+  noreply: "noreply@coaileague.com",
+  billing: "billing@coaileague.com",
+  legal: "legal@coaileague.com",
+  compliance: "compliance@coaileague.com",
+  privacy: "privacy@coaileague.com",
+  security: "security@coaileague.com",
+  trust: "trust@coaileague.com",
+  dpa: "dpa@coaileague.com",
+  enterprise: "enterprise@coaileague.com",
+  sales: "sales@coaileague.com",
+  trinity: "trinity@coaileague.com",
+  operations: "operations@coaileague.com",
+  automation: "automation@coaileague.com",
+  unsubscribe: "unsubscribe@coaileague.com",
+  root: "root@coaileague.com",
+  demo: "demo@coaileague.com",
+} as const;
+
+// ============================================================================
 // WORKSPACE CONFIGURATION
 // ============================================================================
 export const WORKSPACE = {
@@ -568,9 +616,11 @@ export const FEATURES = {
 // ============================================================================
 // AI CONFIGURATION
 // ============================================================================
+export const AI_DEFAULT_MODEL = "gemini-2.0-flash-exp" as const;
+
 export const AI = {
   provider: "gemini" as const,
-  model: "gemini-2.0-flash-exp",
+  model: AI_DEFAULT_MODEL,
   maxTokens: 8192,
   temperature: 0.7,
   schedulingConfidenceThreshold: 0.8,
@@ -1067,11 +1117,11 @@ export const COAI_TWIN = {
   // AI Model Configuration (uses Gemini via AI Brain)
   model: {
     provider: "gemini" as const,
-    modelId: "gemini-2.0-flash-exp",
+    modelId: AI_DEFAULT_MODEL,
     maxTokens: 256,
     temperature: 0.8,
   },
-  
+
   // Bot Feature Flags
   capabilities: {
     enabled: true,
@@ -1113,7 +1163,7 @@ export const HELPAI = {
   // AI Model Configuration (uses Gemini via AI Brain)
   model: {
     provider: "gemini" as const,
-    modelId: "gemini-2.0-flash-exp",
+    modelId: AI_DEFAULT_MODEL,
     maxTokens: 512,
     temperature: 0.7,
   },

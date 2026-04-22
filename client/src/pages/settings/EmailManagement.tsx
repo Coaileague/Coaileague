@@ -20,6 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { sanitizeRichHtml } from "@/lib/sanitize";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 import { Mail, Users, Building2, BarChart3, CircleDollarSign, AlertTriangle, CheckCircle, Settings2, Forward, Pen, Bold, Italic, Underline, Link } from "lucide-react";
 
 interface EmailAddress {
@@ -594,7 +595,7 @@ export default function EmailManagement() {
             ))}
             {userAddresses.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                No officer addresses yet. Add officers to reserve their @coaileague.com address.
+                No officer addresses yet. Add officers to reserve their @{DOMAINS.root} address.
               </p>
             )}
           </div>

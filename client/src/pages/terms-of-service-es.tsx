@@ -1,6 +1,7 @@
 import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
 import { SEO } from "@/components/seo";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 export default function TermsOfServiceEs() {
   return (
@@ -8,7 +9,7 @@ export default function TermsOfServiceEs() {
       <SEO
         title="Términos de Servicio | CoAIleague"
         description="Términos de Servicio de CoAIleague — las condiciones de uso de la plataforma de gestión de la fuerza laboral."
-        canonical="https://www.coaileague.com/terms-es"
+        canonical={`${DOMAINS.app}/terms-es`}
       />
       <UniversalHeader variant="public" />
       <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">
@@ -111,7 +112,7 @@ export default function TermsOfServiceEs() {
             <h2 className="text-2xl font-semibold mb-4">12. Contacto</h2>
             <p>Para preguntas sobre estos Términos de Servicio:</p>
             <ul>
-              <li>Correo electrónico: legal@coaileague.com</li>
+              <li>Correo electrónico: {CONTACTS.legal}</li>
               <li>Solicitudes de privacidad: <a href="/data-subject-requests" className="underline">Solicitudes de Derechos de Datos</a></li>
             </ul>
           </section>

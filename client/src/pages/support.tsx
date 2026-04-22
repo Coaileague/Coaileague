@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/accordion";
 
 import type { HealthSummary } from '@shared/healthTypes';
+import { DOMAINS } from "@shared/platformConfig";
 
 export default function Support() {
   const [, setLocation] = useLocation();
@@ -258,7 +259,7 @@ export default function Support() {
         <SEO
           title={PAGE_SEO.support.title}
           description={PAGE_SEO.support.description}
-          canonical="https://www.coaileague.com/support"
+          canonical={`${DOMAINS.app}/support`}
         />
         <UniversalHeader variant="public" />
 

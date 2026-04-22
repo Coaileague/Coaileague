@@ -1,6 +1,7 @@
 import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
 import { SEO } from "@/components/seo";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 export default function CookiePolicy() {
   return (
@@ -8,7 +9,7 @@ export default function CookiePolicy() {
       <SEO
         title="Cookie Policy | CoAIleague"
         description="Learn how CoAIleague uses cookies and similar technologies to improve your experience."
-        canonical="https://www.coaileague.com/cookie-policy"
+        canonical={DOMAINS.cookiePolicyUrl}
       />
       <UniversalHeader variant="public" />
       <main className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">
@@ -72,7 +73,7 @@ export default function CookiePolicy() {
             <ul>
               <li><strong>In CoAIleague:</strong> Visit <a href="/end-user-controls" className="underline">Privacy Settings</a> or <a href="/data-subject-requests" className="underline">Data Subject Requests</a></li>
               <li><strong>Browser settings:</strong> Most browsers allow you to block or delete cookies. Note that blocking essential cookies will prevent you from using CoAIleague.</li>
-              <li><strong>Email request:</strong> Contact privacy@coaileague.com to withdraw consent</li>
+              <li><strong>Email request:</strong> Contact {CONTACTS.privacy} to withdraw consent</li>
             </ul>
           </section>
 
@@ -100,7 +101,7 @@ export default function CookiePolicy() {
             <h2 className="text-2xl font-semibold mb-4">7. Contact</h2>
             <p>For questions about our cookie practices, contact:</p>
             <ul>
-              <li>Email: privacy@coaileague.com</li>
+              <li>Email: {CONTACTS.privacy}</li>
               <li>Data Subject Requests: <a href="/data-subject-requests" className="underline">Submit a request</a></li>
             </ul>
           </section>

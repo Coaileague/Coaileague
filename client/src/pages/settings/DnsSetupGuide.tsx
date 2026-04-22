@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Globe, Mail, Shield, CheckCircle, Copy, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 interface DnsRecord {
   type: string;
@@ -47,7 +48,7 @@ const DMARC_RECORDS: DnsRecord[] = [
   {
     type: "TXT",
     name: "_dmarc",
-    value: "v=DMARC1; p=quarantine; rua=mailto:dmarc@coaileague.com; ruf=mailto:dmarc-forensic@coaileague.com; pct=100",
+    value: `v=DMARC1; p=quarantine; rua=mailto:dmarc@${DOMAINS.root}; ruf=mailto:dmarc-forensic@${DOMAINS.root}; pct=100`,
     ttl: "3600",
     purpose: "DMARC policy — quarantine unauthenticated email",
   },
@@ -255,9 +256,9 @@ export default function DnsSetupGuide() {
               "SPF record includes 'include:amazonses.com'",
               "DKIM selector 'resend._domainkey' returns public key",
               "DMARC record present with p=quarantine or p=reject",
-              "Test inbound email: send to staffing@coaileague.com, confirm it hits /api/inbound/email",
+              `Test inbound email: send to staffing@${DOMAINS.root}, confirm it hits /api/inbound/email`,
               "Test outbound: Trinity sends email, Resend dashboard shows delivery",
-              "Confirm inbound routing is live on coaileague.com before disabling legacy routing",
+              `Confirm inbound routing is live on ${DOMAINS.root} before disabling legacy routing`,
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />

@@ -17,6 +17,7 @@ import {
   TableCell 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DOMAINS } from "@shared/platformConfig";
 import { 
   Dialog, 
   DialogContent, 
@@ -189,7 +190,7 @@ export default function DeveloperPortal() {
               <div className="bg-slate-950 p-3 rounded-md overflow-x-auto border border-slate-800">
                 <pre className="text-xs text-slate-300">
                   <code>
-{`curl -X GET "https://api.coaileague.com/api/employees" \\
+{`curl -X GET "${DOMAINS.apiUrl}/api/employees" \\
   -H "Authorization: Bearer YOUR_API_KEY"`}
                   </code>
                 </pre>

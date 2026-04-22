@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 import { motion } from 'framer-motion';
 import { Mail, Zap, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -136,7 +137,7 @@ export default function OnboardingEmailIntro() {
                 Your Workspace Email:
               </p>
               <p className="text-lg font-mono font-semibold text-blue-600 dark:text-blue-400">
-                operations@{dbWorkspaceId.toLowerCase().substring(0, 8)}-coaileague.com
+                operations@{dbWorkspaceId.toLowerCase().substring(0, 8)}-{DOMAINS.root}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
                 This is your shared inbox where Trinity works
@@ -230,7 +231,7 @@ export default function OnboardingEmailIntro() {
           <p>
             Questions? Trinity is available 24/7.{' '}
             <a
-              href="mailto:support@coaileague.com"
+              href={`mailto:${CONTACTS.support}`}
               className="text-blue-500 hover:underline"
             >
               Contact Support

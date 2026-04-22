@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SEO, PAGE_SEO } from '@/components/seo';
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { DOMAINS } from "@shared/platformConfig";
 
 interface MaintenanceStatus {
   success: boolean;
@@ -58,7 +59,7 @@ export default function StatusPage() {
       <SEO
         title={PAGE_SEO.status.title}
         description={PAGE_SEO.status.description}
-        canonical="https://www.coaileague.com/status"
+        canonical={`${DOMAINS.app}/status`}
       />
 
       <CanvasHubPage config={pageConfig}>

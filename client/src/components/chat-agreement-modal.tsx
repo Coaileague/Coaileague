@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { CONTACTS } from "@shared/platformConfig";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,8 +148,8 @@ These Terms are governed by the laws of [Your Jurisdiction], without regard to c
 
 14. CONTACT INFORMATION
 For questions about these Terms:
-Email: legal@coaileague.com
-Support: support@coaileague.com
+Email: ${CONTACTS.legal}
+Support: ${CONTACTS.support}
 
 15. ENTIRE AGREEMENT
 These Terms, along with our Privacy Policy and Service Agreement, constitute the entire agreement between you and CoAIleague regarding this Service.

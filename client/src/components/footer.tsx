@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { AIGeneralDisclaimer } from "@/components/liability-disclaimers";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
@@ -260,8 +261,8 @@ export function Footer({ variant = "dark" }: FooterProps) {
             </p>
             <div className="flex items-center gap-2 text-xs">
               <Mail className="w-3.5 h-3.5" />
-              <a href="mailto:support@coaileague.com" className={linkClass} data-testid="footer-email">
-                support@coaileague.com
+              <a href={`mailto:${CONTACTS.support}`} className={linkClass} data-testid="footer-email">
+                {CONTACTS.support}
               </a>
             </div>
           </div>

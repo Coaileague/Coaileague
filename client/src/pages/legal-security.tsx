@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import { Footer } from "@/components/footer";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import { Button } from "@/components/ui/button";
+import { CONTACTS } from "@shared/platformConfig";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Shield, Lock, Server, Eye, AlertCircle, RefreshCw } from "lucide-react";
 
@@ -140,7 +141,7 @@ export default function SecurityPolicyPage() {
                 <li>Continuous dependency scanning and automated patching pipelines</li>
                 <li>Static application security testing (SAST) on every code deployment</li>
                 <li>Regular third-party penetration tests (at minimum annually)</li>
-                <li>Responsible disclosure program — report vulnerabilities to <a href="mailto:security@coaileague.com" className="text-primary underline underline-offset-4">security@coaileague.com</a></li>
+                <li>Responsible disclosure program — report vulnerabilities to <a href={`mailto:${CONTACTS.security}`} className="text-primary underline underline-offset-4">{CONTACTS.security}</a></li>
                 <li>SLA of 24 hours for critical, 7 days for high, 30 days for medium severity findings</li>
               </ul>
             </div>
@@ -173,8 +174,8 @@ export default function SecurityPolicyPage() {
             <p className="text-muted-foreground leading-relaxed">
               If you discover a security vulnerability in our Platform, please report it
               responsibly. Contact our security team at{" "}
-              <a href="mailto:security@coaileague.com" className="text-primary underline underline-offset-4">
-                security@coaileague.com
+              <a href={`mailto:${CONTACTS.security}`} className="text-primary underline underline-offset-4">
+                {CONTACTS.security}
               </a>
               {" "}with a description of the issue, steps to reproduce, and any supporting
               materials. We commit to acknowledging reports within 48 hours and providing
@@ -190,8 +191,8 @@ export default function SecurityPolicyPage() {
           <div className="border-t pt-6">
             <p className="text-sm text-muted-foreground">
               Security inquiries:{" "}
-              <a href="mailto:security@coaileague.com" className="text-primary underline underline-offset-4">
-                security@coaileague.com
+              <a href={`mailto:${CONTACTS.security}`} className="text-primary underline underline-offset-4">
+                {CONTACTS.security}
               </a>
             </p>
             <div className="flex flex-wrap gap-4 mt-4 text-sm">

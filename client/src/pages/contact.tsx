@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -105,7 +106,7 @@ export default function Contact() {
       <SEO
         title={PAGE_SEO.contact.title}
         description={PAGE_SEO.contact.description}
-        canonical="https://www.coaileague.com/contact"
+        canonical={DOMAINS.contactUrl}
       />
       {/* Universal Header */}
       <UniversalHeader variant="public" />
@@ -168,11 +169,11 @@ export default function Contact() {
                     <span className="text-xs text-indigo-300 font-medium uppercase tracking-wide">Email</span>
                   </div>
                   <a
-                    href="mailto:trinity@coaileague.com"
+                    href={`mailto:${CONTACTS.trinity}`}
                     className="text-sm font-bold text-white hover:text-amber-300 transition-colors font-mono"
                     data-testid="link-trinity-email"
                   >
-                    trinity@coaileague.com
+                    {CONTACTS.trinity}
                   </a>
                   <p className="text-xs text-indigo-400 mt-0.5">Always-on AI</p>
                 </div>
@@ -246,11 +247,11 @@ export default function Contact() {
               </p>
               <div className="space-y-1 pt-2">
                 <a
-                  href="mailto:trinity@coaileague.com"
+                  href={`mailto:${CONTACTS.trinity}`}
                   className="text-xs sm:text-sm font-mono text-violet-600 hover:underline block break-all"
                   data-testid="link-email-support"
                 >
-                  trinity@coaileague.com
+                  {CONTACTS.trinity}
                 </a>
                 <p className="text-xs text-muted-foreground dark:text-gray-400">
                   Response time: &lt;24 hours
@@ -638,21 +639,21 @@ export default function Contact() {
                   <div>
                     <p className="text-xs font-semibold text-foreground dark:text-gray-100">Trinity AI:</p>
                     <a
-                      href="mailto:trinity@coaileague.com"
+                      href={`mailto:${CONTACTS.trinity}`}
                       className="text-sm font-mono text-amber-600 hover:underline block"
                       data-testid="link-email-trinity"
                     >
-                      trinity@coaileague.com
+                      {CONTACTS.trinity}
                     </a>
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-foreground dark:text-gray-100">General Support:</p>
                     <a
-                      href="mailto:support@coaileague.com"
+                      href={`mailto:${CONTACTS.support}`}
                       className="text-sm font-mono text-violet-600 hover:underline block"
                       data-testid="link-email-info"
                     >
-                      support@coaileague.com
+                      {CONTACTS.support}
                     </a>
                   </div>
                 </div>
@@ -681,11 +682,11 @@ export default function Contact() {
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-amber-400 flex-shrink-0" />
                   <a
-                    href="mailto:trinity@coaileague.com"
+                    href={`mailto:${CONTACTS.trinity}`}
                     className="text-sm font-mono text-white hover:text-amber-300 transition-colors break-all"
                     data-testid="link-trinity-direct-email"
                   >
-                    trinity@coaileague.com
+                    {CONTACTS.trinity}
                   </a>
                 </div>
               </div>
@@ -706,7 +707,7 @@ export default function Contact() {
               </p>
               <Button
                 className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md"
-                onClick={() => window.location.href = "mailto:support@coaileague.com"}
+                onClick={() => window.location.href = `mailto:${CONTACTS.support}`}
                 data-testid="button-enterprise-contact"
               >
                 Contact Us

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { CONTACTS } from "@shared/platformConfig";
 import { apiFetch } from "@/lib/apiError";
 import { BillingInvoiceListResponse, UsageSummaryResponse, AddonPlanListResponse } from "@shared/schemas/responses/billing";
 import { PREMIUM_FEATURES } from "@shared/config/premiumFeatures";
@@ -661,7 +662,7 @@ export default function Billing() {
                   if (accountState === "payment_failed") {
                     billingPortalMutation.mutate();
                   } else {
-                    window.location.href = "mailto:support@coaileague.com";
+                    window.location.href = `mailto:${CONTACTS.support}`;
                   }
                 }}
               >

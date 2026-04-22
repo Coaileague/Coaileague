@@ -1,6 +1,7 @@
 import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
 import { SEO } from "@/components/seo";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 export default function PrivacyPolicyEs() {
   return (
@@ -8,7 +9,7 @@ export default function PrivacyPolicyEs() {
       <SEO
         title="Política de Privacidad | CoAIleague"
         description="Política de privacidad de CoAIleague — sus derechos de privacidad y cómo manejamos sus datos."
-        canonical="https://www.coaileague.com/privacy-es"
+        canonical={`${DOMAINS.app}/privacy-es`}
       />
       <UniversalHeader variant="public" />
       <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">
@@ -83,7 +84,7 @@ export default function PrivacyPolicyEs() {
 
             <div className="bg-muted/40 border border-border rounded-md p-4 mt-4">
               <p className="font-medium">Cómo ejercer sus derechos:</p>
-              <p className="text-sm mt-1">Visite <a href="/data-subject-requests" className="underline">Solicitudes de Derechos de Datos</a> en la plataforma, o envíe un correo electrónico a privacy@coaileague.com. Las solicitudes se procesan en un plazo de 30 días.</p>
+              <p className="text-sm mt-1">Visite <a href="/data-subject-requests" className="underline">Solicitudes de Derechos de Datos</a> en la plataforma, o envíe un correo electrónico a {CONTACTS.privacy}. Las solicitudes se procesan en un plazo de 30 días.</p>
             </div>
           </section>
 
@@ -122,7 +123,7 @@ export default function PrivacyPolicyEs() {
             <h2 className="text-2xl font-semibold mb-4">8. Contacto</h2>
             <p>Para preguntas sobre privacidad o para ejercer sus derechos:</p>
             <ul>
-              <li>Correo electrónico: privacy@coaileague.com</li>
+              <li>Correo electrónico: {CONTACTS.privacy}</li>
               <li>Plataforma: <a href="/data-subject-requests" className="underline">Solicitudes de Derechos de Datos</a></li>
               <li>Acuerdo de Procesamiento de Datos (DPA): <a href="/dpa" className="underline">/dpa</a></li>
             </ul>

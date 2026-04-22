@@ -4,11 +4,13 @@
  * Edit settings per feature, model, temperature, prompts
  */
 
+const DEFAULT_MODEL = "gemini-2.0-flash-exp" as const;
+
 export const AI_CONFIG = {
   // Global AI Settings
   global: {
     provider: "gemini" as const, // "gemini" | "openai" | "anthropic"
-    defaultModel: "gemini-2.0-flash-exp",
+    defaultModel: DEFAULT_MODEL,
     defaultTemperature: 0.7,
     maxTokens: 2048,
     timeout: 30000, // ms
@@ -19,7 +21,7 @@ export const AI_CONFIG = {
   // Auto-Scheduling AI
   scheduling: {
     enabled: true,
-    model: "gemini-2.0-flash-exp",
+    model: DEFAULT_MODEL,
     temperature: 0.5, // Lower = more deterministic, consistent
     maxTokens: 2048,
     prompt: `You are an expert workforce scheduling AI. Analyze employee availability, shift requirements, and constraints to create optimal schedules. Consider:
@@ -42,7 +44,7 @@ Provide schedules in JSON format.`,
   // Sentiment Analysis AI
   sentiment: {
     enabled: true,
-    model: "gemini-2.0-flash-exp",
+    model: DEFAULT_MODEL,
     temperature: 0.3, // Low temperature for consistency
     maxTokens: 100,
     prompt: `Analyze the sentiment of the following text on a scale of -1 (very negative) to 1 (very positive).
@@ -56,7 +58,7 @@ Respond with ONLY a JSON object: { "sentiment": <number>, "label": "<positive|ne
   // Predictive Analytics AI
   analytics: {
     enabled: false,
-    model: "gemini-2.0-flash-exp",
+    model: DEFAULT_MODEL,
     temperature: 0.6,
     maxTokens: 1024,
     prompt: `Analyze the provided workforce data and predict trends for:
@@ -71,7 +73,7 @@ Provide insights and recommendations.`,
   // Smart Matching AI (Employees to Shifts)
   matching: {
     enabled: true,
-    model: "gemini-2.0-flash-exp",
+    model: DEFAULT_MODEL,
     temperature: 0.4,
     maxTokens: 512,
     prompt: `Match employees to available shifts based on:
@@ -88,7 +90,7 @@ Return matches ranked by quality score (0-1).`,
   // AI Copilot (Chat Assistant)
   copilot: {
     enabled: true,
-    model: "gemini-2.0-flash-exp",
+    model: DEFAULT_MODEL,
     temperature: 0.7,
     maxTokens: 2048,
     systemPrompt: `You are Trinity AI, a helpful assistant for workforce management.
@@ -106,7 +108,7 @@ Be professional, concise, and actionable.`,
   // Payroll Processing AI
   payroll: {
     enabled: false,
-    model: "gemini-2.0-flash-exp",
+    model: DEFAULT_MODEL,
     temperature: 0.2, // Very low for accuracy
     maxTokens: 1024,
     prompt: `Process payroll data with calculations for:

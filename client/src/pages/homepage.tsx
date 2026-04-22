@@ -9,6 +9,7 @@ import { FTCDisclaimer } from '@/components/ftc-disclaimer';
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import featuresOverviewImg from '@/assets/marketing/features-overview.png';
 import { SEO, PAGE_SEO, STRUCTURED_DATA } from '@/components/seo';
+import { DOMAINS } from "@shared/platformConfig";
 import { useAuth } from '@/hooks/useAuth';
 import { UniversalSpinner } from '@/components/ui/universal-spinner';
 
@@ -58,7 +59,7 @@ export default function Homepage() {
       <SEO
         title={PAGE_SEO.landing.title}
         description={PAGE_SEO.landing.description}
-        canonical="https://www.coaileague.com/"
+        canonical={`${DOMAINS.app}/`}
         structuredData={[STRUCTURED_DATA.organization, STRUCTURED_DATA.softwareApp]}
       />
       <div className="min-h-screen bg-background overflow-x-hidden w-full">

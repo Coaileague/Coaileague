@@ -16,6 +16,7 @@ import { Link, useLocation } from "wouter";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
+import { CONTACTS } from "@shared/platformConfig";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeMessage } from "@/lib/sanitize";
 
@@ -683,12 +684,12 @@ export default function Help() {
                   {import.meta.env.VITE_TRINITY_PHONE || "+1 (866) 464-4151"}
                 </a>
                 <a
-                  href="mailto:trinity@coaileague.com"
+                  href={`mailto:${CONTACTS.trinity}`}
                   className="flex items-center gap-2 text-sm font-mono text-white hover:text-amber-300 transition-colors"
                   data-testid="link-help-trinity-email"
                 >
                   <Mail className="h-4 w-4 text-amber-400" />
-                  trinity@coaileague.com
+                  {CONTACTS.trinity}
                 </a>
               </div>
             </div>

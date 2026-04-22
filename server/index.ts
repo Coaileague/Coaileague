@@ -25,6 +25,7 @@ import { createLogger } from './lib/logger';
 import { pool } from "./db"; // Assuming 'pool' is your PostgreSQL client connection pool
 import { monitoringService } from "./monitoring";
 import { CACHING } from './config/platformConfig';
+import { DOMAINS } from '@shared/platformConfig';
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
 import { ensureRequiredTables } from "./services/dbMigrationService";
 import { runLegacyBootstraps } from "./services/legacyBootstrapRegistry";
@@ -334,15 +335,15 @@ const explicitAllowedOrigins: string[] = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
   : [];
 const defaultOrigins = [
-  'https://www.coaileague.com',
-  'https://coaileague.com',
+  `https://${DOMAINS.www}`,
+  `https://${DOMAINS.root}`,
 ];
 const defaultOriginPatterns = defaultOrigins.map(
   (allowedOrigin) => new RegExp(`^${allowedOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
 );
 const fallbackOriginPatterns = [
   ...defaultOriginPatterns,
-  /^https?:\/\/([a-zA-Z0-9-]+\.)*coaileague\.com$/,
+  new RegExp(`^https?:\\/\\/([a-zA-Z0-9-]+\\.)*${DOMAINS.root.replace('.', '\\.')}$`),
   ...(isProdDeployment ? [] : [
     /^https?:\/\/localhost(?::\d+)?$/,
     /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
@@ -388,8 +389,8 @@ app.use((req, res, next) => {
   const host = req.hostname;
   // Exempt ALL /api/ paths from redirect — webhooks must never be redirected.
   // Twilio, Plaid, Stripe, Resend all call /api/* and cannot follow redirects.
-  if (host === 'coaileague.com' && !req.path.startsWith('/api/')) {
-    const wwwUrl = `https://www.coaileague.com${req.originalUrl}`;
+  if (host === DOMAINS.root && !req.path.startsWith('/api/')) {
+    const wwwUrl = `https://${DOMAINS.www}${req.originalUrl}`;
     return res.redirect(301, wwwUrl);
   }
   next();
@@ -528,9 +529,9 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         "wss:",
-        "https://coaileague.com",
-        "https://www.coaileague.com",
-        "https://*.coaileague.com",
+        `https://${DOMAINS.root}`,
+        `https://${DOMAINS.www}`,
+        `https://*.${DOMAINS.root}`,
         "https://api.anthropic.com",
         "https://api.openai.com",
         "https://generativelanguage.googleapis.com",

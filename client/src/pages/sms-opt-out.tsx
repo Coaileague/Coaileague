@@ -1,5 +1,6 @@
 import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 export default function SmsOptOut() {
   return (
@@ -56,7 +57,7 @@ export default function SmsOptOut() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">2.3 Email Us</h3>
             <p className="text-foreground/90 mb-4">
-              Email <a href="mailto:support@coaileague.com">support@coaileague.com</a> from
+              Email <a href={`mailto:${CONTACTS.support}`}>{CONTACTS.support}</a> from
               the address associated with your account, with the subject line "SMS Opt-Out",
               and include the phone number you want removed. We will process your request
               within one business day.
@@ -78,7 +79,7 @@ export default function SmsOptOut() {
             <p className="text-foreground/90 mb-4">
               Reply <strong>HELP</strong> to any CoAIleague SMS message to receive contact
               information. You can also reach our support team at{" "}
-              <a href="mailto:support@coaileague.com">support@coaileague.com</a> or by
+              <a href={`mailto:${CONTACTS.support}`}>{CONTACTS.support}</a> or by
               visiting our <a href="/support">Support page</a>.
             </p>
           </section>
@@ -97,8 +98,8 @@ export default function SmsOptOut() {
             <h2 className="text-2xl font-semibold mb-4">6. Contact</h2>
             <p className="text-foreground/90 mb-4">
               CoAIleague<br />
-              Email: <a href="mailto:support@coaileague.com">support@coaileague.com</a><br />
-              Web: <a href="https://www.coaileague.com">https://www.coaileague.com</a>
+              Email: <a href={`mailto:${CONTACTS.support}`}>{CONTACTS.support}</a><br />
+              Web: <a href={DOMAINS.app}>{DOMAINS.app}</a>
             </p>
           </section>
         </div>

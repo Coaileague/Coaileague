@@ -2,6 +2,7 @@ import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
 import { SEO } from '@/components/seo';
 import { Link } from "wouter";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 export default function SmsTerms() {
   return (
@@ -9,7 +10,7 @@ export default function SmsTerms() {
       <SEO
         title="SMS Terms of Service | CoAIleague Workforce Alerts"
         description="CoAIleague SMS Workforce Alerts program terms — opt-in, opt-out, message frequency, and privacy information for security workforce SMS notifications."
-        canonical="https://www.coaileague.com/sms-terms"
+        canonical={`${DOMAINS.app}/sms-terms`}
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />
@@ -30,7 +31,7 @@ export default function SmsTerms() {
                 <div className="flex gap-2"><span className="font-medium min-w-[160px]">Message Frequency:</span><span>Varies — up to 10 messages per week during active periods</span></div>
                 <div className="flex gap-2"><span className="font-medium min-w-[160px]">Rates:</span><span>Msg &amp; data rates may apply</span></div>
                 <div className="flex gap-2"><span className="font-medium min-w-[160px]">Opt Out:</span><span>Reply STOP to any message</span></div>
-                <div className="flex gap-2"><span className="font-medium min-w-[160px]">Help:</span><span>Reply HELP or email support@coaileague.com</span></div>
+                <div className="flex gap-2"><span className="font-medium min-w-[160px]">Help:</span><span>Reply HELP or email {CONTACTS.support}</span></div>
               </div>
             </div>
 
@@ -163,7 +164,7 @@ export default function SmsTerms() {
                   SMS notifications checkbox.
                 </li>
                 <li>
-                  Email <strong>support@coaileague.com</strong> with your name and mobile phone number
+                  Email <strong>{CONTACTS.support}</strong> with your name and mobile phone number
                   requesting removal from SMS communications.
                 </li>
               </ul>
@@ -189,17 +190,15 @@ export default function SmsTerms() {
               </p>
               <div className="bg-muted border border-border rounded-md p-4 mb-4 not-prose">
                 <p className="text-sm text-foreground/90 italic">
-                  "CoAIleague Workforce Alerts: Shift reminders, schedule updates, safety alerts, and account
-                  notifications for security staff. Msg frequency varies. Msg &amp; data rates may apply.
-                  Reply STOP to unsubscribe. Contact support@coaileague.com for help."
+                  {`CoAIleague Workforce Alerts: Shift reminders, schedule updates, safety alerts, and account notifications for security staff. Msg frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe. Contact ${CONTACTS.support} for help.`}
                 </p>
               </div>
               <p className="text-foreground/90 mb-4">
                 You may also contact CoAIleague support directly:
               </p>
               <ul className="list-none pl-0 mb-4 text-foreground/90 space-y-1">
-                <li><strong>Email:</strong> support@coaileague.com</li>
-                <li><strong>Website:</strong> coaileague.com</li>
+                <li><strong>Email:</strong> {CONTACTS.support}</li>
+                <li><strong>Website:</strong> {DOMAINS.www}</li>
               </ul>
             </section>
 
@@ -247,9 +246,9 @@ export default function SmsTerms() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold mb-4">10. Contact</h2>
               <ul className="list-none pl-0 mb-4 text-foreground/90 space-y-1">
-                <li><strong>Email:</strong> support@coaileague.com</li>
-                <li><strong>Privacy:</strong> privacy@coaileague.com</li>
-                <li><strong>Website:</strong> coaileague.com</li>
+                <li><strong>Email:</strong> {CONTACTS.support}</li>
+                <li><strong>Privacy:</strong> {CONTACTS.privacy}</li>
+                <li><strong>Website:</strong> {DOMAINS.www}</li>
               </ul>
             </section>
 

@@ -2,6 +2,7 @@ import { createLogger } from '../../lib/logger';
 const log = createLogger('aiRetryWrapper');
 
 export class AIServiceUnavailableError extends Error {
+  declare cause: Error;
   constructor(label: string, attempts: number, cause: Error) {
     super(`AI service unavailable for "${label}" after ${attempts} attempts: ${cause.message}`);
     this.name = 'AIServiceUnavailableError';

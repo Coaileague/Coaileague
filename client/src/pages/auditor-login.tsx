@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { CONTACTS } from "@shared/platformConfig";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,8 +145,8 @@ export default function AuditorLogin() {
 
         <p className="text-center text-xs text-muted-foreground">
           Access problems? Contact{" "}
-          <a href="mailto:compliance@coaileague.com" className="underline underline-offset-4">
-            compliance@coaileague.com
+          <a href={`mailto:${CONTACTS.compliance}`} className="underline underline-offset-4">
+            {CONTACTS.compliance}
           </a>
         </p>
       </div>

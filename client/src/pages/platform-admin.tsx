@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { secureFetch } from "@/lib/csrf";
+import { CONTACTS } from "@shared/platformConfig";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -864,7 +865,7 @@ export default function PlatformAdmin() {
     maintenanceMode: false,
     newWorkspaceRegistration: true,
     emailNotifications: true,
-    supportEmail: "support@coaileague.com",
+    supportEmail: CONTACTS.support as string,
     enforceSSO: false,
     requireMFA: false,
     passwordExpiry: 90,

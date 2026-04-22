@@ -10,6 +10,7 @@ import { SchedulePreview } from "@/components/schedule-preview";
 import { PricingROICalculator } from "@/components/pricing-roi-calculator";
 import { Check, X, TrendingUp, Sparkles, ArrowRight, Shield, Lock, Award } from "lucide-react";
 import { MARKETING, getFormattedPrice } from "@shared/marketingConfig";
+import { DOMAINS } from "@shared/platformConfig";
 
 interface Section {
   id: 'landing' | 'pricing' | 'sales';
@@ -54,7 +55,7 @@ export default function UniversalMarketing() {
       <SEO
         title={PAGE_SEO.pricing.title}
         description={PAGE_SEO.pricing.description}
-        canonical="https://www.coaileague.com/pricing"
+        canonical={`${DOMAINS.app}/pricing`}
       />
       <UniversalHeader variant="public" />
 

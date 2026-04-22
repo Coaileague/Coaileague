@@ -4,6 +4,8 @@
  * EDIT THIS FILE TO UPDATE NAVIGATION EVERYWHERE
  */
 
+import { DOMAINS, CONTACTS } from "@shared/platformConfig";
+
 export const navConfig = {
   // Authentication Routes
   auth: {
@@ -201,13 +203,17 @@ export const navConfig = {
     serverError: "/error-500",
   },
 
-  // External URLs
+  // External URLs — sourced from DOMAINS config; never hardcode here
   external: {
-    docs: "https://docs.coaileague.com",
-    support: "https://support.coaileague.com",
-    status: "https://status.coaileague.com",
+    docs: DOMAINS.docsUrl,
+    support: DOMAINS.supportUrl,
+    status: DOMAINS.statusUrl,
+    supportEmail: CONTACTS.support,
+    enterpriseEmail: CONTACTS.enterprise,
+    salesEmail: CONTACTS.sales,
+    trinityEmail: CONTACTS.trinity,
   },
-} as const;
+};
 
 /**
  * Helper functions for navigation

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CanvasHubPage, CanvasPageConfig } from "@/components/canvas-hub/CanvasHubRegistry";
 import { SEO, PAGE_SEO } from '@/components/seo';
+import { DOMAINS } from "@shared/platformConfig";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -1046,7 +1047,7 @@ export default function FeaturesShowcasePage() {
       <SEO
         title={PAGE_SEO.features.title}
         description={PAGE_SEO.features.description}
-        canonical="https://www.coaileague.com/features"
+        canonical={DOMAINS.featuresUrl}
       />
       <div className="min-h-screen bg-background overflow-x-hidden w-full">
         <UniversalHeader variant="public" />

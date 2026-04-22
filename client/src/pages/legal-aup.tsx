@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import { Footer } from "@/components/footer";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import { Button } from "@/components/ui/button";
+import { CONTACTS } from "@shared/platformConfig";
 import { ArrowLeft } from "lucide-react";
 
 export default function AcceptableUsePolicyPage() {
@@ -101,7 +102,7 @@ export default function AcceptableUsePolicyPage() {
             <p className="text-muted-foreground leading-relaxed">
               You are responsible for maintaining the confidentiality of your credentials and
               for all activities that occur under your account. You must notify us immediately
-              at <a href="mailto:security@coaileague.com" className="text-primary underline underline-offset-4">security@coaileague.com</a> of
+              at <a href={`mailto:${CONTACTS.security}`} className="text-primary underline underline-offset-4">{CONTACTS.security}</a> of
               any unauthorized access or security breach.
             </p>
           </section>
@@ -120,8 +121,8 @@ export default function AcceptableUsePolicyPage() {
             <h2 className="text-xl font-semibold mb-3">8. Reporting Violations</h2>
             <p className="text-muted-foreground leading-relaxed">
               To report a suspected violation of this AUP, contact us at{" "}
-              <a href="mailto:trust@coaileague.com" className="text-primary underline underline-offset-4">
-                trust@coaileague.com
+              <a href={`mailto:${CONTACTS.trust}`} className="text-primary underline underline-offset-4">
+                {CONTACTS.trust}
               </a>
               . We will investigate all reports and respond within 5 business days.
             </p>
@@ -138,8 +139,8 @@ export default function AcceptableUsePolicyPage() {
           <div className="border-t pt-6 mt-8">
             <p className="text-sm text-muted-foreground">
               For questions about this Acceptable Use Policy, contact{" "}
-              <a href="mailto:legal@coaileague.com" className="text-primary underline underline-offset-4">
-                legal@coaileague.com
+              <a href={`mailto:${CONTACTS.legal}`} className="text-primary underline underline-offset-4">
+                {CONTACTS.legal}
               </a>
               .
             </p>

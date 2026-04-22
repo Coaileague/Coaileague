@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SEO } from "@/components/seo";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +45,7 @@ export default function SmsConsent() {
       <SEO
         title="SMS Opt-In | CoAIleague Workforce Alerts"
         description="Opt in to receive recurring automated CoAIleague Workforce Alert text messages — shift reminders, schedule changes, safety alerts, and account notifications for security staff. Reply STOP to opt out at any time."
-        canonical="https://www.coaileague.com/sms-consent"
+        canonical={`${DOMAINS.app}/sms-consent`}
       />
       <div className="min-h-screen bg-background flex flex-col">
         <UniversalHeader variant="public" />
@@ -179,12 +180,12 @@ export default function SmsConsent() {
               <div><span className="font-medium text-foreground">Number type:</span><br />Toll-free SMS / 10DLC</div>
               <div><span className="font-medium text-foreground">Supported carriers:</span><br />All major U.S. carriers</div>
               <div><span className="font-medium text-foreground">Opt-out:</span><br />Reply STOP</div>
-              <div><span className="font-medium text-foreground">Help:</span><br />Reply HELP or support@coaileague.com</div>
+              <div><span className="font-medium text-foreground">Help:</span><br />Reply HELP or {CONTACTS.support}</div>
             </div>
             <div className="border-t border-border pt-3 text-xs text-muted-foreground space-y-0.5">
               <p className="font-medium text-foreground text-xs">Company Contact &amp; Address</p>
-              <p>CoAIleague, Inc. &bull; support@coaileague.com</p>
-              <p>For written correspondence: CoAIleague, Inc. — contact us at support@coaileague.com</p>
+              <p>CoAIleague, Inc. &bull; {CONTACTS.support}</p>
+              <p>For written correspondence: CoAIleague, Inc. — contact us at {CONTACTS.support}</p>
               <p className="mt-1">
                 Consent is not a condition of any purchase, employment, or use of the platform.
                 Standard message and data rates from your carrier may apply.

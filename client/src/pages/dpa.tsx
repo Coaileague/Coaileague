@@ -3,6 +3,7 @@ import { Footer } from "@/components/footer";
 import { SEO } from "@/components/seo";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { CONTACTS, DOMAINS } from "@shared/platformConfig";
 
 export default function DataProcessingAgreement() {
   return (
@@ -10,7 +11,7 @@ export default function DataProcessingAgreement() {
       <SEO
         title="Data Processing Agreement (DPA) | CoAIleague"
         description="CoAIleague Data Processing Agreement — GDPR Article 28 compliant DPA for enterprise customers."
-        canonical="https://www.coaileague.com/dpa"
+        canonical={DOMAINS.dpaUrl}
       />
       <UniversalHeader variant="public" />
       <main className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">
@@ -211,9 +212,9 @@ export default function DataProcessingAgreement() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">13. Contact</h2>
-            <p>Data Protection Officer: privacy@coaileague.com</p>
+            <p>Data Protection Officer: {CONTACTS.privacy}</p>
             <p>For data subject requests: <a href="/data-subject-requests" className="underline">Submit a request online</a></p>
-            <p>Enterprise DPA inquiries: dpa@coaileague.com</p>
+            <p>Enterprise DPA inquiries: {CONTACTS.dpa}</p>
           </section>
 
           <div className="mt-12 pt-6 border-t border-border text-sm text-muted-foreground">

@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { CONTACTS } from "@shared/platformConfig";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -106,7 +107,7 @@ export default function AccountManagerPage() {
                 Request Account Manager
               </Button>
               <p className="text-xs text-muted-foreground mt-4">
-                Or contact enterprise support at enterprise@coaileague.com
+                Or contact enterprise support at {CONTACTS.enterprise}
               </p>
             </CardContent>
           </Card>
@@ -230,7 +231,7 @@ export default function AccountManagerPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground mb-1">Priority Support</p>
-                <p className="text-sm font-medium" data-testid="text-support-email">enterprise@coaileague.com</p>
+                <p className="text-sm font-medium" data-testid="text-support-email">{CONTACTS.enterprise}</p>
               </div>
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground mb-1">Response Time SLA</p>

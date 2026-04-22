@@ -2,12 +2,13 @@ import { AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { navConfig } from "@/config/navigationConfig";
+import { CONTACTS } from "@shared/platformConfig";
 
 export function DemoBanner() {
   const { user } = useAuth();
   
   // Only show banner for demo user
-  if (!user || user.email !== "demo@coaileague.com") {
+  if (!user || user.email !== CONTACTS.demo) {
     return null;
   }
 

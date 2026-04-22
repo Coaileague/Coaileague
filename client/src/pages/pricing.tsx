@@ -1,4 +1,5 @@
 import { useState, useRef, Fragment } from "react";
+import { CONTACTS } from "@shared/platformConfig";
 
 const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 import { Link } from "wouter";
@@ -293,7 +294,7 @@ function StrategicCard({ annual: _annual }: { annual: boolean }) {
       toast({ title: "Inquiry received", description: "We'll respond within 4 business hours with a personalized ROI analysis." });
       setOpen(false);
     },
-    onError: () => toast({ title: "Error", description: "Something went wrong. Email us at sales@coaileague.com", variant: "destructive" }),
+    onError: () => toast({ title: "Error", description: `Something went wrong. Email us at ${CONTACTS.sales}`, variant: "destructive" }),
   });
 
   return (
