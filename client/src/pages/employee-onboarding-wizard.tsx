@@ -508,6 +508,22 @@ export default function EmployeeOnboardingWizard() {
                     ))}
                   </ul>
                 </div>
+                {invite && (
+                  <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                    <span className="text-amber-400 text-lg">⏱</span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-300">
+                        DPS Provisional Work Authorization
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        You have <strong>14 days</strong> from your start date to complete your
+                        Texas DPS security license registration. You may work during this period,
+                        but clock-in will be blocked if the deadline passes without completion.
+                        Complete the <strong>DPS Credentials</strong> step to upload your license.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Your information is secured and encrypted. Required fields are marked with *.
                 </p>

@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { storage } from '../storage';
-import { db } from '../db';
+import { db, pool } from '../db';
 import { documentSignatures, workspaceInvites, users, employees, onboardingInvites } from '@shared/schema';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -756,6 +756,64 @@ router.post('/workspace-invite/register', async (req, res) => {
       await tx.update(users)
         .set({ currentWorkspaceId: invite.workspaceId })
         .where(eq(users.id, userId));
+    });
+
+    // ── Cross-tenant CoAIleague score lookup (non-blocking)
+    // Surfaces prior CoAIleague network history (reliability, overall score) from
+    // other workspaces so owners know if the new hire has a track record — good or bad.
+    // is_in_global_pool = TRUE means the prior workspace opted this profile into the shared pool.
+    scheduleNonBlocking('onboarding.cross-tenant-score', async () => {
+      try {
+        const { rows } = await pool.query(
+          `SELECT cp.overall_score,
+                  cp.reliability_score,
+                  cp.workspace_id AS prior_workspace_id,
+                  e.first_name || ' ' || e.last_name AS prior_name
+             FROM coaileague_employee_profiles cp
+             JOIN employees e ON e.id = cp.employee_id
+             JOIN users u ON u.id = e.user_id
+            WHERE cp.is_in_global_pool = TRUE
+              AND LOWER(u.email) = LOWER($1)
+              AND cp.workspace_id <> $2
+            ORDER BY COALESCE(cp.last_shift_completed, cp.updated_at, cp.created_at) DESC NULLS LAST
+            LIMIT 1`,
+          [normalizedEmail, invite.workspaceId],
+        );
+
+        if (rows[0]) {
+          const score = parseFloat(rows[0].overall_score || '0.5');
+          const reliability = parseFloat(rows[0].reliability_score || '0.5');
+          const flag = reliability < 0.4
+            ? '⚠️ LOW RELIABILITY — verify references before assigning solo posts'
+            : score > 0.8 ? '⭐ Strong CoAIleague network history' : '';
+
+          const { rows: owners } = await pool.query(
+            `SELECT user_id FROM employees
+              WHERE workspace_id = $1
+                AND workspace_role IN ('org_owner','co_owner')
+                AND is_active = TRUE
+                AND user_id IS NOT NULL
+              LIMIT 3`,
+            [invite.workspaceId],
+          );
+
+          const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+          for (const owner of owners) {
+            await NotificationDeliveryService.send({
+              type: 'staffing_status_update',
+              workspaceId: invite.workspaceId,
+              recipientUserId: owner.user_id,
+              channel: 'in_app',
+              body: {
+                title: 'New Hire Has CoAIleague History',
+                message: `${firstName} ${lastName} previously worked on CoAIleague. Network score: ${(score * 100).toFixed(0)}/100, Reliability: ${(reliability * 100).toFixed(0)}/100. ${flag}`.trim(),
+              },
+            }).catch(() => {});
+          }
+        }
+      } catch (err: any) {
+        log.warn('[CrossTenantScore] Hire lookup failed (non-fatal):', err?.message);
+      }
     });
 
     if (req.session) {
