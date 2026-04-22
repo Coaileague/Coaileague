@@ -1845,7 +1845,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       periodStart: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
       periodEnd: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
       type: (line as any).type,
-      priceId: line.price?.id,
+      priceId: (line as any).price?.id,
       metadata: line.metadata || {},
     }));
 
@@ -1853,7 +1853,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       pendingItems: items,
       totalCents: upcoming.total,
       subtotalCents: upcoming.subtotal,
-      taxCents: upcoming.tax || 0,
+      taxCents: (upcoming as any).tax || 0,
       nextPaymentDate: upcoming.next_payment_attempt
         ? new Date(upcoming.next_payment_attempt * 1000).toISOString()
         : null,
