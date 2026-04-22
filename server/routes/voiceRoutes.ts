@@ -2449,6 +2449,26 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
         res.type('text/xml').send(
           `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${safeReply}</Message></Response>`
         );
+
+        // Guest SMS billing: unverified senders consume Trinity tokens against
+        // the platform workspace. Verified employees are already billed via
+        // their workspace's subscription; only the anonymous/guest path needs
+        // the explicit guest-session accounting ledger entry.
+        if (!result.workspaceId) {
+          try {
+            const { recordGuestSessionUsage } = await import('../services/billing/guestSessionService');
+            const { PLATFORM_WORKSPACE_ID } = await import('../services/billing/billingConstants');
+            await recordGuestSessionUsage({
+              workspaceId: PLATFORM_WORKSPACE_ID,
+              sessionId: `sms-${From}-${Date.now()}`,
+              guestType: 'general_inquiry',
+              channel: 'sms',
+              tokensUsed: 150,
+            });
+          } catch (billingErr: any) {
+            log.warn('[VoiceRoutes] Guest SMS billing failed (non-fatal):', billingErr?.message);
+          }
+        }
         return;
       }
     } catch (resolverErr: any) {

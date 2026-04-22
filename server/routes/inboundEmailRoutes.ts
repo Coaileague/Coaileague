@@ -27,6 +27,13 @@ import {
   type ParsedInboundEmail,
 } from '../services/trinity/trinityInboundEmailProcessor';
 import { trinityEmailProcessor, type InboundEmailData } from '../services/trinityEmailProcessor';
+import {
+  parseEmailFunctionAndSlug,
+  parseOrgCodeFromEmail,
+  lookupWorkspaceByEmailSlug,
+  lookupWorkspaceByOrgCode,
+} from '../utils/orgCodeValidator';
+import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 
 // ─── Email Tables Bootstrap ──────────────────────────────────────────────────
 // These tables were specified but never wired into the bootstrap pipeline.
@@ -301,6 +308,169 @@ function parseResendPayload(raw: ResendInboundPayload, targetAddress: string): P
 // All handlers fall back to Buffer.from(JSON.stringify(req.body)) if not present.
 inboundEmailRouter.use((_req, _res, next) => next());
 
+// ─── Forward HTML Builder ────────────────────────────────────────────────────
+// Guarantees the original message body survives every forward path. When the
+// source email is purely textual, wrap it in <pre> to preserve formatting;
+// when both bodyHtml and bodyText are empty, fall back to an explicit notice
+// so the forwarded message is never blank — that was the "noreply body not
+// being sent when forwarded" regression.
+function escapeHtml(raw: string): string {
+  return raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildForwardHtml(opts: {
+  bannerLabel: string;
+  fromName?: string;
+  fromEmail: string;
+  toEmail: string;
+  subject: string;
+  bodyHtml?: string;
+  bodyText?: string;
+}): string {
+  const { bannerLabel, fromName, fromEmail, toEmail, subject, bodyHtml, bodyText } = opts;
+  const originalDate = new Date().toUTCString();
+  const bodySection = bodyHtml && bodyHtml.trim().length > 0
+    ? bodyHtml
+    : bodyText && bodyText.trim().length > 0
+      ? `<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:0;">${escapeHtml(bodyText)}</pre>`
+      : `<p style="color:#a16207;font-style:italic;">(Original message had no text or HTML body — only headers and attachments.)</p>`;
+  return `
+<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
+  <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
+    -------- ${escapeHtml(bannerLabel)} --------<br>
+    <strong>From:</strong> ${fromName ? `${escapeHtml(fromName)} &lt;${escapeHtml(fromEmail)}&gt;` : escapeHtml(fromEmail)}<br>
+    <strong>To:</strong> ${escapeHtml(toEmail)}<br>
+    <strong>Date:</strong> ${escapeHtml(originalDate)}<br>
+    <strong>Subject:</strong> ${escapeHtml(subject)}
+  </p>
+  ${bodySection}
+</div>`;
+}
+
+// ─── Canonical Platform Addresses ────────────────────────────────────────────
+// Addresses routed to the platform workspace when they are not explicitly
+// registered in email_routing. auto_process drives Trinity category handling.
+const CANONICAL_PLATFORM_LOCALPARTS: Record<string, { processAs: string; routeType: string }> = {
+  support:     { processAs: 'support',     routeType: 'platform_inbox' },
+  calloffs:    { processAs: 'calloff',     routeType: 'platform_inbox' },
+  calloff:     { processAs: 'calloff',     routeType: 'platform_inbox' },
+  incidents:   { processAs: 'incident',    routeType: 'platform_inbox' },
+  incident:    { processAs: 'incident',    routeType: 'platform_inbox' },
+  docs:        { processAs: 'docs',        routeType: 'platform_inbox' },
+  documents:   { processAs: 'docs',        routeType: 'platform_inbox' },
+  staffing:    { processAs: 'staffing',    routeType: 'platform_inbox' },
+  scheduling:  { processAs: 'staffing',    routeType: 'platform_inbox' },
+  payroll:     { processAs: 'staffing',    routeType: 'platform_inbox' },
+  ops:         { processAs: 'staffing',    routeType: 'platform_inbox' },
+  operations:  { processAs: 'staffing',    routeType: 'platform_inbox' },
+  careers:     { processAs: 'careers',     routeType: 'platform_inbox' },
+  jobs:        { processAs: 'careers',     routeType: 'platform_inbox' },
+  apply:       { processAs: 'careers',     routeType: 'platform_inbox' },
+  billing:     { processAs: 'billing',     routeType: 'platform_inbox' },
+  invoices:    { processAs: 'billing',     routeType: 'platform_inbox' },
+  invoice:     { processAs: 'billing',     routeType: 'platform_inbox' },
+  trinity:     { processAs: 'trinity',     routeType: 'platform_inbox' },
+};
+
+const PLATFORM_HOST_SUFFIX = (process.env.INBOUND_EMAIL_DOMAIN || process.env.VITE_APP_DOMAIN || 'coaileague.com').toLowerCase();
+
+interface ResolvedFallbackRoute {
+  route: {
+    route_type: string;
+    process_as: string;
+    auto_process: boolean;
+    target_workspace_id: string | null;
+    target_user_id: string | null;
+  };
+  workspaceId: string | null;
+  targetUserId: string | null;
+  resolution: 'slug_subdomain' | 'slug_dash' | 'platform_canonical';
+}
+
+/**
+ * Fallback resolver for inbound addresses not present in email_routing.
+ * Handles per-org slug addresses (staffing@acme.coaileague.com,
+ * staffing-acme@coaileague.com) and canonical platform addresses
+ * (support@, calloffs@, incidents@, docs@, staffing@, billing@, trinity@,
+ * careers@). Returns null if the address cannot be resolved.
+ */
+async function resolveFallbackRoute(toEmail: string): Promise<ResolvedFallbackRoute | null> {
+  if (!toEmail) return null;
+  const addr = toEmail.toLowerCase().trim();
+  const [localPart, domain] = addr.split('@');
+  if (!localPart || !domain) return null;
+
+  // Attempt 1: per-org slug resolution (staffing@acme.coaileague.com or staffing-acme@coaileague.com)
+  const slugMatch = parseEmailFunctionAndSlug(addr);
+  if (slugMatch?.slug) {
+    const slugLookup = await lookupWorkspaceByEmailSlug(slugMatch.slug);
+    if (slugLookup.found && slugLookup.workspaceId) {
+      const canonical = CANONICAL_PLATFORM_LOCALPARTS[slugMatch.fn];
+      return {
+        route: {
+          route_type: 'workspace_inbox',
+          process_as: canonical?.processAs || slugMatch.fn,
+          auto_process: true,
+          target_workspace_id: slugLookup.workspaceId,
+          target_user_id: null,
+        },
+        workspaceId: slugLookup.workspaceId,
+        targetUserId: null,
+        resolution: addr.includes('.coaileague.com') ? 'slug_subdomain' : 'slug_dash',
+      };
+    }
+  }
+
+  // Attempt 2: explicit org code (plus-addressing: staffing+orgcode@coaileague.com)
+  const orgCode = parseOrgCodeFromEmail(addr);
+  if (orgCode) {
+    const codeLookup = await lookupWorkspaceByOrgCode(orgCode);
+    if ((codeLookup as any).found && (codeLookup as any).workspaceId) {
+      const fn = localPart.replace(/[-+].*/, '');
+      const canonical = CANONICAL_PLATFORM_LOCALPARTS[fn];
+      return {
+        route: {
+          route_type: 'workspace_inbox',
+          process_as: canonical?.processAs || fn,
+          auto_process: true,
+          target_workspace_id: (codeLookup as any).workspaceId,
+          target_user_id: null,
+        },
+        workspaceId: (codeLookup as any).workspaceId,
+        targetUserId: null,
+        resolution: 'slug_dash',
+      };
+    }
+  }
+
+  // Attempt 3: canonical platform address (support@coaileague.com, calloffs@, etc.)
+  const isPlatformHost = domain === PLATFORM_HOST_SUFFIX;
+  if (isPlatformHost) {
+    const canonical = CANONICAL_PLATFORM_LOCALPARTS[localPart];
+    if (canonical) {
+      return {
+        route: {
+          route_type: canonical.routeType,
+          process_as: canonical.processAs,
+          auto_process: true,
+          target_workspace_id: PLATFORM_WORKSPACE_ID,
+          target_user_id: null,
+        },
+        workspaceId: PLATFORM_WORKSPACE_ID,
+        targetUserId: null,
+        resolution: 'platform_canonical',
+      };
+    }
+  }
+
+  return null;
+}
+
 // ─── Generic Inbound Handler ──────────────────────────────────────────────────
 
 async function handleInboundWebhook(
@@ -407,49 +577,53 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
   const attachments = payload.attachments || [];
 
   try {
-    // Step 3a: Platform root address forwarding — root@coaileague.com
-    // Forward to configured personal email before DB lookup (tables may not route it)
-    if (toEmail === 'root@coaileague.com' || toEmail === 'noreply@coaileague.com') {
-      if (toEmail === 'noreply@coaileague.com') {
-        log.info(`[InboundEmail/root] Discarding email to noreply@`);
-        res.status(200).json({ received: true, routed: false, reason: 'noreply_discard' });
-        return;
-      }
-      // root@ — forward only if ROOT_EMAIL_FORWARD_TO is configured
+    // Step 3a: Platform root/noreply address forwarding.
+    // Both root@ and noreply@ are forwarded to ROOT_EMAIL_FORWARD_TO when
+    // configured. Previously noreply@ was silently discarded, which caused
+    // operators to lose inbound replies and auto-response bounces that still
+    // contained actionable context. Forwarding preserves the body in all
+    // cases via buildForwardHtml().
+    const isRootAddress = toEmail === 'root@coaileague.com';
+    const isNoreplyAddress = toEmail === 'noreply@coaileague.com';
+    if (isRootAddress || isNoreplyAddress) {
       if (!ROOT_EMAIL_FORWARD_TO) {
-        log.warn('[InboundEmail/root] ROOT_EMAIL_FORWARD_TO not configured — discarding root@ email');
-        res.status(200).json({ received: true, routed: false, reason: 'root_forward_unconfigured' });
+        const reason = isNoreplyAddress ? 'noreply_forward_unconfigured' : 'root_forward_unconfigured';
+        log.warn(`[InboundEmail/root] ROOT_EMAIL_FORWARD_TO not configured — dropping ${toEmail} email`);
+        res.status(200).json({ received: true, routed: false, reason });
         return;
       }
-      log.info(`[InboundEmail/root] root@ email from ${fromEmail} — forwarding to ${ROOT_EMAIL_FORWARD_TO}`);
-      res.status(200).json({ received: true, routed: true, routeType: 'root_forward' });
+
+      const bannerLabel = isNoreplyAddress
+        ? 'Forwarded from noreply@coaileague.com'
+        : 'Forwarded from root@coaileague.com';
+      log.info(`[InboundEmail/root] ${toEmail} email from ${fromEmail} — forwarding to ${ROOT_EMAIL_FORWARD_TO}`);
+      res.status(200).json({
+        received: true,
+        routed: true,
+        routeType: isNoreplyAddress ? 'noreply_forward' : 'root_forward',
+      });
 
       scheduleNonBlocking('inbound-email.root-forward', async () => {
         try {
-          const fwdSubject = `Fwd: ${subject}`;
-          const originalDate = new Date().toUTCString();
-          const fwdHtml = `
-<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
-  <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
-    -------- Forwarded from root@coaileague.com --------<br>
-    <strong>From:</strong> ${fromName ? `${fromName} &lt;${fromEmail}&gt;` : fromEmail}<br>
-    <strong>To:</strong> ${toEmail}<br>
-    <strong>Date:</strong> ${originalDate}<br>
-    <strong>Subject:</strong> ${subject}
-  </p>
-  ${bodyHtml || `<pre style="white-space:pre-wrap;font-size:13px;">${(bodyText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`}
-</div>`;
-
+          const fwdHtml = buildForwardHtml({
+            bannerLabel,
+            fromName,
+            fromEmail,
+            toEmail,
+            subject,
+            bodyHtml,
+            bodyText,
+          });
           await sendCanSpamCompliantEmail({
             to: ROOT_EMAIL_FORWARD_TO,
-            subject: fwdSubject,
+            subject: `Fwd: ${subject}`,
             html: fwdHtml,
             emailType: 'inbound_forward',
             skipUnsubscribeCheck: true,
           });
-          log.info(`[InboundEmail/root] Forwarded root@ email to ${ROOT_EMAIL_FORWARD_TO}`);
+          log.info(`[InboundEmail/root] Forwarded ${toEmail} to ${ROOT_EMAIL_FORWARD_TO}`);
         } catch (fwdErr: any) {
-          log.warn(`[InboundEmail/root] root@ forward failed: ${fwdErr?.message}`);
+          log.warn(`[InboundEmail/root] ${toEmail} forward failed: ${fwdErr?.message}`);
         }
       });
       return;
@@ -477,16 +651,64 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
       [toEmail]
     );
 
-    // Step 5: No route — accept silently
-    if (routeResult.rows.length === 0) {
-      log.info(`[InboundEmail/root] No route found for ${toEmail} — accepted silently`);
-      res.status(200).json({ received: true, routed: false });
-      return;
-    }
+    // Step 5: Route resolution with fallback cascade.
+    // When email_routing has no match, try per-org slug, org-code, and
+    // canonical platform addresses before silently dropping the message.
+    let route: any;
+    let workspaceId: string | null;
+    let targetUserId: string | null;
+    let resolvedVia: string = 'email_routing';
 
-    const route = routeResult.rows[0];
-    const workspaceId = route.target_workspace_id || route.pea_workspace_id;
-    const targetUserId = route.target_user_id || route.pea_user_id;
+    if (routeResult.rows.length > 0) {
+      const row = routeResult.rows[0];
+      route = row;
+      workspaceId = row.target_workspace_id || row.pea_workspace_id || null;
+      targetUserId = row.target_user_id || row.pea_user_id || null;
+    } else {
+      const fallback = await resolveFallbackRoute(toEmail);
+      if (!fallback) {
+        // Last chance: if ROOT_EMAIL_FORWARD_TO is configured, forward the
+        // message to the platform admin so no inbound mail is ever silently
+        // discarded without human awareness.
+        if (ROOT_EMAIL_FORWARD_TO) {
+          log.info(`[InboundEmail/root] No route for ${toEmail} — forwarding to ${ROOT_EMAIL_FORWARD_TO}`);
+          res.status(200).json({ received: true, routed: true, routeType: 'unrouted_forward' });
+          scheduleNonBlocking('inbound-email.unrouted-forward', async () => {
+            try {
+              const fwdSubject = `[Unrouted] Fwd: ${subject || '(no subject)'}`;
+              const fwdHtml = buildForwardHtml({
+                bannerLabel: `Unrouted inbound mail — original To: ${toEmail}`,
+                fromName,
+                fromEmail,
+                toEmail,
+                subject: subject || '(no subject)',
+                bodyHtml,
+                bodyText,
+              });
+              await sendCanSpamCompliantEmail({
+                to: ROOT_EMAIL_FORWARD_TO,
+                subject: fwdSubject,
+                html: fwdHtml,
+                emailType: 'inbound_forward',
+                skipUnsubscribeCheck: true,
+              });
+            } catch (fwdErr: any) {
+              log.warn(`[InboundEmail/root] Unrouted forward failed: ${fwdErr?.message}`);
+            }
+          });
+          return;
+        }
+        log.info(`[InboundEmail/root] No route found for ${toEmail} and no ROOT_EMAIL_FORWARD_TO — accepted silently`);
+        res.status(200).json({ received: true, routed: false });
+        return;
+      }
+
+      route = fallback.route;
+      workspaceId = fallback.workspaceId;
+      targetUserId = fallback.targetUserId;
+      resolvedVia = fallback.resolution;
+      log.info(`[InboundEmail/root] Fallback routed ${toEmail} via ${fallback.resolution} → ws=${workspaceId} process_as=${fallback.route.process_as}`);
+    }
 
     // Step 6: INSERT into platform_emails — return 200 immediately after
     const insertResult = await pool.query(`
@@ -532,7 +754,13 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
     }
 
     // Return 200 immediately — before any async processing
-    res.status(200).json({ received: true, routed: true, routeType: route.route_type });
+    res.status(200).json({
+      received: true,
+      routed: true,
+      routeType: route.route_type,
+      resolvedVia,
+      processAs: route.process_as || undefined,
+    });
 
     // Step 8: Trinity auto-process (deferred via scheduleNonBlocking)
     if (route.auto_process && route.process_as && workspaceId) {
@@ -592,16 +820,15 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
           const forwardTo: string | null = fwdRes.rows[0]?.personal_forward_email || null;
           if (!forwardTo) return;
 
-          const fwdHtml = `
-<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
-  <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
-    -------- Forwarded to your personal email --------<br>
-    <strong>From:</strong> ${fromName ? `${fromName} &lt;${fromEmail}&gt;` : fromEmail}<br>
-    <strong>To:</strong> ${toEmail}<br>
-    <strong>Subject:</strong> ${subject}
-  </p>
-  ${bodyHtml || `<pre style="white-space:pre-wrap;font-size:13px;">${(bodyText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`}
-</div>`;
+          const fwdHtml = buildForwardHtml({
+            bannerLabel: 'Forwarded to your personal email',
+            fromName,
+            fromEmail,
+            toEmail,
+            subject,
+            bodyHtml,
+            bodyText,
+          });
           await sendCanSpamCompliantEmail({
             to: forwardTo,
             subject: `Fwd: ${subject}`,
@@ -648,18 +875,15 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
           if (!forwardTo) return;
 
           const fwdSubject = `Fwd: ${subject}`;
-          const originalDate = new Date().toUTCString();
-          const fwdHtml = `
-<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
-  <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
-    -------- Forwarded Message --------<br>
-    <strong>From:</strong> ${fromName ? `${fromName} &lt;${fromEmail}&gt;` : fromEmail}<br>
-    <strong>To:</strong> ${toEmail}<br>
-    <strong>Date:</strong> ${originalDate}<br>
-    <strong>Subject:</strong> ${subject}
-  </p>
-  ${bodyHtml || `<pre style="white-space:pre-wrap;font-size:13px;">${(bodyText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`}
-</div>`;
+          const fwdHtml = buildForwardHtml({
+            bannerLabel: 'Forwarded Message',
+            fromName,
+            fromEmail,
+            toEmail,
+            subject,
+            bodyHtml,
+            bodyText,
+          });
 
           await sendCanSpamCompliantEmail({
             to: forwardTo,
