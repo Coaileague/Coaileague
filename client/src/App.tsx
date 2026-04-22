@@ -384,6 +384,7 @@ const OnboardingEmailIntro = lazy(() => import("@/pages/onboarding-email-intro")
 const AcceptHandoff = lazy(() => import("@/pages/accept-handoff"));
 const AcceptOffer = lazy(() => import("@/pages/accept-offer"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
+const VerifyEmailPage = lazy(() => import("@/pages/verify-email"));
 const WhiteLabelBranding = lazy(() => import("@/pages/white-label-branding"));
 const MultiCompany = lazy(() => import("@/pages/multi-company"));
 const GateDuty = lazy(() => import("@/pages/gate-duty"));
@@ -1230,6 +1231,7 @@ function AppContent() {
     "/client-signup",
     "/org-unavailable",
     "/accept-invite",
+    "/verify-email",
     "/regulatory",
     "/regulatory/dashboard",
     "/auditor/login",
@@ -1369,6 +1371,7 @@ function AppContent() {
               <Route path="/accept-handoff/:token" component={AcceptHandoff} />
               <Route path="/accept-offer/:offerId" component={AcceptOffer} />
               <Route path="/accept-invite" component={AcceptInvite} />
+              <Route path="/verify-email"><ErrorBoundary><Suspense fallback={<PageLoader />}><VerifyEmailPage /></Suspense></ErrorBoundary></Route>
               {/* Client portal setup — invite acceptance (must come BEFORE /:tempCode wildcard) */}
               <Route path="/client-portal/setup"><ErrorBoundary><Suspense fallback={<PageLoader />}><ClientPortalSetup /></Suspense></ErrorBoundary></Route>
               <Route path="/client-portal/:tempCode">{(params: { tempCode: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><ProspectPortal tempCode={params.tempCode} /></Suspense></ErrorBoundary>}</Route>

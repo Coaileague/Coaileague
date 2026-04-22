@@ -771,6 +771,7 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
       role: z.string().max(50).optional(),
       inviteeName: z.string().max(200).optional(),
       name: z.string().max(200).optional(),
+      organizationalTitle: z.string().max(100).optional(),
     });
     const bodyParsed = inviteBodySchema.safeParse(req.body);
     if (!bodyParsed.success) {
@@ -781,6 +782,7 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
     const rawName = bodyParsed.data.inviteeName || bodyParsed.data.name;
     const inviteeEmail = rawEmail ? rawEmail.trim().toLowerCase() : null;
     const inviteeName = rawName ? rawName.trim() : null;
+    const organizationalTitle = bodyParsed.data.organizationalTitle?.trim() || null;
 
     const ROLE_DISPLAY_NAMES: Record<string, string> = {
       manager: 'Manager',
@@ -848,6 +850,7 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
       inviterUserId: userId,
       inviteeEmail: inviteeEmail || null,
       inviteeRole,
+      organizationalTitle,
       status: 'pending',
       expiresAt,
     }).returning();

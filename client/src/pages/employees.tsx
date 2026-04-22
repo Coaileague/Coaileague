@@ -149,6 +149,15 @@ const getOnboardingStatusBadge = (status?: string) => {
   );
 };
 
+function getRoleDot(workspaceRole: string | null | undefined, isArmed: boolean | null | undefined): string {
+  const role = workspaceRole || '';
+  if (['org_owner', 'co_owner'].includes(role)) return 'bg-violet-500';
+  if (['org_manager', 'department_manager', 'manager'].includes(role)) return 'bg-indigo-500';
+  if (['supervisor', 'shift_leader'].includes(role)) return 'bg-amber-500';
+  if (isArmed) return 'bg-red-500';
+  return 'bg-slate-400';
+}
+
   const EmployeeCard = memo(({ employee, getInitials, canManage, isMobile, handleEditEmployee, setSelectedEmployee, setIsInviteDialogOpen, user, setApprovalPayRate, setIsApprovalDialogOpen, handleDeleteEmployee, managerMap, isAnyMutationPending, inviteMutation, approveMutation, deleteMutation, isSelected, onToggleSelect }: {
     employee: Employee;
     getInitials: (f: string, l: string) => string;
@@ -189,7 +198,12 @@ const getOnboardingStatusBadge = (status?: string) => {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0" data-testid={`text-employee-name-${employee.id}`}>
                   <div className="text-sm max-sm:![font-size:14px] font-medium truncate text-foreground">
-                    <div className="truncate max-w-[180px] min-w-0" title={`${employee.firstName} ${employee.lastName}`}>
+                    <div className="flex items-center gap-1.5 truncate max-w-[180px] min-w-0" title={`${employee.firstName} ${employee.lastName}`}>
+                      <span
+                        className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${getRoleDot(employee.workspaceRole, (employee as any).isArmed)}`}
+                        title={(employee as any).isArmed ? 'Armed' : 'Unarmed'}
+                        data-testid={`dot-role-${employee.id}`}
+                      />
                       {employee.firstName} {employee.lastName}
                     </div>
                     {employee.email && (

@@ -473,6 +473,57 @@ const EVENT_HANDLERS: Record<string, EventHandlerConfig> = {
       }, 'OT approaching → manager alert');
     },
   },
+
+  // ═══════════════════════════════════════════════════════════
+  // MEMBERSHIP & ONBOARDING
+  // ═══════════════════════════════════════════════════════════
+
+  member_joined: {
+    risk: 'low',
+    handler: async (event) => {
+      const { workspaceId, metadata } = event;
+      if (!workspaceId || !metadata?.userId) return;
+
+      try {
+        const { NotificationDeliveryService } = await import('../notificationDeliveryService');
+
+        await NotificationDeliveryService.send({
+          type: 'welcome_message',
+          workspaceId,
+          recipientUserId: metadata.userId,
+          channel: 'in_app',
+          body: {
+            title: `Welcome to ${metadata.workspaceName || 'CoAIleague'}!`,
+            message: `Hi ${metadata.firstName || 'there'}! I'm Trinity, your AI operations supervisor. I'm already monitoring your organization and I'm here to help. Ask me anything — scheduling, compliance, payroll, or anything else you need.`,
+          },
+        } as any).catch(() => {});
+
+        const { rows: owners } = await pool.query(
+          `SELECT user_id FROM employees
+            WHERE workspace_id = $1
+              AND workspace_role IN ('org_owner', 'co_owner')
+              AND is_active = TRUE
+              AND user_id != $2`,
+          [workspaceId, metadata.userId]
+        );
+
+        for (const owner of owners) {
+          await NotificationDeliveryService.send({
+            type: 'staffing_status_update',
+            workspaceId,
+            recipientUserId: owner.user_id,
+            channel: 'in_app',
+            body: {
+              title: 'New Team Member Joined',
+              message: `${metadata.firstName || ''} ${metadata.lastName || ''} (${metadata.role || 'team member'}) has joined and is ready to use the platform. Trinity has been briefed.`,
+            },
+          } as any).catch(() => {});
+        }
+      } catch (err: any) {
+        log.warn('[EventBrain] member_joined welcome failed (non-fatal):', err?.message);
+      }
+    },
+  },
 };
 
 export const trinityEventBrain = {

@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { emailService } from '../services/emailService';
 import { publicFormLimiter } from '../middleware/rateLimiter';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { createLogger } from '../lib/logger';
 const log = createLogger('PublicOnboardingRoutes');
 
@@ -368,6 +369,28 @@ router.get('/contracts/:applicationId', async (req, res) => {
         status: 'pending',
       });
 
+      // I-9 Employment Eligibility — Section 1
+      contractsToCreate.push({
+        workspaceId: workspaceId as string,
+        id: crypto.randomUUID(),
+        applicationId,
+        documentType: 'i9_section_1',
+        documentTitle: 'Employment Eligibility Verification (I-9) — Section 1',
+        documentContent: `EMPLOYMENT ELIGIBILITY VERIFICATION — FORM I-9 (SECTION 1)\nU.S. Citizenship and Immigration Services\n\nEmployee Information and Attestation\n\nEmployee Name: ${application.firstName} ${application.lastName}\nDate of Birth: [To be completed by employee]\nSSN Last 4: [To be completed by employee]\nEmail: ${application.email}\nDate of Hire: ${today}\nEmployer: ${orgName}\n\nATTESTATION (Employee must check one):\n[ ] A citizen of the United States\n[ ] A noncitizen national of the United States (Alien Registration Number: _______)\n[ ] A lawful permanent resident\n[ ] An alien authorized to work until: _______________\n\nI attest, under penalty of perjury, that I am aware that federal law provides for imprisonment and/or fines for false statements or use of false documents in connection with the completion of this form.\n\nEmployee Signature: _________________________ Date: _______________\nPrinted Name: ${application.firstName} ${application.lastName}\n\nEMPLOYER — Section 2 is to be completed and signed no later than the first day of employment. Keep this form on file for 3 years or 1 year after employment ends, whichever is later.`,
+        status: 'pending',
+      });
+
+      // Background Check Authorization
+      contractsToCreate.push({
+        workspaceId: workspaceId as string,
+        id: crypto.randomUUID(),
+        applicationId,
+        documentType: 'background_check_authorization',
+        documentTitle: 'Background Investigation Authorization and Release',
+        documentContent: `BACKGROUND INVESTIGATION AUTHORIZATION AND RELEASE\n\nApplicant: ${application.firstName} ${application.lastName}\nEmail: ${application.email}\nDate: ${today}\nOrganization: ${orgName}\n\nI hereby authorize ${orgName} and its designated background screening partners to conduct a thorough background investigation, which may include:\n\n• Criminal history check (federal, state, county)\n• Texas Department of Public Safety (DPS) criminal history\n• Texas Sex Offender Registry check\n• Statewide criminal search\n• Employment history verification\n• Identity verification\n• Professional license/certification verification\n\nThis authorization is required by Texas Occupations Code Chapter 1702 for all security personnel. I understand that:\n\n1. A consumer report may be obtained for employment purposes.\n2. Information obtained will be used solely for employment decisions.\n3. I have the right to request a copy of any report obtained.\n4. Adverse action based on the report will be communicated to me with an opportunity to dispute inaccurate information.\n\nI release ${orgName}, its agents, and all persons and organizations providing information from any liability arising from this investigation.\n\nSignature: _________________________ Date: _______________\nPrinted Name: ${application.firstName} ${application.lastName}`,
+        status: 'pending',
+      });
+
       const created = await db
         .insert(documentSignatures)
         .values(contractsToCreate)
@@ -513,6 +536,50 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
       await storage.updateEmployee(application.employeeId, workspaceId, employeeUpdate);
     }
 
+    // ── Auto-queue tenant compliance documents (workspace-wide signing requirements)
+    // After onboarding submit, dispatch any org docs marked for all_employees/all_staff
+    // to the new employee for signing. Non-blocking — won't fail the submit if it errors.
+    if (application.employeeId) {
+      const newEmployeeId = application.employeeId;
+      scheduleNonBlocking('onboarding.tenant-docs', async () => {
+        try {
+          const { orgDocuments: orgDocsTable } = await import('@shared/schema');
+          const { eq: eqOp, and: andOp, sql: sqlOp } = await import('drizzle-orm');
+          const { documentSigningService } = await import('../services/documentSigningService');
+
+          const tenantDocs = await db.select()
+            .from(orgDocsTable)
+            .where(andOp(
+              eqOp(orgDocsTable.workspaceId, workspaceId),
+              eqOp(orgDocsTable.requiresSignature, true),
+              sqlOp`${orgDocsTable.signatureRequired} IN ('all_employees', 'all_staff')`
+            ));
+
+          const workspace = await storage.getWorkspace(workspaceId);
+          const orgName = workspace?.name || 'Your Organization';
+
+          for (const doc of tenantDocs) {
+            await documentSigningService.sendDocumentForSignature({
+              documentId: doc.id,
+              workspaceId,
+              senderUserId: 'system',
+              senderName: orgName,
+              recipients: [{
+                email: application.email,
+                name: `${application.firstName} ${application.lastName}`,
+                type: 'internal',
+                employeeId: newEmployeeId,
+              }],
+              message: `Please review and sign this required company compliance document as part of your onboarding for ${orgName}.`,
+            });
+            log.info(`[Onboarding] Queued tenant doc for signing: ${doc.fileName} → ${application.email}`);
+          }
+        } catch (err: any) {
+          log.warn('[Onboarding] Tenant doc queue failed (non-fatal):', err?.message);
+        }
+      });
+    }
+
     const managers = await storage.getEmployeesByWorkspace(workspaceId);
     const managerIds = managers
       .filter(e => e.userId && ['org_owner', 'co_owner', 'manager', 'department_manager', 'supervisor'].includes(e.workspaceRole || ''))
@@ -598,6 +665,7 @@ router.get('/workspace-invite/:code', async (req, res) => {
       workspaceId: invite.workspaceId,
       role: invite.inviteeRole,
       roleName: ROLE_DISPLAY_NAMES[invite.inviteeRole || 'staff'] || invite.inviteeRole,
+      organizationalTitle: invite.organizationalTitle || null,
       inviterName,
       inviteeEmail: invite.inviteeEmail,
       expiresAt: invite.expiresAt,
@@ -672,6 +740,7 @@ router.post('/workspace-invite/register', async (req, res) => {
         lastName,
         email: normalizedEmail,
         workspaceRole: role as any,
+        organizationalTitle: invite.organizationalTitle || undefined,
         isActive: true,
         hireDate: new Date(),
         // Default payroll classification so payroll readiness scanner doesn't flag immediately

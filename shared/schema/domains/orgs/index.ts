@@ -1421,7 +1421,8 @@ export const workspaceInvites = pgTable("workspace_invites", {
   // Invitee information
   inviteeEmail: varchar("invitee_email"),
   inviteeRole: varchar("invitee_role").default("staff"),
-  
+  organizationalTitle: varchar("organizational_title"),
+
   // Status tracking
   status: varchar("status").default("pending"),
   acceptedByUserId: varchar("accepted_by_user_id"),

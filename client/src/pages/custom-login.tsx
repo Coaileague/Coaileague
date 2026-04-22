@@ -52,6 +52,9 @@ export default function CustomLogin() {
   const [loginData, setLoginData] = useState<LoginResponse["user"] | null>(null);
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [devLoginEnabled, setDevLoginEnabled] = useState(false);
+  const [emailUnverified, setEmailUnverified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [resendingVerification, setResendingVerification] = useState(false);
   const transitionLoader = useTransitionLoader();
   const { executeRecaptcha } = useRecaptcha({ action: 'login' });
 
@@ -117,6 +120,13 @@ export default function CustomLogin() {
       const result = await response.json();
 
       if (!response.ok) {
+        if (result.code === "email_unverified" || result.code === "EMAIL_UNVERIFIED") {
+          authTransition?.cancel();
+          setUnverifiedEmail(data.email);
+          setEmailUnverified(true);
+          setIsLoading(false);
+          return;
+        }
         if (result.needsPasswordReset) {
           authTransition?.cancel();
           toast({
@@ -218,6 +228,39 @@ export default function CustomLogin() {
     await form.handleSubmit(onSubmit)();
   };
 
+  const resendVerification = async () => {
+    if (!unverifiedEmail) return;
+    setResendingVerification(true);
+    try {
+      const res = await secureFetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      if (res.ok) {
+        toast({
+          title: "Verification email sent",
+          description: "Check your inbox for a fresh verification link.",
+        });
+      } else {
+        const json = await res.json().catch(() => ({}));
+        toast({
+          title: "Could not resend",
+          description: json.message || "Please try again in a few minutes.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Network error",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   return (
     <>
       <SEO
@@ -265,6 +308,27 @@ export default function CustomLogin() {
                 Access your workspace
               </p>
             </div>
+
+            {emailUnverified && (
+              <div
+                className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm"
+                data-testid="banner-email-unverified"
+              >
+                <p className="font-medium text-amber-400">Please verify your email first</p>
+                <p className="text-muted-foreground mt-1">
+                  Check your inbox for a verification link from CoAIleague{unverifiedEmail ? ` sent to ${unverifiedEmail}` : ""}.
+                </p>
+                <button
+                  type="button"
+                  className="mt-1 inline-flex items-center text-xs font-medium text-amber-400 underline underline-offset-2 disabled:opacity-60"
+                  onClick={resendVerification}
+                  disabled={resendingVerification}
+                  data-testid="button-resend-verification"
+                >
+                  {resendingVerification ? "Sending…" : "Resend verification email →"}
+                </button>
+              </div>
+            )}
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3" aria-label="Login form">

@@ -705,7 +705,7 @@ export class AuthService {
   // ─────────────────────────────────────────────────────────────────────────
 
   private async sendVerificationEmail(email: string, token: string): Promise<void> {
-    const verifyUrl = `${this.getBaseUrl()}/auth/verify-email?token=${token}`;
+    const verifyUrl = `${this.getBaseUrl()}/verify-email?token=${token}`;
 
     try {
       const { client, fromEmail } = await getUncachableResendClient();

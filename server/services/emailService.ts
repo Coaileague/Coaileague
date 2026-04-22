@@ -1344,7 +1344,7 @@ export class EmailService {
       expiresInDays?: number;
     }
   ): Promise<EmailResult> {
-    const joinUrl = `${getAppBaseUrl()}/accept-invite?token=${inviteToken}`;
+    const joinUrl = `${getAppBaseUrl()}/accept-invite?code=${inviteToken}`;
     
     const template = emailTemplates.employeeInvitation({
       firstName: data.firstName || 'there',

@@ -1061,6 +1061,35 @@ function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-1.5" data-testid="org-invite-code-section">
+          <Label className="text-xs text-muted-foreground">Org Invite Code</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              readOnly
+              value={(workspace as any)?.orgCode || (workspace as any)?.slug || 'Not set'}
+              className="font-mono text-sm bg-muted"
+              data-testid="input-org-invite-code"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const code = (workspace as any)?.orgCode || (workspace as any)?.slug || '';
+                if (!code) return;
+                navigator.clipboard.writeText(code);
+                toast({ title: "Org code copied!" });
+              }}
+              data-testid="button-copy-org-invite-code"
+            >
+              Copy
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Share this code with your team members to join your organization.
+          </p>
+        </div>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1862,6 +1891,7 @@ export default function Settings() {
   // Invite form state
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<string>('manager');
+  const [inviteTitle, setInviteTitle] = useState<string>('');
   const [inviteResult, setInviteResult] = useState<{ code: string; link: string } | null>(null);
 
   // Fetch workspace data
@@ -2162,7 +2192,7 @@ export default function Settings() {
 
   // Send invite mutation
   const sendInviteMutation = useMutation({
-    mutationFn: async (data: { email: string; role: string }) => {
+    mutationFn: async (data: { email: string; role: string; organizationalTitle?: string }) => {
       const res = await apiRequest('POST', '/api/invites/create', data);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || 'Failed to send invite');
@@ -2175,6 +2205,7 @@ export default function Settings() {
         link: inv.inviteLink || data.inviteLink || `${window.location.origin}/accept-invite?code=${inv.inviteCode || data.inviteCode || ''}`,
       });
       setInviteEmail('');
+      setInviteTitle('');
       refetchInvites();
       toast({ title: "Invitation sent!", description: `Invite sent to ${inv.inviteeEmail || data.inviteeEmail || 'recipient'}.` });
     },
@@ -3513,7 +3544,7 @@ export default function Settings() {
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="colleague@company.com"
                     data-testid="input-invite-email"
-                    onKeyDown={(e) => { if (e.key === 'Enter' && inviteEmail.trim()) sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole }); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && inviteEmail.trim()) sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole, organizationalTitle: inviteTitle || undefined }); }}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -3532,8 +3563,32 @@ export default function Settings() {
                   </Select>
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Organizational Title (optional)</Label>
+                <Select value={inviteTitle} onValueChange={setInviteTitle}>
+                  <SelectTrigger data-testid="select-invite-title" className="h-9">
+                    <SelectValue placeholder="Title (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Chief Executive Officer">Chief Executive Officer</SelectItem>
+                    <SelectItem value="Chief of Operations">Chief of Operations</SelectItem>
+                    <SelectItem value="Deputy Chief">Deputy Chief</SelectItem>
+                    <SelectItem value="Vice President">Vice President</SelectItem>
+                    <SelectItem value="General Manager">General Manager</SelectItem>
+                    <SelectItem value="Operations Manager">Operations Manager</SelectItem>
+                    <SelectItem value="Field Manager">Field Manager</SelectItem>
+                    <SelectItem value="Field Supervisor">Field Supervisor</SelectItem>
+                    <SelectItem value="Shift Supervisor">Shift Supervisor</SelectItem>
+                    <SelectItem value="Lead Officer">Lead Officer</SelectItem>
+                    <SelectItem value="Security Officer (Armed)">Security Officer (Armed)</SelectItem>
+                    <SelectItem value="Security Officer (Unarmed)">Security Officer (Unarmed)</SelectItem>
+                    <SelectItem value="Security Contractor (Armed)">Security Contractor (Armed)</SelectItem>
+                    <SelectItem value="Security Contractor (Unarmed)">Security Contractor (Unarmed)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
-                onClick={() => { if (inviteEmail.trim()) { setInviteResult(null); sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole }); } }}
+                onClick={() => { if (inviteEmail.trim()) { setInviteResult(null); sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole, organizationalTitle: inviteTitle || undefined }); } }}
                 disabled={sendInviteMutation.isPending || !inviteEmail.trim()}
                 data-testid="button-send-invite"
                 className="gap-2"
