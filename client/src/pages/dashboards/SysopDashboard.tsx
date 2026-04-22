@@ -3,6 +3,11 @@ import { useLocation } from "wouter";
 import { Server, Database, Activity, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import {
+  TrinityBrainStatusPanel,
+  AICreditBalancePanel,
+  BrainActivityFeed,
+} from "@/components/ai-brain";
 
 const pageConfig: CanvasPageConfig = {
   id: "sysop-dashboard",
@@ -31,11 +36,6 @@ export default function SysopDashboard() {
       updatedAt: string;
     };
   }>({ queryKey: ["/api/analytics/stats"], staleTime: 30000 });
-
-  const { data: healthData } = useQuery<{ status: string; services: Record<string, string> }>({
-    queryKey: ["/api/ai-brain/health"],
-    staleTime: 30000,
-  });
 
   const dbStatus = stats?.system?.database?.status ?? "unknown";
   const dbColor = dbStatus === "healthy" ? "text-green-600" : "text-red-600";
@@ -89,54 +89,33 @@ export default function SysopDashboard() {
           </div>
         </div>
 
-        {/* AI Brain status */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-br from-muted/50 to-muted/30 border border-border rounded-lg p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-muted rounded-lg">
-                <Activity className="w-5 h-5 text-foreground" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">AI Brain Status</p>
-                <p className="text-xs text-muted-foreground">
-                  {healthData?.status ? `Status: ${healthData.status}` : "Fetching status…"}
-                </p>
-              </div>
-            </div>
-            {healthData?.services && (
-              <div className="space-y-1">
-                {Object.entries(healthData.services).slice(0, 4).map(([svc, status]) => (
-                  <div key={svc} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground capitalize">{svc.replace(/_/g, " ")}</span>
-                    <span className={status === "healthy" || status === "ok" ? "text-green-600" : "text-yellow-600"}>
-                      {status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Trinity Brain widgets */}
+        <div className="space-y-4">
+          <TrinityBrainStatusPanel />
+          <AICreditBalancePanel />
+          <BrainActivityFeed />
+        </div>
 
-          <div className="bg-card border border-border rounded-lg p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-muted rounded-lg">
-                <Server className="w-5 h-5 text-foreground" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">Infrastructure</p>
-                <p className="text-xs text-muted-foreground">Server and diagnostics access</p>
-              </div>
+        {/* Infrastructure quick actions */}
+        <div className="bg-card border border-border rounded-lg p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-muted rounded-lg">
+              <Server className="w-5 h-5 text-foreground" />
             </div>
-            <div className="flex flex-col gap-2">
-              <Button size="sm" variant="outline" onClick={() => setLocation("/admin")} className="text-xs justify-start">
-                <Activity className="w-3 h-3 mr-2" />
-                System Diagnostics
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setLocation("/admin/support")} className="text-xs justify-start">
-                <AlertCircle className="w-3 h-3 mr-2" />
-                View Error Logs
-              </Button>
+            <div>
+              <p className="font-semibold text-foreground">Infrastructure</p>
+              <p className="text-xs text-muted-foreground">Server and diagnostics access</p>
             </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button size="sm" variant="outline" onClick={() => setLocation("/admin")} className="text-xs justify-start">
+              <Activity className="w-3 h-3 mr-2" />
+              System Diagnostics
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setLocation("/admin/support")} className="text-xs justify-start">
+              <AlertCircle className="w-3 h-3 mr-2" />
+              View Error Logs
+            </Button>
           </div>
         </div>
 

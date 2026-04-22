@@ -1569,7 +1569,7 @@ aiBrainRouter.post('/routing/execute', requireAuth, async (req: Request, res: Re
  * GET /api/ai-brain/providers/balances - Get all AI provider balances
  * For Support Dashboard to monitor and top-off API credits
  */
-aiBrainRouter.get('/providers/balances', requireAuth, async (req: Request, res: Response) => {
+aiBrainRouter.get('/providers/balances', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const forceRefresh = req.query.refresh === 'true';

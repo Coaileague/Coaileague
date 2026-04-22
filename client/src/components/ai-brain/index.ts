@@ -4,3 +4,6 @@ export { GuardrailsDashboard } from './guardrails-dashboard';
 export { MigrationReview } from './migration-review';
 export { FastModeToggle } from './FastModeToggle';
 export { FastModeStatusWidget } from './FastModeStatusWidget';
+export { TrinityBrainStatusPanel } from './TrinityBrainStatusPanel';
+export { AICreditBalancePanel } from './AICreditBalancePanel';
+export { BrainActivityFeed } from './BrainActivityFeed';

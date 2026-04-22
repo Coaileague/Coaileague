@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { CONTACTS } from "@shared/platformConfig";
+import { AICreditBalancePanel } from "@/components/ai-brain";
 
 const pageConfig: CanvasPageConfig = {
   id: "support-agent-dashboard",
@@ -127,6 +128,9 @@ export default function SupportAgentDashboard() {
             </div>
           </div>
         </div>
+
+        {/* AI provider credit balances (read-only for agents) */}
+        <AICreditBalancePanel canRefresh={false} showDashboardLinks={false} />
 
         {/* Access notice */}
         <div className="bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800 rounded-lg p-4">
