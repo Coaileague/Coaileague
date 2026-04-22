@@ -1470,9 +1470,21 @@ function AppContent() {
                 <Route path="/sales-pipeline"><ErrorBoundary><SalesPipelinePage /></ErrorBoundary></Route>
                 <Route path="/outreach"><ErrorBoundary><Outreach /></ErrorBoundary></Route>
                 <Route path="/behavior-scoring"><ErrorBoundary><BehaviorScoring /></ErrorBoundary></Route>
-                <Route path="/trinity-memory"><ErrorBoundary><TrinityMemory /></ErrorBoundary></Route>
-                <Route path="/trinity/transparency"><ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary></Route>
-                <Route path="/trinity/agent-dashboard"><ErrorBoundary><TrinityAgentDashboard /></ErrorBoundary></Route>
+                <Route path="/trinity-memory">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinityMemory /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
+                <Route path="/trinity/transparency">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
+                <Route path="/trinity/agent-dashboard">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinityAgentDashboard /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/inbound-opportunities"><ErrorBoundary><InboundOpportunities /></ErrorBoundary></Route>
                 <Route path="/hris-management"><ErrorBoundary><HRISManagement /></ErrorBoundary></Route>
                 <Route path="/labor-law-config"><ErrorBoundary><LaborLawConfig /></ErrorBoundary></Route>
@@ -1502,19 +1514,31 @@ function AppContent() {
                 <Route path="/financial-intelligence"><ErrorBoundary componentName="Financial Intelligence"><FinancialIntelligence /></ErrorBoundary></Route>
                 <Route path="/pl-dashboard"><ErrorBoundary componentName="P&L Dashboard"><PLDashboard /></ErrorBoundary></Route>
                 <Route path="/org-hub"><ErrorBoundary><OrgHub /></ErrorBoundary></Route>
-                <Route path="/developers"><ErrorBoundary><DeveloperPortal /></ErrorBoundary></Route>
+                <Route path="/developers">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><DeveloperPortal /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/reports"><ErrorBoundary componentName="Reports Dashboard"><Reports /></ErrorBoundary></Route>
                 <Route path="/analytics"><ErrorBoundary componentName="Analytics Dashboard"><Analytics /></ErrorBoundary></Route>
                 <Route path="/audit-logs"><ErrorBoundary><AuditLogs /></ErrorBoundary></Route>
                 <Route path="/automation-control"><ErrorBoundary><AutomationControl /></ErrorBoundary></Route>
-                <Route path="/ai/command-center"><ErrorBoundary><AICommandCenter /></ErrorBoundary></Route>
+                <Route path="/ai/command-center">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><AICommandCenter /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/support/bugs"><ErrorBoundary><SupportBugDashboard /></ErrorBoundary></Route>
                 <Route path="/support/queue"><ErrorBoundary><SupportQueue /></ErrorBoundary></Route>
                 <Route path="/support/chatrooms"><ErrorBoundary><SupportChatrooms /></ErrorBoundary></Route>
                 <Route path="/my-tickets"><ErrorBoundary><MyTickets /></ErrorBoundary></Route>
                 <Route path="/support/assisted-onboarding"><ErrorBoundary><AssistedOnboarding /></ErrorBoundary></Route>
                 <Route path="/workspace-onboarding"><ErrorBoundary><WorkspaceOnboarding /></ErrorBoundary></Route>
-                <Route path="/trinity/self-edit"><ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary></Route>
+                <Route path="/trinity/self-edit">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/trinity">
                   <RBACRoute require={["owner", "leader"]}>
                     <ErrorBoundary componentName="Trinity AI">
@@ -1588,7 +1612,11 @@ function AppContent() {
                 <Route path="/payroll/deductions"><ErrorBoundary><PayrollDeductions /></ErrorBoundary></Route>
                 <Route path="/payroll/garnishments"><ErrorBoundary><PayrollGarnishments /></ErrorBoundary></Route>
                 <Route path="/communications/onboarding"><ErrorBoundary><CommunicationsOnboarding /></ErrorBoundary></Route>
-                <Route path="/diagnostics"><ErrorBoundary><Diagnostics /></ErrorBoundary></Route>
+                <Route path="/diagnostics">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><Diagnostics /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
                 <Route path="/private-messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
                 <Route path="/training-os"><ErrorBoundary><Training /></ErrorBoundary></Route>
@@ -1720,7 +1748,11 @@ function AppContent() {
                 </Route>
                 <Route path="/automation/audit-log"><ErrorBoundary><AutomationAuditLog /></ErrorBoundary></Route>
                 <Route path="/automation/settings"><ErrorBoundary><AutomationSettings /></ErrorBoundary></Route>
-                <Route path="/ai/brain"><ErrorBoundary><AIBrainDashboard /></ErrorBoundary></Route>
+                <Route path="/ai/brain">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><AIBrainDashboard /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/ai/orchestration"><ErrorBoundary><OrchestrationDashboard /></ErrorBoundary></Route>
                 <Route path="/ai/audit-log-viewer"><ErrorBoundary><AIAuditLogViewer /></ErrorBoundary></Route>
                 <Route path="/ai/workboard"><ErrorBoundary><WorkboardDashboard /></ErrorBoundary></Route>
@@ -1775,7 +1807,11 @@ function AppContent() {
                 <Route path="/enterprise/sso"><ErrorBoundary><SSOConfiguration /></ErrorBoundary></Route>
                 <Route path="/enterprise/account-manager"><ErrorBoundary><AccountManager /></ErrorBoundary></Route>
                 <Route path="/enterprise/background-checks"><ErrorBoundary><BackgroundChecks /></ErrorBoundary></Route>
-                <Route path="/enterprise/api-access"><ErrorBoundary><ApiAccess /></ErrorBoundary></Route>
+                <Route path="/enterprise/api-access">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><ApiAccess /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 
                 {/* Parity routes — accessible on both mobile and desktop */}
                 <Route path="/platform-feedback"><ErrorBoundary componentName="Platform Feedback"><PlatformFeedbackPage /></ErrorBoundary></Route>
@@ -2030,7 +2066,7 @@ function AppContent() {
                 </Route>
                 <Route path="/org-hub"><ErrorBoundary><OrgHub /></ErrorBoundary></Route>
                 <Route path="/developers">
-                  <RBACRoute require="owner">
+                  <RBACRoute require="platform_staff">
                     <ErrorBoundary><DeveloperPortal /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
@@ -2055,7 +2091,7 @@ function AppContent() {
                   </RBACRoute>
                 </Route>
                 <Route path="/ai/command-center">
-                  <RBACRoute require="leader">
+                  <RBACRoute require="platform_staff">
                     <ErrorBoundary><AICommandCenter /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
@@ -2065,13 +2101,21 @@ function AppContent() {
                 <Route path="/my-tickets"><ErrorBoundary><MyTickets /></ErrorBoundary></Route>
                 <Route path="/support/assisted-onboarding"><ErrorBoundary><AssistedOnboarding /></ErrorBoundary></Route>
                 <Route path="/workspace-onboarding"><ErrorBoundary><WorkspaceOnboarding /></ErrorBoundary></Route>
-                <Route path="/trinity/self-edit"><ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary></Route>
+                <Route path="/trinity/self-edit">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/trinity">
                   <RBACRoute require={["owner", "leader"]}>
                     <ErrorBoundary><TrinityChat /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
-                <Route path="/ai/brain"><ErrorBoundary><AIBrainDashboard /></ErrorBoundary></Route>
+                <Route path="/ai/brain">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><AIBrainDashboard /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/ai/orchestration"><ErrorBoundary><OrchestrationDashboard /></ErrorBoundary></Route>
                 <Route path="/ai/workboard"><ErrorBoundary><WorkboardDashboard /></ErrorBoundary></Route>
                 <Route path="/ai/audit-log-viewer"><ErrorBoundary><AIAuditLogViewer /></ErrorBoundary></Route>
@@ -2164,7 +2208,11 @@ function AppContent() {
                 <Route path="/briefing-channel"><ErrorBoundary><BriefingChannel /></ErrorBoundary></Route>
                 <Route path="/chat/:roomId">{(params: { roomId: string }) => <ErrorBoundary><HelpDesk roomId={params.roomId} /></ErrorBoundary>}</Route>
                 <Route path="/inbox"><ErrorBoundary><EmailIntelligence /></ErrorBoundary></Route>
-                <Route path="/diagnostics"><ErrorBoundary><Diagnostics /></ErrorBoundary></Route>
+                <Route path="/diagnostics">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><Diagnostics /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
                 <Route path="/private-messages"><ErrorBoundary><PrivateMessages /></ErrorBoundary></Route>
                 <Route path="/training-os"><ErrorBoundary><Training /></ErrorBoundary></Route>
@@ -2181,9 +2229,21 @@ function AppContent() {
                 <Route path="/records"><ErrorBoundary><Records /></ErrorBoundary></Route>
                 <Route path="/insights"><ErrorBoundary><Insights /></ErrorBoundary></Route>
                 <Route path="/behavior-scoring"><ErrorBoundary><BehaviorScoring /></ErrorBoundary></Route>
-                <Route path="/trinity-memory"><ErrorBoundary><TrinityMemory /></ErrorBoundary></Route>
-                <Route path="/trinity/transparency"><ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary></Route>
-                <Route path="/trinity/agent-dashboard"><ErrorBoundary><TrinityAgentDashboard /></ErrorBoundary></Route>
+                <Route path="/trinity-memory">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinityMemory /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
+                <Route path="/trinity/transparency">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
+                <Route path="/trinity/agent-dashboard">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><TrinityAgentDashboard /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/document-library"><ErrorBoundary componentName="Document Library"><DocumentLibrary /></ErrorBoundary></Route>
                 <Route path="/labor-law-config"><ErrorBoundary><LaborLawConfig /></ErrorBoundary></Route>
                 <Route path="/inbound-opportunities"><ErrorBoundary><InboundOpportunities /></ErrorBoundary></Route>
@@ -2269,7 +2329,11 @@ function AppContent() {
                 <Route path="/enterprise/sso"><ErrorBoundary><SSOConfiguration /></ErrorBoundary></Route>
                 <Route path="/enterprise/account-manager"><ErrorBoundary><AccountManager /></ErrorBoundary></Route>
                 <Route path="/enterprise/background-checks"><ErrorBoundary><BackgroundChecks /></ErrorBoundary></Route>
-                <Route path="/enterprise/api-access"><ErrorBoundary><ApiAccess /></ErrorBoundary></Route>
+                <Route path="/enterprise/api-access">
+                  <RBACRoute require="platform_staff">
+                    <ErrorBoundary><ApiAccess /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
                 <Route path="/alert-settings"><ErrorBoundary><AlertSettings /></ErrorBoundary></Route>
                 <Route path="/notifications/log">{(params) => <ErrorBoundary componentName="Notification Log"><Suspense fallback={<PageLoader />}><NotificationLog /></Suspense></ErrorBoundary>}</Route>
                 <Route path="/employee/profile"><ErrorBoundary componentName="Employee Profile"><EmployeeProfile /></ErrorBoundary></Route>
