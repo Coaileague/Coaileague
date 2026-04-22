@@ -2,8 +2,11 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../db";
-import { employees, clients } from "@shared/schema";
+import { employees, clients, workspaceInvites } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import crypto from 'crypto';
+import { emailService } from '../services/emailService';
+import { storage } from '../storage';
 import { createLogger } from '../lib/logger';
 const log = createLogger('ImportRoutes');
 
@@ -325,8 +328,14 @@ router.post("/employees", async (req: Request, res: Response) => {
     const skippedRows = parsedEmployees.filter((e) => e.errors.length > 0);
 
     let imported = 0;
+    let invited = 0;
     let skippedDuplicates = 0;
     const importErrors: string[] = [];
+    const missingEmailRows: number[] = [];
+
+    const workspace = await storage.getWorkspace(workspaceId).catch(() => null);
+    const workspaceName = workspace?.name || 'Your Organization';
+    const inviterUserId = userId || 'system';
 
     for (const emp of validEmployees) {
       try {
@@ -341,7 +350,11 @@ router.post("/employees", async (req: Request, res: Response) => {
             skippedDuplicates++;
             continue;
           }
+        } else {
+          missingEmailRows.push(emp.rowNumber);
         }
+
+        const onboardingStatus = emp.email ? 'invited' : 'pending';
 
         await db.insert(employees).values({
           workspaceId,
@@ -352,8 +365,41 @@ router.post("/employees", async (req: Request, res: Response) => {
           role: emp.position || null,
           hourlyRate: emp.hourlyRate?.toString() || null,
           isActive: true,
-        });
+          onboardingStatus,
+        } as any);
         imported++;
+
+        // For employees with email, create a workspace invite and send onboarding email
+        if (emp.email) {
+          try {
+            const inviteCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+            await db.insert(workspaceInvites).values({
+              workspaceId,
+              inviteCode,
+              inviterUserId,
+              inviteeEmail: emp.email,
+              inviteeFirstName: emp.firstName || null,
+              inviteeLastName: emp.lastName || null,
+              inviteeRole: 'employee',
+              status: 'pending',
+              expiresAt,
+            } as any);
+
+            await emailService.sendEmployeeInvitation(workspaceId, emp.email, inviteCode, {
+              firstName: emp.firstName || 'there',
+              inviterName: workspaceName,
+              workspaceName,
+              roleName: 'Team Member',
+              expiresInDays: 7,
+            });
+
+            invited++;
+          } catch (inviteErr: any) {
+            log.warn(`[ImportRoutes] Invite/email failed for row ${emp.rowNumber}:`, inviteErr?.message);
+          }
+        }
       } catch (error: unknown) {
         importErrors.push(`Row ${emp.rowNumber}: ${sanitizeError(error)}`);
       }
@@ -363,10 +409,12 @@ router.post("/employees", async (req: Request, res: Response) => {
     return res.json({
       success: importErrors.length === 0,
       imported,
+      invited,
       skippedDuplicates,
       skippedInvalid: skippedRows.length,
       totalRows: parsedEmployees.length,
       errors: importErrors,
+      missingEmailRows,
       invalidRows: skippedRows.map((e) => ({
         rowNumber: e.rowNumber,
         errors: e.errors,

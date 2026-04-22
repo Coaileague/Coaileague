@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useParams } from 'wouter';
+import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,6 +70,7 @@ interface FormState {
   taxClassification: string; filingStatus: string; multipleJobs: string;
   dependentsAmount: string; otherIncome: string; extraWithholding: string;
   bankName: string; routingNumber: string; accountNumber: string; accountType: string;
+  plaidLinked: boolean;
   availableMonday: boolean; availableTuesday: boolean; availableWednesday: boolean;
   availableThursday: boolean; availableFriday: boolean; availableSaturday: boolean;
   availableSunday: boolean; preferredShiftTime: string; maxHoursPerWeek: string;
@@ -222,8 +223,160 @@ function DocSignaturePanel({
   );
 }
 
+// Plaid Link is loaded via CDN (index.html). Declare the global type.
+declare global {
+  interface Window {
+    Plaid?: {
+      create: (config: {
+        token: string;
+        onSuccess: (publicToken: string, metadata: any) => void;
+        onExit: (err: any, metadata: any) => void;
+      }) => { open: () => void };
+    };
+  }
+}
+
+function PayrollStep({
+  form,
+  setField,
+  applicationId,
+  workspaceId,
+  onPlaidLinked,
+}: {
+  form: FormState;
+  setField: (key: keyof FormState, val: string | boolean) => void;
+  applicationId: string | null;
+  workspaceId: string | null;
+  onPlaidLinked: (bankName: string, accountType: string) => void;
+}) {
+  const [isLoadingPlaid, setIsLoadingPlaid] = useState(false);
+  const { toast } = useToast();
+
+  const openPlaidLink = async () => {
+    if (!applicationId || !workspaceId) return;
+    setIsLoadingPlaid(true);
+    try {
+      const res = await fetch('/api/onboarding/plaid/link-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId, workspaceId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to start bank connection');
+      }
+      const { linkToken } = await res.json();
+
+      if (!window.Plaid) {
+        throw new Error('Plaid is not available. Please enter your bank details manually.');
+      }
+
+      const handler = window.Plaid.create({
+        token: linkToken,
+        onSuccess: async (publicToken, metadata) => {
+          try {
+            const exchangeRes = await fetch('/api/onboarding/plaid/exchange', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ applicationId, workspaceId, publicToken }),
+            });
+            if (exchangeRes.ok) {
+              const data = await exchangeRes.json();
+              onPlaidLinked(data.institutionName || metadata?.institution?.name || '', 'checking');
+              toast({ title: 'Bank connected', description: `${data.institutionName || 'Your bank'} linked for direct deposit.` });
+            }
+          } catch {
+            toast({ title: 'Bank link failed', description: 'Please enter your bank details manually.', variant: 'destructive' });
+          }
+        },
+        onExit: () => {},
+      });
+      handler.open();
+    } catch (err: any) {
+      toast({ title: 'Bank connection unavailable', description: err?.message || 'Please enter your bank details manually.', variant: 'destructive' });
+    } finally {
+      setIsLoadingPlaid(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="p-3 rounded-md text-sm text-muted-foreground" style={{ background: 'hsl(var(--muted))' }}>
+        Your banking information is used to set up direct deposit for your paychecks. This information is encrypted and stored securely.
+      </div>
+
+      {form.plaidLinked ? (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-green-500/30 bg-green-500/10">
+          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium">{form.bankName || 'Bank'} connected via Plaid</p>
+            <p className="text-xs text-muted-foreground">Direct deposit is set up securely. No account numbers stored.</p>
+          </div>
+          <Button variant="ghost" size="sm" className="ml-auto text-xs" onClick={() => setField('plaidLinked', false)}>
+            Change
+          </Button>
+        </div>
+      ) : (
+        <>
+          {applicationId && window.Plaid !== undefined && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={openPlaidLink}
+              disabled={isLoadingPlaid}
+              data-testid="button-connect-plaid"
+            >
+              {isLoadingPlaid ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Connecting...</>
+              ) : (
+                <><Building2 className="h-4 w-4 mr-2" />Connect Bank with Plaid (Recommended)</>
+              )}
+            </Button>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Bank or Financial Institution Name</Label>
+              <div className="relative">
+                <Building2 className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Chase, Wells Fargo, etc." className="pl-9" value={form.bankName} onChange={e => setField('bankName', e.target.value)} data-testid="input-bankName" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Routing Number (9 digits)</Label>
+              <Input placeholder="021000021" maxLength={9} value={form.routingNumber} onChange={e => setField('routingNumber', e.target.value.replace(/\D/, ''))} data-testid="input-routingNumber" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account Number</Label>
+              <Input placeholder="000123456789" value={form.accountNumber} onChange={e => setField('accountNumber', e.target.value)} data-testid="input-accountNumber" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account Type</Label>
+              <Select value={form.accountType} onValueChange={v => setField('accountType', v)}>
+                <SelectTrigger data-testid="select-accountType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="checking">Checking</SelectItem>
+                  <SelectItem value="savings">Savings</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            If you prefer to receive a paper check, you may leave this section blank and notify your HR representative.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+const MANAGEMENT_ROLES = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'supervisor'];
+
 export default function EmployeeOnboardingWizard() {
   const { token } = useParams<{ token: string }>();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const [step, setStep] = useState(0);
@@ -239,7 +392,7 @@ export default function EmployeeOnboardingWizard() {
     emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelation: '',
     taxClassification: 'w4_employee', filingStatus: 'single', multipleJobs: 'no',
     dependentsAmount: '', otherIncome: '', extraWithholding: '',
-    bankName: '', routingNumber: '', accountNumber: '', accountType: 'checking',
+    bankName: '', routingNumber: '', accountNumber: '', accountType: 'checking', plaidLinked: false,
     availableMonday: true, availableTuesday: true, availableWednesday: true,
     availableThursday: true, availableFriday: true, availableSaturday: false,
     availableSunday: false, preferredShiftTime: '', maxHoursPerWeek: '40',
@@ -273,6 +426,13 @@ export default function EmployeeOnboardingWizard() {
       fetch(`/api/onboarding/invite/${token}/opened`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => {});
     }
   }, [invite, token]);
+
+  // Management roles skip the employee onboarding wizard — they go straight to their dashboard.
+  useEffect(() => {
+    if (invite && MANAGEMENT_ROLES.includes(invite.workspaceRole || '')) {
+      setLocation('/dashboard');
+    }
+  }, [invite, setLocation]);
 
   const setField = (key: keyof FormState, val: string | boolean) =>
     setForm(prev => ({ ...prev, [key]: val }));
@@ -721,43 +881,17 @@ export default function EmployeeOnboardingWizard() {
             )}
 
             {step === 4 && (
-              <div className="space-y-4">
-                <div className="p-3 rounded-md text-sm text-muted-foreground" style={{ background: 'hsl(var(--muted))' }}>
-                  Your banking information is used to set up direct deposit for your paychecks. This information is encrypted and stored securely.
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Bank or Financial Institution Name</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Chase, Wells Fargo, etc." className="pl-9" value={form.bankName} onChange={e => setField('bankName', e.target.value)} data-testid="input-bankName" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Routing Number (9 digits)</Label>
-                    <Input placeholder="021000021" maxLength={9} value={form.routingNumber} onChange={e => setField('routingNumber', e.target.value.replace(/\D/,''))} data-testid="input-routingNumber" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Account Number</Label>
-                    <Input placeholder="000123456789" value={form.accountNumber} onChange={e => setField('accountNumber', e.target.value)} data-testid="input-accountNumber" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Account Type</Label>
-                    <Select value={form.accountType} onValueChange={v => setField('accountType', v)}>
-                      <SelectTrigger data-testid="select-accountType">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="checking">Checking</SelectItem>
-                        <SelectItem value="savings">Savings</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  If you prefer to receive a paper check, you may leave this section blank and notify your HR representative.
-                </p>
-              </div>
+              <PayrollStep
+                form={form}
+                setField={setField}
+                applicationId={applicationId}
+                workspaceId={workspaceId}
+                onPlaidLinked={(bankName, accountType) => {
+                  setField('bankName', bankName);
+                  setField('accountType', accountType);
+                  setField('plaidLinked', true);
+                }}
+              />
             )}
 
             {step === 5 && (

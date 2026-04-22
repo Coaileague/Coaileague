@@ -626,6 +626,7 @@ const ROLE_LANDING_PAGES: Record<string, string> = {
   co_owner: '/dashboard',
   org_owner: '/dashboard',
   org_admin: '/dashboard',
+  org_manager: '/dashboard',
   admin: '/dashboard',
   employee: '/schedule',
   staff: '/schedule',
@@ -1060,6 +1061,68 @@ router.post('/workspace-invite/accept-existing', async (req, res) => {
   } catch (error: unknown) {
     log.error('[PublicOnboarding] accept-existing error:', error);
     res.status(500).json({ message: sanitizeError(error) || 'Failed to accept invite.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUBLIC PLAID LINK-TOKEN — for the employee onboarding wizard (unauthenticated flow)
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.post('/plaid/link-token', publicFormLimiter, async (req, res) => {
+  try {
+    const { applicationId, workspaceId } = req.body;
+    if (!applicationId || !workspaceId) {
+      return res.status(400).json({ error: 'applicationId and workspaceId are required' });
+    }
+
+    const application = await storage.getOnboardingApplication(applicationId, workspaceId);
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    const { isPlaidConfigured, createLinkToken } = await import('../services/partners/plaidService');
+    if (!isPlaidConfigured()) {
+      return res.status(503).json({ error: 'Plaid is not configured on this server' });
+    }
+
+    const result = await createLinkToken({ userId: applicationId, workspaceId, purpose: 'employee_dd' });
+    res.json(result);
+  } catch (err: any) {
+    log.error('[PublicOnboarding] plaid link-token error:', err?.message);
+    res.status(500).json({ error: sanitizeError(err) || 'Failed to create Plaid link token' });
+  }
+});
+
+router.post('/plaid/exchange', publicFormLimiter, async (req, res) => {
+  try {
+    const { applicationId, workspaceId, publicToken } = req.body;
+    if (!applicationId || !workspaceId || !publicToken) {
+      return res.status(400).json({ error: 'applicationId, workspaceId, and publicToken are required' });
+    }
+
+    const application = await storage.getOnboardingApplication(applicationId, workspaceId);
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    const { isPlaidConfigured, exchangePublicToken, getAccountDetails } = await import('../services/partners/plaidService');
+    if (!isPlaidConfigured()) {
+      return res.status(503).json({ error: 'Plaid is not configured on this server' });
+    }
+
+    const { accessToken } = await exchangePublicToken(publicToken);
+    const details = await getAccountDetails(accessToken);
+
+    // Store the bank institution name and account type on the application record
+    await storage.updateOnboardingApplication(applicationId, workspaceId, {
+      bankName: details.institutionName || '',
+      accountType: details.accountType || 'checking',
+    } as any);
+
+    res.json({ success: true, institutionName: details.institutionName, mask: details.mask });
+  } catch (err: any) {
+    log.error('[PublicOnboarding] plaid exchange error:', err?.message);
+    res.status(500).json({ error: sanitizeError(err) || 'Failed to exchange Plaid token' });
   }
 });
 
