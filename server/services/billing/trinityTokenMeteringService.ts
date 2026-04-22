@@ -300,6 +300,89 @@ export class TrinityTokenMeteringService {
         AND operation_id IN (${placeholders})
     `, [invoiceId, workspaceId, ...operationIds]);
   }
+
+  /**
+   * Current token budget for a workspace — used by TrinityBudgetGuard
+   * to determine conservative mode and tier constraints.
+   */
+  async getBudget(workspaceId: string): Promise<{
+    totalTokensThisPeriod: number;
+    softCapPercent: number;
+    billingStatus: 'free' | 'billable' | 'grandfathered';
+  }> {
+    const billingStatus = getTrinityBillingStatus(workspaceId);
+    if (billingStatus !== 'billable') {
+      return { totalTokensThisPeriod: 0, softCapPercent: 0, billingStatus };
+    }
+
+    try {
+      const periodStart = new Date();
+      periodStart.setDate(1);
+      periodStart.setHours(0, 0, 0, 0);
+
+      const { rows } = await pool.query(`
+        SELECT COALESCE(SUM(total_tokens), 0) AS used
+        FROM trinity_token_ledger
+        WHERE workspace_id = $1
+          AND timestamp >= $2
+      `, [workspaceId, periodStart.toISOString()]);
+
+      const totalTokensThisPeriod = Number(rows[0]?.used ?? 0);
+
+      // Soft cap: $50 USD worth of tokens (varies by model mix — use avg $2/1M as proxy)
+      const SOFT_CAP_TOKENS = 25_000_000; // 25M tokens ≈ $50 avg
+      const softCapPercent = Math.min(100, (totalTokensThisPeriod / SOFT_CAP_TOKENS) * 100);
+
+      return { totalTokensThisPeriod, softCapPercent: Math.round(softCapPercent * 10) / 10, billingStatus };
+    } catch (err: unknown) {
+      log.warn('[TrinityTokenMetering] getBudget failed (non-fatal):', (err as any)?.message);
+      return { totalTokensThisPeriod: 0, softCapPercent: 0, billingStatus };
+    }
+  }
+
+  /**
+   * Per-model token breakdown for the current billing period — used by
+   * the tenant billing transparency dashboard.
+   */
+  async getModelTierBreakdown(workspaceId: string): Promise<{
+    byModelTier: Array<{ model: string; tokens: number; costUsd: number; callCount: number }>;
+    periodStart: string;
+    billingStatus: 'free' | 'billable' | 'grandfathered';
+  }> {
+    const billingStatus = getTrinityBillingStatus(workspaceId);
+
+    const periodStart = new Date();
+    periodStart.setDate(1);
+    periodStart.setHours(0, 0, 0, 0);
+    const periodStartStr = periodStart.toISOString().split('T')[0];
+
+    try {
+      const { rows } = await pool.query(`
+        SELECT model,
+               SUM(total_tokens) AS tokens,
+               SUM(cost_usd)     AS cost_usd,
+               COUNT(*)          AS call_count
+        FROM trinity_token_ledger
+        WHERE workspace_id = $1
+          AND timestamp >= $2
+        GROUP BY model
+        ORDER BY tokens DESC
+      `, [workspaceId, periodStart.toISOString()]);
+
+      const byModelTier = rows.map(r => ({
+        model: r.model,
+        tokens: Number(r.tokens),
+        costUsd: Number(r.cost_usd),
+        callCount: Number(r.call_count),
+      }));
+
+      return { byModelTier, periodStart: periodStartStr, billingStatus };
+    } catch (err: unknown) {
+      log.warn('[TrinityTokenMetering] getModelTierBreakdown failed:', (err as any)?.message);
+      return { byModelTier: [], periodStart: periodStartStr, billingStatus };
+    }
+  }
 }
 
 export const trinityTokenMeteringService = new TrinityTokenMeteringService();
+

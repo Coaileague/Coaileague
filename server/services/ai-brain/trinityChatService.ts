@@ -39,6 +39,7 @@ import {
 } from '@shared/schema';
 import { geminiClient, GEMINI_MODELS, ANTI_YAP_PRESETS } from './providers/geminiClient';
 import { withAIRetry } from './aiRetryWrapper';
+import { orchestrateTriad } from './trinityTriadOrchestrator';
 import { trinityMemoryService } from './trinityMemoryService';
 import { trinitySelfAwarenessService } from './trinitySelfAwarenessService';
 import { trinityThoughtEngine } from './trinityThoughtEngine';
@@ -1540,7 +1541,7 @@ Do NOT skip steps — decompose fully before concluding.`;
 
     const requestStartTime = Date.now();
 
-    const aiResponse = await this.generateResponse(systemPrompt, history, message, mode, workspaceId, images, userId);
+    const aiResponse = await this.generateResponse(systemPrompt, history, message, mode, workspaceId, images, userId, session.id);
 
     const timeMs = Date.now() - requestStartTime;
 
@@ -1577,7 +1578,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         log.warn(`[PersonaAnchor] Drift detected (${driftCheck.driftType}) — re-generating response with correction.`);
         try {
           const correctedPrompt = `${systemPrompt}\n\nPERSONA DRIFT CORRECTION: ${driftCheck.correctionInstruction} Your previous draft had "${driftCheck.driftType}" drift — rewrite without it.`;
-          const corrected = await this.generateResponse(correctedPrompt, history, message, mode, workspaceId, images, userId);
+          const corrected = await this.generateResponse(correctedPrompt, history, message, mode, workspaceId, images, userId, session.id);
           if (corrected?.text && corrected.text.length > 0) {
             finalResponseText = corrected.text;
           }
@@ -2879,18 +2880,17 @@ Do NOT skip steps — decompose fully before concluding.`;
     mode: ConversationMode,
     workspaceId?: string,
     images?: string[],
-    userId?: string
+    userId?: string,
+    sessionId?: string,
   ): Promise<{ text: string; tokensUsed: number; model: string; toolCalls?: any[] }> {
     try {
-      // v2.0: Use vision model when images are attached
+      // Vision path: Gemini is the only provider supporting multimodal today
       if (images && images.length > 0) {
-        // Build a text prompt that includes history context
         const historyContext = history.slice(-6).map(h => `${h.role === 'user' ? 'User' : 'Trinity'}: ${h.content}`).join('\n');
         const visionMessage = historyContext
           ? `Previous conversation:\n${historyContext}\n\nUser now says: ${message}`
           : message;
 
-        // Use the first image for vision analysis (Gemini vision API takes one image at a time)
         const response = await geminiClient.generateVision({
           featureKey: 'trinity_chat',
           systemPrompt,
@@ -2909,39 +2909,35 @@ Do NOT skip steps — decompose fully before concluding.`;
         };
       }
 
-      // Standard text generation with platform tool calling enabled
-      // Trinity can now call real Acme data (schedules, timesheets, incidents, compliance) to ground her responses
-      const response = await withAIRetry(
-        () => geminiClient.generate({
-          featureKey: 'trinity_chat',
-          systemPrompt,
-          userMessage: message,
-          workspaceId,
-          userId,
-          conversationHistory: history.map(h => ({
-            role: h.role === 'user' ? 'user' as const : 'model' as const,
-            content: h.content,
-          })),
-          temperature: 0.9,
-          maxTokens: 4096,
-          modelTier: 'CONVERSATIONAL',
-          enableToolCalling: true,
-        }),
-        { label: 'trinity_chat', maxAttempts: 3, baseDelayMs: 800 }
-      );
+      // Standard text: route through the Trinity Triad Orchestrator.
+      // GPT (workhorse) → Gemini (reasoner) → Claude (judge)
+      // Complexity, budget, and agent health determine which agents run and at what tier.
+      const triadResult = await orchestrateTriad({
+        message,
+        systemPrompt,
+        workspaceId: workspaceId || 'platform',
+        userId,
+        sessionId: sessionId || `chat-${userId || 'anon'}`,
+        conversationHistory: history.map(h => ({
+          role: h.role === 'user' ? 'user' as const : 'assistant' as const,
+          content: h.content,
+        })),
+        conversationTurnCount: history.length,
+        featureKey: 'trinity_chat',
+        maxTokens: 4096,
+      });
 
       return {
-        text: response.text || "I'm sorry, I couldn't generate a response. Could you try rephrasing that?",
-        tokensUsed: response.tokensUsed || 0,
-        model: 'gemini-2.5-flash-lite',
-        toolCalls: response.functionCalls,
+        text: triadResult.response || "I'm sorry, I couldn't generate a response. Could you try rephrasing that?",
+        tokensUsed: triadResult.totalTokensUsed,
+        model: triadResult.model,
       };
     } catch (error) {
       log.error('[TrinityChatService] Generation error:', error);
       return {
         text: "I'm having trouble processing that right now. Let me try again - could you rephrase your question?",
         tokensUsed: 0,
-        model: 'gemini-2.5-flash-lite',
+        model: 'triad-error',
       };
     }
   }

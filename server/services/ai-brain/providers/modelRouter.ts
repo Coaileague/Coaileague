@@ -576,3 +576,43 @@ export function getModelRouterStatus() {
 export function getChainForRole(role: ModelRole) {
   return modelRouter.getChainForRole(role);
 }
+
+// ─── Explicit Tier Matrix ─────────────────────────────────────────────────────
+// Canonical mapping of complexity tier → preferred model per agent.
+// This is the single source of truth referenced by the triad orchestrator
+// and the complexity-aware routing layer.
+//
+//   Agent      | low          | medium       | high
+//   -----------|--------------|--------------|-------------
+//   GPT        | gpt4o_mini   | gpt4o        | gpt4o
+//   Gemini     | gemini_flash  | gemini_pro   | gemini_pro
+//   Claude     | claude_haiku | claude_haiku | claude_sonnet
+//
+// Budget conservative mode (>90% soft cap) caps effective tier at 'medium'.
+// Premium tiers cost more — billed to tenant monthly invoice, never interrupted.
+
+export const TRINITY_TIER_MATRIX = {
+  gpt: {
+    low:    'gpt4o_mini'    as ModelName,
+    medium: 'gpt4o'         as ModelName,
+    high:   'gpt4o'         as ModelName,
+  },
+  gemini: {
+    low:    'gemini_flash'  as ModelName,
+    medium: 'gemini_pro'    as ModelName,
+    high:   'gemini_pro'    as ModelName,
+  },
+  claude: {
+    low:    'claude_haiku'  as ModelName,
+    medium: 'claude_haiku'  as ModelName,
+    high:   'claude_sonnet' as ModelName,
+  },
+} as const satisfies Record<string, Record<'low' | 'medium' | 'high', ModelName>>;
+
+export type TriadAgent = keyof typeof TRINITY_TIER_MATRIX;
+export type TierLevel = 'low' | 'medium' | 'high';
+
+export function getTriadTierMatrix() {
+  return TRINITY_TIER_MATRIX;
+}
+
