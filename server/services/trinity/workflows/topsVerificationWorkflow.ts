@@ -20,6 +20,7 @@ import { employees } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { platformEventBus } from '../../platformEventBus';
 import { createLogger } from '../../../lib/logger';
+import { scheduleNonBlocking } from '../../../lib/scheduleNonBlocking';
 
 const log = createLogger('TOPSVerificationWorkflow');
 
@@ -258,6 +259,16 @@ Return ONLY the JSON object, no other text.`;
         })
         .catch(() => {});
     }
+
+    // Bill the workspace for the TOPS verification (rejected screenshots are
+    // free; the fee fn handles that and founder exemptions internally).
+    scheduleNonBlocking('tops-verify.fee', async () => {
+      const { chargeTopsVerificationFee } = await import('../../billing/middlewareTransactionFees');
+      const feeResult = await chargeTopsVerificationFee({ workspaceId, employeeId, result: status });
+      if (!feeResult.success) {
+        log.warn(`[TOPSVerification] Fee charge failed for workspace ${workspaceId}: ${feeResult.error}`);
+      }
+    });
 
     return result;
   } catch (err: any) {
