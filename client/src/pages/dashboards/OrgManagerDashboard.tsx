@@ -4,6 +4,7 @@ import { Clock, Calendar, Users, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { TrinityApprovalQueue } from "@/components/trinity/TrinityApprovalQueue";
 
 const pageConfig: CanvasPageConfig = {
   id: "org-manager-dashboard",
@@ -61,6 +62,11 @@ export default function OrgManagerDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">{orgName} — Management Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Approvals, scheduling, and employee management</p>
+        </div>
+
+        {/* Trinity Approvals — 1% human intervention queue */}
+        <div className="bg-card border border-border rounded-lg p-4">
+          <TrinityApprovalQueue />
         </div>
 
         {/* Metrics row */}

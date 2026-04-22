@@ -2028,6 +2028,51 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
     setShowAttach(false);
   }, [roomId, sendMessage, userName, toast]);
 
+  // ── Voice Recording ────────────────────────────────────────────────────────
+  // Hold-to-record microphone button. Uses MediaRecorder → uploads via
+  // handleFileUpload → ChatServerHub transcribes via OpenAI Whisper and
+  // feeds the transcript to HelpAI/Trinity for command handling.
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+
+  const startVoiceRecording = useCallback(async () => {
+    if (isRecording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mr.onstop = async () => {
+        try {
+          const blob = new Blob(audioChunksRef.current, { type: mr.mimeType || 'audio/webm' });
+          stream.getTracks().forEach((t) => t.stop());
+          if (blob.size === 0) return;
+          const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          await handleFileUpload(dt.files);
+        } catch (err) {
+          toast({ title: "Voice upload failed", variant: "destructive" });
+        }
+      };
+      mediaRecorderRef.current = mr;
+      mr.start();
+      setIsRecording(true);
+    } catch {
+      toast({ title: "Microphone access denied", variant: "destructive" });
+    }
+  }, [isRecording, handleFileUpload, toast]);
+
+  const stopVoiceRecording = useCallback(() => {
+    try {
+      mediaRecorderRef.current?.state === 'recording' && mediaRecorderRef.current?.stop();
+    } catch { /* no-op */ }
+    setIsRecording(false);
+  }, []);
+
   useEffect(() => {
     if (swipeReplyId) {
       const msg = wsMessages.find(m => m.id === swipeReplyId);
@@ -2512,6 +2557,15 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
             className="text-sm flex-1 h-9 rounded-full bg-muted/50 border border-border/40 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/30"
             data-testid={`input-chat-msg-${roomId}`}
           />
+          {!input.trim() && !editingMessage && (
+            <VoiceRecordButton
+              roomId={roomId}
+              isConnected={isConnected}
+              isRecording={isRecording}
+              onStart={startVoiceRecording}
+              onStop={stopVoiceRecording}
+            />
+          )}
           <div className="flex-shrink-0">
             <Button
               size="icon"
@@ -2537,6 +2591,45 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
         <ImageLightbox data={lightboxData} onClose={() => setLightboxData(null)} />,
         document.body
       )}
+    </div>
+  );
+}
+
+function VoiceRecordButton({
+  roomId,
+  isConnected,
+  isRecording,
+  onStart,
+  onStop,
+}: {
+  roomId: string;
+  isConnected: boolean;
+  isRecording: boolean;
+  onStart: () => void;
+  onStop: () => void;
+}) {
+  return (
+    <div className="flex-shrink-0">
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); onStart(); }}
+        onMouseUp={onStop}
+        onMouseLeave={() => { if (isRecording) onStop(); }}
+        onTouchStart={(e) => { e.preventDefault(); onStart(); }}
+        onTouchEnd={onStop}
+        disabled={!isConnected}
+        className={cn(
+          "h-9 w-9 rounded-full flex items-center justify-center transition-colors",
+          isRecording
+            ? "bg-red-500 text-white animate-pulse"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+        )}
+        data-testid={`button-voice-record-${roomId}`}
+        aria-label={isRecording ? "Release to send voice message" : "Hold to record voice"}
+        title={isRecording ? "Release to send" : "Hold to record"}
+      >
+        <Mic className="h-4 w-4" />
+      </button>
     </div>
   );
 }

@@ -158,6 +158,7 @@ async function cleanupAndVerifyPort(port: number): Promise<boolean> {
 // Do NOT re-import them here — OMEGA LAW 24: No dead imports.
 import { ensureWorkspaceAccess } from './middleware/workspaceScope';
 import { requireAuth } from './rbac';
+import { scheduleNonBlocking } from './lib/scheduleNonBlocking';
 import { GamificationEventTracker } from "./services/gamification/eventTracker";
 import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
 import { WhatsNewGamificationBridge } from "./services/gamification/whatsNewIntegration";
@@ -1710,6 +1711,201 @@ process.on('unhandledRejection', (reason: any, promise) => {
         res.json({ success: true, approvals: rows, count: rows.length });
       } catch (err: any) {
         log.error('[Route] Internal error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Trinity — idempotent approve endpoint with execution-after-approve.
+    // Atomic UPDATE gates by status + execution_locked + expires_at so a
+    // second tap cannot duplicate execution. Distinct 4xx per failure mode
+    // so the UI can explain exactly what happened. On successful approval
+    // we schedule a non-blocking executor that runs the action via
+    // helpaiOrchestrator and records completion / broadcast.
+    app.post('/api/trinity/pending-approvals/:id/approve', requireAuth, ensureWorkspaceAccess, async (req: any, res: any) => {
+      const wid = req.workspaceId || req.body?.workspaceId || req.query.workspaceId;
+      const { id } = req.params;
+      const userId = req.user?.id || req.user?.userId || 'unknown';
+      const userRole = req.user?.role || req.workspaceRole || 'manager';
+      if (!wid) return res.status(400).json({ error: 'workspaceId required' });
+      if (!id) return res.status(400).json({ error: 'approval id required' });
+
+      // Manager-or-higher gate (layered on top of existing workspace scope)
+      if (!['org_owner','co_owner','org_admin','org_manager','manager'].includes(userRole)) {
+        return res.status(403).json({ error: 'Manager access required to approve Trinity actions' });
+      }
+
+      try {
+        // Primary path — atomic idempotent UPDATE using the v2 columns.
+        // Falls back gracefully when execution_locked / executed_by / executed_at
+        // columns don't yet exist (schema migration not applied).
+        let rows: any[] = [];
+        try {
+          const res1 = await pool.query(
+            `UPDATE governance_approvals
+                SET status = 'approved',
+                    approvals = COALESCE(approvals, '[]'::jsonb) || $1::jsonb,
+                    executed_by = $2,
+                    executed_at = NOW(),
+                    execution_locked = TRUE,
+                    updated_at = NOW()
+              WHERE id = $3
+                AND workspace_id = $4
+                AND status = 'pending'
+                AND execution_locked = FALSE
+                AND (expires_at IS NULL OR expires_at > NOW())
+              RETURNING *`,
+            [
+              JSON.stringify([{ approvedBy: userId, role: userRole, at: new Date().toISOString() }]),
+              userId, id, wid,
+            ],
+          );
+          rows = res1.rows;
+        } catch (schemaErr: any) {
+          // Columns not present — fall back to v1 shape (id + workspace + pending)
+          const res2 = await pool.query(
+            `UPDATE governance_approvals
+                SET status = 'approved',
+                    approvals = COALESCE(approvals, '[]'::jsonb) || $1::jsonb,
+                    updated_at = NOW()
+              WHERE id = $2 AND workspace_id = $3 AND status = 'pending'
+              RETURNING *`,
+            [JSON.stringify([{ approvedBy: userId, role: userRole, at: new Date().toISOString() }]), id, wid],
+          );
+          rows = res2.rows;
+        }
+
+        if (!rows.length) {
+          // Diagnose why no row was affected so UI can show precise message
+          const { rows: existing } = await pool.query(
+            `SELECT id, status, expires_at FROM governance_approvals
+              WHERE id = $1 AND workspace_id = $2`,
+            [id, wid],
+          );
+          if (!existing.length) return res.status(404).json({ error: 'Approval not found' });
+          const record = existing[0];
+          if (['approved', 'completed', 'executing'].includes(record.status)) {
+            return res.status(409).json({
+              error: 'already_processed',
+              message: 'This action was already approved and has executed or is executing. No duplicate action will be taken.',
+              status: record.status,
+            });
+          }
+          if (record.status === 'rejected' || record.status === 'denied') {
+            return res.status(409).json({ error: 'already_rejected', message: 'This action was already rejected.', status: record.status });
+          }
+          if (record.expires_at && new Date(record.expires_at) < new Date()) {
+            return res.status(410).json({ error: 'expired', message: 'This approval request has expired.' });
+          }
+          return res.status(409).json({ error: 'cannot_approve', status: record.status });
+        }
+
+        const approval = rows[0];
+
+        // Execute the approved action in background — non-blocking.
+        scheduleNonBlocking('trinity.approval.execute', async () => {
+          try {
+            const { helpaiOrchestrator } = await import('./services/helpai/platformActionHub');
+            const payload = typeof approval.parameters === 'string'
+              ? JSON.parse(approval.parameters) : (approval.parameters || {});
+
+            await pool.query(
+              `UPDATE governance_approvals SET status = 'executing', updated_at = NOW() WHERE id = $1`,
+              [id],
+            ).catch(() => {});
+
+            const result = await helpaiOrchestrator.executeAction({
+              actionId: approval.action_type,
+              category: (payload as any).category || 'system',
+              name: approval.action_type,
+              payload,
+              workspaceId: wid,
+              userId,
+              userRole,
+              metadata: { source: 'approval_queue', approvalId: id },
+            });
+
+            await pool.query(
+              `UPDATE governance_approvals
+                  SET status = $1, updated_at = NOW()
+                WHERE id = $2`,
+              [result.success ? 'completed' : 'failed', id],
+            ).catch(() => {});
+
+            try {
+              broadcastToWorkspace(wid, {
+                type: 'trinity_action_executed',
+                approvalId: id,
+                actionId: approval.action_type,
+                success: result.success,
+                message: result.message,
+              });
+            } catch { /* non-fatal */ }
+          } catch (execErr: any) {
+            await pool.query(
+              `UPDATE governance_approvals SET status = 'failed', updated_at = NOW() WHERE id = $1`, [id],
+            ).catch(() => {});
+            log.error('[ApprovalExecute] Failed:', execErr?.message);
+          }
+        });
+
+        res.json({ success: true, message: 'Action approved and queued for execution', approvalId: id, approval });
+      } catch (err: any) {
+        log.error('[Route] pending-approvals/approve internal error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Trinity — reject endpoint, mirrors approve safety.
+    app.post('/api/trinity/pending-approvals/:id/reject', requireAuth, ensureWorkspaceAccess, async (req: any, res: any) => {
+      const wid = req.workspaceId || req.body?.workspaceId || req.query.workspaceId;
+      const { id } = req.params;
+      const userId = req.user?.id || req.user?.userId || 'unknown';
+      const userRole = req.user?.role || req.workspaceRole || 'manager';
+      const reason = (req.body?.reason || '').toString().slice(0, 500);
+      if (!wid) return res.status(400).json({ error: 'workspaceId required' });
+      if (!id) return res.status(400).json({ error: 'approval id required' });
+
+      if (!['org_owner','co_owner','org_admin','org_manager','manager'].includes(userRole)) {
+        return res.status(403).json({ error: 'Manager access required to reject Trinity actions' });
+      }
+
+      try {
+        let rows: any[] = [];
+        try {
+          const res1 = await pool.query(
+            `UPDATE governance_approvals
+                SET status = 'rejected',
+                    approvals = COALESCE(approvals, '[]'::jsonb) || $1::jsonb,
+                    executed_by = $2,
+                    executed_at = NOW(),
+                    updated_at = NOW(),
+                    reason = COALESCE(reason, '') || $3
+              WHERE id = $4 AND workspace_id = $5 AND status = 'pending'
+              RETURNING id, status`,
+            [
+              JSON.stringify([{ rejectedBy: userId, role: userRole, reason, at: new Date().toISOString() }]),
+              userId,
+              reason ? ` | Rejected: ${reason}` : '',
+              id, wid,
+            ],
+          );
+          rows = res1.rows;
+        } catch {
+          const res2 = await pool.query(
+            `UPDATE governance_approvals
+                SET status = 'rejected',
+                    approvals = COALESCE(approvals, '[]'::jsonb) || $1::jsonb,
+                    updated_at = NOW()
+              WHERE id = $2 AND workspace_id = $3 AND status = 'pending'
+              RETURNING id, status`,
+            [JSON.stringify([{ rejectedBy: userId, reason: reason || 'No reason given', at: new Date().toISOString() }]), id, wid],
+          );
+          rows = res2.rows;
+        }
+        if (!rows.length) return res.status(409).json({ error: 'cannot_reject', message: 'Approval not pending or not found' });
+        res.json({ success: true, approval: rows[0] });
+      } catch (err: any) {
+        log.error('[Route] pending-approvals/reject internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
       }
     });

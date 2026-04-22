@@ -387,6 +387,126 @@ async function tryResolvePayrollDispute(
   return { resolved: false, message: 'Your payroll concern has been logged with high priority. A supervisor will review and respond within 24 hours.' };
 }
 
+// ─── Auditor HelpAI (Phase 6) ──────────────────────────────────────────────
+// Compliance-scoped HelpAI for DPS/regulatory auditors. Read-only — never
+// exposes financial, payroll, or commercial data. Authorized under TX OC §1702.
+async function handleAuditorHelpAI(
+  query: string,
+  workspaceId: string,
+  _auditorId: string,
+): Promise<{ reply: string; resolved: boolean }> {
+  if (!workspaceId) {
+    return { reply: 'Auditor session missing workspace context. Please start from an approved audit link.', resolved: true };
+  }
+
+  const OFFICER_LIST_PATTERN = /\b(list|show|all|give me|roster|directory).{0,25}(officers?|employees?|staff|guards?)\b/i;
+  const LICENSE_PATTERN = /\b(licens|certif|guard\s*card|registered|commissioned)\b/i;
+  const INCIDENT_PATTERN = /\b(incident|report|use\s*of\s*force|UOF|use-of-force)\b/i;
+  const PAYROLL_PATTERN = /\b(pay(roll|check|rate|stub)?|wage|salary|compensation|earnings)\b/i;
+  const FINANCIAL_PATTERN = /\b(invoice|billing|revenue|profit|bank|account\s*balance)\b/i;
+  const EXPIRING_PATTERN = /\b(expir|expiring|upcoming\s*renewal|renewal)\b/i;
+
+  if (PAYROLL_PATTERN.test(query) || FINANCIAL_PATTERN.test(query)) {
+    return {
+      reply:
+        "I'm not able to share payroll, billing, or financial information with auditors. " +
+        'Per Texas OC Chapter 1702, auditor access is limited to licensing, certification, ' +
+        'and compliance records. If you need wage records for a specific officer under a ' +
+        'court order, please work with the organization directly.',
+      resolved: true,
+    };
+  }
+
+  if (EXPIRING_PATTERN.test(query) && LICENSE_PATTERN.test(query)) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT (e.first_name || ' ' || e.last_name) AS name,
+                e.employee_number, e.guard_card_number, e.guard_card_expiry_date,
+                e.guard_card_status, e.is_armed
+           FROM employees e
+          WHERE e.workspace_id = $1
+            AND e.is_active = TRUE
+            AND e.guard_card_expiry_date IS NOT NULL
+            AND e.guard_card_expiry_date <= NOW() + INTERVAL '60 days'
+          ORDER BY e.guard_card_expiry_date ASC
+          LIMIT 50`,
+        [workspaceId],
+      );
+      if (!rows.length) {
+        return { reply: 'No officers have licenses expiring within 60 days.', resolved: true };
+      }
+      const summary = rows.map((r: any) => {
+        const expiry = r.guard_card_expiry_date ? new Date(r.guard_card_expiry_date).toLocaleDateString() : 'N/A';
+        return `• ${r.name} (${r.employee_number || 'N/A'}) — ${r.is_armed ? 'Armed' : 'Unarmed'} — Expires: ${expiry}`;
+      }).join('\n');
+      return { reply: `Officers with licenses expiring in 60 days (${rows.length}):\n\n${summary}`, resolved: true };
+    } catch (err: any) {
+      return { reply: 'Unable to retrieve expiry data right now. Please try again.', resolved: false };
+    }
+  }
+
+  if (OFFICER_LIST_PATTERN.test(query) || LICENSE_PATTERN.test(query)) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT (e.first_name || ' ' || e.last_name) AS name,
+                e.employee_number,
+                e.guard_card_status,
+                e.guard_card_number,
+                e.guard_card_expiry_date,
+                e.is_armed,
+                e.is_active
+           FROM employees e
+          WHERE e.workspace_id = $1
+            AND e.is_active = TRUE
+          ORDER BY e.last_name, e.first_name
+          LIMIT 500`,
+        [workspaceId],
+      );
+      if (!rows.length) return { reply: 'No active officers found in this workspace.', resolved: true };
+      const summary = rows.map((r: any) => {
+        const status = (r.guard_card_status || 'unknown').replace(/_/g, ' ');
+        const expiry = r.guard_card_expiry_date ? new Date(r.guard_card_expiry_date).toLocaleDateString() : 'N/A';
+        return `• ${r.name} (${r.employee_number || 'N/A'}) — ${r.is_armed ? 'Armed' : 'Unarmed'} — ${status} — Expires: ${expiry}`;
+      }).join('\n');
+      return {
+        reply: `Active officers in this organization (${rows.length} total):\n\n${summary}`,
+        resolved: true,
+      };
+    } catch (err: any) {
+      return { reply: 'Unable to retrieve officer records right now. Please try again.', resolved: false };
+    }
+  }
+
+  if (INCIDENT_PATTERN.test(query)) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT ir.incident_number, ir.incident_date, ir.incident_type,
+                ir.location, ir.severity,
+                (e.first_name || ' ' || e.last_name) AS officer_name
+           FROM incident_reports ir
+           LEFT JOIN employees e ON e.id = ir.reporting_officer_id
+          WHERE ir.workspace_id = $1
+          ORDER BY ir.incident_date DESC LIMIT 25`,
+        [workspaceId],
+      );
+      if (!rows.length) return { reply: 'No incident reports on file.', resolved: true };
+      const summary = rows.map((r: any) =>
+        `• ${r.incident_number || 'N/A'} — ${new Date(r.incident_date).toLocaleDateString()} — ${r.incident_type || 'general'} — ${r.severity || 'low'} — Officer: ${r.officer_name || 'Unknown'}`,
+      ).join('\n');
+      return { reply: `Recent incident reports (last 25):\n\n${summary}`, resolved: true };
+    } catch (err: any) {
+      return { reply: 'Unable to retrieve incident reports right now. Please try again.', resolved: false };
+    }
+  }
+
+  return {
+    reply:
+      "I can help with officer licensing records, certifications, expiring guard cards, and incident reports. " +
+      "What specific information do you need for your audit?",
+    resolved: false,
+  };
+}
+
 // ─── Main Triage Handler ───────────────────────────────────────────────────
 
 router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -407,6 +527,23 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
 
     const category = classifyMessage(message);
     const actionsLog: any[] = [];
+
+    // ── Phase 6: Auditor HelpAI branch ─────────────────────────────────────
+    // When the caller is a DPS/regulatory auditor, route through a compliance-
+    // scoped handler that only exposes licensing / certification / incident
+    // records. Financial and payroll data are always blocked here — even
+    // before it reaches platformActionHub's auditor guard.
+    const isAuditorSession = (req as any).workspaceRole === 'auditor';
+    if (isAuditorSession) {
+      const auditResponse = await handleAuditorHelpAI(message, workspaceId || '', userId || '');
+      return res.json({
+        category: 'auditor_query',
+        trinityAttempted: true,
+        resolved: auditResponse.resolved,
+        message: auditResponse.reply,
+        language: 'en',
+      });
+    }
 
     // ── TIER 3: Immediate human escalation — no Trinity attempt ──
     if (category === 'hr_escalation') {

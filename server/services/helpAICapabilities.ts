@@ -159,6 +159,63 @@ export const HELPAI_CAPABILITIES = {
     },
   },
 
+  // OFFICER SELF-SERVICE ACTIONS (Phase 4 — Lisa Killer)
+  // Officers text or chat HelpAI to call off, pick up shifts, confirm attendance,
+  // request time off, view paycheck, message supervisor, report incidents.
+  officerActions: {
+    callOffShift: {
+      name: 'calloff_shift',
+      description: 'Officer calls off from their upcoming shift',
+      riskLevel: 'medium',
+      requiresApproval: false,
+      smsConfirmation: true,
+    },
+    pickUpShift: {
+      name: 'pickup_open_shift',
+      description: 'Officer claims an available open shift',
+      riskLevel: 'low',
+      requiresApproval: false,
+      eligibilityCheck: true,
+    },
+    confirmAttendance: {
+      name: 'confirm_shift_attendance',
+      description: 'Officer confirms they will attend their upcoming shift',
+      riskLevel: 'low',
+      requiresApproval: false,
+    },
+    requestTimeOff: {
+      name: 'request_time_off',
+      description: 'Officer requests time off for a specific period',
+      riskLevel: 'low',
+      requiresApproval: true,
+    },
+    updateAvailability: {
+      name: 'update_availability',
+      description: 'Officer updates their general availability preferences',
+      riskLevel: 'low',
+      requiresApproval: false,
+    },
+    viewMyPaycheck: {
+      name: 'view_my_paycheck',
+      description: 'Officer views their own most recent pay stub',
+      riskLevel: 'low',
+      requiresApproval: false,
+      selfOnly: true,
+    },
+    messageSupervisor: {
+      name: 'message_supervisor',
+      description: 'Officer sends a message to their on-duty supervisor or manager',
+      riskLevel: 'low',
+      requiresApproval: false,
+    },
+    reportIncident: {
+      name: 'report_incident',
+      description: 'Officer reports an incident from the field via voice or text',
+      riskLevel: 'medium',
+      requiresApproval: false,
+    },
+  },
+
   // ESCALATION TRIGGERS (When to hand off to human)
   escalationTriggers: {
     complexIssue: 'Issue requires human judgment or multiple system access',

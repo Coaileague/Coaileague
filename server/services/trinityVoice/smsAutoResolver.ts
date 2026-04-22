@@ -708,6 +708,113 @@ async function resolveInboundSmsInner(params: {
   const identity = verification.identity!;
   const category = classifyMessage(trimmed);
 
+  // ── Phase 5: Officer action command routing ──────────────────────────────
+  // Before FAQ/AI, check whether the inbound message matches a known officer
+  // action pattern. If it does, execute directly via HelpAI — the LISA-killer
+  // path. This lets officers text "can't make it tonight" and have it become
+  // a real calloff without human touch.
+  const CALLOFF_PATTERN = /\b(can'?t\s*(make|come|work)|calling?\s*off|not\s*(going|coming|able)|sick|emergency|won'?t\s*make)\b/i;
+  const PICKUP_PATTERN = /\b(pick\s*up|want\s*(a\s*)?(shift|work)|available|claim|take.*shift)\b/i;
+  const CONFIRM_PATTERN = /\b(confirm|i'?ll\s*be\s*there|see\s*you|on\s*my\s*way|confirmed)\b/i;
+  const PAYCHECK_PATTERN = /\b(pay(check|stub|slip)?|how\s*much\s*(did\s*i|was\s*i)|last\s*pay(ment)?)\b/i;
+  const TIMEOFF_PATTERN = /\b(time\s*off|vacation|pto|days?\s*off|day\s*off|need.*off)\b/i;
+  const INCIDENT_PATTERN = /\b(incident|accident|report.*(issue|problem)|injury|use\s*of\s*force|emergency)\b/i;
+
+  try {
+    const { helpAIBotService } = await import('../helpai/helpAIBotService');
+
+    if (CALLOFF_PATTERN.test(trimmed)) {
+      const result = await helpAIBotService.executeCapability('calloff_shift', {
+        employeeId: identity.employeeId,
+        workspaceId: identity.workspaceId,
+        rawCommand: trimmed,
+      });
+      return {
+        resolved: true,
+        reply: result.message.slice(0, 320),
+        method: 'auto_action',
+        workspaceId: identity.workspaceId,
+        employeeId: identity.employeeId,
+      };
+    }
+
+    if (PICKUP_PATTERN.test(trimmed)) {
+      const result = await helpAIBotService.executeCapability('pickup_open_shift', {
+        employeeId: identity.employeeId,
+        workspaceId: identity.workspaceId,
+        rawCommand: trimmed,
+      });
+      return {
+        resolved: true,
+        reply: result.message.slice(0, 320),
+        method: 'auto_action',
+        workspaceId: identity.workspaceId,
+        employeeId: identity.employeeId,
+      };
+    }
+
+    if (CONFIRM_PATTERN.test(trimmed)) {
+      const result = await helpAIBotService.executeCapability('confirm_shift_attendance', {
+        employeeId: identity.employeeId,
+        workspaceId: identity.workspaceId,
+        rawCommand: trimmed,
+      });
+      return {
+        resolved: true,
+        reply: result.message.slice(0, 320),
+        method: 'auto_action',
+        workspaceId: identity.workspaceId,
+        employeeId: identity.employeeId,
+      };
+    }
+
+    if (PAYCHECK_PATTERN.test(trimmed)) {
+      const result = await helpAIBotService.executeCapability('view_my_paycheck', {
+        employeeId: identity.employeeId,
+        workspaceId: identity.workspaceId,
+      });
+      return {
+        resolved: true,
+        reply: result.message.slice(0, 320),
+        method: 'auto_action',
+        workspaceId: identity.workspaceId,
+        employeeId: identity.employeeId,
+      };
+    }
+
+    if (TIMEOFF_PATTERN.test(trimmed)) {
+      const result = await helpAIBotService.executeCapability('request_time_off', {
+        employeeId: identity.employeeId,
+        workspaceId: identity.workspaceId,
+        rawCommand: trimmed,
+      });
+      return {
+        resolved: true,
+        reply: result.message.slice(0, 320),
+        method: 'auto_action',
+        workspaceId: identity.workspaceId,
+        employeeId: identity.employeeId,
+      };
+    }
+
+    if (INCIDENT_PATTERN.test(trimmed)) {
+      const result = await helpAIBotService.executeCapability('report_incident', {
+        employeeId: identity.employeeId,
+        workspaceId: identity.workspaceId,
+        rawCommand: trimmed,
+      });
+      return {
+        resolved: true,
+        reply: result.message.slice(0, 320),
+        method: 'auto_action',
+        workspaceId: identity.workspaceId,
+        employeeId: identity.employeeId,
+      };
+    }
+  } catch (cmdErr: any) {
+    log.warn('[SmsAutoResolver] Officer command routing non-fatal error:', cmdErr?.message);
+  }
+
   // FAQ lookup first
   const faqAnswer = await tryFaqLookup(trimmed, identity.workspaceId);
   if (faqAnswer) {

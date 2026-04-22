@@ -200,6 +200,66 @@ export async function runDataCorrections(): Promise<void> {
     console.log('🔧 Data Correction: workspace_verification_settings skipped:', (err as any)?.message);
   }
 
+  // governance_approvals — idempotency + execution lock columns.
+  // Prevents duplicate pending actions and double-execution of the same
+  // approval. Columns ADD IF NOT EXISTS so this is safe on every startup
+  // regardless of whether a parallel migration has already applied it.
+  try {
+    await typedExec(sql`
+      ALTER TABLE governance_approvals
+        ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128),
+        ADD COLUMN IF NOT EXISTS executed_by VARCHAR,
+        ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS execution_locked BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+    await typedExec(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_governance_approvals_idempotency
+        ON governance_approvals (idempotency_key)
+        WHERE idempotency_key IS NOT NULL
+    `);
+    console.log('🔧 Data Correction: governance_approvals idempotency columns ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: governance_approvals constraints skipped:', (err as any)?.message);
+  }
+
+  // ── sms_outbox — mass-SMS queue for rate-limited Twilio delivery ────────────
+  // Used by smsQueueService for broadcast sends that exceed direct-send batches.
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS sms_outbox (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id    VARCHAR NOT NULL,
+        to_number       VARCHAR NOT NULL,
+        body            TEXT NOT NULL,
+        sms_type        VARCHAR NOT NULL DEFAULT 'notification',
+        user_id         VARCHAR,
+        employee_id     VARCHAR,
+        priority        INTEGER NOT NULL DEFAULT 5,
+        status          VARCHAR NOT NULL DEFAULT 'queued',
+        twilio_sid      VARCHAR,
+        send_after      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        sent_at         TIMESTAMPTZ,
+        failed_at       TIMESTAMPTZ,
+        failure_reason  TEXT,
+        retry_count     INTEGER NOT NULL DEFAULT 0,
+        max_retries     INTEGER NOT NULL DEFAULT 3,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_sms_outbox_status_priority
+        ON sms_outbox (status, priority, send_after)
+        WHERE status = 'queued'
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_sms_outbox_workspace
+        ON sms_outbox (workspace_id, created_at DESC)
+    `);
+    console.log('🔧 Data Correction: sms_outbox ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: sms_outbox skipped:', (err as any)?.message);
+  }
+
   // Trinity Scoring Engine — applicant dimension columns
   try {
     await typedExec(sql`

@@ -20,6 +20,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
 import { ComplianceScoreWidget } from "@/components/dashboard/ComplianceScoreWidget";
+import { TrinityApprovalQueue } from "@/components/trinity/TrinityApprovalQueue";
 
 const PIN_SETUP_DISMISSED_KEY = "pin-setup-dismissed";
 
@@ -283,6 +284,11 @@ export default function OrgOwnerDashboard() {
             </div>
             <p className="text-2xl font-bold text-foreground">{invoiceList.length || "—"}</p>
           </div>
+        </div>
+
+        {/* Trinity Approvals — 1% human intervention queue */}
+        <div className="bg-card border border-border rounded-lg p-4">
+          <TrinityApprovalQueue />
         </div>
 
         {/* Readiness Section 27 #9 — compliance score widget */}
