@@ -157,7 +157,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
 
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey.publicKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey.publicKey) as BufferSource,
       });
 
       subscribeMutation.mutate(subscription.toJSON());
@@ -223,7 +223,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
         if (!subscription) {
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey),
+            applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
           });
         }
 

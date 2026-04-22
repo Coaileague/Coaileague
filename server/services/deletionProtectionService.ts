@@ -177,9 +177,7 @@ class DeletionProtectionService {
     // Check for cascade dependencies
     if (config.cascadeWarning) {
       const cascadeDeps = await this.checkCascadeDependencies(request.entityType, request.entityId);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      if (cascadeDeps.length > 0) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+      if (cascadeDeps && cascadeDeps.length > 0) {
         blockingEntities.push(...cascadeDeps);
       }
     }
