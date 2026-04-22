@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
-import { ChevronDown, ChevronUp, Loader2, X, CheckCircle, AlertTriangle, ClipboardCheck, Brain, Lightbulb, Zap, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, X, CheckCircle, AlertTriangle, ClipboardCheck, Activity, Lightbulb, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TrinitySchedulingSession, TrinityThought } from '@/hooks/use-trinity-scheduling-progress';
 
@@ -93,11 +93,11 @@ function DeliberationIcon({ deliberationType, className }: { deliberationType?: 
     case 'decision':
       return <Lightbulb className={cn("h-3 w-3 text-amber-500 dark:text-amber-400", className)} />;
     case 'action':
-      return <Zap className={cn("h-3 w-3 text-blue-600 dark:text-blue-400", className)} />;
+      return <Activity className={cn("h-3 w-3 text-blue-600 dark:text-blue-400", className)} />;
     case 'review':
-      return <Brain className={cn("h-3 w-3 text-violet-500 dark:text-purple-400", className)} />;
+      return <Activity className={cn("h-3 w-3 text-violet-500 dark:text-purple-400", className)} />;
     default:
-      return <Brain className={cn("h-3 w-3 text-muted-foreground", className)} />;
+      return <Activity className={cn("h-3 w-3 text-muted-foreground", className)} />;
   }
 }
 

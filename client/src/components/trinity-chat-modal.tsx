@@ -37,7 +37,6 @@ import {
   X,
   Send,
   Loader2,
-  Sparkles,
   GripHorizontal,
   Minimize2,
   Trash2,
@@ -53,8 +52,7 @@ import {
   HelpCircle,
   Briefcase,
   Heart,
-  Zap,
-  Brain,
+  Activity,
   Eye,
   Undo2,
   Play,
@@ -65,6 +63,9 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
+// Adapter: makes TrinityLogo compatible with Lucide icon props
+const TrinityIcon = ({ className }: { className?: string }) => <TrinityLogo size={14} />;
+
 import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
 import { Suspense } from 'react';
 import { TrinityAgentPanel } from '@/components/trinity';
@@ -372,7 +373,7 @@ function getQuickActions(location: string): QuickAction[] {
       { id: 'create-invoice', label: 'Create Invoice', icon: 'FileText', action: 'billing.create' },
       { id: 'send-reminders', label: 'Send Reminders', icon: 'Bell', action: 'billing.remind' },
       { id: 'view-aging', label: 'View Aging Report', icon: 'Clock', action: 'billing.aging' },
-      { id: 'sync-quickbooks', label: 'Sync QuickBooks', icon: 'Zap', action: 'billing.qbSync' },
+      { id: 'sync-quickbooks', label: 'Sync QuickBooks', icon: 'Activity', action: 'billing.qbSync' },
     ];
   }
   
@@ -498,7 +499,7 @@ function UsageBlock({ usage }: { usage: UsageData }) {
         data-testid="button-toggle-usage-details"
       >
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/50 text-[10px] text-muted-foreground hover-elevate transition-colors">
-          <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+          <Activity className="h-3 w-3 text-amber-500 shrink-0" />
           <span className="font-medium shrink-0">Usage</span>
           <span className="text-muted-foreground/70 shrink-0">|</span>
           <span className="shrink-0">{formatTime(usage.timeMs)}</span>
@@ -584,7 +585,7 @@ function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: C
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Trinity</span>
             <span className="inline-flex items-center gap-1 text-xs text-primary animate-pulse">
-              <Brain className="h-3 w-3" />
+              <Activity className="h-3 w-3" />
               <span className="thinking-dots">Thinking</span>
             </span>
           </div>
@@ -743,11 +744,11 @@ function ModeSelector({ mode, onModeChange }: { mode: ConversationMode; onModeCh
 }
 
 const quickActionIconMap: Record<string, any> = {
-  Calendar, FileText, Users, DollarSign, Clock, AlertCircle, HelpCircle, Sparkles, Zap
+  Calendar, FileText, Users, DollarSign, Clock, AlertCircle, HelpCircle, Activity
 };
 
 function QuickActionChip({ action, onExecute }: { action: QuickAction; onExecute: (action: QuickAction) => void }) {
-  const Icon = quickActionIconMap[action.icon] || Sparkles;
+  const Icon = quickActionIconMap[action.icon] || TrinityIcon;
   
   return (
     <motion.button
@@ -767,7 +768,7 @@ function QuickActionGrid({ actions, onExecute }: { actions: QuickAction[]; onExe
   return (
     <div className="grid grid-cols-2 gap-1.5 max-h-[200px] overflow-y-auto" data-testid="quick-action-grid">
       {actions.map(action => {
-        const Icon = quickActionIconMap[action.icon] || Sparkles;
+        const Icon = quickActionIconMap[action.icon] || TrinityIcon;
         return (
           <button
             key={action.id}
@@ -815,7 +816,7 @@ function CommandSuggestions({
       data-testid="command-suggestions"
     >
       {filtered.map(action => {
-        const Icon = quickActionIconMap[action.icon] || Sparkles;
+        const Icon = quickActionIconMap[action.icon] || TrinityIcon;
         return (
           <button
             key={action.id}

@@ -45,7 +45,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Brain,
   DollarSign,
   Activity,
   AlertTriangle,
@@ -55,7 +54,6 @@ import {
   RefreshCw,
   Layers,
   Shield,
-  Zap,
   Info,
 } from 'lucide-react';
 import { TrinityArrowMark } from '@/components/trinity-logo';
@@ -403,7 +401,7 @@ export default function TrinityTransparencyDashboard() {
               <Activity className="w-3.5 h-3.5 mr-1.5" /> Actions
             </TabsTrigger>
             <TabsTrigger value="decisions" className="data-[state=active]:bg-[#1a2540]">
-              <Brain className="w-3.5 h-3.5 mr-1.5" /> Decisions
+              <Activity className="w-3.5 h-3.5 mr-1.5" /> Decisions
             </TabsTrigger>
             <TabsTrigger value="costs" className="data-[state=active]:bg-[#1a2540]">
               <DollarSign className="w-3.5 h-3.5 mr-1.5" /> Costs
@@ -441,7 +439,7 @@ export default function TrinityTransparencyDashboard() {
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <Zap className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
+                                <Activity className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
                                 <span className="text-sm font-medium truncate">
                                   {action.action_name || action.action_type}
                                 </span>
@@ -760,7 +758,7 @@ export default function TrinityTransparencyDashboard() {
                                   {isBlock ? (
                                     <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                                   ) : (
-                                    <Zap className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
+                                    <Activity className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
                                   )}
                                   <span className="text-sm font-medium truncate">
                                     {row.action.replace('trinity.', '').replace(/_/g, ' ')}

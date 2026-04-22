@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useQuery } from '@tanstack/react-query';
-import { Brain, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Activity, AlertTriangle, TrendingUp } from 'lucide-react';
 
 interface TrinityTokenStatus {
   workspaceId: string;
@@ -49,7 +49,7 @@ export function TrinityCreditsCard() {
       <Card data-testid="card-trinity-credits">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-primary" />
+            <Activity className="h-5 w-5 text-primary" />
             AI Token Usage
           </CardTitle>
         </CardHeader>
@@ -80,7 +80,7 @@ export function TrinityCreditsCard() {
       <CardHeader>
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-primary" />
+            <Activity className="h-5 w-5 text-primary" />
             <CardTitle>AI Token Usage</CardTitle>
           </div>
           {isOverage && (
@@ -182,7 +182,7 @@ export function TrinityCreditsHeaderBadge({ onClick }: { onClick?: () => void })
         disabled
         data-testid="button-trinity-credits-header"
       >
-        <Brain className="h-4 w-4" />
+        <Activity className="h-4 w-4" />
         <span>...</span>
       </button>
     );
@@ -198,7 +198,7 @@ export function TrinityCreditsHeaderBadge({ onClick }: { onClick?: () => void })
       className={`inline-flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded hover:bg-accent ${isOverage ? 'text-orange-600' : isWarning ? 'text-yellow-600' : ''}`}
       data-testid="button-trinity-credits-header"
     >
-      <Brain className={`h-4 w-4 ${isOverage ? 'text-orange-500' : isWarning ? 'text-yellow-500' : 'text-primary'}`} />
+      <Activity className={`h-4 w-4 ${isOverage ? 'text-orange-500' : isWarning ? 'text-yellow-500' : 'text-primary'}`} />
       <span data-testid="text-trinity-header-balance">{formatTokens(tokensUsed)}</span>
       {isOverage && (
         <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-orange-500 text-orange-600">
@@ -237,7 +237,7 @@ export function FeatureLockedOverlay({
       </div>
       <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-lg">
         <div className="text-center p-4 space-y-2">
-          <Brain className="h-8 w-8 mx-auto text-muted-foreground" />
+          <Activity className="h-8 w-8 mx-auto text-muted-foreground" />
           <p className="text-sm font-medium text-muted-foreground">
             {gateResult?.reason || 'Feature requires a higher plan'}
           </p>

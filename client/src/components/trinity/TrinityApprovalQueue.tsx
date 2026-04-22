@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Clock, Zap } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Activity } from "lucide-react";
 
 interface PendingApproval {
   id: string;
@@ -94,7 +94,7 @@ export function TrinityApprovalQueue() {
   if (!approvals.length) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground text-sm py-3">
-        <Zap className="w-4 h-4 text-purple-400" />
+        <Activity className="w-4 h-4 text-purple-400" />
         Trinity is running fully autonomously — no approvals needed.
       </div>
     );

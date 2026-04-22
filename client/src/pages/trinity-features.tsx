@@ -6,19 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Brain, Shield, Users, MessageSquare, ArrowRight, Calendar, DollarSign,
-  FileText, BarChart3, MapPin, Briefcase, Building2, Zap, Eye, BookOpen,
+  Shield, Users, ArrowRight, Calendar, DollarSign,
+  FileText, BarChart3, MapPin, Briefcase, Building2, Eye, BookOpen,
   Lightbulb, Heart, Network, ListChecks, Layers, Mic, Clock, Calculator,
-  CheckCircle2, Star, AlarmClock, Wallet, Leaf, Sparkles, Bot, Lock,
+  CheckCircle2, AlarmClock, Wallet, Leaf, MessageCircle, Lock,
   Activity, Cpu, GitBranch,
 } from 'lucide-react';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { PRICING_TIERS } from '@/config/pricing';
 
 // ─── Who Is Trinity? — Full Spotlight ────────────────────────────────────────
 
 const BRAIN_SYSTEMS = [
   {
-    icon: Brain,
+    icon: Activity,
     name: "Memory System",
     plain: "Trinity remembers every officer — their history, certifications, performance patterns, and past issues. She uses that memory to make smarter decisions today.",
   },
@@ -28,7 +29,7 @@ const BRAIN_SYSTEMS = [
     plain: "She scans your entire operation constantly, the way a great manager would scan a room. She notices things before they become problems: a coverage gap, an overtime risk, a license expiring.",
   },
   {
-    icon: Zap,
+    icon: Activity,
     name: "Pattern Recognition",
     plain: "Trinity sees patterns humans miss. She knows which officer is likely to call off before they do. She knows which site consistently goes short on Fridays. She acts before you have to.",
   },
@@ -81,7 +82,7 @@ const TRINITY_CAPABILITIES = [
     color: "bg-primary/10 text-primary",
   },
   {
-    icon: Bot,
+    icon: MessageCircle,
     name: "Trinity — Officer Field Assistant",
     description: "The face your officers see. Lives in every shift room. Answers questions, takes calloffs, files incident reports, and looks up schedules — by text or voice, instantly.",
     color: "bg-teal-500/10 text-teal-400",
@@ -117,7 +118,7 @@ const TRINITY_CAPABILITIES = [
     color: "bg-red-500/10 text-red-400",
   },
   {
-    icon: MessageSquare,
+    icon: TrinityLogo,
     name: "Client Relations — Proactive",
     description: "Manages client service requests and contract health. Alerts you when a relationship is at risk and recommends exactly what to do to keep the account.",
     color: "bg-orange-500/10 text-orange-400",
@@ -131,7 +132,7 @@ function WhoIsTrinitySection() {
 
         <div className="text-center mb-16">
           <Badge className="mb-4 bg-violet-500/10 text-violet-400 border-violet-500/20">
-            <Sparkles className="w-3 h-3 mr-1.5" />
+            <TrinityLogo size={12} className="mr-1.5" />
             Trinity — The Heart of CoAIleague
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-5 leading-tight">
@@ -480,12 +481,12 @@ const AI_CARDS = [
     body: "Calloffs before they happen. Overtime before payroll closes. Client churn before the complaint. Coverage gaps before the shift starts.",
   },
   {
-    icon: Zap,
+    icon: Activity,
     title: "Acts Without Being Asked",
     body: "Trinity self-assigns tasks she knows need to be done. She resolves routine tasks automatically — and escalates anything that needs human judgment. She runs while you sleep.",
   },
   {
-    icon: Brain,
+    icon: Activity,
     title: "Gets Smarter Every Night",
     body: "13-phase overnight processing cycle. Hebbian learning from every decision outcome. Counterfactual simulation from every mistake. She improves continuously.",
   },

@@ -15,8 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Brain,
-  Zap,
+  Activity,
   TrendingUp,
   CheckCircle2,
   Loader2,
@@ -153,7 +152,7 @@ export function TrinityTrainingPanel({ workspaceId }: TrinityTrainingPanelProps)
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-purple-500" />
+            <Activity className="w-5 h-5 text-purple-500" />
             <CardTitle className="text-lg">Trinity Training</CardTitle>
           </div>
           <Badge variant="outline" className="text-xs gap-1 border-cyan-500/40 text-cyan-600 dark:text-cyan-400">
@@ -229,7 +228,7 @@ export function TrinityTrainingPanel({ workspaceId }: TrinityTrainingPanelProps)
           {(trainMutation.isPending || isScheduling) ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
-            <Zap className="w-4 h-4 mr-2" />
+            <Activity className="w-4 h-4 mr-2" />
           )}
           <span className="truncate">
             {isScheduling

@@ -50,8 +50,6 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Brain,
-  Zap,
   Clock,
   RefreshCw,
   Search,
@@ -275,7 +273,7 @@ function ReasoningDrawer({
       <DialogContent className="bg-[#0d1426] border-white/20 text-white max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-[#4FC3F7]" />
+            <Activity className="w-5 h-5 text-[#4FC3F7]" />
             Trinity Reasoning
           </DialogTitle>
           <DialogDescription className="text-white/40 text-xs font-mono">
@@ -614,7 +612,7 @@ export default function TrinityAgentDashboard() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
-                                <Zap className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
+                                <Activity className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
                                 <span className="text-sm font-medium truncate">
                                   {item.action_name || item.action_type}
                                 </span>
@@ -808,7 +806,7 @@ export default function TrinityAgentDashboard() {
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <Zap className="w-3 h-3 text-[#4FC3F7] shrink-0" />
+                              <Activity className="w-3 h-3 text-[#4FC3F7] shrink-0" />
                               <span className="text-sm truncate">
                                 {item.action_name || item.action_type}
                               </span>

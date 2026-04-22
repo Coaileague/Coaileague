@@ -24,12 +24,10 @@ import {
   X,
   Minimize2,
   Maximize2,
-  Sparkles,
+  Activity,
   Loader2,
   ChevronDown,
   User,
-  Bot,
-  Zap,
   FileEdit,
   Play,
   RefreshCw,
@@ -315,7 +313,7 @@ export function TrinityDialogue({
         <div className="flex items-center gap-2">
           <div className="relative">
             <TrinityMascotIcon size="sm" />
-            <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
+            <TrinityLogo size={12} className="text-yellow-500 absolute -top-1 -right-1" />
           </div>
           <div>
             <CardTitle className="text-sm font-semibold">Trinity AI</CardTitle>
@@ -331,7 +329,7 @@ export function TrinityDialogue({
             onClick={() => setMode(mode === 'guru' ? 'pro' : 'guru')}
             data-testid="badge-trinity-mode"
           >
-            {mode === 'guru' && <Zap className="h-3 w-3 mr-1" />}
+            {mode === 'guru' && <Activity className="h-3 w-3 mr-1" />}
             {mode}
           </Badge>
           <Button
@@ -411,7 +409,7 @@ export function TrinityDialogue({
         {messages.length === 0 && actionLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-4">
             {/* @ts-ignore */}
-            <Brain className="h-12 w-12 text-muted-foreground/50 mb-3" />
+            <Activity className="h-12 w-12 text-muted-foreground/50 mb-3" />
             <p className="text-sm text-muted-foreground mb-2">
               Hi! I'm Trinity, your platform copilot.
             </p>
@@ -430,7 +428,7 @@ export function TrinityDialogue({
                 {msg.role === 'assistant' && (
                   <Avatar className="h-7 w-7 shrink-0">
                     <AvatarFallback className="bg-primary/10 text-primary">
-                      <Bot className="h-4 w-4" />
+                      <MessageCircle className="h-4 w-4" />
                     </AvatarFallback>
                   </Avatar>
                 )}

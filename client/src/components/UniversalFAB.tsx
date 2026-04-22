@@ -3,10 +3,11 @@
  * ============
  * Single unified floating action button for work actions on all screen sizes.
  *
- * One floating button, bottom-right. Tap to expand speed-dial:
+ * One teal Trinity button, bottom-right. Tap to expand speed-dial:
  *   • Clock In/Out  — shift-aware clock action
  *   • View Schedule — navigates to /schedule
  *   • Request Time Off — navigates to /hr/pto
+ *   • PANIC / SOS   — emergency alert (on-shift only)
  */
 
 import { secureFetch } from "@/lib/csrf";
@@ -20,6 +21,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { markCoreActionPerformed } from "@/lib/pushNotifications";
 import { useFABPosition } from "@/hooks/useFABPosition";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
@@ -166,9 +168,9 @@ export function UniversalFAB() {
       if (code === "NO_SHIFT_TODAY") {
         toast({
           title: "Not Scheduled Today",
-          description: "You're not scheduled to work today. Contact your manager if you believe this is incorrect.",
+          description: "You're not scheduled to work today. Contact your supervisor for assistance.",
           variant: "destructive",
-        } as any);
+        });
         return;
       }
       if (code === "TOO_EARLY_TO_CLOCK_IN") {
@@ -354,6 +356,7 @@ export function UniversalFAB() {
               data-testid="fab-backdrop"
             />
             <div className="absolute bottom-[64px] right-0 flex flex-col items-end gap-2 z-40 fab-menu-enter">
+
               {/* Clock In/Out */}
               <QuickActionItem
                 icon={Clock}
@@ -425,6 +428,7 @@ export function UniversalFAB() {
               <Clock style={{ width: isMobile ? 28 : 26, height: isMobile ? 28 : 26 }} className="text-white" strokeWidth={2.2} />
             )}
           </button>
+
         </div>
       </div>
     </>

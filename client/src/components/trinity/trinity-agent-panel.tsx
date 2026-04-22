@@ -18,11 +18,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   PanelRightClose, 
   PanelRightOpen, 
-  Bot, 
+  MessageCircle,
   Activity,
   Wallet,
   History,
-  Zap
 } from 'lucide-react';
 
 import { BusinessImpactPanel } from './business-impact-panel';
@@ -96,7 +95,7 @@ export function TrinityAgentPanel({
         <div className={`flex-1 flex flex-col overflow-hidden ${showSidebar ? 'border-r' : ''}`}>
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/30">
             <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-primary" />
+              <MessageCircle className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Agent Execution</span>
               {isExecuting && (
                 <Badge variant="default" className="bg-primary animate-pulse text-xs">
@@ -222,7 +221,7 @@ export function TrinityAgentWrapper({
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between gap-2 px-4 py-2 border-b bg-primary/5">
         <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-primary" />
+          <Activity className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">Agent Mode Active</span>
         </div>
         {onToggleAgentMode && (

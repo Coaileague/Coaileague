@@ -35,7 +35,7 @@ import {
   History,
   MessageSquare,
   Loader2,
-  Brain,
+  Activity,
   Shield,
   Crown,
 } from 'lucide-react';
@@ -602,7 +602,7 @@ export default function TrinityChat() {
                   <div className="bg-muted rounded-lg px-3 py-2">
                     {thoughtPhase ? (
                       <div className="flex items-center gap-2">
-                        <Brain className="w-3.5 h-3.5 text-primary animate-pulse" />
+                        <Activity className="w-3.5 h-3.5 text-primary animate-pulse" />
                         <p className="text-sm text-muted-foreground">
                           <span className="font-medium text-foreground">{THOUGHT_PHASE_LABELS[thoughtPhase] || thoughtPhase}</span>
                           <span className="animate-pulse">...</span>

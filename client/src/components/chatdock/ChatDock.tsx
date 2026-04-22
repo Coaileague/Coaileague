@@ -10,7 +10,7 @@ import {
   Image, Video, Mic, UserPlus, LogOut, EyeOff, VolumeX, Volume2,
   Trash2, Ban, Shield, Crown, Info, Settings, Check, CheckCheck, FileText,
   Reply, Pencil, Forward, Pin, SmilePlus, ExternalLink, XCircle,
-  ArrowDown, ThumbsUp, Heart, Laugh, Frown, Star, Flame, Headphones, Calendar,
+  ArrowDown, ThumbsUp, Heart, Laugh, Frown, Flame, Headphones, Calendar,
   Phone, Mail, AlertCircle, MapPin, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -726,7 +726,7 @@ const QUICK_REACTIONS = [
   { key: "thumbsup", icon: ThumbsUp, label: "Like" },
   { key: "heart", icon: Heart, label: "Love" },
   { key: "laugh", icon: Laugh, label: "Haha" },
-  { key: "star", icon: Star, label: "Star" },
+  { key: "star", icon: Shield, label: "Star" },
   { key: "flame", icon: Flame, label: "Fire" },
   { key: "frown", icon: Frown, label: "Sad" },
 ];

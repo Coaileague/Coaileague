@@ -13,10 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Brain, 
-  Zap, 
-  Eye, 
+import {
+  Eye,
   AlertTriangle, 
   CheckCircle, 
   Clock, 
@@ -215,7 +213,7 @@ export function TrinityControlConsole({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-                <Brain className="w-4 h-4 text-white" />
+                <Activity className="w-4 h-4 text-white" />
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold">Trinity Control Console</CardTitle>
@@ -269,7 +267,7 @@ export function TrinityControlConsole({
                 {stats.thoughts}
               </Badge>
               <Badge variant="outline" className="text-xs gap-1">
-                <Zap className="w-3 h-3" />
+                <Activity className="w-3 h-3" />
                 {stats.actions}
               </Badge>
               <Badge variant="outline" className="text-xs gap-1">
@@ -379,10 +377,10 @@ function ConsoleEntryRow({ entry }: { entry: ConsoleEntry }) {
 
     const actionIcon = {
       tool_call: <Terminal className="w-3 h-3" />,
-      api_request: <Zap className="w-3 h-3" />,
+      api_request: <Activity className="w-3 h-3" />,
       database_query: <Database className="w-3 h-3" />,
       file_operation: <Code className="w-3 h-3" />,
-      ai_generation: <Brain className="w-3 h-3" />,
+      ai_generation: <Activity className="w-3 h-3" />,
       notification: <Activity className="w-3 h-3" />,
       workflow_step: <RefreshCw className="w-3 h-3" />,
     }[action.actionType];
@@ -477,7 +475,7 @@ export function TrinityConsoleToggle({ onClick }: { onClick: () => void }) {
       className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg hover:shadow-xl"
       data-testid="button-open-trinity-console"
     >
-      <Brain className="w-5 h-5 text-white" />
+      <Activity className="w-5 h-5 text-white" />
     </Button>
   );
 }

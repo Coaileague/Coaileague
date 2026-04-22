@@ -47,7 +47,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { 
-  Brain, 
   Send, 
   Mic,
   MicOff,
@@ -56,7 +55,6 @@ import {
   XCircle,
   AlertTriangle,
   AlertCircle,
-  Zap,
   Shield,
   Settings,
   Play,
@@ -75,8 +73,6 @@ import {
   ChevronDown,
   BarChart3,
   TrendingUp,
-  Bot,
-  Sparkles,
   RefreshCw,
   Command,
   Loader2,
@@ -84,7 +80,7 @@ import {
   X,
   Maximize2,
   Minimize2,
-  MessageSquare,
+  MessageCircle,
   Ticket,
   HelpCircle,
   Database,
@@ -273,7 +269,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 const ICON_MAP: Record<string, any> = {
   FileSearch, Calendar, Users, Clock, TestTube, Activity, Ticket, Wrench,
-  RefreshCw, Bug, Database, RotateCcw, Brain, Zap, Shield, Settings,
+  RefreshCw, Bug, Database, RotateCcw, Shield, Settings,
   BarChart3, TrendingUp, Gauge, Target, DollarSign, CreditCard, BellRing,
   AlertTriangle, ShieldCheck, UserX, BarChart2, Building2,
 };
@@ -283,7 +279,7 @@ const ICON_MAP: Record<string, any> = {
 // ============================================================================
 
 function getActionIcon(iconName: string) {
-  return ICON_MAP[iconName] || Zap;
+  return ICON_MAP[iconName] || Activity;
 }
 
 function getRiskBadgeClass(risk: string) {
@@ -553,7 +549,7 @@ export default function TrinityCommandCenter() {
               <SheetContent side="left" className="bg-slate-900 border-slate-700 w-80">
                 <SheetHeader>
                   <SheetTitle className="text-white flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-cyan-400" />
+                    <Activity className="w-5 h-5 text-cyan-400" />
                     Trinity Command
                   </SheetTitle>
                 </SheetHeader>
@@ -572,7 +568,7 @@ export default function TrinityCommandCenter() {
             
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <Brain className="w-6 h-6 text-white" />
+                <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-white">Trinity Command Center</h1>
@@ -605,7 +601,7 @@ export default function TrinityCommandCenter() {
             {/* Credit balance */}
             {creditsData && (
               <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/30 hidden lg:flex">
-                <Zap className="w-3 h-3 mr-1" />
+                <Activity className="w-3 h-3 mr-1" />
                 {creditsData.balance?.toLocaleString() || 0}
               </Badge>
             )}
@@ -621,7 +617,7 @@ export default function TrinityCommandCenter() {
             {/* Output Header with Frontier Mode Toggle */}
             <div className="bg-slate-900/50 border-b border-slate-700/50 px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-cyan-400" />
+                <TrinityLogo size={16} className="text-cyan-400" />
                 <span className="text-sm font-medium text-white">Trinity AI Output</span>
                 <span className="text-xs text-slate-400">/ {trinityMode === 'strategic_guru' ? 'Strategic Guru' : 'Diagnostic'}</span>
               </div>
@@ -645,7 +641,7 @@ export default function TrinityCommandCenter() {
                     onClick={() => setTrinityMode('strategic_guru')}
                     data-testid="button-mode-guru"
                   >
-                    <Sparkles className="w-3 h-3 mr-1" />
+                    <TrinityLogo size={12} className="mr-1" />
                     Guru Mode
                   </Button>
                 </div>
@@ -750,7 +746,7 @@ export default function TrinityCommandCenter() {
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-slate-300">
-                  <Brain className="w-5 h-5 text-cyan-400" />
+                  <Activity className="w-5 h-5 text-cyan-400" />
                   <span className="font-medium">Trinity Quick Actions</span>
                 </div>
                 <p className="text-xs text-slate-400">
@@ -1041,7 +1037,7 @@ function MessageBubble({ message }: { message: TrinityMessage }) {
         ) : isSystem ? (
           <AlertCircle className="w-4 h-4 text-amber-400" />
         ) : (
-          <Brain className="w-4 h-4 text-white" />
+          <Activity className="w-4 h-4 text-white" />
         )}
       </div>
       
@@ -1049,7 +1045,7 @@ function MessageBubble({ message }: { message: TrinityMessage }) {
         {/* Collaborator Joined Badge - when external agent is hired */}
         {message.collaboratorJoined && (
           <div className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs">
-            <Bot className="w-3 h-3" />
+            <MessageCircle className="w-3 h-3" />
             <span>Collaborator Joined: {message.collaboratorJoined}</span>
           </div>
         )}
@@ -1098,7 +1094,7 @@ function MessageBubble({ message }: { message: TrinityMessage }) {
           {message.evolutionLog && (
             <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
               <div className="flex items-center gap-2 text-amber-300 text-xs font-medium mb-2">
-                <Sparkles className="w-3 h-3" />
+                <TrinityLogo size={12} />
                 Self-Evolution Log
               </div>
               <div className="space-y-2 text-xs">

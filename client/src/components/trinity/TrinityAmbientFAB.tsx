@@ -18,7 +18,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Sparkles, X, ArrowRight, CalendarDays, CheckSquare, Users } from "lucide-react";
+import { X, ArrowRight, CalendarDays, CheckSquare, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
@@ -33,7 +33,7 @@ const HIDDEN_ROUTES = ["/", "/dashboard", "/landing"];
 // ── Context chip definitions per route ───────────────────────────────────────
 interface Chip {
   label: string;
-  icon: typeof Sparkles;
+  icon: React.ComponentType<any>;
   prompt: string;
 }
 
@@ -45,7 +45,7 @@ function getContextPanel(path: string): { greeting: string; insight: string; chi
       chips: [
         { label: "Am I on track?", icon: CheckSquare, prompt: "Am I on track with my hours this pay period?" },
         { label: "Explain overtime", icon: CalendarDays, prompt: "Explain how overtime is calculated on this platform." },
-        { label: "GPS not working?", icon: Sparkles, prompt: "My GPS isn't capturing. What should I do?" },
+        { label: "GPS not working?", icon: TrinityLogo, prompt: "My GPS isn't capturing. What should I do?" },
       ],
     };
   }
@@ -56,7 +56,7 @@ function getContextPanel(path: string): { greeting: string; insight: string; chi
       chips: [
         { label: "Any conflicts?", icon: CalendarDays, prompt: "Check the schedule for conflicts or coverage gaps this week." },
         { label: "Who is uncovered?", icon: Users, prompt: "Which shifts are uncovered or understaffed right now?" },
-        { label: "Explain schedule", icon: Sparkles, prompt: "Explain the current schedule setup and any issues you notice." },
+        { label: "Explain schedule", icon: TrinityLogo, prompt: "Explain the current schedule setup and any issues you notice." },
       ],
     };
   }
@@ -78,7 +78,7 @@ function getContextPanel(path: string): { greeting: string; insight: string; chi
       chips: [
         { label: "Any overtime?", icon: CalendarDays, prompt: "Which employees have overtime this pay period?" },
         { label: "Pending approvals", icon: CheckSquare, prompt: "What timesheets are pending my approval?" },
-        { label: "Explain my hours", icon: Sparkles, prompt: "Break down my timesheet for the current pay period." },
+        { label: "Explain my hours", icon: TrinityLogo, prompt: "Break down my timesheet for the current pay period." },
       ],
     };
   }
@@ -87,7 +87,7 @@ function getContextPanel(path: string): { greeting: string; insight: string; chi
       greeting: "Payroll",
       insight: "I can walk through calculations, flag anomalies, or tell you when the next run pays out.",
       chips: [
-        { label: "How calculated?", icon: Sparkles, prompt: "Walk me through how payroll is being calculated for this period." },
+        { label: "How calculated?", icon: TrinityLogo, prompt: "Walk me through how payroll is being calculated for this period." },
         { label: "When do I get paid?", icon: CalendarDays, prompt: "When is the next payroll run and who gets paid?" },
         { label: "Any anomalies?", icon: CheckSquare, prompt: "Did you notice any anomalies or errors in the current payroll?" },
       ],
@@ -100,7 +100,7 @@ function getContextPanel(path: string): { greeting: string; insight: string; chi
       chips: [
         { label: "Expiring soon?", icon: CalendarDays, prompt: "What licenses or certifications are expiring in the next 30 days?" },
         { label: "Needs action?", icon: CheckSquare, prompt: "What compliance items need immediate action from me or my team?" },
-        { label: "Explain requirement", icon: Sparkles, prompt: "Explain what this compliance requirement means and how to complete it." },
+        { label: "Explain requirement", icon: TrinityLogo, prompt: "Explain what this compliance requirement means and how to complete it." },
       ],
     };
   }
@@ -109,7 +109,7 @@ function getContextPanel(path: string): { greeting: string; insight: string; chi
       greeting: "Billing",
       insight: "I can explain charges, check invoice status, or flag anything that looks off.",
       chips: [
-        { label: "Explain this charge", icon: Sparkles, prompt: "Explain the current billing charges and what they cover." },
+        { label: "Explain this charge", icon: TrinityLogo, prompt: "Explain the current billing charges and what they cover." },
         { label: "Next invoice?", icon: CalendarDays, prompt: "When is the next invoice due and for what amount?" },
       ],
     };
@@ -128,7 +128,7 @@ function getContextPanel(path: string): { greeting: string; insight: string; chi
     greeting: "Trinity",
     insight: "I can help with scheduling, payroll, compliance, and anything else on this page.",
     chips: [
-      { label: "What can you do?", icon: Sparkles, prompt: "What can you help me with on this page and throughout the platform?" },
+      { label: "What can you do?", icon: TrinityLogo, prompt: "What can you help me with on this page and throughout the platform?" },
       { label: "What's urgent?", icon: CheckSquare, prompt: "What urgent items need my attention right now?" },
     ],
   };
@@ -257,7 +257,7 @@ export function TrinityAmbientFAB() {
               className="trinity-panel-avatar"
               style={{ background: "linear-gradient(135deg, #0D9488 0%, #0891B2 100%)" }}
             >
-              <Sparkles className="w-4 h-4 text-white" />
+              <TrinityLogo size={16} className="text-white" />
             </div>
             <div className="trinity-panel-identity">
               <span className="trinity-panel-name">Trinity</span>
@@ -290,7 +290,7 @@ export function TrinityAmbientFAB() {
                 className="trinity-panel-chip"
                 data-testid={`trinity-chip-${i}`}
               >
-                <chip.icon className="w-3 h-3 flex-shrink-0" />
+                {chip.icon === TrinityLogo ? <TrinityLogo size={12} /> : <chip.icon className="w-3 h-3 flex-shrink-0" />}
                 {chip.label}
               </button>
             ))}

@@ -33,7 +33,6 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
   Bell,
-  Sparkles,
   Shield,
   ClipboardCheck,
   CheckCircle2,
@@ -173,7 +172,7 @@ function kindMeta(kind: TrinityTask["kind"]) {
   switch (kind) {
     case "approval":
       return {
-        icon: <Sparkles className="h-4 w-4" />,
+        icon: <TrinityLogo size={16} />,
         label: "Trinity approval",
         accent: "from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300",
       };
@@ -478,7 +477,7 @@ export function TrinityTaskWidget() {
       <UniversalModalHeader className="border-b pb-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
-            <Sparkles className="h-4 w-4" />
+            <TrinityLogo size={16} />
           </span>
           <div className="flex-1 min-w-0">
             <UniversalModalTitle className="text-base">

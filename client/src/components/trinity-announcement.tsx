@@ -6,8 +6,10 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle, Sparkles } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { Button } from '@/components/ui/button';
 import { 
   useTrinityAnnouncement, 
@@ -24,7 +26,7 @@ interface TrinityAnnouncementDisplayProps {
 const typeStyles: Record<MessageType, { 
   bg: string; 
   border: string; 
-  icon: typeof CheckCircle2;
+  icon: React.ComponentType<any>;
   iconColor: string;
 }> = {
   success: {
@@ -54,7 +56,7 @@ const typeStyles: Record<MessageType, {
   celebration: {
     bg: 'bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/50 dark:to-fuchsia-950/50',
     border: 'border-violet-200 dark:border-violet-800',
-    icon: Sparkles,
+    icon: TrinityLogo,
     iconColor: 'text-violet-600 dark:text-violet-400',
   },
 };
@@ -90,7 +92,7 @@ function AnnouncementBubble({
     >
       <div className="flex items-start gap-3">
         <div className={`flex-shrink-0 ${style.iconColor}`}>
-          <Icon className="h-5 w-5" />
+          {Icon === TrinityLogo ? <TrinityLogo size={20} /> : <Icon className="h-5 w-5" />}
         </div>
         
         <div className="flex-1 min-w-0">

@@ -19,7 +19,8 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sparkles, ArrowRight, Zap, RefreshCw, Check, AlertTriangle, Lightbulb, Trophy, Brain } from 'lucide-react';
+import { ArrowRight, Activity, RefreshCw, Check, AlertTriangle, Lightbulb, Trophy } from 'lucide-react';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { useToast } from '@/hooks/use-toast';
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
@@ -105,9 +106,9 @@ export default function TrinityInsights() {
     switch (type) {
       case 'advice': return <Lightbulb className="w-4 h-4" />;
       case 'alert': return <AlertTriangle className="w-4 h-4" />;
-      case 'recommendation': return <Brain className="w-4 h-4" />;
+      case 'recommendation': return <Activity className="w-4 h-4" />;
       case 'achievement': return <Trophy className="w-4 h-4" />;
-      case 'insight': return <Sparkles className="w-4 h-4" />;
+      case 'insight': return <TrinityLogo size={16} />;
       default: return null;
     }
   };
@@ -288,7 +289,7 @@ export default function TrinityInsights() {
           </ScrollArea>
         ) : (
           <Card className="p-12 text-center">
-            <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground text-lg mb-4">
               No insights yet. Trinity will start analyzing your data as you use the platform.
             </p>

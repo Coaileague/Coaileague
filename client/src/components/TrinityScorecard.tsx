@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Brain, Shield, AlertTriangle, CheckCircle, Clock, Users, DollarSign, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Activity, Shield, AlertTriangle, CheckCircle, Clock, Users, DollarSign, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 interface CandidateEval {
@@ -103,7 +103,7 @@ function DomainIcon({ domain }: { domain: string }) {
     case 'compliance': return <Shield className="w-4 h-4" />;
     case 'payroll': return <DollarSign className="w-4 h-4" />;
     case 'invoicing': return <FileText className="w-4 h-4" />;
-    default: return <Brain className="w-4 h-4" />;
+    default: return <Activity className="w-4 h-4" />;
   }
 }
 
@@ -273,7 +273,7 @@ export default function TrinityScorecard() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2" data-testid="text-scorecard-title">
-            <Brain className="w-5 h-5" />
+            <Activity className="w-5 h-5" />
             Trinity Decision Intelligence
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -339,7 +339,7 @@ export default function TrinityScorecard() {
       ) : decisions.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <Brain className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <Activity className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-muted-foreground" data-testid="text-no-decisions">
               No decisions logged yet. Trinity will record her reasoning here as she makes scheduling, compliance, payroll, and invoicing decisions.
             </p>

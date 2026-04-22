@@ -12,8 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
-  Brain, Activity, Database, Cpu, Clock, CheckCircle,
-  AlertTriangle, Zap, Network, RefreshCw, Search
+  Activity, Database, Cpu, Clock, CheckCircle,
+  AlertTriangle, Network, RefreshCw, Search
 } from "lucide-react";
 
 const pageConfig: CanvasPageConfig = {
@@ -278,7 +278,7 @@ export default function TrinityMemoryPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
+                    <Activity className="h-4 w-4" />
                     Fast Diagnostic Scan
                   </CardTitle>
                   <Button
@@ -289,7 +289,7 @@ export default function TrinityMemoryPage() {
                     {runDiagnosticMutation.isPending ? (
                       <><RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />Running...</>
                     ) : (
-                      <><Zap className="h-4 w-4 mr-1.5" />Run Diagnostic</>
+                      <><Activity className="h-4 w-4 mr-1.5" />Run Diagnostic</>
                     )}
                   </Button>
                 </div>

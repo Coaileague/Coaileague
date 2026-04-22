@@ -10,7 +10,7 @@ import { TrinityArrowMark } from "@/components/trinity-logo";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, X, Circle, Brain } from 'lucide-react';
+import { Check, Loader2, X, Circle, Activity } from 'lucide-react';
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { Suspense } from 'react';
 import type { ThinkingStep } from '@/hooks/use-trinity-state';
@@ -117,7 +117,7 @@ export function ThinkingStepsStream({
       <CardHeader className="py-3 px-4 border-b">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Brain className="h-4 w-4 text-primary" />
+            <Activity className="h-4 w-4 text-primary" />
             Trinity Thinking
           </CardTitle>
           <Badge variant="outline" className="text-xs">

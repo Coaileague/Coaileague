@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Clock, Calendar, Users, AlertCircle } from "lucide-react";
+import { Clock, Calendar, Users, AlertCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { DashboardLoadError } from "@/components/dashboard/DashboardLoadError";
@@ -17,6 +18,7 @@ const pageConfig: CanvasPageConfig = {
 
 export default function OrgManagerDashboard() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const { data: workspace, isError: workspaceIsError, error: workspaceError, refetch: refetchWorkspace } = useQuery<{ id: string; name?: string }>({
     queryKey: ["/api/workspace/current"],

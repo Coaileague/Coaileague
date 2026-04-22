@@ -9,6 +9,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
 import { trinityChatService } from '../services/ai-brain/trinityChatService';
 import { attachWorkspaceId, AuthenticatedRequest } from '../rbac';
 import { requireAuth } from '../auth';
@@ -294,6 +295,49 @@ router.get('/thought-stream', attachWorkspaceId, requireTrinityAccess, async (re
   } catch (error: unknown) {
     log.error('[TrinityChat] Thought stream error:', error);
     return res.status(500).json({ error: 'Failed to get thought stream' });
+  }
+});
+
+// ─── Trinity File Upload — multimodal analysis via vision ───────────────────
+
+const trinityUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB cap
+  fileFilter: (_req, file, cb) => {
+    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+    cb(null, ALLOWED.includes(file.mimetype));
+  },
+});
+
+router.post('/chat/with-file', attachWorkspaceId, requireTrinityAccess, trinityUpload.single('file'), async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const workspaceId = authReq.workspaceId;
+    const { message, sessionId } = req.body;
+
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'message is required' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'file is required' });
+    }
+
+    const base64 = req.file.buffer.toString('base64');
+    const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
+
+    const response = await trinityChatService.chat({
+      userId,
+      workspaceId,
+      message,
+      sessionId,
+      images: [dataUrl],
+    });
+
+    return res.json(response);
+  } catch (error: unknown) {
+    log.error('[TrinityChat] File upload chat error:', error);
+    return res.status(500).json({ error: sanitizeError(error) || 'Failed to process file' });
   }
 });
 

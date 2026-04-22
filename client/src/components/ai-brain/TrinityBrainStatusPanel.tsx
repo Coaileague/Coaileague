@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  Brain,
+  Activity,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -108,7 +108,7 @@ export function TrinityBrainStatusPanel({ canReset = true }: TrinityBrainStatusP
                 : "bg-amber-500/10"
             }`}
           >
-            <Brain
+            <Activity
               className={`w-5 h-5 ${
                 allHealthy
                   ? "text-green-500"

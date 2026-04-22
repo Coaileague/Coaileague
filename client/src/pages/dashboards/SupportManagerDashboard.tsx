@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { MessageCircle, Activity, Bell, FileText, AlertCircle, Mail, Users, Clock } from "lucide-react";
+import { MessageCircle, Activity, Bell, FileText, AlertCircle, Mail, Users, Clock, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
