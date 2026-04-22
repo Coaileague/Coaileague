@@ -51,7 +51,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npx vitest run --project unit --reporter=verbose --maxWorkers=1
+        run: npx vitest run --project unit --reporter=verbose --pool=forks
 
       - name: Upload coverage
         if: always()
@@ -83,4 +83,4 @@ jobs:
       - name: Run integration & regression tests
         # Tests guard themselves with describe.skipIf(() => !serverAvailable),
         # so they skip gracefully when no server is running in CI.
-        run: npx vitest run --project integration --reporter=verbose --maxWorkers=1
+        run: npx vitest run --project integration --reporter=verbose --pool=forks
