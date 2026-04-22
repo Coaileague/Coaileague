@@ -336,7 +336,6 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
     const { broadcastNotification } = await import('../websocket');
     
     // Helper to clear notification and broadcast update
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     async function clearNotificationAndBroadcast(notifId: string, userId: string, workspaceId?: string) {
       if (!notifId) return;
       try {

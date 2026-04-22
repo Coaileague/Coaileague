@@ -3242,7 +3242,6 @@ router.get('/runs/:id/nacha', async (req: AuthenticatedRequest, res) => {
 
     // ACH COMPLIANCE: Decrypt routing/account numbers — fields are AES-256-GCM encrypted at rest.
     // safeDecrypt falls back to raw value for any legacy plaintext rows (migration safety).
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     function safeDecrypt(value: string | null | undefined): string | null {
       if (!value) return null;
       try { return decryptToken(value); } catch { return value; }

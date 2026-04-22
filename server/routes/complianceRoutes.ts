@@ -1561,7 +1561,6 @@ router.post('/compliance/license-verify', async (req: AuthenticatedRequest, res:
       status = 'pending_api';
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [verification] = await db.insert(stateLicenseVerifications as any).values({
       workspaceId: workspaceId!,
       employeeId: employeeId ?? null,
@@ -1686,7 +1685,6 @@ router.post('/compliance/states', async (req: AuthenticatedRequest, res: Respons
       return res.status(409).json({ error: 'Compliance window for this state already exists', existing: existing[0] });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [window] = await db.insert(multiStateComplianceWindows as any).values({
       workspaceId: workspaceId!,
       stateCode,

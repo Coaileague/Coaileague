@@ -179,7 +179,6 @@ class DeletionProtectionService {
       const cascadeDeps = await this.checkCascadeDependencies(request.entityType, request.entityId);
       // @ts-expect-error — TS migration: fix in refactoring sprint
       if (cascadeDeps.length > 0) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         blockingEntities.push(...cascadeDeps);
       }
     }
