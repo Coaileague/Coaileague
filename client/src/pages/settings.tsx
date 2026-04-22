@@ -93,6 +93,7 @@ import {
   Save,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
@@ -103,6 +104,7 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { apiFetch } from "@/lib/apiError";
 import { WorkspaceResponse, OnboardingStatusResponse } from "@shared/schemas/responses/workspace";
 import { CONTACTS, DOMAINS } from "@shared/platformConfig";
+import { LICENSE_TYPES, type LicenseCategory } from "@shared/licenseTypes";
 
 const settingsConfig: CanvasPageConfig = {
   id: 'settings',
@@ -1888,10 +1890,16 @@ export default function Settings() {
     }
   }, [isSimpleMode, activeSection]);
   
-  // Invite form state
+  // Invite form state — identity captured at invite time so Trinity has the
+  // person on-record before registration, and license types drive which
+  // regulatory documents the onboarding checklist seeds.
+  const [inviteFirstName, setInviteFirstName] = useState('');
+  const [inviteLastName, setInviteLastName] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<string>('manager');
   const [inviteTitle, setInviteTitle] = useState<string>('');
+  const [inviteLicenseTypes, setInviteLicenseTypes] = useState<string[]>([]);
   const [inviteResult, setInviteResult] = useState<{ code: string; link: string } | null>(null);
 
   // Fetch workspace data
@@ -2192,7 +2200,15 @@ export default function Settings() {
 
   // Send invite mutation
   const sendInviteMutation = useMutation({
-    mutationFn: async (data: { email: string; role: string; organizationalTitle?: string }) => {
+    mutationFn: async (data: {
+      firstName: string;
+      lastName: string;
+      phone?: string;
+      email: string;
+      role: string;
+      organizationalTitle?: string;
+      licenseTypes?: string[];
+    }) => {
       const res = await apiRequest('POST', '/api/invites/create', data);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || 'Failed to send invite');
@@ -2204,8 +2220,12 @@ export default function Settings() {
         code: inv.inviteCode || data.inviteCode || '',
         link: inv.inviteLink || data.inviteLink || `${window.location.origin}/accept-invite?code=${inv.inviteCode || data.inviteCode || ''}`,
       });
+      setInviteFirstName('');
+      setInviteLastName('');
+      setInvitePhone('');
       setInviteEmail('');
       setInviteTitle('');
+      setInviteLicenseTypes([]);
       refetchInvites();
       toast({ title: "Invitation sent!", description: `Invite sent to ${inv.inviteeEmail || data.inviteeEmail || 'recipient'}.` });
     },
@@ -3535,18 +3555,49 @@ export default function Settings() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Email Address</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">First Name *</Label>
+                  <Input
+                    value={inviteFirstName}
+                    onChange={(e) => setInviteFirstName(e.target.value)}
+                    placeholder="Jane"
+                    data-testid="input-invite-first-name"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Last Name *</Label>
+                  <Input
+                    value={inviteLastName}
+                    onChange={(e) => setInviteLastName(e.target.value)}
+                    placeholder="Doe"
+                    data-testid="input-invite-last-name"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Email Address *</Label>
                   <Input
                     type="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="colleague@company.com"
                     data-testid="input-invite-email"
-                    onKeyDown={(e) => { if (e.key === 'Enter' && inviteEmail.trim()) sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole, organizationalTitle: inviteTitle || undefined }); }}
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Phone (optional)</Label>
+                  <Input
+                    type="tel"
+                    value={invitePhone}
+                    onChange={(e) => setInvitePhone(e.target.value)}
+                    placeholder="(555) 123-4567"
+                    data-testid="input-invite-phone"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Role</Label>
                   <Select value={inviteRole} onValueChange={setInviteRole}>
@@ -3562,34 +3613,117 @@ export default function Settings() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Organizational Title (optional)</Label>
+                  <Select value={inviteTitle} onValueChange={setInviteTitle}>
+                    <SelectTrigger data-testid="select-invite-title" className="h-9">
+                      <SelectValue placeholder="Title (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Chief Executive Officer">Chief Executive Officer</SelectItem>
+                      <SelectItem value="Chief of Operations">Chief of Operations</SelectItem>
+                      <SelectItem value="Deputy Chief">Deputy Chief</SelectItem>
+                      <SelectItem value="Vice President">Vice President</SelectItem>
+                      <SelectItem value="General Manager">General Manager</SelectItem>
+                      <SelectItem value="Operations Manager">Operations Manager</SelectItem>
+                      <SelectItem value="Field Manager">Field Manager</SelectItem>
+                      <SelectItem value="Field Supervisor">Field Supervisor</SelectItem>
+                      <SelectItem value="Shift Supervisor">Shift Supervisor</SelectItem>
+                      <SelectItem value="Lead Officer">Lead Officer</SelectItem>
+                      <SelectItem value="Security Officer (Armed)">Security Officer (Armed)</SelectItem>
+                      <SelectItem value="Security Officer (Unarmed)">Security Officer (Unarmed)</SelectItem>
+                      <SelectItem value="Security Contractor (Armed)">Security Contractor (Armed)</SelectItem>
+                      <SelectItem value="Security Contractor (Unarmed)">Security Contractor (Unarmed)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Organizational Title (optional)</Label>
-                <Select value={inviteTitle} onValueChange={setInviteTitle}>
-                  <SelectTrigger data-testid="select-invite-title" className="h-9">
-                    <SelectValue placeholder="Title (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Chief Executive Officer">Chief Executive Officer</SelectItem>
-                    <SelectItem value="Chief of Operations">Chief of Operations</SelectItem>
-                    <SelectItem value="Deputy Chief">Deputy Chief</SelectItem>
-                    <SelectItem value="Vice President">Vice President</SelectItem>
-                    <SelectItem value="General Manager">General Manager</SelectItem>
-                    <SelectItem value="Operations Manager">Operations Manager</SelectItem>
-                    <SelectItem value="Field Manager">Field Manager</SelectItem>
-                    <SelectItem value="Field Supervisor">Field Supervisor</SelectItem>
-                    <SelectItem value="Shift Supervisor">Shift Supervisor</SelectItem>
-                    <SelectItem value="Lead Officer">Lead Officer</SelectItem>
-                    <SelectItem value="Security Officer (Armed)">Security Officer (Armed)</SelectItem>
-                    <SelectItem value="Security Officer (Unarmed)">Security Officer (Unarmed)</SelectItem>
-                    <SelectItem value="Security Contractor (Armed)">Security Contractor (Armed)</SelectItem>
-                    <SelectItem value="Security Contractor (Unarmed)">Security Contractor (Unarmed)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs text-muted-foreground">
+                  License Types (optional) {inviteLicenseTypes.length > 0 && `— ${inviteLicenseTypes.length} selected`}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Pick the credentials this person needs. Selected licenses seed the onboarding checklist with the right document uploads and expiry tracking.
+                </p>
+                <div
+                  className="rounded-md border p-3 max-h-56 overflow-y-auto space-y-3"
+                  data-testid="invite-license-types"
+                >
+                  {(() => {
+                    const CATEGORY_LABEL: Record<LicenseCategory, string> = {
+                      security: 'Security',
+                      healthcare: 'Healthcare',
+                      food_service: 'Food Service',
+                      transportation: 'Transportation',
+                      cleaning: 'Cleaning / Janitorial',
+                      cosmetology: 'Cosmetology',
+                      trades: 'Trades',
+                      general: 'General',
+                    };
+                    const grouped = LICENSE_TYPES.reduce((acc, t) => {
+                      (acc[t.category] ||= []).push(t);
+                      return acc;
+                    }, {} as Record<LicenseCategory, typeof LICENSE_TYPES>);
+                    return (Object.keys(grouped) as LicenseCategory[]).map((cat) => (
+                      <div key={cat}>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                          {CATEGORY_LABEL[cat]}
+                        </div>
+                        <div className="space-y-1.5">
+                          {grouped[cat].map((t) => {
+                            const checked = inviteLicenseTypes.includes(t.key);
+                            return (
+                              <label
+                                key={t.key}
+                                className="flex items-start gap-2 text-sm cursor-pointer"
+                                data-testid={`invite-license-${t.key}`}
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    setInviteLicenseTypes((prev) =>
+                                      v ? [...prev, t.key] : prev.filter((k) => k !== t.key),
+                                    );
+                                  }}
+                                />
+                                <span>
+                                  {t.displayName}
+                                  {t.jurisdictionHint && (
+                                    <span className="text-xs text-muted-foreground"> — {t.jurisdictionHint}</span>
+                                  )}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
               </div>
               <Button
-                onClick={() => { if (inviteEmail.trim()) { setInviteResult(null); sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole, organizationalTitle: inviteTitle || undefined }); } }}
-                disabled={sendInviteMutation.isPending || !inviteEmail.trim()}
+                onClick={() => {
+                  const first = inviteFirstName.trim();
+                  const last = inviteLastName.trim();
+                  const emailVal = inviteEmail.trim();
+                  if (!first || !last || !emailVal) return;
+                  setInviteResult(null);
+                  sendInviteMutation.mutate({
+                    firstName: first,
+                    lastName: last,
+                    phone: invitePhone.trim() || undefined,
+                    email: emailVal,
+                    role: inviteRole,
+                    organizationalTitle: inviteTitle || undefined,
+                    licenseTypes: inviteLicenseTypes.length > 0 ? inviteLicenseTypes : undefined,
+                  });
+                }}
+                disabled={
+                  sendInviteMutation.isPending ||
+                  !inviteFirstName.trim() ||
+                  !inviteLastName.trim() ||
+                  !inviteEmail.trim()
+                }
                 data-testid="button-send-invite"
                 className="gap-2"
               >

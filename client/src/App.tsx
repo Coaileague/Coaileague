@@ -2015,7 +2015,6 @@ function AppContent() {
                 <Route path="/employee-onboarding"><ErrorBoundary><EmployeeOnboardingDashboard /></ErrorBoundary></Route>
                 <Route path="/employee-packets"><ErrorBoundary><EmployeePackets /></ErrorBoundary></Route>
                 <Route path="/onboarding-hub"><Suspense fallback={<PageLoader />}><ErrorBoundary><OnboardingHub /></ErrorBoundary></Suspense></Route>
-                <Route path="/onboarding-forms"><Suspense fallback={<PageLoader />}><ErrorBoundary><OnboardingForms /></ErrorBoundary></Suspense></Route>
                 <Route path="/quickbooks-import"><ErrorBoundary><QuickBooksImport /></ErrorBoundary></Route>
                 <Route path="/resolution-inbox"><ErrorBoundary><ResolutionInbox /></ErrorBoundary></Route>
                 <Route path="/org-management">

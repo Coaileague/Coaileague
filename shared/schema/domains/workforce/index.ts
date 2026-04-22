@@ -849,6 +849,14 @@ export const coaileagueEmployeeProfiles = pgTable("coaileague_employee_profiles"
   // Pool membership
   isInOrgPool: boolean("is_in_org_pool").default(true),
   isInGlobalPool: boolean("is_in_global_pool").default(false),
+  // Trinity Phase 3 Conscience — cross-tenant score persistence on
+  // departure. When a termination/deactivation fires, the profile flips
+  // to isInGlobalPool=true, isActiveInCurrentOrg=false, and the
+  // departedAt/departureReason are stamped so any next employer
+  // sees the context.
+  isActiveInCurrentOrg: boolean("is_active_in_current_org").default(true),
+  departedAt: timestamp("departed_at"),
+  departureReason: varchar("departure_reason"),
   globalPoolCategories: text("global_pool_categories").array().default(sql`ARRAY[]::text[]`),
   
   // Last activity timestamps

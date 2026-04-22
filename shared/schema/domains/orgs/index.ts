@@ -1413,24 +1413,32 @@ export const workspaceThemes = pgTable("workspace_themes", {
 export const workspaceInvites = pgTable("workspace_invites", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),
-  
+
   // Invitation details
   inviteCode: varchar("invite_code").notNull().unique(),
   inviterUserId: varchar("inviter_user_id").notNull(),
-  
-  // Invitee information
+
+  // Invitee information — identity captured at invite time so Trinity
+  // has the person on-record before registration, and so register flow
+  // pre-fills rather than re-asks.
   inviteeEmail: varchar("invitee_email"),
+  inviteeFirstName: varchar("invitee_first_name"),
+  inviteeLastName: varchar("invitee_last_name"),
+  inviteePhone: varchar("invitee_phone"),
   inviteeRole: varchar("invitee_role").default("staff"),
   organizationalTitle: varchar("organizational_title"),
+  // Array of license-type keys from shared/licenseTypes.ts. Drives which
+  // documents and regulatory steps the onboarding checklist seeds.
+  licenseTypes: jsonb("license_types").$type<string[]>().default(sql`'[]'::jsonb`),
 
   // Status tracking
   status: varchar("status").default("pending"),
   acceptedByUserId: varchar("accepted_by_user_id"),
   acceptedAt: timestamp("accepted_at"),
-  
+
   // Expiry
   expiresAt: timestamp("expires_at").notNull(),
-  
+
   // Metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

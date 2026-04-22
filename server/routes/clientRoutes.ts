@@ -23,6 +23,7 @@ import {
 import { z } from "zod";
 import { requireAuth } from "../auth";
 import { requireManagerOrPlatformStaff, type AuthenticatedRequest } from "../rbac";
+import { scheduleNonBlocking } from "../lib/scheduleNonBlocking";
 import { clientsQuerySchema } from "../../shared/validation/pagination";
 import { deletionProtection } from "../services/deletionProtectionService";
 import { clientPortalHelpAIService } from "../services/helpai/clientPortalHelpAIService";
@@ -496,6 +497,53 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
       return res.status(400).json({ error: "Validation failed", details: validation.error.issues });
     }
     const body = validation.data;
+
+    // ── Trinity Deliberation Gate ───────────────────────────────────────────
+    // Before any destructive action, Trinity's conscience considers financial,
+    // legal, relational, and operational impact. Owners can override by
+    // resubmitting with { deliberationApproved: true }.
+    const deliberationApproved = (req.body as any)?.deliberationApproved === true;
+    if (!deliberationApproved) {
+      try {
+        const { deliberate, persistDeliberationDocuments } =
+          await import('../services/trinity/trinityDeliberation');
+        const delibCtx = {
+          requestType: 'cancel_client' as const,
+          requestedBy: userId || 'unknown',
+          requestedByRole: req.workspaceRole || '',
+          workspaceId,
+          targetId: req.params.id,
+          targetType: 'client' as const,
+          rawCommand: body.reason || 'Client deactivation requested',
+        };
+        const result = await deliberate(delibCtx);
+        scheduleNonBlocking('client-deactivate.docs', () =>
+          persistDeliberationDocuments(result, delibCtx),
+        );
+        if (['intervene', 'pause_and_warn', 'block'].includes(result.verdict)) {
+          const isOwnerLevel = ['org_owner', 'co_owner'].includes(req.workspaceRole || '');
+          return res.status(200).json({
+            trinityIntervention: true,
+            verdict: result.verdict,
+            headline: result.headline,
+            reasoning: result.reasoning,
+            empathyStatement: result.empathyStatement,
+            riskAssessment: result.riskAssessment,
+            alternatives: result.alternatives,
+            generatedDocuments: result.generatedDocuments?.map(d => ({ type: d.type, title: d.title })),
+            overrideAvailable: isOwnerLevel && result.verdict !== 'block',
+            overrideMessage: isOwnerLevel && result.verdict !== 'block'
+              ? "Resubmit with deliberationApproved: true to override Trinity's recommendation."
+              : result.verdict === 'block'
+                ? 'Trinity blocked this action — override not available.'
+                : 'Only org_owner or co_owner can override this recommendation.',
+          });
+        }
+        log.info(`[ClientDeactivate] Trinity verdict: ${result.verdict} — ${result.headline}`);
+      } catch (deliberationErr: any) {
+        log.warn('[ClientDeactivate] Deliberation failed (non-fatal):', deliberationErr?.message);
+      }
+    }
 
     // Race-condition guard: only deactivate if currently active
     const [existing] = await db.select().from(clients)

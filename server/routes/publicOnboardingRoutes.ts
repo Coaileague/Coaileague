@@ -681,8 +681,8 @@ router.post('/workspace-invite/register', async (req, res) => {
   try {
     const { code, firstName, lastName, email, password } = req.body;
 
-    if (!code || !firstName || !lastName || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required.' });
+    if (!code || !email || !password) {
+      return res.status(400).json({ message: 'Invite code, email, and password are required.' });
     }
     if (password.length < 8) {
       return res.status(400).json({ message: 'Password must be at least 8 characters.' });
@@ -702,6 +702,16 @@ router.post('/workspace-invite/register', async (req, res) => {
       return res.status(403).json({ message: 'This invite was sent to a different email address.' });
     }
 
+    // Identity prefilled at invite time is the source of truth. The form-supplied
+    // firstName/lastName is only a fallback for legacy invites that predate the
+    // identity-at-invite-time change.
+    const resolvedFirstName = (invite.inviteeFirstName || firstName || '').toString().trim();
+    const resolvedLastName = (invite.inviteeLastName || lastName || '').toString().trim();
+    const resolvedPhone = (invite.inviteePhone || '').toString().trim() || null;
+    if (!resolvedFirstName || !resolvedLastName) {
+      return res.status(400).json({ message: 'First and last name are required.' });
+    }
+
     const workspace = await storage.getWorkspace(invite.workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Organization no longer exists.' });
 
@@ -719,13 +729,15 @@ router.post('/workspace-invite/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const userId = crypto.randomUUID();
     const role = (invite.inviteeRole as string) || 'employee';
+    const licenseTypes = (invite.licenseTypes || []) as string[];
 
+    let newEmployeeId: string | null = null;
     await db.transaction(async (tx) => {
       await tx.insert(users).values({
         id: userId,
         email: normalizedEmail,
-        firstName,
-        lastName,
+        firstName: resolvedFirstName,
+        lastName: resolvedLastName,
         passwordHash,
         authProvider: 'email',
         emailVerified: true,
@@ -733,12 +745,13 @@ router.post('/workspace-invite/register', async (req, res) => {
         createdAt: new Date(),
       });
 
-      await tx.insert(employees).values({
+      const [emp] = await tx.insert(employees).values({
         workspaceId: invite.workspaceId,
         userId,
-        firstName,
-        lastName,
+        firstName: resolvedFirstName,
+        lastName: resolvedLastName,
         email: normalizedEmail,
+        phone: resolvedPhone || undefined,
         workspaceRole: role as any,
         organizationalTitle: invite.organizationalTitle || undefined,
         isActive: true,
@@ -747,7 +760,8 @@ router.post('/workspace-invite/register', async (req, res) => {
         payType: 'hourly',
         workerType: 'employee',
         onboardingStatus: 'in_progress',
-      });
+      }).returning({ id: employees.id });
+      newEmployeeId = emp?.id ?? null;
 
       await tx.update(workspaceInvites)
         .set({ status: 'accepted', acceptedByUserId: userId, acceptedAt: new Date() })
@@ -756,6 +770,27 @@ router.post('/workspace-invite/register', async (req, res) => {
       await tx.update(users)
         .set({ currentWorkspaceId: invite.workspaceId })
         .where(eq(users.id, userId));
+
+      // Seed onboarding checklist from the licenseTypes the inviter attached.
+      // Runs inside the same transaction so a register that succeeds always
+      // produces the corresponding checklist — no orphaned employees with
+      // blank onboarding requirements.
+      if (licenseTypes.length > 0 && newEmployeeId) {
+        const { expandLicensesToChecklistItems } = await import('@shared/licenseTypes');
+        const { onboardingChecklists } = await import('@shared/schema');
+        const items = expandLicensesToChecklistItems(licenseTypes).map((i) => ({
+          ...i,
+          isCompleted: false,
+        }));
+        if (items.length > 0) {
+          await tx.insert(onboardingChecklists).values({
+            workspaceId: invite.workspaceId,
+            applicationId: invite.id, // use invite.id as correlation key until app row is created
+            employeeId: newEmployeeId,
+            checklistItems: items,
+          });
+        }
+      }
     });
 
     // ── Cross-tenant CoAIleague score lookup (non-blocking)
@@ -831,7 +866,17 @@ router.post('/workspace-invite/register', async (req, res) => {
         platformEventBus.publish({
           type: 'member_joined',
           workspaceId: invite.workspaceId,
-          metadata: { userId, email: normalizedEmail, role, firstName, lastName, method: 'workspace_invite_new_user' },
+          metadata: {
+            userId,
+            email: normalizedEmail,
+            role,
+            firstName: resolvedFirstName,
+            lastName: resolvedLastName,
+            phone: resolvedPhone,
+            licenseTypes,
+            inviteId: invite.id,
+            method: 'workspace_invite_new_user',
+          },
         }).catch(() => null);
       } catch (_) { /* non-blocking */ }
       try {
@@ -842,8 +887,8 @@ router.post('/workspace-invite/register', async (req, res) => {
           entityType: 'employee',
           entityId: userId,
           action: 'member_joined',
-          description: `${firstName} ${lastName} (${normalizedEmail}) registered via invite code and joined as ${role}`,
-          metadata: JSON.stringify({ role, inviteCode: normalizedCode, method: 'register' }),
+          description: `${resolvedFirstName} ${resolvedLastName} (${normalizedEmail}) registered via invite code and joined as ${role}`,
+          metadata: JSON.stringify({ role, inviteCode: normalizedCode, licenseTypes, method: 'register' }),
           createdAt: new Date(),
         });
       } catch (_) { /* non-blocking */ }
@@ -860,7 +905,7 @@ router.post('/workspace-invite/register', async (req, res) => {
             channel: 'in_app',
             body: {
               title: 'New Team Member Joined',
-              message: `${firstName} ${lastName} accepted their invitation and joined as ${role}. Complete their onboarding in the Employee Portal.`,
+              message: `${resolvedFirstName} ${resolvedLastName} accepted their invitation and joined as ${role}. Complete their onboarding in the Employee Portal.`,
             },
           }).catch(() => null);
         }
@@ -874,7 +919,8 @@ router.post('/workspace-invite/register', async (req, res) => {
       workspaceName: workspace.name,
       role,
       roleName: ROLE_DISPLAY_NAMES[role] || role,
-      firstName,
+      firstName: resolvedFirstName,
+      lastName: resolvedLastName,
       landingPage,
       firstLogin: true,
     });

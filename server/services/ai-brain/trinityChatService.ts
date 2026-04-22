@@ -148,6 +148,11 @@ export interface ChatRequest {
   sessionId?: string;
   images?: string[];
   isSupportMode?: boolean;
+  // Access tier that drives how the thalamus/ACC process the signal.
+  // Set by the chat route based on workspaceRole/platformRole —
+  // owner/co_owner get full financial + scheduling, manager gets
+  // management context, supervisor/officer get field-level only.
+  trustTier?: 'owner' | 'manager' | 'supervisor' | 'officer' | 'system';
 }
 
 export interface UsageAction {

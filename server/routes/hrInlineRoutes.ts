@@ -731,8 +731,15 @@ router.get("/employee-reputation/:employeeId", requireAuth, async (req: any, res
   }
 });
 
+// Short, human-friendly code (12 chars) so accept-invite.tsx can distinguish
+// workspace invites (len < 20) from long employee-onboarding tokens.
+// Crockford-style alphabet: no 0/O/1/I to prevent transcription errors.
 function generateInviteCode(): string {
-  return crypto.randomBytes(32).toString('hex');
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.randomBytes(12);
+  let code = '';
+  for (let i = 0; i < 12; i++) code += chars[bytes[i] % chars.length];
+  return code;
 }
 
 router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -747,6 +754,9 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
     if (!user?.currentWorkspaceId) {
       return res.status(400).json({ message: "No workspace selected" });
     }
+    // Narrow for use in closures later (fire-and-forget events) where TS
+    // loses the null-refinement across await boundaries.
+    const activeWorkspaceId: string = user.currentWorkspaceId;
 
     const workspace = await storage.getWorkspace(user.currentWorkspaceId);
     let inviterRole = 'org_owner'; // default for workspace primary owner
@@ -763,7 +773,10 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
       inviterRole = employee.workspaceRole || 'co_owner';
     }
 
-    // Accept both field name conventions from the frontend, with Zod validation
+    // Accept both field name conventions from the frontend, with Zod validation.
+    // Identity (firstName/lastName/phone) is captured at invite time so Trinity
+    // has the person on-record before they register, and the onboarding flow
+    // pre-fills rather than re-asks. licenseTypes drives checklist seeding.
     const inviteBodySchema = z.object({
       inviteeEmail: z.string().email().max(254).optional(),
       email: z.string().email().max(254).optional(),
@@ -771,7 +784,14 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
       role: z.string().max(50).optional(),
       inviteeName: z.string().max(200).optional(),
       name: z.string().max(200).optional(),
+      inviteeFirstName: z.string().max(100).optional(),
+      firstName: z.string().max(100).optional(),
+      inviteeLastName: z.string().max(100).optional(),
+      lastName: z.string().max(100).optional(),
+      inviteePhone: z.string().max(30).optional(),
+      phone: z.string().max(30).optional(),
       organizationalTitle: z.string().max(100).optional(),
+      licenseTypes: z.array(z.string().max(50)).max(20).optional(),
     });
     const bodyParsed = inviteBodySchema.safeParse(req.body);
     if (!bodyParsed.success) {
@@ -779,10 +799,35 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
     }
     const rawEmail = bodyParsed.data.inviteeEmail || bodyParsed.data.email;
     const rawRole = bodyParsed.data.inviteeRole || bodyParsed.data.role || 'manager';
-    const rawName = bodyParsed.data.inviteeName || bodyParsed.data.name;
+    const rawFirstName = bodyParsed.data.inviteeFirstName || bodyParsed.data.firstName;
+    const rawLastName = bodyParsed.data.inviteeLastName || bodyParsed.data.lastName;
+    const rawPhone = bodyParsed.data.inviteePhone || bodyParsed.data.phone;
+    // Back-compat: if only the combined `name` was sent, split on first space.
+    const rawCombinedName = bodyParsed.data.inviteeName || bodyParsed.data.name;
+    let derivedFirst = rawFirstName?.trim() || null;
+    let derivedLast = rawLastName?.trim() || null;
+    if ((!derivedFirst || !derivedLast) && rawCombinedName) {
+      const parts = rawCombinedName.trim().split(/\s+/);
+      derivedFirst = derivedFirst || parts[0] || null;
+      derivedLast = derivedLast || (parts.length > 1 ? parts.slice(1).join(' ') : null);
+    }
     const inviteeEmail = rawEmail ? rawEmail.trim().toLowerCase() : null;
-    const inviteeName = rawName ? rawName.trim() : null;
+    const inviteeFirstName = derivedFirst;
+    const inviteeLastName = derivedLast;
+    const inviteeName = [inviteeFirstName, inviteeLastName].filter(Boolean).join(' ') || null;
+    const inviteePhone = rawPhone ? rawPhone.trim() : null;
     const organizationalTitle = bodyParsed.data.organizationalTitle?.trim() || null;
+    // Validate license-type keys against the canonical registry.
+    const { LICENSE_TYPE_KEYS } = await import('@shared/licenseTypes');
+    const validKeySet = new Set(LICENSE_TYPE_KEYS);
+    const requestedLicenses = bodyParsed.data.licenseTypes || [];
+    const invalidLicenses = requestedLicenses.filter((k) => !validKeySet.has(k));
+    if (invalidLicenses.length > 0) {
+      return res.status(400).json({
+        message: `Unknown license type(s): ${invalidLicenses.join(', ')}`,
+      });
+    }
+    const licenseTypes = Array.from(new Set(requestedLicenses));
 
     const ROLE_DISPLAY_NAMES: Record<string, string> = {
       manager: 'Manager',
@@ -828,6 +873,60 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
       }
     }
 
+    // Guard: reject re-invites of members who are still active or mid-onboarding.
+    // Only deactivated/terminated/suspended members may be re-invited (rehire path).
+    // Trinity is notified on every invite_created event below — she can override
+    // by consulting her rehireability scoring and emitting her own invite tool
+    // call, which ultimately hits this same endpoint.
+    if (inviteeEmail) {
+      const [existingEmployee] = await db
+        .select({
+          id: employees.id,
+          status: employees.status,
+          isActive: employees.isActive,
+          onboardingStatus: employees.onboardingStatus,
+          firstName: employees.firstName,
+          lastName: employees.lastName,
+        })
+        .from(employees)
+        .where(and(
+          eq(employees.workspaceId, user.currentWorkspaceId),
+          eq(employees.email, inviteeEmail),
+        ))
+        .limit(1);
+      if (existingEmployee) {
+        const isDeactivated = existingEmployee.status !== 'active' && existingEmployee.status !== 'pending';
+        if (!isDeactivated) {
+          return res.status(409).json({
+            message: `${existingEmployee.firstName || 'This person'} ${existingEmployee.lastName || ''} is already a ${existingEmployee.status === 'pending' ? 'pending' : 'member'} of this workspace${existingEmployee.onboardingStatus === 'in_progress' ? ' and is currently onboarding' : ''}. Deactivate the existing member before sending a new invite.`.trim(),
+            conflict: 'member_exists',
+            existingEmployeeId: existingEmployee.id,
+            existingStatus: existingEmployee.status,
+          });
+        }
+      }
+
+      // Also guard against an in-progress onboarding application with no
+      // employee row yet (invite accepted but wizard not finished).
+      const { onboardingApplications } = await import('@shared/schema');
+      const [pendingApp] = await db
+        .select({ id: onboardingApplications.id, status: onboardingApplications.status })
+        .from(onboardingApplications)
+        .where(and(
+          eq(onboardingApplications.workspaceId, user.currentWorkspaceId),
+          eq(onboardingApplications.email, inviteeEmail),
+          eq(onboardingApplications.status, 'in_progress'),
+        ))
+        .limit(1);
+      if (pendingApp) {
+        return res.status(409).json({
+          message: "This email already has an in-progress onboarding application. Let them finish or cancel it before sending a new invite.",
+          conflict: 'application_in_progress',
+          existingApplicationId: pendingApp.id,
+        });
+      }
+    }
+
     let inviteCode = generateInviteCode();
     let attempts = 0;
     while (attempts < 5) {
@@ -849,11 +948,57 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
       inviteCode,
       inviterUserId: userId,
       inviteeEmail: inviteeEmail || null,
+      inviteeFirstName,
+      inviteeLastName,
+      inviteePhone,
       inviteeRole,
       organizationalTitle,
+      licenseTypes,
       status: 'pending',
       expiresAt,
     }).returning();
+
+    // Fire-and-forget: emit invite_created so Trinity remembers every invite
+    // move (manual or tool-driven) for future rehireability decisions.
+    Promise.resolve().then(async () => {
+      try {
+        const { platformEventBus } = await import('../services/platformEventBus');
+        platformEventBus.publish({
+          type: 'invite_created',
+          workspaceId: activeWorkspaceId,
+          metadata: {
+            inviteId: invite.id,
+            inviteeEmail,
+            inviteeFirstName,
+            inviteeLastName,
+            inviteePhone,
+            inviteeRole,
+            organizationalTitle,
+            licenseTypes,
+            inviterUserId: userId,
+          },
+        }).catch(() => null);
+      } catch (_) { /* non-blocking */ }
+      try {
+        const { auditLogs } = await import('@shared/schema');
+        const inviteeLabel = [inviteeFirstName, inviteeLastName].filter(Boolean).join(' ') || inviteeEmail || 'recipient';
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        await db.insert(auditLogs).values({
+          workspaceId: activeWorkspaceId,
+          entityType: 'invite',
+          entityId: invite.id,
+          action: 'invite_created',
+          description: `Invite sent to ${inviteeLabel} as ${ROLE_DISPLAY_NAMES[inviteeRole] || inviteeRole}`,
+          metadata: JSON.stringify({
+            inviteeEmail,
+            inviteeRole,
+            licenseTypes,
+            inviterUserId: userId,
+          }),
+          createdAt: new Date(),
+        });
+      } catch (_) { /* non-blocking */ }
+    }).catch(() => null);
 
     // Build invite link from request so it works in every environment
     const appBase = process.env.APP_URL ||
