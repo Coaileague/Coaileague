@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Briefcase, Clock, FileText, Calendar } from "lucide-react";
+import { Briefcase, Clock, FileText, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
@@ -19,7 +19,7 @@ export default function ContractorDashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const { data: earningsData, isLoading: earningsLoading } = useQuery<{
+  const { data: earningsData, isLoading: earningsLoading, isError: earningsIsError, error: earningsError, refetch: refetchEarnings } = useQuery<{
     hoursWorked: number;
     payPeriodStart: string | null;
     payPeriodEnd: string | null;
@@ -33,12 +33,14 @@ export default function ContractorDashboard() {
     staleTime: 60000,
   });
 
-  const { data: shiftsRes, isLoading: shiftsLoading } = useQuery<any[] | { data: any[] }>({
+  const { data: shiftsRes, isLoading: shiftsLoading, isError: shiftsIsError, error: shiftsError, refetch: refetchShifts } = useQuery<any[] | { data: any[] }>({
     queryKey: ["/api/shifts"],
     staleTime: 30000,
   });
 
   const isLoading = earningsLoading || docsLoading || shiftsLoading;
+  const isError = earningsIsError || shiftsIsError;
+  const error = earningsError || shiftsError;
 
   const docs: any[] = Array.isArray(docsRes) ? docsRes : (docsRes as any)?.data ?? [];
   const pendingDocs = docs.filter((d: any) => d.status === "pending" || d.status === "requires_signature");
@@ -50,6 +52,25 @@ export default function ContractorDashboard() {
   });
 
   const firstName = user?.firstName || user?.email?.split("@")[0] || "Contractor";
+
+  if (isError) {
+    return (
+      <CanvasHubPage config={pageConfig}>
+        <div className="flex flex-col items-center justify-center min-h-[300px] gap-4 text-center p-6">
+          <AlertTriangle className="h-10 w-10 text-destructive" />
+          <div>
+            <p className="font-semibold text-destructive">Failed to load dashboard data</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error instanceof Error ? error.message : 'An unexpected error occurred'}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => { refetchEarnings(); refetchShifts(); }}>
+            Try Again
+          </Button>
+        </div>
+      </CanvasHubPage>
+    );
+  }
 
   if (isLoading) {
     return (

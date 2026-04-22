@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { DollarSign, Users, Building2, FileText, AlertCircle, Receipt, Activity, ShieldCheck, Copy, KeyRound, Check } from "lucide-react";
+import { DollarSign, Users, Building2, FileText, AlertCircle, Receipt, Activity, ShieldCheck, Copy, KeyRound, Check, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ export default function OrgOwnerDashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const { data: workspace, isLoading: workspaceLoading } = useQuery<{ id: string; name?: string; orgId?: string; organizationId?: string }>({
+  const { data: workspace, isLoading: workspaceLoading, isError: workspaceIsError, error: workspaceError, refetch: refetchWorkspace } = useQuery<{ id: string; name?: string; orgId?: string; organizationId?: string }>({
     queryKey: ["/api/workspace/current"],
     staleTime: 5 * 60 * 1000,
   });
@@ -107,7 +107,7 @@ export default function OrgOwnerDashboard() {
     setTimeout(() => setPinCopied(false), 1500);
   };
 
-  const { data: clients, isLoading: clientsLoading } = useQuery<{ data: any[] } | any[]>({
+  const { data: clients, isLoading: clientsLoading, isError: clientsIsError, error: clientsError, refetch: refetchClients } = useQuery<{ data: any[] } | any[]>({
     queryKey: ["/api/clients"],
     staleTime: 60000,
   });
@@ -123,6 +123,8 @@ export default function OrgOwnerDashboard() {
   });
 
   const isDashboardLoading = workspaceLoading || clientsLoading || employeesLoading || invoicesLoading;
+  const isDashboardError = workspaceIsError || clientsIsError;
+  const dashboardError = workspaceError || clientsError;
 
   const clientList = Array.isArray(clients) ? clients : (clients as any)?.data ?? [];
   const activeClients = clientList.filter((c: any) => c.status === "active" || !c.status).length;
@@ -133,6 +135,25 @@ export default function OrgOwnerDashboard() {
   const outstandingTotal = outstandingInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.totalAmount) || 0), 0);
 
   const orgName = workspace?.name ?? "Your Organization";
+
+  if (isDashboardError) {
+    return (
+      <CanvasHubPage config={pageConfig}>
+        <div className="flex flex-col items-center justify-center min-h-[300px] gap-4 text-center p-6">
+          <AlertTriangle className="h-10 w-10 text-destructive" />
+          <div>
+            <p className="font-semibold text-destructive">Failed to load dashboard data</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {dashboardError instanceof Error ? dashboardError.message : 'An unexpected error occurred'}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => { refetchWorkspace(); refetchClients(); }}>
+            Try Again
+          </Button>
+        </div>
+      </CanvasHubPage>
+    );
+  }
 
   if (isDashboardLoading) {
     return (

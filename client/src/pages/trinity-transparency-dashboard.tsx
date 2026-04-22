@@ -11,8 +11,9 @@
  * Role gate: org_owner / co_owner / manager or higher.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { credentials: 'include' });
@@ -39,7 +40,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Brain,
   DollarSign,
   Activity,
   AlertTriangle,
@@ -49,7 +49,6 @@ import {
   RefreshCw,
   Layers,
   Shield,
-  Zap,
   Info,
 } from 'lucide-react';
 import { TrinityArrowMark } from '@/components/trinity-logo';
@@ -139,15 +138,16 @@ export default function TrinityTransparencyDashboard() {
     new Date().toISOString().slice(0, 7),
   );
   const [actionsPage, setActionsPage] = useState(0);
+  const { toast } = useToast();
 
-  const { data: overviewData, isLoading: overviewLoading, refetch: refetchOverview } =
+  const { data: overviewData, isLoading: overviewLoading, isError: overviewIsError, error: overviewError, refetch: refetchOverview } =
     useQuery<{ success: boolean; overview: OverviewData }>({
       queryKey: ['/api/trinity/transparency/overview'],
       queryFn: () => fetchJson('/api/trinity/transparency/overview'),
       refetchInterval: 60_000,
     });
 
-  const { data: costsData, isLoading: costsLoading } =
+  const { data: costsData, isLoading: costsLoading, isError: costsIsError, error: costsError, refetch: refetchCosts } =
     useQuery<CostBreakdown>({
       queryKey: ['/api/trinity/transparency/cost-breakdown', selectedMonth],
       queryFn: () =>
@@ -194,6 +194,36 @@ export default function TrinityTransparencyDashboard() {
     });
 
   const overview = overviewData?.overview;
+
+  const isError = overviewIsError || costsIsError;
+  const error = overviewError || costsError;
+
+  useEffect(() => {
+    if (isError) {
+      toast({
+        title: "Failed to load transparency data",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  }, [isError]);
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-[#0a0f1e] text-white flex flex-col items-center justify-center gap-4 text-center p-6">
+        <AlertTriangle className="h-10 w-10 text-destructive" />
+        <div>
+          <p className="font-semibold text-destructive">Failed to load transparency data</p>
+          <p className="text-sm text-white/50 mt-1">
+            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => { refetchOverview(); refetchCosts(); }}>
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0f1e] text-white">
@@ -317,7 +347,7 @@ export default function TrinityTransparencyDashboard() {
               <Activity className="w-3.5 h-3.5 mr-1.5" /> Actions
             </TabsTrigger>
             <TabsTrigger value="decisions" className="data-[state=active]:bg-[#1a2540]">
-              <Brain className="w-3.5 h-3.5 mr-1.5" /> Decisions
+              <Activity className="w-3.5 h-3.5 mr-1.5" /> Decisions
             </TabsTrigger>
             <TabsTrigger value="costs" className="data-[state=active]:bg-[#1a2540]">
               <DollarSign className="w-3.5 h-3.5 mr-1.5" /> Costs
@@ -355,7 +385,7 @@ export default function TrinityTransparencyDashboard() {
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <Zap className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
+                                <Activity className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
                                 <span className="text-sm font-medium truncate">
                                   {action.action_name || action.action_type}
                                 </span>
@@ -674,7 +704,7 @@ export default function TrinityTransparencyDashboard() {
                                   {isBlock ? (
                                     <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                                   ) : (
-                                    <Zap className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
+                                    <Activity className="w-3.5 h-3.5 text-[#4FC3F7] shrink-0" />
                                   )}
                                   <span className="text-sm font-medium truncate">
                                     {row.action.replace('trinity.', '').replace(/_/g, ' ')}

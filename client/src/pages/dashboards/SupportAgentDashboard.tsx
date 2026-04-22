@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { MessageCircle, Clock, CheckCircle, Activity, AlertCircle, Mail } from "lucide-react";
+import { MessageCircle, Clock, CheckCircle, Activity, AlertCircle, Mail, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
@@ -18,7 +18,7 @@ const pageConfig: CanvasPageConfig = {
 export default function SupportAgentDashboard() {
   const [, setLocation] = useLocation();
 
-  const { data: stats } = useQuery<{
+  const { data: stats, isError: statsIsError, error: statsError, refetch: refetchStats } = useQuery<{
     support: {
       openTickets: number;
       unresolvedEscalations: number;
@@ -27,12 +27,34 @@ export default function SupportAgentDashboard() {
     };
   }>({ queryKey: ["/api/analytics/stats"], staleTime: 60000 });
 
-  const { data: emailData } = useQuery<{ emails: any[]; total: number }>({
+  const { data: emailData, isError: emailIsError, error: emailError, refetch: refetchEmail } = useQuery<{ emails: any[]; total: number }>({
     queryKey: ["/api/email/inbox", { folder: "inbox", limit: 5 }],
     staleTime: 60000,
   });
   const unreadCount = emailData?.emails?.filter((e: any) => !e.is_read).length ?? 0;
   const totalEmails = emailData?.total ?? 0;
+
+  const isError = statsIsError || emailIsError;
+  const error = statsError || emailError;
+
+  if (isError) {
+    return (
+      <CanvasHubPage config={pageConfig}>
+        <div className="flex flex-col items-center justify-center min-h-[300px] gap-4 text-center p-6">
+          <AlertTriangle className="h-10 w-10 text-destructive" />
+          <div>
+            <p className="font-semibold text-destructive">Failed to load dashboard data</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error instanceof Error ? error.message : 'An unexpected error occurred'}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => { refetchStats(); refetchEmail(); }}>
+            Try Again
+          </Button>
+        </div>
+      </CanvasHubPage>
+    );
+  }
 
   return (
     <CanvasHubPage config={pageConfig}>
