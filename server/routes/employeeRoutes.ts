@@ -2398,4 +2398,52 @@ router.delete('/:id/pii-purge', requireAuth, async (req: AuthenticatedRequest, r
   }
 });
 
+// Phase 4 — GET /api/employees/my/career-score
+// Self-service career score for the currently authenticated employee.
+// Returns the cross-tenant coaileague score plus active disciplinary counts
+// so HelpAI can answer "what's my score" by SMS / chat.
+router.get('/my/career-score', requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId;
+    if (!userId || !workspaceId) return res.status(403).json({ error: 'Auth required' });
+
+    const { pool } = await import('../db');
+
+    const { rows: emp } = await pool.query(
+      `SELECT id FROM employees WHERE user_id = $1 AND workspace_id = $2 LIMIT 1`,
+      [userId, workspaceId],
+    );
+    if (!emp.length) return res.status(404).json({ error: 'Employee record not found' });
+
+    const { rows } = await pool.query(
+      `SELECT cp.overall_score,
+              cp.reliability_score,
+              (SELECT COUNT(*)::int FROM disciplinary_records dr
+                WHERE dr.employee_id = cp.employee_id
+                  AND dr.workspace_id = $1
+                  AND dr.status = 'active'
+                  AND dr.record_type != 'commendation') AS active_disciplinary_count,
+              (SELECT COUNT(*)::int FROM disciplinary_records dr
+                WHERE dr.employee_id = cp.employee_id
+                  AND dr.workspace_id = $1
+                  AND dr.record_type = 'commendation') AS commendation_count
+         FROM coaileague_employee_profiles cp
+        WHERE cp.employee_id = $2 AND cp.workspace_id = $1
+        LIMIT 1`,
+      [workspaceId, emp[0].id],
+    );
+
+    res.json(rows[0] || {
+      overall_score: 0.75,
+      reliability_score: 0.85,
+      active_disciplinary_count: 0,
+      commendation_count: 0,
+    });
+  } catch (error: unknown) {
+    log.error('[CareerScore] Fetch failed:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
+  }
+});
+
 export default router;

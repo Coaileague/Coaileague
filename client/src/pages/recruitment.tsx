@@ -67,6 +67,9 @@ import {
   Star,
   Award,
   Target,
+  ShieldAlert,
+  AlertTriangle,
+  SearchCheck,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,6 +99,12 @@ interface Candidate {
   voiceSessionId?: string;
   createdAt: string;
   updatedAt?: string;
+  trinityScoreDimensions?: Record<string, { score?: number; notes?: string }> | null;
+  trinityFlags?: Array<{ type: string; severity: string; description: string }> | null;
+  trinityLiabilityIndicators?: string[] | null;
+  trinityRecommendation?: string | null;
+  crossTenantFlag?: boolean | null;
+  crossTenantFlagReason?: string | null;
 }
 
 interface Session {
@@ -205,6 +214,85 @@ function ScoreBadge({ score }: { score?: number }) {
       <Brain className="w-3 h-3" />
       {score}/100
     </span>
+  );
+}
+
+// Trinity score dimension breakdown — renders the 6 weighted dimensions
+export function DimensionBreakdown({ dimensions }: { dimensions?: Record<string, { score?: number; notes?: string } | undefined> | null }) {
+  if (!dimensions || typeof dimensions !== 'object' || Object.keys(dimensions).length === 0) return null;
+
+  const bars = [
+    { key: 'license_eligibility',  label: 'License',      max: 25, color: 'bg-blue-500' },
+    { key: 'experience_fit',       label: 'Experience',   max: 20, color: 'bg-purple-500' },
+    { key: 'reliability_signals',  label: 'Reliability',  max: 20, color: 'bg-green-500' },
+    { key: 'liability_indicators', label: 'Liability',    max: 20, color: 'bg-amber-500' },
+    { key: 'operational_fit',      label: 'Ops Fit',      max: 10, color: 'bg-teal-500' },
+    { key: 'speed_to_deploy',      label: 'Speed',        max: 5,  color: 'bg-indigo-500' },
+  ];
+
+  return (
+    <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/50">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        Trinity Score Breakdown
+      </p>
+      {bars.map(({ key, label, max, color }) => {
+        const dim = dimensions[key];
+        const score = dim?.score ?? 0;
+        const pct = Math.max(0, Math.min(100, Math.round((score / max) * 100)));
+        return (
+          <div key={key} className="space-y-0.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">{label}</span>
+              <span className="font-medium tabular-nums">{score}/{max}</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full ${color} rounded-full transition-all`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            {dim?.notes && (
+              <p className="text-[10px] text-muted-foreground leading-tight">{dim.notes}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Trinity flag badges — critical (red) and warning (amber)
+export function FlagBadges({ flags }: { flags?: Array<{ type: string; severity: string; description: string }> | null }) {
+  if (!flags?.length) return null;
+  const critical = flags.filter(f => f.severity === 'critical');
+  const warnings = flags.filter(f => f.severity === 'warning');
+
+  return (
+    <div className="space-y-1">
+      {critical.map((f, i) => (
+        <div key={`c-${i}`} className="flex items-start gap-1.5 text-xs bg-red-500/10 text-red-400 border border-red-500/20 rounded px-2 py-1">
+          <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
+          <span>{f.description}</span>
+        </div>
+      ))}
+      {warnings.map((f, i) => (
+        <div key={`w-${i}`} className="flex items-start gap-1.5 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-1">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          <span>{f.description}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Cross-tenant network flag — orange badge
+export function CrossTenantBadge({ flagged, reason }: { flagged?: boolean | null; reason?: string | null }) {
+  if (!flagged) return null;
+  return (
+    <div className="flex items-start gap-1.5 text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded px-2 py-1">
+      <SearchCheck className="w-3 h-3 mt-0.5 shrink-0" />
+      <span>{reason || 'Prior employment record detected in network — recommend reference check.'}</span>
+    </div>
   );
 }
 
@@ -532,6 +620,13 @@ function CandidateDetailSheet({
                       Run Screen
                     </Button>
                   )}
+                </div>
+
+                {/* Trinity dimension breakdown + flags */}
+                <div className="mt-3 space-y-2">
+                  <DimensionBreakdown dimensions={candidate.trinityScoreDimensions} />
+                  <FlagBadges flags={candidate.trinityFlags} />
+                  <CrossTenantBadge flagged={candidate.crossTenantFlag} reason={candidate.crossTenantFlagReason} />
                 </div>
 
                 {parsedResume && Object.keys(parsedResume).length > 0 && (

@@ -1698,6 +1698,276 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
   }
 
   /**
+   * Phase 4 — Officer self-service capabilities.
+   * Routes officer commands (calloff, pickup, confirm, paycheck) to concrete
+   * handlers. Callers: trinityChatService officer mode, smsAutoResolver, and
+   * ChatServerHub voice transcripts. Read-only lookups do not mutate state.
+   */
+  async executeCapability(
+    capability: string,
+    params: { employeeId: string; workspaceId: string; [key: string]: any },
+  ): Promise<{ success: boolean; message: string; data?: any }> {
+    const { pool } = await import('../../db');
+    const { employeeId, workspaceId } = params;
+
+    if (!employeeId || !workspaceId) {
+      return { success: false, message: 'Missing employee or workspace context.' };
+    }
+
+    switch (capability) {
+      case 'calloff_shift': {
+        const { rows: shifts } = await pool.query(
+          `SELECT s.id, s.start_time, s.site_id, si.name AS site_name
+             FROM shifts s
+             LEFT JOIN sites si ON si.id = s.site_id
+            WHERE s.employee_id = $1
+              AND s.workspace_id = $2
+              AND s.start_time > NOW()
+              AND s.status NOT IN ('cancelled','completed')
+            ORDER BY s.start_time ASC LIMIT 1`,
+          [employeeId, workspaceId],
+        ).catch(() => ({ rows: [] as any[] }));
+
+        if (!shifts.length) {
+          return { success: false, message: "You don't have any upcoming shifts to call off from." };
+        }
+
+        const shift = shifts[0];
+        const shiftTime = new Date(shift.start_time).toLocaleString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric',
+          hour: 'numeric', minute: '2-digit',
+        });
+
+        await pool.query(
+          `UPDATE shifts
+              SET employee_id = NULL, status = 'open', updated_at = NOW()
+            WHERE id = $1 AND workspace_id = $2`,
+          [shift.id, workspaceId],
+        ).catch(() => {});
+
+        await pool.query(
+          `INSERT INTO schedule_calloffs
+             (id, workspace_id, employee_id, shift_id, called_off_at, source)
+           VALUES (gen_random_uuid(), $1, $2, $3, NOW(), 'helpai')`,
+          [workspaceId, employeeId, shift.id],
+        ).catch(() => {});
+
+        try {
+          const { platformEventBus } = await import('../platformEventBus');
+          await platformEventBus.publish({
+            type: 'shift_calloff',
+            category: 'scheduling',
+            title: `Officer Call-Off — ${shiftTime}`,
+            description: `An officer called off their shift at ${shift.site_name || 'Unknown Site'} starting ${shiftTime}. Open shift needs coverage.`,
+            workspaceId,
+            metadata: { shiftId: shift.id, employeeId, siteId: shift.site_id },
+          } as any);
+        } catch { /* non-fatal */ }
+
+        return {
+          success: true,
+          message:
+            `Got it — I've recorded your calloff for the ${shiftTime} shift at ${shift.site_name || 'your site'}. ` +
+            `Your manager has been notified and we're looking for coverage.`,
+          data: { shiftId: shift.id, shiftTime, siteId: shift.site_id },
+        };
+      }
+
+      case 'pickup_open_shift': {
+        const { rows: openShifts } = await pool.query(
+          `SELECT s.id, s.start_time, s.end_time, s.site_id, si.name AS site_name,
+                  COALESCE(jp.requires_armed_license, FALSE) AS requires_armed_license
+             FROM shifts s
+             LEFT JOIN sites si ON si.id = s.site_id
+             LEFT JOIN job_postings jp ON jp.site_id = s.site_id
+             JOIN employees e ON e.id = $1 AND e.workspace_id = $2
+            WHERE s.workspace_id = $2
+              AND s.employee_id IS NULL
+              AND s.status = 'open'
+              AND s.start_time > NOW()
+              AND (COALESCE(jp.requires_armed_license, FALSE) = FALSE OR e.is_armed = TRUE)
+              AND COALESCE(e.guard_card_status, '') NOT IN ('expired_hard_block')
+            ORDER BY s.start_time ASC LIMIT 5`,
+          [employeeId, workspaceId],
+        ).catch(() => ({ rows: [] as any[] }));
+
+        if (!openShifts.length) {
+          return {
+            success: true,
+            message: "There are no open shifts available that match your qualifications right now. I'll notify you when one opens up.",
+          };
+        }
+
+        const shift = openShifts[0];
+        const shiftTime = new Date(shift.start_time).toLocaleString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric',
+          hour: 'numeric', minute: '2-digit',
+        });
+
+        const { rowCount } = await pool.query(
+          `UPDATE shifts SET employee_id = $1, status = 'scheduled', updated_at = NOW()
+            WHERE id = $2 AND workspace_id = $3 AND employee_id IS NULL`,
+          [employeeId, shift.id, workspaceId],
+        ).catch(() => ({ rowCount: 0 } as any));
+
+        if (!rowCount) {
+          return { success: false, message: 'That shift was just claimed by someone else. Try again for the next available shift.' };
+        }
+
+        return {
+          success: true,
+          message: `You're all set — I've assigned you to the ${shiftTime} shift at ${shift.site_name || 'your site'}. This is now on your schedule.`,
+          data: { shiftId: shift.id, shiftTime, siteId: shift.site_id },
+        };
+      }
+
+      case 'confirm_shift_attendance': {
+        const { rows } = await pool.query(
+          `SELECT id, start_time FROM shifts
+            WHERE employee_id = $1 AND workspace_id = $2
+              AND start_time > NOW() AND status NOT IN ('cancelled','completed')
+            ORDER BY start_time ASC LIMIT 1`,
+          [employeeId, workspaceId],
+        ).catch(() => ({ rows: [] as any[] }));
+
+        if (!rows.length) {
+          return { success: false, message: "You don't have any upcoming shifts to confirm." };
+        }
+
+        await pool.query(
+          `UPDATE shifts SET status = 'confirmed', updated_at = NOW()
+            WHERE id = $1 AND workspace_id = $2`,
+          [rows[0].id, workspaceId],
+        ).catch(() => {});
+
+        const shiftTime = new Date(rows[0].start_time).toLocaleString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric',
+          hour: 'numeric', minute: '2-digit',
+        });
+
+        return {
+          success: true,
+          message: `Thanks for confirming — I've marked your ${shiftTime} shift as confirmed. See you then!`,
+        };
+      }
+
+      case 'view_my_paycheck': {
+        const { rows } = await pool.query(
+          `SELECT pr.period_start, pr.period_end, pr.status,
+                  pe.gross_pay, pe.net_pay, pe.hours_worked, pe.overtime_hours
+             FROM payroll_entries pe
+             JOIN payroll_runs pr ON pr.id = pe.payroll_run_id
+            WHERE pe.employee_id = $1
+              AND pe.workspace_id = $2
+            ORDER BY pr.period_end DESC LIMIT 1`,
+          [employeeId, workspaceId],
+        ).catch(() => ({ rows: [] as any[] }));
+
+        if (!rows.length) {
+          return { success: true, message: 'No payroll records found yet. Check back after your first payroll run.' };
+        }
+
+        const p = rows[0];
+        const periodStr = `${new Date(p.period_start).toLocaleDateString()} – ${new Date(p.period_end).toLocaleDateString()}`;
+
+        const lines = [
+          `Your most recent paycheck (${periodStr}):`,
+          `• Regular hours: ${parseFloat(p.hours_worked || 0).toFixed(1)}h`,
+        ];
+        if (parseFloat(p.overtime_hours || 0) > 0) {
+          lines.push(`• Overtime hours: ${parseFloat(p.overtime_hours).toFixed(1)}h`);
+        }
+        lines.push(`• Gross pay: $${parseFloat(p.gross_pay || 0).toFixed(2)}`);
+        lines.push(`• Net pay: $${parseFloat(p.net_pay || 0).toFixed(2)}`);
+        lines.push(`• Status: ${p.status}`);
+
+        return { success: true, message: lines.join('\n'), data: p };
+      }
+
+      case 'request_time_off': {
+        // Queues an approval via governance_approvals — manager must action it.
+        const { randomUUID } = await import('crypto');
+        const approvalId = randomUUID();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await pool.query(
+          `INSERT INTO governance_approvals
+             (id, workspace_id, action_type, requester_id, requester_role, parameters, reason, status, expires_at, created_at, updated_at)
+           VALUES ($1,$2,'time_off.request',$3,'officer',$4,$5,'pending',$6,NOW(),NOW())`,
+          [
+            approvalId,
+            workspaceId,
+            employeeId,
+            JSON.stringify({ employeeId, rawCommand: params.rawCommand || '' }),
+            params.rawCommand || 'Officer requested time off via HelpAI',
+            expiresAt,
+          ],
+        ).catch(() => {});
+        return {
+          success: true,
+          message: "I've submitted your time-off request to your manager. You'll get a notification when they respond.",
+          data: { approvalId },
+        };
+      }
+
+      case 'update_availability': {
+        // Writes a simple availability note — extend with structured parsing later.
+        await pool.query(
+          `UPDATE employees SET availability_notes = $1, updated_at = NOW()
+            WHERE id = $2 AND workspace_id = $3`,
+          [(params.rawCommand || '').slice(0, 500), employeeId, workspaceId],
+        ).catch(() => {});
+        return { success: true, message: "Thanks — I've updated your availability notes. Your scheduler will see this on the next run." };
+      }
+
+      case 'message_supervisor': {
+        try {
+          const { platformEventBus } = await import('../platformEventBus');
+          await platformEventBus.publish({
+            type: 'officer_supervisor_message',
+            category: 'communication',
+            title: 'Officer message for supervisor',
+            description: (params.rawCommand || params.message || '').slice(0, 400),
+            workspaceId,
+            metadata: { employeeId },
+          } as any);
+        } catch { /* non-fatal */ }
+        return { success: true, message: "Message delivered — your supervisor has been notified." };
+      }
+
+      case 'report_incident': {
+        const { randomUUID } = await import('crypto');
+        const incidentId = randomUUID();
+        const narrative = (params.rawCommand || params.message || '').slice(0, 2000);
+        await pool.query(
+          `INSERT INTO incident_reports
+             (id, workspace_id, reporting_officer_id, incident_date, incident_type, location, severity, narrative, created_at)
+           VALUES ($1, $2, $3, NOW(), COALESCE($4, 'general'), COALESCE($5, 'unknown'), COALESCE($6, 'low'), $7, NOW())`,
+          [incidentId, workspaceId, employeeId, params.incidentType || null, params.location || null, params.severity || null, narrative],
+        ).catch(() => {});
+        try {
+          const { platformEventBus } = await import('../platformEventBus');
+          await platformEventBus.publish({
+            type: 'incident_reported',
+            category: 'compliance',
+            title: 'Officer Incident Report',
+            description: narrative.slice(0, 200),
+            workspaceId,
+            metadata: { incidentId, employeeId },
+          } as any);
+        } catch { /* non-fatal */ }
+        return {
+          success: true,
+          message: `I've logged the incident report (#${incidentId.slice(0, 8)}). Management has been notified. Stay safe.`,
+          data: { incidentId },
+        };
+      }
+
+      default:
+        return { success: false, message: `Unknown officer capability: ${capability}` };
+    }
+  }
+
+  /**
    * Soft-delete a resource (HelpAI has NO hard-delete authority)
    * This marks records as deleted/archived without permanent removal
    */

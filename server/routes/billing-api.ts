@@ -1845,10 +1845,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       periodStart: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
       periodEnd: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
       type: (line as any).type,
-      // `price` was removed from InvoiceLineItem in newer Stripe API versions;
-      // fall back to pricing.price_details for forward-compat, cast to any
-      // so the build passes across SDK upgrades.
-      priceId: (line as any).price?.id ?? (line as any).pricing?.price_details?.price,
+      priceId: (line as any).price?.id,
       metadata: line.metadata || {},
     }));
 
@@ -1856,8 +1853,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       pendingItems: items,
       totalCents: upcoming.total,
       subtotalCents: upcoming.subtotal,
-      // `tax` was replaced by `total_tax_amounts` in newer Stripe API versions
-      taxCents: (upcoming as any).tax ?? (upcoming as any).total_taxes?.reduce((s: number, t: any) => s + (t?.amount ?? 0), 0) ?? 0,
+      taxCents: (upcoming as any).tax || 0,
       nextPaymentDate: upcoming.next_payment_attempt
         ? new Date(upcoming.next_payment_attempt * 1000).toISOString()
         : null,

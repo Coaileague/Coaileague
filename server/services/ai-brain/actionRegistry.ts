@@ -187,6 +187,7 @@ class AIBrainActionRegistry {
     this.registerBillingSettingsActions();
     this.registerInvoiceActions();
     registerTrainingSessionActions();
+    this.registerDisciplinaryActions();
 
     this.initialized = true;
     (global as any)._aiBrainActionRegistryInitializing = false;
@@ -4053,6 +4054,98 @@ class AIBrainActionRegistry {
     // helpaiOrchestrator.registerAction(getInvoice);
     helpaiOrchestrator.registerAction(withAuditWrap(getInvoiceSummary, 'invoice')); // billing.invoice_summary
     log.info('[AI Brain] Invoice & analytics actions registered (2 actions)');
+  }
+
+  // ============================================================================
+  // DISCIPLINARY / HR ACTIONS (Phase 4)
+  // Trinity-guided 5-W intake + AI document generation for write-ups and LODs.
+  // ============================================================================
+
+  private registerDisciplinaryActions(): void {
+    const initiateDisciplinary: ActionHandler = {
+      actionId: 'hr.initiate_disciplinary',
+      name: 'Initiate Disciplinary Process',
+      category: 'hr',
+      description:
+        'Trinity guides the manager through a 5-W intake and generates a disciplinary document (or Letter of Dissatisfaction for 1099 contractors).',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const {
+          subjectId,
+          subjectType,
+          what,
+          why,
+          when: whenStr,
+          where: whereStr,
+          who,
+          how,
+          witnesses,
+          priorIncidents,
+          rawNarrative,
+        } = request.payload || {};
+
+        if (!subjectId || !what) {
+          return createResult(
+            request.actionId,
+            false,
+            'Trinity needs subjectId, what happened, and why it is a policy violation.',
+            null,
+            start,
+          );
+        }
+        if (!request.workspaceId) {
+          return createResult(
+            request.actionId,
+            false,
+            'Workspace context required.',
+            null,
+            start,
+          );
+        }
+
+        try {
+          const { runDisciplinaryWorkflow } = await import(
+            '../trinity/trinityDisciplinaryWorkflow'
+          );
+          const result = await runDisciplinaryWorkflow({
+            workspaceId: request.workspaceId,
+            initiatedBy: request.userId || 'trinity-brain',
+            initiatedByRole: request.userRole || 'manager',
+            subjectId,
+            subjectType: subjectType || 'employee',
+            who: who || 'See incident report',
+            what,
+            where: whereStr || 'On duty',
+            when: whenStr || new Date().toLocaleString(),
+            why: why || 'Policy violation',
+            how: how || 'Manager observation',
+            witnesses,
+            priorIncidents,
+            rawNarrative,
+          });
+
+          return createResult(
+            request.actionId,
+            true,
+            `Disciplinary document generated: ${result.documentTitle}. ${result.severityLevel.toUpperCase()} severity. Trinity recommends: ${result.documentType.replace(/_/g, ' ')}.`,
+            result,
+            start,
+          );
+        } catch (err: any) {
+          return createResult(
+            request.actionId,
+            false,
+            `Document generation failed: ${err?.message}`,
+            null,
+            start,
+          );
+        }
+      },
+    };
+
+    helpaiOrchestrator.registerAction(withAuditWrap(initiateDisciplinary, 'disciplinary'));
+    log.info('[AI Brain] Disciplinary actions registered (1 action)');
   }
 
   getRegisteredActionCount(): number {

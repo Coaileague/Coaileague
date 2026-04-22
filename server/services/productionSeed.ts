@@ -200,12 +200,14 @@ export async function runDataCorrections(): Promise<void> {
     console.log('🔧 Data Correction: workspace_verification_settings skipped:', (err as any)?.message);
   }
 
-  // Trinity Phase 2 — governance_approvals idempotency + execution lock.
+  // governance_approvals — Trinity Phase 2 idempotency + execution lock columns.
   // Prevents duplicate pending actions (via payload-hashed idempotency_key),
   // enforces one-approval-one-execution, and rejects re-approval of
-  // completed/rejected/expired requests. The dedup semantics intentionally
-  // key on idempotency_key (payload hash) rather than (workspace+action+status)
-  // so different payloads of the same action_type can coexist as pending.
+  // completed/rejected/expired requests. Columns ADD IF NOT EXISTS so this is
+  // safe on every startup regardless of whether a parallel migration has
+  // already applied it. The dedup semantics intentionally key on
+  // idempotency_key (payload hash) rather than (workspace+action+status) so
+  // different payloads of the same action_type can coexist as pending.
   try {
     await typedExec(sql`
       ALTER TABLE governance_approvals
@@ -229,6 +231,148 @@ export async function runDataCorrections(): Promise<void> {
     console.log('🔧 Data Correction: governance_approvals idempotency columns ensured');
   } catch (err) {
     console.log('🔧 Data Correction: governance_approvals constraints skipped:', (err as any)?.message);
+  }
+
+  // ── sms_outbox — mass-SMS queue for rate-limited Twilio delivery ────────────
+  // Used by smsQueueService for broadcast sends that exceed direct-send batches.
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS sms_outbox (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id    VARCHAR NOT NULL,
+        to_number       VARCHAR NOT NULL,
+        body            TEXT NOT NULL,
+        sms_type        VARCHAR NOT NULL DEFAULT 'notification',
+        user_id         VARCHAR,
+        employee_id     VARCHAR,
+        priority        INTEGER NOT NULL DEFAULT 5,
+        status          VARCHAR NOT NULL DEFAULT 'queued',
+        twilio_sid      VARCHAR,
+        send_after      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        sent_at         TIMESTAMPTZ,
+        failed_at       TIMESTAMPTZ,
+        failure_reason  TEXT,
+        retry_count     INTEGER NOT NULL DEFAULT 0,
+        max_retries     INTEGER NOT NULL DEFAULT 3,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_sms_outbox_status_priority
+        ON sms_outbox (status, priority, send_after)
+        WHERE status = 'queued'
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_sms_outbox_workspace
+        ON sms_outbox (workspace_id, created_at DESC)
+    `);
+    console.log('🔧 Data Correction: sms_outbox ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: sms_outbox skipped:', (err as any)?.message);
+  }
+
+  // Trinity Scoring Engine — applicant dimension columns
+  try {
+    await typedExec(sql`
+      ALTER TABLE applicants
+        ADD COLUMN IF NOT EXISTS trinity_score_dimensions JSONB,
+        ADD COLUMN IF NOT EXISTS trinity_flags JSONB,
+        ADD COLUMN IF NOT EXISTS trinity_liability_indicators JSONB,
+        ADD COLUMN IF NOT EXISTS trinity_recommendation VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS trinity_scored_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS cross_tenant_flag BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS cross_tenant_flag_reason TEXT
+    `);
+    console.log('🔧 Data Correction: applicants trinity dimension columns ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: applicants trinity columns skipped:', (err as any)?.message);
+  }
+
+  // Trinity Scoring Engine — job posting targeting columns for industry-specific prompts
+  try {
+    await typedExec(sql`
+      ALTER TABLE job_postings
+        ADD COLUMN IF NOT EXISTS requires_armed_license BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS site_type VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS state_jurisdiction VARCHAR(2) NOT NULL DEFAULT 'TX',
+        ADD COLUMN IF NOT EXISTS bilingual_required BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS sponsorship_available BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+    console.log('🔧 Data Correction: job_postings trinity targeting columns ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: job_postings trinity columns skipped:', (err as any)?.message);
+  }
+
+  // Trinity Scoring Engine — per-workspace hiring settings
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS workspace_hiring_settings (
+        workspace_id                      VARCHAR PRIMARY KEY,
+        cross_tenant_screening_enabled    BOOLEAN NOT NULL DEFAULT FALSE,
+        auto_score_on_apply               BOOLEAN NOT NULL DEFAULT TRUE,
+        auto_decline_below_score          INTEGER DEFAULT NULL,
+        auto_advance_above_score          INTEGER DEFAULT NULL,
+        license_sponsorship_available     BOOLEAN NOT NULL DEFAULT FALSE,
+        default_state_jurisdiction        VARCHAR(2) NOT NULL DEFAULT 'TX',
+        scoring_weights_custom            JSONB,
+        updated_at                        TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('🔧 Data Correction: workspace_hiring_settings ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: workspace_hiring_settings skipped:', (err as any)?.message);
+  }
+
+  // Phase 4 — SOP index + employee acknowledgment tracking
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS workspace_sop_index (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id    VARCHAR NOT NULL,
+        document_id     VARCHAR NOT NULL,
+        category        VARCHAR NOT NULL,
+        version         INTEGER NOT NULL DEFAULT 1,
+        extracted_text  TEXT,
+        indexed_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        is_current      BOOLEAN NOT NULL DEFAULT TRUE,
+        UNIQUE (workspace_id, document_id)
+      )
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_sop_index_workspace
+        ON workspace_sop_index (workspace_id, is_current)
+    `);
+    console.log('🔧 Data Correction: workspace_sop_index ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: workspace_sop_index skipped:', (err as any)?.message);
+  }
+
+  try {
+    await typedExec(sql`
+      CREATE TABLE IF NOT EXISTS sop_acknowledgments (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id    VARCHAR NOT NULL,
+        document_id     VARCHAR NOT NULL,
+        employee_id     VARCHAR NOT NULL,
+        acknowledged_at TIMESTAMPTZ,
+        signature_token VARCHAR,
+        signed_at       TIMESTAMPTZ,
+        is_required     BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await typedExec(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_sop_ack_unique
+        ON sop_acknowledgments (workspace_id, document_id, employee_id)
+    `);
+    await typedExec(sql`
+      CREATE INDEX IF NOT EXISTS idx_sop_ack_pending
+        ON sop_acknowledgments (workspace_id, employee_id)
+        WHERE signed_at IS NULL
+    `);
+    console.log('🔧 Data Correction: sop_acknowledgments ensured');
+  } catch (err) {
+    console.log('🔧 Data Correction: sop_acknowledgments skipped:', (err as any)?.message);
   }
 
   console.log('🔧 Data Corrections Service: Complete');

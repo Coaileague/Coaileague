@@ -9,12 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Star, AlertTriangle, FileText, User, ChevronLeft } from "lucide-react";
+import { Loader2, Plus, Star, AlertTriangle, FileText, User, ChevronLeft, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 
@@ -43,6 +44,22 @@ export default function OfficerHrRecord() {
   const [noteContent, setNoteContent] = useState("");
   const [disciplinaryType, setDisciplinaryType] = useState("verbal_warning");
   const [disciplinaryDescription, setDisciplinaryDescription] = useState("");
+
+  // Phase 4 — Trinity 5-W intake
+  const [showTrinityDialog, setShowTrinityDialog] = useState(false);
+  const [subjectType, setSubjectType] = useState<"employee" | "contractor_1099">("employee");
+  const [fiveW, setFiveW] = useState({
+    who: "",
+    what: "",
+    where: "",
+    when: "",
+    why: "",
+    how: "",
+    witnesses: "",
+    priorIncidents: "",
+    rawNarrative: "",
+  });
+  const [trinityDraft, setTrinityDraft] = useState<any | null>(null);
 
   const canManage = user?.role === "owner" || user?.role === "manager" || user?.role === "root_admin";
 
@@ -101,6 +118,68 @@ export default function OfficerHrRecord() {
       toast({ title: "Disciplinary record created" });
     },
     onError: () => toast({ title: "Failed to create record", variant: "destructive" }),
+  });
+
+  // Phase 4 — Trinity-powered 5-W intake and finalize
+  const trinityIntakeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/disciplinary-records/trinity-intake", {
+        subjectId: employeeId,
+        subjectType,
+        who: fiveW.who,
+        what: fiveW.what,
+        where: fiveW.where,
+        when: fiveW.when,
+        why: fiveW.why,
+        how: fiveW.how,
+        witnesses: fiveW.witnesses,
+        priorIncidents: fiveW.priorIncidents,
+        rawNarrative: fiveW.rawNarrative,
+      });
+      return await res.json();
+    },
+    onSuccess: (result: any) => {
+      setTrinityDraft(result);
+      toast({ title: "Trinity drafted the document — review before sending" });
+    },
+    onError: () =>
+      toast({ title: "Document generation failed", variant: "destructive" }),
+  });
+
+  const finalizeMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/api/disciplinary-records/finalize", {
+        subjectId: employeeId,
+        subjectType,
+        documentType: trinityDraft?.documentType,
+        documentTitle: trinityDraft?.documentTitle,
+        documentContent: trinityDraft?.documentContent,
+        sopViolationsFound: trinityDraft?.sopViolationsFound,
+        severityLevel: trinityDraft?.severityLevel,
+        scoreDeduction: trinityDraft?.scoreDeduction,
+        signingSequence: trinityDraft?.signingSequence,
+        rehabilitationSuggestions: trinityDraft?.rehabilitationSuggestions,
+        lodCount: trinityDraft?.lodCount,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/disciplinary-records", { employeeId }] });
+      setShowTrinityDialog(false);
+      setTrinityDraft(null);
+      setFiveW({
+        who: "",
+        what: "",
+        where: "",
+        when: "",
+        why: "",
+        how: "",
+        witnesses: "",
+        priorIncidents: "",
+        rawNarrative: "",
+      });
+      toast({ title: "Document sent for signature" });
+    },
+    onError: () =>
+      toast({ title: "Failed to send for signature", variant: "destructive" }),
   });
 
   const isLoading = empLoading || notesLoading || discLoading;
@@ -203,10 +282,21 @@ export default function OfficerHrRecord() {
                 <p className="text-sm text-muted-foreground">Formal HR actions — verbal/written warnings, PIPs, and terminations.</p>
               </div>
               {canManage && (
-                <Button size="sm" variant="destructive" onClick={() => setShowDisciplinaryDialog(true)} data-testid="button-add-disciplinary-record">
-                  <Plus className="h-4 w-4 mr-1" />
-                  New Record
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => setShowTrinityDialog(true)}
+                    data-testid="button-trinity-intake"
+                  >
+                    <Sparkles className="h-4 w-4 mr-1" />
+                    Trinity Write-Up (5-W)
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => setShowDisciplinaryDialog(true)} data-testid="button-add-disciplinary-record">
+                    <Plus className="h-4 w-4 mr-1" />
+                    New Record
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -351,6 +441,225 @@ export default function OfficerHrRecord() {
               {addDisciplinaryMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Create Record
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trinity 5-W Intake Dialog */}
+      <Dialog
+        open={showTrinityDialog}
+        onOpenChange={(open) => {
+          setShowTrinityDialog(open);
+          if (!open) setTrinityDraft(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl" data-testid="dialog-trinity-intake">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Trinity 5-W Disciplinary Intake
+            </DialogTitle>
+          </DialogHeader>
+
+          {!trinityDraft ? (
+            <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-1.5">
+                <Label>Subject Type</Label>
+                <Select value={subjectType} onValueChange={(v) => setSubjectType(v as any)}>
+                  <SelectTrigger data-testid="select-subject-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee">Employee (W-2)</SelectItem>
+                    <SelectItem value="contractor_1099">Contractor (1099)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Contractors receive a Letter of Dissatisfaction, not a disciplinary write-up (IRS
+                  classification compliance).
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Who</Label>
+                  <Input
+                    value={fiveW.who}
+                    onChange={(e) => setFiveW({ ...fiveW, who: e.target.value })}
+                    placeholder="Officer / contractor involved"
+                    data-testid="input-5w-who"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Where</Label>
+                  <Input
+                    value={fiveW.where}
+                    onChange={(e) => setFiveW({ ...fiveW, where: e.target.value })}
+                    placeholder="Site / post"
+                    data-testid="input-5w-where"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>When</Label>
+                  <Input
+                    value={fiveW.when}
+                    onChange={(e) => setFiveW({ ...fiveW, when: e.target.value })}
+                    placeholder="Date and time"
+                    data-testid="input-5w-when"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>How Discovered</Label>
+                  <Input
+                    value={fiveW.how}
+                    onChange={(e) => setFiveW({ ...fiveW, how: e.target.value })}
+                    placeholder="Supervisor round, client call, GPS alert..."
+                    data-testid="input-5w-how"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>What Happened *</Label>
+                <Textarea
+                  value={fiveW.what}
+                  onChange={(e) => setFiveW({ ...fiveW, what: e.target.value })}
+                  placeholder="Describe the specific incident in factual detail..."
+                  className="min-h-[70px] resize-none"
+                  data-testid="textarea-5w-what"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Why It's a Problem *</Label>
+                <Textarea
+                  value={fiveW.why}
+                  onChange={(e) => setFiveW({ ...fiveW, why: e.target.value })}
+                  placeholder="Which policy, SOP, or safety standard was violated?"
+                  className="min-h-[60px] resize-none"
+                  data-testid="textarea-5w-why"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Witnesses (optional)</Label>
+                <Input
+                  value={fiveW.witnesses}
+                  onChange={(e) => setFiveW({ ...fiveW, witnesses: e.target.value })}
+                  placeholder="Names of anyone who saw the incident"
+                  data-testid="input-5w-witnesses"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Prior Related Incidents (optional)</Label>
+                <Input
+                  value={fiveW.priorIncidents}
+                  onChange={(e) => setFiveW({ ...fiveW, priorIncidents: e.target.value })}
+                  placeholder="Any prior coaching, warnings, or similar incidents"
+                  data-testid="input-5w-prior"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Additional Context (optional)</Label>
+                <Textarea
+                  value={fiveW.rawNarrative}
+                  onChange={(e) => setFiveW({ ...fiveW, rawNarrative: e.target.value })}
+                  placeholder="Anything else Trinity should know..."
+                  className="min-h-[50px] resize-none"
+                  data-testid="textarea-5w-narrative"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+              <div className="rounded-md border p-3 bg-muted/40">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                  Trinity's Recommendation
+                </p>
+                <p className="text-sm font-semibold">{trinityDraft.documentTitle}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Severity: {String(trinityDraft.severityLevel).toUpperCase()} · Score impact: −
+                  {trinityDraft.scoreDeduction} pts
+                  {trinityDraft.lodCount ? ` · LOD ${trinityDraft.lodCount}/3` : ""}
+                </p>
+              </div>
+
+              {trinityDraft.trinityNarrative && (
+                <div className="rounded-md border p-3 text-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                    Trinity's Reasoning
+                  </p>
+                  <p className="whitespace-pre-wrap">{trinityDraft.trinityNarrative}</p>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label>Generated Document</Label>
+                <Textarea
+                  value={trinityDraft.documentContent}
+                  readOnly
+                  className="min-h-[260px] font-mono text-xs"
+                  data-testid="textarea-trinity-doc"
+                />
+              </div>
+
+              {Array.isArray(trinityDraft.rehabilitationSuggestions) &&
+                trinityDraft.rehabilitationSuggestions.length > 0 && (
+                  <div className="rounded-md border p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                      Rehabilitation Suggestions
+                    </p>
+                    <ul className="text-sm list-disc list-inside space-y-0.5">
+                      {trinityDraft.rehabilitationSuggestions.map((s: string, i: number) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTrinityDialog(false);
+                setTrinityDraft(null);
+              }}
+              data-testid="button-cancel-trinity"
+            >
+              Cancel
+            </Button>
+            {!trinityDraft ? (
+              <Button
+                onClick={() => trinityIntakeMutation.mutate()}
+                disabled={
+                  trinityIntakeMutation.isPending ||
+                  !fiveW.what.trim() ||
+                  !fiveW.why.trim()
+                }
+                data-testid="button-submit-trinity-intake"
+              >
+                {trinityIntakeMutation.isPending && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Generate with Trinity
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={() => finalizeMutation.mutate()}
+                disabled={finalizeMutation.isPending}
+                data-testid="button-finalize-trinity"
+              >
+                {finalizeMutation.isPending && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Finalize &amp; Send for Signature
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

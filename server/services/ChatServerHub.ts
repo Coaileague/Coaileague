@@ -42,6 +42,7 @@ import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
 import { universalNotificationEngine } from './universalNotificationEngine';
 import { helpAIBotService } from './helpai/helpAIBotService';
 import { typedExec } from '../lib/typedSql';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 
 // ============================================================================
 // CHAT-SPECIFIC EVENT TYPES
@@ -1558,6 +1559,65 @@ class ChatServerHubClass {
     messagePreview?: string;
   }): Promise<void> {
     const message = params.messagePreview || '';
+
+    // ── VOICE TRANSCRIPTION — Detect [Shared audio] attachments ───────────────
+    // When a user sends a voice note, transcribe it asynchronously and
+    // post the transcript as a follow-up system message so HelpAI/Trinity
+    // can process it as a command. Non-fatal: original message still delivers.
+    const AUDIO_PATTERN = /\[Shared audio\]\(([^)]+)\)/i;
+    const audioMatch = message.match(AUDIO_PATTERN);
+    if (audioMatch && audioMatch[1]) {
+      const audioUrl = audioMatch[1];
+      scheduleNonBlocking('chat.voice.transcribe', async () => {
+        try {
+          const { transcribeVoiceMessage } = await import('./chat/voiceTranscriptionService');
+          const transcript = await transcribeVoiceMessage(audioUrl);
+          if (!transcript) return;
+
+          const voiceTranscriptText = `🎙️ Voice message from ${params.userName}: "${transcript}"`;
+
+          // Broadcast the transcript as a system message so clients render it
+          if (this.wsBroadcaster) {
+            this.wsBroadcaster({
+              type: 'bot_reply',
+              conversationId: params.conversationId,
+              workspaceId: params.workspaceId,
+              payload: {
+                message: voiceTranscriptText,
+                voiceTranscript: true,
+                originalAudioUrl: audioUrl,
+                originalSenderId: params.userId,
+              },
+            });
+          }
+
+          // If this was posted in an assisting HelpAI session, feed the transcript as a user turn
+          try {
+            const [session] = await db
+              .select()
+              .from(helpaiSessions)
+              .where(and(eq(helpaiSessions.userId, params.userId), eq(helpaiSessions.state, 'assisting')))
+              .orderBy(desc(helpaiSessions.createdAt))
+              .limit(1);
+            if (session) {
+              const response = await helpAIBotService.handleMessage(session.id, transcript);
+              if (this.wsBroadcaster && response?.response) {
+                this.wsBroadcaster({
+                  type: 'bot_reply',
+                  conversationId: params.conversationId,
+                  workspaceId: params.workspaceId,
+                  payload: { message: response.response, triggeredByVoice: true },
+                });
+              }
+            }
+          } catch (routeErr: any) {
+            log.warn('[ChatServerHub] Voice transcript routing failed (non-fatal):', routeErr?.message);
+          }
+        } catch (err: any) {
+          log.warn('[ChatServerHub] Voice transcription failed (non-fatal):', err?.message);
+        }
+      });
+    }
 
     // INTERCEPT HELPAI COMMANDS (H004)
     if (message.startsWith('/helpai') || message.startsWith('/trinity help')) {

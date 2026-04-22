@@ -2533,6 +2533,123 @@ export function initializeTrinityEventSubscriptions(): void {
     },
   });
 
+  // ── Phase 4: sop_updated_acknowledgment_required ──────────────────────────
+  // When an owner uploads a new SOP version, every active employee must
+  // acknowledge it before their next shift. This handler creates the pending
+  // acknowledgment rows and pushes a workspace-wide notification so nobody
+  // can claim they never saw the change.
+  platformEventBus.subscribe('sop_updated_acknowledgment_required', {
+    name: 'TrinitySOPAcknowledgmentRouter',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        if (!workspaceId) return;
+        const documentId = metadata?.documentId;
+        if (!documentId) return;
+
+        const { rows: employees } = await (await import('../db')).pool.query(
+          `SELECT id FROM employees WHERE workspace_id = $1 AND is_active = TRUE`,
+          [workspaceId],
+        );
+
+        for (const emp of employees) {
+          await (await import('../db')).pool.query(
+            `INSERT INTO sop_acknowledgments
+               (workspace_id, document_id, employee_id, is_required)
+             VALUES ($1, $2, $3, TRUE)
+             ON CONFLICT (workspace_id, document_id, employee_id) DO NOTHING`,
+            [workspaceId, documentId, emp.id],
+          ).catch(() => null);
+        }
+
+        // Notify the workspace owner so they can verify deliverability.
+        const [ws] = await db.select({ ownerId: workspaces.ownerId })
+          .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        if (ws?.ownerId) {
+          await NotificationDeliveryService.send({
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            type: 'sop_acknowledgment_requested',
+            workspaceId,
+            recipientUserId: ws.ownerId,
+            channel: 'in_app',
+            body: {
+              title: 'SOP Updated — Employees Notified',
+              message: `${employees.length} employee(s) must acknowledge the updated policy before their next shift.`,
+            },
+          }).catch(() => null);
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] sop_updated_acknowledgment_required handler failed:', err?.message);
+      }
+    },
+  });
+
+  // ── Phase 4: disciplinary record activation when signed by both parties ───
+  // When a disciplinary document is signed by the employee and the manager,
+  // flip the underlying disciplinary_records row from 'pending_signature' to
+  // 'active' so the score deduction becomes canonical and the record counts
+  // toward the progressive-discipline stack.
+  platformEventBus.subscribe('document_fully_signed', {
+    name: 'TrinityDisciplinaryActivation',
+    handler: async (event: PlatformEvent) => {
+      try {
+        const { workspaceId, metadata } = event;
+        const documentId = metadata?.documentId;
+        if (!workspaceId || !documentId) return;
+
+        const { rows } = await (await import('../db')).pool.query(
+          `SELECT dr.id, dr.employee_id, dr.record_type
+             FROM disciplinary_records dr
+            WHERE dr.workspace_id = $1
+              AND dr.status = 'pending_signature'
+              AND (dr.notes ILIKE $2 OR dr.document_url = $3)
+            LIMIT 1`,
+          [workspaceId, `%"orgDocId":"${documentId}"%`, documentId],
+        );
+        if (!rows.length) return;
+
+        const record = rows[0];
+        await (await import('../db')).pool.query(
+          `UPDATE disciplinary_records
+              SET status = 'active',
+                  acknowledged_at = NOW(),
+                  updated_at = NOW()
+            WHERE id = $1`,
+          [record.id],
+        );
+        log.info(
+          `[TrinityEvents] disciplinary ${record.record_type} fully signed and activated for ${record.employee_id}`,
+        );
+
+        // Final warning fully executed — notify the workspace owner so they
+        // can initiate separation review if needed.
+        if (
+          ['final_written_warning', 'termination_warning', 'written_warning'].includes(
+            record.record_type,
+          )
+        ) {
+          const [ws] = await db.select({ ownerId: workspaces.ownerId })
+            .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+          if (ws?.ownerId) {
+            await NotificationDeliveryService.send({
+              // @ts-expect-error — TS migration: fix in refactoring sprint
+              type: 'disciplinary_final_warning_executed',
+              workspaceId,
+              recipientUserId: ws.ownerId,
+              channel: 'in_app',
+              body: {
+                title: 'Disciplinary Document Executed',
+                message: `A ${record.record_type.replace(/_/g, ' ')} has been fully signed and is now active.`,
+              },
+            }).catch(() => null);
+          }
+        }
+      } catch (err: any) {
+        log.warn('[TrinityEvents] disciplinary activation handler failed:', err?.message);
+      }
+    },
+  });
+
   // ─── RMS + BID DEAD-LETTER SUBSCRIBERS ─────────────────────────────────────
 
   platformEventBus.subscribe('proposal_won', {

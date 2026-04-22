@@ -32,6 +32,7 @@ import onboardingFormsRoutes from "../onboardingFormsRoutes";
 import { intelligentOnboardingRouter } from "../intelligentOnboardingRoutes";
 import atsRouter from "../atsRoutes";
 import hiringRouter from "../hiringRoutes";
+import hiringSettingsRouter from "../hiringSettingsRoutes";
 import performanceNoteRouter from "../performanceNoteRoutes";
 import disciplinaryRecordRouter from "../disciplinaryRecordRoutes";
 import onboardingTaskRouter from "../onboardingTaskRoutes";
@@ -87,6 +88,8 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api/ats", requireAuth, ensureWorkspaceAccess, atsRouter);
   // Hiring pipeline — Trinity-orchestrated full hiring module (authenticated endpoints)
   app.use("/api/hiring", requireAuth, ensureWorkspaceAccess, hiringRouter);
+  // Per-workspace Trinity Scoring Engine settings (auto-score, thresholds, cross-tenant opt-in)
+  app.use("/api/workspace/hiring-settings", requireAuth, ensureWorkspaceAccess, hiringSettingsRouter);
   // Performance notes — manager-authored notes per officer
   app.use("/api/performance-notes", requireAuth, ensureWorkspaceAccess, performanceNoteRouter);
   // Disciplinary records — formal HR disciplinary workflow

@@ -1048,6 +1048,26 @@ class TrinityChatService {
       }
     }
 
+    // Phase 4 — SOP awareness. When a manager asks anything HR / policy /
+    // disciplinary related, inline the tenant's indexed SOPs so Trinity cites
+    // the exact policy section when advising on discipline.
+    if (isManagerLevel && workspaceId) {
+      try {
+        const isHRQuery = /\b(disciplin|write.?up|warning|sop|policy|violation|terminate|conduct|performance|handbook|pip|lod)\b/i.test(message || '');
+        if (isHRQuery) {
+          const { getSOPContextForTrinity } = await import(
+            '../../services/trinity/sopIndexingService'
+          );
+          const sopContext = await getSOPContextForTrinity(workspaceId, (message || '').slice(0, 200));
+          if (sopContext) {
+            systemPrompt += `\n\nCOMPANY SOP/POLICIES ON FILE:\n${sopContext.slice(0, 2000)}\nReference these when advising on policy violations or disciplinary matters.`;
+          }
+        }
+      } catch {
+        // non-fatal — SOP context is nice-to-have
+      }
+    }
+
     // === SELF-MODEL INJECTION (Cognitive Brain — Self-Awareness Layer) ===
     // Two complementary injections:
     // 1. buildSelfAwarePrompt() — general service-level awareness (identity, capabilities, platform)
@@ -1839,11 +1859,43 @@ Do NOT skip steps — decompose fully before concluding.`;
         .catch(err => log.warn('[TrinityChatService] encodeEmotionalEpisode failed (non-fatal):', err));
     }
 
+    // ── Trinity Action Dispatcher — execute or queue detected actions ─────────
+    // Non-blocking: if dispatcher fails, Trinity's text response still returns.
+    let dispatchAppend = '';
+    let dispatchMeta: any = null;
+    try {
+      const { dispatchFromChat } = await import('../trinity/trinityActionDispatcher');
+      const dispatchResult = await dispatchFromChat(
+        message,
+        finalResponseText,
+        {
+          workspaceId: workspaceId || '',
+          userId: userId || '',
+          userRole: (request as any).workspaceRole || workspaceRole || 'org_owner',
+          sessionId: session.id,
+          platformRole: (request as any).platformRole,
+        }
+      );
+      if (dispatchResult.appendToResponse) {
+        dispatchAppend = dispatchResult.appendToResponse;
+      }
+      if (dispatchResult.detected) {
+        dispatchMeta = {
+          detected: true,
+          status: dispatchResult.status,
+          actionId: dispatchResult.actionId,
+          approvalId: dispatchResult.approvalId,
+        };
+      }
+    } catch (dispatchErr: any) {
+      log.warn('[TrinityChat] Dispatcher non-fatal error:', dispatchErr?.message);
+    }
+
     return {
       sessionId: session.id,
       response: accConflict?.autoBlocked
         ? `I need to pause before delivering that response. I detected a potential issue: ${accConflict.contradictionDescription}\n\nRecommended next step: ${accConflict.recommendedResolution}`
-        : finalResponseText,
+        : (finalResponseText + dispatchAppend),
       mode,
       usage,
       metadata: {
@@ -1855,10 +1907,10 @@ Do NOT skip steps — decompose fully before concluding.`;
           severity: accConflict.conflictSeverity,
           blocked: accConflict.autoBlocked,
         } : undefined,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+        ...(dispatchMeta ? { dispatch: dispatchMeta } : {}),
         thalamicSignalId: thalamicSignal?.signalId,
         thalamicPriority: thalamicSignal?.priorityScore,
-      },
+      } as any,
     };
   }
 

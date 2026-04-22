@@ -413,6 +413,7 @@ const DockChatPage = lazy(() => import("@/pages/dock-chat"));
 const VoiceSettingsPage = lazy(() => import("@/pages/voice-settings"));
 const EmailManagement = lazy(() => import("@/pages/settings/EmailManagement"));
 const DnsSetupGuide = lazy(() => import("@/pages/settings/DnsSetupGuide"));
+const HiringSettingsPage = lazy(() => import("@/pages/settings/HiringSettings"));
 const VoiceCallsPage = lazy(() => import("@/pages/voice-calls"));
 const ClientCommunicationsPage = lazy(() => import("@/pages/client-communications"));
 const ShiftTradingPage = lazy(() => import("@/pages/shift-trading"));
@@ -1642,6 +1643,7 @@ function AppContent() {
                 <Route path="/voice-settings"><ErrorBoundary><VoiceSettingsPage /></ErrorBoundary></Route>
                 <Route path="/settings/email"><ErrorBoundary><EmailManagement /></ErrorBoundary></Route>
                 <Route path="/settings/dns-guide"><ErrorBoundary><DnsSetupGuide /></ErrorBoundary></Route>
+                <Route path="/settings/hiring"><ErrorBoundary><HiringSettingsPage /></ErrorBoundary></Route>
                 <Route path="/voice-calls"><ErrorBoundary><VoiceCallsPage /></ErrorBoundary></Route>
                 <Route path="/client-communications"><ErrorBoundary><ClientCommunicationsPage /></ErrorBoundary></Route>
                 <Route path="/shift-trading"><ErrorBoundary><ShiftTradingPage /></ErrorBoundary></Route>
@@ -2259,6 +2261,7 @@ function AppContent() {
                 <Route path="/automation/audit-log"><ErrorBoundary><AutomationAuditLog /></ErrorBoundary></Route>
                 <Route path="/settings/email"><ErrorBoundary><EmailManagement /></ErrorBoundary></Route>
                 <Route path="/settings/dns-guide"><ErrorBoundary><DnsSetupGuide /></ErrorBoundary></Route>
+                <Route path="/settings/hiring"><ErrorBoundary><HiringSettingsPage /></ErrorBoundary></Route>
                 <Route path="/category/communication"><ErrorBoundary><CommunicationFamilyPage /></ErrorBoundary></Route>
                 <Route path="/category/operations"><ErrorBoundary><OperationsFamilyPage /></ErrorBoundary></Route>
                 <Route path="/category/growth"><ErrorBoundary><GrowthFamilyPage /></ErrorBoundary></Route>

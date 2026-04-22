@@ -187,7 +187,10 @@ export function mountTrinityRoutes(app: Express): void {
   app.use("/api/trinity/transparency", requireAuth, ensureWorkspaceAccess, trinityTransparencyRouter);
 
   // ── Phase 16: Support Agent Command Dashboard ────────────────────────────
-  app.use("/api/trinity/agent-dashboard", trinityAgentDashboardRouter);
+  // Trinity agent queue and reasoning surfaces — platform-staff only.
+  // Previously mounted without any auth middleware, which exposed queue
+  // metadata and approve/override endpoints to anonymous callers.
+  app.use("/api/trinity/agent-dashboard", requireAuth, requirePlatformStaff, trinityAgentDashboardRouter);
 
   // General /api/trinity — empire & bluedot first (requireAuth inside router), then broader catches
   app.use("/api/trinity", empireRouter);

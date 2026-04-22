@@ -7,6 +7,7 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import '../types';
 import { documentSigningService } from '../services/documentSigningService';
 import { tokenManager } from '../services/billing/tokenManager';
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { createLogger } from '../lib/logger';
 const log = createLogger('DocumentLibraryRoutes');
 
@@ -128,6 +129,27 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
         signatureRequired,
         totalSignaturesRequired: totalSignaturesRequired || 0
       }).returning();
+
+      // Phase 4 — index SOP / employee-handbook uploads for Trinity so she can
+      // cite the right policy during disciplinary intake. Non-blocking.
+      if (doc && (category === 'sop' || category === 'employee_handbook')) {
+        scheduleNonBlocking('sop.index-for-trinity', async () => {
+          try {
+            const { indexSOPForTrinity } = await import(
+              '../services/trinity/sopIndexingService'
+            );
+            await indexSOPForTrinity({
+              documentId: doc.id,
+              workspaceId: workspaceId!,
+              filePath: doc.filePath,
+              category,
+              version: (doc as any).version || 1,
+            });
+          } catch (err: any) {
+            log.warn('[SOP] Indexing failed (non-fatal):', err?.message);
+          }
+        });
+      }
 
       res.json({ success: true, data: doc });
     } catch (error: unknown) {
