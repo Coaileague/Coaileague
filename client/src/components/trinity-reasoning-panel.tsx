@@ -20,7 +20,6 @@ import {
   ChevronRight,
   Loader2,
   Eye,
-  MessageSquare,
   Lightbulb,
   Search,
   Wrench,
@@ -168,7 +167,7 @@ export function TrinityReasoningPanel({
       <CardContent className="pt-0">
         {!session ? (
           <div className="text-center py-8 text-muted-foreground">
-            <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <TrinityLogo size={32} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">Ask Trinity a question or give a command to see her reasoning process here.</p>
           </div>
         ) : (
@@ -244,7 +243,7 @@ export function TrinityReasoningPanel({
               {session.status === 'complete' && session.summary && (
                 <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                   <div className="flex items-start gap-3">
-                    <MessageSquare className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <TrinityLogo size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <h4 className="font-semibold text-sm text-green-600 dark:text-green-400 mb-1">
                         Task Complete

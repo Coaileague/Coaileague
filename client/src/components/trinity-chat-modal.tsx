@@ -37,7 +37,6 @@ import {
   X,
   Send,
   Loader2,
-  MessageSquare,
   GripHorizontal,
   Minimize2,
   Trash2,
@@ -64,6 +63,9 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
+// Adapter: makes TrinityLogo compatible with Lucide icon props
+const TrinityIcon = ({ className }: { className?: string }) => <TrinityLogo size={14} />;
+
 import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
 import { Suspense } from 'react';
 import { TrinityAgentPanel } from '@/components/trinity';
@@ -742,11 +744,11 @@ function ModeSelector({ mode, onModeChange }: { mode: ConversationMode; onModeCh
 }
 
 const quickActionIconMap: Record<string, any> = {
-  Calendar, FileText, Users, DollarSign, Clock, AlertCircle, HelpCircle, MessageSquare, Activity
+  Calendar, FileText, Users, DollarSign, Clock, AlertCircle, HelpCircle, Activity
 };
 
 function QuickActionChip({ action, onExecute }: { action: QuickAction; onExecute: (action: QuickAction) => void }) {
-  const Icon = quickActionIconMap[action.icon] || MessageSquare;
+  const Icon = quickActionIconMap[action.icon] || TrinityIcon;
   
   return (
     <motion.button
@@ -766,7 +768,7 @@ function QuickActionGrid({ actions, onExecute }: { actions: QuickAction[]; onExe
   return (
     <div className="grid grid-cols-2 gap-1.5 max-h-[200px] overflow-y-auto" data-testid="quick-action-grid">
       {actions.map(action => {
-        const Icon = quickActionIconMap[action.icon] || MessageSquare;
+        const Icon = quickActionIconMap[action.icon] || TrinityIcon;
         return (
           <button
             key={action.id}
@@ -814,7 +816,7 @@ function CommandSuggestions({
       data-testid="command-suggestions"
     >
       {filtered.map(action => {
-        const Icon = quickActionIconMap[action.icon] || MessageSquare;
+        const Icon = quickActionIconMap[action.icon] || TrinityIcon;
         return (
           <button
             key={action.id}

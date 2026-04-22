@@ -81,7 +81,6 @@ import {
   Maximize2,
   Minimize2,
   MessageCircle,
-  MessageSquare,
   Ticket,
   HelpCircle,
   Database,
@@ -618,7 +617,7 @@ export default function TrinityCommandCenter() {
             {/* Output Header with Frontier Mode Toggle */}
             <div className="bg-slate-900/50 border-b border-slate-700/50 px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-cyan-400" />
+                <TrinityLogo size={16} className="text-cyan-400" />
                 <span className="text-sm font-medium text-white">Trinity AI Output</span>
                 <span className="text-xs text-slate-400">/ {trinityMode === 'strategic_guru' ? 'Strategic Guru' : 'Diagnostic'}</span>
               </div>
@@ -642,7 +641,7 @@ export default function TrinityCommandCenter() {
                     onClick={() => setTrinityMode('strategic_guru')}
                     data-testid="button-mode-guru"
                   >
-                    <MessageSquare className="w-3 h-3 mr-1" />
+                    <TrinityLogo size={12} className="mr-1" />
                     Guru Mode
                   </Button>
                 </div>
@@ -1095,7 +1094,7 @@ function MessageBubble({ message }: { message: TrinityMessage }) {
           {message.evolutionLog && (
             <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
               <div className="flex items-center gap-2 text-amber-300 text-xs font-medium mb-2">
-                <MessageSquare className="w-3 h-3" />
+                <TrinityLogo size={12} />
                 Self-Evolution Log
               </div>
               <div className="space-y-2 text-xs">

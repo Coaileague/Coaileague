@@ -24,7 +24,6 @@ import {
   X,
   Minimize2,
   Maximize2,
-  MessageSquare,
   Activity,
   Loader2,
   ChevronDown,
@@ -314,7 +313,7 @@ export function TrinityDialogue({
         <div className="flex items-center gap-2">
           <div className="relative">
             <TrinityMascotIcon size="sm" />
-            <MessageSquare className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
+            <TrinityLogo size={12} className="text-yellow-500 absolute -top-1 -right-1" />
           </div>
           <div>
             <CardTitle className="text-sm font-semibold">Trinity AI</CardTitle>

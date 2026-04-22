@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Shield, Users, MessageSquare, ArrowRight, Calendar, DollarSign,
+  Shield, Users, ArrowRight, Calendar, DollarSign,
   FileText, BarChart3, MapPin, Briefcase, Building2, Eye, BookOpen,
   Lightbulb, Heart, Network, ListChecks, Layers, Mic, Clock, Calculator,
   CheckCircle2, AlarmClock, Wallet, Leaf, MessageCircle, Lock,
   Activity, Cpu, GitBranch,
 } from 'lucide-react';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { PRICING_TIERS } from '@/config/pricing';
 
 // ─── Who Is Trinity? — Full Spotlight ────────────────────────────────────────
@@ -117,7 +118,7 @@ const TRINITY_CAPABILITIES = [
     color: "bg-red-500/10 text-red-400",
   },
   {
-    icon: MessageSquare,
+    icon: TrinityLogo,
     name: "Client Relations — Proactive",
     description: "Manages client service requests and contract health. Alerts you when a relationship is at risk and recommends exactly what to do to keep the account.",
     color: "bg-orange-500/10 text-orange-400",
@@ -131,7 +132,7 @@ function WhoIsTrinitySection() {
 
         <div className="text-center mb-16">
           <Badge className="mb-4 bg-violet-500/10 text-violet-400 border-violet-500/20">
-            <MessageSquare className="w-3 h-3 mr-1.5" />
+            <TrinityLogo size={12} className="mr-1.5" />
             Trinity — The Heart of CoAIleague
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-5 leading-tight">

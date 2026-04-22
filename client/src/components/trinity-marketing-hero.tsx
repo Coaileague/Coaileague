@@ -13,7 +13,7 @@
 import { memo, useMemo } from 'react';
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { motion } from 'framer-motion';
-import { MessageSquare, MessageCircle, Activity, Shield } from 'lucide-react';
+import { MessageCircle, Activity, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { Suspense } from 'react';
@@ -208,7 +208,7 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
             },
           } : {})}
         >
-          <MessageSquare className="w-2 h-2 text-yellow-300" />
+          <TrinityLogo size={8} className="text-yellow-300" />
         </motion.div>
       ))}
     </motion.div>
@@ -357,7 +357,7 @@ export function TrinitySpotlight({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-white">{title}</span>
-            <MessageSquare className="w-3.5 h-3.5 text-yellow-400" />
+            <TrinityLogo size={14} className="text-yellow-400" />
           </div>
           {message && (
             <p className="text-sm text-slate-300 leading-relaxed">

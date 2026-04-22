@@ -19,7 +19,8 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, ArrowRight, Activity, RefreshCw, Check, AlertTriangle, Lightbulb, Trophy } from 'lucide-react';
+import { ArrowRight, Activity, RefreshCw, Check, AlertTriangle, Lightbulb, Trophy } from 'lucide-react';
+import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { useToast } from '@/hooks/use-toast';
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
@@ -107,7 +108,7 @@ export default function TrinityInsights() {
       case 'alert': return <AlertTriangle className="w-4 h-4" />;
       case 'recommendation': return <Activity className="w-4 h-4" />;
       case 'achievement': return <Trophy className="w-4 h-4" />;
-      case 'insight': return <MessageSquare className="w-4 h-4" />;
+      case 'insight': return <TrinityLogo size={16} />;
       default: return null;
     }
   };
