@@ -949,27 +949,30 @@ class TrinityChatService {
           pendingApprovals,
           reliabilityRisk,
         ] = await Promise.allSettled([
+          // incident_reports has no created_at — use occurred_at with updated_at fallback
           pool.query(
             `SELECT COUNT(*)::int AS count,
                     COUNT(*) FILTER (WHERE severity IN ('high','critical'))::int AS high_severity
                FROM incident_reports
               WHERE workspace_id = $1
-                AND created_at > NOW() - INTERVAL '24 hours'`,
+                AND COALESCE(occurred_at, updated_at) > NOW() - INTERVAL '24 hours'`,
             [workspaceId],
           ),
+          // lone_worker_sessions uses next_check_in_due (four words) not next_checkin_due
           pool.query(
             `SELECT COUNT(*)::int AS active,
-                    COUNT(*) FILTER (WHERE next_checkin_due < NOW())::int AS overdue
+                    COUNT(*) FILTER (WHERE next_check_in_due < NOW())::int AS overdue
                FROM lone_worker_sessions
               WHERE workspace_id = $1 AND ended_at IS NULL`,
             [workspaceId],
           ),
+          // shift_status enum has no 'open' — uncovered = employee_id IS NULL and not cancelled/completed
           pool.query(
             `SELECT COUNT(*)::int AS gap_count
                FROM shifts
               WHERE workspace_id = $1
                 AND employee_id IS NULL
-                AND status = 'open'
+                AND status NOT IN ('cancelled','completed','no_show')
                 AND start_time BETWEEN NOW() AND NOW() + INTERVAL '24 hours'`,
             [workspaceId],
           ),
@@ -981,12 +984,14 @@ class TrinityChatService {
                 AND (expires_at IS NULL OR expires_at > NOW())`,
             [workspaceId],
           ),
+          // Correct table is coaileague_employee_profiles; join employees for is_active filter
           pool.query(
             `SELECT COUNT(*)::int AS at_risk_count
-               FROM coaileague_profiles
-              WHERE workspace_id = $1
-                AND reliability_score < 0.6
-                AND is_active = TRUE`,
+               FROM coaileague_employee_profiles cep
+               JOIN employees e ON e.id = cep.employee_id
+              WHERE cep.workspace_id = $1
+                AND cep.reliability_score < 0.6
+                AND e.is_active = TRUE`,
             [workspaceId],
           ),
         ]);

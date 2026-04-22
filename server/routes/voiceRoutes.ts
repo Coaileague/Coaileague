@@ -2738,6 +2738,10 @@ async function runTrinityTalkTurn(params: {
   // Phase 2 — dispatch any action intent detected in the caller's speech.
   // Trinity now talks AND acts — low-risk actions execute immediately, higher
   // risk actions are queued for manager approval via the action dispatcher.
+  // Note: trinity-talk is reachable from guest flows, so we pass a minimal
+  // 'staff' role. The underlying platformActionHub enforces per-action role
+  // checks, and any medium/high-risk intent is queued for human approval
+  // (payload-hashed idempotency_key de-dupes repeated utterances).
   if (issue && workspaceId) {
     scheduleNonBlocking('voice.trinity-talk.dispatch', async () => {
       try {
@@ -2745,7 +2749,7 @@ async function runTrinityTalkTurn(params: {
         await dispatchFromChat(issue, aiResult.answer || '', {
           workspaceId,
           userId: 'voice-caller',
-          userRole: 'org_owner',
+          userRole: 'staff',
           sessionId: sessionId || 'voice-session',
           source: 'voice-trinity-talk',
         });

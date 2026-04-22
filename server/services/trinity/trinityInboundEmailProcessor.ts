@@ -1321,7 +1321,7 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
     if (isCommandEmail) {
       const senderRole = await lookupEmployeeWorkspaceRole(sender.id);
       const senderIsManager = senderRole &&
-        ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager'].includes(senderRole);
+        ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager'].includes(senderRole);
 
       if (senderIsManager) {
         const commandDispatchSummary = await handleCommandEmail(

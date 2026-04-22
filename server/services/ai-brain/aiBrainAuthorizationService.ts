@@ -750,9 +750,8 @@ class AIBrainAuthorizationService {
 
   async markApprovalExecuted(approvalId: string, executorId: string): Promise<boolean> {
     try {
-      await db.update(governanceApprovals).set({ 
+      await db.update(governanceApprovals).set({
         status: 'executed',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         executedBy: executorId,
         executedAt: new Date(),
         updatedAt: new Date(),

@@ -195,6 +195,13 @@ export const governanceApprovals = pgTable("governance_approvals", {
   requiredApprovals: integer("required_approvals").default(1),
   approvals: jsonb("approvals").default(sql`'[]'::jsonb`),
   expiresAt: timestamp("expires_at"),
+  // Trinity Phase 2 — idempotency + execution lock so the same action can't
+  // be queued twice (unique idempotency_key) and an approved action can't be
+  // double-executed (execution_locked flips true atomically on approve).
+  idempotencyKey: varchar("idempotency_key", { length: 128 }),
+  executedBy: varchar("executed_by"),
+  executedAt: timestamp("executed_at"),
+  executionLocked: boolean("execution_locked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
