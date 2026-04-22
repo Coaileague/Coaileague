@@ -27,6 +27,10 @@ const STEPS = [
   { id: 'emergency',    label: 'Emergency Contact',  icon: Phone },
   { id: 'tax',          label: 'Work Type',          icon: DollarSign },
   { id: 'payroll',      label: 'Payroll Setup',      icon: Building2 },
+  // DPS/regulatory credentials step — guard card, ID front/back, license type.
+  // Inserted between payroll and availability so it's captured before
+  // scheduling decisions are made.
+  { id: 'credentials',  label: 'DPS Credentials',    icon: Shield },
   { id: 'availability', label: 'Availability',       icon: Calendar },
   { id: 'legal',        label: 'Legal Agreement',    icon: Scale },
   { id: 'documents',    label: 'Sign Documents',     icon: FileText },
@@ -70,6 +74,14 @@ interface FormState {
   availableThursday: boolean; availableFriday: boolean; availableSaturday: boolean;
   availableSunday: boolean; preferredShiftTime: string; maxHoursPerWeek: string;
   availabilityNotes: string;
+  // DPS credentials — Texas Private Security License + Gov ID.
+  licenseType: string;
+  guardCardNumber: string;
+  guardCardIssueDate: string;
+  guardCardExpiryDate: string;
+  guardCardScanBase64: string;
+  idFrontBase64: string;
+  idBackBase64: string;
 }
 
 function DocSignaturePanel({
@@ -232,6 +244,8 @@ export default function EmployeeOnboardingWizard() {
     availableThursday: true, availableFriday: true, availableSaturday: false,
     availableSunday: false, preferredShiftTime: '', maxHoursPerWeek: '40',
     availabilityNotes: '',
+    licenseType: '', guardCardNumber: '', guardCardIssueDate: '', guardCardExpiryDate: '',
+    guardCardScanBase64: '', idFrontBase64: '', idBackBase64: '',
   });
 
   const { data: invite, isLoading: inviteLoading, error: inviteError } = useQuery<InviteData>({
@@ -303,7 +317,9 @@ export default function EmployeeOnboardingWizard() {
   }, [applicationId, workspaceId]);
 
   useEffect(() => {
-    if (step === 7 && applicationId) {
+    // documents step (sign contracts) moved from index 7 to 8 after
+    // credentials was inserted at index 5.
+    if (step === 8 && applicationId) {
       fetchContracts();
     }
   }, [step, applicationId, fetchContracts]);
@@ -346,7 +362,7 @@ export default function EmployeeOnboardingWizard() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
       return res.json();
     },
-    onSuccess: () => setStep(8),
+    onSuccess: () => setStep(9),
     onError: (e: any) => toast({ title: 'Submit failed', description: e.message, variant: 'destructive' }),
   });
 
@@ -390,6 +406,30 @@ export default function EmployeeOnboardingWizard() {
           accountType: form.accountType,
         } as any);
       } else if (step === 5) {
+        // Credentials step — submit to /api/onboarding/certifications.
+        // Non-fatal on failure; HR can collect manually later.
+        if (applicationId && workspaceId) {
+          try {
+            await fetch('/api/onboarding/certifications', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                applicationId,
+                workspaceId,
+                licenseType: form.licenseType || undefined,
+                guardCardNumber: form.guardCardNumber || undefined,
+                guardCardIssueDate: form.guardCardIssueDate || undefined,
+                guardCardExpiryDate: form.guardCardExpiryDate || undefined,
+                guardCardScanBase64: form.guardCardScanBase64 || undefined,
+                idFrontBase64: form.idFrontBase64 || undefined,
+                idBackBase64: form.idBackBase64 || undefined,
+              }),
+            });
+          } catch {
+            // silently continue — HR will collect manually
+          }
+        }
+      } else if (step === 6) {
         await updateAppMutation.mutateAsync({
           availableMonday: form.availableMonday,
           availableTuesday: form.availableTuesday,
@@ -416,7 +456,7 @@ export default function EmployeeOnboardingWizard() {
     .filter(c => REQUIRED_DOC_TYPES.includes(c.documentType))
     .every(c => c.status === 'signed');
 
-  const progress = step === 8 ? 100 : Math.round((step / (STEPS.length - 1)) * 100);
+  const progress = step === STEPS.length - 1 ? 100 : Math.round((step / (STEPS.length - 1)) * 100);
 
   if (inviteLoading) {
     return (
@@ -455,7 +495,7 @@ export default function EmployeeOnboardingWizard() {
           <p className="text-sm text-muted-foreground">Employee Onboarding Portal</p>
         </div>
 
-        {step < 8 && (
+        {step < STEPS.length - 1 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{STEPS[step]?.label}</span>
@@ -478,8 +518,8 @@ export default function EmployeeOnboardingWizard() {
         <Card data-testid={`step-${STEPS[step]?.id}`}>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2">
-              {step < 8 && (() => { const Icon = STEPS[step].icon; return <Icon className="h-5 w-5 text-primary" />; })()}
-              {step === 8 ? 'Application Submitted!' : STEPS[step]?.label}
+              {step < STEPS.length - 1 && (() => { const Icon = STEPS[step].icon; return <Icon className="h-5 w-5 text-primary" />; })()}
+              {step === STEPS.length - 1 ? 'Application Submitted!' : STEPS[step]?.label}
             </CardTitle>
             {step === 0 && (
               <CardDescription>
@@ -705,6 +745,127 @@ export default function EmployeeOnboardingWizard() {
             )}
 
             {step === 5 && (
+              <div className="space-y-5">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Texas DPS requires verification of your security license and government ID
+                    before you can begin working. Upload clear photos of each document — they're
+                    stored securely in your document safe and available for regulatory audits.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Texas Security License Type <span className="text-red-500">*</span></Label>
+                  <Select
+                    value={form.licenseType}
+                    onValueChange={(v) => setField('licenseType', v)}
+                  >
+                    <SelectTrigger data-testid="select-licenseType">
+                      <SelectValue placeholder="Select your license type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="level2_unarmed">Level II — Non-Commissioned (Unarmed)</SelectItem>
+                      <SelectItem value="level3_armed">Level III — Commissioned (Armed)</SelectItem>
+                      <SelectItem value="level4_ppo">Level IV — Personal Protection Officer</SelectItem>
+                      <SelectItem value="pending">Pending / In Progress</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Guard Card / License Number</Label>
+                  <Input
+                    placeholder="e.g. B12345678"
+                    value={form.guardCardNumber}
+                    onChange={(e) => setField('guardCardNumber', e.target.value)}
+                    data-testid="input-guardCardNumber"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Issue Date</Label>
+                    <Input
+                      type="date"
+                      value={form.guardCardIssueDate}
+                      onChange={(e) => setField('guardCardIssueDate', e.target.value)}
+                      data-testid="input-guardCardIssueDate"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Expiry Date <span className="text-red-500">*</span></Label>
+                    <Input
+                      type="date"
+                      value={form.guardCardExpiryDate}
+                      onChange={(e) => setField('guardCardExpiryDate', e.target.value)}
+                      data-testid="input-guardCardExpiryDate"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Guard Card / License Scan</Label>
+                  <Input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setField('guardCardScanBase64', reader.result as string);
+                      reader.readAsDataURL(file);
+                    }}
+                    data-testid="input-guardCardScan"
+                  />
+                  {form.guardCardScanBase64 && (
+                    <p className="text-xs text-green-500">Guard card uploaded</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Government ID — Front <span className="text-red-500">*</span></Label>
+                  <p className="text-xs text-muted-foreground">
+                    Driver&apos;s license, state ID, or passport photo page.
+                  </p>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setField('idFrontBase64', reader.result as string);
+                      reader.readAsDataURL(file);
+                    }}
+                    data-testid="input-idFront"
+                  />
+                  {form.idFrontBase64 && (
+                    <p className="text-xs text-green-500">ID front uploaded</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Government ID — Back</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setField('idBackBase64', reader.result as string);
+                      reader.readAsDataURL(file);
+                    }}
+                    data-testid="input-idBack"
+                  />
+                  {form.idBackBase64 && (
+                    <p className="text-xs text-green-500">ID back uploaded</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {step === 6 && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Days Available *</Label>
@@ -763,7 +924,7 @@ export default function EmployeeOnboardingWizard() {
               </div>
             )}
 
-            {step === 6 && (
+            {step === 7 && (
               <div className="space-y-2">
                 <TOSAgreementStep
                   agreementType="user_onboarding"
@@ -771,13 +932,13 @@ export default function EmployeeOnboardingWizard() {
                   inviteToken={token}
                   onComplete={(id) => {
                     setTosAgreementId(id);
-                    setStep(7);
+                    setStep(8);
                   }}
                 />
               </div>
             )}
 
-            {step === 7 && (
+            {step === 8 && (
               <div className="space-y-6">
                 {contracts.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
@@ -830,7 +991,7 @@ export default function EmployeeOnboardingWizard() {
               </div>
             )}
 
-            {step === 8 && (
+            {step === 9 && (
               <div className="text-center space-y-5 py-4">
                 <div className="flex justify-center">
                   <div className="h-16 w-16 rounded-full flex items-center justify-center bg-green-600/10 dark:bg-green-400/10">
@@ -889,7 +1050,7 @@ export default function EmployeeOnboardingWizard() {
             )}
           </CardContent>
 
-          {step < 8 && (
+          {step < 9 && (
             <div className="px-6 pb-6 flex items-center justify-between gap-3">
               {step > 0 ? (
                 <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={isBusy} data-testid="button-back">
@@ -900,7 +1061,7 @@ export default function EmployeeOnboardingWizard() {
                 <div />
               )}
 
-              {step < 6 && (
+              {step < 7 && (
                 <Button onClick={handleNext} disabled={isBusy} data-testid="button-next">
                   {isBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {step === 0 ? 'Begin Onboarding' : 'Save & Continue'}
@@ -908,7 +1069,7 @@ export default function EmployeeOnboardingWizard() {
                 </Button>
               )}
 
-              {step === 7 && (
+              {step === 8 && (
                 <Button
                   onClick={() => submitMutation.mutate()}
                   disabled={!allRequiredSigned || submitMutation.isPending}

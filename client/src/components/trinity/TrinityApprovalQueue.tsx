@@ -17,6 +17,22 @@ interface PendingApproval {
   reason: string;
   created_at: string;
   expires_at: string;
+  // Trinity's deliberation — present when the action went through the
+  // conscience gate (terminate_employee / cancel_client / etc.).
+  deliberation?: {
+    verdict: string;
+    headline: string;
+    reasoning: string;
+    empathyStatement?: string;
+    riskAssessment?: {
+      financial: string;
+      legal: string;
+      relational: string;
+      operational: string;
+    };
+    alternatives?: Array<{ title: string; description: string }>;
+    generatedDocuments?: Array<{ type: string; title: string }>;
+  };
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -101,19 +117,47 @@ export function TrinityApprovalQueue() {
         return (
           <div
             key={approval.id}
-            className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
+            className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-card"
             data-testid={`approval-item-${approval.id}`}
           >
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{label}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {approval.reason || "Trinity proposed this action"}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                Expires in {expiresIn}h
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{label}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {approval.reason || "Trinity proposed this action"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  Expires in {expiresIn}h
+                </p>
+              </div>
             </div>
-            <div className="flex gap-1.5 shrink-0">
+            {approval.deliberation && (
+              <div className="space-y-1.5" data-testid={`deliberation-${approval.id}`}>
+                <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs">
+                  <p className="font-medium text-amber-400 mb-0.5">{approval.deliberation.headline}</p>
+                  <p className="text-muted-foreground leading-relaxed">{approval.deliberation.reasoning}</p>
+                </div>
+                {approval.deliberation.empathyStatement && (
+                  <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2 text-xs text-blue-300">
+                    {approval.deliberation.empathyStatement}
+                  </div>
+                )}
+                {(approval.deliberation.alternatives?.length ?? 0) > 0 && (
+                  <div className="text-xs space-y-0.5">
+                    <p className="font-medium text-green-400">Trinity suggests first:</p>
+                    {approval.deliberation.alternatives!.map((alt, i) => (
+                      <p key={i} className="text-muted-foreground">• {alt.title}: {alt.description}</p>
+                    ))}
+                  </div>
+                )}
+                {(approval.deliberation.generatedDocuments?.length ?? 0) > 0 && (
+                  <p className="text-xs text-purple-400">
+                    Auto-generated: {approval.deliberation.generatedDocuments!.map(d => d.title).join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="flex gap-1.5 justify-end">
               <Button
                 size="sm"
                 variant="outline"

@@ -109,6 +109,21 @@ router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Reques
     const SUPPORT_PLATFORM_ROLES = ['root_admin', 'co_admin', 'sysops', 'deputy_admin'];
     const isSupportMode = platformRole !== null && SUPPORT_PLATFORM_ROLES.includes(platformRole);
 
+    // Map workspaceRole/platformRole to Trinity's trustTier so the thalamus
+    // and ACC include the right data in their signal. Without this the
+    // service defaults to 'officer' — co_owner then loses financial data,
+    // payroll insight, and owner-level scheduling commands.
+    const workspaceRole = authReq.workspaceRole || '';
+    const trustTier: 'owner' | 'manager' | 'supervisor' | 'officer' =
+      ['org_owner', 'co_owner'].includes(workspaceRole) ||
+      ['root_admin', 'co_admin', 'deputy_admin', 'sysops'].includes(platformRole || '')
+        ? 'owner'
+        : ['org_manager', 'department_manager', 'manager'].includes(workspaceRole)
+          ? 'manager'
+          : ['supervisor', 'shift_leader'].includes(workspaceRole)
+            ? 'supervisor'
+            : 'officer';
+
     const response = await trinityChatService.chat({
       userId,
       workspaceId,
@@ -116,6 +131,7 @@ router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Reques
       sessionId,
       images,
       isSupportMode,
+      trustTier,
     });
 
     return res.json(response);

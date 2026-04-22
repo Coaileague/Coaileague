@@ -2,9 +2,10 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { requireAuth } from "../auth";
 import { storage } from "../storage";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { hasManagerAccess, resolveWorkspaceForUser, getUserPlatformRole, hasPlatformWideAccess } from "../rbac";
 import { platformEventBus } from "../services/platformEventBus";
+import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
 const log = createLogger('TerminationRoutes');
@@ -55,7 +56,78 @@ router.post("/terminations", requireAuth, async (req: any, res) => {
       workspaceId: workspace.id,
     });
 
+    // ── Trinity Deliberation Gate ───────────────────────────────────────────
+    // Terminations are the highest-stakes destructive action. Trinity considers
+    // tenure, reliability score, progressive-discipline record, and empathetic
+    // impact; generated PIPs/warnings are persisted regardless of verdict to
+    // create legal protection. Owners override via { deliberationApproved: true }.
+    const deliberationApproved = req.body?.deliberationApproved === true;
+    if (!deliberationApproved) {
+      try {
+        const { deliberate, persistDeliberationDocuments } =
+          await import('../services/trinity/trinityDeliberation');
+        const delibCtx = {
+          requestType: 'terminate_employee' as const,
+          requestedBy: req.user?.id || 'unknown',
+          requestedByRole: (result as any)?.workspace?.role || '',
+          workspaceId: workspace.id,
+          targetId: validated.employeeId,
+          targetType: 'employee' as const,
+          rawCommand: validated.terminationReason || 'Employee termination',
+        };
+        const deliberationResult = await deliberate(delibCtx);
+        scheduleNonBlocking('termination.deliberation-docs', () =>
+          persistDeliberationDocuments(deliberationResult, delibCtx),
+        );
+        if (['intervene', 'pause_and_warn'].includes(deliberationResult.verdict)) {
+          return res.status(200).json({
+            trinityIntervention: true,
+            verdict: deliberationResult.verdict,
+            headline: deliberationResult.headline,
+            reasoning: deliberationResult.reasoning,
+            empathyStatement: deliberationResult.empathyStatement,
+            riskAssessment: deliberationResult.riskAssessment,
+            alternatives: deliberationResult.alternatives,
+            generatedDocuments: deliberationResult.generatedDocuments?.map(d => ({
+              type: d.type, title: d.title, persisted: d.shouldPersist,
+            })),
+            overrideAvailable: true,
+            overrideMessage: 'Resubmit with deliberationApproved: true to proceed.',
+          });
+        }
+        if (deliberationResult.verdict === 'block') {
+          return res.status(200).json({
+            trinityIntervention: true,
+            verdict: 'block',
+            headline: deliberationResult.headline,
+            reasoning: deliberationResult.reasoning,
+            overrideAvailable: false,
+          });
+        }
+      } catch (deliberationErr: any) {
+        log.warn('[Termination] Deliberation failed (non-fatal):', deliberationErr?.message);
+      }
+    }
+
     const termination = await storage.createEmployeeTermination(validated);
+
+    // Cross-tenant score persistence — when an employee departs, mark them
+    // as members of the global pool so their score/reputation survives
+    // into any next employer. Non-blocking: score writes should never
+    // fail a termination.
+    scheduleNonBlocking('termination.cross-tenant-score', async () => {
+      try {
+        await pool.query(`
+          UPDATE coaileague_profiles
+             SET is_in_global_pool = TRUE,
+                 is_in_org_pool = FALSE,
+                 updated_at = NOW()
+           WHERE employee_id = $1 AND workspace_id = $2
+        `, [validated.employeeId, workspace.id]);
+      } catch (err: any) {
+        log.warn('[CrossTenantScore] Persist failed (non-fatal):', err?.message);
+      }
+    });
 
     interface EquipmentChecklistItem { assignmentId: string; itemName: string; serialNumber: string | null; category: string; checkoutDate: string | null; expectedReturnDate: string | null; }
     let equipmentChecklist: EquipmentChecklistItem[] = [];
