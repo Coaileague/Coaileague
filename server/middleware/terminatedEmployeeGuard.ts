@@ -13,7 +13,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { employees } from '@shared/schema';
+import { employees, workspaceMembers } from '@shared/schema';
 import { eq, and, isNull, isNotNull } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { createLogger } from '../lib/logger';
@@ -95,8 +95,25 @@ export const terminatedEmployeeGuard = async (
     const expiresAt = emp.documentAccessExpiresAt ? new Date(emp.documentAccessExpiresAt) : null;
 
     if (!expiresAt) {
-      // No grace period set (legacy termination before this feature) — allow access
-      // so we don't retroactively lock out existing terminated employees
+      // Legacy record: terminated before grace-period feature shipped.
+      // Block unless they still have an active workspace-member row.
+      const [activeRole] = await db
+        .select({ status: workspaceMembers.status })
+        .from(workspaceMembers)
+        .where(and(
+          eq(workspaceMembers.userId, emp.userId ?? userId),
+          workspaceId ? eq(workspaceMembers.workspaceId, workspaceId) : sql`TRUE`,
+        ))
+        .limit(1);
+
+      if (!activeRole || activeRole.status === 'inactive') {
+        res.status(403).json({
+          error: 'access_suspended',
+          message: 'Your account access has been suspended. Please contact HR.',
+          code: 'INACTIVE_NO_GRACE_PERIOD',
+        });
+        return;
+      }
       return next();
     }
 

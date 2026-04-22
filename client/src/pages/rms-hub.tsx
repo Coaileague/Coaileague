@@ -479,6 +479,10 @@ export default function RMSHub() {
 
   const uploadPhoto = useMutation({
     mutationFn: (data: { base64Data: string; fileName: string; category: string }) => apiRequest("POST", "/api/rms/upload-photo", { ...data, workspaceId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rms/incidents", { workspaceId }] });
+      toast({ title: "Photo uploaded", description: "Photo has been attached successfully." });
+    },
     onError: (e: any) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
   });
 
