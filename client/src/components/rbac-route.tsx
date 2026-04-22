@@ -41,7 +41,7 @@ interface RoleCheckResult {
 }
 
 const PLATFORM_ADMIN_ROLES = ['root_admin', 'deputy_admin'];
-const PLATFORM_STAFF_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+const PLATFORM_STAFF_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
 const OWNER_ROLES = ['org_owner', 'co_owner'];
 const LEADER_ROLES = ['org_owner', 'department_manager'];
 const SUPERVISOR_ROLES = ['org_owner', 'co_owner', 'department_manager', 'supervisor'];
