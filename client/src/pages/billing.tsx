@@ -62,6 +62,7 @@ import { CheckpointAlert } from "@/components/checkpoint-alert";
 import { PremiumFeaturesPanel } from "@/components/premium-features-panel";
 import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { AiUsageDashboard } from "@/components/billing/AiUsageDashboard";
+import { InvoicePreviewWidget } from "@/components/billing/InvoicePreviewWidget";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1102,6 +1103,7 @@ export default function Billing() {
 
         {/* Usage Tab */}
         <TabsContent value="usage" className="space-y-6">
+          <InvoicePreviewWidget />
           <AiUsageDashboard />
           {/* Monthly Allowance Meter */}
           <Card>

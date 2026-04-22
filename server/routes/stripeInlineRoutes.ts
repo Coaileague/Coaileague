@@ -854,4 +854,70 @@ router.post('/connect-dashboard', flexAuth, async (req: any, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// GET /api/billing/stripe-health — platform staff only
+// Verifies Stripe environment variables, API connectivity, livemode status,
+// and that our webhook endpoint is registered with Stripe.
+// ══════════════════════════════════════════════════════════════════════════
+router.get('/stripe-health', requireAuth, async (req, res) => {
+  const platformRole = (req as any).platformRole || '';
+  const isPlatformStaff = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent']
+    .includes(platformRole);
+  if (!isPlatformStaff) {
+    return res.status(403).json({ error: 'Platform staff only' });
+  }
+
+  const issues: string[] = [];
+  const checks: Record<string, any> = {};
+
+  const requiredEnvVars = [
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'STRIPE_STARTER_MONTHLY_PRICE_ID',
+    'STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID',
+    'STRIPE_MIDDLEWARE_PAYROLL_PRICE_ID',
+    'STRIPE_EMPLOYMENT_VERIFY_PRICE_ID',
+    'STRIPE_TAC_DOCUMENT_PRICE_ID',
+    'STRIPE_TOPS_VERIFY_PRICE_ID',
+    'STRIPE_W2_FORM_PRICE_ID',
+    'STRIPE_1099_NEC_PRICE_ID',
+  ];
+
+  checks.envVars = {};
+  for (const envVar of requiredEnvVars) {
+    const present = !!process.env[envVar];
+    checks.envVars[envVar] = present ? 'present' : 'missing';
+    if (!present) issues.push(`Missing env var: ${envVar}`);
+  }
+
+  try {
+    const balance = await stripe.balance.retrieve();
+    checks.stripeConnected = 'connected';
+    checks.stripeLiveMode = balance.livemode ? 'live' : 'test';
+  } catch (stripeErr: any) {
+    checks.stripeConnected = `failed: ${stripeErr?.message || 'unknown'}`;
+    issues.push('Stripe API connection failed');
+  }
+
+  try {
+    const webhooks = await stripe.webhookEndpoints.list({ limit: 10 });
+    const ourWebhook = webhooks.data.find((w: any) =>
+      typeof w.url === 'string' &&
+      w.url.includes('coaileague.com') &&
+      w.status === 'enabled'
+    );
+    checks.webhookRegistered = ourWebhook ? ourWebhook.url : 'not found';
+    if (!ourWebhook) issues.push('Stripe webhook not registered');
+  } catch (err: any) {
+    checks.webhookRegistered = `unverified: ${err?.message || 'unknown'}`;
+  }
+
+  res.json({
+    healthy: issues.length === 0,
+    issues,
+    checks,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 export default router;

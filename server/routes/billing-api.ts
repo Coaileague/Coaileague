@@ -1768,3 +1768,99 @@ billingRouter.post('/trinity-credits/generate-code', async (req: AuthenticatedRe
     res.status(400).json({ error: sanitizeError(error) });
   }
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+// GET /api/billing/invoice-preview
+// Owner-only preview of pending Stripe invoice line items for the current
+// billing period. Surfaces per-use transactional charges (payroll, employment
+// verify, TAC docs, tax forms, metered voice/SMS) alongside the subscription
+// before the invoice closes, so tenants can reconcile usage before it bills.
+// ══════════════════════════════════════════════════════════════════════════
+billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const callerRole = (req as any).workspaceRole || '';
+  const platformRole = (req as any).platformRole || '';
+  const isPlatformStaff = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'].includes(platformRole);
+  if (!['org_owner', 'co_owner'].includes(callerRole) && !isPlatformStaff) {
+    return res.status(403).json({ error: 'Owner access required' });
+  }
+
+  const workspaceId = req.workspaceId || (req as any).currentWorkspaceId;
+  if (!workspaceId) {
+    return res.status(400).json({ error: 'Workspace context required' });
+  }
+
+  try {
+    const [workspace] = await db
+      .select({ stripeCustomerId: workspaces.stripeCustomerId })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
+
+    if (!workspace?.stripeCustomerId) {
+      return res.json({
+        pendingItems: [],
+        totalCents: 0,
+        subtotalCents: 0,
+        taxCents: 0,
+        nextPaymentDate: null,
+        currency: 'usd',
+        message: 'No Stripe customer configured',
+      });
+    }
+
+    let upcoming: Stripe.UpcomingInvoice | null = null;
+    try {
+      upcoming = await (stripe as any).invoices.retrieveUpcoming({
+        customer: workspace.stripeCustomerId,
+      });
+    } catch (stripeErr: any) {
+      // invoice_upcoming_none → no pending invoice; return empty preview gracefully.
+      if (stripeErr?.code === 'invoice_upcoming_none') {
+        return res.json({
+          pendingItems: [],
+          totalCents: 0,
+          subtotalCents: 0,
+          taxCents: 0,
+          nextPaymentDate: null,
+          currency: 'usd',
+        });
+      }
+      throw stripeErr;
+    }
+
+    if (!upcoming) {
+      return res.json({
+        pendingItems: [],
+        totalCents: 0,
+        subtotalCents: 0,
+        taxCents: 0,
+        nextPaymentDate: null,
+        currency: 'usd',
+      });
+    }
+
+    const items = upcoming.lines.data.map((line) => ({
+      description: line.description || 'Subscription',
+      amountCents: line.amount,
+      quantity: line.quantity || 1,
+      periodStart: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
+      periodEnd: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
+      type: (line as any).type,
+      priceId: line.price?.id,
+      metadata: line.metadata || {},
+    }));
+
+    res.json({
+      pendingItems: items,
+      totalCents: upcoming.total,
+      subtotalCents: upcoming.subtotal,
+      taxCents: upcoming.tax || 0,
+      nextPaymentDate: upcoming.next_payment_attempt
+        ? new Date(upcoming.next_payment_attempt * 1000).toISOString()
+        : null,
+      currency: upcoming.currency,
+    });
+  } catch (err: any) {
+    log.error(`[BillingApi] invoice-preview failed: ${err?.message}`);
+    res.status(500).json({ error: 'Failed to fetch invoice preview' });
+  }
+});

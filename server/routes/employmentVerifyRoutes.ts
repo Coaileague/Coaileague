@@ -298,6 +298,33 @@ employmentVerifyRouter.get(
       });
 
       log.info(`[EmploymentVerify] ${refNum} approved; verification sent to ${requesterEmail}`);
+
+      // Middleware billing — non-blocking so the manager UX isn't delayed by Stripe.
+      // Default $1.00; workspaces can override via workspace_verification_settings
+      // (if present) within $0.50–$5.00 per billingConfig.
+      scheduleNonBlocking('employment-verify.middleware-fee', async () => {
+        const { chargeEmploymentVerificationFee } = await import(
+          '../services/billing/middlewareTransactionFees'
+        );
+        let feeCents = 100;
+        try {
+          const settingRows = await pool.query(
+            `SELECT verification_fee_cents
+               FROM workspace_verification_settings
+              WHERE workspace_id = $1
+              LIMIT 1`,
+            [workspaceId]
+          );
+          const override = settingRows.rows[0]?.verification_fee_cents;
+          if (typeof override === 'number' && override >= 50 && override <= 500) {
+            feeCents = override;
+          }
+        } catch {
+          // Table may not exist yet — fall back to default fee.
+        }
+        await chargeEmploymentVerificationFee({ workspaceId, referenceId: refNum, feeCents });
+      });
+
       return res.json({
         success: true,
         message: 'Verification sent to requester.',

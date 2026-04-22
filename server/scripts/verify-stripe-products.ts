@@ -56,6 +56,29 @@ async function main() {
     console.log(`  ${tier.padEnd(14)} monthly: ${hasMonthly ? '✓' : '✗ MISMATCH'} ($${(expected.monthly!/100).toFixed(2)})   annual: ${hasAnnual ? '✓' : '✗ MISMATCH'} ($${(expected.annual!/100).toFixed(2)})`);
   }
 
+  // ==========================================================================
+  // SERVICE CHARGE + METERED ENV VARS
+  // Confirms the per-use transactional billing products are wired into Railway
+  // ==========================================================================
+  const SERVICE_CHARGE_ENV_VARS = [
+    'STRIPE_EMPLOYMENT_VERIFY_PRICE_ID',
+    'STRIPE_TAC_DOCUMENT_PRICE_ID',
+    'STRIPE_TOPS_VERIFY_PRICE_ID',
+    'STRIPE_GUEST_VOICE_PRICE_ID',
+    'STRIPE_W2_FORM_PRICE_ID',
+    'STRIPE_1099_NEC_PRICE_ID',
+    'STRIPE_BACKGROUND_CHECK_PRICE_ID',
+    'STRIPE_MIDDLEWARE_PAYROLL_PRICE_ID',
+    'STRIPE_AI_VOICE_AUTH_METERED_PRICE_ID',
+    'STRIPE_AI_SMS_AUTH_METERED_PRICE_ID',
+  ];
+
+  console.log('\nSERVICE CHARGE PRICE IDs:');
+  for (const envVar of SERVICE_CHARGE_ENV_VARS) {
+    const val = process.env[envVar];
+    console.log(`  ${val ? '✓' : '✗ MISSING'} ${envVar}${val ? ` = ${val}` : ''}`);
+  }
+
   console.log('\n✅ Verification complete');
 }
 

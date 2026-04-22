@@ -476,6 +476,145 @@ async function seedProducts() {
   }
 
   // ==========================================================================
+  // 7. PLATFORM SERVICE CHARGES — per-use transactional fees
+  // These appear as line items on the tenant's monthly Stripe invoice
+  // ==========================================================================
+  console.log('\n--- PLATFORM SERVICE CHARGES ---\n');
+
+  // 7a. Employment Verification — $1.00 default (configurable $0.50–$5.00 per workspace)
+  const empVerifyProductId = await findOrCreateProduct(
+    'CoAIleague Employment Verification',
+    'FCRA-compliant employment verification response via voice, SMS, or email. ' +
+    'Includes: name, title, employment status, start date, pay band, officer readiness score.',
+    { type: 'service_charge', fee_type: 'employment_verification', fcra_compliant: 'true' }
+  );
+  const empVerifyPriceId = await createOneTimePrice(
+    empVerifyProductId,
+    100, // $1.00 default — overridden per workspace
+    'Employment Verification ($1.00/verification)'
+  );
+  envVars['STRIPE_EMPLOYMENT_VERIFY_PRICE_ID'] = empVerifyPriceId;
+
+  // 7b. TAC Document Generation — $5.00 per document
+  const tacDocProductId = await findOrCreateProduct(
+    'CoAIleague TAC Document Generation',
+    'AI-generated tactical, legal, and compliance documents. ' +
+    'Includes post orders, incident narratives, compliance reports, RFP responses, and legal declarations.',
+    { type: 'service_charge', fee_type: 'tac_document' }
+  );
+  const tacDocPriceId = await createOneTimePrice(
+    tacDocProductId,
+    500, // $5.00 per document
+    'TAC Document ($5.00/document)'
+  );
+  envVars['STRIPE_TAC_DOCUMENT_PRICE_ID'] = tacDocPriceId;
+
+  // 7c. TOPS Screenshot Verification — $0.25 per verification
+  const topsVerifyProductId = await findOrCreateProduct(
+    'CoAIleague TOPS License Verification',
+    'AI-powered verification of Texas DPS TOPS portal screenshots for officer license status. ' +
+    'Authenticates ACTIVE and Substantially Complete Application status for compliance.',
+    { type: 'service_charge', fee_type: 'tops_verification', jurisdiction: 'TX' }
+  );
+  const topsVerifyPriceId = await createOneTimePrice(
+    topsVerifyProductId,
+    25, // $0.25 per verification (AI vision cost)
+    'TOPS Verification ($0.25/verification)'
+  );
+  envVars['STRIPE_TOPS_VERIFY_PRICE_ID'] = topsVerifyPriceId;
+
+  // 7d. Guest Voice Session — $0.10 per session
+  const guestVoiceProductId = await findOrCreateProduct(
+    'CoAIleague Guest Voice Session',
+    'AI-powered voice handling for unauthenticated inbound callers. ' +
+    'Includes complaint intake, general inquiries, and employment verification via IVR.',
+    { type: 'service_charge', fee_type: 'guest_voice' }
+  );
+  const guestVoicePriceId = await createOneTimePrice(
+    guestVoiceProductId,
+    10, // $0.10 per guest session
+    'Guest Voice Session ($0.10/session)'
+  );
+  envVars['STRIPE_GUEST_VOICE_PRICE_ID'] = guestVoicePriceId;
+
+  // 7e. W-2 Year-End Tax Form — $5.00 per form
+  const w2ProductId = await findOrCreateProduct(
+    'CoAIleague W-2 Tax Form',
+    'Year-end W-2 generation, digital delivery, and IRS-compliant formatting per employee.',
+    { type: 'service_charge', fee_type: 'w2_form' }
+  );
+  const w2PriceId = await createOneTimePrice(
+    w2ProductId,
+    500, // $5.00 per W-2
+    'W-2 Tax Form ($5.00/form)'
+  );
+  envVars['STRIPE_W2_FORM_PRICE_ID'] = w2PriceId;
+
+  // 7f. 1099-NEC Year-End Tax Form — $3.00 per form
+  const form1099ProductId = await findOrCreateProduct(
+    'CoAIleague 1099-NEC Tax Form',
+    'Year-end 1099-NEC generation and delivery for independent contractors.',
+    { type: 'service_charge', fee_type: '1099_nec' }
+  );
+  const form1099PriceId = await createOneTimePrice(
+    form1099ProductId,
+    300, // $3.00 per 1099-NEC
+    '1099-NEC Tax Form ($3.00/form)'
+  );
+  envVars['STRIPE_1099_NEC_PRICE_ID'] = form1099PriceId;
+
+  // 7g. Background Check Coordination — $2.00 coordination fee per check
+  const bgCheckProductId = await findOrCreateProduct(
+    'CoAIleague Background Check Coordination',
+    'Platform coordination and record-keeping for commercial background checks. ' +
+    'Includes DPS Criminal History, Sex Offender Registry, and commercial check documentation.',
+    { type: 'service_charge', fee_type: 'background_check' }
+  );
+  const bgCheckPriceId = await createOneTimePrice(
+    bgCheckProductId,
+    200, // $2.00 coordination fee
+    'Background Check Coordination ($2.00/check)'
+  );
+  envVars['STRIPE_BACKGROUND_CHECK_PRICE_ID'] = bgCheckPriceId;
+
+  // ==========================================================================
+  // 8. AI VOICE & SMS — per-minute / per-message metered billing
+  // ==========================================================================
+  console.log('\n--- AI VOICE & SMS METERED ---\n');
+
+  // 8a. AI Voice — Authenticated (metered, per-minute)
+  const aiVoiceProductId = await findOrCreateProduct(
+    'CoAIleague AI Voice — Authenticated',
+    'Trinity AI voice for authenticated employees, managers, and clients. ' +
+    'Billed per minute of active AI call time.',
+    { type: 'metered', fee_type: 'ai_voice_authenticated' }
+  );
+  const aiVoiceMeteredPriceId = await findOrCreatePrice(
+    aiVoiceProductId,
+    8,  // $0.08 per minute (metered)
+    'month',
+    'AI Voice Authenticated ($0.08/min)',
+    'metered'
+  );
+  envVars['STRIPE_AI_VOICE_AUTH_METERED_PRICE_ID'] = aiVoiceMeteredPriceId;
+
+  // 8b. AI SMS — Authenticated (metered, per message)
+  const aiSmsProductId = await findOrCreateProduct(
+    'CoAIleague AI SMS — Authenticated',
+    'Trinity AI SMS for authenticated employees and clients. ' +
+    'Includes calloff processing, schedule inquiries, and notifications.',
+    { type: 'metered', fee_type: 'ai_sms_authenticated' }
+  );
+  const aiSmsMeteredPriceId = await findOrCreatePrice(
+    aiSmsProductId,
+    2,  // $0.02 per SMS (metered)
+    'month',
+    'AI SMS Authenticated ($0.02/msg)',
+    'metered'
+  );
+  envVars['STRIPE_AI_SMS_AUTH_METERED_PRICE_ID'] = aiSmsMeteredPriceId;
+
+  // ==========================================================================
   // OUTPUT — ENV VARS + PRICING SUMMARY
   // ==========================================================================
   console.log('\n' + '='.repeat(60));

@@ -385,4 +385,36 @@ router.get('/transfers/:payStubId', requireAuth, async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// GET /api/plaid/health — platform staff only
+// Confirms Plaid credentials, environment, and webhook URL are configured.
+// Used to diagnose payroll ACH failures and onboarding issues in production.
+// ══════════════════════════════════════════════════════════════════════════
+router.get('/health', requireAuth, async (req, res) => {
+  const platformRole = (req as any).platformRole || '';
+  const isPlatformStaff = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent']
+    .includes(platformRole);
+  if (!isPlatformStaff) {
+    return res.status(403).json({ error: 'Platform staff only' });
+  }
+
+  const configured = isPlaidConfigured();
+  const envCheck = {
+    PLAID_CLIENT_ID: !!process.env.PLAID_CLIENT_ID,
+    PLAID_SECRET: !!process.env.PLAID_SECRET,
+    PLAID_ENV: process.env.PLAID_ENV || 'NOT SET',
+    PLAID_ENCRYPTION_KEY: !!process.env.PLAID_ENCRYPTION_KEY,
+    PLAID_WEBHOOK_SECRET: !!process.env.PLAID_WEBHOOK_SECRET,
+    PLAID_WEBHOOK_URL: process.env.PLAID_WEBHOOK_URL || 'NOT SET',
+  };
+
+  res.json({
+    configured,
+    environment: process.env.PLAID_ENV || 'not set',
+    envCheck,
+    status: configured ? 'ready' : 'missing credentials',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 export default router;

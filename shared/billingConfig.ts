@@ -1056,6 +1056,31 @@ export const BILLING = {
       description: "Year-end tax form generation and delivery",
     },
 
+    // PLATFORM SERVICE CHARGES — additive line items on monthly Stripe invoice
+    tacDocumentGeneration: {
+      perDocumentCents: 500,        // $5.00 per TAC document
+      description: "AI-generated tactical, legal, and compliance document",
+    },
+    employmentVerification: {
+      defaultFeeCents: 100,         // $1.00 default (workspace-configurable $0.50–$5.00)
+      minCents: 50,
+      maxCents: 500,
+      description: "FCRA-compliant employment verification response",
+    },
+    topsScreenshotVerification: {
+      perVerificationCents: 25,     // $0.25 — AI vision cost
+      description: "Texas DPS TOPS portal screenshot authenticity verification",
+    },
+    backgroundCheckCoordination: {
+      perCheckCents: 200,           // $2.00 coordination fee
+      description: "Background check coordination and record-keeping",
+    },
+    guestVoiceSession: {
+      perSessionCents: 10,          // $0.10 per guest voice session
+      absorptionThresholdCents: 5,  // Absorb if < $0.05
+      description: "AI voice for unauthenticated inbound callers",
+    },
+
     // TIER DISCOUNTS — loyal customers pay less
     tierDiscounts: {
       free: 0,

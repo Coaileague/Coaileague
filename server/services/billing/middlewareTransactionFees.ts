@@ -512,6 +512,302 @@ export async function chargeAiCreditOverageFee(params: {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// EMPLOYMENT VERIFICATION FEE
+// Called from employmentVerifyRoutes.ts after manager approval.
+// Fee is workspace-configurable via workspace_verification_settings
+// (default $1.00 — overridable between $0.50–$5.00).
+// ══════════════════════════════════════════════════════════════════════════
+export async function chargeEmploymentVerificationFee(params: {
+  workspaceId: string;
+  referenceId: string;
+  feeCents?: number;
+}): Promise<MiddlewareFeeResult> {
+  const { workspaceId, referenceId, feeCents = 100 } = params;
+
+  if (isBillingExcluded(workspaceId)) {
+    return { success: true, amountCents: 0, description: 'Platform workspace — employment verify fee excluded' };
+  }
+
+  const workspace = await getWorkspaceBillingInfo(workspaceId);
+  if (!workspace) {
+    return { success: false, amountCents: 0, description: 'Workspace not found', error: 'workspace_not_found' };
+  }
+
+  if (isBillingExemptByRecord(workspace)) {
+    await logExemptedAction({ workspaceId, action: 'chargeEmploymentVerificationFee', skippedAmount: feeCents, skippedAmountUnit: 'cents' });
+    return { success: true, amountCents: 0, description: 'Founder exemption — employment verify fee skipped' };
+  }
+
+  const customerId = await ensureStripeCustomer(workspaceId, workspace.name || 'Workspace');
+  if (!customerId) {
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: `Employment Verification — ${referenceId}`,
+      error: 'no_stripe_customer',
+    };
+  }
+
+  try {
+    const priceId = process.env.STRIPE_EMPLOYMENT_VERIFY_PRICE_ID;
+    const idempotencyKey = `emp_verify_${workspaceId}_${referenceId}`;
+    const invoiceItem = await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: feeCents,
+      currency: 'usd',
+      description: `Employment Verification — Ref ${referenceId}`,
+      ...(priceId ? { price: priceId } : {}),
+      metadata: {
+        type: 'employment_verification',
+        chargeType: 'employment_verification',
+        workspaceId,
+        referenceId,
+        platform: 'coaileague',
+      },
+    }, { idempotencyKey });
+
+    log.info(`[EmploymentVerifyFee] Charged $${(feeCents / 100).toFixed(2)} — workspace ${workspaceId} ref=${referenceId}`);
+    return {
+      success: true,
+      amountCents: feeCents,
+      stripeInvoiceItemId: invoiceItem.id,
+      description: `Employment Verification — ${referenceId}`,
+    };
+  } catch (err: any) {
+    log.error(`[EmploymentVerifyFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: `Employment Verification — ${referenceId}`,
+      error: (err instanceof Error ? err.message : String(err)),
+    };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TAC DOCUMENT GENERATION FEE
+// Called from document generation endpoints after successful creation.
+// ══════════════════════════════════════════════════════════════════════════
+export async function chargeTacDocumentFee(params: {
+  workspaceId: string;
+  documentId: string;
+  documentType: string;
+  feeCents?: number;
+}): Promise<MiddlewareFeeResult> {
+  const { workspaceId, documentId, documentType, feeCents = 500 } = params;
+
+  if (isBillingExcluded(workspaceId)) {
+    return { success: true, amountCents: 0, description: 'Platform workspace — TAC document fee excluded' };
+  }
+
+  const workspace = await getWorkspaceBillingInfo(workspaceId);
+  if (!workspace) {
+    return { success: false, amountCents: 0, description: 'Workspace not found', error: 'workspace_not_found' };
+  }
+
+  if (isBillingExemptByRecord(workspace)) {
+    await logExemptedAction({ workspaceId, action: 'chargeTacDocumentFee', skippedAmount: feeCents, skippedAmountUnit: 'cents', metadata: { documentType } });
+    return { success: true, amountCents: 0, description: 'Founder exemption — TAC document fee skipped' };
+  }
+
+  const customerId = await ensureStripeCustomer(workspaceId, workspace.name || 'Workspace');
+  if (!customerId) {
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: `TAC Document — ${documentType}`,
+      error: 'no_stripe_customer',
+    };
+  }
+
+  try {
+    const priceId = process.env.STRIPE_TAC_DOCUMENT_PRICE_ID;
+    const idempotencyKey = `tac_doc_${workspaceId}_${documentId}`;
+    const prettyType = documentType.replace(/_/g, ' ');
+    const invoiceItem = await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: feeCents,
+      currency: 'usd',
+      description: `TAC Document — ${prettyType} (ID: ${documentId.slice(0, 8)})`,
+      ...(priceId ? { price: priceId } : {}),
+      metadata: {
+        type: 'tac_document',
+        chargeType: 'tac_document',
+        workspaceId,
+        documentId,
+        documentType,
+        referenceId: documentId,
+        platform: 'coaileague',
+      },
+    }, { idempotencyKey });
+
+    log.info(`[TacDocumentFee] Charged $${(feeCents / 100).toFixed(2)} — workspace ${workspaceId} type=${documentType}`);
+    return {
+      success: true,
+      amountCents: feeCents,
+      stripeInvoiceItemId: invoiceItem.id,
+      description: `TAC Document — ${documentType}`,
+    };
+  } catch (err: any) {
+    log.error(`[TacDocumentFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: `TAC Document — ${documentType}`,
+      error: (err instanceof Error ? err.message : String(err)),
+    };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TOPS VERIFICATION FEE
+// Called after AI vision verification of Texas DPS TOPS screenshots.
+// Rejected results are not billed (no AI cost when caught early).
+// ══════════════════════════════════════════════════════════════════════════
+export async function chargeTopsVerificationFee(params: {
+  workspaceId: string;
+  employeeId: string;
+  result: 'verified' | 'suspicious' | 'rejected';
+}): Promise<MiddlewareFeeResult> {
+  const { workspaceId, employeeId, result } = params;
+
+  if (result === 'rejected') {
+    return { success: true, amountCents: 0, description: 'No charge for rejected screenshots' };
+  }
+
+  if (isBillingExcluded(workspaceId)) {
+    return { success: true, amountCents: 0, description: 'Platform workspace — TOPS verify fee excluded' };
+  }
+
+  const workspace = await getWorkspaceBillingInfo(workspaceId);
+  if (!workspace) {
+    return { success: false, amountCents: 0, description: 'Workspace not found', error: 'workspace_not_found' };
+  }
+
+  if (isBillingExemptByRecord(workspace)) {
+    await logExemptedAction({ workspaceId, action: 'chargeTopsVerificationFee', skippedAmountUnit: 'cents' });
+    return { success: true, amountCents: 0, description: 'Founder exemption — TOPS verify fee skipped' };
+  }
+
+  const feeCents = 25; // $0.25 per TOPS verification
+  const customerId = await ensureStripeCustomer(workspaceId, workspace.name || 'Workspace');
+  if (!customerId) {
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: 'TOPS Verification',
+      error: 'no_stripe_customer',
+    };
+  }
+
+  try {
+    const priceId = process.env.STRIPE_TOPS_VERIFY_PRICE_ID;
+    const idempotencyKey = `tops_verify_${workspaceId}_${employeeId}_${result}`;
+    const invoiceItem = await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: feeCents,
+      currency: 'usd',
+      description: `TOPS License Verification — Employee ${employeeId.slice(0, 8)} (${result})`,
+      ...(priceId ? { price: priceId } : {}),
+      metadata: {
+        type: 'tops_verification',
+        chargeType: 'tops_verification',
+        workspaceId,
+        employeeId,
+        referenceId: employeeId,
+        result,
+        platform: 'coaileague',
+      },
+    }, { idempotencyKey });
+
+    log.info(`[TopsVerifyFee] Charged $${(feeCents / 100).toFixed(2)} — workspace ${workspaceId} result=${result}`);
+    return { success: true, amountCents: feeCents, stripeInvoiceItemId: invoiceItem.id, description: 'TOPS Verification' };
+  } catch (err: any) {
+    log.error(`[TopsVerifyFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: 'TOPS Verification',
+      error: (err instanceof Error ? err.message : String(err)),
+    };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TAX FORM FEE (W-2 and 1099-NEC)
+// Called from year-end payroll processing.
+// W-2: $5.00 / 1099-NEC: $3.00
+// ══════════════════════════════════════════════════════════════════════════
+export async function chargeTaxFormFee(params: {
+  workspaceId: string;
+  formType: 'w2' | '1099_nec';
+  employeeId: string;
+  taxYear: number;
+}): Promise<MiddlewareFeeResult> {
+  const { workspaceId, formType, employeeId, taxYear } = params;
+  const feeCents = formType === 'w2' ? 500 : 300;
+  const priceEnvVar = formType === 'w2' ? 'STRIPE_W2_FORM_PRICE_ID' : 'STRIPE_1099_NEC_PRICE_ID';
+  const formLabel = formType === 'w2' ? 'W-2' : '1099-NEC';
+
+  if (isBillingExcluded(workspaceId)) {
+    return { success: true, amountCents: 0, description: `Platform workspace — ${formLabel} fee excluded` };
+  }
+
+  const workspace = await getWorkspaceBillingInfo(workspaceId);
+  if (!workspace) {
+    return { success: false, amountCents: 0, description: 'Workspace not found', error: 'workspace_not_found' };
+  }
+
+  if (isBillingExemptByRecord(workspace)) {
+    await logExemptedAction({ workspaceId, action: 'chargeTaxFormFee', skippedAmount: feeCents, skippedAmountUnit: 'cents', metadata: { formType, taxYear } });
+    return { success: true, amountCents: 0, description: `Founder exemption — ${formLabel} fee skipped` };
+  }
+
+  const customerId = await ensureStripeCustomer(workspaceId, workspace.name || 'Workspace');
+  if (!customerId) {
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: `${formLabel} ${taxYear}`,
+      error: 'no_stripe_customer',
+    };
+  }
+
+  try {
+    const priceId = process.env[priceEnvVar];
+    const idempotencyKey = `tax_form_${formType}_${workspaceId}_${employeeId}_${taxYear}`;
+    const invoiceItem = await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: feeCents,
+      currency: 'usd',
+      description: `${formLabel} ${taxYear} — Employee ${employeeId.slice(0, 8)}`,
+      ...(priceId ? { price: priceId } : {}),
+      metadata: {
+        type: 'tax_form',
+        chargeType: 'tax_form',
+        workspaceId,
+        employeeId,
+        referenceId: `${formType}-${taxYear}-${employeeId.slice(0, 8)}`,
+        formType,
+        taxYear: String(taxYear),
+        platform: 'coaileague',
+      },
+    }, { idempotencyKey });
+
+    log.info(`[TaxFormFee] Charged $${(feeCents / 100).toFixed(2)} for ${formLabel} ${taxYear} — workspace ${workspaceId}`);
+    return { success: true, amountCents: feeCents, stripeInvoiceItemId: invoiceItem.id, description: `${formLabel} ${taxYear}` };
+  } catch (err: any) {
+    log.error(`[TaxFormFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
+    return {
+      success: false,
+      amountCents: feeCents,
+      description: `${formLabel} ${taxYear}`,
+      error: (err instanceof Error ? err.message : String(err)),
+    };
+  }
+}
+
 /**
  * Get a summary of middleware fees for display in the UI.
  * Shows what the workspace will be charged for payroll/invoicing.
