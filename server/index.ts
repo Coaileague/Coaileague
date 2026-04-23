@@ -1698,10 +1698,23 @@ process.on('unhandledRejection', (reason: any, promise) => {
 (async () => {
   const startupStart = Date.now();
   let server;
-  
+
+  // ── EARLIEST CRITICAL MIGRATION ─────────────────────────────────────────────
+  // Must run before ANYTHING — Phase 0 route registration fires background tasks
+  // that immediately insert to platform_updates with the 'date' column.
+  // Running here (before Phase 0, before bindToPort) eliminates the race condition.
+  try {
+    const { pool: earlyPool } = await import('./db');
+    await earlyPool.query(`ALTER TABLE platform_updates ADD COLUMN IF NOT EXISTS date TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
+    await earlyPool.query(`ALTER TABLE platform_updates ALTER COLUMN date DROP NOT NULL`);
+  } catch (e: any) {
+    // Non-fatal: table may not exist yet (first boot) or column already exists
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // Port is cleaned up right before server.listen() for maximum reliability
   const port = parseInt(process.env.PORT || '5000', 10);
-  
+
   // Environment validation — comprehensive check of critical and billing vars
   validateEnvironment();
 
