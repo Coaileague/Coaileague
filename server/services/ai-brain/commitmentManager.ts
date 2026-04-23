@@ -53,7 +53,7 @@ class CommitmentManagerService {
   private startLockCleanup() {
     let consecutiveFailures = 0;
     let backoffUntil = 0;
-    setInterval(async () => {
+    this.cleanupIntervalRef = setInterval(async () => {
       if (Date.now() < backoffUntil) return;
       try {
         const { probeDbConnection } = await import('../../db');
@@ -70,7 +70,7 @@ class CommitmentManagerService {
           log.warn('[CommitmentManager] Lock cleanup failed (will retry):', error?.message || 'unknown');
         }
       }
-    }, 60000);
+    }, 60000).unref();
   }
 
   async declareIntent(

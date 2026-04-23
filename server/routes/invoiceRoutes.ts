@@ -887,14 +887,14 @@ import { createHash } from "crypto";
 
       const emailLineItems = lineItems.map((item: any) => ({
         description: item.description || '',
-        quantity: parseFloat(item.quantity as string || '1').toString(),
-        unitPrice: parseFloat(item.unitPrice as string || '0').toFixed(2),
-        amount: parseFloat(item.amount as string || '0').toFixed(2),
+        quantity: toFinancialString(item.quantity as string || '1'),
+        unitPrice: toFinancialString(item.unitPrice as string || '0'),
+        amount: toFinancialString(item.amount as string || '0'),
       }));
 
       // FIX 7: Financial anomaly check — warn if invoice total is unusually high (non-blocking)
       let financialAnomalyWarning: string | null = null;
-      const invoiceTotal = parseFloat(invoice.total as string || '0');
+      const invoiceTotal = toFinancialString(invoice.total as string || '0');
       const INVOICE_ANOMALY_THRESHOLD = 50000;
       const INVOICE_EXTREME_THRESHOLD = 250000;
       if (invoiceTotal >= INVOICE_EXTREME_THRESHOLD) {
@@ -967,7 +967,7 @@ import { createHash } from "crypto";
         clientName: client.companyName || `${client.firstName} ${client.lastName}`,
         invoiceNumber: invoice.invoiceNumber,
         invoiceDate: invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString() : new Date().toLocaleDateString(),
-        totalAmount: parseFloat(invoice.total as string || "0").toFixed(2),
+        totalAmount: toFinancialString(invoice.total as string || '0'),
         dueDate: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : "N/A",
         lineItems: emailLineItems,
         portalUrl,

@@ -369,7 +369,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       // FIX 7: Financial anomaly check on payroll approval — non-blocking warning
       let payrollAnomalyWarning: string | null = null;
       const proposalData = (proposal as any).data ?? {};
-      const payrollTotal = parseFloat(proposalData.totalGross ?? proposalData.totalAmount ?? proposalData.total ?? 0);
+      const payrollTotal = parseFloat(toFinancialString(proposalData.totalGross ?? proposalData.totalAmount ?? proposalData.total ?? '0')); // billing boundary
       const PAYROLL_ANOMALY_THRESHOLD = 100000;
       const PAYROLL_EXTREME_THRESHOLD = 500000;
       if (payrollTotal >= PAYROLL_EXTREME_THRESHOLD) {
@@ -1094,7 +1094,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           direction: 'credit',
           // G14 FIX: use ?? not || — totalNetPay can legitimately be 0 (e.g. 100% garnishment)
           // and || would silently fall back to totalGrossPay, recording the wrong ledger amount.
-          amount: parseFloat(String(run.totalNetPay ?? run.totalGrossPay ?? 0)),
+          amount: parseFloat(toFinancialString(run.totalNetPay ?? run.totalGrossPay ?? '0')), // display-boundary: toFinancialString ensures precision before parseFloat for external API
           relatedEntityType: 'payroll_run',
           relatedEntityId: id,
           payrollRunId: id,
@@ -1999,11 +1999,12 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
         .limit(1);
 
       if (entry) {
-        const grossPay     = parseFloat(String(entry.grossPay     || '0'));
-        const federalTax   = parseFloat(String(entry.federalTax   || '0'));
-        const stateTax     = parseFloat(String(entry.stateTax     || '0'));
-        const socialSec    = parseFloat(String(entry.socialSecurity || '0'));
-        const medicare     = parseFloat(String(entry.medicare     || '0'));
+        // RC4: All payroll arithmetic via FinancialCalculator (Decimal.js) — no native Number
+        const grossPay     = toFinancialString(entry.grossPay     ?? '0');
+        const federalTax   = toFinancialString(entry.federalTax   ?? '0');
+        const stateTax     = toFinancialString(entry.stateTax     ?? '0');
+        const socialSec    = toFinancialString(entry.socialSecurity ?? '0');
+        const medicare     = toFinancialString(entry.medicare     ?? '0');
 
         const allGarnishments = await db.select({ amount: payrollGarnishments.amount })
           .from(payrollGarnishments)
@@ -2011,10 +2012,10 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
             eq(payrollGarnishments.payrollEntryId, payrollEntryId),
             eq(payrollGarnishments.workspaceId, workspaceId),
           ));
-        const totalGarnishments = allGarnishments.reduce((sum, g) => sum + parseFloat(String(g.amount || '0')), 0);
+        const totalGarnishments = sumFinancialValues(allGarnishments.map(g => toFinancialString(g.amount ?? '0')));
 
-        const preTaxDeductions  = parseFloat(String((entry as any).preTaxDeductions  || '0'));
-        const postTaxDeductions = parseFloat(String((entry as any).postTaxDeductions || '0'));
+        const preTaxDeductions  = toFinancialString((entry as any).preTaxDeductions  ?? '0');
+        const postTaxDeductions = toFinancialString((entry as any).postTaxDeductions ?? '0');
         const totalTaxes = federalTax + stateTax + socialSec + medicare;
 
         let newNetPay = grossPay - preTaxDeductions - totalTaxes - postTaxDeductions - totalGarnishments;
@@ -2035,8 +2036,8 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
               eq(payrollEntries.payrollRunId, entry.payrollRunId),
               eq(payrollEntries.workspaceId, workspaceId),
             ));
-          const runTotalNet   = runEntries.reduce((s, e) => s + parseFloat(String(e.netPay   || '0')), 0);
-          const runTotalGross = runEntries.reduce((s, e) => s + parseFloat(String(e.grossPay || '0')), 0);
+          const runTotalNet   = sumFinancialValues(runEntries.map(e => toFinancialString(e.netPay   ?? '0')));
+          const runTotalGross = sumFinancialValues(runEntries.map(e => toFinancialString(e.grossPay ?? '0')));
           await db.update(payrollRuns)
             .set({ totalNetPay: runTotalNet.toFixed(2) as any, totalGrossPay: runTotalGross.toFixed(2) as any, updatedAt: new Date() })
             .where(and(
