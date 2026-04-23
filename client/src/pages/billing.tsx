@@ -157,7 +157,7 @@ function HardCapToggleCard({ workspaceId }: { workspaceId?: string }) {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card role="status" aria-live="polite" aria-busy="true">
         <CardHeader className="pb-3">
           <Skeleton className="h-4 w-44" />
           <Skeleton className="h-3 w-72 mt-2" />

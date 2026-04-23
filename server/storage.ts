@@ -1818,10 +1818,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateClient(id: string, workspaceId: string, data: Partial<InsertClient>): Promise<Client | undefined> {
     if ('billableHourlyRate' in data && (data as any).billableHourlyRate == null) {
-      throw new Error("billableHourlyRate cannot be null or undefined");
+      throw new Error(`billableHourlyRate cannot be null or undefined for client ${id}`);
     }
     if ('paymentTerms' in (data as any) && (data as any).paymentTerms == null) {
-      throw new Error("paymentTerms cannot be null or undefined");
+      throw new Error(`paymentTerms cannot be null or undefined for client ${id}`);
     }
 
     const [existing] = await db

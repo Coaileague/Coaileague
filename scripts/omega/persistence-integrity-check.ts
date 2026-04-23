@@ -1,12 +1,12 @@
 #!/usr/bin/env tsx
 import { db } from '../../server/db';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, and, inArray } from 'drizzle-orm';
 import { workspaces, clients, clientBillingSettings } from '../../shared/schema';
 
 async function main() {
   const workspaceRows = await db.select({ id: workspaces.id, subscriptionTier: workspaces.subscriptionTier }).from(workspaces).limit(2);
   if (workspaceRows.length < 1) {
-    throw new Error('No workspaces found');
+    throw new Error('No workspaces found; persistence integrity check requires at least one workspace.');
   }
 
   const workspaceA = process.env.WORKSPACE_ID_A || workspaceRows[0].id;
@@ -24,7 +24,10 @@ async function main() {
   const leaked = workspaceBClientIds.length === 0 ? [] : await db
     .select({ id: clients.id })
     .from(clients)
-    .where(sql`${clients.workspaceId} = ${workspaceA} AND ${clients.id} IN (${sql.join(workspaceBClientIds.map((c) => sql`${c.id}`), sql`,`)})`);
+    .where(and(
+      eq(clients.workspaceId, workspaceA),
+      inArray(clients.id, workspaceBClientIds.map((c) => c.id)),
+    ));
   if (leaked.length > 0) {
     throw new Error(`Isolation failure: workspace ${workspaceA} can see ${leaked.length} client(s) from ${workspaceB}`);
   }

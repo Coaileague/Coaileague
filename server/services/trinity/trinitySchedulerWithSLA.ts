@@ -67,7 +67,7 @@ export class TrinitySchedulerWithSLA {
     }
 
     if ((clientConstraints?.numberOfGuards ?? null) !== null) {
-      const maxGuards = Number(clientConstraints.numberOfGuards);
+      const maxGuards = Number(clientConstraints?.numberOfGuards ?? 0);
       const currentlyScheduled = Number(clientConstraints?.currentlyScheduledGuards || 0);
       if (maxGuards > 0 && currentlyScheduled >= maxGuards) {
         return {

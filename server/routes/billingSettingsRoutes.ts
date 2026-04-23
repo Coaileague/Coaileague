@@ -159,7 +159,8 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
       createdAt: existingPayrollSettings?.createdAt ?? new Date(),
       updatedAt: new Date(),
     };
-    delete (mergedPayrollSettings as any).id;
+    // Omit existing row id so inserts/updates only write mutable settings fields.
+    const { id: _existingId, ...mergedPayrollSettingsWithoutId } = mergedPayrollSettings as Record<string, unknown> & { id?: string };
 
     let persistedPayrollSettings: Record<string, unknown> | null = null;
     await db.transaction(async (tx) => {
@@ -167,12 +168,12 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
 
       if (existingPayrollSettings?.id) {
         const [updatedPayrollSettings] = await tx.update(payrollSettings)
-          .set(mergedPayrollSettings as any)
+          .set(mergedPayrollSettingsWithoutId as any)
           .where(eq(payrollSettings.id, existingPayrollSettings.id))
           .returning();
         persistedPayrollSettings = updatedPayrollSettings as any;
       } else {
-        const [insertedPayrollSettings] = await tx.insert(payrollSettings).values(mergedPayrollSettings as any).returning();
+        const [insertedPayrollSettings] = await tx.insert(payrollSettings).values(mergedPayrollSettingsWithoutId as any).returning();
         persistedPayrollSettings = insertedPayrollSettings as any;
       }
 
