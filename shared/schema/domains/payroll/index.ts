@@ -51,6 +51,26 @@ export const employeeBenefits = pgTable("employee_benefits", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const payrollSettings = pgTable("payroll_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  payrollFrequency: varchar("payroll_frequency", { length: 30 }).notNull().default("biweekly"),
+  payrollDayOfWeek: integer("payroll_day_of_week"),
+  payrollDayOfMonth: integer("payroll_day_of_month"),
+  payrollSecondDayOfMonth: integer("payroll_second_day_of_month"),
+  payrollCutoffDays: integer("payroll_cutoff_days"),
+  payrollFirstPeriodStart: date("payroll_first_period_start"),
+  payrollFirstPeriodEnd: date("payroll_first_period_end"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("payroll_settings_workspace_idx").on(table.workspaceId),
+  uniqueIndex("payroll_settings_workspace_unique_idx").on(table.workspaceId),
+]);
+export const insertPayrollSettingsSchema = createInsertSchema(payrollSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPayrollSettings = z.infer<typeof insertPayrollSettingsSchema>;
+export type PayrollSettings = typeof payrollSettings.$inferSelect;
+
 export const payrollProposals = pgTable("payroll_proposals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),

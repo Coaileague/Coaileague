@@ -26,6 +26,12 @@ export interface ScheduleShiftResult {
   recommendations?: ShiftTimeWindow[];
 }
 
+export interface ClientSchedulingConstraints {
+  numberOfGuards?: number | null;
+  daysOfService?: string[] | null;
+  currentlyScheduledGuards?: number;
+}
+
 export class TrinitySchedulerWithSLA {
   private slaService: SLAConfigService;
   private gateService: SchedulingGateService;
@@ -45,7 +51,34 @@ export class TrinitySchedulerWithSLA {
     workspaceId: string,
     proposedShift: ScheduleShiftRequest,
     openTickets: TicketForGate[],
+    clientConstraints?: ClientSchedulingConstraints,
   ): ScheduleShiftResult {
+    if (clientConstraints?.daysOfService?.length) {
+      const shiftDay = proposedShift.startTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const normalizedDays = clientConstraints.daysOfService.map((d) => String(d).toLowerCase());
+      if (!normalizedDays.includes(shiftDay)) {
+        return {
+          success: false,
+          reason: `Client day-of-service constraint blocks ${shiftDay}`,
+          conflicts: [],
+          recommendations: [],
+        };
+      }
+    }
+
+    if ((clientConstraints?.numberOfGuards ?? null) !== null) {
+      const maxGuards = Number(clientConstraints?.numberOfGuards ?? 0);
+      const currentlyScheduled = Number(clientConstraints?.currentlyScheduledGuards || 0);
+      if (maxGuards > 0 && currentlyScheduled >= maxGuards) {
+        return {
+          success: false,
+          reason: `Client number-of-guards constraint reached (${currentlyScheduled}/${maxGuards})`,
+          conflicts: [],
+          recommendations: [],
+        };
+      }
+    }
+
     const window: ShiftTimeWindow = {
       startTime: proposedShift.startTime,
       endTime: proposedShift.endTime,

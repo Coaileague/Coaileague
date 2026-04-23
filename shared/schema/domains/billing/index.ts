@@ -1932,6 +1932,8 @@ export const clientBillingSettings = pgTable("client_billing_settings", {
   billingSecondDayOfMonth: integer("billing_second_day_of_month"), // 1–31 (semimonthly second day)
   // Payment terms
   paymentTerms: varchar("payment_terms", { length: 20 }).default("net_30"), // net_15|net_30|net_45|net_60|due_on_receipt
+  taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).default("0.0000"),
+  roundHoursTo: decimal("round_hours_to", { precision: 4, scale: 2 }).default("0.25"),
   defaultBillRate: decimal("default_bill_rate", { precision: 10, scale: 2 }),
   defaultPayRate: decimal("default_pay_rate", { precision: 10, scale: 2 }),
   overtimeBillMultiplier: decimal("overtime_bill_multiplier", { precision: 4, scale: 2 }).default("1.50"),
@@ -1952,10 +1954,17 @@ export const clientBillingSettings = pgTable("client_billing_settings", {
 }, (table) => [
   index("client_billing_settings_workspace_idx").on(table.workspaceId),
   index("client_billing_settings_client_idx").on(table.clientId),
+  uniqueIndex("client_billing_settings_workspace_client_unique_idx").on(table.workspaceId, table.clientId),
 ]);
 export const insertClientBillingSettingsSchema = createInsertSchema(clientBillingSettings).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertClientBillingSettings = z.infer<typeof insertClientBillingSettingsSchema>;
 export type ClientBillingSettings = typeof clientBillingSettings.$inferSelect;
+
+// Canonical alias used by persistence hardening requirements.
+export const invoiceSettings = clientBillingSettings;
+export const insertInvoiceSettingsSchema = insertClientBillingSettingsSchema;
+export type InsertInvoiceSettings = InsertClientBillingSettings;
+export type InvoiceSettings = ClientBillingSettings;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // trinity_credit_failures

@@ -275,7 +275,7 @@ router.post('/schedule-shift', async (req: any, res) => {
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
-    const { startTime, endTime, employeeId } = req.body;
+    const { startTime, endTime, employeeId, clientId } = req.body;
     if (!startTime || !endTime || !employeeId) {
       return res.status(400).json({ message: 'startTime, endTime, and employeeId are required' });
     }
@@ -298,11 +298,39 @@ router.post('/schedule-shift', async (req: any, res) => {
       firstResponseAt: t.firstResponseAt ? new Date(t.firstResponseAt) : null,
     }));
 
-    // Evaluate via the SLA gate
+    let clientConstraints: { numberOfGuards?: number | null; daysOfService?: string[] | null; currentlyScheduledGuards?: number } | undefined;
+    if (clientId) {
+      const [client] = await db
+        .select()
+        .from(clients)
+        .where(and(eq(clients.workspaceId, workspaceId), eq(clients.id, clientId), isNull(clients.deletedAt)))
+        .limit(1);
+      if (!client) return res.status(404).json({ message: 'Client not found' });
+
+      const overlappingShifts = await db
+        .select({ id: shifts.id })
+        .from(shifts)
+        .where(and(
+          eq(shifts.workspaceId, workspaceId),
+          eq(shifts.clientId, clientId),
+          lte(shifts.startTime, new Date(endTime)),
+          gte(shifts.endTime, new Date(startTime)),
+          sql`${shifts.status} NOT IN ('cancelled')`
+        ));
+
+      clientConstraints = {
+        numberOfGuards: (client as any).numberOfGuards ?? null,
+        daysOfService: (client as any).daysOfService ?? null,
+        currentlyScheduledGuards: overlappingShifts.length,
+      };
+    }
+
+    // Evaluate via the SLA gate + client hard constraints
     const result = trinitySchedulerWithSLA.evaluateShift(
       workspaceId,
       { startTime: new Date(startTime), endTime: new Date(endTime), employeeId },
       ticketsForGate,
+      clientConstraints,
     );
 
     if (!result.success) {
@@ -312,6 +340,7 @@ router.post('/schedule-shift', async (req: any, res) => {
     // SLA gate passed — create the shift
     const [newShift] = await db.insert(shifts).values({
       workspaceId,
+      clientId: clientId || null,
       employeeId,
       startTime: new Date(startTime),
       endTime: new Date(endTime),
