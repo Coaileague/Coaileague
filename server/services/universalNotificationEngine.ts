@@ -1063,7 +1063,6 @@ export class UniversalNotificationEngine {
         visibility: 'all',
         learnMoreUrl: payload.learnMoreUrl,
         metadata: enrichedMetadata,
-        date: new Date(),
       }).onConflictDoNothing({ target: platformUpdates.id })
         .returning({ id: platformUpdates.id });
 

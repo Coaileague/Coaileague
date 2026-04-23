@@ -276,13 +276,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // universal_id_sequences — referenced by AcmeCandidateSeed
       await pool.query(`
         CREATE TABLE IF NOT EXISTS universal_id_sequences (
-          id           SERIAL PRIMARY KEY,
-          scope        TEXT NOT NULL UNIQUE,
-          prefix       TEXT NOT NULL,
-          last_value   INTEGER NOT NULL DEFAULT 0,
-          created_at   TIMESTAMPTZ DEFAULT NOW(),
-          updated_at   TIMESTAMPTZ DEFAULT NOW()
+          sequence_key  TEXT PRIMARY KEY,
+          current_value INTEGER NOT NULL DEFAULT 0,
+          created_at    TIMESTAMPTZ DEFAULT NOW(),
+          updated_at    TIMESTAMPTZ DEFAULT NOW()
         )
+      `).catch(() => null);
+      // If universal_id_sequences exists with old schema (scope/prefix), migrate it
+      await pool.query(`
+        DO $$
+        BEGIN
+          -- Check if old schema (scope column) exists and migrate
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'universal_id_sequences' AND column_name = 'scope'
+          ) THEN
+            DROP TABLE universal_id_sequences;
+            CREATE TABLE universal_id_sequences (
+              sequence_key  TEXT PRIMARY KEY,
+              current_value INTEGER NOT NULL DEFAULT 0,
+              created_at    TIMESTAMPTZ DEFAULT NOW(),
+              updated_at    TIMESTAMPTZ DEFAULT NOW()
+            );
+          END IF;
+        END $$;
       `).catch(() => null);
       log.info('[Startup] Missing tables ensured: cookie_consent, universal_id_sequences');
     };

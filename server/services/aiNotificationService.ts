@@ -424,7 +424,6 @@ Respond with ONLY valid JSON, no markdown:`;
     visibility: "all",
     learnMoreUrl: data.learnMoreUrl,
     metadata: enrichedMetadata,
-    date: new Date(),
   }).onConflictDoNothing().returning({ id: platformUpdates.id });
 
   // If nothing was inserted (id collision = same update already exists today), skip broadcast

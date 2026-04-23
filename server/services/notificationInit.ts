@@ -77,7 +77,6 @@ export async function initializeNotifications(): Promise<void> {
         isNew: true,
         visibility: "all",
         learnMoreUrl: update.learnMoreUrl,
-        date: new Date(),
         metadata: { source: "system-init", version: "1.0.0" },
       });
       log.info(`[NotificationInit] Created update: ${update.title}`);
