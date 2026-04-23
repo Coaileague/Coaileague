@@ -226,13 +226,13 @@ function DocSignaturePanel({
 // Plaid Link is loaded via CDN (index.html). Declare the global type.
 declare global {
   interface Window {
-    Plaid?: {
+    Plaid: {
       create: (config: {
         token: string;
         onSuccess: (publicToken: string, metadata: any) => void;
         onExit: (err: any, metadata: any) => void;
       }) => { open: () => void };
-    };
+    } | undefined;
   }
 }
 

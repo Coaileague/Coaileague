@@ -174,7 +174,7 @@ const InterviewChatroomPage = lazy(() => import("@/pages/interview-chatroom"));
 const OnboardingProgressPage = lazy(() => import("@/pages/onboarding-progress"));
 const MobileHubPage = lazy(() => import("@/pages/mobile-hub"));
 const MobileMorePage = lazy(() => import("@/pages/mobile-more"));
-const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Dashboard = lazyWithRetry(() => import("@/pages/dashboard"));
 const CommandCenter = lazy(() => import("@/pages/command-center"));
 const CommandDocumentation = lazy(() => import("@/pages/command-documentation"));
 const UniversalSchedule = lazy(() => import("@/pages/universal-schedule"));

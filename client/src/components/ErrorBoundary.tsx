@@ -12,24 +12,52 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  isChunkError: boolean;
+}
+
+function isChunkLoadError(error: Error): boolean {
+  const msg = error?.message ?? '';
+  const name = error?.name ?? '';
+  return (
+    name === 'ChunkLoadError' ||
+    msg.includes('dynamically imported module') ||
+    msg.includes('Failed to fetch dynamically') ||
+    msg.includes('Loading chunk') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('failed to fetch') ||
+    /Loading CSS chunk \d+ failed/.test(msg) ||
+    /Failed to load module script/.test(msg)
+  );
 }
 
 export class ErrorBoundary extends Component<Props, State> {
+  private _reloadScheduled = false;
+
   public state: State = {
     hasError: false,
     error: null,
+    isChunkError: false,
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, isChunkError: isChunkLoadError(error) };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
+
+    if (isChunkLoadError(error) && !this._reloadScheduled) {
+      this._reloadScheduled = true;
+      console.warn('[ErrorBoundary] Chunk load failure — reloading in 1.5s');
+      setTimeout(() => {
+        try { window.location.reload(); } catch { window.location.href = '/'; }
+      }, 1500);
+    }
   }
 
   private handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    this._reloadScheduled = false;
+    this.setState({ hasError: false, error: null, isChunkError: false });
     window.location.reload();
   };
 
@@ -37,6 +65,36 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
+      }
+
+      if (this.state.isChunkError) {
+        return (
+          <div className="flex items-center justify-center min-h-[400px] p-4" data-testid="error-boundary-chunk">
+            <Card className="w-full max-w-md border-primary/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-primary">
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  Reloading…
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  A new version of the application is available. The page will reload automatically.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={this.handleRetry}
+                  className="w-full gap-2"
+                  data-testid="button-reload-now"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Reload Now
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        );
       }
 
       return (

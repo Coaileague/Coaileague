@@ -511,8 +511,8 @@ spsFormsRouter.post('/:id/set-rate', async (req, res) => {
     const workspaceId = resolveWorkspace(req);
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
-    const role = req.user?.workspaceRole || req.user?.role;
-    if (!['owner', 'co_owner'].includes(role)) {
+    const role = req.workspaceRole || req.user?.role;
+    if (!['owner', 'co_owner'].includes(role ?? '')) {
       return res.status(403).json({ error: 'Only workspace owners can set hourly rates' });
     }
 
@@ -553,9 +553,9 @@ spsFormsRouter.post('/:id/grant-trinity', async (req, res) => {
     const workspaceId = resolveWorkspace(req);
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
-    const role = req.user?.workspaceRole || req.user?.role;
+    const role = req.workspaceRole || req.user?.role;
     const allowed = ['owner', 'co_owner', 'manager', 'admin'];
-    if (!allowed.includes(role)) {
+    if (!allowed.includes(role ?? '')) {
       return res.status(403).json({ error: 'Insufficient permissions to grant Trinity access' });
     }
 

@@ -319,6 +319,9 @@ router.post('/chat/with-file', attachWorkspaceId, requireTrinityAccess, trinityU
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'message is required' });
     }
+    if (!userId || !workspaceId) {
+      return res.status(401).json({ error: !userId ? 'Authentication required' : 'Workspace context required' });
+    }
     if (!req.file) {
       return res.status(400).json({ error: 'file is required' });
     }
