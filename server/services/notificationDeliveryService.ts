@@ -408,10 +408,25 @@ export class NotificationDeliveryService {
 
     const { PLATFORM } = await import('../config/platformConfig');
     const subject = record.subject ?? String(payload.subject ?? `${PLATFORM.name} Notification`);
-    const html = String(
-      payload.html ?? payload.body ??
-      `<p>${subject}</p><p>Please log in to ${PLATFORM.name} for details.</p>`
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const templateHtml = payload.html != null ? String(payload.html) : null;
+    const textSource = payload.body ?? payload.message ?? payload.text ?? payload.title;
+    const html = templateHtml ?? (
+      textSource
+        ? `<div style="font-family:Arial,sans-serif;line-height:1.5;"><h3 style="margin:0 0 8px 0;">${escapeHtml(subject)}</h3><p style="margin:0;">${escapeHtml(String(textSource))}</p></div>`
+        : `<div style="font-family:Arial,sans-serif;line-height:1.5;"><h3 style="margin:0 0 8px 0;">${escapeHtml(subject)}</h3><p style="margin:0;">Notification received. Please log in to ${escapeHtml(PLATFORM.name)} for details.</p></div>`
     );
+
+    if (payload.html == null && payload.body == null) {
+      log.warn(
+        `[NDS] Missing payload html/body for email notification ${record.id}; synthesized fallback body (type=${record.notificationType}, channel=${record.channel})`
+      );
+    }
 
     const sendResult = await emailService.sendCustomEmail(to, subject, html, record.notificationType);
     if (!sendResult) throw new Error('emailService.sendCustomEmail returned falsy');

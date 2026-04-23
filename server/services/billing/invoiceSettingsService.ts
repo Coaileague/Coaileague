@@ -28,6 +28,13 @@ function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T>
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
+function sameStringArray(a?: string[] | null, b?: string[] | null): boolean {
+  const left = Array.isArray(a) ? [...a].sort() : [];
+  const right = Array.isArray(b) ? [...b].sort() : [];
+  if (left.length !== right.length) return false;
+  return left.every((val, idx) => val === right[idx]);
+}
+
 export async function getInvoiceSettings(workspaceId: string, clientId: string) {
   const [settings] = await db
     .select()
@@ -72,6 +79,24 @@ export async function setInvoiceSettings(input: SetInvoiceSettingsInput, actorId
 
     let persisted;
     if (existing) {
+      const hasChanges =
+        (patch.billingCycle !== undefined && patch.billingCycle !== existing.billingCycle) ||
+        (patch.paymentTerms !== undefined && patch.paymentTerms !== existing.paymentTerms) ||
+        (patch.taxRate !== undefined && patch.taxRate !== existing.taxRate) ||
+        (patch.roundHoursTo !== undefined && patch.roundHoursTo !== existing.roundHoursTo) ||
+        (patch.defaultBillRate !== undefined && patch.defaultBillRate !== existing.defaultBillRate) ||
+        (patch.autoSendInvoice !== undefined && patch.autoSendInvoice !== existing.autoSendInvoice) ||
+        (patch.isActive !== undefined && patch.isActive !== existing.isActive) ||
+        (patch.invoiceRecipientEmails !== undefined && !sameStringArray(patch.invoiceRecipientEmails as string[] | undefined, existing.invoiceRecipientEmails as string[] | undefined)) ||
+        (patch.ccEmails !== undefined && !sameStringArray(patch.ccEmails as string[] | undefined, existing.ccEmails as string[] | undefined));
+
+      // Critical loop-breaker: do not write a no-op update.
+      // Some downstream automations subscribe to row updates; rewriting unchanged
+      // settings can trigger repeated notifications without real user changes.
+      if (!hasChanges) {
+        return existing;
+      }
+
       [persisted] = await tx
         .update(clientBillingSettings)
         .set(patch)
