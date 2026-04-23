@@ -38,6 +38,7 @@ export interface LockOptions {
 class CommitmentManagerService {
   private static instance: CommitmentManagerService;
   private activeLocks: Map<string, string> = new Map();
+  private cleanupIntervalRef?: ReturnType<typeof setInterval>;
 
   private constructor() {
     this.startLockCleanup();

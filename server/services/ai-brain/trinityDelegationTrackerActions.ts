@@ -47,14 +47,25 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
   };
 }
 
-async function notifyUser(workspaceId: string, userId: string, title: string, message: string, priority: string = 'normal') {
+async function notifyUser(
+  workspaceId: string,
+  userId: string,
+  title: string,
+  message: string,
+  priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal',
+) {
   await createNotification({ workspaceId, userId, type: 'task_delegation', title, message, priority,
  idempotencyKey: `task_delegation-${String(Date.now())}-${'system'}`,
         })
     .catch((err: Error) => log.warn(`[TrinityDelegation] Notification persist failed for user ${userId}:`, err.message));
 }
 
-async function notifyManagers(workspaceId: string, title: string, message: string, priority: string = 'high') {
+async function notifyManagers(
+  workspaceId: string,
+  title: string,
+  message: string,
+  priority: 'low' | 'normal' | 'high' | 'urgent' = 'high',
+) {
   const managers = await db.select({ userId: workspaceMembers.userId })
     .from(workspaceMembers)
     .where(and(eq(workspaceMembers.workspaceId, workspaceId), sql`${workspaceMembers.role} IN ('org_owner', 'co_owner', 'manager', 'supervisor')`))

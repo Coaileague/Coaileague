@@ -116,8 +116,7 @@ router.post("/api/pto", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.patch("/api/pto/:id/approve", requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId = req.user?.id || (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
@@ -186,8 +185,7 @@ router.patch("/api/pto/:id/approve", requireAuth, requireManager, async (req: Au
 
 router.patch("/api/pto/:id/deny", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId = req.user?.id || (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
@@ -531,9 +529,10 @@ router.put("/api/shift-actions/:id/approve", requireManager, async (req: Authent
       .where(and(eq(shiftActions.id, id), eq(shiftActions.workspaceId, workspaceId!)))
       .returning();
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const targetShiftId = (action as Record<string, unknown>).targetShiftId as string | undefined;
-    if (approved && action.actionType === "swap" && action.shiftId && targetShiftId) {
+    const targetShiftId = typeof (action as { targetShiftId?: unknown }).targetShiftId === 'string'
+      ? (action as { targetShiftId?: string }).targetShiftId
+      : undefined;
+    if (approved && action.actionType === "switch_request" && action.shiftId && targetShiftId) {
       try {
         // Both shifts must be scoped to the same workspace to prevent cross-tenant swap
         const [shift1] = await db.select().from(shifts)

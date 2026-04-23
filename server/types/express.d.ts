@@ -1,14 +1,10 @@
 import type { User } from '@shared/schema/auth';
 import type { WorkspaceRole, PlatformRole } from '@shared/lib/rbac/roleDefinitions';
-import type { AuditContext } from '../middleware/audit';
 
 /**
- * CANONICAL Express Request augmentation — server/types/express.d.ts
- *
- * This is the single source of truth for all req.* fields added by middleware.
- * server/types.ts is for express-session augmentation ONLY.
- *
- * Codex fix: Stopped duplicated Request augmentation drift across multiple files.
+ * Properties added to req.user at runtime by auth middleware that aren't
+ * part of the Drizzle `users` table schema. The middleware reads JWT claims,
+ * resolves workspace context, and decorates the user object before handlers run.
  */
 interface AuthMiddlewareUserExtensions {
   userId?: string | null;
@@ -34,59 +30,53 @@ interface AuthMiddlewareUserExtensions {
   isPlatformAdmin?: boolean;
 }
 
+interface AuditContext {
+  workspaceId?: string;
+  userId?: string;
+  userEmail?: string;
+  userRole?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  requestId?: string;
+  isSupportElevated?: boolean;
+  elevationId?: string;
+  platformRole?: string;
+  actionsExecuted?: number;
+}
+
 declare global {
   namespace Express {
     interface Request {
-      // Auth & user
       user?: User & AuthMiddlewareUserExtensions;
-
-      // Request identity
-      requestId: string;
-      auditContext?: AuditContext;
-
-      // Workspace context
       workspaceId?: string;
       currentWorkspaceId?: string;
       activeWorkspaceId?: string;
-
-      // Roles
       workspaceRole?: WorkspaceRole | string;
       platformRole?: PlatformRole | string;
-
-      // Employee / claims
       employeeId?: string;
       userEmail?: string;
       claims?: Record<string, unknown>;
-
-      // Feature flags / mode
       isTestMode?: boolean;
       isTrinityBot?: boolean;
-
-      // Support / auditor portal
-      supportExecutorId?: string;
-      supportActorId?: string;
-      supportSessionId?: string;
-      auditorId?: string;
-      auditorWorkspaceId?: string;
-
-      // Billing / subscription
-      subscriptionTier?: string;
-
-      // Lifecycle guards
-      terminatedEmployeeId?: string;
-      documentAccessExpiresAt?: Date;
-
-      // Voice session
-      _voiceSessionLang?: string;
-
-      // Raw body (webhook signature verification)
-      rawBody?: Buffer;
-
-      // Helper methods (legacy compat)
       assertOwnsResource?: (resourceWorkspaceId: string | null | undefined, resourceType?: string) => void;
       getWorkspaceId?: () => string;
+      supportExecutorId?: string;
+      executorPlatformRole?: string;
+      executorLevel?: number;
+      auditorId?: string;
+      auditorAccountId?: string;
+      auditorWorkspaceId?: string;
+      auditorAccountVerified?: boolean;
+      subscriptionTier?: string;
+      terminatedEmployeeId?: string;
+      terminatedGracePeriod?: boolean;
+      documentAccessExpiresAt?: Date | string;
+      _voiceSessionLang?: string;
+      rawBody?: Buffer | string;
+      requestId: string;
+      auditContext?: AuditContext;
     }
   }
 }
 
-export type { AuthMiddlewareUserExtensions };
+export {};

@@ -43,7 +43,6 @@ function hasLicenseDashboardAccess(role: string | null | undefined): boolean {
 router.get('/dashboard', ensureWorkspaceAccess, async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId as string;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const actorRole = req.workspaceRole ?? (req.user)?.workspaceRole;
 
     if (!hasLicenseDashboardAccess(actorRole)) {
@@ -102,7 +101,6 @@ router.get('/dashboard', ensureWorkspaceAccess, async (req: Request, res: Respon
 router.get('/export/dps-csv', ensureWorkspaceAccess, async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId as string;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const actorRole = req.workspaceRole ?? (req.user)?.workspaceRole;
 
     if (!hasLicenseDashboardAccess(actorRole)) {
@@ -174,7 +172,6 @@ router.post('/:certId/revoke', ensureWorkspaceAccess, async (req: Request, res: 
   try {
     const workspaceId = req.workspaceId as string;
     const actorId = req.user?.id as string;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const actorRole = req.workspaceRole ?? (req.user)?.workspaceRole;
     const { certId } = req.params;
     const { reason } = req.body;
@@ -303,7 +300,6 @@ router.get('/export/:stateCode/csv', ensureWorkspaceAccess, async (req: Request,
   try {
     const workspaceId = req.workspaceId as string;
     const { stateCode } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const actorRole = req.workspaceRole ?? (req.user)?.workspaceRole;
 
     if (!hasLicenseDashboardAccess(actorRole)) {

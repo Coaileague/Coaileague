@@ -11,23 +11,31 @@ import { meteredGemini } from "../services/billing/meteredGeminiClient";
 
 const router = Router();
 
+function getQueryString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 // ── LEADS ──────────────────────────────────────────────────────────────────
 
 router.get("/leads", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const wid = req.workspaceId;
     if (!wid) return res.status(400).json({ error: "Workspace required" });
-    const { stage, assigned_to, lead_source, limit = 50, offset = 0 } = req.query;
+    const stage = getQueryString(req.query.stage);
+    const assignedTo = getQueryString(req.query.assigned_to);
+    const leadSource = getQueryString(req.query.lead_source);
+    const limit = Number.parseInt(getQueryString(req.query.limit) || "50", 10);
+    const offset = Number.parseInt(getQueryString(req.query.offset) || "0", 10);
     const conditions = ["workspace_id = $1"];
     const params: any[] = [wid];
     let p = 2;
     if (stage) { conditions.push(`stage = $${p++}`); params.push(stage); }
-    if (assigned_to) { conditions.push(`assigned_to = $${p++}`); params.push(assigned_to); }
-    if (lead_source) { conditions.push(`lead_source = $${p++}`); params.push(lead_source); }
+    if (assignedTo) { conditions.push(`assigned_to = $${p++}`); params.push(assignedTo); }
+    if (leadSource) { conditions.push(`lead_source = $${p++}`); params.push(leadSource); }
     const where = conditions.join(" AND ");
     const { rows } = await pool.query(
       `SELECT * FROM sales_leads WHERE ${where} ORDER BY created_at DESC LIMIT $${p} OFFSET $${p+1}`,
-      [...params, parseInt(limit), parseInt(offset)]
+      [...params, limit, offset]
     );
     const countRes = await pool.query(`SELECT COUNT(*) FROM sales_leads WHERE ${where}`, params);
     res.json({ leads: rows, total: parseInt(countRes.rows[0].count) });

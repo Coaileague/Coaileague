@@ -40,7 +40,6 @@ executionTrackerRouter.get('/executions', requireAuth, async (req: Request, res:
 
     // Verify user has access to this workspace
     const userId = req.user?.id;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
@@ -75,7 +74,6 @@ executionTrackerRouter.get('/executions/:id', requireAuth, async (req: Request, 
 
     // Verify user has access to the execution's workspace
     const userId = req.user?.id;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
@@ -102,7 +100,6 @@ executionTrackerRouter.get('/pending-verifications', requireAuth, async (req: Re
 
     // Verify user has access to this workspace
     const userId = req.user?.id;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
@@ -126,7 +123,6 @@ executionTrackerRouter.post('/executions/:id/verify', requireAuth, async (req: R
   try {
     const { notes } = req.body;
     const userId = req.user?.id || 'unknown';
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole as PlatformRole;
 
     // First get the execution to verify workspace access
@@ -172,7 +168,6 @@ executionTrackerRouter.post('/executions/:id/reject', requireAuth, async (req: R
   try {
     const { reason } = req.body;
     const userId = req.user?.id || 'unknown';
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole as PlatformRole;
 
     if (!reason) {
@@ -225,7 +220,6 @@ executionTrackerRouter.get('/stats', requireAuth, async (req: Request, res: Resp
 
     // Verify user has access to this workspace
     const userId = req.user?.id;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {

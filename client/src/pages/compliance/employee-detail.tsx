@@ -258,15 +258,21 @@ export default function EmployeeComplianceDetail() {
     const loadingConfig: CanvasPageConfig = {
       id: 'employee-compliance-loading',
       title: 'Employee Compliance',
-      subtitle: 'Loading...',
+      subtitle: 'Loading employee records, compliance vault, and document requirements',
       category: 'operations',
       backButton: true,
       onBack: () => navigate('/security-compliance'),
     };
     return (
       <CanvasHubPage config={loadingConfig}>
-        <div className="flex justify-center items-center py-12">
+        <div className="flex flex-col justify-center items-center py-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div>
+            <p className="font-medium text-foreground">Loading employee compliance file</p>
+            <p className="text-sm text-muted-foreground">
+              Reviewing vault status, uploaded documents, and state-specific requirements.
+            </p>
+          </div>
         </div>
       </CanvasHubPage>
     );
@@ -468,7 +474,10 @@ export default function EmployeeComplianceDetail() {
                 {documents.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No documents uploaded yet</p>
+                    <p className="font-medium text-foreground">No documents uploaded yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Upload the first credential to start the review and vault-lock workflow.
+                    </p>
                     <Button 
                       className="mt-4" 
                       onClick={() => setUploadDialogOpen(true)}

@@ -131,7 +131,7 @@ const scheduleLoadingConfig: CanvasPageConfig = {
   id: 'schedule-loading',
   category: 'operations',
   title: 'Schedule',
-  subtitle: 'Loading...',
+  subtitle: 'Loading shifts, staffing coverage, and Trinity scheduling context',
 };
 
 // POST_ORDER_TEMPLATES, ShiftFormData, and DAYS_OF_WEEK are imported from ShiftCreationModal

@@ -80,6 +80,7 @@ export interface RequestPayload {
 
 export interface AlertPayload {
   type: 'alert';
+  alert_idempotencyKey?: string;
   alert_type:
     | 'safety_flag'
     | 'pattern_detected'
@@ -93,7 +94,6 @@ export interface AlertPayload {
   workspace_id: string | null;
   conversation_id?: string;
   language?: 'en' | 'es';
-  alert_idempotencyKey?: string;
 }
 
 type CommandPayload = EscalationPayload | ReportPayload | RequestPayload | AlertPayload | Record<string, unknown>;

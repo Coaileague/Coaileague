@@ -322,7 +322,6 @@ router.put("/contract-documents/:id/status", requireAuth, async (req: Authentica
     const workspaceId = req.workspaceId!;
     const { id } = req.params;
     const { status, reviewNotes } = req.body;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status. Must be approved or rejected.' });

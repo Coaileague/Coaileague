@@ -10,6 +10,10 @@ import { requireAuth, requireManager, type AuthenticatedRequest } from "../rbac"
 
 const router = Router();
 
+function getQueryString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 const VALID_STATUSES = ["draft","pending_assignment","active","completed","cancelled","billed"];
 const VALID_TYPES = ["special_assignment","escort","investigation","event_security","emergency_deployment","other"];
 
@@ -19,19 +23,23 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const wid = req.workspaceId;
     if (!wid) return res.status(400).json({ error: "Workspace required" });
-    const { status, client_id, type, limit = 50, offset = 0 } = req.query;
+    const status = getQueryString(req.query.status);
+    const clientId = getQueryString(req.query.client_id);
+    const type = getQueryString(req.query.type);
+    const limit = Number.parseInt(getQueryString(req.query.limit) || "50", 10);
+    const offset = Number.parseInt(getQueryString(req.query.offset) || "0", 10);
 
     const conditions = ["workspace_id = $1"];
     const params: any[] = [wid];
     let p = 2;
     if (status) { conditions.push(`status = $${p++}`); params.push(status); }
-    if (client_id) { conditions.push(`client_id = $${p++}`); params.push(client_id); }
+    if (clientId) { conditions.push(`client_id = $${p++}`); params.push(clientId); }
     if (type) { conditions.push(`work_order_type = $${p++}`); params.push(type); }
 
     const where = conditions.join(" AND ");
     const { rows } = await pool.query(
       `SELECT * FROM work_orders WHERE ${where} ORDER BY created_at DESC LIMIT $${p} OFFSET $${p+1}`,
-      [...params, parseInt(limit), parseInt(offset)]
+      [...params, limit, offset]
     );
     const countRes = await pool.query(`SELECT COUNT(*) FROM work_orders WHERE ${where}`, params);
     res.json({ workOrders: rows, total: parseInt(countRes.rows[0].count) });

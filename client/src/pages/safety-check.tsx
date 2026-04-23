@@ -301,7 +301,9 @@ export default function SafetyCheck() {
 
             {isLoading ? (
               <Card className="p-6 text-center">
-                <p className="text-muted-foreground">Loading...</p>
+                <p className="text-muted-foreground">
+                  Loading recent inspections, findings, and follow-up status...
+                </p>
               </Card>
             ) : !recentChecks?.length ? (
               <Card className="p-6 text-center">

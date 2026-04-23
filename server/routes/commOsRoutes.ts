@@ -22,7 +22,6 @@ router.get('/rooms', requireAuth, async (req: AuthenticatedRequest, res) => {
     const workspaceId = req.workspaceId;
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const userRole = req.user.role;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 
@@ -53,7 +52,6 @@ router.get('/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) =>
     const workspaceId = req.workspaceId;
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const userRole = req.user.role;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 
@@ -166,7 +164,6 @@ router.post('/rooms/:id/join', requireAuth, async (req: AuthenticatedRequest, re
     const workspaceId = req.workspaceId;
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const userRole = req.user.role;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
     
@@ -214,7 +211,6 @@ router.get('/messages/search', requireAuth, async (req: AuthenticatedRequest, re
     const workspaceId = req.workspaceId;
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const userRole = req.user.role;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
     
@@ -376,7 +372,6 @@ router.post('/rooms/:id/suspend', requireAuth, async (req: AuthenticatedRequest,
     const { reason } = req.body;
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const userRole = req.user.role;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 
@@ -430,7 +425,6 @@ router.post('/rooms/:id/lift-suspension', requireAuth, async (req: Authenticated
     const roomId = req.params.id;
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const userRole = req.user.role;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole;
     const isSupportStaff = !!platformRole && platformRole !== 'none';
 

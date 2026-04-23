@@ -263,7 +263,7 @@ export default function PayInvoice() {
   const loadingConfig: CanvasPageConfig = {
     id: 'pay-invoice-loading',
     title: 'Invoice Payment',
-    subtitle: 'Loading...',
+    subtitle: 'Loading invoice details and secure payment configuration',
     category: 'public',
     withBottomNav: false,
     showSeasonalBanner: false,

@@ -589,8 +589,8 @@ export default function QuickBooksImportPage() {
         description: hasData 
           ? `Found ${data?.employees?.length || 0} employees and ${data?.customers?.length || 0} customers`
           : isProductionMode 
-            ? 'No data found in QuickBooks. Verify you have active customers or employees.'
-            : 'No data found in QuickBooks. Try pushing sandbox data first.',
+            ? 'QuickBooks is connected, but no active customers or employees were returned for discovery.'
+            : 'Sandbox is connected, but no records were returned yet. Try pushing sandbox data first.',
       });
     } catch (error: any) {
       toast({
@@ -1235,7 +1235,7 @@ export default function QuickBooksImportPage() {
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">
-                    {isProductionMode ? 'QuickBooks Connected - No Data Found' : 'Sandbox Connected - No Data Found'}
+                    {isProductionMode ? 'QuickBooks Connected - No Records Returned' : 'Sandbox Connected - No Records Returned'}
                   </h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
                     {isProductionMode 

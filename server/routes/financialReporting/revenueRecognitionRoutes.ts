@@ -126,7 +126,6 @@ const router = Router();
 
 // Auth middleware applied by billing domain mount — but double-check workspace
 async function resolveWorkspace(req: AuthenticatedRequest): Promise<{ ok: boolean; workspaceId?: string; status?: number; error?: string }> {
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const userId = req.user?.id || (req.user)?.claims?.sub;
   if (!userId) return { ok: false, status: 401, error: 'Unauthorized' };
 

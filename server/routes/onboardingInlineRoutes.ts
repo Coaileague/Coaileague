@@ -1494,7 +1494,6 @@ router.get('/readiness', async (req: AuthenticatedRequest, res) => {
 
 router.get('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     // CATEGORY C — Raw SQL retained: LIMIT | Tables: org_creation_progress | Verified: 2026-03-23
@@ -1511,7 +1510,6 @@ router.get('/create-org/progress', async (req: AuthenticatedRequest, res) => {
 
 router.post('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     const data = req.body;
@@ -1535,7 +1533,6 @@ router.post('/create-org/progress', async (req: AuthenticatedRequest, res) => {
 
 router.delete('/create-org/progress', async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     await db.delete(orgCreationProgress).where(eq(orgCreationProgress.userId, userId));

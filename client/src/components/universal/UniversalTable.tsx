@@ -71,7 +71,12 @@ export function UniversalTable<T extends Record<string, unknown>>({
     if (!sortKey || !sortDir) return 0;
     const av = a[sortKey];
     const bv = b[sortKey];
-    const cmp = av === null ? -1 : bv === null ? 1 : av < bv ? -1 : av > bv ? 1 : 0;
+    const cmp =
+      av == null ? -1 :
+      bv == null ? 1 :
+      av < bv ? -1 :
+      av > bv ? 1 :
+      0;
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
@@ -121,7 +126,7 @@ export function UniversalTable<T extends Record<string, unknown>>({
               fontFamily: 'var(--font-body)',
             }}
           >
-            No data available
+            Nothing to show yet
           </div>
         )}
       </div>

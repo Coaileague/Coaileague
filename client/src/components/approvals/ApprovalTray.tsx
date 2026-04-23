@@ -7,6 +7,7 @@ import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalMod
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   CheckCircle, 
   XCircle, 
@@ -166,6 +167,30 @@ export function ApprovalTray({ scope = 'employee', isMobile = false }: ApprovalT
 
   const pendingApprovals = approvals.filter(a => a.decision === 'pending');
 
+  const loadingState = (
+    <div className="space-y-3 py-4">
+      {Array.from({ length: 2 }).map((_, index) => (
+        <div key={index} className="p-3 border rounded-lg space-y-2 bg-card">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 rounded-full" />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-3/4" />
+          <div className="flex gap-2 pt-1">
+            <Skeleton className="h-8 flex-1" />
+            <Skeleton className="h-8 flex-1" />
+            <Skeleton className="h-8 w-16" />
+          </div>
+        </div>
+      ))}
+      <p className="text-sm text-muted-foreground text-center">
+        Loading pending approvals and routing context...
+      </p>
+    </div>
+  );
+
   if (isMobile) {
     return (
       <UniversalModal open={isOpen} onOpenChange={setIsOpen}>
@@ -197,9 +222,13 @@ export function ApprovalTray({ scope = 'employee', isMobile = false }: ApprovalT
           <ScrollArea className="h-full mt-4">
             <div className="space-y-3 pb-20">
               {isLoading ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
+                loadingState
               ) : pendingApprovals.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No pending approvals</p>
+                <div className="text-sm text-muted-foreground text-center py-8 space-y-2">
+                  <CheckCircle className="w-10 h-10 mx-auto opacity-50 text-green-600 dark:text-green-400" />
+                  <p className="font-medium text-foreground">No pending approvals</p>
+                  <p>Trinity and human review queues are currently clear.</p>
+                </div>
               ) : (
                 pendingApprovals.map((approval) => (
                   <ApprovalCard
@@ -240,9 +269,13 @@ export function ApprovalTray({ scope = 'employee', isMobile = false }: ApprovalT
           <CollapsibleContent>
             <div className="border-t max-h-[300px] overflow-auto p-4">
               {isLoading ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
+                loadingState
               ) : pendingApprovals.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No pending approvals</p>
+                <div className="text-sm text-muted-foreground text-center py-4 space-y-2">
+                  <CheckCircle className="w-8 h-8 mx-auto opacity-50 text-green-600 dark:text-green-400" />
+                  <p className="font-medium text-foreground">No pending approvals</p>
+                  <p>The approval tray will reopen automatically when review work arrives.</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {pendingApprovals.map((approval) => (

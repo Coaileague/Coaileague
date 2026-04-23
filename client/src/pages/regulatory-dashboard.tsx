@@ -113,7 +113,7 @@ function SectionCard({ title, icon: Icon, children, isLoading }: {
       <CardHeader className="flex flex-row items-center gap-2 pb-3 flex-wrap">
         <Icon size={18} className="text-[#ffc83c] flex-shrink-0" />
         <CardTitle className="text-white text-base">{title}</CardTitle>
-        {isLoading && <Badge variant="outline" className="text-slate-400 border-slate-600 ml-auto">Loading...</Badge>}
+        {isLoading && <Badge variant="outline" className="text-slate-400 border-slate-600 ml-auto">Syncing records</Badge>}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
@@ -520,7 +520,7 @@ export default function RegulatoryDashboard() {
             <Shield className="text-[#ffc83c]" size={24} />
             <div>
               <h1 className="text-white font-bold text-base leading-tight">
-                {overview?.legalName ?? "Loading..."} — Compliance Audit
+                {overview?.legalName ?? "Organization"} — Compliance Audit
               </h1>
               <p className="text-slate-400 text-xs">
                 License: {overview?.stateLicenseNumber ?? "—"} · State: {overview?.stateLicenseState ?? "—"}
@@ -597,7 +597,7 @@ export default function RegulatoryDashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Loading company information...</p>
+                <p className="text-slate-400 text-sm">Loading company license data, entity details, and audit readiness context...</p>
               )}
             </SectionCard>
           </TabsContent>
@@ -622,11 +622,11 @@ export default function RegulatoryDashboard() {
               </div>
 
               {officersQuery.isLoading ? (
-                <p className="text-slate-400 text-sm py-6 text-center">Loading officer roster...</p>
+                <p className="text-slate-400 text-sm py-6 text-center">Loading officer roster, license status, and hard-block compliance signals...</p>
               ) : officersQuery.data?.data?.officers?.length === 0 ? (
                 <div className="text-center py-10">
                   <Users size={32} className="text-slate-600 mx-auto mb-2" />
-                  <p className="text-slate-500">No active officers found</p>
+                  <p className="text-slate-500">No active officers are on file for this audit view yet.</p>
                 </div>
               ) : (
                 <>
@@ -715,7 +715,7 @@ export default function RegulatoryDashboard() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-slate-400 text-sm">Loading violation records...</p>
+                <p className="text-slate-400 text-sm">Loading WORM-locked violation history and owner notification status...</p>
               )}
               {violationsQuery.data?.data?.violations?.length === 0 && (
                 <div className="text-center py-8">
@@ -771,7 +771,7 @@ export default function RegulatoryDashboard() {
                   )}
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Loading insurance documentation...</p>
+                <p className="text-slate-400 text-sm">Loading insurance certificates, coverage requirements, and compliance evidence...</p>
               )}
             </SectionCard>
           </TabsContent>
@@ -803,7 +803,7 @@ export default function RegulatoryDashboard() {
                   </div>
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Loading posting compliance...</p>
+                <p className="text-slate-400 text-sm">Loading labor posting records and federal notice coverage...</p>
               )}
             </SectionCard>
           </TabsContent>
@@ -823,7 +823,7 @@ export default function RegulatoryDashboard() {
                   </div>
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Loading uniform compliance...</p>
+                <p className="text-slate-400 text-sm">Loading uniform policy requirements and inspection evidence...</p>
               )}
             </SectionCard>
           </TabsContent>
@@ -855,7 +855,7 @@ export default function RegulatoryDashboard() {
                   )}
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Loading vehicle documentation...</p>
+                <p className="text-slate-400 text-sm">Loading patrol vehicle requirements, photos, and supporting documentation...</p>
               )}
             </SectionCard>
           </TabsContent>
@@ -926,7 +926,7 @@ export default function RegulatoryDashboard() {
                 </div>
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Loading shift records...</p>
+                <p className="text-slate-400 text-sm">Loading shift assignments, GPS verification, and staffing records...</p>
               )}
             </SectionCard>
           </TabsContent>
@@ -987,7 +987,7 @@ export default function RegulatoryDashboard() {
                   </div>
                 )
               ) : (
-                <p className="text-slate-400 text-sm">Loading incident reports...</p>
+                <p className="text-slate-400 text-sm">Loading incident history and report status for this audit session...</p>
               )}
             </SectionCard>
           </TabsContent>
@@ -1035,7 +1035,7 @@ export default function RegulatoryDashboard() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-slate-400 text-sm">Loading document safe...</p>
+                <p className="text-slate-400 text-sm">Loading auditor-safe compliance documents and allowed evidence files...</p>
               )}
             </SectionCard>
           </TabsContent>

@@ -311,7 +311,14 @@ export default function AutomationSettings() {
 
   if (isLoading) {
     return (
-      <CanvasHubPage config={{ id: 'automation-settings', title: 'Automation Settings', subtitle: 'Loading...', category: 'settings' }}>
+      <CanvasHubPage
+        config={{
+          id: 'automation-settings',
+          title: 'Automation Settings',
+          subtitle: 'Loading automation policies and saved Trinity preferences',
+          category: 'settings'
+        }}
+      >
         <div className="space-y-3 max-w-2xl py-2">
           <div className="flex items-center justify-center py-2">
             <UniversalSpinner size="md" label="Trinity is loading automation pipelines…" />

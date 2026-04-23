@@ -47,7 +47,7 @@ export function ResponsiveLoading({
     status === "success" ? "Success!" :
     status === "error" ? "Error occurred" :
     status === "denied" ? "Access Denied" :
-    "Loading..."
+    "Loading your workspace..."
   );
 
   return (

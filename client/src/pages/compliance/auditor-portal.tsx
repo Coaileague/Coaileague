@@ -129,15 +129,21 @@ export default function AuditorPortal() {
     const loadingConfig: CanvasPageConfig = {
       id: 'auditor-portal-loading',
       title: 'Auditor Access Portal',
-      subtitle: 'Loading...',
+      subtitle: 'Loading compliance reports, state rules, and read-only audit context',
       category: 'operations',
       backButton: true,
       onBack: () => navigate('/security-compliance'),
     };
     return (
       <CanvasHubPage config={loadingConfig}>
-        <div className="flex justify-center items-center py-12" data-testid="loading-state">
+        <div className="flex flex-col justify-center items-center py-12 text-center space-y-3" data-testid="loading-state">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div>
+            <p className="font-medium text-foreground">Preparing auditor snapshot</p>
+            <p className="text-sm text-muted-foreground">
+              Pulling state configurations, point rules, and workforce compliance scoring.
+            </p>
+          </div>
         </div>
       </CanvasHubPage>
     );
@@ -229,7 +235,7 @@ export default function AuditorPortal() {
               <UniversalEmptyState
                 icon={<Building2 size={32} />}
                 title="No State Configurations"
-                description="No state configurations found"
+                description="State-specific audit rules have not been configured for this workspace yet."
                 data-testid="empty-states"
               />
             ) : (
@@ -297,7 +303,10 @@ export default function AuditorPortal() {
             ) : pointRules.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground" data-testid="empty-rules">
                 <Scale className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No point rules configured</p>
+                <p className="font-medium text-foreground">No point rules configured</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Auditor scoring rules will appear here once the selected state program has been initialized.
+                </p>
               </div>
             ) : (
               <Table data-testid="table-point-rules">
@@ -352,7 +361,10 @@ export default function AuditorPortal() {
             {report.scoreboard.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground" data-testid="empty-scoreboard">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No employee scores available</p>
+                <p className="font-medium text-foreground">No employee scores available</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Individual compliance scoring appears after employee documents and rule mappings are processed.
+                </p>
               </div>
             ) : (
               <Table data-testid="table-scoreboard">

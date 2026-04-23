@@ -816,7 +816,7 @@ function StatCard({ icon, label, value, loading }: any) {
       </div>
       {loading ? (
         <div className="h-8 flex items-center">
-          <div className="text-sm text-muted-foreground">Loading...</div>
+          <div className="text-sm text-muted-foreground">Loading current command metrics...</div>
         </div>
       ) : (
         <div className="text-lg sm:text-2xl lg:text-3xl font-bold text-foreground truncate">{value}</div>

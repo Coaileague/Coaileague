@@ -302,6 +302,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         END $$;
       `).catch(() => null);
       log.info('[Startup] Missing tables ensured: cookie_consent, universal_id_sequences');
+      // Backfill shifts.date for any shifts with null date (from before date column was populated)
+      await pool.query(`
+        UPDATE shifts 
+        SET date = TO_CHAR(start_time AT TIME ZONE 'UTC', 'YYYY-MM-DD')
+        WHERE date IS NULL AND start_time IS NOT NULL
+      `).catch(() => null);
       // Ensure workspace_members unique constraint (needed for ON CONFLICT in seedPlatformWorkspace)
       await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS workspace_members_user_workspace_idx

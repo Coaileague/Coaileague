@@ -1343,7 +1343,7 @@ router.get('/seasonal/state', async (req, res) => {
     if (seasonalCache && (now - seasonalCache.timestamp) < SEASONAL_CACHE_TTL) {
       return res.json(seasonalCache.data);
     }
-    const workspaceId = req.session?.activeWorkspaceId || null;
+    const workspaceId = req.session?.activeWorkspaceId ?? undefined;
     const profile = await generateSeasonalProfile(workspaceId);
     
     const responseData = {

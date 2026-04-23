@@ -237,7 +237,6 @@ export function registerShiftConfirmationActions() {
         startTime: s.startTime,
         title: s.title,
         hoursUntilStart: +((new Date(s.startTime).getTime() - now.getTime()) / 3600000).toFixed(1),
-        idempotencyKey: `unconfirmed_shifts_alert-${Date.now()}-${mgr.userId}`
       })),
       managersNotified: managers.length,
     };

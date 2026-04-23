@@ -10,7 +10,6 @@ const router = express.Router();
 
 router.post('/intake/start', requireAuth, async (req, res, next) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     const userId = req.user?.id;
     const { flowType, chatRoomId, triggerMessage } = req.body;
@@ -65,7 +64,6 @@ router.post('/intake/start', requireAuth, async (req, res, next) => {
 
 router.post('/intake/:sessionId/respond', requireAuth, async (req, res, next) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     const { sessionId } = req.params;
     const { fieldId, value, stepIndex } = req.body;
@@ -174,7 +172,6 @@ router.post('/intake/:sessionId/respond', requireAuth, async (req, res, next) =>
 
 router.post('/intake/:sessionId/abandon', requireAuth, async (req, res, next) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
     await pool.query(
@@ -189,7 +186,6 @@ router.post('/intake/:sessionId/abandon', requireAuth, async (req, res, next) =>
 
 router.get('/intake/sessions', requireAuth, async (req, res, next) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
     const limit = parseInt(String(req.query.limit || '20'));

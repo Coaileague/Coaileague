@@ -8,10 +8,21 @@ import { employeeOnboardingPipeline } from '../services/employeeOnboardingPipeli
 const log = createLogger('OnboardingPipelineRoutes');
 const router = Router();
 
+function requireWorkspaceUser(req: Request, res: Response): (NonNullable<Request['user']> & { workspaceId: string }) | null {
+  const user = req.user;
+  const workspaceId = user?.workspaceId || req.workspaceId;
+  if (!user || !workspaceId) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+  return { ...user, workspaceId };
+}
+
 // POST /api/onboarding-pipeline — create a pipeline for an employee
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const { entityId, entityType = 'employee', pipelineType, assignedToUserId } = req.body;
 
     if (!entityId) return res.status(400).json({ error: 'entityId required' });
@@ -33,7 +44,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 // GET /api/onboarding-pipeline — list all pipelines for workspace
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const result = await pool.query(
       `SELECT op.id, op.pipeline_type, op.entity_type, op.entity_id,
               op.status, op.current_step, op.total_steps, op.created_at, op.updated_at,
@@ -57,7 +69,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 // GET /api/onboarding-pipeline/:id — get pipeline with full step detail
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const pipeline = await employeeOnboardingPipeline.getPipeline(req.params.id);
     if (!pipeline || pipeline.workspace_id !== user.workspaceId) {
       return res.status(404).json({ error: 'Pipeline not found' });
@@ -95,7 +108,8 @@ router.get('/public/:id', async (req: Request, res: Response) => {
 // PATCH /api/onboarding-pipeline/:id/steps/:stepId/complete — mark a step complete
 router.patch('/:id/steps/:stepId/complete', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const pipeline = await employeeOnboardingPipeline.getPipeline(req.params.id);
     if (!pipeline || pipeline.workspace_id !== user.workspaceId) {
       return res.status(404).json({ error: 'Pipeline not found' });
@@ -136,7 +150,8 @@ router.post('/public/:id/steps/:stepId/complete', async (req: Request, res: Resp
 // GET /api/onboarding-pipeline/by-employee/:employeeId
 router.get('/by-employee/:employeeId', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const pipeline = await employeeOnboardingPipeline.getPipelineByEntity(
       req.params.employeeId,
       user.workspaceId
@@ -154,7 +169,8 @@ router.get('/by-employee/:employeeId', requireAuth, async (req: Request, res: Re
 // POST /api/onboarding-pipeline/:id/activate — manually trigger activation
 router.post('/:id/activate', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const pipeline = await employeeOnboardingPipeline.getPipeline(req.params.id);
     if (!pipeline || pipeline.workspace_id !== user.workspaceId) {
       return res.status(404).json({ error: 'Pipeline not found' });

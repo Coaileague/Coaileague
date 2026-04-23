@@ -297,7 +297,6 @@ router.post(
       const isReservedName = RESERVED_ROOM_NAMES.some(
         r => requestedName === r || requestedName.startsWith(r)
       );
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const _userPlatformRole = (authReq.user)?.platformRole || (authReq.user)?.role || '';
       const isSupportExempt = SUPPORT_EXEMPT_ROLES.includes(authReq.workspaceRole || '') ||
                               SUPPORT_EXEMPT_ROLES.includes(_userPlatformRole);
@@ -587,7 +586,6 @@ router.get(
 
       const requireAuth = !!userId;
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const platformRole = (authReq.user)?.platformRole || (authReq.user)?.role;
       const { hasPlatformWideAccess } = await import('../rbac');
       const isPlatformAdmin = platformRole && hasPlatformWideAccess(platformRole);
@@ -1989,7 +1987,6 @@ router.get(
     const authReq = req as AuthenticatedRequest;
     try {
       const userId = authReq.user?.id;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
 
       if (!userId) {
@@ -2124,7 +2121,6 @@ router.post(
       const { roomId } = req.params;
       const { action, reason } = req.body;
       const userId = authReq.user?.id;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const userName = (authReq.user)?.firstName && (authReq.user)?.lastName
         ? `${(authReq.user).firstName} ${(authReq.user).lastName}`
@@ -2399,7 +2395,6 @@ router.get(
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
 
       // Only support staff can access
@@ -2436,7 +2431,6 @@ router.get(
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
       
@@ -2575,7 +2569,6 @@ router.get(
     const { roomId } = req.params;
 
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const platformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
       

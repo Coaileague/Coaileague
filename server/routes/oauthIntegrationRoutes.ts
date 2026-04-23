@@ -889,10 +889,10 @@ router.post('/quickbooks/push/unlock', requireAuth, requireWorkspaceMembership()
   try {
     const { workspaceId, forceReset = false } = req.body;
     const userId = req.user?.id || req.session?.userId;
-    const userRole = req.session?.platformRole;
+    const userRole = req.platformRole;
     
     // Check if user is support staff (can force reset any workspace)
-    const isSupportStaff = ['root_admin', 'co_admin', 'sysops'].includes(userRole);
+    const isSupportStaff = !!userRole && ['root_admin', 'co_admin', 'sysops'].includes(userRole);
     
     // Find stuck migrations (running or cancel_requested for > 5 minutes, or failed)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -966,10 +966,10 @@ router.post('/quickbooks/push/factory-reset', requireAuth, requireWorkspaceMembe
   try {
     const { workspaceId, reason } = req.body;
     const userId = req.user?.id || req.session?.userId;
-    const userRole = req.session?.platformRole;
+    const userRole = req.platformRole;
     
     // Only support staff can factory reset
-    const isSupportStaff = ['root_admin', 'co_admin', 'sysops'].includes(userRole);
+    const isSupportStaff = !!userRole && ['root_admin', 'co_admin', 'sysops'].includes(userRole);
     if (!isSupportStaff) {
       return res.status(403).json({ 
         error: 'Forbidden',

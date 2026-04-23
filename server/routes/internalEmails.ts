@@ -842,8 +842,10 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
     if (!user?.id) {
       return res.status(401).json({ error: "Authentication required" });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || user.currentWorkspaceId || null;
+    if (!workspaceId) {
+      return res.status(400).json({ error: "Workspace context required" });
+    }
 
     const validated = sendEmailSchema.parse(req.body); // infra
 
@@ -979,7 +981,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
             validated.subject,
             emailHtml,
             'internal_external',
-            workspaceId
+          workspaceId
           );
           // @ts-expect-error — TS migration: fix in refactoring sprint
           if (result.messageId) lastMessageId = (result as any).messageId;
@@ -1038,7 +1040,6 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
             if (recipientMailbox?.userId && recipientMailbox.userId !== user.id) {
               universalNotificationEngine.sendInternalEmailNotification({
                 recipientUserId: recipientMailbox.userId,
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 workspaceId: req.workspaceId || (req.user)?.workspaceId || user.currentWorkspaceId || '',
                 senderName: mailbox.displayName || mailbox.emailAddress,
                 subject: validated.subject,

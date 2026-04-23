@@ -681,7 +681,6 @@ router.get("/api/workspaces/all", requireAuth, async (req: AuthenticatedRequest,
 
 router.get("/api/workspaces/current", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(404).json({ message: "No current workspace" });
@@ -1277,7 +1276,7 @@ router.post("/api/knowledge/ask", requireAuth, async (req: AuthenticatedRequest,
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = req.workspaceId;
 
     const schema = z.object({
       query: z.string().min(1, "Question is required"),
@@ -1372,7 +1371,7 @@ router.post("/api/knowledge/ask", requireAuth, async (req: AuthenticatedRequest,
 
 router.get("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = req.workspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const { category, search } = req.query;
 
@@ -1404,7 +1403,7 @@ router.get("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequ
 
 router.post("/api/knowledge/articles", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = req.workspaceId;
     const { title, content, category, summary, tags, isPublic } = req.body;
 
     if (!title || !content) {
@@ -1724,7 +1723,7 @@ router.post("/api/escalation/check-sla", requireAuth, readLimiter, async (req: A
 router.post("/api/migrations/employee-match", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { employeeName, workspaceId: reqWorkspaceId } = req.body;
-    const workspaceId = reqWorkspaceId || req.workspaceId?.id;
+    const workspaceId = reqWorkspaceId || req.workspaceId;
     if (!workspaceId || !employeeName) return res.status(400).json({ error: "Workspace and employeeName required" });
 
     const allEmployees = await db.select().from(employees).where(eq(employees.workspaceId, workspaceId));
@@ -1881,7 +1880,6 @@ router.get("/api/orchestration/dashboard", requireAuth, async (req: Authenticate
     const { orchestrationOverlays } = await import("@shared/schema");
     const { desc, and, gte, eq, inArray } = await import("drizzle-orm");
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) {
       return res.json({ status: "not_started" });
@@ -1923,7 +1921,6 @@ router.get("/api/orchestration/dashboard", requireAuth, async (req: Authenticate
 
 router.get("/api/my-team", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -2315,7 +2312,6 @@ router.post("/api/client-signup", async (req, res) => {
 
 router.get("/api/sites", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.json([]);
@@ -2331,7 +2327,6 @@ router.get("/api/sites", requireAuth, async (req: AuthenticatedRequest, res) => 
 
 router.get("/api/search/suggestions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const q = (req.query.q as string) || "";
 
@@ -2417,7 +2412,6 @@ router.get("/api/search/suggestions", requireAuth, async (req: AuthenticatedRequ
 router.get("/api/device/settings", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!userId || !workspaceId) {
       return res.json({ notifications: true, theme: "system", fontSize: "medium", compactMode: false });
@@ -2654,7 +2648,6 @@ router.delete("/api/shift-templates/:id", requireAuth, async (req: any, res) => 
 // ─── Missing workspace / billing aliases ─────────────────────────────────────
 router.get("/api/workspace/current", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(404).json({ message: "No current workspace" });
     const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
@@ -2667,7 +2660,6 @@ router.get("/api/workspace/current", requireAuth, async (req: AuthenticatedReque
 
 router.get("/api/workspace/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.json({ employeeCount: 0, clientCount: 0, activeShifts: 0, timeEntryCount: 0, invoiceCount: 0, deliveredInvoiceCount: 0 });
     const [empCount] = await db.select({ count: sql<number>`count(*)::int` }).from(employees).where(eq(employees.workspaceId, workspaceId));
@@ -2691,7 +2683,6 @@ router.get("/api/workspace/stats", requireAuth, async (req: AuthenticatedRequest
 
 router.get("/api/workspace/health", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.json({ status: "unknown", employeeCount: 0, activeShifts: 0 });
     const [empCount] = await db.select({ count: sql<number>`count(*)` }).from(employees).where(eq(employees.workspaceId, workspaceId));
@@ -2710,7 +2701,6 @@ router.get("/api/workspace/health", requireAuth, async (req: AuthenticatedReques
 
 router.get("/api/billing/subscription", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.json({ tier: "starter", status: "active", trialEndsAt: null, trialStartedAt: null, currentPeriodEnd: null });
     const [sub] = await db

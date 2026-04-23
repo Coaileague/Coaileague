@@ -470,10 +470,10 @@ router.patch('/:id', requireManagerOrPlatformStaff, async (req: AuthenticatedReq
       await setInvoiceSettings({
         workspaceId,
         clientId: req.params.id,
-        billingCycle: validated.billingFrequency || validated.billingCycle,
-        defaultBillRate: validated.billableHourlyRate ? String(validated.billableHourlyRate) : undefined,
-        autoSendInvoice: validated.autoSendInvoice,
-        invoiceRecipientEmails: validated.billingEmail ? [validated.billingEmail] : undefined,
+        billingCycle: validated.billingFrequency ?? validated.billingCycle ?? undefined,
+        defaultBillRate: validated.billableHourlyRate != null ? String(validated.billableHourlyRate) : undefined,
+        autoSendInvoice: validated.autoSendInvoice ?? undefined,
+        invoiceRecipientEmails: validated.billingEmail != null ? [validated.billingEmail] : undefined,
       }, req.user?.id || null);
     }
 
@@ -1151,7 +1151,6 @@ router.post('/dockchat/close', dockChatRateLimit, async (req: any, res: any) => 
 // ORG: Get all client portal reports (requires org auth)
 router.get('/dockchat/reports', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
 
@@ -1167,7 +1166,6 @@ router.get('/dockchat/reports', requireManagerOrPlatformStaff, async (req: Authe
 // ORG: Get a single report by ID
 router.get('/dockchat/reports/:reportId', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
 
@@ -1184,7 +1182,6 @@ router.get('/dockchat/reports/:reportId', requireManagerOrPlatformStaff, async (
 // ORG: Acknowledge a report
 router.post('/dockchat/reports/:reportId/acknowledge', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
 
@@ -1202,7 +1199,6 @@ router.post('/dockchat/reports/:reportId/acknowledge', requireManagerOrPlatformS
 // ORG: Resolve a report
 router.post('/dockchat/reports/:reportId/resolve', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
 
@@ -1224,7 +1220,6 @@ router.post('/dockchat/reports/:reportId/resolve', requireManagerOrPlatformStaff
 // ============================================================================
 router.get('/my-communications', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     const userEmail = req.user?.email;
     if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
@@ -1257,7 +1252,6 @@ router.get('/my-communications', requireAuth, async (req: AuthenticatedRequest, 
 // ============================================================================
 router.post('/contract-renewal-request', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     const userId = req.user?.id;
     const userEmail = req.user?.email;
@@ -1304,7 +1298,6 @@ router.post('/contract-renewal-request', requireAuth, async (req: AuthenticatedR
 
 router.post('/coi-request', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     const userId = req.user?.id;
     const userEmail = req.user?.email;
@@ -1570,7 +1563,6 @@ router.get('/:id/export', requireManagerOrPlatformStaff, async (req: Authenticat
 // Used by the client portal frontend to make portal-authenticated payment calls.
 router.get('/my-portal-token', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = (req.user)?.workspaceId;
     const userEmail = req.user?.email;
     if (!workspaceId || !userEmail) return res.status(401).json({ message: 'Unauthorized' });

@@ -609,6 +609,7 @@ router.get('/priority-queue', requirePlatformStaff, async (req: AuthenticatedReq
 router.patch('/escalated/:id/assign', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
 
     const validated = z.object({
       staffId: z.string().min(1, "Staff ID required")
@@ -650,6 +651,7 @@ router.patch('/escalated/:id/assign', requirePlatformStaff, async (req: Authenti
 router.patch('/escalated/:id/notes', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
 
     const validated = z.object({
       notes: z.string().min(1, "Notes required")
@@ -676,6 +678,7 @@ router.patch('/escalated/:id/notes', requirePlatformStaff, async (req: Authentic
 router.patch('/escalated/:id/resolve', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
 
@@ -737,6 +740,7 @@ router.patch('/escalated/:id/resolve', requirePlatformStaff, async (req: Authent
 router.post('/tickets/:id/generate-summary', requirePlatformStaff, async (req, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
     const { messages, guestEmail, guestName } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
@@ -813,6 +817,7 @@ Summary:`;
 router.post('/tickets/:id/close', requirePlatformStaff, async (req, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
     const { summary, guestEmail, guestName } = req.body;
 
     if (!guestEmail) {
@@ -1013,6 +1018,7 @@ router.delete('/tickets/:id', async (req: AuthenticatedRequest, res) => {
 router.delete('/performance-reviews/:id', requirePlatformStaff, async (req: any, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
     const { explanation, notifyUserId } = req.body;
 
     if (!explanation) {
@@ -1125,6 +1131,7 @@ router.patch('/performance-reviews/:id', requirePlatformStaff, async (req: any, 
 router.delete('/employer-ratings/:id', requirePlatformStaff, async (req: any, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
     const { explanation, notifyWorkspaceId } = req.body;
 
     if (!explanation) {
@@ -1247,6 +1254,7 @@ router.patch('/employer-ratings/:id', requirePlatformStaff, async (req: any, res
 router.delete('/report-submissions/:id', requirePlatformStaff, async (req: any, res) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.workspaceId || req.session?.workspaceId;
     const { explanation, notifyUserId } = req.body;
 
     if (!explanation) {
@@ -1301,7 +1309,6 @@ router.get('/chatrooms', async (req: AuthenticatedRequest, res) => {
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required" });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const isSupportStaff = (req.user).platformRole && [
       'root_admin',
       'support_manager',
@@ -1311,7 +1318,6 @@ router.get('/chatrooms', async (req: AuthenticatedRequest, res) => {
       'sysop',
       'deputy_admin',
       'deputy_assistant'
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     ].includes((req.user).platformRole);
 
     if (!isSupportStaff) {

@@ -35,7 +35,6 @@ const router = Router();
 
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { status } = req.query;
     
@@ -64,7 +63,6 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/pending", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     
     if (!workspaceId) {
@@ -93,7 +91,6 @@ router.get("/pending", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     
     if (!workspaceId) {
@@ -155,7 +152,6 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/:approvalId/decide", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { approvalId } = req.params;
     const decParsed = decisionSchema.safeParse(req.body);

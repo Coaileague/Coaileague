@@ -245,7 +245,9 @@ export default function EmployeePackets() {
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">Loading...</div>
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              Loading packet templates, completion status, and assigned recipients...
+            </div>
           ) : packets.length === 0 ? (
             <div className="p-10 text-center">
               <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-3" />

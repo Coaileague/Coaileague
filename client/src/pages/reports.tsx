@@ -398,8 +398,8 @@ export default function ReportsPage() {
   const handleExport = (exportFormat: 'csv' | 'pdf') => {
     if (submissions.length === 0) {
       toast({
-        title: "No data available",
-        description: "Cannot export - no report submissions found",
+        title: "Reports not ready yet",
+        description: "Export becomes available after report submissions exist for this view.",
         variant: "destructive",
       });
       return;

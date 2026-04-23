@@ -541,7 +541,6 @@ const router = Router();
 
       // PUBLIC ACCESS: Guests can access chat but AI features require workspace for billing
       // Workspace users get AI assistance (billed), guests get human support only
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       if (!workspaceId) {
         // Gracefully disable AI for guests instead of blocking chat access
@@ -552,7 +551,6 @@ const router = Router();
         });
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user?.id || (req.user)?.claims?.sub;
 
       // Generate AI response with billing (workspace users only)

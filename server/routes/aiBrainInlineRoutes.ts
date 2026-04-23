@@ -142,9 +142,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       const context = {
         userId: req.user!,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: (req.user)?.activeWorkspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userRole: (req.user)?.platformRole || 'user',
         currentPage,
         recentActions,
@@ -305,9 +303,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       const context = {
         userId: req.user!,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: (req.user)?.activeWorkspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userRole: (req.user)?.platformRole || 'user',
       };
 
@@ -327,9 +323,7 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       const context = {
         userId: req.user!,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: (req.user)?.activeWorkspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userRole: (req.user)?.platformRole || 'user',
         currentPage: '/test',
       };
@@ -504,7 +498,6 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
   router.get("/graduation-status", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       
       if (!workspaceId) {
@@ -531,7 +524,6 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
       const { domain, actionId } = req.body;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId;
 
       if (!workspaceId || !domain) {
@@ -569,7 +561,6 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       const { getUserPlatformRole } = await import("../rbac");
       
       const userId = req.user!;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       const { tier = 'standard', actions } = req.body;
 
@@ -622,7 +613,6 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
   router.get("/fast-mode/metrics", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId;
 
       if (!workspaceId) {
@@ -699,7 +689,6 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
       const { emailService } = await import("../services/emailService");
       
       const { category, recipient, data } = req.body;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       const userId = req.user!;
 
@@ -726,9 +715,8 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
 
       // Send via NDS — tracked delivery with automatic retry on failure
       const notifId = await NotificationDeliveryService.send({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         idempotencyKey: `notif-${Date.now()}`,
-            type: 'ai_brain_email',
+        type: 'alert_notification',
         workspaceId: workspaceId || 'system',
         // @ts-expect-error — TS migration: fix in refactoring sprint
         recipientUserId: userId || recipient,
@@ -761,7 +749,6 @@ router.get("/guardrails/config", requireManager, readLimiter, async (req: Authen
     try {
       const { subagentSupervisor } = await import("../services/ai-brain/subagentSupervisor");
       const { workboardJobId, tasks, options } = req.body;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId;
       const userId = req.user!;
       const platformRole = req.platformRole || 'employee';

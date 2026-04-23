@@ -38,7 +38,7 @@ export function UniversalDataView<T>({
   data,
   columns,
   keyExtractor,
-  emptyMessage = "No data found",
+  emptyMessage = "Nothing to show yet",
   emptyIcon,
   className,
   tableClassName,

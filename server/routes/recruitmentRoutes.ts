@@ -299,12 +299,16 @@ router.patch('/candidates/:id/decision', async (req: Request, res: Response) => 
       return res.status(400).json({ error: 'Invalid decision data', details: parsed.error.issues });
     }
 
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     await recordDecision(
       workspaceId,
       req.params.id,
       parsed.data.decision,
       parsed.data.notes,
-      req.user?.id,
+      req.user.id,
     );
 
     await generateComprehensiveScorecard(req.params.id, workspaceId).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));

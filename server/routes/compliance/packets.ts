@@ -29,7 +29,6 @@ function generatePacketHash(documents: any[]): string {
 
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace required" });
@@ -62,7 +61,6 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/generate", requireAuth, mutationLimiter, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const userId = (req.user)?.id;
     if (!workspaceId) {
@@ -323,7 +321,6 @@ router.post("/generate", requireAuth, mutationLimiter, async (req: Request, res:
 
 router.get("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { id } = req.params;
     
@@ -369,7 +366,6 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/:id/download", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const userId = (req.user)?.id;
     const { id } = req.params;

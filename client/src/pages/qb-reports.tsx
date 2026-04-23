@@ -154,7 +154,7 @@ function ClientProfitabilityReport({ startDate, endDate }: { startDate: string; 
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No data for this period</td></tr>
+                <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No client margin data is available for this period yet.</td></tr>
               )}
               {rows.map((r: any) => (
                 <tr key={r.clientId} className="border-b last:border-0" data-testid={`row-client-${r.clientId}`}>
@@ -208,7 +208,7 @@ function PayrollSummaryReport({ startDate, endDate }: { startDate: string; endDa
             </thead>
             <tbody>
               {topEarners.length === 0 && (
-                <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No payroll data</td></tr>
+                <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No payroll activity is available for this period yet.</td></tr>
               )}
               {topEarners.map((e: any) => (
                 <tr key={e.employeeId} className="border-b last:border-0">
@@ -387,7 +387,7 @@ function LaborCostReport({ startDate, endDate }: { startDate: string; endDate: s
               </tr>
             </thead>
             <tbody>
-              {bySite.length === 0 && <tr><td colSpan={6} className="text-center p-6 text-muted-foreground">No data</td></tr>}
+              {bySite.length === 0 && <tr><td colSpan={6} className="text-center p-6 text-muted-foreground">No labor cost data is available for the selected range yet.</td></tr>}
               {bySite.map((s: any) => (
                 <tr key={s.siteId || "none"} className="border-b last:border-0">
                   <td className="p-3 font-medium">{s.siteName}</td>
@@ -420,7 +420,7 @@ function LaborCostReport({ startDate, endDate }: { startDate: string; endDate: s
               </BarChart>
             </ChartContainer>
           ) : (
-            <p className="text-center text-muted-foreground py-6">No overtime data</p>
+            <p className="text-center text-muted-foreground py-6">No overtime activity is available for the selected range yet.</p>
           )}
         </CardContent>
       </Card>
@@ -461,7 +461,7 @@ function TaxLiabilityReport({ startDate, endDate }: { startDate: string; endDate
               </tr>
             </thead>
             <tbody>
-              {quarters.length === 0 && <tr><td colSpan={7} className="text-center p-6 text-muted-foreground">No tax data</td></tr>}
+              {quarters.length === 0 && <tr><td colSpan={7} className="text-center p-6 text-muted-foreground">No tax liability data is available for this period yet.</td></tr>}
               {quarters.map((q: any) => (
                 <tr key={q.quarter} className="border-b last:border-0">
                   <td className="p-3 font-medium">{q.quarter}</td>
@@ -550,7 +550,7 @@ function WorkersCompReport({ startDate, endDate }: { startDate: string; endDate:
               </tr>
             </thead>
             <tbody>
-              {classifications.length === 0 && <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No data</td></tr>}
+              {classifications.length === 0 && <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No workers' comp classification data is available for this period yet.</td></tr>}
               {classifications.map((c: any) => (
                 <tr key={c.classificationCode} className="border-b last:border-0">
                   <td className="p-3 font-medium">{c.classificationCode}</td>

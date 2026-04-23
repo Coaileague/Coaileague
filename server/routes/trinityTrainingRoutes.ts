@@ -30,8 +30,7 @@ const log = createLogger('TrinityTrainingRoutes');
 const router = Router();
 
 async function resolveWorkspaceId(req: AuthenticatedRequest): Promise<string | null> {
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  const userId = req.user?.id || (req.user)?.claims?.sub;
+  const userId = req.user?.id || (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
   if (!userId) return null;
 
   const fromRequest = req.body?.workspaceId || req.query?.workspaceId;
@@ -43,8 +42,7 @@ async function resolveWorkspaceId(req: AuthenticatedRequest): Promise<string | n
 
 router.get('/status', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId = req.user?.id || (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -66,7 +64,6 @@ router.get('/status', requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.post('/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -115,7 +112,6 @@ router.post('/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
  */
 router.post('/seed-org', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -149,7 +145,6 @@ router.post('/seed-org', requireAuth, async (req: AuthenticatedRequest, res) => 
 
 router.post('/clear', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -183,7 +178,6 @@ router.post('/clear', requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.post('/reset', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -217,7 +211,6 @@ router.post('/reset', requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.post('/start-run', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -248,7 +241,6 @@ router.post('/start-run', requireAuth, async (req: AuthenticatedRequest, res) =>
 
 router.post('/clear-all-schedule', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -462,7 +454,6 @@ const DIFFICULTY_PARAMS: Record<string, {
  */
 router.post('/schedule-month', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 

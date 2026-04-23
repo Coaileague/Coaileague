@@ -45,9 +45,7 @@ const router = Router();
  */
 router.get('/status', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
@@ -91,9 +89,7 @@ router.get('/status', requireAnyAuth, async (req: Request, res: Response) => {
  */
 router.post('/ensure', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
@@ -121,9 +117,7 @@ router.post('/ensure', requireAnyAuth, async (req: Request, res: Response) => {
  */
 router.post('/sync-role-holders', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const workspaceRole = req.workspaceRole || req.session?.workspaceRole;
 
@@ -154,9 +148,7 @@ router.post('/sync-role-holders', requireAnyAuth, async (req: Request, res: Resp
  */
 router.get('/missing-records', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const workspaceRole = req.workspaceRole || req.session?.workspaceRole;
 
@@ -186,9 +178,7 @@ router.get('/missing-records', requireAnyAuth, async (req: Request, res: Respons
  */
 router.get('/compliance', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {
@@ -308,9 +298,7 @@ router.get('/certification-types', requireAnyAuth, async (req: Request, res: Res
  */
 router.post('/certification', requireAnyAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub || req.session?.userId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
 
     if (!userId || !workspaceId) {

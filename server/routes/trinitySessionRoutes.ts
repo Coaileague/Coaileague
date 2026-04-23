@@ -14,7 +14,9 @@ const router = Router();
 
 router.get("/", async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user || req.user?.id || (req.user as any)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {

@@ -9,10 +9,21 @@ import { interviewChatOrchestrator } from '../services/interviewChatOrchestrator
 const log = createLogger('InterviewChatroomRoutes');
 const router = Router();
 
+function requireWorkspaceUser(req: Request, res: Response): (NonNullable<Request['user']> & { workspaceId: string }) | null {
+  const user = req.user;
+  const workspaceId = user?.workspaceId || req.workspaceId;
+  if (!user || !workspaceId) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+  return { ...user, workspaceId };
+}
+
 // POST /api/interview/chatrooms — create a new chatroom for a candidate
 router.post('/chatrooms', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const { candidateId, sessionId, humanCopilotUserId, roomType } = req.body;
 
     if (!candidateId) return res.status(400).json({ error: 'candidateId required' });
@@ -46,7 +57,8 @@ router.post('/chatrooms', requireAuth, async (req: Request, res: Response) => {
 // POST /api/interview/chatrooms/:id/start — Trinity sends first message
 router.post('/chatrooms/:id/start', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const room = await interviewChatOrchestrator.getChatroom(req.params.id);
     if (!room || room.workspace_id !== user.workspaceId) {
       return res.status(404).json({ error: 'Chatroom not found' });
@@ -66,7 +78,8 @@ router.post('/chatrooms/:id/start', requireAuth, async (req: Request, res: Respo
 // GET /api/interview/chatrooms — list chatrooms for workspace
 router.get('/chatrooms', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const result = await pool.query(
       `SELECT ic.id, ic.status, ic.room_type, ic.overall_score,
               ic.trinity_recommendation, ic.human_decision,
@@ -91,7 +104,8 @@ router.get('/chatrooms', requireAuth, async (req: Request, res: Response) => {
 // GET /api/interview/chatrooms/:id — get chatroom with messages (manager view)
 router.get('/chatrooms/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const room = await interviewChatOrchestrator.getChatroom(req.params.id);
     if (!room || room.workspace_id !== user.workspaceId) {
       return res.status(404).json({ error: 'Chatroom not found' });
@@ -108,7 +122,8 @@ router.get('/chatrooms/:id', requireAuth, async (req: Request, res: Response) =>
 // PATCH /api/interview/chatrooms/:id/decision — manager records hire decision
 router.patch('/chatrooms/:id/decision', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = requireWorkspaceUser(req, res);
+    if (!user) return;
     const { decision, notes } = req.body;
     if (!decision) return res.status(400).json({ error: 'decision required' });
 

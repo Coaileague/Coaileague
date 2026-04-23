@@ -14,7 +14,6 @@ const router = Router();
 
 router.get("/oversight", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)!.workspaceId || (req.user)!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ message: "No workspace selected" });
@@ -40,7 +39,6 @@ router.get("/oversight", requireManager, async (req: AuthenticatedRequest, res) 
 
 router.get("/oversight/stats", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)!.workspaceId || (req.user)!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ message: "No workspace selected" });
@@ -80,7 +78,6 @@ router.get("/oversight/stats", requireManager, async (req: AuthenticatedRequest,
 
 router.patch("/oversight/:id/approve", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)!.workspaceId || (req.user)!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ message: "No workspace selected" });
@@ -144,7 +141,6 @@ router.patch("/oversight/:id/approve", requireManager, async (req: Authenticated
 
 router.patch("/oversight/:id/reject", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)!.workspaceId || (req.user)!.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ message: "No workspace selected" });
@@ -405,7 +401,6 @@ router.get("/platform-audit/history", requireManager, async (req: AuthenticatedR
 
 router.post("/platform-audit/trigger", requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });

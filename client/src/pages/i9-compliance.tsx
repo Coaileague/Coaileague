@@ -51,7 +51,11 @@ export default function I9CompliancePage() {
   if (allLoading || expiring30Loading || expiring7Loading) {
     return (
       <CanvasHubPage config={pageConfig}>
-        <div className="p-6">Loading...</div>
+        <div className="p-6 text-center text-muted-foreground space-y-2">
+          <Clock className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
+          <p className="font-medium text-foreground">Loading I-9 compliance dashboard</p>
+          <p className="text-sm">Checking verified records, expiring authorizations, and urgent re-verification needs.</p>
+        </div>
       </CanvasHubPage>
     );
   }
@@ -186,7 +190,11 @@ export default function I9CompliancePage() {
           {compliantRecords.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
-                No compliant records
+                <div className="space-y-2">
+                  <CheckCircle2 className="h-8 w-8 mx-auto opacity-50 text-green-600 dark:text-green-400" />
+                  <p className="font-medium text-foreground">No compliant records yet</p>
+                  <p className="text-sm">Verified authorizations will appear here once I-9 review is complete.</p>
+                </div>
               </CardContent>
             </Card>
           ) : (

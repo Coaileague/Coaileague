@@ -1550,7 +1550,6 @@ export function initializeTrinityEventSubscriptions(): void {
           entityId: shiftId || clientId || 'unknown',
           action: 'sla_breach_detected',
           description: 'SLA breach event received — managers notified, incident logged',
-            idempotencyKey: `sla_breach-${Date.now()}-${m.userId}`,
           metadata: JSON.stringify({ breachType, clientId, shiftId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -1690,7 +1689,6 @@ export function initializeTrinityEventSubscriptions(): void {
           entityId: actionId,
           action: 'action_blocked',
           description: 'Trinity blocked an autonomous action — compliance or policy enforcement',
-            idempotencyKey: `trinity_action_blocked-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ actionId, reason, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -1775,7 +1773,6 @@ export function initializeTrinityEventSubscriptions(): void {
           entityId: contractId || 'unknown',
           action: 'contract_executed',
           description: `Contract fully executed — ${autoCreatedClientId ? 'client auto-created' : existingClientId ? 'linked to existing client' : 'pending manual client creation'}`,
-            idempotencyKey: `contract_executed-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ contractId, clientName, title, autoCreatedClientId, existingClientId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2006,7 +2003,6 @@ export function initializeTrinityEventSubscriptions(): void {
           entityId: 'reconciliation',
           action: 'reconciliation_alert',
           description: 'Financial reconciliation alert — math discrepancy detected, disbursement may be blocked',
-            idempotencyKey: `reconciliation_alert-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ discrepancy, amount, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2046,7 +2042,6 @@ export function initializeTrinityEventSubscriptions(): void {
           entityId: 'subscription',
           action: 'payment_blocked',
           description: 'Subscription payment blocked — access enforcement triggered, owner notified',
-            idempotencyKey: `subscription_payment_blocked-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ reason, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2087,7 +2082,6 @@ export function initializeTrinityEventSubscriptions(): void {
           entityId: userId || 'unknown',
           action: 'content_moderation_alert',
           description: 'HelpAI content moderation alert — critical flag raised during conversation',
-            idempotencyKey: `content_moderation_alert-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ flagType, userId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2171,7 +2165,6 @@ export function initializeTrinityEventSubscriptions(): void {
           entityId: shiftId || 'unknown',
           action: 'coverage_gap_detected',
           description: 'Coverage gap — automated pipeline exhausted, manual intervention required',
-            idempotencyKey: `coverage_gap_detected-${Date.now()}-${m.userId}`,
           metadata: JSON.stringify({ shiftId, shiftDate, site, payload }),
           createdAt: new Date(),
         }).catch(() => null);

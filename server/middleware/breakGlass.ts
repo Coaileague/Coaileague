@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '../lib/logger';
+import type { AuthenticatedRequest } from '../rbac';
 
 const log = createLogger('BreakGlass');
 

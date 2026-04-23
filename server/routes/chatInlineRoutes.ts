@@ -532,7 +532,6 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) {
       return res.status(200).json({
@@ -542,7 +541,6 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
 
     const response = await generateGeminiResponse({
@@ -573,11 +571,9 @@ router.post('/gemini', async (req: AuthenticatedRequest, res) => {
  */
 router.post('/trinity-field-query', async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userId = req.user?.id || (req.user)?.claims?.sub;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
 

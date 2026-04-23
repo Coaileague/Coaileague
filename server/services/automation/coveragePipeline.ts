@@ -173,8 +173,7 @@ class CoveragePipelineService {
           reason: input.reason,
           reasonDetails: input.reasonDetails,
           originalEmployeeId: input.originalEmployeeId || shift.employeeId || undefined,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          shiftDate: shift.date,
+          shiftDate: shift.date || new Date(shift.startTime).toISOString().split('T')[0],
           shiftStartTime: new Date(shift.startTime),
           shiftEndTime: new Date(shift.endTime),
           clientId: shift.clientId || undefined,

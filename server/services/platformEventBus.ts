@@ -440,6 +440,7 @@ export type EventVisibility = 'all' | 'staff' | 'supervisor' | 'manager' | 'org_
 export interface PlatformEvent {
   type?: PlatformEventType | string;
   category?: EventCategory | string;
+  idempotencyKey?: string;
   title?: string;
   description?: string;
   version?: string;
@@ -461,8 +462,7 @@ export interface PlatformEvent {
     severity?: 'low' | 'medium' | 'high' | 'critical';
     chatEventType?: string;
     payrollRunId?: string;
-  idempotencyKey?: string;
-};
+  };
   payload?: Record<string, any>;
   priority?: number;
   isNew?: boolean;

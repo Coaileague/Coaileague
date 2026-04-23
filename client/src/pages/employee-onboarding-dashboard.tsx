@@ -404,9 +404,10 @@ export default function EmployeeOnboardingDashboard() {
       <CanvasHubPage config={pageConfig}>
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>No Data Available</AlertTitle>
+          <AlertTitle>Onboarding data unavailable</AlertTitle>
           <AlertDescription>
-            Unable to load onboarding data. Please ensure you have the correct permissions.
+            We could not load onboarding progress for this view. Confirm your workspace access or try
+            refreshing after onboarding records are created.
           </AlertDescription>
         </Alert>
       </CanvasHubPage>

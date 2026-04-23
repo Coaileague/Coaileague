@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Clock, CheckCircle, XCircle, AlertCircle, User, FileText, ChevronRight } from "lucide-react";
+import { Clock, CheckCircle, XCircle, AlertCircle, User, FileText, ChevronRight, RefreshCw } from "lucide-react";
 
 interface Approval {
   approval: {
@@ -48,11 +48,21 @@ export default function ComplianceApprovals() {
   const [showDialog, setShowDialog] = useState(false);
   const [pendingDecision, setPendingDecision] = useState<string | null>(null);
 
-  const { data: pendingData, isLoading: pendingLoading } = useQuery<{ success: boolean; approvals: Approval[] }>({
+  const {
+    data: pendingData,
+    isLoading: pendingLoading,
+    isError: pendingError,
+    refetch: refetchPending,
+  } = useQuery<{ success: boolean; approvals: Approval[] }>({
     queryKey: ['/api/security-compliance/approvals/pending'],
   });
 
-  const { data: allData, isLoading: allLoading } = useQuery<{ success: boolean; approvals: Approval[] }>({
+  const {
+    data: allData,
+    isLoading: allLoading,
+    isError: allError,
+    refetch: refetchAll,
+  } = useQuery<{ success: boolean; approvals: Approval[] }>({
     queryKey: ['/api/security-compliance/approvals'],
   });
 
@@ -105,6 +115,7 @@ export default function ComplianceApprovals() {
   const recentDecisions = allApprovals.filter(a => a.approval.status !== 'pending').slice(0, 10);
 
   const isLoading = pendingLoading || allLoading;
+  const hasError = pendingError || allError;
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
@@ -217,11 +228,40 @@ export default function ComplianceApprovals() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="py-10 text-center text-muted-foreground space-y-2">
+                <Clock className="h-10 w-10 mx-auto opacity-50 animate-pulse" />
+                <div className="font-medium text-foreground">Loading approval queue</div>
+                <p className="text-sm text-muted-foreground">
+                  Pulling pending document reviews and the latest decision history.
+                </p>
+              </div>
+            ) : hasError ? (
+              <div className="py-10 text-center space-y-3">
+                <AlertCircle className="h-10 w-10 mx-auto text-destructive" />
+                <div>
+                  <p className="font-medium text-destructive">Couldn&apos;t load approval workflow</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    The compliance queue is temporarily unavailable. Retry to pull the latest approvals.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    refetchPending();
+                    refetchAll();
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
             ) : pendingApprovals.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <CheckCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No pending approvals</p>
+                <p className="font-medium text-foreground">No pending approvals</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  The review queue is clear. New compliance submissions will appear here when they need attention.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">

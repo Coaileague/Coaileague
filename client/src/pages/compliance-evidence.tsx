@@ -85,9 +85,17 @@ export default function ComplianceEvidencePage() {
             </CardHeader>
             <CardContent>
               {loadingPending ? (
-                <div className="flex justify-center p-8">Loading...</div>
+                <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground space-y-2">
+                  <Clock className="h-8 w-8 opacity-50 animate-pulse" />
+                  <p className="font-medium text-foreground">Loading pending evidence</p>
+                  <p className="text-sm">Pulling newly submitted documents that still need reviewer action.</p>
+                </div>
               ) : pendingEvidence?.length === 0 ? (
-                <div className="text-center p-8 text-muted-foreground">No pending items for review.</div>
+                <div className="text-center p-8 text-muted-foreground space-y-2">
+                  <CheckCircle2 className="h-8 w-8 mx-auto opacity-50 text-green-600 dark:text-green-400" />
+                  <p className="font-medium text-foreground">No pending items for review</p>
+                  <p className="text-sm">The evidence queue is clear right now.</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pendingEvidence?.map((item) => (
@@ -151,9 +159,17 @@ export default function ComplianceEvidencePage() {
             </CardHeader>
             <CardContent>
               {loadingExpiring ? (
-                <div className="flex justify-center p-8">Loading...</div>
+                <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground space-y-2">
+                  <Clock className="h-8 w-8 opacity-50 animate-pulse" />
+                  <p className="font-medium text-foreground">Loading expiring documents</p>
+                  <p className="text-sm">Checking verified evidence that needs renewal soon.</p>
+                </div>
               ) : expiringEvidence?.length === 0 ? (
-                <div className="text-center p-8 text-muted-foreground">No expiring documents found.</div>
+                <div className="text-center p-8 text-muted-foreground space-y-2">
+                  <CheckCircle2 className="h-8 w-8 mx-auto opacity-50 text-green-600 dark:text-green-400" />
+                  <p className="font-medium text-foreground">No expiring documents found</p>
+                  <p className="text-sm">Verified evidence is currently clear of near-term renewals.</p>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>

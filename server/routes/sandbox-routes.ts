@@ -34,12 +34,11 @@ router.use(requireAuth);
 
 const sandboxDevBypass = (req: Request, res: Response, next: NextFunction) => {
   if (process.env.NODE_ENV === 'development') {
-    req.user = { 
+    req.user = ({ 
       id: 'sandbox-dev-user', 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformRole: 'root_admin',
       email: 'sandbox@dev.local'
-    };
+    } as unknown as NonNullable<AuthenticatedRequest['user']>);
     return next();
   }
   return requirePlatformRole(['root_admin', 'sysop'])(req as AuthenticatedRequest, res, next);

@@ -634,7 +634,6 @@ router.post(
 
       const isOwner = message.senderId === userId;
       const isManager = workspaceRole && ["org_owner", "co_owner", "org_admin"].includes(workspaceRole);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const platformRole = (authReq.user)?.platformRole;
       const isSupport = platformRole && ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"].includes(platformRole);
 
@@ -865,7 +864,6 @@ router.post(
 
       // DM RULE: End-users cannot directly DM support agents or system bots
       // Only support staff / platform admins can initiate DMs to anyone
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const senderPlatformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const senderIsStaff = senderPlatformRole && [
         "root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"
@@ -1053,7 +1051,6 @@ router.post(
         return res.status(400).json({ error: "conversationId is required" });
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const closerPlatformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const closerIsStaff = closerPlatformRole && [
         "root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"
@@ -1151,7 +1148,6 @@ router.post(
       ];
       const _nameLC = name.trim().toLowerCase();
       const _isReserved = RESERVED_ROOM_NAMES.some(r => _nameLC === r || _nameLC.startsWith(r));
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const _platformRole = (authReq.user)?.platformRole || (authReq.user)?.role || '';
       const _isExempt = SUPPORT_EXEMPT_ROLES.includes(authReq.workspaceRole || '') ||
                         SUPPORT_EXEMPT_ROLES.includes(_platformRole);
@@ -1321,7 +1317,6 @@ router.get(
       const blockedIds = new Set(blockedByMe.map((b) => b.blockedUserId));
 
       // DM RULE: Hide support staff and system bots from search for non-staff users
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const searcherPlatformRole = (authReq.user)?.platformRole || authReq.user?.role;
       const searcherIsStaff = searcherPlatformRole && [
         "root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"

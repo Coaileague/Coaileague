@@ -486,8 +486,26 @@ function WorkspaceDeepDive({ workspaceId, data, isLoading, onExecuteAction }: {
   isLoading: boolean;
   onExecuteAction: (wsId: string) => void;
 }) {
-  if (isLoading) return <div className="py-12 text-center text-sm text-muted-foreground">Loading workspace details...</div>;
-  if (!data) return <div className="py-12 text-center text-sm text-muted-foreground">No data</div>;
+  if (isLoading) {
+    return (
+      <div className="py-12 text-center text-sm text-muted-foreground space-y-2">
+        <Building2 className="w-10 h-10 mx-auto opacity-50 animate-pulse" />
+        <p className="font-medium text-foreground">Loading workspace details</p>
+        <p>Pulling operators, active shifts, invoices, and recent support activity for this organization.</p>
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div className="py-12 text-center text-sm text-muted-foreground space-y-2">
+        <Building2 className="w-10 h-10 mx-auto opacity-50" />
+        <p className="font-medium text-foreground">Workspace details unavailable</p>
+        <p>
+          This workspace may still be provisioning, or the detail snapshot could not be loaded yet.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

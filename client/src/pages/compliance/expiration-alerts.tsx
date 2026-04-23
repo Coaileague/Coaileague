@@ -67,7 +67,7 @@ export default function ExpirationAlerts() {
   const [, navigate] = useLocation();
   const [filterDays, setFilterDays] = useState<7 | 30 | 90>(90);
 
-  const { data, isLoading } = useQuery<ExpirationData>({
+  const { data, isLoading, isError, refetch } = useQuery<ExpirationData>({
     queryKey: ['/api/security-compliance/records/expiring', filterDays],
     queryFn: async () => {
       const response = await secureFetch(`/api/security-compliance/records/expiring?days=${filterDays}`);
@@ -235,11 +235,34 @@ export default function ExpirationAlerts() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="py-10 text-center text-muted-foreground space-y-2">
+                <Clock className="h-10 w-10 mx-auto opacity-50 animate-pulse" />
+                <div className="font-medium text-foreground">Checking expiring documents</div>
+                <p className="text-sm text-muted-foreground">
+                  Reviewing license and credential deadlines for the next {filterDays} days.
+                </p>
+              </div>
+            ) : isError ? (
+              <div className="py-10 text-center space-y-3">
+                <AlertTriangle className="h-10 w-10 mx-auto text-destructive" />
+                <div>
+                  <p className="font-medium text-destructive">Couldn&apos;t load expiration alerts</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Retry to refresh compliance deadlines and renewal reminders.
+                  </p>
+                </div>
+                <Button variant="outline" onClick={() => refetch()}>
+                  <Clock className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
             ) : expiring.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No documents expiring in the next 90 days</p>
+                <p className="font-medium text-foreground">No documents expiring soon</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Everyone is currently clear for the next {filterDays} days.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">

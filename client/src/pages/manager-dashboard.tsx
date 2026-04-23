@@ -11,6 +11,16 @@ import {
 } from "lucide-react";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
+function QueueLoadingState({ label }: { label: string }) {
+  return (
+    <div className="text-center py-8 text-muted-foreground space-y-2">
+      <Clock className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
+      <p className="text-sm font-medium text-foreground">Loading {label}</p>
+      <p className="text-xs text-muted-foreground">Pulling the latest manager approvals for this queue.</p>
+    </div>
+  );
+}
+
 export default function ManagerDashboard() {
   const { user } = useAuth();
 
@@ -135,7 +145,7 @@ export default function ManagerDashboard() {
           <CardContent>
             <ScrollArea className="h-[200px]">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <QueueLoadingState label="time-off requests" />
               ) : pendingTimeOff && pendingTimeOff.length > 0 ? (
                 <div className="space-y-2">
                   {pendingTimeOff.slice(0, 5).map((request: any) => (
@@ -182,7 +192,7 @@ export default function ManagerDashboard() {
           <CardContent>
             <ScrollArea className="h-[200px]">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <QueueLoadingState label="timesheet edits" />
               ) : pendingTimesheetEdits && pendingTimesheetEdits.length > 0 ? (
                 <div className="space-y-2">
                   {pendingTimesheetEdits.slice(0, 5).map((request: any) => (
@@ -227,7 +237,7 @@ export default function ManagerDashboard() {
           <CardContent>
             <ScrollArea className="h-[200px]">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <QueueLoadingState label="shift actions" />
               ) : pendingShifts && pendingShifts.length > 0 ? (
                 <div className="space-y-2">
                   {pendingShifts.slice(0, 5).map((request: any) => (
@@ -272,7 +282,7 @@ export default function ManagerDashboard() {
           <CardContent>
             <ScrollArea className="h-[200px]">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <QueueLoadingState label="expense approvals" />
               ) : pendingExpenses && pendingExpenses.length > 0 ? (
                 <div className="space-y-2">
                   {pendingExpenses.slice(0, 5).map((expense: any) => (
@@ -317,7 +327,7 @@ export default function ManagerDashboard() {
           <CardContent>
             <ScrollArea className="h-[200px]">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <QueueLoadingState label="I-9 compliance alerts" />
               ) : expiringI9 && expiringI9.length > 0 ? (
                 <div className="space-y-2">
                   {expiringI9.slice(0, 10).map((record: any) => (

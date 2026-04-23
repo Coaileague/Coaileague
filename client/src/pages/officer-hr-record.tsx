@@ -199,7 +199,7 @@ export default function OfficerHrRecord() {
           </Link>
           <div className="flex items-center gap-2">
             <User className="h-5 w-5 text-muted-foreground" />
-            <span className="font-semibold text-lg">{isLoading ? "Loading..." : employeeName}</span>
+            <span className="font-semibold text-lg">{isLoading ? "Loading employee record" : employeeName}</span>
           </div>
         </div>
 

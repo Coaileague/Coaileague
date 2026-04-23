@@ -86,7 +86,6 @@ export function registerMilestoneActions() {
             milestoneDate: milestoneDate.toISOString(),
             daysUntil,
             isOverdue: daysUntil < 0,
-      idempotencyKey: `milestone_alert-${Date.now()}-${owner.userId}`
           });
         }
       }
