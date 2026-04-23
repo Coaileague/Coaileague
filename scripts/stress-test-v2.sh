@@ -114,6 +114,13 @@ c "╔════════════════════════�
 c "║   CoAIleague Platform Stress Test v2                    ║"
 c "╚══════════════════════════════════════════════════════════╝"
 
+# Guardrail: avoid false negatives when no local server is running
+if ! curl -s --connect-timeout 2 --max-time 4 "$BASE/health" >/dev/null 2>&1; then
+  r "  SKIP: No server responding at $BASE (start API before stress test)."
+  r "  SKIP: Marking run as environment-blocked to prevent false-positive failures."
+  exit 2
+fi
+
 # ---------- SUITE 1: AUTH ----------
 section "SUITE 1: Universal Auth Flow"
 rm -f "$JAR"

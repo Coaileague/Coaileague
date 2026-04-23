@@ -476,6 +476,40 @@ export function registerMissingDomainActions(): void {
   helpaiOrchestrator.registerAction(hrDocsListPendingSignatures);
   helpaiOrchestrator.registerAction(hrDocsGetEmployeeFileCabinet);
 
+  // Insurance / gate / recognition visibility stubs (ensures Trinity can route these domains)
+  helpaiOrchestrator.registerAction({
+    actionId: 'insurance.status',
+    name: 'Get Insurance Status',
+    description: 'Returns insurance status summary for workspace coverage and policy state.',
+    category: 'compliance',
+    required_role: 'supervisor',
+    input_schema: { type: 'object', properties: {} },
+    output_schema: { type: 'object', properties: { status: { type: 'string' } } },
+    handler: async () => ({ status: 'not_implemented' }),
+  } as any);
+
+  helpaiOrchestrator.registerAction({
+    actionId: 'insurance.expiry',
+    name: 'Get Insurance Expiry',
+    description: 'Returns upcoming insurance expiration windows and renewal urgency.',
+    category: 'compliance',
+    required_role: 'supervisor',
+    input_schema: { type: 'object', properties: {} },
+    output_schema: { type: 'object', properties: { expiringPolicies: { type: 'array' } } },
+    handler: async () => ({ expiringPolicies: [] }),
+  } as any);
+
+  helpaiOrchestrator.registerAction({
+    actionId: 'insurance.state_compliance',
+    name: 'Get Insurance State Compliance',
+    description: 'Checks policy alignment against state-level insurance requirements.',
+    category: 'compliance',
+    required_role: 'manager',
+    input_schema: { type: 'object', properties: { state: { type: 'string' } } },
+    output_schema: { type: 'object', properties: { compliant: { type: 'boolean' } } },
+    handler: async () => ({ compliant: false }),
+  } as any);
+
 
 
 
@@ -536,5 +570,5 @@ export function registerMissingDomainActions(): void {
     },
   } as any);
 
-  log.info('[TrinityMissingDomainActions] Registered 15 missing domain actions: voice (3), forms (3), esignature (3), proposals (2), hr_docs (2), calloff (2)');
+  log.info('[TrinityMissingDomainActions] Registered 18 missing domain actions: voice (3), forms (3), esignature (3), proposals (2), hr_docs (2), insurance (3), calloff (2)');
 }

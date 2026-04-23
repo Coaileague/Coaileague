@@ -1,0 +1,57 @@
+{
+  "last_updated": "2026-04-23T07:08:28Z",
+  "audit_source": "attached_assets/coaileague_100_phase_audit_1775064153759.txt",
+  "master_roadmap_source": "attached_assets/Pasted-Here-is-the-complete-resequenced-master-phase-plan-with_1774526104858.txt",
+  "last_completed_batch": -1,
+  "current_batch": 0,
+  "status": "in_progress",
+  "blockers": [
+    "Required production environment variables were not injected into this shell session during preflight execution (DATABASE_URL, SESSION_SECRET, RESEND_API_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, BASE_URL).",
+    "DATABASE_URL was not present in process.env for this run, so DB-backed guards (statewide read-only verification, health baseline) could not be fully validated.",
+    "Local stress test requires running API server on http://localhost:5000 with seeded auth fixture; current non-server session returns connection failures."
+  ],
+  "started_batches": [
+    0
+  ],
+  "completed_batches": [],
+  "next_batch": 1,
+  "batch_0": {
+    "status": "failed",
+    "completed_at": "2026-04-23T06:43:31Z",
+    "checks": [
+      {
+        "name": "statewide_workspace_write_protection",
+        "status": "blocked",
+        "reason": "Cannot execute live API guard verification without valid DATABASE_URL/auth token context in this environment."
+      },
+      {
+        "name": "environment_variable_validation",
+        "status": "failed",
+        "reason": "Critical env vars were not present in process.env during preflight-check.ts execution."
+      },
+      {
+        "name": "ai_token_extractor_safeguards",
+        "status": "pending",
+        "reason": "Requires deeper code-path audit after Batch 0 env prerequisites pass."
+      },
+      {
+        "name": "system_health_baseline",
+        "status": "failed",
+        "reason": "DB connectivity unavailable because DATABASE_URL was not injected into runtime env for this shell run."
+      }
+    ]
+  },
+  "notes": [
+    "Executed scripts/omega/verify-prior-fixes.ts successfully (29/29 PASS) while Batch 0 runtime prerequisites remain unresolved in current shell context.",
+    "Executed scripts/omega/battle-sim.ts -> PASS (32/32, VERDICT GO).",
+    "Mounted SPS onboarding alias route at /api/sps/onboarding and confirmed build + verify-prior-fixes PASS.",
+    "Added /api/sps/onboarding/status readiness endpoint and passed unit tests (100/100).",
+    "Stress suite executed; failures were environment connectivity (no running local server), not route logic regressions.",
+    "Refreshed clean clone at /tmp/coaileague-fresh-audit to confirm no merge conflicts/duplication drift before continuing audit.",
+    "Hardened stress harness with server-availability guard to avoid false-positive failures when localhost API is down."
+  ],
+  "resolved_blockers": [
+    "Build toolchain verified: npm install + npm run build succeeded in this environment.",
+    "SPS onboarding route mounted at /api/sps/onboarding (alias to spsOnboardingRoutes)."
+  ]
+}
