@@ -532,20 +532,26 @@ router.put("/api/shift-actions/:id/approve", requireManager, async (req: Authent
       .returning();
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (approved && action.actionType === "swap" && action.shiftId && (action as any).targetShiftId) {
+    const targetShiftId = (action as Record<string, unknown>).targetShiftId as string | undefined;
+    if (approved && action.actionType === "swap" && action.shiftId && targetShiftId) {
       try {
-        const [shift1] = await db.select().from(shifts).where(eq(shifts.id, action.shiftId));
-        const [shift2] = await db.select().from(shifts).where(eq(shifts.id, (action as any).targetShiftId));
+        // Both shifts must be scoped to the same workspace to prevent cross-tenant swap
+        const [shift1] = await db.select().from(shifts)
+          .where(and(eq(shifts.id, action.shiftId), eq(shifts.workspaceId, workspaceId!)));
+        const [shift2] = await db.select().from(shifts)
+          .where(and(eq(shifts.id, targetShiftId), eq(shifts.workspaceId, workspaceId!)));
 
         if (shift1 && shift2) {
-          await db
-            .update(shifts)
-            .set({ employeeId: shift2.employeeId })
-            .where(eq(shifts.id, action.shiftId));
-          await db
-            .update(shifts)
-            .set({ employeeId: shift1.employeeId })
-            .where(eq(shifts.id, (action as any).targetShiftId));
+          await db.transaction(async (tx) => {
+            await tx
+              .update(shifts)
+              .set({ employeeId: shift2.employeeId })
+              .where(and(eq(shifts.id, action.shiftId), eq(shifts.workspaceId, workspaceId!)));
+            await tx
+              .update(shifts)
+              .set({ employeeId: shift1.employeeId })
+              .where(and(eq(shifts.id, targetShiftId!), eq(shifts.workspaceId, workspaceId!)));
+          });
         }
       } catch (swapError) {
         log.error("Error executing shift swap:", swapError);

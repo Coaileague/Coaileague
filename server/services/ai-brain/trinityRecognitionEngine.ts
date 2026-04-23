@@ -375,8 +375,7 @@ class TrinityRecognitionEngine {
   private async getCompanyName(workspaceId: string): Promise<string> {
     // CATEGORY C — Raw SQL retained: LIMIT | Tables: workspaces | Verified: 2026-03-23
     const { rows } = await typedPool(`
-      SELECT name FROM workspaces WHERE id = $1 LIMIT 1,
-        idempotencyKey: `milestone_alert-${Date.now()}-${rows[0].user_id}`
+      SELECT name FROM workspaces WHERE id = $1 LIMIT 1
     `, [workspaceId]).catch(() => ({ rows: [] }));
     // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows[0]?.name || 'the company';

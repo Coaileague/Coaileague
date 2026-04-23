@@ -690,8 +690,7 @@ class TrinityProactiveScannerService {
     return { workspaceId, scannedAt: now.toISOString(), otRiskOfficers, openShiftsNextWeek, expiringCertsNext30Days, staleMarketplaceOffers, alerts };
   }
 
-  async runMonthlyCycle(workspaceId: string): Promise<MonthlyCycleResult> {,
-          idempotencyKey: `alert-${Date.now()}-${mgr.userId}`
+  async runMonthlyCycle(workspaceId: string): Promise<MonthlyCycleResult> {
     await assertWorkspaceActive(workspaceId, { bypassForSystemActor: true });
     const now = new Date();
     const alerts: string[] = [];

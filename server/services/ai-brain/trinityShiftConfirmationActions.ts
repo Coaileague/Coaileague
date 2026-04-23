@@ -176,8 +176,7 @@ export function registerShiftConfirmationActions() {
         replacementShiftCreated: !!(replacementShift as any)?.id,
         replacementShiftId: (replacementShift as any)?.id || null,
       };
-    },
-          idempotencyKey: `shift_declined_alert-${Date.now()}-${mgr.userId}`
+    }   // close else block
   }));
 
   helpaiOrchestrator.registerAction(mkAction('shift.flag_unconfirmed', async (params) => {
