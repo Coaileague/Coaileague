@@ -1613,7 +1613,7 @@ export class DatabaseStorage implements IStorage {
         .values({
           workspaceId: createdClient.workspaceId,
           clientId: createdClient.id,
-          billingCycle: createdClient.billingFrequency || createdClient.billingCycle || "monthly",
+          billingCycle: createdClient.billingFrequency ?? createdClient.billingCycle ?? "monthly",
           paymentTerms: "net_30",
           taxRate: "0.0000",
           roundHoursTo: "0.25",

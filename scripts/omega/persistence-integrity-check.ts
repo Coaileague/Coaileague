@@ -18,6 +18,9 @@ async function main() {
     .from(clients)
     .where(eq(clients.workspaceId, workspaceB))
     .limit(200);
+  if (workspaceBClientIds.length === 0) {
+    console.log(`ℹ️ Workspace ${workspaceB} has no clients; isolation leak check uses empty comparison set.`);
+  }
   const leaked = workspaceBClientIds.length === 0 ? [] : await db
     .select({ id: clients.id })
     .from(clients)
@@ -78,4 +81,3 @@ main().catch((error) => {
   console.error('❌ Persistence integrity check failed:', error);
   process.exit(1);
 });
-

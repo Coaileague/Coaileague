@@ -155,7 +155,25 @@ function HardCapToggleCard({ workspaceId }: { workspaceId?: string }) {
     },
   });
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <Skeleton className="h-4 w-44" />
+          <Skeleton className="h-3 w-72 mt-2" />
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-64" />
+            </div>
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -301,7 +319,7 @@ export default function Billing() {
   });
 
   // ── Payroll cycle settings ─────────────────────────────────────────────────
-  const { data: workspaceBillingSettings, refetch: refetchWorkspaceBillingSettings } = useQuery<{ settings: Record<string, any> | null }>({
+  const { data: workspaceBillingSettings, isLoading: workspaceBillingSettingsLoading, refetch: refetchWorkspaceBillingSettings } = useQuery<{ settings: Record<string, any> | null }>({
     queryKey: ["/api/billing-settings/workspace"],
     enabled: !!user,
   });
@@ -428,12 +446,12 @@ export default function Billing() {
   });
 
   // ── Client billing terms ─────────────────────────────────────────────────────
-  const { data: allClientsData } = useQuery<{ data: { id: string; companyName: string | null; firstName: string | null; lastName: string | null }[] }>({
+  const { data: allClientsData, isLoading: allClientsLoading } = useQuery<{ data: { id: string; companyName: string | null; firstName: string | null; lastName: string | null }[] }>({
     queryKey: ["/api/clients"],
     enabled: !!user && selectedTab === "client-terms",
   });
   const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const { data: clientTermsData, refetch: refetchClientTerms } = useQuery<{ settings: Record<string, any> | null }>({
+  const { data: clientTermsData, isLoading: clientTermsLoading, refetch: refetchClientTerms } = useQuery<{ settings: Record<string, any> | null }>({
     queryKey: ["/api/billing-settings/clients", selectedClientId],
     enabled: !!selectedClientId,
   });
@@ -1433,6 +1451,14 @@ export default function Billing() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {workspaceBillingSettingsLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (
+                <>
               {payrollSettings.payrollCycle && (
                 <div className="flex items-center gap-3 p-3 rounded-md bg-primary/10 border border-primary/20">
                   <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
@@ -1576,6 +1602,8 @@ export default function Billing() {
                   </div>
                 </div>
               </div>
+              </>
+              )}
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
               <Button
@@ -1621,6 +1649,18 @@ export default function Billing() {
                   </SelectContent>
                 </Select>
               </div>
+              {allClientsLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading clients...
+                </div>
+              )}
+              {selectedClientId && clientTermsLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading client billing terms...
+                </div>
+              )}
 
               {selectedClientId && (
                 <>

@@ -115,6 +115,7 @@ function isValidId(id: string): boolean {
 }
 
 const router = Router();
+const INVOICE_ROUND_HOURS_DEFAULT = '0.25';
 
 // Apply rate limiting to all invoice routes
 // Billing operations are sensitive and involve PDF generation/Stripe calls
@@ -690,7 +691,7 @@ import { createHash } from "crypto";
 
           // RC4 (Phase 2): Calculate totals using Decimal.js via FinancialCalculator.
           const invoiceSettings = allInvoiceSettings.find((s) => s.clientId === client.id);
-          const roundHoursToIncrement = Math.max(0.01, Number(invoiceSettings?.roundHoursTo || '0.25'));
+          const roundHoursToIncrement = Math.max(0.01, Number(invoiceSettings?.roundHoursTo || INVOICE_ROUND_HOURS_DEFAULT));
           const lineAmountParts: string[] = [];
           for (const entry of unbilledEntries) {
             const rawHours = Number(entry.totalHours || 0);

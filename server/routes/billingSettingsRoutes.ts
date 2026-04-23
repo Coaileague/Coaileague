@@ -126,7 +126,7 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
     }
     if ((req.body.payrollFrequency !== undefined && req.body.payrollFrequency == null) ||
         (req.body.payrollCycle !== undefined && req.body.payrollCycle == null)) {
-      return res.status(400).json({ message: "payrollFrequency cannot be null or undefined" });
+      return res.status(400).json({ message: "payrollFrequency/payrollCycle cannot be null or undefined" });
     }
 
     // PRIMARY WRITE: billingSettingsBlob is the canonical source for payrollCycle and all
@@ -145,6 +145,7 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
       .where(eq(payrollSettings.workspaceId, workspaceId))
       .limit(1);
 
+    // payrollCycle remains a compatibility alias for payrollFrequency during transition.
     const mergedPayrollSettings: Record<string, unknown> = {
       ...(existingPayrollSettings || {}),
       workspaceId,
@@ -160,15 +161,19 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
     };
     delete (mergedPayrollSettings as any).id;
 
+    let persistedPayrollSettings: Record<string, unknown> | null = null;
     await db.transaction(async (tx) => {
       await tx.update(workspaces).set(wsColumnSync).where(eq(workspaces.id, workspaceId));
 
       if (existingPayrollSettings?.id) {
-        await tx.update(payrollSettings)
+        const [updatedPayrollSettings] = await tx.update(payrollSettings)
           .set(mergedPayrollSettings as any)
-          .where(eq(payrollSettings.id, existingPayrollSettings.id));
+          .where(eq(payrollSettings.id, existingPayrollSettings.id))
+          .returning();
+        persistedPayrollSettings = updatedPayrollSettings as any;
       } else {
-        await tx.insert(payrollSettings).values(mergedPayrollSettings as any);
+        const [insertedPayrollSettings] = await tx.insert(payrollSettings).values(mergedPayrollSettings as any).returning();
+        persistedPayrollSettings = insertedPayrollSettings as any;
       }
 
       await tx.insert(auditLogs).values({
@@ -178,7 +183,7 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
         entityType: 'payroll_settings',
         entityId: workspaceId,
         changesBefore: existingPayrollSettings || null,
-        changesAfter: mergedPayrollSettings,
+        changesAfter: persistedPayrollSettings,
         createdAt: new Date(),
       } as any);
     });
