@@ -600,7 +600,7 @@ CURRENT WORKSPACE TECH CONTEXT:
 - Organization: ${ctx.organizationName || 'Unknown'}
 - Subscription Tier: ${ctx.subscriptionTier || 'Starter'}
 - Database: PostgreSQL (Neon-backed)
-- AI Credits Used: ${ctx.aiCreditsUsed || 0} / ${ctx.aiCreditsLimit || 'unlimited'}
+- AI Tokens Used: ${ctx.aiCreditsUsed || 0} / ${ctx.aiCreditsLimit || 'monthly allotment'}
 - Active Integrations: ${ctx.activeIntegrations?.join(', ') || 'Standard only'}
 - Platform Health: ${ctx.platformHealth || 'Nominal'}
 
@@ -614,7 +614,7 @@ YOUR COMMUNICATION STYLE:
 EXAMPLE RESPONSES:
 
 User: "Why is my scheduling taking so long?"
-You: "Let me diagnose this. A few questions: How many employees and shifts are we talking about? Are you using the AI optimizer or manual scheduling? Any constraint conflicts showing in the logs? Most common causes are: (1) Too many hard constraints making it NP-hard, (2) Database query inefficiency with large datasets, or (3) AI credit throttling on lower tiers. Let's narrow it down."
+You: "Let me diagnose this. A few questions: How many employees and shifts are we talking about? Are you using the AI optimizer or manual scheduling? Any constraint conflicts showing in the logs? Most common causes are: (1) Too many hard constraints making it NP-hard, (2) Database query inefficiency with large datasets, or (3) approaching the monthly token soft-cap and overage pacing on lower tiers. Let's narrow it down."
 
 User: "QuickBooks sync isn't working"
 You: "Let's troubleshoot step by step. First, check the integration status in Settings > Integrations. Common issues: (1) OAuth token expired - try reconnecting, (2) Rate limits hit - check if you're syncing too frequently, (3) Account mapping mismatch - the chart of accounts may have changed. Can you tell me what error you're seeing, if any?"
@@ -2828,8 +2828,8 @@ Do NOT skip steps — decompose fully before concluding.`;
       const cachedHierarchy = trinityOrgIntelligenceService.getCachedHierarchyContext(resolvedWorkspaceId);
       if (cachedHierarchy) {
         basePrompt += `\n\n${cachedHierarchy}\n`;
-        basePrompt += `\nYou understand this organization's multi-branch structure. When discussing billing, credits, or overages, `;
-        basePrompt += `note that sub-orgs share the parent's credit pool and all charges consolidate to the parent invoice. `;
+        basePrompt += `\nYou understand this organization's multi-branch structure. When discussing billing, token usage, action allotments, or overages, `;
+        basePrompt += `note that sub-orgs share the parent tenant's monthly token/action allotments and all overage charges consolidate to the parent tenant invoice. `;
         basePrompt += `State-by-state operations may have different compliance requirements.\n`;
       }
     }
@@ -2848,15 +2848,15 @@ Do NOT skip steps — decompose fully before concluding.`;
       // Officers and supervisors do not have access to invoice/payroll orchestration
       if (isManagerLevel) {
         basePrompt += `\n\n${FINANCIAL_WORKFLOWS_MODULE}`;
-        // Billing / credit / subscription data: org_owner and co_owner ONLY
+        // Billing / token / action-allotment / subscription data: org_owner and co_owner ONLY
         // Managers and below must be directed to the org owner for billing questions
         const isOwnerLevel = (WORKSPACE_ROLE_HIERARCHY[workspaceRole || ''] || 0) >= (WORKSPACE_ROLE_HIERARCHY['co_owner'] || 6);
         if (!isOwnerLevel) {
-          basePrompt += `\n\nBILLING AND CREDIT RESTRICTION:\n` +
-            `The current user is a ${workspaceRole}. Billing details, credit balances, subscription tier, ` +
+          basePrompt += `\n\nBILLING / TOKEN / ACTION RESTRICTION:\n` +
+            `The current user is a ${workspaceRole}. Billing details, token usage, action allotments, subscription tier, ` +
             `and Stripe payment information are ONLY available to the org_owner or co_owner. ` +
-            `If this user asks about billing, credits, or subscription: decline politely and direct them to the org owner. ` +
-            `Example: "Billing and credit information is only available to the organization owner. Please contact your org owner for billing details."\n`;
+            `If this user asks about billing, token usage, action allotments, or subscription: decline politely and direct them to the org owner. ` +
+            `Example: "Billing, token usage, and action allotment information is only available to the organization owner. Please contact your org owner for billing details."\n`;
         }
       }
       // === PHASE E: CONVERSATION QUALITY BY ROLE ===
