@@ -152,8 +152,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
       await Promise.allSettled(
         managerIds.flatMap((recipientUserId) => [
           NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'client_portal_report' as any,
             workspaceId,
             recipientUserId,
@@ -168,8 +166,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
             idempotencyKey: `srq-${request.id}-inapp-${recipientUserId}`,
           }),
           ...(isHighPriority ? [NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'client_portal_report' as any,
             workspaceId,
             recipientUserId,

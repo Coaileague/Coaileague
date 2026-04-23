@@ -1922,9 +1922,6 @@ import { createHash } from "crypto";
             .limit(1);
           if (ws?.ownerId) {
             await NotificationDeliveryService.send({
-              idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'invoice_paid',
               workspaceId: workspace.id,
               recipientUserId: ws.ownerId,
@@ -3647,9 +3644,6 @@ router.post('/portal/:accessToken/invoice/:invoiceId/dispute', async (req, res) 
           .limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'client_portal_dispute',
             workspaceId: portal.workspaceId,
             recipientUserId: ws.ownerId,

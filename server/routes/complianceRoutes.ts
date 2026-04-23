@@ -1118,7 +1118,6 @@ router.post('/compliance/auditors/invite', async (req: AuthenticatedRequest, res
       try {
         const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
         await NotificationDeliveryService.send({
-          idempotencyKey: `notif-${Date.now()}`,
             type: 'onboarding_notification',
           workspaceId: account.workspaceId || 'system',
           recipientUserId: account.id,

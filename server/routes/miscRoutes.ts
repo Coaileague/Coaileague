@@ -1082,7 +1082,6 @@ router.post("/api/contact", async (req, res) => {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const _confEmail = emailService.buildSupportTicketConfirmation(ticket.id, email, ticketNumber, subject, name);
     await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'support_ticket_confirmation', workspaceId: platformWorkspaceId, recipientUserId: email, channel: 'email', body: _confEmail });
 
     res.json({
@@ -1163,7 +1162,6 @@ Escalate to human if: there are complaints, billing disputes, legal matters, urg
             </div>`;
             await NotificationDeliveryService.send({
               idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'support_ticket_confirmation',
               workspaceId: platformWorkspaceId,
               recipientUserId: email,

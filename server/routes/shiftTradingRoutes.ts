@@ -201,10 +201,6 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
         try {
           await NotificationDeliveryService.send({
             idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'shift_trade_request',
             workspaceId: wid,
             recipientUserId: targetUser.rows[0].user_id,
@@ -241,10 +237,6 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
         }).catch(() => null);
         try {
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             idempotencyKey: `notif-${Date.now()}`,
             type: 'shift_trade_request',
             workspaceId: wid,
@@ -306,10 +298,6 @@ router.post("/trades/:id/accept", requireAuth, async (req: AuthenticatedRequest,
         const dateLabel = shiftDate?.date || (shiftDate?.start_time ? new Date(shiftDate.start_time).toLocaleDateString() : 'your');
         await NotificationDeliveryService.send({
           idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'shift_trade_accepted',
           workspaceId: wid,
           recipientUserId: requester.rows[0].user_id,
@@ -355,10 +343,6 @@ router.post("/trades/:id/reject", requireAuth, async (req: AuthenticatedRequest,
         const dateLabel = shiftRow?.date || (shiftRow?.start_time ? new Date(shiftRow.start_time).toLocaleDateString() : 'your');
         await NotificationDeliveryService.send({
           idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'shift_trade_declined',
           workspaceId: wid,
           recipientUserId: requester.rows[0].user_id,
@@ -505,10 +489,6 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
 
         await NotificationDeliveryService.send({
           idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'shift_trade_approved',
           workspaceId: wid,
           recipientUserId: userRes.rows[0].user_id,

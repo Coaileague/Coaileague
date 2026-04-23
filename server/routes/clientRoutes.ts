@@ -292,7 +292,6 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
       // @ts-expect-error — TS migration: fix in refactoring sprint
       const _clientWelcomeEmail = emailService.buildClientWelcomeEmail(client.id, validated.email, (validated as any).name || 'Valued Client', validated.companyName || '', workspace.name || '');
       NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'client_welcome', workspaceId: workspaceId || 'system', recipientUserId: client.id, channel: 'email', body: _clientWelcomeEmail })
         .catch(err => log.error('[Client Creation] Failed to queue welcome email:', err));
 
@@ -1364,7 +1363,6 @@ router.post('/coi-request', requireAuth, async (req: AuthenticatedRequest, res) 
     const _coiAdminEmail = `admin@${ws?.name?.toLowerCase().replace(/\s+/g, '') || 'organization'}.com`;
     NotificationDeliveryService.send({
       idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'invoice_notification',
       workspaceId: workspaceId || 'system',
       recipientUserId: _coiAdminEmail,

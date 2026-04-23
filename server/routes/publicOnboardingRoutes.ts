@@ -838,8 +838,6 @@ router.post('/workspace-invite/register', async (req, res) => {
           for (const owner of owners) {
             await NotificationDeliveryService.send({
               idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'staffing_status_update',
               workspaceId: invite.workspaceId,
               recipientUserId: owner.user_id,
@@ -904,8 +902,6 @@ router.post('/workspace-invite/register', async (req, res) => {
         if (ws?.ownerId) {
           const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             idempotencyKey: `notif-${Date.now()}`,
             type: 'staffing_status_update',
             workspaceId: invite.workspaceId,
@@ -1044,8 +1040,6 @@ router.post('/workspace-invite/accept-existing', async (req, res) => {
         if (ws?.ownerId && ws.ownerId !== userId) {
           const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             idempotencyKey: `notif-${Date.now()}`,
             type: 'staffing_status_update',
             workspaceId: invite.workspaceId,

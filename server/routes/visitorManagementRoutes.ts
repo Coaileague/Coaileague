@@ -211,8 +211,6 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
       NotificationDeliveryService.send({
         // @ts-expect-error — TS migration: fix in refactoring sprint
         idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'security_alert',
         workspaceId,
         recipientUserId: workspaceId,
@@ -227,8 +225,6 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
 
     platformEventBus.publish({
       idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'visitor_checked_in',
       workspaceId,
       title: `Visitor Checked In — ${visitorName}`,
@@ -316,8 +312,6 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
         NotificationDeliveryService.send({
           // @ts-expect-error — TS migration: fix in refactoring sprint
           idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'security_alert',
           workspaceId,
           recipientUserId: workspaceId,
@@ -331,8 +325,6 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
 
         platformEventBus.publish({
           idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'visitor_overstay',
           workspaceId,
           title: `Visitor Overstay — ${o.visitor_name}`,
@@ -581,8 +573,6 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
         NotificationDeliveryService.send({
           // @ts-expect-error — TS migration: fix in refactoring sprint
           idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'security_alert',
           workspaceId,
           recipientUserId: workspaceId,
@@ -596,8 +586,6 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
 
         platformEventBus.publish({
           idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
-            idempotencyKey: `notif-${Date.now()}`,
             type: 'visitor_overstay',
           workspaceId,
           title: `Visitor Overstay — ${o.visitor_name}`,
