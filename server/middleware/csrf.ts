@@ -170,6 +170,10 @@ const CSRF_EXEMPT_PATHS: RegExp[] = [
 
   // CSRF token endpoint itself
   /^\/api\/csrf-token$/,
+
+  // Bootstrap endpoint — dev only, protected by secret key not CSRF token
+  /^\/api\/bootstrap\//,
+  /^\/api\/bootstrap$/,
   /^\/csrf-token$/,
 
   // Sandbox development endpoints (dev bypass auth)

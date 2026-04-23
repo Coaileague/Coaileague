@@ -344,6 +344,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   setupAuth(app);
 
+  // Bootstrap — MUST be before CSRF (uses key-based auth not CSRF tokens)
+  app.use('/api/bootstrap', bootstrapRouter);
+
   // CSRF protection
   app.use(ensureCsrfToken);
   app.get("/api/csrf-token", csrfTokenHandler);
@@ -716,8 +719,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // No auth required — Resend POSTs here; signature verification is internal.
   app.use('/api/inbound/email', inboundEmailRouter);
 
-  // Bootstrap — no auth, secret-key protected, dev only
-  app.use('/api/bootstrap', bootstrapRouter);
 
   // Email API: inbox, send, thread, management (requires auth)
   app.use('/api/email', emailRouter);
