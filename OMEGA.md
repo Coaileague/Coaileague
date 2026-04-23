@@ -339,6 +339,20 @@ PROHIBITED patterns:
   - Relying on `drizzle-kit push` to run automatically or on CI without verifying it
     completes successfully in this environment
 
+**LAW 26 — OMEGA HARNESS BASELINE REGRESSION GATE**
+Before any release candidate, `scripts/omega/verify-prior-fixes.ts` MUST pass
+with zero failures. A merge that drops this script below full pass is a blocker.
+This harness is now treated as a regression gate for the platform's fixed
+security, financial atomicity, Trinity routing, and tier enforcement guarantees.
+
+**LAW 27 — TRINITY DOMAIN REGISTRATION INTEGRITY**
+Trinity domain actions that are verified by OMEGA harness checks MUST remain
+registered in `registerMissingDomainActions()` unless replaced by an equivalent
+or stronger canonical registry path in the same commit.
+At minimum, these insurance actions must remain resolvable by actionId:
+`insurance.status`, `insurance.expiry`, `insurance.state_compliance`.
+Removing or renaming them without updating the harness + laws is a regression.
+
 REQUIRED pattern:
   - New column in schema.ts → immediately add `ALTER TABLE x ADD COLUMN IF NOT EXISTS y` to `quickFixCommonColumns()`
   - New table in schema.ts → immediately add `CREATE TABLE IF NOT EXISTS t (...)` to `quickFixCommonColumns()`

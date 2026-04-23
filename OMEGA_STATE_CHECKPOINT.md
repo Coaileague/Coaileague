@@ -3085,3 +3085,258 @@ SPS production tenant: ZERO MUTATIONS — protected by GRANDFATHERED_TENANT_ID e
 - ✅ Step 31: Statewide (SPS) workspace has explicit billing exemption — Statewide founder exemption found in founderExemption.ts
 - ✅ Step 32: All AI providers unavailable → Safe Mode (no unsafe mutations) — CODE: resilientAIGateway degraded mode
 **BATTLE SIM VERDICT: GO** (32/32 steps passed)
+
+### Preflight Check — 2026-04-23T06:38:27.440Z
+- ❌ ENV:DATABASE_URL: MISSING — required for production
+- ❌ ENV:SESSION_SECRET: MISSING — required for production
+- ❌ ENV:RESEND_API_KEY: MISSING — required for production
+- ❌ ENV:STRIPE_SECRET_KEY: MISSING — required for production
+- ❌ ENV:STRIPE_WEBHOOK_SECRET: MISSING — required for production
+- ❌ ENV:BASE_URL: MISSING — required for production
+- ❌ ENV:GEMINI_API_KEY: missing — recommended
+- ❌ ENV:ANTHROPIC_API_KEY: missing — recommended
+- ❌ ENV:OPENAI_API_KEY: missing — recommended
+- ❌ ENV:TWILIO_ACCOUNT_SID: missing — recommended
+- ❌ ENV:TWILIO_AUTH_TOKEN: missing — recommended
+- ❌ ENV:STATEWIDE_WORKSPACE_ID: missing — recommended
+- ❌ ENV:ENCRYPTION_KEY: missing — recommended
+- ❌ ENV:JWT_SECRET: missing — recommended
+- ✅ NODE_ENV: NODE_ENV=production (must be production)
+- ❌ DB:connect: FAILED: DATABASE_URL must be set. Did you forget to provision a database?
+- ✅ SOT:roleDefinitions.ts: exists
+- ✅ SOT:featureRegistry.ts: exists
+- ✅ SOT:billingConfig.ts: exists
+- ✅ SOT:emailProvisioningService.ts: exists
+- ✅ SCRIPT:preflight-check.ts: exists
+- ✅ SCRIPT:verify-prior-fixes.ts: exists
+- ✅ SCRIPT:tenant-isolation-audit.ts: exists
+- ✅ SCRIPT:financial-atomicity-check.ts: exists
+- ✅ SCRIPT:battle-sim.ts: exists
+- ✅ SCRIPT:statewide-readonly-verify.ts: exists
+- ✅ OMEGA.md: exists
+- ✅ OMEGA_STATE_CHECKPOINT.md: exists
+**Verdict: FAIL** (13/28 passed)
+
+### Verify-Prior-Fixes — 2026-04-23T06:46:58.535Z
+- ✅ FIX-01: requireAuth structured logging: requireAuth uses structured log on auth failure
+- ✅ FIX-02: dashboard workspace_id isPlatformAdmin guard: dashboard /summary workspace_id param gated to platform admin
+- ✅ FIX-03: session.regenerate on workspace switch: session.regenerate() fires on workspace switch
+- ✅ FIX-04: resetPassword invalidates all sessions: resetPassword sets isValid=false on all user sessions
+- ✅ FIX-05: admin reset invalidates target user sessions: admin reset password invalidates target user sessions
+- ✅ FIX-06: lockout structured warn log: recordFailedLogin logs structured warn on lockout
+- ✅ FIX-07: payroll recordPayrollFee + recordMiddlewareFeeCharge: payroll route fires both fee records atomically
+- ✅ FIX-08: stripe pay-invoice chargeInvoiceMiddlewareFee: stripeInlineRoutes pay-invoice charges middleware fee
+- ✅ FIX-09: invoice mark-paid chargeInvoiceMiddlewareFee card/ACH only: invoiceRoutes mark-paid fires middleware fee for card/ACH
+- ✅ FIX-10: weeklyBillingRun recordMiddlewareFeeCharge: weeklyBillingRunService fires fee records on overages
+- ✅ FIX-11: stripeConnect recordMiddlewareFeeCharge: stripeConnect payout fires middleware fee record
+- ✅ FIX-12: quickbooks recordQbSyncFee: quickbooks sync fires recordQbSyncFee after CDC poll
+- ✅ FIX-13: active subscription guard on create: create-subscription has active subscription guard
+- ✅ FIX-14: verifySignature tries test + live secrets: stripeWebhooks verifySignature tries both test and live secrets
+- ✅ FIX-15: contractPipeline requirePlan professional: contractPipeline gated to professional tier
+- ✅ FIX-16: documentVault requirePlan professional: documentVault gated to professional tier
+- ✅ FIX-17: rfpPipeline requireAuth + requirePlan professional: rfpPipeline has requireAuth + requirePlan professional
+- ✅ FIX-18: financialIntelligence requirePlan professional: financialIntelligence gated to professional tier
+- ✅ FIX-19: biAnalytics requirePlan professional: biAnalytics gated to professional tier
+- ✅ FIX-20: multiCompany requirePlan business: multiCompany gated to business tier
+- ✅ FIX-21: enterpriseFeatures requirePlan enterprise: enterpriseFeatures gated to enterprise tier
+- ❌ FIX-22: trinityMissingDomainActions 20 actions registered: trinityMissingDomainActions registers insurance + gate + recognition actions
+- ✅ FIX-23: voice_support_cases drizzle schema exported: voice_support tables exported from drizzle schema
+- ✅ FIX-24: officer_activated event fires on reactivation: officer_activated event published on reactivation
+- ✅ FIX-25: adminRoutes no duplicate requirePlatformStaff: no duplicate requirePlatformStaff on /platform/activities or /admin/metrics
+- ✅ GAP-1: VOID invoice write-protect API layer (409): VOID invoices return 409 on PATCH/PUT attempt
+- ✅ GAP-2: workspaceTrinityLimiter 50/min in-memory: workspaceTrinityLimiter exists with 50/min limit
+- ✅ GAP-3: PII hard-purge DELETE endpoint: DELETE /api/workspace/employees/:id/pii-purge endpoint exists
+- ✅ GAP-4: DB-level REVOKE (app layer enforcement verified): App layer enforces immutability; DB REVOKE blocked by superuser (Bryan action required)
+**Verdict: FAIL** (28/29 passed)
+
+### Verify-Prior-Fixes — 2026-04-23T06:47:29.243Z
+- ✅ FIX-01: requireAuth structured logging: requireAuth uses structured log on auth failure
+- ✅ FIX-02: dashboard workspace_id isPlatformAdmin guard: dashboard /summary workspace_id param gated to platform admin
+- ✅ FIX-03: session.regenerate on workspace switch: session.regenerate() fires on workspace switch
+- ✅ FIX-04: resetPassword invalidates all sessions: resetPassword sets isValid=false on all user sessions
+- ✅ FIX-05: admin reset invalidates target user sessions: admin reset password invalidates target user sessions
+- ✅ FIX-06: lockout structured warn log: recordFailedLogin logs structured warn on lockout
+- ✅ FIX-07: payroll recordPayrollFee + recordMiddlewareFeeCharge: payroll route fires both fee records atomically
+- ✅ FIX-08: stripe pay-invoice chargeInvoiceMiddlewareFee: stripeInlineRoutes pay-invoice charges middleware fee
+- ✅ FIX-09: invoice mark-paid chargeInvoiceMiddlewareFee card/ACH only: invoiceRoutes mark-paid fires middleware fee for card/ACH
+- ✅ FIX-10: weeklyBillingRun recordMiddlewareFeeCharge: weeklyBillingRunService fires fee records on overages
+- ✅ FIX-11: stripeConnect recordMiddlewareFeeCharge: stripeConnect payout fires middleware fee record
+- ✅ FIX-12: quickbooks recordQbSyncFee: quickbooks sync fires recordQbSyncFee after CDC poll
+- ✅ FIX-13: active subscription guard on create: create-subscription has active subscription guard
+- ✅ FIX-14: verifySignature tries test + live secrets: stripeWebhooks verifySignature tries both test and live secrets
+- ✅ FIX-15: contractPipeline requirePlan professional: contractPipeline gated to professional tier
+- ✅ FIX-16: documentVault requirePlan professional: documentVault gated to professional tier
+- ✅ FIX-17: rfpPipeline requireAuth + requirePlan professional: rfpPipeline has requireAuth + requirePlan professional
+- ✅ FIX-18: financialIntelligence requirePlan professional: financialIntelligence gated to professional tier
+- ✅ FIX-19: biAnalytics requirePlan professional: biAnalytics gated to professional tier
+- ✅ FIX-20: multiCompany requirePlan business: multiCompany gated to business tier
+- ✅ FIX-21: enterpriseFeatures requirePlan enterprise: enterpriseFeatures gated to enterprise tier
+- ✅ FIX-22: trinityMissingDomainActions 20 actions registered: trinityMissingDomainActions registers insurance + gate + recognition actions
+- ✅ FIX-23: voice_support_cases drizzle schema exported: voice_support tables exported from drizzle schema
+- ✅ FIX-24: officer_activated event fires on reactivation: officer_activated event published on reactivation
+- ✅ FIX-25: adminRoutes no duplicate requirePlatformStaff: no duplicate requirePlatformStaff on /platform/activities or /admin/metrics
+- ✅ GAP-1: VOID invoice write-protect API layer (409): VOID invoices return 409 on PATCH/PUT attempt
+- ✅ GAP-2: workspaceTrinityLimiter 50/min in-memory: workspaceTrinityLimiter exists with 50/min limit
+- ✅ GAP-3: PII hard-purge DELETE endpoint: DELETE /api/workspace/employees/:id/pii-purge endpoint exists
+- ✅ GAP-4: DB-level REVOKE (app layer enforcement verified): App layer enforces immutability; DB REVOKE blocked by superuser (Bryan action required)
+**Verdict: PASS** (29/29 passed)
+
+### Battle-Sim — 2026-04-23T06:51:24.636Z
+- ✅ Step 1: Workspace provisions with trial tier + 6 email addresses — CODE: emailProvisioningService provisions 6 subdomain addresses
+- ✅ Step 2: EmailHubCanvas initializes exactly 8 folders — CODE: 8 folders: Staffing, Call-Offs, Incidents, Support, Billing, Documents, Unread, Archive
+- ✅ Step 3: Officer creation fires officer_activated event — CODE: officer_activated published on creation
+- ✅ Step 4: Expired license hard-blocks shift assignment — CODE: License expiry enforced in scheduling
+- ✅ Step 5: Shift state machine enforces OPEN→ASSIGNED→STARTED→COMPLETED only — CODE: illegal transition logged in shiftRoutes
+- ✅ Step 6: scheduling_audit_log written BEFORE shift mutation — CODE: ShiftAudit log in shiftRoutes
+- ✅ Step 7: Call-off email → call_off record → shift reopens for coverage — CODE: calloff → coverage pipeline found
+- ✅ Step 8: Invoice DRAFT created from COMPLETED shifts only — CODE: stagedShifts used for invoice line items
+- ✅ Step 9: Org owner approval required before invoice becomes SENT — CODE: approval audit
+- ✅ Step 10: SENT invoice content is write-protected — CODE: SEND_BLOCKED_STATUSES includes sent
+- ✅ Step 11: Payment portal token contains invoice_id, workspace_id, expiry — CODE: portal token expiry
+- ✅ Step 12: 3-layer atomicity: Stripe + financial_processing_fees + platform_revenue — 3-layer atomicity: chargeInvoiceMiddlewareFee + platform_revenue verified
+- ✅ Step 13: PAID invoice blocked from modification (409) — CODE: paid blocked
+- ✅ Step 14: VOID invoice blocked from modification (409) — CODE: void blocked
+- ✅ Step 15: VOID requires voidReason (min 5 chars) — CODE: void reason required
+- ✅ Step 16: Closed payroll period immutable at service layer — CODE: Payroll period_closed immutability enforced
+- ✅ Step 17: Payroll run fires recordPayrollFee + recordMiddlewareFeeCharge atomically — CODE: payroll fee records
+- ✅ Step 18: Plaid ACH: bank verification required before first transfer — CODE: Plaid bank verification enforced
+- ✅ Step 19: NDS is sole notification sender (4 approved bypasses only) — CODE: NDS 4 approved auth bypasses defined
+- ✅ Step 20: Trinity canonical 7-step pipeline enforced (RBAC before Fetch) — CODE: Trinity execution fabric
+- ✅ Step 21: Trinity velocity limiter: 50 actions/min per workspace — CODE: workspaceTrinityLimiter
+- ✅ Step 22: TRINITY_CONFLICT_QUEUE has resolution path — CODE: resolution fabric
+- ✅ Step 23: Trinity zero-trust filesystem lockdown enforced — CODE: trinityGuardMiddleware
+- ✅ Step 24: WebSocket broadcast is workspace-scoped (no cross-tenant) — CODE: ws workspaceId auth
+- ✅ Step 25: Stripe webhook deduplication prevents double-write — CODE: stripe ON CONFLICT DO NOTHING
+- ❌ Step 26: AI credit deduction is atomic (no double-burn) — MISSING: transactionId in server/services/billing/creditManager.ts
+**BATTLE SIM VERDICT: NOT GO** (25/26 steps passed)
+
+### Battle-Sim — 2026-04-23T06:52:30.292Z
+- ✅ Step 1: Workspace provisions with trial tier + 6 email addresses — CODE: emailProvisioningService provisions 6 subdomain addresses
+- ✅ Step 2: EmailHubCanvas initializes exactly 8 folders — CODE: 8 folders: Staffing, Call-Offs, Incidents, Support, Billing, Documents, Unread, Archive
+- ✅ Step 3: Officer creation fires officer_activated event — CODE: officer_activated published on creation
+- ✅ Step 4: Expired license hard-blocks shift assignment — CODE: License expiry enforced in scheduling
+- ✅ Step 5: Shift state machine enforces OPEN→ASSIGNED→STARTED→COMPLETED only — CODE: illegal transition logged in shiftRoutes
+- ✅ Step 6: scheduling_audit_log written BEFORE shift mutation — CODE: ShiftAudit log in shiftRoutes
+- ✅ Step 7: Call-off email → call_off record → shift reopens for coverage — CODE: calloff → coverage pipeline found
+- ✅ Step 8: Invoice DRAFT created from COMPLETED shifts only — CODE: stagedShifts used for invoice line items
+- ✅ Step 9: Org owner approval required before invoice becomes SENT — CODE: approval audit
+- ✅ Step 10: SENT invoice content is write-protected — CODE: SEND_BLOCKED_STATUSES includes sent
+- ✅ Step 11: Payment portal token contains invoice_id, workspace_id, expiry — CODE: portal token expiry
+- ✅ Step 12: 3-layer atomicity: Stripe + financial_processing_fees + platform_revenue — 3-layer atomicity: chargeInvoiceMiddlewareFee + platform_revenue verified
+- ✅ Step 13: PAID invoice blocked from modification (409) — CODE: paid blocked
+- ✅ Step 14: VOID invoice blocked from modification (409) — CODE: void blocked
+- ✅ Step 15: VOID requires voidReason (min 5 chars) — CODE: void reason required
+- ✅ Step 16: Closed payroll period immutable at service layer — CODE: Payroll period_closed immutability enforced
+- ✅ Step 17: Payroll run fires recordPayrollFee + recordMiddlewareFeeCharge atomically — CODE: payroll fee records
+- ✅ Step 18: Plaid ACH: bank verification required before first transfer — CODE: Plaid bank verification enforced
+- ✅ Step 19: NDS is sole notification sender (4 approved bypasses only) — CODE: NDS 4 approved auth bypasses defined
+- ✅ Step 20: Trinity canonical 7-step pipeline enforced (RBAC before Fetch) — CODE: Trinity execution fabric
+- ✅ Step 21: Trinity velocity limiter: 50 actions/min per workspace — CODE: workspaceTrinityLimiter
+- ✅ Step 22: TRINITY_CONFLICT_QUEUE has resolution path — CODE: resolution fabric
+- ✅ Step 23: Trinity zero-trust filesystem lockdown enforced — CODE: trinityGuardMiddleware
+- ✅ Step 24: WebSocket broadcast is workspace-scoped (no cross-tenant) — CODE: ws workspaceId auth
+- ✅ Step 25: Stripe webhook deduplication prevents double-write — CODE: stripe ON CONFLICT DO NOTHING
+- ✅ Step 26: AI credit deduction is atomic (no double-burn) — CODE: tokenManager recordUsage
+- ✅ Step 27: Trinity email classification: 6 addresses → 6 categories — CODE: Email classification by address type found
+- ✅ Step 28: PII hard-purge: DELETE /employees/:id/pii-purge with pre-flights — CODE: legal hold pre-flight
+- ✅ Step 29: Storage quota checked BEFORE upload (507 on breach) — CODE: checkCategoryQuota called before upload
+- ✅ Step 30: Break-glass middleware (Section XXIII) active — CODE: break-glass middleware file
+- ✅ Step 31: Statewide (SPS) workspace has explicit billing exemption — Statewide founder exemption found in founderExemption.ts
+- ✅ Step 32: All AI providers unavailable → Safe Mode (no unsafe mutations) — CODE: resilientAIGateway degraded mode
+**BATTLE SIM VERDICT: GO** (32/32 steps passed)
+
+### Verify-Prior-Fixes — 2026-04-23T06:57:58.138Z
+- ✅ FIX-01: requireAuth structured logging: requireAuth uses structured log on auth failure
+- ✅ FIX-02: dashboard workspace_id isPlatformAdmin guard: dashboard /summary workspace_id param gated to platform admin
+- ✅ FIX-03: session.regenerate on workspace switch: session.regenerate() fires on workspace switch
+- ✅ FIX-04: resetPassword invalidates all sessions: resetPassword sets isValid=false on all user sessions
+- ✅ FIX-05: admin reset invalidates target user sessions: admin reset password invalidates target user sessions
+- ✅ FIX-06: lockout structured warn log: recordFailedLogin logs structured warn on lockout
+- ✅ FIX-07: payroll recordPayrollFee + recordMiddlewareFeeCharge: payroll route fires both fee records atomically
+- ✅ FIX-08: stripe pay-invoice chargeInvoiceMiddlewareFee: stripeInlineRoutes pay-invoice charges middleware fee
+- ✅ FIX-09: invoice mark-paid chargeInvoiceMiddlewareFee card/ACH only: invoiceRoutes mark-paid fires middleware fee for card/ACH
+- ✅ FIX-10: weeklyBillingRun recordMiddlewareFeeCharge: weeklyBillingRunService fires fee records on overages
+- ✅ FIX-11: stripeConnect recordMiddlewareFeeCharge: stripeConnect payout fires middleware fee record
+- ✅ FIX-12: quickbooks recordQbSyncFee: quickbooks sync fires recordQbSyncFee after CDC poll
+- ✅ FIX-13: active subscription guard on create: create-subscription has active subscription guard
+- ✅ FIX-14: verifySignature tries test + live secrets: stripeWebhooks verifySignature tries both test and live secrets
+- ✅ FIX-15: contractPipeline requirePlan professional: contractPipeline gated to professional tier
+- ✅ FIX-16: documentVault requirePlan professional: documentVault gated to professional tier
+- ✅ FIX-17: rfpPipeline requireAuth + requirePlan professional: rfpPipeline has requireAuth + requirePlan professional
+- ✅ FIX-18: financialIntelligence requirePlan professional: financialIntelligence gated to professional tier
+- ✅ FIX-19: biAnalytics requirePlan professional: biAnalytics gated to professional tier
+- ✅ FIX-20: multiCompany requirePlan business: multiCompany gated to business tier
+- ✅ FIX-21: enterpriseFeatures requirePlan enterprise: enterpriseFeatures gated to enterprise tier
+- ✅ FIX-22: trinityMissingDomainActions 20 actions registered: trinityMissingDomainActions registers insurance + gate + recognition actions
+- ✅ FIX-23: voice_support_cases drizzle schema exported: voice_support tables exported from drizzle schema
+- ✅ FIX-24: officer_activated event fires on reactivation: officer_activated event published on reactivation
+- ✅ FIX-25: adminRoutes no duplicate requirePlatformStaff: no duplicate requirePlatformStaff on /platform/activities or /admin/metrics
+- ✅ GAP-1: VOID invoice write-protect API layer (409): VOID invoices return 409 on PATCH/PUT attempt
+- ✅ GAP-2: workspaceTrinityLimiter 50/min in-memory: workspaceTrinityLimiter exists with 50/min limit
+- ✅ GAP-3: PII hard-purge DELETE endpoint: DELETE /api/workspace/employees/:id/pii-purge endpoint exists
+- ✅ GAP-4: DB-level REVOKE (app layer enforcement verified): App layer enforces immutability; DB REVOKE blocked by superuser (Bryan action required)
+**Verdict: PASS** (29/29 passed)
+
+### Verify-Prior-Fixes — 2026-04-23T07:01:45.888Z
+- ✅ FIX-01: requireAuth structured logging: requireAuth uses structured log on auth failure
+- ✅ FIX-02: dashboard workspace_id isPlatformAdmin guard: dashboard /summary workspace_id param gated to platform admin
+- ✅ FIX-03: session.regenerate on workspace switch: session.regenerate() fires on workspace switch
+- ✅ FIX-04: resetPassword invalidates all sessions: resetPassword sets isValid=false on all user sessions
+- ✅ FIX-05: admin reset invalidates target user sessions: admin reset password invalidates target user sessions
+- ✅ FIX-06: lockout structured warn log: recordFailedLogin logs structured warn on lockout
+- ✅ FIX-07: payroll recordPayrollFee + recordMiddlewareFeeCharge: payroll route fires both fee records atomically
+- ✅ FIX-08: stripe pay-invoice chargeInvoiceMiddlewareFee: stripeInlineRoutes pay-invoice charges middleware fee
+- ✅ FIX-09: invoice mark-paid chargeInvoiceMiddlewareFee card/ACH only: invoiceRoutes mark-paid fires middleware fee for card/ACH
+- ✅ FIX-10: weeklyBillingRun recordMiddlewareFeeCharge: weeklyBillingRunService fires fee records on overages
+- ✅ FIX-11: stripeConnect recordMiddlewareFeeCharge: stripeConnect payout fires middleware fee record
+- ✅ FIX-12: quickbooks recordQbSyncFee: quickbooks sync fires recordQbSyncFee after CDC poll
+- ✅ FIX-13: active subscription guard on create: create-subscription has active subscription guard
+- ✅ FIX-14: verifySignature tries test + live secrets: stripeWebhooks verifySignature tries both test and live secrets
+- ✅ FIX-15: contractPipeline requirePlan professional: contractPipeline gated to professional tier
+- ✅ FIX-16: documentVault requirePlan professional: documentVault gated to professional tier
+- ✅ FIX-17: rfpPipeline requireAuth + requirePlan professional: rfpPipeline has requireAuth + requirePlan professional
+- ✅ FIX-18: financialIntelligence requirePlan professional: financialIntelligence gated to professional tier
+- ✅ FIX-19: biAnalytics requirePlan professional: biAnalytics gated to professional tier
+- ✅ FIX-20: multiCompany requirePlan business: multiCompany gated to business tier
+- ✅ FIX-21: enterpriseFeatures requirePlan enterprise: enterpriseFeatures gated to enterprise tier
+- ✅ FIX-22: trinityMissingDomainActions 20 actions registered: trinityMissingDomainActions registers insurance + gate + recognition actions
+- ✅ FIX-23: voice_support_cases drizzle schema exported: voice_support tables exported from drizzle schema
+- ✅ FIX-24: officer_activated event fires on reactivation: officer_activated event published on reactivation
+- ✅ FIX-25: adminRoutes no duplicate requirePlatformStaff: no duplicate requirePlatformStaff on /platform/activities or /admin/metrics
+- ✅ GAP-1: VOID invoice write-protect API layer (409): VOID invoices return 409 on PATCH/PUT attempt
+- ✅ GAP-2: workspaceTrinityLimiter 50/min in-memory: workspaceTrinityLimiter exists with 50/min limit
+- ✅ GAP-3: PII hard-purge DELETE endpoint: DELETE /api/workspace/employees/:id/pii-purge endpoint exists
+- ✅ GAP-4: DB-level REVOKE (app layer enforcement verified): App layer enforces immutability; DB REVOKE blocked by superuser (Bryan action required)
+**Verdict: PASS** (29/29 passed)
+
+### Verify-Prior-Fixes — 2026-04-23T07:08:16.039Z
+- ✅ FIX-01: requireAuth structured logging: requireAuth uses structured log on auth failure
+- ✅ FIX-02: dashboard workspace_id isPlatformAdmin guard: dashboard /summary workspace_id param gated to platform admin
+- ✅ FIX-03: session.regenerate on workspace switch: session.regenerate() fires on workspace switch
+- ✅ FIX-04: resetPassword invalidates all sessions: resetPassword sets isValid=false on all user sessions
+- ✅ FIX-05: admin reset invalidates target user sessions: admin reset password invalidates target user sessions
+- ✅ FIX-06: lockout structured warn log: recordFailedLogin logs structured warn on lockout
+- ✅ FIX-07: payroll recordPayrollFee + recordMiddlewareFeeCharge: payroll route fires both fee records atomically
+- ✅ FIX-08: stripe pay-invoice chargeInvoiceMiddlewareFee: stripeInlineRoutes pay-invoice charges middleware fee
+- ✅ FIX-09: invoice mark-paid chargeInvoiceMiddlewareFee card/ACH only: invoiceRoutes mark-paid fires middleware fee for card/ACH
+- ✅ FIX-10: weeklyBillingRun recordMiddlewareFeeCharge: weeklyBillingRunService fires fee records on overages
+- ✅ FIX-11: stripeConnect recordMiddlewareFeeCharge: stripeConnect payout fires middleware fee record
+- ✅ FIX-12: quickbooks recordQbSyncFee: quickbooks sync fires recordQbSyncFee after CDC poll
+- ✅ FIX-13: active subscription guard on create: create-subscription has active subscription guard
+- ✅ FIX-14: verifySignature tries test + live secrets: stripeWebhooks verifySignature tries both test and live secrets
+- ✅ FIX-15: contractPipeline requirePlan professional: contractPipeline gated to professional tier
+- ✅ FIX-16: documentVault requirePlan professional: documentVault gated to professional tier
+- ✅ FIX-17: rfpPipeline requireAuth + requirePlan professional: rfpPipeline has requireAuth + requirePlan professional
+- ✅ FIX-18: financialIntelligence requirePlan professional: financialIntelligence gated to professional tier
+- ✅ FIX-19: biAnalytics requirePlan professional: biAnalytics gated to professional tier
+- ✅ FIX-20: multiCompany requirePlan business: multiCompany gated to business tier
+- ✅ FIX-21: enterpriseFeatures requirePlan enterprise: enterpriseFeatures gated to enterprise tier
+- ✅ FIX-22: trinityMissingDomainActions 20 actions registered: trinityMissingDomainActions registers insurance + gate + recognition actions
+- ✅ FIX-23: voice_support_cases drizzle schema exported: voice_support tables exported from drizzle schema
+- ✅ FIX-24: officer_activated event fires on reactivation: officer_activated event published on reactivation
+- ✅ FIX-25: adminRoutes no duplicate requirePlatformStaff: no duplicate requirePlatformStaff on /platform/activities or /admin/metrics
+- ✅ GAP-1: VOID invoice write-protect API layer (409): VOID invoices return 409 on PATCH/PUT attempt
+- ✅ GAP-2: workspaceTrinityLimiter 50/min in-memory: workspaceTrinityLimiter exists with 50/min limit
+- ✅ GAP-3: PII hard-purge DELETE endpoint: DELETE /api/workspace/employees/:id/pii-purge endpoint exists
+- ✅ GAP-4: DB-level REVOKE (app layer enforcement verified): App layer enforces immutability; DB REVOKE blocked by superuser (Bryan action required)
+**Verdict: PASS** (29/29 passed)

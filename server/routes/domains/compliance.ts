@@ -63,6 +63,7 @@ export function mountComplianceRoutes(app: Express): void {
   app.use("/api/security", requireAuth, ensureWorkspaceAccess, securityAuditRouter);
   // SPS 10-Step Onboarding — must come before /api/sps catch-all mounts
   // /upload is handled inside the router without workspace middleware (multer + GCS)
+  app.use("/api/sps/onboarding", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
   app.use("/api/sps/forms", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
   // SPS Document Management System
   // Document view/download routes MUST come before spsDocumentRouter (/:id catch-all)

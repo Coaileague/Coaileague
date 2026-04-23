@@ -1,7 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db } from "../db";
-import { sql, eq, and, desc, gte, inArray } from "drizzle-orm";
+import { sql, eq, and, or, desc, gte, inArray } from "drizzle-orm";
 import { workspaces, employees, shifts, trinityEmailConversations, staffingClaimTokens, clients, invoices, emailUnsubscribes, emailEvents, resendWebhookEvents, notificationDeliveries, supportTickets } from "@shared/schema";
 import { universalAudit } from "../services/universalAuditService";
 import { trinityStaffingOrchestrator } from "../services/trinityStaffing/orchestrator";
@@ -80,6 +80,35 @@ async function getWorkspaceDetails(workspaceId: string): Promise<{ name: string;
  */
 function generatePreRef(): string {
   return `SR-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildInboundBodyFallback(inboundEmail: any): { html: string; text: string } {
+  const rawHtml = String(inboundEmail?.html || '').trim();
+  const rawText = String(inboundEmail?.text || '').trim();
+  const textFromHtml = rawHtml ? stripHtml(rawHtml) : '';
+  const attachmentCount = Array.isArray(inboundEmail?.attachments) ? inboundEmail.attachments.length : 0;
+
+  const fallbackText = rawText || textFromHtml || (
+    attachmentCount > 0
+      ? `[No inline body. ${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'} included.]`
+      : '[No message body provided by sender.]'
+  );
+
+  const fallbackHtml = rawHtml || `<pre style="white-space:pre-wrap;font-size:13px;">${fallbackText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')}</pre>`;
+
+  return { html: fallbackHtml, text: fallbackText };
 }
 
 const router = Router();
@@ -599,6 +628,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
                   .where(eq(emailEvents.resendId, bounceResendId));
               }
               if (bouncedAddresses.length > 0) {
+                const normalizedBounced = bouncedAddresses.map((e) => e.toLowerCase().trim()).filter(Boolean);
                 await tx.update(notificationDeliveries)
                   .set({
                     status: 'failed',
@@ -607,7 +637,22 @@ router.post("/api/webhooks/resend", async (req, res) => {
                   })
                   .where(
                     and(
-                      inArray(notificationDeliveries.recipientUserId, bouncedAddresses),
+                      or(
+                        inArray(notificationDeliveries.recipientUserId, normalizedBounced),
+                        sql`LOWER(COALESCE(${notificationDeliveries.payload}->>'to', '')) = ANY(${normalizedBounced}::text[])`,
+                        sql`LOWER(COALESCE(${notificationDeliveries.payload}->>'recipientEmail', '')) = ANY(${normalizedBounced}::text[])`,
+                        sql`EXISTS (
+                          SELECT 1
+                          FROM jsonb_array_elements_text(
+                            CASE
+                              WHEN jsonb_typeof(${notificationDeliveries.payload}->'to') = 'array'
+                                THEN ${notificationDeliveries.payload}->'to'
+                              ELSE '[]'::jsonb
+                            END
+                          ) AS addr(value)
+                          WHERE LOWER(addr.value) = ANY(${normalizedBounced}::text[])
+                        )`
+                      ),
                       eq(notificationDeliveries.channel, 'email'),
                       inArray(notificationDeliveries.status, ['sent', 'pending'])
                     )
@@ -655,6 +700,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
                   .where(eq(emailEvents.resendId, complaintResendId));
               }
               if (complainedAddresses.length > 0) {
+                const normalizedComplained = complainedAddresses.map((e) => e.toLowerCase().trim()).filter(Boolean);
                 await tx.update(notificationDeliveries)
                   .set({
                     status: 'failed',
@@ -663,7 +709,22 @@ router.post("/api/webhooks/resend", async (req, res) => {
                   })
                   .where(
                     and(
-                      inArray(notificationDeliveries.recipientUserId, complainedAddresses),
+                      or(
+                        inArray(notificationDeliveries.recipientUserId, normalizedComplained),
+                        sql`LOWER(COALESCE(${notificationDeliveries.payload}->>'to', '')) = ANY(${normalizedComplained}::text[])`,
+                        sql`LOWER(COALESCE(${notificationDeliveries.payload}->>'recipientEmail', '')) = ANY(${normalizedComplained}::text[])`,
+                        sql`EXISTS (
+                          SELECT 1
+                          FROM jsonb_array_elements_text(
+                            CASE
+                              WHEN jsonb_typeof(${notificationDeliveries.payload}->'to') = 'array'
+                                THEN ${notificationDeliveries.payload}->'to'
+                              ELSE '[]'::jsonb
+                            END
+                          ) AS addr(value)
+                          WHERE LOWER(addr.value) = ANY(${normalizedComplained}::text[])
+                        )`
+                      ),
                       eq(notificationDeliveries.channel, 'email'),
                       inArray(notificationDeliveries.status, ['sent', 'pending'])
                     )
@@ -791,8 +852,9 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
         const rootFromEmail = rootFromRaw.match(/<([^>]+)>/)?.[1]?.trim() || rootFromRaw.trim();
         const rootFromName = rootFromRaw.split('<')[0].trim() || undefined;
         const rootSubject = inboundEmail.subject || '(no subject)';
-        const rootBody = inboundEmail.html || inboundEmail.text || '';
-        const rootBodyText = inboundEmail.text || '';
+        const normalizedBody = buildInboundBodyFallback(inboundEmail);
+        const rootBody = normalizedBody.html;
+        const rootBodyText = normalizedBody.text;
         scheduleNonBlocking('resend-inbound.root-forward', async () => {
           try {
             const fwdHtml = `
