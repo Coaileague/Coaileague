@@ -1123,7 +1123,7 @@ export class UniversalNotificationEngine {
         columns: { quietHoursStart: true, quietHoursEnd: true },
       });
 
-      if (!prefs || prefs.quietHoursStart == null || prefs.quietHoursEnd == null) {
+      if (!prefs || prefs.quietHoursStart === null || prefs.quietHoursEnd === null) {
         return false;
       }
 

@@ -92,11 +92,11 @@ router.put('/', requireManager, async (req: AuthenticatedRequest, res) => {
 
     // Clamp score thresholds to 0-100
     const declineThreshold =
-      autoDeclineBelowScore == null
+      autoDeclineBelowScore === null
         ? null
         : Math.max(0, Math.min(100, Number(autoDeclineBelowScore)));
     const advanceThreshold =
-      autoAdvanceAboveScore == null
+      autoAdvanceAboveScore === null
         ? null
         : Math.max(0, Math.min(100, Number(autoAdvanceAboveScore)));
 

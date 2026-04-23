@@ -1817,10 +1817,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateClient(id: string, workspaceId: string, data: Partial<InsertClient>): Promise<Client | undefined> {
-    if ('billableHourlyRate' in data && (data as any).billableHourlyRate == null) {
+    if ('billableHourlyRate' in data && (data as any).billableHourlyRate === null) {
       throw new Error(`billableHourlyRate cannot be null or undefined for client ${id}`);
     }
-    if ('paymentTerms' in (data as any) && (data as any).paymentTerms == null) {
+    if ('paymentTerms' in (data as any) && (data as any).paymentTerms === null) {
       throw new Error(`paymentTerms cannot be null or undefined for client ${id}`);
     }
 
@@ -4204,7 +4204,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(chatMessages.conversationId, conversationId),
           eq(chatMessages.isRead, false),
-          sql`${chatMessages.senderId} != ${userId}` // Only mark messages from other users as read
+          sql`${chatMessages.senderId} !== ${userId}` // Only mark messages from other users as read
         )
       );
   }
@@ -7517,7 +7517,7 @@ export class DatabaseStorage implements IStorage {
         ),
         eq(notifications.isRead, false),
         isNull(notifications.clearedAt),
-        sql`${notifications.type} != 'platform_update'`,
+        sql`${notifications.type} !== 'platform_update'`,
       ));
     return result?.count || 0;
   }
@@ -7537,7 +7537,7 @@ export class DatabaseStorage implements IStorage {
             eq(notifications.scope, 'user' as any)
           ),
           eq(notifications.isRead, false),
-          sql`${notifications.type} != 'platform_update'`,
+          sql`${notifications.type} !== 'platform_update'`,
         ));
       return result?.count || 0;
     } else {
@@ -7548,7 +7548,7 @@ export class DatabaseStorage implements IStorage {
           eq(notifications.userId, userId),
           eq(notifications.scope, 'user' as any),
           eq(notifications.isRead, false),
-          sql`${notifications.type} != 'platform_update'`,
+          sql`${notifications.type} !== 'platform_update'`,
         ));
       return result?.count || 0;
     }

@@ -177,7 +177,7 @@ export class NotificationDeliveryService {
   private static readonly SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   private static hasMeaningfulContent(value: unknown): boolean {
-    if (value == null) return false;
+    if (value === null) return false;
     if (typeof value === 'string') return value.trim().length > 0;
     if (typeof value === 'number' || typeof value === 'boolean') return true;
     if (Array.isArray(value)) return value.length > 0;
@@ -465,14 +465,14 @@ export class NotificationDeliveryService {
     const textSource = payload.body ?? payload.message ?? payload.text ?? payload.title;
     const normalizedText = typeof textSource === 'object'
       ? JSON.stringify(textSource, null, 2)
-      : (textSource != null ? String(textSource) : '');
+      : (textSource !== null ? String(textSource) : '');
     const html = templateHtml ?? (
       normalizedText
         ? `<div style="font-family:Arial,sans-serif;line-height:1.5;"><h3 style="margin:0 0 8px 0;">${escapeHtml(subject)}</h3><p style="margin:0;white-space:pre-wrap;">${escapeHtml(normalizedText)}</p></div>`
         : `<div style="font-family:Arial,sans-serif;line-height:1.5;"><h3 style="margin:0 0 8px 0;">${escapeHtml(subject)}</h3><p style="margin:0;">Notification received. Please log in to ${escapeHtml(PLATFORM.name)} for details.</p></div>`
     );
 
-    if (payload.html == null && payload.body == null) {
+    if (payload.html === null && payload.body === null) {
       log.warn(
         `[NDS] EMPTY_BODY_FALLBACK: synthesized body at deliverEmail() for notification=${record.id} type=${record.notificationType} recipient=${record.recipientUserId}`
       );

@@ -17,8 +17,8 @@ export function useTableSort<T>(data: T[], defaultSortKey?: keyof T, defaultDir:
     return [...data].sort((a, b) => {
       const av = a[sortKey];
       const bv = b[sortKey];
-      if (av == null) return 1;
-      if (bv == null) return -1;
+      if (av === null) return 1;
+      if (bv === null) return -1;
       const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
       return sortDir === 'asc' ? cmp : -cmp;
     });

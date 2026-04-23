@@ -124,8 +124,8 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
-    if ((req.body.payrollFrequency !== undefined && req.body.payrollFrequency == null) ||
-        (req.body.payrollCycle !== undefined && req.body.payrollCycle == null)) {
+    if ((req.body.payrollFrequency !== undefined && req.body.payrollFrequency === null) ||
+        (req.body.payrollCycle !== undefined && req.body.payrollCycle === null)) {
       return res.status(400).json({ message: "payrollFrequency/payrollCycle cannot be null or undefined" });
     }
 
@@ -328,7 +328,7 @@ router.patch("/clients/:clientId", requireManager, async (req: AuthenticatedRequ
       'isActive',
     ];
 
-    if (req.body.paymentTerms !== undefined && req.body.paymentTerms == null) {
+    if (req.body.paymentTerms !== undefined && req.body.paymentTerms === null) {
       return res.status(400).json({ message: "paymentTerms cannot be null or undefined" });
     }
 

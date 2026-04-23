@@ -1254,7 +1254,7 @@ billingRouter.get('/pricing', async (req, res) => {
         formattedMonthlyPrice: monthlyPriceDollars === 0 ? 'Free' : `$${monthlyPriceDollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
         formattedYearlyPrice: yearlyPriceDollars === 0 ? 'Free' : `$${yearlyPriceDollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
         yearlySavingsPercent,
-        maxEmployees: (t.includedEmployees === 0 || t.includedEmployees == null) ? -1 : t.includedEmployees,
+        maxEmployees: (t.includedEmployees === 0 || t.includedEmployees === null) ? -1 : t.includedEmployees,
         monthlyCredits: t.baseCredits || 0,
         basePriceCents: t.basePriceCents,
         includedEmployees: t.includedEmployees,

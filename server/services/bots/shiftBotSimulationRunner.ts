@@ -232,7 +232,7 @@ export async function runShiftBotSimulation(): Promise<{
       results.push({
         scenario: '6. ClockBot CONFIRM Flow',
         passed: true, // CONFIRM accepted even if no pending (TTL or same user)
-        details: confirmReply ? `ClockBot response: "${confirmReply.message?.substring(0, 80)}..."` : 'No pending CONFIRM found (TTL may have expired or manager == officer)',
+        details: confirmReply ? `ClockBot response: "${confirmReply.message?.substring(0, 80)}..."` : 'No pending CONFIRM found (TTL may have expired or manager === officer)',
       });
     } catch (e: any) {
       results.push({ scenario: '6. ClockBot CONFIRM Flow', passed: false, details: `Failed: ${e.message}` });

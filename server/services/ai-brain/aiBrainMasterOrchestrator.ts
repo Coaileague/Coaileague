@@ -2094,7 +2094,7 @@ class AIBrainMasterOrchestrator {
         try {
           const configuredRules = rules || [
             { trigger: 'payment_failure_count > 5', action: 'escalate_to_finance', delay: '5m' },
-            { trigger: 'health_status == degraded', action: 'escalate_to_ops', delay: '2m' },
+            { trigger: 'health_status === degraded', action: 'escalate_to_ops', delay: '2m' },
             { trigger: 'error_rate > 10%', action: 'execute_runbook', runbookId: 'rb_high_load', delay: '1m' }
           ];
           

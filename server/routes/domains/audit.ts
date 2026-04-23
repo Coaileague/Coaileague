@@ -153,7 +153,7 @@ export function mountAuditRoutes(app: Express): void {
       }
 
       const escapeCsv = (value: unknown): string => {
-        const stringValue = value == null ? '' : String(value);
+        const stringValue = value === null ? '' : String(value);
         return `"${stringValue.replace(/"/g, '""')}"`;
       };
 
