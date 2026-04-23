@@ -13,6 +13,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { UniversalSpinner } from "@/components/ui/universal-spinner";
+import { TrinityArrowMark } from "@/components/trinity-logo";
 import {
   getStatusState,
   getBroadcastColor,
@@ -125,6 +127,7 @@ export function TrinityThoughtBar({
   const livePhaseLabel = thoughtStream?.currentPhase
     ? THOUGHT_PHASE_LABELS[thoughtStream.currentPhase] ?? null
     : null;
+  const thinkingLabel = livePhaseLabel ?? "Thinking";
 
   // ─── Bootstrap ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -250,7 +253,7 @@ export function TrinityThoughtBar({
         aria-expanded={mobileExpanded}
       >
         {/* Icon */}
-        <TrinityIcon color={colors.primary} active={state === "active"} />
+        <TrinityIcon color={colors.primary} active={isProcessing || state === "active"} />
 
         {/* Phrase */}
         <span
@@ -264,11 +267,11 @@ export function TrinityThoughtBar({
             transition: "opacity 0.3s",
           }}
         >
-          {state === "offline" ? "TRINITY OFFLINE" : (livePhaseLabel ?? phrase)}
+          {state === "offline" ? "TRINITY OFFLINE" : (isProcessing ? thinkingLabel : phrase)}
         </span>
 
         {/* Dots */}
-        <BouncingDots color={colors.primary} active={state === "active"} />
+        <BouncingDots color={colors.primary} active={isProcessing || state === "active"} />
       </button>
 
       {/* Mobile expanded panel */}
@@ -286,7 +289,7 @@ export function TrinityThoughtBar({
       <div className="hidden sm:flex items-center h-12 px-3 gap-3">
         {/* Left: Trinity identity */}
         <div className="flex items-center gap-1.5 flex-shrink-0 w-36">
-          <TrinityIcon color={colors.primary} active={state === "active"} />
+          <TrinityIcon color={colors.primary} active={isProcessing || state === "active"} />
           <span
             style={{
               fontSize: "10px",
@@ -328,7 +331,7 @@ export function TrinityThoughtBar({
               textOverflow: "ellipsis",
             }}
           >
-            {state === "offline" ? "TRINITY OFFLINE" : (livePhaseLabel ?? phrase)}
+            {state === "offline" ? "TRINITY OFFLINE" : (isProcessing ? thinkingLabel : phrase)}
           </div>
         </div>
 
@@ -359,7 +362,7 @@ export function TrinityThoughtBar({
           ) : completionFlash ? (
             <span style={{ color: "#22C55E", fontSize: "12px", fontWeight: 700 }}>&#10003;</span>
           ) : (
-            <BouncingDots color={colors.primary} active={state === "active"} />
+            <BouncingDots color={colors.primary} active={isProcessing || state === "active"} />
           )}
         </div>
       </div>
@@ -370,6 +373,14 @@ export function TrinityThoughtBar({
 // ─── Sub-components ────────────────────────────────────────────────────────
 
 function TrinityIcon({ color, active }: { color: string; active: boolean }) {
+  if (active) {
+    return (
+      <span className="inline-flex items-center justify-center w-[18px] h-[18px] flex-shrink-0" aria-hidden="true">
+        <UniversalSpinner size="sm" className="!gap-0 scale-[0.56] origin-center" />
+      </span>
+    );
+  }
+
   return (
     <span
       style={{
@@ -384,12 +395,11 @@ function TrinityIcon({ color, active }: { color: string; active: boolean }) {
         fontSize: 10,
         fontWeight: 700,
         flexShrink: 0,
-        animation: active ? "coai-pulse-glow 2s ease-in-out infinite" : undefined,
-        boxShadow: active ? `0 0 6px ${color}55` : "none",
+        boxShadow: `0 0 5px ${color}33`,
       }}
       aria-hidden="true"
     >
-      T
+      <TrinityArrowMark size={11} />
     </span>
   );
 }

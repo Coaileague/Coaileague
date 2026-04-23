@@ -3,7 +3,7 @@
  *
  * PURPOSE: Verify Statewide workspace (GRANDFATHERED_TENANT_ID) is correctly
  *          protected — exempt from billing, no trial countdown, no lockout,
- *          no paid-tenant prompts.
+ *          no paid-tenant prompts, and still fully onboarding-compatible.
  *
  * READ-ONLY — no mutations whatsoever.
  *
@@ -183,6 +183,121 @@ async function main() {
       name: 'No platform_revenue records for Statewide',
       pass: revCount === 0,
       detail: `Found ${revCount} revenue record(s) — should be 0`,
+    });
+
+    // 13. Owner user exists and is attached to the grandfathered workspace
+    if (ownerId) {
+      const ownerUser = await pool.query(
+        `SELECT id, current_workspace_id, email_verified
+         FROM users WHERE id = $1 LIMIT 1`,
+        [ownerId]
+      );
+
+      if (ownerUser.rows.length === 0) {
+        results.push({
+          name: 'Owner user exists in users table',
+          pass: false,
+          detail: `No users row found for owner_id=${ownerId}`,
+        });
+      } else {
+        const owner = ownerUser.rows[0];
+        results.push({
+          name: 'Owner user current_workspace_id points to Statewide',
+          pass: owner.current_workspace_id === tenantId,
+          detail: `current_workspace_id=${owner.current_workspace_id}`,
+        });
+        results.push({
+          name: 'Owner user email is verified',
+          pass: !!owner.email_verified,
+          detail: `email_verified=${owner.email_verified}`,
+        });
+      }
+
+      // 14. Owner has active workspace_members row
+      const ownerMembership = await pool.query(
+        `SELECT role, status
+         FROM workspace_members
+         WHERE user_id = $1 AND workspace_id = $2
+         LIMIT 1`,
+        [ownerId, tenantId]
+      );
+
+      if (ownerMembership.rows.length === 0) {
+        results.push({
+          name: 'Owner has workspace_members row in Statewide',
+          pass: false,
+          detail: 'No workspace_members row found',
+        });
+      } else {
+        const member = ownerMembership.rows[0];
+        results.push({
+          name: 'Owner workspace_members status is active',
+          pass: member.status === 'active',
+          detail: `status=${member.status}`,
+        });
+        results.push({
+          name: 'Owner workspace role is owner-level',
+          pass: ['org_owner', 'co_owner'].includes(member.role),
+          detail: `role=${member.role}`,
+        });
+      }
+
+      // 15. Owner has employee row linked for workforce/compliance paths
+      const ownerEmployee = await pool.query(
+        `SELECT id, onboarding_status, is_active
+         FROM employees
+         WHERE user_id = $1 AND workspace_id = $2
+         LIMIT 1`,
+        [ownerId, tenantId]
+      );
+
+      if (ownerEmployee.rows.length === 0) {
+        results.push({
+          name: 'Owner has employee row linked in Statewide',
+          pass: false,
+          detail: 'No employees row found for owner in Statewide',
+        });
+      } else {
+        const emp = ownerEmployee.rows[0];
+        results.push({
+          name: 'Owner employee row is active',
+          pass: emp.is_active !== false,
+          detail: `is_active=${emp.is_active}`,
+        });
+        results.push({
+          name: 'Owner employee onboarding_status is present',
+          pass: typeof emp.onboarding_status === 'string' && emp.onboarding_status.length > 0,
+          detail: `onboarding_status=${emp.onboarding_status || 'null'}`,
+        });
+      }
+    }
+
+    // 16. Workspace-level onboarding tasks exist (manual seed parity check)
+    const taskCountResult = await pool.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM org_onboarding_tasks
+       WHERE workspace_id = $1`,
+      [tenantId]
+    );
+    const onboardingTaskCount = taskCountResult.rows[0].cnt;
+    results.push({
+      name: 'Workspace has onboarding task scaffolding',
+      pass: onboardingTaskCount > 0,
+      detail: `org_onboarding_tasks count=${onboardingTaskCount}`,
+    });
+
+    // 17. Unified workspace onboarding state exists (state machine parity)
+    const stateCountResult = await pool.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM workspace_onboarding_states
+       WHERE workspace_id = $1`,
+      [tenantId]
+    );
+    const onboardingStateCount = stateCountResult.rows[0].cnt;
+    results.push({
+      name: 'Workspace onboarding state machine row exists',
+      pass: onboardingStateCount > 0,
+      detail: `workspace_onboarding_states count=${onboardingStateCount}`,
     });
 
   } finally {

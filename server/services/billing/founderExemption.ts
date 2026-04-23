@@ -132,6 +132,23 @@ export async function ensureFounderExemption(): Promise<void> {
       log.info('[FounderExemption] Grandfathered tenant exemption verified and enforced');
     }
 
+    // Load workspace context once for downstream bootstrap/repair checks.
+    const [workspace] = await db
+      .select({
+        id: workspaces.id,
+        ownerId: workspaces.ownerId,
+        name: workspaces.name,
+        companyName: workspaces.companyName,
+      })
+      .from(workspaces)
+      .where(eq(workspaces.id, GRANDFATHERED_TENANT_ID))
+      .limit(1);
+
+    if (!workspace) {
+      log.warn('[FounderExemption] Grandfathered tenant row not found — skipping onboarding bootstrap');
+      return;
+    }
+
     // 2. Ensure credit_balances record exists with generous enterprise credits
     await db
       .insert(creditBalances)
@@ -180,6 +197,29 @@ export async function ensureFounderExemption(): Promise<void> {
       });
 
     log.info('[FounderExemption] Grandfathered tenant credit_balances and usage_tracking initialized');
+
+    // 4. Ensure onboarding scaffolding exists even if tenant was manually seeded.
+    // This keeps grandfathered tenants aligned with normal registration flows.
+    const { onboardingPipelineService } = await import('../onboardingPipelineService');
+    await onboardingPipelineService.initializeOnboarding(GRANDFATHERED_TENANT_ID);
+
+    // 5. Ensure the owner has an employee record for compliance/onboarding parity.
+    if (workspace.ownerId) {
+      const { ensureUserHasEmployeeRecord } = await import('../ownerManagerEmployeeService');
+      await ensureUserHasEmployeeRecord(workspace.ownerId, GRANDFATHERED_TENANT_ID);
+    }
+
+    // 6. Ensure unified onboarding state exists for the workspace-level checklist.
+    const { onboardingStateMachine } = await import('../orchestration/onboardingStateMachine');
+    const existingState = await onboardingStateMachine.getState(GRANDFATHERED_TENANT_ID);
+    if (!existingState && workspace.ownerId) {
+      await onboardingStateMachine.initializeOnboarding({
+        workspaceId: GRANDFATHERED_TENANT_ID,
+        organizationId: workspace.companyName || workspace.name || GRANDFATHERED_TENANT_ID,
+        ownerId: workspace.ownerId,
+      });
+      log.info('[FounderExemption] Grandfathered tenant onboarding state initialized');
+    }
   } catch {
     // Non-fatal: tenant may not exist in this environment
   }
