@@ -16,6 +16,7 @@ import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { MANAGER_ROLES } from "@shared/lib/rbac/roleDefinitions";
 import type { WorkspaceRole } from "@/hooks/useWorkspaceAccess";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -298,8 +299,27 @@ export default function PayrollTimesheets() {
 
       {/* List */}
       {timesheetsQuery.isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Skeleton className="h-4 w-4 rounded shrink-0" />
+                    <div className="space-y-1.5 min-w-0">
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : !timesheetsQuery.data?.length ? (
         <Card>

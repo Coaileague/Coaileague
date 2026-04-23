@@ -37,6 +37,7 @@ export {
   EMPLOYEE_ROLES,
   AUDITOR_ROLES,
   CONTRACTOR_ROLES,
+  FINANCE_ROLES,
 } from './lib/rbac/roleDefinitions';
 import type { WorkspaceRole, PlatformRole } from './lib/rbac/roleDefinitions';
 import {
@@ -52,6 +53,7 @@ import {
   EMPLOYEE_ROLES,
   AUDITOR_ROLES,
   CONTRACTOR_ROLES,
+  FINANCE_ROLES,
 } from './lib/rbac/roleDefinitions';
 
 // ORG_ACTION_MIN_LEVELS sourced from roleDefinitions.ts (re-exported above)
@@ -314,6 +316,9 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
 // Tier 0: Owner-level access (org_owner + co_owner)
 // Use for: billing, workspace config, child org management, integration management
 export const requireOwner = requireWorkspaceRole(OWNER_ROLES);
+
+// Finance access — owner-level only
+export const requireFinanceRole = requireWorkspaceRole(FINANCE_ROLES);
 
 // Tier 0.5: Org Admin-level access (owners + org_admin/office secretary)
 // Use for: operational decisions requiring broad authority but not ownership rights

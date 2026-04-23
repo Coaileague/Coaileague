@@ -163,3 +163,9 @@ export const AUDITOR_ROLES: WorkspaceRole[] = [
 export const CONTRACTOR_ROLES: WorkspaceRole[] = [
   'org_owner', 'co_owner', 'org_manager', 'manager', 'department_manager', 'supervisor', 'staff', 'employee', 'contractor',
 ];
+
+/**
+ * Finance access — org owners only.
+ * Billing, subscription, and payroll disbursement actions require ownership.
+ */
+export const FINANCE_ROLES: WorkspaceRole[] = ['org_owner', 'co_owner'];

@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { deductionTypesConfig, payrollMessages } from "@/config/payrollConfig";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const deductionSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),
@@ -286,7 +287,20 @@ export default function PayrollDeductionsPage() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading deductions...</div>
+                <div className="space-y-2 py-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                        <Skeleton className="h-8 w-8 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : deductions?.length === 0 ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
@@ -328,7 +342,17 @@ export default function PayrollDeductionsPage() {
           <Card>
             <CardContent className="pt-6">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading deductions...</div>
+                <div className="space-y-2 py-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </div>
+                  ))}
+                </div>
               ) : deductions?.filter(d => d.isPreTax)?.length === 0 ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
@@ -364,7 +388,17 @@ export default function PayrollDeductionsPage() {
           <Card>
             <CardContent className="pt-6">
               {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading deductions...</div>
+                <div className="space-y-2 py-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </div>
+                  ))}
+                </div>
               ) : deductions?.filter(d => !d.isPreTax)?.length === 0 ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground mb-2" />

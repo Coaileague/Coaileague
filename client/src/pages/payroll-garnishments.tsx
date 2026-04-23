@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { garnishmentTypesConfig, priorityConfig, payrollMessages } from "@/config/payrollConfig";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const garnishmentSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),
@@ -311,7 +312,23 @@ export default function PayrollGarnishmentsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading garnishments...</div>
+            <div className="space-y-3 py-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : sortedGarnishments.length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground mb-2" />

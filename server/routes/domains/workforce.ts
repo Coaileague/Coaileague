@@ -43,8 +43,10 @@ import { identityPinRouter } from "../identityPinRoutes";
 import { employmentVerifyRouter } from "../employmentVerifyRoutes";
 import recruitmentRouter from "../recruitmentRoutes";
 import wellnessRouter from "../wellnessRoutes";
+import inviteRouter, { publicInviteRouter } from "../inviteRoutes";
 
 export function mountWorkforceRoutes(app: Express): void {
+  app.use(publicInviteRouter);
   // hrisRouter applies requireAuth on every route internally; requireAuth added at mount level
   // as defense-in-depth. attachWorkspaceIdOptional retained for HRIS provider flows where
   // the workspace is resolved from the provider token rather than the user session.
@@ -100,6 +102,7 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api/onboarding-tasks", requireAuth, ensureWorkspaceAccess, onboardingTaskRouter);
   // Phase 35T: Officer Recognition, Awards & Culture Building
   app.use("/api/recognition", requireAuth, ensureWorkspaceAccess, recognitionRouter);
+  app.use("/api/invitations", requireAuth, ensureWorkspaceAccess, inviteRouter);
   // Phase 57: Clock-in PIN management (set/verify/clear/status per employee)
   app.use("/api/employees", requireAuth, ensureWorkspaceAccess, clockinPinRouter);
   // Phase 23: Universal identity PINs (owner, client, combined verify)

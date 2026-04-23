@@ -1,8 +1,9 @@
 import { db } from "server/db";
-import { timeEntries, employees, workspaces, clients, shifts } from "@shared/schema";
-import { and, eq, gte, lte, isNull, isNotNull, or, sql } from "drizzle-orm";
+import { timeEntries, employees, workspaces, clients, shifts, employeePayrollInfo } from "@shared/schema";
+import { and, eq, gte, lte, inArray, isNull, isNotNull, or, sql } from "drizzle-orm";
 import { resolveRates, bucketHours, calculateAmount, roundHours } from "./rateResolver";
-import { isHolidayDate } from "./holidayDetector";
+import { getHolidayEntry, isHolidayDate } from "./holidayDetector";
+import { calculatePayrollTaxes, type PayPeriod, type FilingStatus, type PayrollTaxBreakdown } from "../billing/payrollTaxService";
 import { PayrollAutomationEngine } from "../payrollAutomation";
 import { createLogger } from "../../lib/logger";
 
@@ -40,6 +41,8 @@ export interface PayrollHoursSummary {
   periodEnd: Date;
   employeeSummaries: EmployeePayrollSummary[];
   totalPayrollAmount: number;
+  totalPayrollTaxes: number;
+  totalNetPay: number;
   warnings: string[];
   entriesProcessed: number;
 }
@@ -59,6 +62,8 @@ export interface EmployeePayrollSummary {
   overtimePay: number;
   holidayPay: number;
   grossPay: number;
+  netPay: number;
+  taxes: PayrollTaxBreakdown | null;
   warnings: string[];
 }
 
@@ -112,6 +117,18 @@ export async function aggregatePayrollHours(params: {
   // Holiday calendar and timezone for timezone-aware holiday detection
   const holidayCalendar = workspace.holidayCalendar as any[] || [];
   const workspaceTimezone = workspace.timezone || "America/New_York";
+  const overtimeMultiplier = parseFloat(workspace.overtimePayMultiplier || "1.50");
+  const defaultHolidayMultiplier = parseFloat(workspace.holidayPayMultiplier || "2.00");
+  const payrollSchedule = (workspace.payrollSchedule || workspace.payrollCycle || 'biweekly').toString().toLowerCase();
+  const payPeriodMap: Record<string, PayPeriod> = {
+    weekly: 'weekly',
+    biweekly: 'biweekly',
+    'bi-weekly': 'biweekly',
+    semimonthly: 'semimonthly',
+    'semi-monthly': 'semimonthly',
+    monthly: 'monthly',
+  };
+  const payPeriod = payPeriodMap[payrollSchedule] || 'biweekly';
 
   // Find all approved, unpayrolled time entries in period
   // Training guard: exclude entries linked to training shifts (isTrainingShift=true)
@@ -145,6 +162,8 @@ export async function aggregatePayrollHours(params: {
       periodEnd: endDate,
       employeeSummaries: [],
       totalPayrollAmount: 0,
+      totalPayrollTaxes: 0,
+      totalNetPay: 0,
       warnings: ['No approved, unpayrolled time entries found in this period'],
       entriesProcessed: 0,
     };
@@ -180,8 +199,24 @@ export async function aggregatePayrollHours(params: {
     employeeGroups.get(employeeId)!.push(entry);
   }
 
+  const employeeIds = Array.from(employeeGroups.keys());
+  const payrollInfoRows = employeeIds.length > 0
+    ? await db.select({
+        employeeId: employeePayrollInfo.employeeId,
+        taxFilingStatus: employeePayrollInfo.taxFilingStatus,
+        federalAllowances: employeePayrollInfo.federalAllowances,
+        additionalWithholding: employeePayrollInfo.additionalWithholding,
+        stateOfResidence: employeePayrollInfo.stateOfResidence,
+      })
+        .from(employeePayrollInfo)
+        .where(inArray(employeePayrollInfo.employeeId, employeeIds))
+    : [];
+  const payrollInfoMap = new Map(payrollInfoRows.map(row => [row.employeeId, row]));
+
   const employeeSummaries: EmployeePayrollSummary[] = [];
   let totalPayrollAmount = 0;
+  let totalPayrollTaxes = 0;
+  let totalNetPay = 0;
 
   // Process each employee group
   for (const [employeeId, entries] of Array.from(employeeGroups)) {
@@ -270,12 +305,17 @@ export async function aggregatePayrollHours(params: {
       // 1099 contractors: ALL hours are regular — no overtime or holiday multipliers
       // They are paid straight rate regardless of hours worked (no FLSA OT protection)
       let hoursBucket: { regularHours: number; overtimeHours: number; holidayHours: number };
+      let holidayMultiplier = defaultHolidayMultiplier;
       
       if (isContractor) {
         hoursBucket = { regularHours: totalHours, overtimeHours: 0, holidayHours: 0 };
       } else {
         // Timezone-aware holiday detection using workspace holiday calendar
-        const isHoliday = isHolidayDate(timeEntry.clockIn, holidayCalendar, workspaceTimezone);
+        const holidayEntry = getHolidayEntry(timeEntry.clockIn, holidayCalendar, workspaceTimezone);
+        const isHoliday = !!holidayEntry;
+        if (holidayEntry?.payMultiplier) {
+          holidayMultiplier = holidayEntry.payMultiplier;
+        }
         
         hoursBucket = bucketHours({
           totalHours,
@@ -291,8 +331,8 @@ export async function aggregatePayrollHours(params: {
 
       // Calculate pay amounts
       const regularPay = calculateAmount(hoursBucket.regularHours, resolved.payRate);
-      const overtimePay = calculateAmount(hoursBucket.overtimeHours, resolved.payRate * 1.5);
-      const holidayPay = calculateAmount(hoursBucket.holidayHours, resolved.payRate * 2.0);
+      const overtimePay = calculateAmount(hoursBucket.overtimeHours, resolved.payRate * overtimeMultiplier);
+      const holidayPay = calculateAmount(hoursBucket.holidayHours, resolved.payRate * holidayMultiplier);
       const totalPay = regularPay + overtimePay + holidayPay;
 
       // Get client name from batch-loaded map
@@ -366,6 +406,31 @@ export async function aggregatePayrollHours(params: {
     }
 
     const grossPay = employeeRegularPay + employeeOvertimePay + employeeHolidayPay;
+    let taxes: PayrollTaxBreakdown | null = null;
+    let netPay = grossPay;
+    if (!isContractor) {
+      const payrollInfo = payrollInfoMap.get(employeeId);
+      const filingStatusRaw = (payrollInfo?.taxFilingStatus || 'single').toString().toLowerCase().replace(/\s+/g, '_');
+      const filingStatus: FilingStatus =
+        filingStatusRaw === 'married' || filingStatusRaw === 'married_jointly'
+          ? 'married_jointly'
+          : filingStatusRaw === 'married_separately'
+            ? 'married_separately'
+            : filingStatusRaw === 'head_of_household'
+              ? 'head_of_household'
+              : 'single';
+      const state = (payrollInfo?.stateOfResidence || employee.state || workspace.stateLicenseState || 'CA').toString();
+      taxes = calculatePayrollTaxes({
+        grossWage: grossPay,
+        state,
+        payPeriod,
+        filingStatus,
+        allowances: payrollInfo?.federalAllowances ?? 0,
+        additionalWithholding: parseFloat(String(payrollInfo?.additionalWithholding || '0')),
+      });
+      netPay = taxes.netWage;
+      totalPayrollTaxes += taxes.totalDeductions;
+    }
 
     if (employeePayroll.length > 0) {
       employeeSummaries.push({
@@ -383,10 +448,13 @@ export async function aggregatePayrollHours(params: {
         overtimePay: employeeOvertimePay,
         holidayPay: employeeHolidayPay,
         grossPay,
+        netPay,
+        taxes,
         warnings: employeeWarnings,
       });
 
       totalPayrollAmount += grossPay;
+      totalNetPay += netPay;
     }
 
     warnings.push(...employeeWarnings);
@@ -400,6 +468,8 @@ export async function aggregatePayrollHours(params: {
     periodEnd: endDate,
     employeeSummaries,
     totalPayrollAmount,
+    totalPayrollTaxes,
+    totalNetPay,
     warnings,
     entriesProcessed: approvedEntries.length,
   };

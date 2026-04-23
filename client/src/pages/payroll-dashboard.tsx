@@ -581,8 +581,21 @@ export default function PayrollDashboard() {
                                     </UniversalModalDescription>
                                   </UniversalModalHeader>
                                   {isLoadingDetails ? (
-                                    <div className="flex justify-center p-8">
-                                      <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
+                                    <div className="space-y-4 p-4">
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {Array.from({ length: 4 }).map((_, i) => (
+                                          <div key={i} className="p-4 rounded-md bg-muted/50 space-y-2">
+                                            <Skeleton className="h-3 w-16" />
+                                            <Skeleton className="h-6 w-24" />
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <Skeleton className="h-4 w-32" />
+                                      <div className="space-y-2">
+                                        {Array.from({ length: 4 }).map((_, i) => (
+                                          <Skeleton key={i} className="h-12 w-full" />
+                                        ))}
+                                      </div>
                                     </div>
                                   ) : isErrorDetails ? (
                                     <div className="flex flex-col items-center justify-center p-8 text-center">

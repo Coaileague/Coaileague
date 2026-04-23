@@ -7,6 +7,7 @@ import { getTransferStatus, verifyPlaidWebhookJwt } from '../services/partners/p
 import { platformEventBus } from '../services/platformEventBus';
 import { broadcastToWorkspace } from '../websocket';
 import { createLogger } from '../lib/logger';
+import { tryClaimWebhookEvent } from '../services/infrastructure/webhookIdempotency';
 const log = createLogger('PlaidWebhookRoutes');
 
 
@@ -49,9 +50,18 @@ router.post('/', async (req, res) => {
   }
 
   const body = req.body || {};
-  const { webhook_type, webhook_code, transfer_id, event_type } = body;
+    const { webhook_type, webhook_code, transfer_id, event_type } = body;
 
-  try {
+    try {
+      const eventKey = transfer_id
+        ? `${transfer_id}:${event_type || webhook_code || 'unknown'}`
+        : (webhook_code || event_type || 'unknown');
+      const claimed = await tryClaimWebhookEvent('plaid', eventKey, webhook_code || event_type);
+      if (!claimed) {
+        log.info(`[PlaidWebhook] Duplicate webhook skipped: ${eventKey}`);
+        return;
+      }
+
     platformEventBus.publish({
       type: 'plaid_webhook_received',
       category: 'integration',

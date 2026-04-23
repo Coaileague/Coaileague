@@ -155,6 +155,13 @@ class AssistedOnboardingService {
 
       log.info(`[AssistedOnboarding] Created workspace ${workspace.id} for ${targetUserEmail} by support ${supportUserId}`);
 
+      try {
+        const { provisionWorkspace } = await import('./workspaceProvisioningService');
+        await provisionWorkspace({ workspaceId: workspace.id, ownerId: supportUserId });
+      } catch (provError: unknown) {
+        log.warn('[AssistedOnboarding] Workspace provisioning failed (non-blocking):', (provError as any)?.message);
+      }
+
       // Auto-initialize onboarding pipeline for the new workspace
       try {
         const { onboardingPipelineService } = await import('./onboardingPipelineService');

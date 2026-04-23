@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, CheckCircle2, XCircle, Clock, MapPin, Camera, DollarSign, Calendar, Filter, User, Building2 } from "lucide-react";
+import { TableSkeleton } from "@/components/loading-indicators/skeletons";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
@@ -225,10 +226,18 @@ export default function PendingTimeEntries() {
   };
 
   if (isLoading) {
+    const loadingConfig: CanvasPageConfig = {
+      id: 'pending-time-entries',
+      title: 'Time Entry Approvals',
+      subtitle: 'Review and approve pending time entries before automated invoicing and payroll',
+      category: 'operations',
+    };
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <CanvasHubPage config={loadingConfig}>
+        <div className="space-y-4">
+          <TableSkeleton rows={6} columns={4} showAvatar={false} />
+        </div>
+      </CanvasHubPage>
     );
   }
 

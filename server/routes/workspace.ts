@@ -270,6 +270,13 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     }
 
     try {
+      const { provisionWorkspace } = await import('../services/workspaceProvisioningService');
+      await provisionWorkspace({ workspaceId: workspace.id, ownerId: userId });
+    } catch (provError: unknown) {
+      log.warn(`[Workspace Create] Provisioning failed (non-blocking):`, (provError as any)?.message);
+    }
+
+    try {
       await storage.createAuditLog({
         userId,
         workspaceId: workspace.id,

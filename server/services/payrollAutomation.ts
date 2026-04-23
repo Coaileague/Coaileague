@@ -2286,117 +2286,39 @@ export async function executePayrollEntry(
   // ── PLAID ACH DISBURSEMENT ────────────────────────────────────────────────
   // If the org has a Plaid-connected funding account and the employee has a
   // Plaid-linked bank account, initiate an ACH credit transfer automatically.
-  // This is the canonical automated disbursement path for orgs without Stripe Connect.
   try {
-    const { isPlaidConfigured, initiateTransfer, plaidDecrypt } = await import('./partners/plaidService');
-    if (isPlaidConfigured()) {
-      // Look up org's Plaid funding account
-      const { orgFinanceSettings } = await import('@shared/schema');
-      const [orgFinance] = await db.select({
-        plaidAccessTokenEncrypted: orgFinanceSettings.plaidAccessTokenEncrypted,
-        plaidAccountId: orgFinanceSettings.plaidAccountId,
-      }).from(orgFinanceSettings).where(eq(orgFinanceSettings.workspaceId, workspaceId)).limit(1).catch(() => []);
+    const { initiatePayrollAchTransfer } = await import('./payroll/achTransferService');
+    const achResult = await initiatePayrollAchTransfer({
+      workspaceId,
+      employeeId,
+      payrollRunId: entry.payrollRunId,
+      payrollEntryId: entry.id,
+      amount: netPay,
+      idempotencyKey: `payroll-entry-${entry.id}`,
+      description: 'Payroll',
+      legalName: employeeId,
+    });
 
-      // Look up employee's Plaid-linked receiving bank account
-      const { employeeBankAccounts } = await import('@shared/schema');
-      const [empBank] = await db.select({
-        plaidAccessTokenEncrypted: employeeBankAccounts.plaidAccessTokenEncrypted,
-        plaidAccountId: employeeBankAccounts.plaidAccountId,
-        plaidInstitutionName: employeeBankAccounts.plaidInstitutionName,
-      }).from(employeeBankAccounts).where(and(
-        eq(employeeBankAccounts.employeeId, employeeId),
-        eq(employeeBankAccounts.isActive, true),
-        eq(employeeBankAccounts.isPrimary, true),
-      )).limit(1).catch(() => []);
+    if (achResult.status === 'initiated') {
+      log.info(`[InternalPayroll] Plaid ACH transfer initiated for ${employeeId}: ${achResult.transferId} ($${netPay})`);
+      return {
+        success: true,
+        employeeId,
+        netPay,
+        paymentMethod: 'plaid_ach',
+        plaidTransferId: achResult.transferId,
+      };
+    }
 
-      if (orgFinance?.plaidAccessTokenEncrypted && orgFinance?.plaidAccountId &&
-          empBank?.plaidAccessTokenEncrypted && empBank?.plaidAccountId) {
-        // Decrypt employee's access token (employee's bank is the credit destination)
-        const empAccessToken = plaidDecrypt(empBank.plaidAccessTokenEncrypted);
-
-        // Compensating-transaction step 1: write PENDING row BEFORE touching Plaid.
-        // If our server dies between the Plaid call and the DB update, this row is
-        // the only record of the in-flight transfer and reconciliation needs it.
-        const { plaidTransferAttempts } = await import('@shared/schema');
-        const [pendingRecord] = await db.insert(plaidTransferAttempts).values({
-          workspaceId,
-          employeeId,
-          payrollRunId: entry.payrollRunId,
-          payrollEntryId: entry.id,
-          amount: netPay.toFixed(2),
-          status: 'pending',
-        } as any).returning().catch(() => [null as any]);
-
-        let transfer: { transferId: string };
-        try {
-          // Initiate credit transfer — funds flow from org funding account TO employee bank
-          // GAP-36 FIX: Pass payroll entry ID as idempotency key so Plaid deduplicates
-          // if two concurrent payroll process requests race for the same entry — preventing
-          // a double ACH transfer being issued for the same pay stub.
-          transfer = await initiateTransfer({
-            accessToken: empAccessToken,
-            accountId: empBank.plaidAccountId,
-            amount: netPay.toFixed(2),
-            description: `Payroll`,
-            legalName: employeeId, // full name not available here; monitor resolves it
-            type: 'credit',
-            idempotencyKey: `payroll-entry-${entry.id}`,
-          });
-
-          // Compensating-transaction step 2: Plaid accepted — mark INITIATED
-          // with the transfer ID. The webhook will later flip this to completed.
-          if (pendingRecord?.id) {
-            await db.update(plaidTransferAttempts).set({
-              status: 'initiated',
-              transferId: transfer.transferId,
-              initiatedAt: new Date(),
-            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
-          }
-        } catch (plaidErr: any) {
-          // Compensating-transaction step 3: Plaid rejected — no money moved,
-          // mark FAILED and preserve the record for reconciliation.
-          if (pendingRecord?.id) {
-            await db.update(plaidTransferAttempts).set({
-              status: 'failed',
-              errorMessage: plaidErr?.message ?? String(plaidErr),
-            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
-          }
-          throw plaidErr;
-        }
-
-        // Record transfer ID on the payroll entry using the dedicated Plaid column.
-        // Also update any existing payStub linked to this entry so the transfer monitor can find it.
-        await db.update(payrollEntries).set({
-          plaidTransferId: transfer.transferId,
-          plaidTransferStatus: 'pending',
-          disbursementMethod: 'plaid_ach',
-          disbursedAt: new Date(),
-        } as any).where(eq(payrollEntries.id, entry.id)).catch(() => null);
-
-        // Upsert plaidTransferId onto the associated payStub so the TransferMonitor can poll it.
-        const { payStubs: payStubsTable } = await import('@shared/schema');
-        const existingStub = await db.select({ id: payStubsTable.id })
-          .from(payStubsTable)
-          .where(eq(payStubsTable.payrollEntryId, entry.id))
-          .limit(1).catch(() => []);
-
-        if (existingStub.length > 0) {
-          await db.update(payStubsTable).set({
-            plaidTransferId: transfer.transferId,
-            plaidTransferStatus: 'pending',
-            updatedAt: new Date(),
-          }).where(eq(payStubsTable.id, existingStub[0].id)).catch(() => null);
-        }
-
-        log.info(`[InternalPayroll] Plaid ACH transfer initiated for ${employeeId}: ${transfer.transferId} ($${netPay})`);
-        return {
-          success: true,
-          employeeId,
-          netPay,
-          paymentMethod: 'plaid_ach',
-          plaidTransferId: transfer.transferId,
-        };
-      }
+    if (achResult.status === 'payment_held') {
+      log.warn(`[InternalPayroll] Plaid ACH transfer held for ${employeeId}: ${achResult.reason}`);
+      return {
+        success: true,
+        employeeId,
+        netPay,
+        paymentMethod: 'pending_manual_payment',
+        error: achResult.reason,
+      };
     }
   } catch (err: any) {
     // Non-fatal — fall through to manual if Plaid ACH fails

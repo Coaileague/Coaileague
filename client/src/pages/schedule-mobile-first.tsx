@@ -44,6 +44,7 @@ import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { TrinityLoadingSpinner } from '@/components/trinity-loading-overlay';
 import { useSimpleMode } from '@/contexts/SimpleModeContext';
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
+import { ShiftCardSkeleton } from '@/components/ui/skeleton-loaders';
 import type { Shift, Employee, Client } from '@shared/schema';
 import { getShiftStatus, SHIFT_STATUS, type ShiftStatusConfig } from '@/constants/scheduling';
 
@@ -805,11 +806,10 @@ export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMo
 
         <div className="pb-24">
           {shiftsLoading || (viewMode === 'my' && !currentEmployee?.id) ? (
-            <div className="px-3 py-4 space-y-2">
+            <div className="px-3 py-4 space-y-3">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-16 bg-muted/50 rounded-lg animate-pulse" />
+                <ShiftCardSkeleton key={i} />
               ))}
-              <p className="text-center text-xs text-muted-foreground mt-2">Loading schedule...</p>
             </div>
           ) : viewMode === 'pending' ? (
             /* Pending View - Compact list */

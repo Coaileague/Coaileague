@@ -127,6 +127,7 @@ import {
 import { rateLimitMiddleware } from "../services/infrastructure/rateLimiting";
 import { idempotencyMiddleware } from "../middleware/idempotency";
 import { mutationLimiter } from "../middleware/rateLimiter";
+import { isValidPayrollTransition, resolvePayrollLifecycleStatus } from "../services/payroll/payrollStateMachine";
 import { createLogger } from '../lib/logger';
 const log = createLogger('PayrollRoutes');
 
@@ -863,8 +864,12 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       }
       // ─────────────────────────────────────────────────────────────────────────────
 
-      if (run.status !== 'pending') {
-        return res.status(422).json({ message: "Only pending payroll runs can be approved" });
+      if (!isValidPayrollTransition(run.status, 'approved')) {
+        const lifecycleStatus = resolvePayrollLifecycleStatus(run.status);
+        return res.status(422).json({
+          message: "Only payroll runs pending review can be approved",
+          currentStatus: lifecycleStatus || run.status,
+        });
       }
 
       // FIX [GAP-11 FOUR-EYES RUN APPROVAL]: The manager who created the payroll run
@@ -990,8 +995,12 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       }
       // ─────────────────────────────────────────────────────────────────────────────
 
-      if (run.status !== 'approved') {
-        return res.status(422).json({ message: "Only approved payroll runs can be processed" });
+      if (!isValidPayrollTransition(run.status, 'processing')) {
+        const lifecycleStatus = resolvePayrollLifecycleStatus(run.status);
+        return res.status(422).json({
+          message: "Only approved payroll runs can be processed",
+          currentStatus: lifecycleStatus || run.status,
+        });
       }
 
       const updated = await storage.updatePayrollRunStatus(id, 'processed', userId, workspaceId);
@@ -1851,11 +1860,17 @@ router.delete("/deductions/:id", async (req: AuthenticatedRequest, res) => {
     if (!deduction) {
       return res.status(404).json({ error: "Deduction not found" });
     }
-    const [entry] = await db.select().from(payrollEntries).where(eq(payrollEntries.id, deduction.payrollEntryId));
+    const [entry] = await db.select().from(payrollEntries).where(and(
+      eq(payrollEntries.id, deduction.payrollEntryId),
+      eq(payrollEntries.workspaceId, workspaceId),
+    ));
     if (!entry) {
       return res.status(404).json({ error: "Associated payroll entry not found" });
     }
-    const [run] = await db.select().from(payrollRuns).where(eq(payrollRuns.id, entry.payrollRunId));
+    const [run] = await db.select().from(payrollRuns).where(and(
+      eq(payrollRuns.id, entry.payrollRunId),
+      eq(payrollRuns.workspaceId, workspaceId),
+    ));
     if (!run || run.workspaceId !== workspaceId) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -1880,11 +1895,17 @@ router.delete("/garnishments/:id", async (req: AuthenticatedRequest, res) => {
     if (!garnishment) {
       return res.status(404).json({ error: "Garnishment not found" });
     }
-    const [entry] = await db.select().from(payrollEntries).where(eq(payrollEntries.id, garnishment.payrollEntryId));
+    const [entry] = await db.select().from(payrollEntries).where(and(
+      eq(payrollEntries.id, garnishment.payrollEntryId),
+      eq(payrollEntries.workspaceId, workspaceId),
+    ));
     if (!entry) {
       return res.status(404).json({ error: "Associated payroll entry not found" });
     }
-    const [run] = await db.select().from(payrollRuns).where(eq(payrollRuns.id, entry.payrollRunId));
+    const [run] = await db.select().from(payrollRuns).where(and(
+      eq(payrollRuns.id, entry.payrollRunId),
+      eq(payrollRuns.workspaceId, workspaceId),
+    ));
     if (!run || run.workspaceId !== workspaceId) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -1979,18 +2000,27 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
 
         await db.update(payrollEntries)
           .set({ netPay: newNetPay.toFixed(2) as any, updatedAt: new Date() })
-          .where(eq(payrollEntries.id, payrollEntryId));
+          .where(and(
+            eq(payrollEntries.id, payrollEntryId),
+            eq(payrollEntries.workspaceId, workspaceId),
+          ));
 
         // Re-aggregate run totals so the payroll run header stays correct
         if (entry.payrollRunId) {
           const runEntries = await db.select({ netPay: payrollEntries.netPay, grossPay: payrollEntries.grossPay })
             .from(payrollEntries)
-            .where(eq(payrollEntries.payrollRunId, entry.payrollRunId));
+            .where(and(
+              eq(payrollEntries.payrollRunId, entry.payrollRunId),
+              eq(payrollEntries.workspaceId, workspaceId),
+            ));
           const runTotalNet   = runEntries.reduce((s, e) => s + parseFloat(String(e.netPay   || '0')), 0);
           const runTotalGross = runEntries.reduce((s, e) => s + parseFloat(String(e.grossPay || '0')), 0);
           await db.update(payrollRuns)
             .set({ totalNetPay: runTotalNet.toFixed(2) as any, totalGrossPay: runTotalGross.toFixed(2) as any, updatedAt: new Date() })
-            .where(eq(payrollRuns.id, entry.payrollRunId));
+            .where(and(
+              eq(payrollRuns.id, entry.payrollRunId),
+              eq(payrollRuns.workspaceId, workspaceId),
+            ));
         }
 
         storage.createAuditLog({
@@ -2554,9 +2584,10 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
     const run = await storage.getPayrollRun(runId, workspaceId);
     if (!run) return res.status(404).json({ message: 'Payroll run not found' });
 
-    if (run.status !== 'processed') {
+    if (!isValidPayrollTransition(run.status, 'paid')) {
+      const lifecycleStatus = resolvePayrollLifecycleStatus(run.status);
       return res.status(422).json({
-        message: `Only processed payroll runs can be marked as paid. Current status: ${run.status}`,
+        message: `Only processing payroll runs can be marked as paid. Current status: ${lifecycleStatus || run.status}`,
       });
     }
 
@@ -2572,7 +2603,10 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
         disbursedAt: now,
         disbursementMethod,
       })
-      .where(eq(payrollEntries.payrollRunId, runId));
+      .where(and(
+        eq(payrollEntries.payrollRunId, runId),
+        eq(payrollEntries.workspaceId, workspaceId),
+      ));
 
     try {
       const { writeLedgerEntry } = await import('../services/orgLedgerService');
@@ -2695,6 +2729,7 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
       .from(payStubs)
       .where(and(
         eq(payStubs.payrollRunId, runId),
+        eq(payStubs.workspaceId, workspaceId),
         sql`${payStubs.plaidTransferStatus} IN ('failed', 'poll_failed', 'returned')`,
       ));
 
@@ -2702,146 +2737,53 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
       return res.status(400).json({ message: 'No failed transfers found for this payroll run' });
     }
 
-    const { isPlaidConfigured, initiateTransfer, verifyBankAccount, plaidDecrypt } = await import('../services/partners/plaidService');
-    if (!isPlaidConfigured()) {
-      return res.status(503).json({ message: 'Plaid is not configured — cannot retry transfers' });
-    }
-
-    const { orgFinanceSettings, employeeBankAccounts: empBankTable } = await import('@shared/schema');
-
-    const [orgFinance] = await db.select({
-      plaidAccessTokenEncrypted: orgFinanceSettings.plaidAccessTokenEncrypted,
-      plaidAccountId: orgFinanceSettings.plaidAccountId,
-    }).from(orgFinanceSettings).where(eq(orgFinanceSettings.workspaceId, workspaceId)).limit(1).catch(() => []);
-
-    if (!orgFinance?.plaidAccessTokenEncrypted) {
-      return res.status(400).json({ message: 'No organization funding bank account connected — cannot retry transfers' });
-    }
+    const { initiatePayrollAchTransfer } = await import('../services/payroll/achTransferService');
 
     const results: { stubId: string; employeeId: string; status: 'retried' | 'skipped' | 'failed'; transferId?: string; reason?: string }[] = [];
 
     for (const stub of failedStubs) {
       try {
         const empId = stub.employeeId;
-        const [empBank] = await db.select({
-          plaidAccessTokenEncrypted: empBankTable.plaidAccessTokenEncrypted,
-          plaidAccountId: empBankTable.plaidAccountId,
-        }).from(empBankTable).where(and(
-          eq(empBankTable.employeeId, empId),
-          eq(empBankTable.isActive, true),
-          eq(empBankTable.isPrimary, true),
-        )).limit(1).catch(() => []);
-
-        if (!empBank?.plaidAccessTokenEncrypted) {
-          results.push({ stubId: stub.id, employeeId: empId, status: 'skipped', reason: 'No employee bank account connected' });
-          continue;
-        }
-
-        const empAccessToken = plaidDecrypt(empBank.plaidAccessTokenEncrypted);
-        const verification = await verifyBankAccount(empAccessToken);
-        if (!verification.valid) {
-          // OMEGA-L6: PAYMENT_HELD gate — unverified bank account must NOT receive an ACH transfer.
-          // Set plaidTransferStatus = 'payment_held' on the pay stub so payroll dashboard surfaces
-          // the issue and managers can prompt the employee to complete bank verification.
-          await db.update(payStubs).set({
-            plaidTransferStatus: 'payment_held',
-            updatedAt: new Date(),
-          } as any).where(eq(payStubs.id, stub.id)).catch((dbErr: unknown) => {
-            log.error('[PayrollRoute] Failed to stamp PAYMENT_HELD on pay stub:', { stubId: stub.id, error: dbErr });
-          });
-          results.push({ stubId: stub.id, employeeId: empId, status: 'skipped', reason: `PAYMENT_HELD — bank account not Plaid-verified: ${verification.status}` });
-          continue;
-        }
-
         const netPay = parseFloat(String(stub.netPay ?? 0));
-
-        // Compensating-transaction step 1: write PENDING row BEFORE touching Plaid.
-        // Mirrors the main disbursement path in payrollAutomation.ts. If this
-        // retry loop crashes between Plaid success and pay-stub UPDATE, the
-        // attempt row with its transfer_id is the only authoritative record
-        // reconciliation can use to find the in-flight transfer.
-        const { plaidTransferAttempts } = await import('@shared/schema');
-        const [pendingRecord] = await db.insert(plaidTransferAttempts).values({
+        const transferResult = await initiatePayrollAchTransfer({
           workspaceId,
           employeeId: empId,
           payrollRunId: runId,
-          payrollEntryId: null,
-          amount: netPay.toFixed(2),
-          status: 'pending',
-        } as any).returning().catch(() => [null as any]);
+          payrollEntryId: stub.payrollEntryId || null,
+          payStubId: stub.id,
+          amount: netPay,
+          idempotencyKey: `retry-${stub.id}`,
+          description: 'Payroll Retry',
+          legalName: empId,
+        });
 
-        // GAP-AUDIT-1 FIX: Pass stub-derived idempotencyKey so Plaid can deduplicate
-        // at the API level if this retry loop executes twice (e.g. user double-clicks,
-        // network timeout causes client to re-POST, or server restarts mid-loop).
-        // Without this, two concurrent retry requests for the same failed stub would
-        // produce two Plaid transfer authorizations for the same employee — double pay.
-        let transfer: Awaited<ReturnType<typeof initiateTransfer>>;
-        try {
-          transfer = await initiateTransfer({
-            accessToken: empAccessToken,
-            accountId: empBank.plaidAccountId!,
-            amount: netPay.toFixed(2),
-            description: 'Payroll Retry',
-            legalName: empId,
-            type: 'credit',
-            idempotencyKey: `retry-${stub.id}`,
-          });
+        if (transferResult.status === 'initiated') {
+          platformEventBus.publish({
+            type: 'payroll_transfer_initiated' as any,
+            category: 'payroll',
+            title: 'ACH Transfer Retry Initiated',
+            description: `Retry transfer ${transferResult.transferId} initiated for employee ${empId}`,
+            workspaceId,
+            userId,
+            metadata: { payrollRunId: runId, employeeId: empId, transferId: transferResult.transferId, amount: netPay, isRetry: true },
+            visibility: 'manager',
+          }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
-          // Compensating-transaction step 2: Plaid accepted — mark INITIATED
-          // with the transfer ID. The webhook will later flip this to completed.
-          if (pendingRecord?.id) {
-            await db.update(plaidTransferAttempts).set({
-              status: 'initiated',
-              transferId: transfer.transferId,
-              initiatedAt: new Date(),
-            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
-          }
-        } catch (plaidErr: any) {
-          // Compensating-transaction step 3: Plaid rejected — no money moved.
-          if (pendingRecord?.id) {
-            await db.update(plaidTransferAttempts).set({
-              status: 'failed',
-              errorMessage: plaidErr?.message ?? String(plaidErr),
-            } as any).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
-          }
-          throw plaidErr;
+          results.push({ stubId: stub.id, employeeId: empId, status: 'retried', transferId: transferResult.transferId });
+          continue;
         }
 
-        // GAP-49 FIX: The DB update that persists the transferId is now wrapped in its own
-        // try/catch SEPARATE from the initiateTransfer() call above.
-        // Previously: one outer catch handled both. If initiateTransfer() succeeded but the
-        // DB update failed, the outer catch would push status='failed' — hiding the fact
-        // that money was already in flight. The Plaid webhook would arrive referencing a
-        // transferId that no pay stub record knew about, so the transfer settled silently
-        // with no employee pay confirmation and no employer ledger entry.
-        // Fix: on DB update failure we log the transferId CRITICALLY (auditable for manual
-        // reconciliation) and still push status='retried' so the caller reports the truth.
-        try {
-          await db.update(payStubs).set({
-            plaidTransferId: transfer.transferId,
-            plaidTransferStatus: 'pending',
-            updatedAt: new Date(),
-          } as any).where(eq(payStubs.id, stub.id));
-        } catch (dbErr: unknown) {
-          log.error(
-            '[FinancialAudit] CRITICAL: Plaid transfer initiated but pay stub DB update failed — attempt row holds transfer_id for reconciliation.',
-            { payStubId: stub.id, employeeId: empId, transferId: transfer.transferId, attemptId: pendingRecord?.id, amount: netPay, runId, error: (dbErr as any)?.message }
-          );
-          // Fall through: transfer IS in flight, we report it as retried despite tracking failure
+        if (transferResult.status === 'payment_held') {
+          results.push({ stubId: stub.id, employeeId: empId, status: 'skipped', reason: transferResult.reason || 'PAYMENT_HELD' });
+          continue;
         }
 
-        platformEventBus.publish({
-          type: 'payroll_transfer_initiated' as any,
-          category: 'payroll',
-          title: 'ACH Transfer Retry Initiated',
-          description: `Retry transfer ${transfer.transferId} initiated for employee ${empId}`,
-          workspaceId,
-          userId,
-          metadata: { payrollRunId: runId, employeeId: empId, transferId: transfer.transferId, amount: netPay, isRetry: true },
-          visibility: 'manager',
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        if (transferResult.status === 'skipped') {
+          results.push({ stubId: stub.id, employeeId: empId, status: 'skipped', reason: transferResult.reason || 'Transfer skipped' });
+          continue;
+        }
 
-        results.push({ stubId: stub.id, employeeId: empId, status: 'retried', transferId: transfer.transferId });
+        results.push({ stubId: stub.id, employeeId: empId, status: 'failed', reason: transferResult.reason || 'Transfer failed' });
       } catch (err: unknown) {
         results.push({ stubId: stub.id, employeeId: stub.employeeId, status: 'failed', reason: (err instanceof Error ? err.message : String(err)) });
       }
@@ -2891,7 +2833,10 @@ router.post('/:entryId/amend', async (req: AuthenticatedRequest, res) => {
       const [parentRun] = await db
         .select({ status: payrollRuns.status })
         .from(payrollRuns)
-        .where(eq(payrollRuns.id, entryForRunCheck.payrollRunId))
+        .where(and(
+          eq(payrollRuns.id, entryForRunCheck.payrollRunId),
+          eq(payrollRuns.workspaceId, workspaceId),
+        ))
         .limit(1);
 
       if (parentRun?.status === 'paid') {
@@ -2974,7 +2919,10 @@ router.get('/export/pdf/:runId', async (req: AuthenticatedRequest, res) => {
       netPay: payrollEntries.netPay,
       workerType: payrollEntries.workerType,
     }).from(payrollEntries)
-      .where(eq(payrollEntries.payrollRunId, runId));
+      .where(and(
+        eq(payrollEntries.payrollRunId, runId),
+        eq(payrollEntries.workspaceId, workspaceId),
+      ));
 
     const workspace = await storage.getWorkspace(workspaceId);
     const { employees: employeesTable } = await import('@shared/schema');
@@ -3475,6 +3423,37 @@ router.get('/employees/:employeeId/bank-accounts', async (req: AuthenticatedRequ
     res.json({ success: true, bankAccounts: rows.map(maskBankAccount) });
   } catch (error: unknown) {
     log.error('[BankAccounts] GET error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+router.post('/employees/:employeeId/bank-accounts/verify', async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId;
+    const userId = req.user?.id;
+    if (!workspaceId || !userId) return res.status(400).json({ error: 'Workspace and user required' });
+    const { employeeId } = req.params;
+
+    const [employee] = await db.select({ userId: employees.userId })
+      .from(employees)
+      .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+      .limit(1);
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+
+    if (!requireManagerOrOwn(req, employee.userId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { verifyEmployeeBankAccount } = await import('../services/payroll/achTransferService');
+    const verification = await verifyEmployeeBankAccount({
+      workspaceId,
+      employeeId,
+      verifiedBy: userId,
+    });
+
+    res.json({ success: verification.valid, status: verification.status });
+  } catch (error: unknown) {
+    log.error('[BankAccounts] VERIFY error:', error);
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
