@@ -1607,6 +1607,27 @@ async function gracefulShutdown(signal: string): Promise<void> {
         log.warn('HTTP server close timeout, forcing');
         resolve();
       }, 5000);
+  // Close WebSocket connections
+  if (global.wss && typeof global.wss.close === 'function') {
+    try {
+      global.wss.close(() => {
+        log.info('WebSocket server closed');
+      });
+    } catch (e) {
+      log.error('Error closing WebSocket server', { error: e instanceof Error ? { message: e.message } : String(e) });
+    }
+  }
+  
+  // Clean up event listeners
+  process.removeAllListeners('uncaughtException');
+  process.removeAllListeners('unhandledRejection');
+  
+  // Clear all timers
+  // Note: This could be aggressive - only clear non-core timers in production
+  if (global.gc) {
+    log.info('Running garbage collection');
+    global.gc();
+  }
       
       serverInstance.close(() => {
         clearTimeout(shutdownTimeout);

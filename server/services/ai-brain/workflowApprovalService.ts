@@ -508,7 +508,8 @@ class WorkflowApprovalService {
           const result = await universalNotificationEngine.sendNotification({
             workspaceId: targetWorkspaceId,
             userId: user.id,
-            type: 'ai_approval_needed',
+            idempotencyKey: `notif-${Date.now()}`,
+          type: 'ai_approval_needed',
             title,
             message,
             severity: approval.riskLevel === 'critical' ? 'error' : approval.riskLevel === 'high' ? 'warning' : 'info',

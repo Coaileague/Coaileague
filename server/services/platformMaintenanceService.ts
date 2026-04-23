@@ -343,7 +343,8 @@ class PlatformMaintenanceService {
     try {
       await universalNotificationEngine.sendNotification({
         workspaceId: '*', // Platform-wide
-        type: 'system',
+        idempotencyKey: `notif-${Date.now()}`,
+          type: 'system',
         title: 'Support Audit',
         message,
         severity: this.getActionSeverity(event.action) as any,

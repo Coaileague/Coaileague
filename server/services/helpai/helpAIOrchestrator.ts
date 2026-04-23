@@ -1630,7 +1630,8 @@ Return ONLY valid JSON:
       await universalNotificationEngine.sendNotification({
         workspaceId,
         userId: 'system',
-        type: 'issue_detected',
+        idempotencyKey: `notif-${Date.now()}`,
+          type: 'issue_detected',
         title: `Agent Review Required: ${taskType}`,
         message: `HelpAI denied the agent output for "${taskType}" and retries are exhausted. Manual review required.`,
         severity: 'warning',
@@ -1643,7 +1644,8 @@ Return ONLY valid JSON:
     await universalNotificationEngine.sendNotification({
       workspaceId,
       userId: 'system',
-      type: 'issue_detected',
+      idempotencyKey: `notif-${Date.now()}`,
+          type: 'issue_detected',
       title: `Agent Review Required: ${taskType}`,
       message: `Trinity was unable to complete "${taskType}" automatically. HelpAI escalated to management. Manual review required.`,
       severity: 'warning',

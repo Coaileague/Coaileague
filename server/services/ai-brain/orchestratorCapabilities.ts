@@ -174,7 +174,8 @@ export class ServiceController {
     
     // Log the action via UniversalNotificationEngine for Trinity AI enrichment
     await universalNotificationEngine.sendNotification({
-      type: 'system_update',
+      idempotencyKey: `notif-${Date.now()}`,
+          type: 'system_update',
       title: `Service Restart: ${serviceName}`,
       message: `AI Brain initiated restart of ${serviceName} service`,
       targetUserIds: [userId],
@@ -241,7 +242,8 @@ export class FeatureToggleManager {
 
     // Create notification for the change via UniversalNotificationEngine
     await universalNotificationEngine.sendNotification({
-      type: 'system_update',
+      idempotencyKey: `notif-${Date.now()}`,
+          type: 'system_update',
       title: `Feature Toggle Updated`,
       message: `${request.featurePath} ${request.enabled ? 'enabled' : 'disabled'}: ${request.reason}`,
       // @ts-expect-error — TS migration: fix in refactoring sprint

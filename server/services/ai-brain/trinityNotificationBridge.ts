@@ -475,7 +475,8 @@ class TrinityNotificationBridge {
         for (const userId of payload.targetAudience.userIds) {
           try {
             await universalNotificationEngine.sendNotification({
-              type: 'system',
+              idempotencyKey: `notif-${Date.now()}`,
+          type: 'system',
               title: payload.title,
               message: payload.message,
               // @ts-expect-error — TS migration: fix in refactoring sprint

@@ -506,7 +506,8 @@ class ComplianceEnforcementService {
         log.info(`[ComplianceEnforcement] Day-13 warning for ${win.entityType} ${win.entityId}`);
         try {
           await universalNotificationEngine.sendNotification({
-            type: 'compliance_warning',
+            idempotencyKey: `notif-${Date.now()}`,
+          type: 'compliance_warning',
             title: 'FINAL WARNING: Compliance Deadline Tomorrow',
             message: `${win.entityType === 'officer' ? 'Officer' : 'Organization'} (${win.entityId}) has 1 day remaining to submit required compliance documents before account freeze. This is the final warning.`,
             // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -530,7 +531,8 @@ class ComplianceEnforcementService {
         log.info(`[ComplianceEnforcement] Day-11 warning for ${win.entityType} ${win.entityId}`);
         try {
           await universalNotificationEngine.sendNotification({
-            type: 'compliance_warning',
+            idempotencyKey: `notif-${Date.now()}`,
+          type: 'compliance_warning',
             title: 'Compliance Warning: 3 Days Remaining',
             message: `${win.entityType === 'officer' ? 'Officer' : 'Organization'} (${win.entityId}) has 3 days to submit required compliance documents. Failure to comply will result in account freeze.`,
             // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -650,7 +652,8 @@ class ComplianceEnforcementService {
           universalNotificationEngine.sendNotification({
             workspaceId: wsId,
             recipientRole: 'manager',
-            type: 'compliance_document_expired',
+            idempotencyKey: `notif-${Date.now()}`,
+          type: 'compliance_document_expired',
             priority: 'high',
             title: 'Compliance Document Expired',
             message: `Required document(s) expired for ${win.entityType} ${win.entityId}: ${expiredTypes.join(', ')}. Account is${isStillCompliant ? '' : ' no longer'} compliant. Immediate renewal required.`,
@@ -658,7 +661,8 @@ class ComplianceEnforcementService {
           }).catch((e: unknown) => log.error('[ComplianceEnforcement] expiry notify failed:', e));
 
           platformEventBus.publish({
-            type: 'compliance_document_expired',
+            idempotencyKey: `notif-${Date.now()}`,
+          type: 'compliance_document_expired',
             workspaceId: wsId,
             metadata: { windowId: win.id, entityType: win.entityType, entityId: win.entityId, expiredDocTypes: expiredTypes, isStillCompliant },
           });

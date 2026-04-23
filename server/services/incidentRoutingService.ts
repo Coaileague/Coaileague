@@ -189,6 +189,7 @@ export class IncidentRoutingService {
           workspaceId: data.workspaceId,
           userId: supervisor.userId || supervisor.id,
           type: 'issue_detected',
+          idempotencyKey: `incident-supervisor-${incident.id}-${supervisor.id}`,  // ← LOOP GUARD
           title: `Security Incident Reported - ${severity.toUpperCase()} Priority`,
           message: `A ${data.type.replace(/_/g, ' ')} incident has been reported: ${data.description.substring(0, 150)}. Immediate supervisor review required.`,
           severity: severity === 'critical' ? 'critical' : 'warning',
@@ -230,6 +231,7 @@ export class IncidentRoutingService {
               workspaceId: data.workspaceId,
               userId: owner.userId || owner.id,
               type: 'issue_detected',
+              idempotencyKey: `incident-owner-${incident.id}-${owner.id}`,  // ← LOOP GUARD
               title: `URGENT: ${severity.toUpperCase()} Security Incident - Escalated to Owner`,
               message: `A ${data.type.replace(/_/g, ' ')} incident requires your immediate attention: ${data.description.substring(0, 150)}. This was escalated directly because no managers are configured in your organization.`,
               severity: 'critical',
@@ -256,6 +258,7 @@ export class IncidentRoutingService {
             workspaceId: data.workspaceId,
             userId: manager.userId || manager.id,
             type: 'issue_detected',
+            idempotencyKey: `incident-manager-${incident.id}-${manager.id}`,  // ← LOOP GUARD
             title: `${severity.toUpperCase()} Security Incident - Manager Action Required`,
             message: `A ${data.type.replace(/_/g, ' ')} incident has been reported and requires manager review: ${data.description.substring(0, 200)}`,
             severity: severity === 'critical' ? 'critical' : 'warning',
@@ -269,7 +272,17 @@ export class IncidentRoutingService {
 
           if (severity === 'critical' && manager.phone) {
             try {
-              await NotificationDeliveryService.send({ type: 'incident_alert', workspaceId: data.workspaceId || 'system', recipientUserId: manager.id || manager.phone, channel: 'sms', body: { to: manager.phone, body: `CRITICAL INCIDENT: ${data.type} reported. ${data.description.substring(0, 100)}. Login to CoAIleague for details.` } });
+              await NotificationDeliveryService.send({ 
+                type: 'incident_alert', 
+                workspaceId: data.workspaceId || 'system', 
+                recipientUserId: manager.id || manager.phone, 
+                channel: 'sms',
+                idempotencyKey: `incident-sms-${incident.id}-${manager.id}`,  // ← LOOP GUARD
+                body: { 
+                  to: manager.phone, 
+                  body: `CRITICAL INCIDENT: ${data.type} reported. ${data.description.substring(0, 100)}. Login to CoAIleague for details.` 
+                } 
+              });
               routingDetails.push(`SMS sent to manager: ${manager.firstName} ${manager.lastName}`);
             } catch (smsError) {
               escalationFailures.push(`SMS failed for ${manager.firstName} ${manager.lastName}: ${smsError}`);

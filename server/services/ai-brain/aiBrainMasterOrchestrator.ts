@@ -2201,7 +2201,8 @@ class AIBrainMasterOrchestrator {
               };
             }
             await universalNotificationEngine.sendNotification({
-              type: type || 'announcement',
+              idempotencyKey: `notif-${Date.now()}`,
+          type: type || 'announcement',
               title,
               message,
               workspaceId,

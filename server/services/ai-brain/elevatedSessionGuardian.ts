@@ -655,7 +655,8 @@ class ElevatedSessionGuardian {
     try {
       await universalNotificationEngine.sendNotification({
         workspaceId: 'system',
-        type: 'system',
+        idempotencyKey: `notif-${Date.now()}`,
+          type: 'system',
         title: 'Session Guardian Alert',
         message: `${report.diagnosis}. Risk level: ${report.riskLevel}`,
         severity: report.riskLevel === 'critical' ? 'critical' : 'warning',

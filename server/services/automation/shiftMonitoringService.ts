@@ -302,7 +302,8 @@ class ShiftMonitoringService {
               await universalNotificationEngine.sendNotification({
                 workspaceId: upShift.workspaceId,
                 userId: upEmployee.userId,
-                type: 'issue_detected',
+                idempotencyKey: `notif-${Date.now()}`,
+          type: 'issue_detected',
                 title: 'Shift Reminder — 30 Minutes',
                 message: `Your shift starts in approximately 30 minutes (${new Date(upShift.startTime).toLocaleTimeString()}). Please be on-site and ready to clock in on time.`,
                 severity: 'info',
@@ -492,7 +493,8 @@ class ShiftMonitoringService {
           await universalNotificationEngine.sendNotification({
             workspaceId: shift.workspaceId,
             userId: officer.userId,
-            type: 'issue_detected',
+            idempotencyKey: `notif-${Date.now()}`,
+          type: 'issue_detected',
             title: `Stay-Late Request — ${reason === 'ncns' ? 'No-Show Coverage Needed' : 'Call-Off Coverage Needed'}`,
             message: `Your post needs coverage. Can you stay late to cover the next shift (starting ${shiftStart.toLocaleTimeString()})? A co-worker ${reason === 'ncns' ? 'did not show up' : 'called off'}. Please respond ASAP or clock out normally if you cannot extend.`,
             severity: 'warning',
@@ -624,6 +626,7 @@ class ShiftMonitoringService {
         await universalNotificationEngine.sendNotification({
           workspaceId: shift.workspaceId,
           userId: worker.user_id,
+          idempotencyKey: `notif-${Date.now()}`,
           type: 'issue_detected',
           title: 'Platform Pool Shift Available',
           message: `Emergency coverage needed. A shift is available starting at ${shiftStart.toLocaleTimeString()}. Reply to claim this opportunity.`,
@@ -691,6 +694,7 @@ class ShiftMonitoringService {
         await universalNotificationEngine.sendNotification({
           workspaceId,
           userId: mgr.userId,
+          idempotencyKey: `notif-${Date.now()}`,
           type: 'issue_detected',
           title: `Shift Alert: ${alert.employeeName} - ${alert.type.replace(/_/g, ' ')}`,
           message: alert.message,
@@ -734,7 +738,8 @@ class ShiftMonitoringService {
           await universalNotificationEngine.sendNotification({
             workspaceId,
             userId: owner.userId,
-            type: 'issue_detected',
+            idempotencyKey: `notif-${Date.now()}`,
+          type: 'issue_detected',
             title: `Critical: ${alert.type.replace(/_/g, ' ')} — Action Required`,
             message: alert.message,
             severity: 'critical',

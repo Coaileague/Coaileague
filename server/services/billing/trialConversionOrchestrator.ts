@@ -298,7 +298,8 @@ class TrialConversionOrchestrator {
     await universalNotificationEngine.sendNotification({
       workspaceId,
       userId: workspace.ownerId!,
-      type: 'system',
+      idempotencyKey: `notif-${Date.now()}`,
+          type: 'system',
       title: `Free Trial Ending Soon - ${daysRemaining} Day${daysRemaining === 1 ? '' : 's'} Remaining`,
       message: `Your ${PLATFORM.name} trial for ${workspaceName} expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. ${paymentPrompt} Upgrade now to keep all your data and continue using the platform.`,
       severity: daysRemaining === 1 ? 'critical' : daysRemaining <= 3 ? 'warning' : 'info',
