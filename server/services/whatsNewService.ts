@@ -133,7 +133,7 @@ export async function getUpdates(options?: {
       where: conditions.length > 0 ? and(...conditions) : undefined,
       orderBy: [
         sql`COALESCE(${platformUpdatesTable.priority}, 999) ASC`,
-        desc(platformUpdatesTable.date),
+        desc(platformUpdatesTable.createdAt), // date column does not exist → use createdAt
       ],
       limit: options?.includeAll ? undefined : (options?.limit || 50),
     });
@@ -262,7 +262,7 @@ export async function getNewFeatures(userId?: string, userRole?: string, workspa
     
     const updates = await db.query.platformUpdates.findMany({
       where: and(...conditions),
-      orderBy: [sql`COALESCE(${platformUpdatesTable.priority}, 999) ASC`, desc(platformUpdatesTable.date)],
+      orderBy: [sql`COALESCE(${platformUpdatesTable.priority}, 999) ASC`, desc(platformUpdatesTable.createdAt)], // date column does not exist → use createdAt
     });
     
     // Get viewed status
