@@ -1500,6 +1500,105 @@ router.post('/seed/acme', requirePlatformAdmin, async (_req, res) => {
   }
 });
 
+// ──────────────────────────────────────────────────────────────────────────────
+// FULL DEVELOPMENT SEED — POST /api/dev/seed/full
+// Seeds all 3 test tenants: ACME, Anvil, Test Statewide
+// Protected: platform_admin only + production guard
+// ──────────────────────────────────────────────────────────────────────────────
+router.post('/seed/full', requirePlatformAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  if (isProduction()) {
+    return res.status(403).json({ error: 'Refused — production environment' });
+  }
+  try {
+    log.info('[Dev:FullSeed] Starting full development seed...');
+    const results: Record<string, any> = {};
+
+    // Run existing ACME seed
+    try {
+      const { seedAcmeComplete } = await import('../scripts/seedAcmeComplete');
+      results.acme = await seedAcmeComplete();
+    } catch (e: any) { results.acme = { error: e?.message }; }
+
+    // Run Anvil seed
+    try {
+      const { runAnvilCoreSeed } = await import('../services/developmentSeedAnvil');
+      results.anvil = await runAnvilCoreSeed();
+    } catch (e: any) { results.anvil = { error: e?.message }; }
+
+    // Run dev seed (creates ACME workspace + base data)
+    try {
+      const { runDevelopmentSeed } = await import('../services/developmentSeed');
+      results.devSeed = await runDevelopmentSeed();
+    } catch (e: any) { results.devSeed = { error: e?.message }; }
+
+    // Count totals
+    const [empCount, clientCount, shiftCount, invoiceCount, payrollCount, ticketCount] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS n FROM employees WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+      pool.query(`SELECT COUNT(*) AS n FROM clients WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+      pool.query(`SELECT COUNT(*) AS n FROM shifts WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+      pool.query(`SELECT COUNT(*) AS n FROM invoices WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+      pool.query(`SELECT COUNT(*) AS n FROM payroll_runs WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+      pool.query(`SELECT COUNT(*) AS n FROM support_tickets WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+    ]);
+
+    log.info('[Dev:FullSeed] Complete');
+    return res.json({
+      success: true,
+      message: 'Full development seed complete — 2 tenants seeded',
+      tenants: results,
+      totals: {
+        employees: parseInt(empCount.rows[0].n),
+        clients: parseInt(clientCount.rows[0].n),
+        shifts: parseInt(shiftCount.rows[0].n),
+        invoices: parseInt(invoiceCount.rows[0].n),
+        payroll_runs: parseInt(payrollCount.rows[0].n),
+        support_tickets: parseInt(ticketCount.rows[0].n),
+      },
+      loginCredentials: {
+        password: 'DevTest2026!',
+        acme_owner: 'owner@acme-security.test',
+        acme_manager: 'manager@acme-security.test',
+        anvil_owner: 'owner@anvil-security.test',
+      },
+    });
+  } catch (error: unknown) {
+    log.error('[Dev:FullSeed] Failed:', error);
+    return res.status(500).json({ error: 'Full seed failed', message: sanitizeError(error) });
+  }
+});
+
+// GET: Full status dashboard — GET /api/dev/seed/status
+router.get('/seed/status', requirePlatformAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const tenants = ['dev-acme-security-ws', 'dev-anvil-security-ws'];
+    const rows = await Promise.all(
+      tenants.map(async (wsId) => {
+        const [emp, cli, shf, inv, pay, tkt] = await Promise.all([
+          pool.query(`SELECT COUNT(*) AS n FROM employees WHERE workspace_id = $1`, [wsId]),
+          pool.query(`SELECT COUNT(*) AS n FROM clients WHERE workspace_id = $1`, [wsId]),
+          pool.query(`SELECT COUNT(*) AS n FROM shifts WHERE workspace_id = $1`, [wsId]),
+          pool.query(`SELECT COUNT(*) AS n FROM invoices WHERE workspace_id = $1`, [wsId]),
+          pool.query(`SELECT COUNT(*) AS n FROM payroll_runs WHERE workspace_id = $1`, [wsId]),
+          pool.query(`SELECT COUNT(*) AS n FROM support_tickets WHERE workspace_id = $1`, [wsId]),
+        ]);
+        return {
+          workspace: wsId,
+          employees: parseInt(emp.rows[0].n),
+          clients: parseInt(cli.rows[0].n),
+          shifts: parseInt(shf.rows[0].n),
+          invoices: parseInt(inv.rows[0].n),
+          payroll_runs: parseInt(pay.rows[0].n),
+          support_tickets: parseInt(tkt.rows[0].n),
+          seeded: parseInt(emp.rows[0].n) > 0,
+        };
+      })
+    );
+    return res.json({ tenants: rows, timestamp: new Date().toISOString() });
+  } catch (error: unknown) {
+    return res.status(500).json({ error: 'Status check failed', message: sanitizeError(error) });
+  }
+});
+
 // GET: status check for ACME complete seed — GET /api/dev/seed/acme/status
 router.get('/seed/acme/status', requirePlatformAdmin, async (_req, res) => {
   try {
