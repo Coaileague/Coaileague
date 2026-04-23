@@ -1851,11 +1851,17 @@ router.delete("/deductions/:id", async (req: AuthenticatedRequest, res) => {
     if (!deduction) {
       return res.status(404).json({ error: "Deduction not found" });
     }
-    const [entry] = await db.select().from(payrollEntries).where(eq(payrollEntries.id, deduction.payrollEntryId));
+    const [entry] = await db.select().from(payrollEntries).where(and(
+      eq(payrollEntries.id, deduction.payrollEntryId),
+      eq(payrollEntries.workspaceId, workspaceId),
+    ));
     if (!entry) {
       return res.status(404).json({ error: "Associated payroll entry not found" });
     }
-    const [run] = await db.select().from(payrollRuns).where(eq(payrollRuns.id, entry.payrollRunId));
+    const [run] = await db.select().from(payrollRuns).where(and(
+      eq(payrollRuns.id, entry.payrollRunId),
+      eq(payrollRuns.workspaceId, workspaceId),
+    ));
     if (!run || run.workspaceId !== workspaceId) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -1880,11 +1886,17 @@ router.delete("/garnishments/:id", async (req: AuthenticatedRequest, res) => {
     if (!garnishment) {
       return res.status(404).json({ error: "Garnishment not found" });
     }
-    const [entry] = await db.select().from(payrollEntries).where(eq(payrollEntries.id, garnishment.payrollEntryId));
+    const [entry] = await db.select().from(payrollEntries).where(and(
+      eq(payrollEntries.id, garnishment.payrollEntryId),
+      eq(payrollEntries.workspaceId, workspaceId),
+    ));
     if (!entry) {
       return res.status(404).json({ error: "Associated payroll entry not found" });
     }
-    const [run] = await db.select().from(payrollRuns).where(eq(payrollRuns.id, entry.payrollRunId));
+    const [run] = await db.select().from(payrollRuns).where(and(
+      eq(payrollRuns.id, entry.payrollRunId),
+      eq(payrollRuns.workspaceId, workspaceId),
+    ));
     if (!run || run.workspaceId !== workspaceId) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -1979,18 +1991,27 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
 
         await db.update(payrollEntries)
           .set({ netPay: newNetPay.toFixed(2) as any, updatedAt: new Date() })
-          .where(eq(payrollEntries.id, payrollEntryId));
+          .where(and(
+            eq(payrollEntries.id, payrollEntryId),
+            eq(payrollEntries.workspaceId, workspaceId),
+          ));
 
         // Re-aggregate run totals so the payroll run header stays correct
         if (entry.payrollRunId) {
           const runEntries = await db.select({ netPay: payrollEntries.netPay, grossPay: payrollEntries.grossPay })
             .from(payrollEntries)
-            .where(eq(payrollEntries.payrollRunId, entry.payrollRunId));
+            .where(and(
+              eq(payrollEntries.payrollRunId, entry.payrollRunId),
+              eq(payrollEntries.workspaceId, workspaceId),
+            ));
           const runTotalNet   = runEntries.reduce((s, e) => s + parseFloat(String(e.netPay   || '0')), 0);
           const runTotalGross = runEntries.reduce((s, e) => s + parseFloat(String(e.grossPay || '0')), 0);
           await db.update(payrollRuns)
             .set({ totalNetPay: runTotalNet.toFixed(2) as any, totalGrossPay: runTotalGross.toFixed(2) as any, updatedAt: new Date() })
-            .where(eq(payrollRuns.id, entry.payrollRunId));
+            .where(and(
+              eq(payrollRuns.id, entry.payrollRunId),
+              eq(payrollRuns.workspaceId, workspaceId),
+            ));
         }
 
         storage.createAuditLog({
@@ -2695,6 +2716,7 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
       .from(payStubs)
       .where(and(
         eq(payStubs.payrollRunId, runId),
+        eq(payStubs.workspaceId, workspaceId),
         sql`${payStubs.plaidTransferStatus} IN ('failed', 'poll_failed', 'returned')`,
       ));
 
@@ -2728,6 +2750,7 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
           plaidAccountId: empBankTable.plaidAccountId,
         }).from(empBankTable).where(and(
           eq(empBankTable.employeeId, empId),
+          eq(empBankTable.workspaceId, workspaceId),
           eq(empBankTable.isActive, true),
           eq(empBankTable.isPrimary, true),
         )).limit(1).catch(() => []);
@@ -2746,7 +2769,10 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
           await db.update(payStubs).set({
             plaidTransferStatus: 'payment_held',
             updatedAt: new Date(),
-          } as any).where(eq(payStubs.id, stub.id)).catch((dbErr: unknown) => {
+          } as any).where(and(
+            eq(payStubs.id, stub.id),
+            eq(payStubs.workspaceId, workspaceId),
+          )).catch((dbErr: unknown) => {
             log.error('[PayrollRoute] Failed to stamp PAYMENT_HELD on pay stub:', { stubId: stub.id, error: dbErr });
           });
           results.push({ stubId: stub.id, employeeId: empId, status: 'skipped', reason: `PAYMENT_HELD — bank account not Plaid-verified: ${verification.status}` });
@@ -2821,7 +2847,10 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
             plaidTransferId: transfer.transferId,
             plaidTransferStatus: 'pending',
             updatedAt: new Date(),
-          } as any).where(eq(payStubs.id, stub.id));
+          } as any).where(and(
+            eq(payStubs.id, stub.id),
+            eq(payStubs.workspaceId, workspaceId),
+          ));
         } catch (dbErr: unknown) {
           log.error(
             '[FinancialAudit] CRITICAL: Plaid transfer initiated but pay stub DB update failed — attempt row holds transfer_id for reconciliation.',
@@ -2891,7 +2920,10 @@ router.post('/:entryId/amend', async (req: AuthenticatedRequest, res) => {
       const [parentRun] = await db
         .select({ status: payrollRuns.status })
         .from(payrollRuns)
-        .where(eq(payrollRuns.id, entryForRunCheck.payrollRunId))
+        .where(and(
+          eq(payrollRuns.id, entryForRunCheck.payrollRunId),
+          eq(payrollRuns.workspaceId, workspaceId),
+        ))
         .limit(1);
 
       if (parentRun?.status === 'paid') {
@@ -2974,7 +3006,10 @@ router.get('/export/pdf/:runId', async (req: AuthenticatedRequest, res) => {
       netPay: payrollEntries.netPay,
       workerType: payrollEntries.workerType,
     }).from(payrollEntries)
-      .where(eq(payrollEntries.payrollRunId, runId));
+      .where(and(
+        eq(payrollEntries.payrollRunId, runId),
+        eq(payrollEntries.workspaceId, workspaceId),
+      ));
 
     const workspace = await storage.getWorkspace(workspaceId);
     const { employees: employeesTable } = await import('@shared/schema');

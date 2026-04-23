@@ -155,7 +155,10 @@ import { createHash } from "crypto";
       }
 
       const lineItems = await storage.getInvoiceLineItems(id);
-      const client = invoice.clientId ? await db.select().from(clients).where(eq(clients.id, invoice.clientId)).limit(1) : null;
+      const client = invoice.clientId ? await db.select().from(clients).where(and(
+        eq(clients.id, invoice.clientId),
+        eq(clients.workspaceId, workspaceId),
+      )).limit(1) : null;
 
       // ── TRACE PROTOCOL V2: DOCUMENT VAULT & PDF INTEGRITY ────────────────────
       // All production documents must be hashed and registered in the vault.
@@ -1841,7 +1844,10 @@ import { createHash } from "crypto";
           if (!owner?.email) return;
           const clientName = updated.clientId
             ? (await db.select({ companyName: clients.companyName, firstName: clients.firstName, lastName: clients.lastName })
-                .from(clients).where(eq(clients.id, updated.clientId)).limit(1)
+                .from(clients).where(and(
+                  eq(clients.id, updated.clientId),
+                  eq(clients.workspaceId, workspace.id),
+                )).limit(1)
                 .then(rows => rows[0]?.companyName || [rows[0]?.firstName, rows[0]?.lastName].filter(Boolean).join(' ') || 'Client'))
             : 'Client';
           const ownerName = [owner.firstName, owner.lastName].filter(Boolean).join(' ') || 'there';
@@ -3218,7 +3224,10 @@ router.get('/portal/:accessToken', async (req, res) => {
     )).orderBy(desc(invoices.issueDate)).limit(100);
 
     const [client] = await db.select().from(clients)
-      .where(eq(clients.id, portal.clientId));
+      .where(and(
+        eq(clients.id, portal.clientId),
+        eq(clients.workspaceId, portal.workspaceId),
+      ));
 
     const resolvedClientName = (client as any)?.companyName || [`${(client as any)?.firstName || ''}`, `${(client as any)?.lastName || ''}`].filter(Boolean).join(' ').trim() || 'Client';
     res.json({
@@ -3258,7 +3267,10 @@ router.get('/portal/:accessToken/invoice/:invoiceId', async (req, res) => {
     if (!invoice.viewedAt) {
       await db.update(invoices)
         .set({ viewedAt: new Date() })
-        .where(eq(invoices.id, invoiceId));
+        .where(and(
+          eq(invoices.id, invoiceId),
+          eq(invoices.workspaceId, portal.workspaceId),
+        ));
     }
 
     const lineItems = await storage.getInvoiceLineItems(invoiceId);
@@ -3267,6 +3279,7 @@ router.get('/portal/:accessToken/invoice/:invoiceId', async (req, res) => {
     const payments = await db.select().from(paymentRecords)
       .where(and(
         eq(paymentRecords.invoiceId, invoiceId),
+        eq(paymentRecords.workspaceId, portal.workspaceId),
         eq(paymentRecords.status, 'completed'),
       )).orderBy(desc(paymentRecords.paidAt));
 
@@ -3333,7 +3346,10 @@ router.get('/aging', async (req: AuthenticatedRequest, res) => {
       const clientRows = await db
         .select({ id: clients.id, companyName: clients.companyName, firstName: clients.firstName, lastName: clients.lastName })
         .from(clients)
-        .where(inArray(clients.id, clientIds));
+        .where(and(
+          inArray(clients.id, clientIds),
+          eq(clients.workspaceId, workspaceId),
+        ));
       for (const c of clientRows) {
         clientMap.set(c.id, c.companyName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown');
       }
@@ -3488,7 +3504,10 @@ router.get('/cash-flow-summary', async (req: AuthenticatedRequest, res) => {
       const topClients = await db
         .select({ id: clients.id, companyName: clients.companyName })
         .from(clients)
-        .where(inArray(clients.id, topClientIds));
+        .where(and(
+          inArray(clients.id, topClientIds),
+          eq(clients.workspaceId, workspaceId),
+        ));
       for (const c of topClients) {
         topClientMap.set(c.id, c.companyName || 'Unknown');
       }

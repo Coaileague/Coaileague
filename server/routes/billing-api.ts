@@ -1,5 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction, RequestHandler } from 'express';
 import { BILLING } from '../config/platformConfig';
 import crypto from 'crypto';
 import { z } from 'zod';
@@ -23,7 +23,8 @@ import {
 } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { requireAuth } from '../auth';
-import { type AuthenticatedRequest, resolveWorkspaceForUser } from '../rbac';
+import { type AuthenticatedRequest, resolveWorkspaceForUser, requireFinanceRole } from '../rbac';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
 import Stripe from 'stripe';
 import { getStripe } from '../services/billing/stripeClient';
 import { isFeatureEnabled } from '@shared/platformConfig';
@@ -97,21 +98,30 @@ billingRouter.use((req, res, next) => {
 
 billingRouter.use(async (req, res, next) => {
   const authReq = req as AuthenticatedRequest;
-  
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  if (req.requireAuth && (req as any).requireAuth()) {
-    if (authReq.user?.currentWorkspaceId) {
-      authReq.currentWorkspaceId = authReq.user.currentWorkspaceId;
+  const runMiddleware = (mw: RequestHandler) =>
+    new Promise<void>((resolve, reject) => {
+      (mw as any)(req, res, (err: unknown) => (err ? reject(err) : resolve()));
+    });
+
+  try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
+    if (req.requireAuth && (req as any).requireAuth()) {
+      if (authReq.user?.currentWorkspaceId) {
+        authReq.currentWorkspaceId = authReq.user.currentWorkspaceId;
+      }
+    } else {
+      await runMiddleware(requireAuth);
+      if (authReq.user?.currentWorkspaceId) {
+        authReq.currentWorkspaceId = authReq.user.currentWorkspaceId;
+      }
     }
-    return next();
-  }
-  
-  return requireAuth(req, res, () => {
-    if (authReq.user?.currentWorkspaceId) {
-      authReq.currentWorkspaceId = authReq.user.currentWorkspaceId;
-    }
+
+    await runMiddleware(ensureWorkspaceAccess);
+    await runMiddleware(requireFinanceRole);
     next();
-  });
+  } catch (error) {
+    next(error);
+  }
 });
 
 billingRouter.get('/subscription', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
