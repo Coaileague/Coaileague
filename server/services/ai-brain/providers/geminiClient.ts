@@ -3371,7 +3371,8 @@ Guidelines:
 RULES:
 - ${modeConfig.style}
 - Address ${greeting} directly
-- Never use emojis
+- Emoji policy: optional, max 1, only from approved Trinity set (✅ ⚠️ 🚨 💰 📊 🎯 🔥 👋 💡 ⏰ 📅 📄 🛡️)
+- If you use an emoji, place it at the beginning or end only (never mid-sentence)
 - Never start with "I"
 - Be concise - every word counts`;
 

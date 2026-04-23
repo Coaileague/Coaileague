@@ -11,8 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { UniversalSpinner } from '@/components/ui/universal-spinner';
 import {
-  Sparkles, DollarSign, AlertTriangle, Save, Loader2, Calendar,
+  Sparkles, DollarSign, AlertTriangle, Save, Calendar,
   FileText, Clock, Bell, Shield, ChevronDown, ChevronRight,
   CheckCircle2, Settings2, Zap, RefreshCcw
 } from 'lucide-react';
@@ -291,7 +293,7 @@ export default function AutomationSettings() {
   const saveButton = (
     <Button onClick={() => saveMutation.mutate(currentSettings)} disabled={saveMutation.isPending} data-testid="button-save-automation-settings">
       {saveMutation.isPending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <UniversalSpinner size="sm" className="mr-1.5 !gap-0 scale-[0.45] origin-center" />
       ) : (
         <Save className="mr-2 h-4 w-4" />
       )}
@@ -310,8 +312,26 @@ export default function AutomationSettings() {
   if (isLoading) {
     return (
       <CanvasHubPage config={{ id: 'automation-settings', title: 'Automation Settings', subtitle: 'Loading...', category: 'settings' }}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="space-y-3 max-w-2xl py-2">
+          <div className="flex items-center justify-center py-2">
+            <UniversalSpinner size="md" label="Trinity is loading automation pipelines…" />
+          </div>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Skeleton className="h-9 w-9 rounded-md" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-44" />
+                      <Skeleton className="h-3 w-64" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-11 rounded-full" />
+                </div>
+              </CardHeader>
+            </Card>
+          ))}
         </div>
       </CanvasHubPage>
     );
@@ -668,7 +688,11 @@ export default function AutomationSettings() {
             size="lg"
             data-testid="button-save-bottom"
           >
-            {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {saveMutation.isPending ? (
+              <UniversalSpinner size="sm" className="mr-1.5 !gap-0 scale-[0.45] origin-center" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             {saveMutation.isPending ? 'Saving...' : 'Save All Settings'}
           </Button>
         </div>

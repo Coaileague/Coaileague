@@ -7,11 +7,11 @@
 
 import { useEffect, useRef } from 'react';
 import { TrinityArrowMark } from "@/components/trinity-logo";
+import { UniversalSpinner } from '@/components/ui/universal-spinner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, X, Circle, Activity } from 'lucide-react';
-import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
+import { Check, X, Circle, Activity } from 'lucide-react';
 import { Suspense } from 'react';
 import type { ThinkingStep } from '@/hooks/use-trinity-state';
 
@@ -38,7 +38,7 @@ export function ThinkingStepsStream({
       case 'complete':
         return <Check className="h-3.5 w-3.5 text-emerald-500" />;
       case 'active':
-        return <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />;
+        return <UniversalSpinner size="sm" className="!gap-0 scale-[0.45] origin-center" />;
       case 'error':
         return <X className="h-3.5 w-3.5 text-destructive" />;
       case 'pending':
