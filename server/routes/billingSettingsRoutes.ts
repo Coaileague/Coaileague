@@ -13,6 +13,8 @@ import {
   workspaces,
   clients,
   clientBillingSettings,
+  payrollSettings,
+  auditLogs,
   insertClientBillingSettingsSchema
 } from '@shared/schema';
 
@@ -122,6 +124,10 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
+    if ((req.body.payrollFrequency !== undefined && req.body.payrollFrequency == null) ||
+        (req.body.payrollCycle !== undefined && req.body.payrollCycle == null)) {
+      return res.status(400).json({ message: "payrollFrequency cannot be null or undefined" });
+    }
 
     // PRIMARY WRITE: billingSettingsBlob is the canonical source for payrollCycle and all
     // billing preferences — all payroll services read from this blob. The dedicated workspace
@@ -132,7 +138,50 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
     if (req.body.payrollCycle !== undefined)      wsColumnSync.payrollCycle      = req.body.payrollCycle;
     if (req.body.payrollDayOfWeek !== undefined)  wsColumnSync.payrollDayOfWeek  = Number(req.body.payrollDayOfWeek);
     if (req.body.payrollDayOfMonth !== undefined) wsColumnSync.payrollDayOfMonth = Number(req.body.payrollDayOfMonth);
-    await db.update(workspaces).set(wsColumnSync).where(eq(workspaces.id, workspaceId));
+
+    const [existingPayrollSettings] = await db
+      .select()
+      .from(payrollSettings)
+      .where(eq(payrollSettings.workspaceId, workspaceId))
+      .limit(1);
+
+    const mergedPayrollSettings: Record<string, unknown> = {
+      ...(existingPayrollSettings || {}),
+      workspaceId,
+      payrollFrequency: (req.body.payrollFrequency ?? req.body.payrollCycle ?? existingPayrollSettings?.payrollFrequency ?? 'biweekly'),
+      payrollDayOfWeek: req.body.payrollDayOfWeek !== undefined ? Number(req.body.payrollDayOfWeek) : existingPayrollSettings?.payrollDayOfWeek,
+      payrollDayOfMonth: req.body.payrollDayOfMonth !== undefined ? Number(req.body.payrollDayOfMonth) : existingPayrollSettings?.payrollDayOfMonth,
+      payrollSecondDayOfMonth: req.body.payrollSecondDayOfMonth !== undefined ? Number(req.body.payrollSecondDayOfMonth) : existingPayrollSettings?.payrollSecondDayOfMonth,
+      payrollCutoffDays: req.body.payrollCutoffDays !== undefined ? Number(req.body.payrollCutoffDays) : existingPayrollSettings?.payrollCutoffDays,
+      payrollFirstPeriodStart: req.body.payrollFirstPeriodStart !== undefined ? req.body.payrollFirstPeriodStart : existingPayrollSettings?.payrollFirstPeriodStart,
+      payrollFirstPeriodEnd: req.body.payrollFirstPeriodEnd !== undefined ? req.body.payrollFirstPeriodEnd : existingPayrollSettings?.payrollFirstPeriodEnd,
+      createdAt: existingPayrollSettings?.createdAt ?? new Date(),
+      updatedAt: new Date(),
+    };
+    delete (mergedPayrollSettings as any).id;
+
+    await db.transaction(async (tx) => {
+      await tx.update(workspaces).set(wsColumnSync).where(eq(workspaces.id, workspaceId));
+
+      if (existingPayrollSettings?.id) {
+        await tx.update(payrollSettings)
+          .set(mergedPayrollSettings as any)
+          .where(eq(payrollSettings.id, existingPayrollSettings.id));
+      } else {
+        await tx.insert(payrollSettings).values(mergedPayrollSettings as any);
+      }
+
+      await tx.insert(auditLogs).values({
+        workspaceId,
+        userId: req.user?.id || null,
+        action: 'payroll_settings_updated',
+        entityType: 'payroll_settings',
+        entityId: workspaceId,
+        changesBefore: existingPayrollSettings || null,
+        changesAfter: mergedPayrollSettings,
+        createdAt: new Date(),
+      } as any);
+    });
 
     // Phase 7: audit ALL billing settings changes unconditionally
     try {
@@ -273,13 +322,28 @@ router.patch("/clients/:clientId", requireManager, async (req: AuthenticatedRequ
       'isActive',
     ];
 
-    const updates: Record<string, any> = { updatedAt: new Date() };
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) updates[field] = req.body[field];
+    if (req.body.paymentTerms !== undefined && req.body.paymentTerms == null) {
+      return res.status(400).json({ message: "paymentTerms cannot be null or undefined" });
     }
 
-    const [settings] = await db.update(clientBillingSettings).set(updates)
+    const merged: Record<string, any> = { ...existing[0], updatedAt: new Date() };
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) merged[field] = req.body[field];
+    }
+
+    const [settings] = await db.update(clientBillingSettings).set(merged)
       .where(eq(clientBillingSettings.id, existing[0].id)).returning();
+
+    await db.insert(auditLogs).values({
+      workspaceId,
+      userId: req.user?.id || null,
+      action: 'invoice_settings_updated',
+      entityType: 'invoice_settings',
+      entityId: existing[0].id,
+      changesBefore: existing[0],
+      changesAfter: settings,
+      createdAt: new Date(),
+    } as any);
 
     res.json({ settings });
   } catch (error: unknown) {

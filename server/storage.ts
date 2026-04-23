@@ -1601,10 +1601,27 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
   
   async createClient(clientData: InsertClient): Promise<Client> {
-    const [client] = await db
-      .insert(clients)
-      .values(clientData)
-      .returning();
+    const [client] = await db.transaction(async (tx) => {
+      const [createdClient] = await tx
+        .insert(clients)
+        .values(clientData)
+        .returning();
+
+      // Persistence hardening: every client gets an isolated invoice settings row at creation.
+      await tx
+        .insert(clientBillingSettings)
+        .values({
+          workspaceId: createdClient.workspaceId,
+          clientId: createdClient.id,
+          billingCycle: createdClient.billingFrequency || createdClient.billingCycle || "monthly",
+          paymentTerms: "net_30",
+          taxRate: "0.0000",
+          roundHoursTo: "0.25",
+        } as any)
+        .onConflictDoNothing();
+
+      return [createdClient];
+    });
     // Publish canonical client_created event so Trinity, cross-device sync, and workboard react (non-blocking)
     import('./services/platformEventBus').then(({ platformEventBus }) =>
       platformEventBus.publish({
@@ -1627,7 +1644,8 @@ export class DatabaseStorage implements IStorage {
       .from(clients)
       .where(and(
         eq(clients.id, id),
-        eq(clients.workspaceId, workspaceId)
+        eq(clients.workspaceId, workspaceId),
+        isNull(clients.deletedAt)
       ));
     return client;
   }
@@ -1636,7 +1654,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(clients)
-      .where(eq(clients.workspaceId, workspaceId))
+      .where(and(eq(clients.workspaceId, workspaceId), isNull(clients.deletedAt)))
       .orderBy(desc(clients.createdAt))
       .limit(1000);
   }
@@ -1644,7 +1662,7 @@ export class DatabaseStorage implements IStorage {
   async getClientByUserId(userId: string): Promise<Client | undefined> {
     const [client] = await db.select()
       .from(clients)
-      .where(eq(clients.userId, userId))
+      .where(and(eq(clients.userId, userId), isNull(clients.deletedAt)))
       .limit(1);
     
     return client;
@@ -1654,7 +1672,7 @@ export class DatabaseStorage implements IStorage {
     const { workspaceId, page, limit, search, status, sort, order } = options;
 
     // Build WHERE conditions
-    const conditions = [eq(clients.workspaceId, workspaceId)];
+    const conditions = [eq(clients.workspaceId, workspaceId), isNull(clients.deletedAt)];
 
     // Status filter
     if (status === 'active') {
@@ -1799,9 +1817,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateClient(id: string, workspaceId: string, data: Partial<InsertClient>): Promise<Client | undefined> {
+    if ('billableHourlyRate' in data && (data as any).billableHourlyRate == null) {
+      throw new Error("billableHourlyRate cannot be null or undefined");
+    }
+    if ('paymentTerms' in (data as any) && (data as any).paymentTerms == null) {
+      throw new Error("paymentTerms cannot be null or undefined");
+    }
+
+    const [existing] = await db
+      .select()
+      .from(clients)
+      .where(and(eq(clients.id, id), eq(clients.workspaceId, workspaceId), isNull(clients.deletedAt)))
+      .limit(1);
+
+    if (!existing) return undefined;
+
+    const mergedRecord = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      workspaceId: existing.workspaceId,
+      createdAt: existing.createdAt,
+      updatedAt: new Date(),
+    };
+
     const [client] = await db
       .update(clients)
-      .set({ ...data, updatedAt: new Date() })
+      .set(mergedRecord as any)
       .where(and(
         eq(clients.id, id),
         eq(clients.workspaceId, workspaceId)
@@ -1823,13 +1865,22 @@ export class DatabaseStorage implements IStorage {
         log.warn('[Storage] deleteClient: shift cascade cancel failed:', err.message)
       );
 
-    const result = await db
-      .delete(clients)
+    const [softDeleted] = await db
+      .update(clients)
+      .set({
+        deletedAt: new Date(),
+        isActive: false,
+        deactivatedAt: new Date(),
+        updatedAt: new Date(),
+      } as any)
       .where(and(
         eq(clients.id, id),
-        eq(clients.workspaceId, workspaceId)
-      ));
-    return result.rowCount ? result.rowCount > 0 : false;
+        eq(clients.workspaceId, workspaceId),
+        isNull(clients.deletedAt)
+      ))
+      .returning({ id: clients.id });
+
+    return Boolean(softDeleted?.id);
   }
 
   // ============================================================================

@@ -580,7 +580,10 @@ class DeletionProtectionService {
         await db.delete(employees).where(eq(employees.id, entityId));
         break;
       case 'client':
-        await db.delete(clients).where(eq(clients.id, entityId));
+        // TRINITY persistence law: clients are never hard-deleted.
+        await db.update(clients)
+          .set({ deletedAt: new Date(), isActive: false, deactivatedAt: new Date(), updatedAt: new Date() } as any)
+          .where(eq(clients.id, entityId));
         break;
       case 'shift':
         await db.delete(shifts).where(eq(shifts.id, entityId));
@@ -619,7 +622,7 @@ class DeletionProtectionService {
 
         case 'client':
           await db.update(clients)
-            .set({ isActive: true })
+            .set({ isActive: true, deletedAt: null, deactivatedAt: null, updatedAt: new Date() } as any)
             .where(eq(clients.id, entityId));
           break;
 

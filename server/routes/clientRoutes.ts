@@ -19,6 +19,7 @@ import {
   clientCollectionsLog,
   shifts,
   clientPortalAccess,
+  auditLogs,
 } from '@shared/schema';
 import { z } from "zod";
 import { requireAuth } from "../auth";
@@ -51,14 +52,14 @@ function normalizeEmail(email: string | null | undefined): string | null {
 // Integer columns: Drizzle maps these to z.number() in Zod, so coerce string → number
 const CLIENT_INT_FIELDS = [
   'paymentTermsDays', 'minOfficerSchedulingScore', 'minimumStaffing',
-  'maxDrivingDistance',
+  'maxDrivingDistance', 'numberOfGuards',
 ] as const;
 
 // Decimal columns: Drizzle maps these to z.string() in Zod — keep as string, just handle empty
 const CLIENT_DECIMAL_FIELDS = [
   'contractRate', 'clientOvertimeMultiplier', 'clientHolidayMultiplier',
   'armedBillRate', 'unarmedBillRate', 'overtimeBillRate',
-  'latitude', 'longitude',
+  'latitude', 'longitude', 'billableHourlyRate',
 ] as const;
 
 function coerceClientNumbers(data: Record<string, unknown>): Record<string, unknown> {
@@ -380,7 +381,7 @@ router.patch('/:id', requireManagerOrPlatformStaff, async (req: AuthenticatedReq
     }
 
     // Fetch current client state BEFORE update so we can detect deactivation
-    const [existing] = await db.select({ isActive: clients.isActive })
+    const [existing] = await db.select()
       .from(clients)
       .where(and(eq(clients.id, req.params.id), eq(clients.workspaceId, workspaceId)))
       .limit(1);
@@ -442,6 +443,18 @@ router.patch('/:id', requireManagerOrPlatformStaff, async (req: AuthenticatedReq
         }
       })();
     }
+
+    await db.insert(auditLogs).values({
+      workspaceId,
+      userId: req.user?.id || null,
+      userEmail: req.user?.email || null,
+      action: 'client_updated',
+      entityType: 'client',
+      entityId: req.params.id,
+      changesBefore: existing || null,
+      changesAfter: client,
+      createdAt: new Date(),
+    } as any);
     
     res.json(filterClientForResponse(
       { ...client, shiftsClosedCount: wasJustDeactivated ? shiftsClosedCount : undefined },
@@ -1563,4 +1576,3 @@ router.get('/my-portal-token', requireAuth, async (req: AuthenticatedRequest, re
 });
 
 export default router;
-

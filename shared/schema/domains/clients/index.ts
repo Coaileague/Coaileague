@@ -84,6 +84,7 @@ export const clients = pgTable("clients", {
 
   // Contract and Billing (for Trinity scheduling and invoicing)
   contractRate: decimal("contract_rate", { precision: 10, scale: 2 }), // Base billing rate per hour
+  billableHourlyRate: decimal("billable_hourly_rate", { precision: 10, scale: 2 }), // Canonical per-hour bill rate for immutable billing flows
   contractRateType: varchar("contract_rate_type").default("hourly"), // 'hourly', 'daily', 'weekly', 'monthly', 'project'
   billingEmail: varchar("billing_email"),                              // Where invoices are emailed
   taxId: varchar("tax_id"),                                            // Client EIN/tax ID for records
@@ -93,6 +94,7 @@ export const clients = pgTable("clients", {
   preferredPaymentMethod: varchar("preferred_payment_method").default("invoice"), // 'invoice', 'ach', 'check', 'wire', 'credit_card'
   autoSendInvoice: boolean("auto_send_invoice").default(true),         // Auto-email invoice when generated
   paymentTermsDays: integer("payment_terms_days").default(30),         // Net days for payment (e.g. 30 = Net 30)
+  billingFrequency: varchar("billing_frequency").default("monthly"),    // Canonical billing cadence used by persistence-safe invoice settings
   billingCycle: varchar("billing_cycle").default("monthly"),           // 'weekly' | 'biweekly' | 'monthly' — invoice generation frequency per client
 
   // Client-Specific Rate Multiplier Overrides (for enterprise contracts)
@@ -165,6 +167,8 @@ export const clients = pgTable("clients", {
   // Coverage Schedule — defines WHEN this client needs security coverage
   // Trinity uses this to generate shifts only during required windows
   coverageType: varchar("coverage_type").default("custom"), // '24_7', 'business_hours', 'custom'
+  daysOfService: text("days_of_service").array(), // Canonical service days for Trinity hard constraints
+  numberOfGuards: integer("number_of_guards"), // Canonical guard count hard constraint for Trinity scheduling
   coverageDays: text("coverage_days").array(), // ['monday','tuesday',...] — null = every day
   coverageStartTime: varchar("coverage_start_time"), // 'HH:mm' — null = 00:00
   coverageEndTime: varchar("coverage_end_time"), // 'HH:mm' — null = 23:59

@@ -41,6 +41,7 @@ import {
   invoiceAdjustments,
   billingAuditLog,
   documentVault,
+  clientBillingSettings,
 } from '@shared/schema';
 import * as notificationHelpers from "../notifications";
 import { format } from "date-fns";
@@ -626,6 +627,10 @@ import { createHash } from "crypto";
       const allClientRates = await storage.getClientRatesByWorkspace(workspace.id);
       const allInvoices = await storage.getInvoicesByWorkspace(workspace.id);
       const allTimeEntries = await storage.getTimeEntriesByWorkspace(workspace.id);
+      const allInvoiceSettings = await db
+        .select()
+        .from(clientBillingSettings)
+        .where(eq(clientBillingSettings.workspaceId, workspace.id));
       
       const generatedInvoices = [];
       const errors = [];
@@ -684,15 +689,19 @@ import { createHash } from "crypto";
           }
 
           // RC4 (Phase 2): Calculate totals using Decimal.js via FinancialCalculator.
+          const invoiceSettings = allInvoiceSettings.find((s) => s.clientId === client.id);
+          const roundHoursToIncrement = Math.max(0.01, Number(invoiceSettings?.roundHoursTo || '0.25'));
           const lineAmountParts: string[] = [];
           for (const entry of unbilledEntries) {
-            const hoursStr = toFinancialString(String(entry.totalHours || '0'));
+            const rawHours = Number(entry.totalHours || 0);
+            const roundedHours = Math.round(rawHours / roundHoursToIncrement) * roundHoursToIncrement;
+            const hoursStr = toFinancialString(String(roundedHours));
             const rateStr = toFinancialString(String(clientRate.billableRate || '0'));
             lineAmountParts.push(calculateInvoiceLineItem(hoursStr, rateStr));
           }
           const subtotalStr = lineAmountParts.length > 0 ? calculateInvoiceTotal(lineAmountParts) : '0.0000';
 
-          const taxRateDecimal = parseFloat(String(workspace.defaultTaxRate || '0'));
+          const taxRateDecimal = Number(invoiceSettings?.taxRate ?? workspace.defaultTaxRate ?? '0');
           const taxRateStr = toFinancialString(String(taxRateDecimal));
           const taxStr = multiplyFinancialValues(subtotalStr, taxRateStr);
           const totalStr = sumFinancialValues([subtotalStr, taxStr]);

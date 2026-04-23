@@ -1139,8 +1139,7 @@ router.post('/support/delete-client', async (req: AuthenticatedRequest, res) => 
       return res.status(404).json({ message: "Client not found in specified workspace" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    await storage.deleteClient(clientId);
+    await storage.deleteClient(clientId, workspaceId);
     await storage.createAuditLog({
       // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: adminUserId!,
