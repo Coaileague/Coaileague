@@ -227,6 +227,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     await seedWithRetry(runEnumMigration, 'enumMigration');
 
+    // ── platform_updates schema parity migration ──────────────────────────────
+    // The 'date' column is in Drizzle schema but may not be in the actual DB
+    // Add it idempotently to prevent column-not-found crashes
+    const runPlatformUpdatesMigration = async () => {
+      const { pool } = await import('./db');
+      const cols: Array<[string, string]> = [
+        ['date', 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()'],
+        ['version', 'VARCHAR(50)'],
+        ['badge', 'VARCHAR(50)'],
+        ['priority', 'INTEGER'],
+        ['is_new', 'BOOLEAN DEFAULT true'],
+        ['learn_more_url', 'VARCHAR(500)'],
+        ['visibility', "VARCHAR(20) DEFAULT 'all'"],
+        ['workspace_id', 'VARCHAR(255)'],
+        ['created_by', 'VARCHAR(255)'],
+        ['metadata', 'JSONB'],
+        ['updated_at', 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()'],
+      ];
+      for (const [col, type] of cols) {
+        try {
+          await pool.query(`ALTER TABLE platform_updates ADD COLUMN IF NOT EXISTS ${col} ${type}`);
+        } catch { /* already exists */ }
+      }
+      log.info('[Startup] platform_updates schema parity: ensured all columns');
+    };
+    await seedWithRetry(runPlatformUpdatesMigration, 'platformUpdatesMigration');
+
+
     // ── DAR chain-of-custody column migration (idempotent ADD COLUMN IF NOT EXISTS) ──
     const runDarChainMigration = async () => {
       const { pool } = await import('./db');

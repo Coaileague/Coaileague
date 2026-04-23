@@ -274,6 +274,9 @@ export class UniversalNotificationEngine {
           // HelpAI proactive operational monitoring
           'helpai_proactive',
           'trinity_compliance',
+          'ai_brain_email',
+          'geo_fence_violation',
+          'inbound_email_unmatched',
           'trinity_autonomous_action',
         ]);
         if (!KNOWN_NOTIFICATION_TYPES.has(payload.type)) {
@@ -336,6 +339,9 @@ export class UniversalNotificationEngine {
         // HelpAI proactive monitor — deterministic operational alerts, not AI-drafted content
         'helpai_proactive',
           'trinity_compliance',
+          'ai_brain_email',
+          'geo_fence_violation',
+          'inbound_email_unmatched',
           'trinity_autonomous_action',
       ]);
       const isOperationalType = OPERATIONAL_TYPES.has(payload.type);

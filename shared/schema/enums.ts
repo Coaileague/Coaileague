@@ -583,6 +583,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'staffing_escalation',         // Staffing issue escalated to manager
   'staffing_critical_escalation', // Critical staffing issue escalated to owner
   'critical_alert',              // Critical alert requiring immediate action
+  'geo_fence_violation',          // Geofence violation detected
   'issue_detected',              // Issue detected in automated monitoring
   'action_required',             // Action required by operator
   'approval_required',           // Approval required for pending item
@@ -590,6 +591,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   // ── AI / SYSTEM ACTIONS ───────────────────────────────────────────────────
   'ai_approval_needed',          // AI Brain needs approval for workflow
   'ai_action_completed',         // AI Brain completed automated action
+  'ai_brain_email',              // AI Brain email action notification
   'trinity_autonomous_alert',    // Trinity AI autonomous action notification
   'trinity_compliance',           // Trinity compliance monitoring alert
   'trinity_autonomous_action',    // Trinity autonomous action taken
@@ -597,6 +599,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'scheduler_job_failed',        // Automated scheduler job failed
 
   // ── PLATFORM NOTIFICATIONS ────────────────────────────────────────────────
+  'inbound_email_unmatched',     // Inbound email could not be matched to workspace
   'platform_maintenance',        // Platform going down for maintenance
   'known_issue',                 // Known issue being investigated
   'service_down',                // Service outage notification
