@@ -36,7 +36,7 @@ import {
 
 import type { WorkspaceRole } from '@/lib/roleHierarchy';
 export type { WorkspaceRole };
-export type PlatformRole = 'root_admin' | 'root' | 'sysop' | 'deputy_admin' | 'deputy_assistant' | 'bot' | 'guest' | 'support_manager' | 'support_agent' | 'none';
+export type PlatformRole = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'Bot' | 'none';
 export type DevicePlatform = 'mobile' | 'tablet' | 'desktop';
 
 export interface QuickAction {
@@ -143,7 +143,7 @@ export const quickActionsRegistry: QuickAction[] = [
     color: 'text-primary',
     category: 'support',
     desktopPath: '/dashboard', // Consolidated admin dashboard
-    requiresPlatformRoles: ['root_admin', 'sysop', 'deputy_admin', 'deputy_assistant'],
+    requiresPlatformRoles: ['root_admin', 'sysop', 'deputy_admin', 'support_manager'],
     requiresAuth: true,
     testId: 'quick-tickets',
     description: 'Manage support tickets and customer requests'

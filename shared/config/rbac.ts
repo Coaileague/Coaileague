@@ -11,35 +11,42 @@
  */
 
 import { z } from "zod";
+import {
+  type PlatformRole as CanonicalPlatformRole,
+  type WorkspaceRole as CanonicalWorkspaceRole,
+} from "@shared/lib/rbac/roleDefinitions";
 
 // ============================================================================
 // ROLE DEFINITIONS
 // ============================================================================
 
 export const PLATFORM_ROLES = [
-  'root_admin',      // Level 0: Full platform control
-  'deputy_admin',    // Level 1: Platform admin with some restrictions
-  'sysop',           // Level 2: System operations
-  'support_manager', // Level 3: Support team lead
-  'support_agent',   // Level 4: Support staff
-  'compliance_officer', // Level 5: Compliance oversight
-  'auditor',         // Level 6: Read-only audit access
-  'Bot',             // Special: AI/automation services
-  'none',            // Level 8: No platform access
+  'root_admin',
+  'deputy_admin',
+  'sysop',
+  'support_manager',
+  'support_agent',
+  'compliance_officer',
+  'Bot',
+  'none',
 ] as const;
 
 export const WORKSPACE_ROLES = [
-  'org_owner',          // Level 0: Organization owner
-  'co_owner',          // Level 1: Co-Owner
-  'department_manager', // Level 2: Department-level management
-  'supervisor',         // Level 3: Team supervision
-  'staff',              // Level 4: Regular employee
-  'limited',            // Level 5: Limited access
-  'contractor',         // Level 6: External contractor
+  'org_owner',
+  'co_owner',
+  'org_admin',
+  'org_manager',
+  'manager',
+  'department_manager',
+  'supervisor',
+  'staff',
+  'employee',
+  'auditor',
+  'contractor',
 ] as const;
 
-export type PlatformRole = typeof PLATFORM_ROLES[number];
-export type WorkspaceRole = typeof WORKSPACE_ROLES[number];
+export type PlatformRole = CanonicalPlatformRole;
+export type WorkspaceRole = CanonicalWorkspaceRole;
 
 // ============================================================================
 // ROLE HIERARCHY (Lower number = higher authority)
@@ -52,20 +59,58 @@ export const PLATFORM_ROLE_LEVEL: Record<PlatformRole, number> = {
   support_manager: 3,
   support_agent: 4,
   compliance_officer: 5,
-  auditor: 6,
-  Bot: 1, // Bot has deputy_admin equivalent for AI operations
+  Bot: 6,
   none: 99,
 };
 
 export const WORKSPACE_ROLE_LEVEL: Record<WorkspaceRole, number> = {
   org_owner: 0,
   co_owner: 1,
-  department_manager: 2,
-  supervisor: 3,
-  staff: 4,
-  limited: 5,
+  org_admin: 2,
+  org_manager: 3,
+  manager: 3,
+  department_manager: 3,
+  supervisor: 4,
+  staff: 5,
+  employee: 5,
+  auditor: 6,
   contractor: 6,
 };
+
+const LEGACY_PLATFORM_ROLE_ALIASES: Record<string, PlatformRole> = {
+  root: 'root_admin',
+  deputy_assistant: 'support_manager',
+  support: 'support_agent',
+  bot: 'Bot',
+  guest: 'none',
+};
+
+const LEGACY_WORKSPACE_ROLE_ALIASES: Record<string, WorkspaceRole> = {
+  owner: 'org_owner',
+  admin: 'org_admin',
+  limited: 'contractor',
+  guard: 'staff',
+  security_officer: 'staff',
+  armed_officer: 'staff',
+  site_lead: 'supervisor',
+  shift_leader: 'supervisor',
+};
+
+function normalizePlatformRole(role: string | null | undefined): PlatformRole | undefined {
+  if (!role) return undefined;
+  if ((PLATFORM_ROLES as readonly string[]).includes(role)) {
+    return role as PlatformRole;
+  }
+  return LEGACY_PLATFORM_ROLE_ALIASES[role];
+}
+
+function normalizeWorkspaceRole(role: string | null | undefined): WorkspaceRole | undefined {
+  if (!role) return undefined;
+  if ((WORKSPACE_ROLES as readonly string[]).includes(role)) {
+    return role as WorkspaceRole;
+  }
+  return LEGACY_WORKSPACE_ROLE_ALIASES[role];
+}
 
 // ============================================================================
 // CAPABILITY CATEGORIES
@@ -352,18 +397,21 @@ export function resolveAccessContext(
     return { allowed: false, reason: `Unknown capability: ${capability}` };
   }
   
-  const platformLevel = PLATFORM_ROLE_LEVEL[context.platformRole] ?? 99;
-  const workspaceLevel = context.workspaceRole 
-    ? WORKSPACE_ROLE_LEVEL[context.workspaceRole] ?? 99 
+  const normalizedPlatformRole = normalizePlatformRole(context.platformRole) ?? context.platformRole;
+  const normalizedWorkspaceRole = normalizeWorkspaceRole(context.workspaceRole);
+
+  const platformLevel = PLATFORM_ROLE_LEVEL[normalizedPlatformRole] ?? 99;
+  const workspaceLevel = normalizedWorkspaceRole
+    ? WORKSPACE_ROLE_LEVEL[normalizedWorkspaceRole] ?? 99
     : 99;
   
   // Check bypass first
-  if (requirement.bypassFor?.includes(context.platformRole)) {
+  if (requirement.bypassFor?.includes(normalizedPlatformRole)) {
     return { allowed: true, bypassUsed: true };
   }
   
   // Bot with elevation can bypass most checks
-  if (context.isBot && context.isElevated && context.platformRole === 'Bot') {
+  if (context.isBot && context.isElevated && normalizedPlatformRole === 'Bot') {
     const restrictedForBots = ['platform.manage_billing', 'security.revoke_all', 'filesystem.delete'];
     if (!restrictedForBots.includes(capability)) {
       return { allowed: true, bypassUsed: true, reason: 'Bot elevated access' };
@@ -428,12 +476,12 @@ export function hasAuthorityOver(
   context: 'platform' | 'workspace'
 ): boolean {
   if (context === 'platform') {
-    const actorLevel = PLATFORM_ROLE_LEVEL[actorRole as PlatformRole] ?? 99;
-    const targetLevel = PLATFORM_ROLE_LEVEL[targetRole as PlatformRole] ?? 99;
+    const actorLevel = PLATFORM_ROLE_LEVEL[normalizePlatformRole(actorRole as string) ?? 'none'] ?? 99;
+    const targetLevel = PLATFORM_ROLE_LEVEL[normalizePlatformRole(targetRole as string) ?? 'none'] ?? 99;
     return actorLevel < targetLevel;
   } else {
-    const actorLevel = WORKSPACE_ROLE_LEVEL[actorRole as WorkspaceRole] ?? 99;
-    const targetLevel = WORKSPACE_ROLE_LEVEL[targetRole as WorkspaceRole] ?? 99;
+    const actorLevel = WORKSPACE_ROLE_LEVEL[normalizeWorkspaceRole(actorRole as string) ?? 'contractor'] ?? 99;
+    const targetLevel = WORKSPACE_ROLE_LEVEL[normalizeWorkspaceRole(targetRole as string) ?? 'contractor'] ?? 99;
     return actorLevel < targetLevel;
   }
 }
@@ -479,11 +527,11 @@ export const ROLE_GROUPS = {
   // Support team plus compliance — used for UI gating (Trinity Guru mode, health dashboards)
   PLATFORM_STAFF: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'] as PlatformRole[],
   AI_SERVICES: ['root_admin', 'deputy_admin', 'Bot'] as PlatformRole[],
-  WORKSPACE_ADMINS: ['org_owner', 'co_owner'] as WorkspaceRole[],
-  WORKSPACE_MANAGERS: ['org_owner', 'co_owner', 'department_manager'] as WorkspaceRole[],
+  WORKSPACE_ADMINS: ['org_owner', 'co_owner', 'org_admin'] as WorkspaceRole[],
+  WORKSPACE_MANAGERS: ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager', 'supervisor'] as WorkspaceRole[],
   // Workspace roles that receive Trinity COO mode (leadership + management tier)
-  WORKSPACE_LEADERSHIP: ['org_owner', 'co_owner', 'department_manager', 'supervisor'] as WorkspaceRole[],
-  ALL_WORKSPACE: ['org_owner', 'co_owner', 'department_manager', 'supervisor', 'staff', 'limited', 'contractor'] as WorkspaceRole[],
+  WORKSPACE_LEADERSHIP: ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager', 'supervisor'] as WorkspaceRole[],
+  ALL_WORKSPACE: ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager', 'supervisor', 'staff', 'employee', 'auditor', 'contractor'] as WorkspaceRole[],
 } as const;
 
 /**
@@ -491,13 +539,16 @@ export const ROLE_GROUPS = {
  * These are exported so client code can gate behavior without importing types.
  */
 export function isPlatformStaffRole(role: string | null | undefined): boolean {
-  return !!role && (ROLE_GROUPS.PLATFORM_STAFF as readonly string[]).includes(role);
+  const normalized = normalizePlatformRole(role);
+  return !!normalized && (ROLE_GROUPS.PLATFORM_STAFF as readonly string[]).includes(normalized);
 }
 
 export function isSupportTeamRole(role: string | null | undefined): boolean {
-  return !!role && (ROLE_GROUPS.SUPPORT_TEAM as readonly string[]).includes(role);
+  const normalized = normalizePlatformRole(role);
+  return !!normalized && (ROLE_GROUPS.SUPPORT_TEAM as readonly string[]).includes(normalized);
 }
 
 export function isWorkspaceLeadershipRole(role: string | null | undefined): boolean {
-  return !!role && (ROLE_GROUPS.WORKSPACE_LEADERSHIP as readonly string[]).includes(role);
+  const normalized = normalizeWorkspaceRole(role);
+  return !!normalized && (ROLE_GROUPS.WORKSPACE_LEADERSHIP as readonly string[]).includes(normalized);
 }

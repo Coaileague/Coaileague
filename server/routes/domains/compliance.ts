@@ -65,6 +65,7 @@ export function mountComplianceRoutes(app: Express): void {
   // /upload is handled inside the router without workspace middleware (multer + GCS)
   app.use("/api/sps/onboarding", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
   app.use("/api/sps/forms", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
+  app.use("/api/sps/onboarding", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
   // SPS Document Management System
   // Document view/download routes MUST come before spsDocumentRouter (/:id catch-all)
   app.use("/api/sps/documents", requireAuth, ensureWorkspaceAccess, documentViewRouter);

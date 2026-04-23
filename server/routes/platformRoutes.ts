@@ -1067,7 +1067,7 @@ router.post('/users', async (req: AuthenticatedRequest, res) => {
     const { passwordHash: _, ...safeUser } = newUser;
 
     // Grant platform role if specified
-    if (platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
+    if (platformRole && ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer', 'Bot', 'none'].includes(platformRole)) {
       await db.insert(platformRoles).values({
         userId: newUser.id,
         role: platformRole,

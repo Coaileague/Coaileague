@@ -138,7 +138,7 @@ interface QuickAction {
   icon: string;
   category: 'hotfix' | 'subagent' | 'report' | 'system' | 'meeting' | 'ticket' | 'scheduling' | 'payroll' | 'compliance' | 'hr' | 'clients' | 'revenue';
   description: string;
-  requiredRole: 'employee' | 'manager' | 'admin' | 'super_admin' | 'root' | 'org_owner';
+  requiredRole: 'employee' | 'manager' | 'org_owner' | 'support_agent' | 'support_manager' | 'deputy_admin' | 'root_admin';
   riskLevel: 'safe' | 'moderate' | 'elevated' | 'critical';
   actionId: string;
   enabled: boolean;
@@ -179,9 +179,9 @@ const ROLE_HIERARCHY: Record<string, RoleStatus> = {
     allowedCategories: ['report'],
     restricted: true
   },
-  support: {
-    role: 'support',
-    displayName: 'Support',
+  support_agent: {
+    role: 'support_agent',
+    displayName: 'Support Agent',
     permissionLevel: 2,
     allowedCategories: ['report', 'ticket'],
     restricted: true
@@ -193,16 +193,16 @@ const ROLE_HIERARCHY: Record<string, RoleStatus> = {
     allowedCategories: ['report', 'ticket', 'meeting'],
     restricted: true
   },
-  admin: {
-    role: 'admin',
-    displayName: 'Admin',
+  support_manager: {
+    role: 'support_manager',
+    displayName: 'Support Manager',
     permissionLevel: 4,
     allowedCategories: ['report', 'ticket', 'meeting', 'subagent', 'system'],
     restricted: true
   },
-  super_admin: {
-    role: 'super_admin',
-    displayName: 'Super Admin',
+  deputy_admin: {
+    role: 'deputy_admin',
+    displayName: 'Deputy Admin',
     permissionLevel: 5,
     allowedCategories: ['report', 'ticket', 'meeting', 'subagent', 'system', 'hotfix'],
     restricted: true
@@ -214,9 +214,9 @@ const ROLE_HIERARCHY: Record<string, RoleStatus> = {
     allowedCategories: ['report', 'ticket', 'meeting', 'subagent', 'system', 'hotfix', 'scheduling', 'payroll', 'compliance', 'hr', 'clients', 'revenue'],
     restricted: true
   },
-  root: {
-    role: 'root',
-    displayName: 'Root',
+  root_admin: {
+    role: 'root_admin',
+    displayName: 'Root Admin',
     permissionLevel: 9,
     allowedCategories: ['report', 'ticket', 'meeting', 'subagent', 'system', 'hotfix', 'scheduling', 'payroll', 'compliance', 'hr', 'clients', 'revenue'],
     restricted: false
@@ -233,14 +233,14 @@ const QUICK_ACTIONS: QuickAction[] = [
   { id: 'timesheet-review', name: 'Timesheet Review', icon: 'Clock', category: 'report', description: 'Review pending timesheets', requiredRole: 'manager', riskLevel: 'safe', actionId: 'time_tracking.review', enabled: true },
   
   // Admin actions
-  { id: 'test-subagent', name: 'Test Subagent', icon: 'TestTube', category: 'subagent', description: 'Run subagent diagnostic tests', requiredRole: 'admin', riskLevel: 'moderate', actionId: 'diagnostics.domain_scan', enabled: true },
-  { id: 'system-health', name: 'System Health', icon: 'Activity', category: 'system', description: 'Check platform health status', requiredRole: 'admin', riskLevel: 'safe', actionId: 'health.self_check', enabled: true },
-  { id: 'view-tickets', name: 'View Tickets', icon: 'Ticket', category: 'ticket', description: 'View support tickets', requiredRole: 'admin', riskLevel: 'safe', actionId: 'tickets.list', enabled: true },
+  { id: 'test-subagent', name: 'Test Subagent', icon: 'TestTube', category: 'subagent', description: 'Run subagent diagnostic tests', requiredRole: 'support_manager', riskLevel: 'moderate', actionId: 'diagnostics.domain_scan', enabled: true },
+  { id: 'system-health', name: 'System Health', icon: 'Activity', category: 'system', description: 'Check platform health status', requiredRole: 'support_manager', riskLevel: 'safe', actionId: 'health.self_check', enabled: true },
+  { id: 'view-tickets', name: 'View Tickets', icon: 'Ticket', category: 'ticket', description: 'View support tickets', requiredRole: 'support_manager', riskLevel: 'safe', actionId: 'tickets.list', enabled: true },
   
   // Super Admin actions
-  { id: 'deploy-hotfix', name: 'Deploy Hotfix', icon: 'Wrench', category: 'hotfix', description: 'Deploy emergency hotfix', requiredRole: 'super_admin', riskLevel: 'elevated', actionId: 'diagnostics.execute_hotpatch', enabled: true },
-  { id: 'restart-service', name: 'Restart Service', icon: 'RefreshCw', category: 'system', description: 'Restart a platform service', requiredRole: 'super_admin', riskLevel: 'elevated', actionId: 'system.restart_service', enabled: true },
-  { id: 'run-diagnostics', name: 'Full Diagnostics', icon: 'Bug', category: 'subagent', description: 'Run full platform diagnostics', requiredRole: 'super_admin', riskLevel: 'moderate', actionId: 'diagnostics.full_scan', enabled: true },
+  { id: 'deploy-hotfix', name: 'Deploy Hotfix', icon: 'Wrench', category: 'hotfix', description: 'Deploy emergency hotfix', requiredRole: 'deputy_admin', riskLevel: 'elevated', actionId: 'diagnostics.execute_hotpatch', enabled: true },
+  { id: 'restart-service', name: 'Restart Service', icon: 'RefreshCw', category: 'system', description: 'Restart a platform service', requiredRole: 'deputy_admin', riskLevel: 'elevated', actionId: 'system.restart_service', enabled: true },
+  { id: 'run-diagnostics', name: 'Full Diagnostics', icon: 'Bug', category: 'subagent', description: 'Run full platform diagnostics', requiredRole: 'deputy_admin', riskLevel: 'moderate', actionId: 'diagnostics.full_scan', enabled: true },
   
   // Manager — Scheduling
   { id: 'fill-open-shifts', name: 'Fill Open Shifts', icon: 'Calendar', category: 'scheduling', description: 'Auto-fill uncovered shifts from eligible pool', requiredRole: 'manager', riskLevel: 'moderate', actionId: 'scheduling.fill_open_shifts', enabled: true },
@@ -264,8 +264,8 @@ const QUICK_ACTIONS: QuickAction[] = [
   { id: 'revenue-summary', name: 'Revenue Summary', icon: 'TrendingUp', category: 'revenue', description: 'MTD revenue, outstanding invoices, projections', requiredRole: 'org_owner', riskLevel: 'safe', actionId: 'analytics.revenue_summary', enabled: true },
 
   // Root-only actions
-  { id: 'db-maintenance', name: 'DB Maintenance', icon: 'Database', category: 'system', description: 'Run database maintenance', requiredRole: 'root', riskLevel: 'critical', actionId: 'system.db_maintenance', enabled: true },
-  { id: 'force-sync', name: 'Force Sync', icon: 'RotateCcw', category: 'system', description: 'Force sync all services', requiredRole: 'root', riskLevel: 'critical', actionId: 'system.force_sync', enabled: true },
+  { id: 'db-maintenance', name: 'DB Maintenance', icon: 'Database', category: 'system', description: 'Run database maintenance', requiredRole: 'root_admin', riskLevel: 'critical', actionId: 'system.db_maintenance', enabled: true },
+  { id: 'force-sync', name: 'Force Sync', icon: 'RotateCcw', category: 'system', description: 'Force sync all services', requiredRole: 'root_admin', riskLevel: 'critical', actionId: 'system.force_sync', enabled: true },
 ];
 
 const ICON_MAP: Record<string, any> = {
@@ -519,8 +519,8 @@ export default function TrinityCommandCenter() {
 
   // Handle action click
   const handleActionClick = (action: QuickAction) => {
-    if (action.riskLevel === 'critical' && userRole !== 'root') {
-      toast({ title: "Access denied", description: "Only root users can execute critical actions", variant: "destructive" });
+    if (action.riskLevel === 'critical' && userRole !== 'root_admin') {
+      toast({ title: "Access denied", description: "Only root admins can execute critical actions", variant: "destructive" });
       return;
     }
     setSelectedAction(action);
