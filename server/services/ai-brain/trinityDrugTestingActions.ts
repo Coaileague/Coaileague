@@ -48,7 +48,7 @@ function mkAction(actionId: string, fn: (params: any, request: ActionRequest) =>
 async function notifyUser(workspaceId: string, userId: string, title: string, message: string, priority: string = 'normal') {
   await createNotification({ workspaceId, userId, type: 'drug_test', title, message, priority,
  idempotencyKey: `drug_test-${String(Date.now())}-${'system'}`,
-}) as any)
+        })
     .catch((err: Error) => log.warn(`[TrinityDrugTesting] Notification persist failed for user ${userId}:`, err.message));
 }
 
@@ -102,9 +102,7 @@ export function registerDrugTestingActions() {
       testId: (run as any).id,
       employeeName: inputParams.employeeName,
       deadline
-    };,
-
-idempotencyKey: `drug_test-${Date.now()}-${req.userId || 'trinity-ai'}`
+    };
   }));
 
   // 2. test.record_result

@@ -235,8 +235,7 @@ class PostOrderQuizService {
           actionUrl: '/time-tracking',
           relatedEntityType: 'shift',
           relatedEntityId: shiftId,
-          metadata: { notificationType: 'post_order_quiz_failed', score, failedQuestions },,
-          idempotencyKey: `issue_detected-${shiftId}-${emp.userId}`
+          metadata: { notificationType: 'post_order_quiz_failed', score, failedQuestions },
         });
       }
     }

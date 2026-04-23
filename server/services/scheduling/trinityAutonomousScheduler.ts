@@ -2233,8 +2233,7 @@ class TrinityAutonomousSchedulerService {
             employeesNeeded: Math.max(0, employeesNeeded),
             topGapClients: sortedGaps.slice(0, 5).map(g => g.clientName),
             recommendations,
-          },,
-          idempotencyKey: `ai_schedule_ready-${session.sessionId}-${mgr.id}`
+          },
         });
       } catch (err) {
         log.warn(`[Trinity] Failed to notify user ${mgr.id}:`, err);

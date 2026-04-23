@@ -757,7 +757,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
                 actionUrl: `/schedule`,
                 relatedEntityType: 'shift',
                 relatedEntityId: shift.id,
-                createdBy: userId,,
+                createdBy: userId,
                 idempotencyKey: `shift_assigned-${shift.id}-${empId}`
               });
               try {

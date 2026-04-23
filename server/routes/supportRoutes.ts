@@ -637,7 +637,7 @@ router.patch('/escalated/:id/assign', requirePlatformStaff, async (req: Authenti
         updatedAt: new Date(),
       })
       .from(supportTickets)
-      .where(eq(supportTickets.id, id))
+      .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId!)))
       .returning();
 
     res.json(updatedTicket);
@@ -663,7 +663,7 @@ router.patch('/escalated/:id/notes', requirePlatformStaff, async (req: Authentic
         updatedAt: new Date(),
       })
       .from(supportTickets)
-      .where(eq(supportTickets.id, id))
+      .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId!)))
       .returning();
 
     res.json(updatedTicket);
@@ -706,7 +706,7 @@ router.patch('/escalated/:id/resolve', requirePlatformStaff, async (req: Authent
         updatedAt: new Date(),
       })
       .from(supportTickets)
-      .where(eq(supportTickets.id, id))
+      .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId!)))
       .returning();
 
     if (ticket.escalatedBy) {
@@ -789,7 +789,7 @@ Summary:`;
           updatedAt: new Date(),
         })
         .from(supportTickets)
-        .where(eq(supportTickets.id, id))
+        .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId!)))
         .returning();
 
       res.json({
@@ -834,7 +834,7 @@ router.post('/tickets/:id/close', requirePlatformStaff, async (req, res) => {
         updatedAt: new Date(),
       })
       .from(supportTickets)
-      .where(eq(supportTickets.id, id))
+      .where(and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId!)))
       .returning();
 
     try {
@@ -1027,7 +1027,7 @@ router.delete('/performance-reviews/:id', requirePlatformStaff, async (req: any,
       return res.status(404).json({ message: "Performance review not found" });
     }
 
-    await db.delete(performanceReviews).where(eq(performanceReviews.id, id));
+    await db.delete(performanceReviews).where(and(eq(performanceReviews.id, id), eq(performanceReviews.workspaceId, workspaceId)));
 
     if (notifyUserId) {
       const notifyUser = await storage.getUser(notifyUserId);
@@ -1139,7 +1139,7 @@ router.delete('/employer-ratings/:id', requirePlatformStaff, async (req: any, re
       return res.status(404).json({ message: "Employer rating not found" });
     }
 
-    await db.delete(employerRatings).where(eq(employerRatings.id, id));
+    await db.delete(employerRatings).where(and(eq(employerRatings.id, id), eq(employerRatings.workspaceId, workspaceId)));
 
     if (notifyWorkspaceId) {
       const workspace = await db.query.workspaces.findFirst({
@@ -1265,7 +1265,7 @@ router.delete('/report-submissions/:id', requirePlatformStaff, async (req: any, 
       where: (templates, { eq }) => eq(templates.id, report.templateId),
     });
 
-    await db.delete(reportSubmissions).where(eq(reportSubmissions.id, id));
+    await db.delete(reportSubmissions).where(and(eq(reportSubmissions.id, id), eq(reportSubmissions.workspaceId, workspaceId)));
 
     if (notifyUserId) {
       const notifyUser = await storage.getUser(notifyUserId);

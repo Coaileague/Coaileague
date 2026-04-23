@@ -1087,8 +1087,7 @@ class TrinityAutonomousOps {
             severity,
             isTrinityAutonomous: true,
             escalatedAt: new Date().toISOString(),
-          },,
-          idempotencyKey: `trinity_autonomous_alert-${crypto.randomUUID()}-${target.userId}`
+          },
         });
       } catch (error) {
         log.error(`[TrinityAutonomousOps] Failed to notify ${target.userId}:`, error);

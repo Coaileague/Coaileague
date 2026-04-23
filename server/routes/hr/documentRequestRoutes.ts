@@ -402,8 +402,7 @@ router.post('/send', requireAuth, requireManager, async (req: any, res) => {
       type: 'document_expiring',
       title: `Document Requests Sent`,
       message: `${successCount} document request${successCount !== 1 ? 's' : ''} sent successfully${failCount > 0 ? `. ${failCount} failed.` : '.'}`,
-      metadata: { successCount, failCount, totalCredits },,
-      idempotencyKey: `document_expiring-${Date.now()}-`
+      metadata: { successCount, failCount, totalCredits },
     });
 
     res.json({

@@ -372,8 +372,7 @@ export class StripeWebhookService {
             title: isUpgrade ? 'Subscription Upgraded' : 'Subscription Changed',
             message: `Your plan has been ${isUpgrade ? 'upgraded to' : 'changed to'} ${tier}. ${isUpgrade ? 'New features are now available.' : 'This change takes effect immediately.'}`,
             actionUrl: '/settings',
-            metadata: { previousTier, newTier: tier, isUpgrade },,
-            idempotencyKey: `notification-${Date.now()}-${ws.ownerId}`
+            metadata: { previousTier, newTier: tier, isUpgrade },
           });
         }
       } catch (notifErr: any) { log.warn('Notification failed on subscription.updated', { error: notifErr.message }); }
@@ -447,8 +446,7 @@ export class StripeWebhookService {
           title: 'Subscription Cancelled',
           message: 'Your subscription has been cancelled. You now have access to free-tier features only.',
           actionUrl: '/settings',
-          metadata: { previousSubscriptionId: subscription.id },,
-          idempotencyKey: `subscription_cancelled-${Date.now()}-${ws.ownerId}`
+          metadata: { previousSubscriptionId: subscription.id },
         });
       }
     } catch (notifErr: any) { log.warn('Notification failed on subscription.deleted', { error: notifErr.message }); }
@@ -547,8 +545,7 @@ export class StripeWebhookService {
           title: 'Subscription Payment Received',
           message: `Your subscription payment of $${amountPaid.toFixed(2)} was processed successfully.`,
           actionUrl: '/settings',
-          metadata: { stripeInvoiceId: invoice.id, invoiceNumber: invoice.number, amount: amountPaid },,
-          idempotencyKey: `payment_received-${Date.now()}-${ws.ownerId}`
+          metadata: { stripeInvoiceId: invoice.id, invoiceNumber: invoice.number, amount: amountPaid },
         });
       }
     } catch (notifErr: any) { log.warn('Notification failed on invoice.payment_succeeded', { error: notifErr.message }); }
@@ -661,8 +658,8 @@ export class StripeWebhookService {
             userId: ws.ownerId,
             workspaceId,
             type: 'subscription_payment_failed',
-            title: `Subscription Payment Failed — ${urgencyMsg}`,,
-            idempotencyKey: `subscription_payment_failed-${Date.now()}-${ws.ownerId}`
+            title: `Subscription Payment Failed — ${urgencyMsg}`,
+            idempotencyKey: `subscription_payment_failed-${Date.now()}-${ws.ownerId}`,
             message: `Payment of $${amountDue.toFixed(2)} failed (attempt #${attemptCount}). ${retryMsg}${nextAttemptDate !== 'N/A' ? ` Next retry: ${nextAttemptDate}.` : ''}`,
             metadata: {
               attemptCount,
@@ -853,7 +850,7 @@ export class StripeWebhookService {
             title: 'Invoice Paid',
             message: `Invoice ${paidInvoice.invoiceNumber} has been paid online — $${amountPaid.toFixed(2)}.`,
             relatedEntityType: 'invoice',
-            relatedEntityId: paidInvoice.id,,
+            relatedEntityId: paidInvoice.id,
             idempotencyKey: `invoice_paid-${paidInvoice.id}-${ws.ownerId}`
           });
         }
@@ -1075,7 +1072,7 @@ export class StripeWebhookService {
             title: 'Invoice Paid',
             message: `Invoice ${paidInvoice.invoiceNumber} has been paid — $${amountPaid.toFixed(2)}.`,
             relatedEntityType: 'invoice',
-            relatedEntityId: paidInvoice.id,,
+            relatedEntityId: paidInvoice.id,
             idempotencyKey: `invoice_paid-${paidInvoice.id}-${ws.ownerId}`
           });
         }
@@ -1228,8 +1225,7 @@ export class StripeWebhookService {
               title: 'Subscription Activated',
               message: `Your ${tier} subscription is now active. All features are unlocked.`,
               actionUrl: '/settings',
-              metadata: { tier, billingCycle: session.metadata?.billingCycle || 'monthly', sessionId: session.id },,
-              idempotencyKey: `subscription_activated-${Date.now()}-${ws.ownerId}`
+              metadata: { tier, billingCycle: session.metadata?.billingCycle || 'monthly', sessionId: session.id },
             });
           }
         } catch (notifErr: any) { log.warn('Notification failed on checkout.session.completed', { error: notifErr.message }); }
@@ -1346,8 +1342,7 @@ export class StripeWebhookService {
             actionUrl: `/invoices/${refundedInvoice.id}`,
             relatedEntityType: 'invoice',
             relatedEntityId: refundedInvoice.id,
-            metadata: { chargeId: charge.id, refundedAmount, isFullRefund },,
-            idempotencyKey: `invoice_refunded-${refundedInvoice.id}-${ws.ownerId}`
+            metadata: { chargeId: charge.id, refundedAmount, isFullRefund },
           });
         }
       } catch (notifErr: any) {
@@ -1434,8 +1429,7 @@ export class StripeWebhookService {
             actionUrl: `/invoices/${disputedInvoice.id}`,
             relatedEntityType: 'invoice',
             relatedEntityId: disputedInvoice.id,
-            metadata: { disputeId: dispute.id, chargeId, disputeAmount, disputeReason, status: dispute.status },,
-            idempotencyKey: `chargeback_received-${disputedInvoice.id}-${ws.ownerId}`
+            metadata: { disputeId: dispute.id, chargeId, disputeAmount, disputeReason, status: dispute.status },
           });
         }
       } catch (notifErr: any) {
@@ -1745,8 +1739,8 @@ export class StripeWebhookService {
           userId: ws.ownerId,
           workspaceId,
           type: 'trial_ending_soon',
-          title: `Trial Ending in ${daysRemaining} Day${daysRemaining !== 1 ? 's' : ''}`,,
-          idempotencyKey: `trial_ending_soon-${Date.now()}-${ws.ownerId}`
+          title: `Trial Ending in ${daysRemaining} Day${daysRemaining !== 1 ? 's' : ''}`,
+          idempotencyKey: `trial_ending_soon-${Date.now()}-${ws.ownerId}`,
           message: `Your free trial expires ${trialEndDate ? `on ${trialEndDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : 'soon'}. Add a payment method to continue using ${PLATFORM.name} without interruption.`,
           metadata: { daysRemaining, trialEnd: trialEndDate?.toISOString(), stripeSubscriptionId: subscription.id },
           actionUrl: '/settings?tab=billing',
@@ -1809,7 +1803,7 @@ export class StripeWebhookService {
           title: 'Account Suspended',
           message: 'Your subscription has been paused. The platform is now in read-only mode. Update your payment method to resume full access.',
           metadata: { stripeSubscriptionId: subscription.id },
-          actionUrl: '/settings?tab=billing',,
+          actionUrl: '/settings?tab=billing',
           idempotencyKey: `subscription_suspended-${Date.now()}-${ws.ownerId}`
         });
       }
@@ -1867,7 +1861,7 @@ export class StripeWebhookService {
           title: 'Account Reactivated',
           message: `Your subscription has been resumed. Full access to ${PLATFORM.name} is restored.`,
           metadata: { stripeSubscriptionId: subscription.id },
-          actionUrl: '/dashboard',,
+          actionUrl: '/dashboard',
           idempotencyKey: `subscription_reactivated-${Date.now()}-${ws.ownerId}`
         });
       }
@@ -1930,7 +1924,7 @@ export class StripeWebhookService {
           title: 'Upcoming Invoice',
           message: `Your next subscription invoice of $${amountDue.toFixed(2)} will be charged on ${dueDate}. Ensure your payment method is up to date.`,
           metadata: { amountDue, dueDate, stripeInvoiceId: invoice.id },
-          actionUrl: '/settings?tab=billing',,
+          actionUrl: '/settings?tab=billing',
           idempotencyKey: `invoice_upcoming-${Date.now()}-${ws.ownerId}`
         });
       }

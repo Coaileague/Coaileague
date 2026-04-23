@@ -272,7 +272,7 @@ class TrinityCognitiveLoadMonitor {
       message: `Trinity is at high operational capacity (load score: ${state.currentLoadScore}/100). Critical items are being prioritized. Non-urgent autonomous work resumes in tonight's processing cycle. Active tasks: ${state.activeAutonomousTasks}, Pending: ${state.pendingAutonomousTasks}, Critical escalations: ${state.activeCriticalEscalations}.`,
       priority: 'high',
       idempotencyKey: `cognitive_overload-${String(Date.now())}-${ownerRows[0].user_id}`,
-}) as any).catch(() => null);
+      }).catch(() => null);
   }
 }
 

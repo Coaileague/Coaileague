@@ -473,7 +473,7 @@ class ComplianceScoringBridge {
               type: 'document_expiring',
               title: 'Missing Critical Document',
               message: `${employee.firstName} ${employee.lastName} is missing: ${payload.documentName}. Work assignment may be blocked.`,
-              priority: 'high',,
+              priority: 'high',
               idempotencyKey: `document_expiring-${Date.now()}-${manager.userId}`
             });
           }

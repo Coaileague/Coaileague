@@ -147,7 +147,7 @@ export async function handleOfficerDeactivation(
             ? `${officerName} was removed from a specific client's shifts due to ${reason.replace(/_/g, ' ')}. ${result.shiftsUnassigned} shift(s) unassigned and coverage pipeline triggered.`
             : `${officerName} was ${reason.replace(/_/g, ' ')}. ${result.shiftsUnassigned} future shift(s) unassigned and coverage pipeline triggered for each.`,
           data: { employeeId, reason, shiftsAffected: result.shiftsUnassigned, clientId },
-          workspaceId,,
+          workspaceId,
           idempotencyKey: `staffing_escalation-${Date.now()}-${owner.userId}`
         });
         result.ownersNotified++;

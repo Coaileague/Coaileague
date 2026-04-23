@@ -162,7 +162,7 @@ class BroadcastService {
             passDownData: broadcast.passDownData,
           },
           // @ts-expect-error — TS migration: fix in refactoring sprint
-          createdBy: broadcast.createdBy,,
+          createdBy: broadcast.createdBy,
           idempotencyKey: `system-${broadcast.id}-${emp.userId}`
         });
 

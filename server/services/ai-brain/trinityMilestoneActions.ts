@@ -46,7 +46,7 @@ async function notifyOwner(workspaceId: string, title: string, message: string) 
       message,
       priority: 'normal',
       idempotencyKey: `milestone_alert-${String(Date.now())}-${owner.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
   }
 }
 

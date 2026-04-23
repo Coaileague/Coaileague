@@ -47,7 +47,7 @@ export async function createPayrollRunCreatedNotification(
     relatedEntityType: 'payroll_run',
     relatedEntityId: params.payrollRunId,
     actionUrl: '/payroll',
-    createdBy: params.createdBy,,
+    createdBy: params.createdBy,
     idempotencyKey: `payroll_processed-${params.payrollRunId}-${params.userId}`
   });
 }
@@ -75,7 +75,7 @@ export async function createShiftAssignedNotification(
     relatedEntityType: 'shift',
     relatedEntityId: params.shiftId,
     actionUrl: '/schedule',
-    createdBy: params.assignedBy,,
+    createdBy: params.assignedBy,
     idempotencyKey: `shift_assigned-${params.shiftId}-${params.userId}`
   });
 }
@@ -100,7 +100,7 @@ export async function createShiftChangedNotification(
     relatedEntityType: 'shift',
     relatedEntityId: params.shiftId,
     actionUrl: '/schedule',
-    createdBy: params.changedBy,,
+    createdBy: params.changedBy,
     idempotencyKey: `shift_changed-${params.shiftId}-${params.userId}`
   });
 }
@@ -125,7 +125,7 @@ export async function createShiftCancelledNotification(
     relatedEntityType: 'shift',
     relatedEntityId: params.shiftId,
     actionUrl: '/schedule',
-    createdBy: params.cancelledBy,,
+    createdBy: params.cancelledBy,
     idempotencyKey: `shift_cancelled-${params.shiftId}-${params.userId}`
   });
 }
@@ -148,8 +148,8 @@ export async function createSchedulePublishedNotification(
     workspaceId: params.workspaceId,
     userId: params.userId,
     type: 'schedule_published',
-    title: 'Schedule Published',,
-    idempotencyKey: `schedule_published-${Date.now()}-${params.userId}`
+    title: 'Schedule Published',
+    idempotencyKey: `schedule_published-${Date.now()}-${params.userId}`,
     message: `Your schedule for ${params.weekStart} – ${params.weekEnd} has been published (${params.totalShifts} shift${params.totalShifts !== 1 ? 's' : ''}).`,
     relatedEntityType: 'schedule',
     actionUrl: '/schedule',
@@ -176,8 +176,8 @@ export async function createInvoiceCreatedNotification(
     workspaceId: params.workspaceId,
     userId: params.userId,
     type: 'invoice_created',
-    title: 'Invoice Created',,
-    idempotencyKey: `invoice_created-${Date.now()}-${params.userId}`
+    title: 'Invoice Created',
+    idempotencyKey: `invoice_created-${Date.now()}-${params.userId}`,
     message: `Invoice #${params.invoiceNumber} for ${params.clientName} ($${params.totalAmount}) has been created.`,
     relatedEntityType: 'invoice',
     relatedEntityId: params.invoiceId,

@@ -45,8 +45,7 @@ export function registerCommsProactiveActions() {
     }
     const result = await createNotification({ workspaceId, userId, type: 'alert', title, message, priority: 'normal',
  idempotencyKey: `alert-${String(Date.now())}-${'system'}`,
-}) as any),
-    idempotencyKey: `alert-${Date.now()}-`
+        })
       .catch((err: Error) => { log.warn(`[TrinityComms] Push notification persist failed for user ${userId}:`, err.message); return null; });
     return { sent: true, userId };
   }));
@@ -66,12 +65,11 @@ export function registerCommsProactiveActions() {
     const userId = (emp as any)?.userId || officerId;
     await createNotification({ workspaceId, userId, type: 'scheduled_email', title: subject || 'Message from CoAIleague', message, priority: priority || 'normal',
  idempotencyKey: `scheduled_email-${String(Date.now())}-${'system'}`,
-}) as any)
+        })
       .catch((err: Error) => log.warn(`[TrinityComms] Officer email notification persist failed for user ${userId}:`, err.message));
     const emailAddr = (emp as any)?.email;
     if (emailAddr) {
       // @ts-expect-error — TS migration: fix in refactoring sprint,
-    idempotencyKey: `scheduled_email-${Date.now()}-`
       await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: userId, channel: 'email', body: { to: emailAddr, subject: subject || 'Message from CoAIleague', html: `<p>${message}</p>` } }).catch(() => null);
     }
     return { sent: true, officerId, subject, emailSent: !!emailAddr };
@@ -92,12 +90,11 @@ export function registerCommsProactiveActions() {
     for (const mgr of managers) {
       await createNotification({ workspaceId, userId: mgr.userId, type: 'scheduled_email', title: subject || 'Manager Alert from Trinity', message, priority: priority || 'normal',
  idempotencyKey: `scheduled_email-${String(Date.now())}-${mgr.userId}`,
-}) as any)
+        })
         .catch((err: Error) => log.warn(`[TrinityComms] Manager email notification persist failed for user ${mgr.userId}:`, err.message));
       const mgrUser = await db.query.users?.findFirst({ where: eq(users.id, mgr.userId) } as any).catch(() => null);
       if ((mgrUser as any)?.email) {
         // @ts-expect-error — TS migration: fix in refactoring sprint,
-      idempotencyKey: `scheduled_email-${Date.now()}-${mgr.userId}`
         await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: mgr.userId, channel: 'email', body: { to: (mgrUser as any).email, subject: subject || 'Manager Alert from Trinity', html: `<p>${message}</p>` } }).catch(() => null);
         emailsSent++;
       }
@@ -217,9 +214,8 @@ export function registerCommsProactiveActions() {
       priority: 'normal',
       metadata: { scheduledFor: sendDate.toISOString() },
       idempotencyKey: `scheduled_email-${String(Date.now())}-${recipientId || null}`,
-}) as any).catch(() => null);
-    return { scheduled: true, sendAt: sendDate.toISOString(), subject };,
-      idempotencyKey: `scheduled_email-${Date.now()}-${recipientId || null}`
+        }).catch(() => null);
+    return { scheduled: true, sendAt: sendDate.toISOString(), subject };
   }));
 
   // H2 FIX: email.get_status previously returned invoice billing status ('sent'/'paid'/'draft')

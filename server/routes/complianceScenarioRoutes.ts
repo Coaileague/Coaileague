@@ -200,8 +200,8 @@ router.post('/confirm-renewal/:employeeId', requireAuth, async (req, res) => {
       workspaceId,
       userId: confirmedByUserId,
       type: 'compliance_alert',
-      title: `License Renewal Confirmed — Employee ${employeeId}`,,
-      idempotencyKey: `compliance_alert-${Date.now()}-${confirmedByUserId}`
+      title: `License Renewal Confirmed — Employee ${employeeId}`,
+      idempotencyKey: `compliance_alert-${Date.now()}-${confirmedByUserId}`,
       message: `Guard card renewal confirmed. New expiration: ${newExpiry.toLocaleDateString()}. Previous record archived (ID: ${certId}). Scheduling eligibility ${newStatus.eligible ? 'RESTORED' : 'still blocked — verify cert data'}.`,
       actionUrl: '/compliance-scenarios',
       relatedEntityType: 'employee',
@@ -272,8 +272,8 @@ router.post('/override-out-of-state/:employeeId', requireAuth, async (req, res) 
       workspaceId,
       userId: approvedByUserId,
       type: 'compliance_alert',
-      title: `Out-of-State License Override Logged`,,
-      idempotencyKey: `compliance_alert-${Date.now()}-${approvedByUserId}`
+      title: `Out-of-State License Override Logged`,
+      idempotencyKey: `compliance_alert-${Date.now()}-${approvedByUserId}`,
       message: `Manager approval documented for ${outOfStateCheck.issuingState} license (${outOfStateCheck.licenseNumber ?? 'N/A'}). Reason: ${reason}`,
       actionUrl: '/compliance-scenarios',
       relatedEntityType: 'employee',

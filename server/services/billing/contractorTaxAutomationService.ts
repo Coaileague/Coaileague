@@ -142,8 +142,8 @@ export async function run1099JanuaryScan(taxYear: number): Promise<{
             metadata: {
               taxYear,
               contractorCount: filingCandidates.length,
-              filingDeadline: deadline,,
-            idempotencyKey: `form_1099_filing_required-${Date.now()}-${ws.ownerId}`
+              filingDeadline: deadline,
+            idempotencyKey: `form_1099_filing_required-${Date.now()}-${ws.ownerId}`,
               contractors: filingCandidates.map(r => ({ id: r.employeeId, name: r.employeeName, total: r.totalPaidInYear })),
             },
           }).catch((e: any) => log.warn('Failed to send 1099 notification', { error: e.message }));

@@ -272,7 +272,7 @@ class MeetingBotPdfService {
             message: `MeetingBot generated a meeting summary for "${conv.subject || 'Meeting'}". ${items.filter(i => i.type === 'action').length} action items, ${items.filter(i => i.type === 'decision').length} decisions.`,
             metadata: { documentId: docId, conversationId, category: 'meetings' },
             // @ts-expect-error — TS migration: fix in refactoring sprint
-            priority: 'normal',,
+            priority: 'normal',
             idempotencyKey: `document-${Date.now()}-${mgr.id}`
           });
         }

@@ -236,15 +236,14 @@ class TrinitySocialGraphEngine {
       message: insight.message,
       priority: insight.severity === 'high' ? 'high' : 'normal',
       idempotencyKey: `social_graph_insight-${String(Date.now())}-${rows[0].user_id}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
   }
 
   /** Get an entity's current social profile */
   async getEntityProfile(workspaceId: string, entityId: string): Promise<SocialEntityProfile | null> {
     // CATEGORY C — Raw SQL retained: LIMIT | Tables: social_entities | Verified: 2026-03-23
     const { rows } = await typedPool(`
-      SELECT * FROM social_entities WHERE workspace_id = $1 AND entity_id = $2 LIMIT 1,
-      idempotencyKey: `social_graph_insight-${Date.now()}-${rows[0].user_id}`
+      SELECT * FROM social_entities WHERE workspace_id = $1 AND entity_id = $2 LIMIT 1
     `, [workspaceId, entityId]).catch(() => ({ rows: [] }));
     if (!rows[0]) return null;
     const r = rows[0];

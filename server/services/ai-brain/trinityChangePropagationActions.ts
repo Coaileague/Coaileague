@@ -48,8 +48,8 @@ async function notifyManagers(workspaceId: string, title: string, message: strin
     .catch(() => []);
   for (const mgr of managers) {
     await createNotification({ workspaceId, userId: mgr.userId, type: 'settings_change_impact', title, message, priority,
- idempotencyKey: `settings_change_impact-${String(Date.now())}-${mgr.userId}`,
-}) as any)
+      idempotencyKey: `settings_change_impact-${String(Date.now())}-${mgr.userId}`,
+    })
       .catch((err: Error) => log.warn(`[TrinityChangePropagation] Notification persist failed for manager ${mgr.userId}:`, err.message));
   }
   return managers.length;
@@ -130,8 +130,7 @@ export function registerChangePropagationActions() {
       warnings,
       actionsTriggered,
       changedAt: new Date().toISOString(),
-    };,
-  idempotencyKey: `settings_change_impact-${Date.now()}-${mgr.userId}`
+    };
   }));
 
   helpaiOrchestrator.registerAction(mkAction('settings.propagate_pay_rate_change', async (params) => {
@@ -455,7 +454,7 @@ export function registerChangePropagationActions() {
         message: `Your ${docType || 'license/certification'} has expired. You have been removed from ${futureShifts.length} upcoming shift(s). Please renew immediately and contact your supervisor.`,
         priority: 'urgent',
         idempotencyKey: `compliance_hold-${String(Date.now())}-${'system'}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
 
     await notifyManagers(workspaceId,
@@ -473,8 +472,7 @@ export function registerChangePropagationActions() {
         futureShiftsCleared: unassigned,
         replacementsCreated,
         timestamp: new Date().toISOString(),
-      },,
-        idempotencyKey: `compliance_hold-${Date.now()}-`
+      },
     });
 
     log.info(`[TrinityChangePropagation] license_expiry: employee=${employeeId}, removed from ${unassigned} shifts, replacements=${replacementsCreated}`);

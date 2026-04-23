@@ -50,13 +50,11 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
 async function notifyUser(workspaceId: string, userId: string, title: string, message: string, priority: string = 'normal') {
   await createNotification({ workspaceId, userId, type: 'task_delegation', title, message, priority,
  idempotencyKey: `task_delegation-${String(Date.now())}-${'system'}`,
-}) as any)
+        })
     .catch((err: Error) => log.warn(`[TrinityDelegation] Notification persist failed for user ${userId}:`, err.message));
 }
 
-async function notifyManagers(workspaceId: string, title: string, message: string, priority: string = 'high') {,
-
-idempotencyKey: `task_delegation-${Date.now()}-${workspaceMembers.userId}`
+async function notifyManagers(workspaceId: string, title: string, message: string, priority: string = 'high') {
   const managers = await db.select({ userId: workspaceMembers.userId })
     .from(workspaceMembers)
     .where(and(eq(workspaceMembers.workspaceId, workspaceId), sql`${workspaceMembers.role} IN ('org_owner', 'co_owner', 'manager', 'supervisor')`))
@@ -64,7 +62,7 @@ idempotencyKey: `task_delegation-${Date.now()}-${workspaceMembers.userId}`
   for (const mgr of managers) {
     await createNotification({ workspaceId, userId: mgr.userId, type: 'task_escalation', title, message, priority,
  idempotencyKey: `task_escalation-${String(Date.now())}-${mgr.userId}`,
-}) as any)
+        })
       .catch((err: Error) => log.warn(`[TrinityDelegation] Manager escalation notification failed for user ${mgr.userId}:`, err.message));
   }
   return managers.length;
@@ -131,8 +129,7 @@ export function registerDelegationTrackerActions() {
       assignedTo,
       dueBy,
       status: 'awaiting_approval',
-    };,
-  idempotencyKey: `task_escalation-${Date.now()}-${mgr.userId}`
+    };
   }));
 
   helpaiOrchestrator.registerAction(mkAction('task.get', async (params) => {

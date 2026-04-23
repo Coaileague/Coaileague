@@ -413,7 +413,7 @@ router.put("/api/time-off-requests/:id/status", requireManager, async (req: Auth
         reviewedAt: new Date(),
         reviewNotes: managerNotes || null,
       })
-      .where(eq(timeOffRequests.id, id))
+      .where(and(eq(timeOffRequests.id, id), eq(timeOffRequests.workspaceId, workspaceId!)))
       .returning();
 
     // Notify the employee of approval or denial outcome
@@ -528,7 +528,7 @@ router.put("/api/shift-actions/:id/approve", requireManager, async (req: Authent
         approvedBy: userId,
         approvedAt: new Date(),
       })
-      .where(eq(shiftActions.id, id))
+      .where(and(eq(shiftActions.id, id), eq(shiftActions.workspaceId, workspaceId!)))
       .returning();
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -690,7 +690,7 @@ router.put("/api/timesheet-edit-requests/:id/review", requireManager, async (req
         reviewedAt: new Date(),
         reviewNotes: reviewerNotes || null,
       })
-      .where(eq(timesheetEditRequests.id, id))
+      .where(and(eq(timesheetEditRequests.id, id), eq(timesheetEditRequests.workspaceId, workspaceId!)))
       .returning();
 
     res.json(updated);

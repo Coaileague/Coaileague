@@ -200,14 +200,13 @@ class AutomationTriggerService {
             priority: 'normal',
             actionUrl: '/payroll',
             idempotencyKey: `payroll_disbursed-${String(Date.now())}-${'system'}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
           notified++;
         }
         log.info(`[AutomationTrigger] payroll_run_paid — notified ${notified}/${entries.length} employee(s)`);
       } catch (e: any) {
         log.warn('[AutomationTrigger] payroll_run_paid employee notification error:', e?.message);
-      },
-            idempotencyKey: `payroll_disbursed-${Date.now()}-`
+      }
     }});
 
     // invoice_overdue → update invoice status + trigger automated collections sweep
@@ -265,7 +264,7 @@ class AutomationTriggerService {
             message: 'They are now eligible to be scheduled. Trinity will include them in auto-scheduling.',
             actionUrl: `/employees/${employeeId}`,
             idempotencyKey: `system-${String(Date.now())}-${mgr.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
 
         await db.insert(thalamiclogs).values({
@@ -277,8 +276,7 @@ class AutomationTriggerService {
           sourceTrustTier: 'workspace',
           signalPayload: { employeeId, employeeName, readyAt: new Date().toISOString() },
         } as any);
-      },,
-            idempotencyKey: `system-${Date.now()}-${mgr.userId}`
+      },
     });
 
     // GAP-A FIX: When a manager approves a payroll gate, actually execute payroll generation

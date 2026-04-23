@@ -164,7 +164,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
               paymentMethod: method,
               period: periodLabel,
             },
-            actionUrl: '/payroll',,
+            actionUrl: '/payroll',
             idempotencyKey: `payroll_payment_method-${Date.now()}-${emp.userId}`
           });
           notificationsSent++;

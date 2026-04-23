@@ -207,8 +207,7 @@ export async function runShiftEscalationScan(): Promise<ShiftEscalationResult> {
               urgencyLevel: gap.level,
               hoursUntilStart: parseFloat(hrs),
               startTime: gap.startTime!.toISOString(),
-            },,
-            idempotencyKey: `notification-${gap.id}-${uid}`
+            },
           });
           alertsSent++;
         }

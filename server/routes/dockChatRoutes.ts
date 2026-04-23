@@ -179,7 +179,7 @@ router.post("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedReq
           title: "You were mentioned",
           message: `${content.slice(0, 80)}`,
           type: "mention",
-          actionUrl: `/dock-chat?room=${roomId}`,,
+          actionUrl: `/dock-chat?room=${roomId}`,
           idempotencyKey: `mention-${Date.now()}-${userRes.rows[0].id}`
         }).catch(() => null);
       }
@@ -216,7 +216,7 @@ router.post("/rooms/:roomId/broadcast", requireManager, async (req: Authenticate
         title: "Broadcast Message",
         message: content.slice(0, 100),
         type: "broadcast",
-        actionUrl: `/dock-chat?room=${roomId}`,,
+        actionUrl: `/dock-chat?room=${roomId}`,
         idempotencyKey: `broadcast-${Date.now()}-${m.user_id}`
       }).catch(() => null);
     }

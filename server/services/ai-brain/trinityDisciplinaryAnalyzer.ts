@@ -357,7 +357,7 @@ class TrinityDisciplinaryAnalyzer {
         message: pattern.suggestion.slice(0, 500),
         priority: pattern.severity === 'critical' ? 'urgent' : pattern.severity === 'high' ? 'high' : 'normal',
         idempotencyKey: `disciplinary_pattern-${String(Date.now())}-${targetUserId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
   }
 }

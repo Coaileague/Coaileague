@@ -83,8 +83,8 @@ const createHiringRecord = mkAction('hiring.create_record', async (req) => {
     for (const mgr of managers) {
       await createNotification({
         workspaceId, userId: mgr.userId, type: 'info',
-        title: 'New Hire Record Created',,
-        idempotencyKey: `info-${Date.now()}-${mgr.userId}`
+        title: 'New Hire Record Created',
+        idempotencyKey: `info-${Date.now()}-${mgr.userId}`,
         message: `Trinity created a hiring record for ${firstName} ${lastName} (${email}). Next step: background check initiation. PERC/Guard Card pipeline started.`,
         priority: 'normal',
       } as any).catch(() => null);
@@ -257,7 +257,7 @@ const confirmLicenseReceived = mkAction('hiring.confirm_license_received', async
         message: `PERC/Guard Card confirmed for application ${applicationId}${percCardNumber ? ' (Card #: ' + percCardNumber + ')' : ''}. Officer is now schedule-eligible. Add to scheduling pool.`,
         priority: 'normal',
         idempotencyKey: `info-${String(Date.now())}-${mgr.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
 
     return createResult(req.actionId, true,
@@ -265,8 +265,7 @@ const confirmLicenseReceived = mkAction('hiring.confirm_license_received', async
       { applicationId, employeeId, percCardNumber, licenseLevel: licenseLevel || 'Level II', expirationDate, scheduleEligible: true }, start);
   } catch (e: any) {
     return createResult(req.actionId, false, e.message, null, start);
-  },
-        idempotencyKey: `info-${Date.now()}-${mgr.userId}`
+  }
 });
 
 const getHiringPipelineStatus = mkAction('hiring.pipeline_status', async (req) => {

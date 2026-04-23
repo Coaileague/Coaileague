@@ -595,7 +595,7 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
         message: `${application.firstName} ${application.lastName} has completed onboarding and is awaiting your approval.`,
         actionUrl: '/employees',
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        priority: 'high',,
+        priority: 'high',
         idempotencyKey: `approval_required-${Date.now()}-${managerId}`
       }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }

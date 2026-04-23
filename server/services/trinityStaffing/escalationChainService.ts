@@ -275,8 +275,7 @@ class EscalationChainService {
                 unfilledPositions: state.unfilledPositions,
                 totalPositions: state.totalPositions,
                 allTiersExhausted: true,
-              },,
-              idempotencyKey: `staffing_critical_escalation-${Date.now()}-${owner.userId}`
+              },
             });
             ownerNotifiedCount++;
           }
@@ -467,7 +466,7 @@ class EscalationChainService {
               title: `URGENT: ${state.unfilledPositions} position(s) still need staffing`,
               message: `Request ${state.requestId} has been escalated to management after 45 minutes without full coverage. Please review and assign staff immediately.`,
               data: { requestId: state.requestId, tier: 4, unfilledPositions: state.unfilledPositions },
-              workspaceId: state.workspaceId,,
+              workspaceId: state.workspaceId,
               idempotencyKey: `staffing_escalation-${Date.now()}-${manager.userId}`
             });
             notifiedCount++;
@@ -523,7 +522,7 @@ class EscalationChainService {
             title: `CRITICAL: Staffing emergency - ${state.unfilledPositions} unfilled position(s)`,
             message: `Request ${state.requestId} requires immediate attention. After 60 minutes, ${state.unfilledPositions} of ${state.totalPositions} positions remain unfilled despite all escalation attempts.`,
             data: { requestId: state.requestId, tier: 5, unfilledPositions: state.unfilledPositions, totalPositions: state.totalPositions },
-            workspaceId: state.workspaceId,,
+            workspaceId: state.workspaceId,
             idempotencyKey: `staffing_critical_escalation-${Date.now()}-${owner.userId}`
           });
           notifiedCount++;

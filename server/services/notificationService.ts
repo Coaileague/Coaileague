@@ -503,7 +503,7 @@ export async function sendWelcomeOrgNotification(workspaceId: string, ownerId: s
       actionUrl: notif.actionUrl,
       relatedEntityType: notif.relatedEntityType,
       relatedEntityId: notif.relatedEntityId,
-      metadata: { notificationType: 'welcome_bundle', orgName, isWelcomeBundle: true },,
+      metadata: { notificationType: 'welcome_bundle', orgName, isWelcomeBundle: true },
       idempotencyKey: `notification-${notif.relatedEntityId}-${ownerId}`
     }));
   }
@@ -536,7 +536,7 @@ export async function sendWelcomeEmployeeNotification(
       actionUrl: notif.actionUrl,
       relatedEntityType: notif.relatedEntityType,
       relatedEntityId: notif.relatedEntityId,
-      metadata: { notificationType: 'welcome_bundle', orgName, employeeName, isWelcomeBundle: true },,
+      metadata: { notificationType: 'welcome_bundle', orgName, employeeName, isWelcomeBundle: true },
       idempotencyKey: `notification-${notif.relatedEntityId}-`
     }));
   }
@@ -567,8 +567,7 @@ export async function sendAIApprovalNeededNotification(
     actionUrl: actionUrl || '/dashboard',
     relatedEntityType: 'ai_workflow',
     relatedEntityId: workspaceId,
-    metadata: { actionType, deadline: deadline.toISOString(), daysUntilDeadline },,
-    idempotencyKey: `ai_approval_needed-${workspaceId}-`
+    metadata: { actionType, deadline: deadline.toISOString(), daysUntilDeadline },
   });
 }
 
@@ -590,8 +589,7 @@ export async function sendAIScheduleReadyNotification(
     actionUrl: `/schedule/${scheduleId}`,
     relatedEntityType: 'schedule',
     relatedEntityId: scheduleId,
-    metadata: { period },,
-    idempotencyKey: `ai_schedule_ready-${scheduleId}-`
+    metadata: { period },
   });
 }
 
@@ -614,8 +612,7 @@ export async function sendInvoiceGeneratedNotification(
     actionUrl: `/invoices/${invoiceId}`,
     relatedEntityType: 'invoice',
     relatedEntityId: invoiceId,
-    metadata: { clientName, amount },,
-    idempotencyKey: `invoice_generated-${invoiceId}-`
+    metadata: { clientName, amount },
   });
 }
 
@@ -638,8 +635,7 @@ export async function sendPaymentReceivedNotification(
     actionUrl: `/invoices/${invoiceId}`,
     relatedEntityType: 'payment',
     relatedEntityId: invoiceId,
-    metadata: { clientName, amount },,
-    idempotencyKey: `payment_received-${invoiceId}-`
+    metadata: { clientName, amount },
   });
 }
 
@@ -664,8 +660,7 @@ export async function sendDeadlineApproachingNotification(
     actionUrl: actionUrl || '/dashboard',
     relatedEntityType: 'deadline',
     relatedEntityId: workspaceId,
-    metadata: { actionType, deadline: deadline.toISOString(), hoursUntilDeadline },,
-    idempotencyKey: `deadline_approaching-${workspaceId}-`
+    metadata: { actionType, deadline: deadline.toISOString(), hoursUntilDeadline },
   });
 }
 
@@ -688,8 +683,7 @@ export async function sendAIActionCompletedNotification(
     actionUrl: actionUrl || '/dashboard',
     relatedEntityType: 'ai_action',
     relatedEntityId: workspaceId,
-    metadata: { actionType },,
-    idempotencyKey: `ai_action_completed-${workspaceId}-`
+    metadata: { actionType },
   });
 }
 
@@ -711,8 +705,7 @@ export async function sendScheduleChangeNotification(
     actionUrl: scheduleId ? `/schedule/${scheduleId}` : '/schedule',
     relatedEntityType: 'schedule',
     relatedEntityId: scheduleId,
-    metadata: { details },,
-    idempotencyKey: `schedule_change-${scheduleId}-`
+    metadata: { details },
   });
 }
 
@@ -734,8 +727,7 @@ export async function sendPayrollProcessedNotification(
     actionUrl: '/employee/portal',
     relatedEntityType: 'payroll',
     relatedEntityId: userId,
-    metadata: { period, amount },,
-    idempotencyKey: `payroll_processed-${userId}-`
+    metadata: { period, amount },
   });
 }
 
@@ -799,8 +791,7 @@ export async function sendTrinityWelcomeNotification(
       tip: content.tip,
       userName,
       welcomeType: 'new_user',
-    },,
-    idempotencyKey: `trinity_welcome-${'trinity_welcome'}-`
+    },
   });
 }
 

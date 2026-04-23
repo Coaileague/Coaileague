@@ -426,8 +426,7 @@ class AlertService {
           severity: alert.severity,
           alertType: alert.alertType,
           triggerData: alert.triggerData,
-        },,
-        idempotencyKey: `notification-${alert.relatedEntityId || undefined}-`
+        },
       });
     }
   }

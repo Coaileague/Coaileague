@@ -723,7 +723,7 @@ class TrinitySentinel {
                 userId: ws[0].ownerId,
                 type: 'system_alert',
                 title: `[Trinity Alert] ${alert.title}`,
-                message: alert.message,,
+                message: alert.message,
                 idempotencyKey: `system_alert-${Date.now()}-${ws[0].ownerId}`
               });
             }

@@ -111,7 +111,45 @@ export class TrinityEmailProcessor {
        LIMIT 1`,
       [addr]
     );
-    return legacy.rows[0] || null;
+    if (legacy.rows[0]) return legacy.rows[0];
+
+    // ─── H4 FIX: Canonical platform address fallback ──────────────────────────
+    // support@, calloffs@, incidents@, docs@, billing@, trinity@ etc. are
+    // platform-level addresses. No workspace row will have these in its email
+    // columns because they belong to the platform, not a tenant workspace.
+    // Without this fallback, resolveWorkspaceFromEmail returns null and every
+    // inbound email gets routed: false — Trinity is deaf to all inbound mail.
+    //
+    // Fix: if the local part matches a known platform address, resolve to the
+    // platform workspace so TrinityEmailProcessor can route it correctly.
+    const localPart = addr.split('@')[0];
+    const PLATFORM_LOCAL_PARTS = new Set([
+      'support', 'calloffs', 'calloff', 'incidents', 'incident',
+      'docs', 'documents', 'staffing', 'scheduling', 'payroll',
+      'ops', 'operations', 'careers', 'jobs', 'apply',
+      'billing', 'invoices', 'invoice', 'trinity',
+    ]);
+
+    if (PLATFORM_LOCAL_PARTS.has(localPart)) {
+      const { PLATFORM_WORKSPACE_ID } = await import('./billing/billingConstants');
+      const platform = await pool.query(
+        `SELECT * FROM workspaces WHERE id = $1 LIMIT 1`,
+        [PLATFORM_WORKSPACE_ID]
+      );
+      if (platform.rows[0]) {
+        log.info(`[TrinityEmailProcessor] Resolved ${addr} to platform workspace via canonical local-part`);
+        return {
+          ...platform.rows[0],
+          // Inject email type hints so getAddressType() can identify it correctly
+          support_email: localPart === 'support' ? addr : platform.rows[0].support_email,
+          calloffs_email: (localPart === 'calloffs' || localPart === 'calloff') ? addr : platform.rows[0].calloffs_email,
+          trinity_email: localPart === 'trinity' ? addr : platform.rows[0].trinity_email,
+          careers_email: (localPart === 'careers' || localPart === 'jobs' || localPart === 'apply') ? addr : platform.rows[0].careers_email,
+        };
+      }
+    }
+
+    return null;
   }
 
   async identifySender(fromEmail: string, workspaceId: string): Promise<any | null> {

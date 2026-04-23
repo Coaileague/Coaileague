@@ -221,7 +221,7 @@ export class PartnerApiUsageService {
           type: 'error',
           category: 'billing',
           priority: 'high',
-          actionUrl: '/billing',,
+          actionUrl: '/billing',
           idempotencyKey: `error-${Date.now()}-${ws.ownerId}`
         });
       }).catch((err) => log.warn('[partnerApiUsage] Fire-and-forget failed:', err));

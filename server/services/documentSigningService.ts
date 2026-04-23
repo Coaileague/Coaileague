@@ -306,7 +306,7 @@ class DocumentSigningService {
                 documentName: doc.fileName,
                 signatureId: signature.id,
               },
-              createdBy: senderUserId,,
+              createdBy: senderUserId,
               idempotencyKey: `document_signature_request-${documentId}-${recipient.userId}`
             });
             log.info(`[DocumentSigning] Created notification for internal user ${recipient.userId}`);
@@ -481,8 +481,7 @@ class DocumentSigningService {
               signerEmail: sigRecord.signerEmail,
               signerName: sigRecord.signerName,
               signatureId: sigRecord.id,
-            },,
-            idempotencyKey: `document_signed-${doc.id}-${doc.uploadedBy}`
+            },
           });
         } catch (notifErr: any) {
           log.warn(`[DocumentSigning] Owner notification failed: ${notifErr.message}`);

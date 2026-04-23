@@ -210,7 +210,7 @@ export async function runPayrollAutoClose(): Promise<{
               actionUrl: `/payroll/${result.payrollRunId}`,
               relatedEntityType: 'payroll_run',
               relatedEntityId: result.payrollRunId,
-              metadata: { periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), entryCount: approvedEntries.length },,
+              metadata: { periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), entryCount: approvedEntries.length },
               idempotencyKey: `payroll_draft_ready-${result.payrollRunId}-${ws.ownerId}`
             }).catch((e: any) => log.warn('Failed to notify owner of payroll draft', { error: e.message }));
           }
@@ -285,8 +285,8 @@ export async function detectOrphanedPayrollRuns(): Promise<void> {
             workspaceId: run.workspaceId,
             userId: run.ownerId,
             type: 'payroll_alert',
-            title: 'Payroll run requires attention',,
-            idempotencyKey: `payroll_alert-${Date.now()}-${run.ownerId}`
+            title: 'Payroll run requires attention',
+            idempotencyKey: `payroll_alert-${Date.now()}-${run.ownerId}`,
             message: `A payroll run (${run.id}) is in processed status but has no pay stubs. This may indicate a partial failure during stub generation. Please review and regenerate stubs if needed.`,
             actionUrl: `/payroll/${run.id}`,
             relatedEntityType: 'payroll_run',

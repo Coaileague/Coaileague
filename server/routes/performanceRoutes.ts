@@ -206,8 +206,8 @@ router.post('/disciplinary', requireAuth, async (req: AuthenticatedRequest, res)
         workspaceId,
         userId: officerUserId,
         type: 'disciplinary_pattern',
-        title: `Disciplinary Record Issued — ${recordTypeLabel}`,,
-        idempotencyKey: `disciplinary_pattern-${Date.now()}-${officerUserId}`
+        title: `Disciplinary Record Issued — ${recordTypeLabel}`,
+        idempotencyKey: `disciplinary_pattern-${Date.now()}-${officerUserId}`,
         message: `A formal disciplinary record (${recordTypeLabel}) has been issued. Please review and acknowledge.`,
         actionUrl: '/performance',
         relatedEntityType: 'disciplinary_record',
@@ -526,7 +526,7 @@ router.post('/reviews', requireAuth, async (req: AuthenticatedRequest, res) => {
         message: 'A performance review has been submitted for you. Please review and acknowledge.',
         actionUrl: '/performance',
         relatedEntityType: 'performance_review',
-        relatedEntityId: review.id,,
+        relatedEntityId: review.id,
         idempotencyKey: `system-${review.id}-${officerUserId}`
       }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }

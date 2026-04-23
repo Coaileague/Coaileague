@@ -180,8 +180,8 @@ export async function runTimesheetReminderScan(): Promise<{
                 workspaceId: ws.id,
                 userId: emp.userId,
                 type: 'timesheet_submission_reminder',
-                title: 'Submit your timesheet — pay period closes soon',,
-                idempotencyKey: `timesheet_submission_reminder-${Date.now()}-${emp.userId}`
+                title: 'Submit your timesheet — pay period closes soon',
+                idempotencyKey: `timesheet_submission_reminder-${Date.now()}-${emp.userId}`,
                 message: `Your timesheet for this pay period (${cycle}) must be submitted before ${periodEnd.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}. Missing entries will not be paid this cycle.`,
                 actionUrl: '/timesheets/pending',
               });
@@ -232,7 +232,7 @@ export async function runTimesheetReminderScan(): Promise<{
                 type: 'timesheet_approval_reminder',
                 title: `${pending} timesheet${pending === 1 ? '' : 's'} pending approval — payroll closes soon`,
                 message: `There ${pending === 1 ? 'is' : 'are'} ${pending} submitted timesheet${pending === 1 ? '' : 's'} waiting for your approval. The pay period closes within 24 hours. Approve now to ensure employees are paid on time.`,
-                actionUrl: '/timesheets/approvals',,
+                actionUrl: '/timesheets/approvals',
                 idempotencyKey: `timesheet_approval_reminder-${Date.now()}-${mgr.userId}`
               });
               approvalReminders++;

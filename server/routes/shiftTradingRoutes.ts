@@ -193,7 +193,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
           title: "Shift Trade Request",
           message: `${requesterName} wants to trade a shift with you.`,
           type: "shift_trade",
-          actionUrl: `/shift-trading?tab=received`,,
+          actionUrl: `/shift-trading?tab=received`,
           idempotencyKey: `shift_trade-${Date.now()}-${targetUser.rows[0].user_id}`
         }).catch(() => null);
         // NDS: deliver through the canonical sender (TRINITY.md §B) so
@@ -236,7 +236,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
           userId: m.id, workspaceId: wid,
           title: "Open Shift Trade",
           message: `An officer posted a shift for trading on the marketplace.`,
-          type: "shift_trade", actionUrl: `/shift-trading`,,
+          type: "shift_trade", actionUrl: `/shift-trading`,
           idempotencyKey: `shift_trade-${Date.now()}-${m.id}`
         }).catch(() => null);
         try {
@@ -291,7 +291,7 @@ router.post("/trades/:id/accept", requireAuth, async (req: AuthenticatedRequest,
         userId: requester.rows[0].user_id, workspaceId: wid,
         title: "Shift Trade Accepted",
         message: "Your shift trade request has been accepted. Awaiting manager approval.",
-        type: "shift_trade", actionUrl: `/shift-trading`,,
+        type: "shift_trade", actionUrl: `/shift-trading`,
         idempotencyKey: `shift_trade-${Date.now()}-${requester.rows[0].user_id}`
       }).catch(() => null);
       try {
@@ -499,7 +499,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
           userId: userRes.rows[0].user_id, workspaceId: wid,
           title: "Shift Trade Approved",
           message: "Your shift trade has been approved. Check your updated schedule.",
-          type: "shift_trade", actionUrl: `/schedule`,,
+          type: "shift_trade", actionUrl: `/schedule`,
           idempotencyKey: `shift_trade-${Date.now()}-${userRes.rows[0].user_id}`
         }).catch(() => null);
 

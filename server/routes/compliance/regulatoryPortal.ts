@@ -894,7 +894,7 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
         type: 'audit_report_uploaded',
         title: 'Regulatory Audit Report Uploaded',
         message: `Your regulatory audit has been completed. Outcome: ${auditOutcome ?? 'See report'}. Trinity has generated a corrective action plan for you.`,
-        metadata: { reportUrl, auditOutcome, requestId },,
+        metadata: { reportUrl, auditOutcome, requestId },
         idempotencyKey: `audit_report_uploaded-${Date.now()}-${owner.id}`
       }).catch ((err: unknown) => {
         log.warn('[RegulatoryPortal] In-app audit report notification failed (non-fatal):', (err as any)?.message);
@@ -1117,8 +1117,7 @@ async function notifyOrgOwnerOfAuditRequest(
     type: 'audit_access_request',
     title: 'State Regulatory Audit Access Requested',
     message: `${info.auditorFullName} from ${info.auditorAgencyName} has requested audit access to ${orgName}. Audit type: ${info.auditPurpose}. You have 24 hours to dispute this access. If no dispute is received, access will be granted automatically.`,
-    metadata: { requestId: info.requestId, auditorEmail: info.auditorEmail },,
-    idempotencyKey: `audit_access_request-${Date.now()}-${owner.id}`
+    metadata: { requestId: info.requestId, auditorEmail: info.auditorEmail },
   });
 
   const _auditRequestHtml = `
@@ -1204,7 +1203,7 @@ router.post('/complete-report', async (req: Request, res: Response) => {
         type: 'audit_report_uploaded',
         title: 'Regulatory Audit Report Submitted',
         message: `A regulatory audit has been completed. Outcome: ${auditOutcome}. ${correctiveActions ? 'Corrective actions have been noted.' : ''} Review the report in your Audit Readiness dashboard.`,
-        metadata: { requestId, reportUrl, auditOutcome },,
+        metadata: { requestId, reportUrl, auditOutcome },
         idempotencyKey: `audit_report_uploaded-${Date.now()}-${owner.id}`
       }).catch ((err: unknown) => {
         log.warn('[RegulatoryPortal] In-app audit submitted notification failed (non-fatal):', (err as any)?.message);

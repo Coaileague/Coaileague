@@ -484,7 +484,7 @@ automationRouter.post('/invoice/anchor-close', requireAuth, async (req: any, res
                 needsReview,
                 anchorDate,
               },
-              createdBy: 'system-coaileague',,
+              createdBy: 'system-coaileague',
               idempotencyKey: `system-${req.workspaceId}-${leader.userId}`
             });
           }
@@ -737,7 +737,7 @@ automationRouter.post('/payroll/anchor-close', requireAuth, async (req: any, res
                 needsReview,
                 anchorDate,
               },
-              createdBy: 'system-coaileague',,
+              createdBy: 'system-coaileague',
               idempotencyKey: `system-${req.workspaceId}-${leader.userId}`
             });
           }
@@ -1010,8 +1010,7 @@ automationRouter.post('/compliance/scan', requireAuth, async (req: any, res: Res
         title: `⚠️ ${summary.critical} Critical Compliance Issues Detected`,
         message: `Compliance scan found ${summary.critical} critical issues requiring immediate attention.`,
         type: 'issue_detected',
-        metadata: { issueCount: summary.critical },,
-        idempotencyKey: `issue_detected-${Date.now()}-${req.user?.id}`
+        metadata: { issueCount: summary.critical },
       });
     }
 

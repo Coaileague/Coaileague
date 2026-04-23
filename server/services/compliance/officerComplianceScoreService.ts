@@ -551,8 +551,7 @@ export async function checkAuditReadinessReminders(): Promise<{ checked: number;
             score: readiness.score,
             missingCount,
             missingItems: readiness.missingItems,
-          },,
-          idempotencyKey: `compliance_alert-${Date.now()}-${ws.ownerId}`
+          },
         });
 
         // For critical audit scores (below 70%), also send an email to ensure the owner is reached

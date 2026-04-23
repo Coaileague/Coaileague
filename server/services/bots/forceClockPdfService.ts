@@ -256,7 +256,7 @@ class ForceClockPdfService {
               message: `Weekly force clock audit complete: ${entries.length} force clocks, ${flaggedCount} flagged patterns detected. Review the report in Documents.`,
               metadata: { documentId: docId, category: 'force_clock_reports', flaggedCount },
               // @ts-expect-error — TS migration: fix in refactoring sprint
-              priority: flaggedCount >= 3 ? 'critical' : 'high',,
+              priority: flaggedCount >= 3 ? 'critical' : 'high',
               idempotencyKey: `compliance_alert-${Date.now()}-${o.userId}`
             });
           }

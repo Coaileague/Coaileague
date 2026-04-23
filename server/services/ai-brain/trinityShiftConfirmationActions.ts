@@ -87,7 +87,7 @@ export function registerShiftConfirmationActions() {
         priority: 'high',
         metadata: { shiftId, startTime: (shift as any).startTime, site: siteName, action: 'confirm_shift' },
         idempotencyKey: `shift_confirmation-${String(Date.now())}-${'system'}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
 
     log.info(`[TrinityShiftConfirmation] Confirmation request sent: shiftId=${shiftId}, officerId=${(shift as any).employeeId}`);
@@ -98,8 +98,7 @@ export function registerShiftConfirmationActions() {
       shiftDate: dateStr,
       shiftTime: timeStr,
       site: siteName,
-    };,
-        idempotencyKey: `shift_confirmation-${Date.now()}-`
+    };
   }));
 
   helpaiOrchestrator.registerAction(mkAction('shift.receive_confirmation', async (params) => {
@@ -129,7 +128,7 @@ export function registerShiftConfirmationActions() {
           priority: 'normal',
           metadata: { shiftId, officerId },
           idempotencyKey: `shift_confirmed-${String(Date.now())}-${mgr.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
       }
 
       log.info(`[TrinityShiftConfirmation] Shift confirmed: shiftId=${shiftId}, officerId=${officerId}`);
@@ -151,8 +150,7 @@ export function registerShiftConfirmationActions() {
         createdAt: now,
         updatedAt: now,
       } as any).returning().catch(() => [null]);
-,
-          idempotencyKey: `shift_confirmed-${Date.now()}-${mgr.userId}`
+
       const managers = await db.select({ userId: workspaceMembers.userId })
         .from(workspaceMembers)
         .where(and(eq(workspaceMembers.workspaceId, ws), sql`${workspaceMembers.role} IN ('org_owner', 'co_owner', 'manager', 'supervisor')`))
@@ -165,7 +163,7 @@ export function registerShiftConfirmationActions() {
           priority: 'urgent',
           metadata: { originalShiftId: shiftId, officerId, replacementShiftId: (replacementShift as any)?.id },
           idempotencyKey: `shift_declined_alert-${String(Date.now())}-${mgr.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
       }
 
       log.info(`[TrinityShiftConfirmation] Shift declined + replacement created: shiftId=${shiftId}, replacementId=${(replacementShift as any)?.id}`);
@@ -227,7 +225,7 @@ export function registerShiftConfirmationActions() {
         priority: 'urgent',
         metadata: { unconfirmedCount: unconfirmedShifts.length, shiftIds: unconfirmedShifts.map(s => s.id) },
         idempotencyKey: `unconfirmed_shifts_alert-${String(Date.now())}-${mgr.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
 
     log.info(`[TrinityShiftConfirmation] Flagged ${unconfirmedShifts.length} unconfirmed shifts within ${hoursBeforeShift}h window`);
@@ -239,7 +237,7 @@ export function registerShiftConfirmationActions() {
         officerId: s.employeeId,
         startTime: s.startTime,
         title: s.title,
-        hoursUntilStart: +((new Date(s.startTime).getTime() - now.getTime()) / 3600000).toFixed(1),,
+        hoursUntilStart: +((new Date(s.startTime).getTime() - now.getTime()) / 3600000).toFixed(1),
         idempotencyKey: `unconfirmed_shifts_alert-${Date.now()}-${mgr.userId}`
       })),
       managersNotified: managers.length,
@@ -299,7 +297,7 @@ export function registerShiftConfirmationActions() {
             priority: 'high',
             metadata: { shiftId: shift.id, startTime: shift.startTime, action: 'confirm_shift' },
             idempotencyKey: `shift_confirmation-${String(Date.now())}-${'system'}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
           sent++;
         }
       }
@@ -312,8 +310,7 @@ export function registerShiftConfirmationActions() {
       alreadyConfirmed,
       needsConfirmation: needsConfirmation.length,
       date: tomorrowStart.toISOString().split('T')[0],
-    };,
-            idempotencyKey: `shift_confirmation-${Date.now()}-`
+    };
   }));
 
   log.info('[Trinity Shift Confirmation] Registered 4 night-before confirmation actions');

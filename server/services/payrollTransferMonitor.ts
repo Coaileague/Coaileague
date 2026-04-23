@@ -196,7 +196,7 @@ async function pollPendingTransfers(): Promise<void> {
               message: `ACH transfer ${stub.plaidTransferId} for employee ${stub.employeeId} could not be polled after ${current} attempts. The transfer status has been set to "poll_failed". Please verify the transfer status directly in your Plaid dashboard and update this record manually.`,
               relatedEntityType: 'pay_stub',
               relatedEntityId: stub.id,
-              metadata: { transferId: stub.plaidTransferId, consecutiveFailures: current },,
+              metadata: { transferId: stub.plaidTransferId, consecutiveFailures: current },
               idempotencyKey: `payroll_alert-${stub.id}-${owner.userId}`
             }).catch(e => log.warn('[PayrollTransferMonitor] Notification failed:', e.message));
 

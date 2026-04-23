@@ -2202,7 +2202,7 @@ router.post('/compliance/notify-pending', async (req: AuthenticatedRequest, res)
         relatedEntityType: 'compliance',
         metadata: { pendingCount: count, reason: 'post_email_fix_notification', notifiedAt: new Date().toISOString() },
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        createdBy: req.user.id,,
+        createdBy: req.user.id,
         idempotencyKey: `system-${Date.now()}-${owner.userId}`
       });
       notified++;

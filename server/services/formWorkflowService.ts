@@ -410,7 +410,7 @@ class FormWorkflowService {
           title: 'Form Approved',
           message: `Your "${submission.templateName}" has been approved by ${submission.reviewerName}`,
           priority: 'normal',
-          actionUrl: '/employees',,
+          actionUrl: '/employees',
           idempotencyKey: `document-${Date.now()}-${submission.submittedBy}`
         });
       }

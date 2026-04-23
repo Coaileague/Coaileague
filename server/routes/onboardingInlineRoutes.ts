@@ -1365,7 +1365,7 @@ router.post('/submit/:applicationId', async (req, res) => {
         message: `${application.firstName} ${application.lastName} has completed onboarding and is awaiting your approval.`,
         actionUrl: '/employees',
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        priority: 'high',,
+        priority: 'high',
         idempotencyKey: `approval_required-${Date.now()}-${managerId}`
       }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
@@ -1415,7 +1415,7 @@ router.post('/approve/:employeeId', async (req: AuthenticatedRequest, res) => {
         message: `Your onboarding has been approved. Welcome to the team! You are now eligible for shift assignments.`,
         actionUrl: '/dashboard',
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        priority: 'high',,
+        priority: 'high',
         idempotencyKey: `action_required-${Date.now()}-${employee.userId}`
       }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
@@ -1461,7 +1461,7 @@ router.post('/approve/:employeeId', async (req: AuthenticatedRequest, res) => {
             title: 'New Officer Activated',
             message: `${officerName} has completed onboarding and is now active. They are eligible for shift assignments.`,
             actionUrl: '/employees',
-            priority: 'normal',,
+            priority: 'normal',
             idempotencyKey: `employee_update-${Date.now()}-${mgr.userId}`
           }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
         }

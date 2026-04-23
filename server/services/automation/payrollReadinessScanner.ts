@@ -279,7 +279,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
             ? `Payroll Alert: ${report.criticalCount} Employee(s) Missing Critical Data`
             : `Payroll Notice: ${report.warningCount} Employee(s) Missing Direct Deposit`,
           message,
-          priority: report.criticalCount > 0 ? 'high' : 'normal',,
+          priority: report.criticalCount > 0 ? 'high' : 'normal',
           idempotencyKey: `payroll_readiness_alert-${Date.now()}-${ws.ownerId}`
         });
       }

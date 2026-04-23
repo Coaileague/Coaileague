@@ -624,7 +624,7 @@ class FeatureGateService {
             type: 'error',
             category: 'billing',
             priority: 'high',
-            actionUrl: '/billing',,
+            actionUrl: '/billing',
             idempotencyKey: `error-${Date.now()}-${ws.ownerId}`
           }).catch((notifErr: Error) => {
             log.warn('[FeatureGate] Failed to send credit-depleted notification:', notifErr?.message);

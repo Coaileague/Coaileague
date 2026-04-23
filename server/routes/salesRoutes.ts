@@ -25,7 +25,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
       const user = req.user;
       const list = await db.select().from(orgInvitations)
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        .where(eq(orgInvitations.sentBy, user?.id))
+        .where(and(eq(orgInvitations.sentBy, user?.id!), eq(orgInvitations.workspaceId, workspaceId!)))
         // @ts-expect-error — TS migration: fix in refactoring sprint
         .orderBy(desc(orgInvitations.createdAt));
       res.json({ success: true, data: list });
@@ -184,7 +184,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
       const user = req.user;
       const salesActivityList = await db.select().from(activities)
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        .where(eq(activities.createdByUserId, user?.id))
+        .where(and(eq(activities.createdByUserId, user?.id!), eq(activities.workspaceId, workspaceId!)))
         .orderBy(desc(activities.createdAt));
       res.json({ success: true, data: salesActivityList });
     } catch (error: unknown) {

@@ -48,8 +48,8 @@ export async function notifyDraftInvoiceCreated(
       workspaceId,
       userId: ws.ownerId,
       type: 'invoice_draft_ready',
-      title: `Invoice ${invoiceNumber} ready for review`,,
-      idempotencyKey: `invoice_draft_ready-${Date.now()}-${ws.ownerId}`
+      title: `Invoice ${invoiceNumber} ready for review`,
+      idempotencyKey: `invoice_draft_ready-${Date.now()}-${ws.ownerId}`,
       message: `A draft invoice of $${parseFloat(total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} was generated for ${clientName}. Review and approve or it will auto-send in 24 hours if auto-send is enabled.`,
       actionUrl: `/invoices/${invoiceId}`,
       relatedEntityType: 'invoice',
@@ -154,8 +154,8 @@ export async function runDraftInvoiceSweep(): Promise<{
             workspaceId: draft.workspaceId,
             userId: ws.ownerId,
             type: 'invoice_auto_sent',
-            title: `Invoice ${draft.invoiceNumber} auto-sent to ${clientName}`,,
-            idempotencyKey: `invoice_auto_sent-${Date.now()}-${ws.ownerId}`
+            title: `Invoice ${draft.invoiceNumber} auto-sent to ${clientName}`,
+            idempotencyKey: `invoice_auto_sent-${Date.now()}-${ws.ownerId}`,
             message: `Invoice ${draft.invoiceNumber} ($${parseFloat(draft.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) was automatically sent after the 24-hour review window.`,
             actionUrl: `/invoices/${draft.id}`,
             relatedEntityType: 'invoice',
@@ -168,8 +168,8 @@ export async function runDraftInvoiceSweep(): Promise<{
             workspaceId: draft.workspaceId,
             userId: ws.ownerId,
             type: 'invoice_draft_reminder',
-            title: `Invoice ${draft.invoiceNumber} still in draft — action needed`,,
-            idempotencyKey: `invoice_draft_reminder-${Date.now()}-${ws.ownerId}`
+            title: `Invoice ${draft.invoiceNumber} still in draft — action needed`,
+            idempotencyKey: `invoice_draft_reminder-${Date.now()}-${ws.ownerId}`,
             message: `Invoice ${draft.invoiceNumber} ($${parseFloat(draft.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) for ${clientName} has been in draft for more than 24 hours. Review and send it to start the payment clock.`,
             actionUrl: `/invoices/${draft.id}`,
             relatedEntityType: 'invoice',

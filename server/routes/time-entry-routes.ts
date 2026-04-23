@@ -506,7 +506,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
                 message: `${employee.firstName} ${employee.lastName} was blocked from clocking in: ${licenseCheck.blockReason || 'security license expired'}. Immediate action required.`,
                 actionUrl: `/employees/${employee.id}`,
                 relatedEntityType: 'employee',
-                relatedEntityId: employee.id,,
+                relatedEntityId: employee.id,
                 idempotencyKey: `compliance_alert-${employee.id}-${supUserId}`
               }).catch((err: any) => log.warn('[time-entry] supervisor notification failed', err?.message));
             }

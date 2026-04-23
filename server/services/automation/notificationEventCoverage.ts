@@ -84,8 +84,7 @@ export async function notifyTimesheetRejected(params: {
         reason: params.reason,
         rejectedBy: params.rejectedByName,
         employeeId: params.employeeId,
-      },,
-      idempotencyKey: `issue_detected-${params.timeEntryId}-${emp.userId}`
+      },
     });
   } catch (error) {
     log.error('[NotificationEvents] Failed to send timesheet rejected notification:', error);
@@ -152,8 +151,7 @@ export async function notifyCertificationExpiring(params: {
             expiresAt: params.expiresAt.toISOString(),
             daysUntilExpiry,
             isExpired: params.isExpired ?? false,
-          },,
-          idempotencyKey: `notification-${params.employeeId}-${emp.userId}`
+          },
         });
       }
     }
@@ -199,8 +197,7 @@ export async function notifyCertificationExpiring(params: {
           daysUntilExpiry,
           isExpired: params.isExpired ?? false,
           recipientRole: mgr.workspaceRole,
-        },,
-        idempotencyKey: `notification-${params.employeeId}-${mgr.userId}`
+        },
       });
     }
   } catch (error) {
@@ -253,8 +250,7 @@ export async function notifyPayrollReadyForReview(params: {
           periodEnd: params.periodEnd.toISOString(),
           totalEmployees: params.totalEmployees,
           totalGrossPay: params.totalGrossPay,
-        },,
-        idempotencyKey: `issue_detected-${params.payrollRunId}-${owner.userId}`
+        },
       });
     }
   } catch (error) {

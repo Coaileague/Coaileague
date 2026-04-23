@@ -156,7 +156,7 @@ class ApprovalResumeOrchestrator {
           relatedEntityType: 'approval',
           relatedEntityId: approvalId,
           metadata: { domain, riskLevel, operationType },
-          createdBy: 'system-trinity',,
+          createdBy: 'system-trinity',
           idempotencyKey: `approval_required-${approvalId}-${approver.userId}`
         });
       }

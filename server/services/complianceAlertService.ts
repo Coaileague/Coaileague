@@ -178,7 +178,7 @@ export async function scanShiftLicenseConflicts(): Promise<{ conflictsFound: num
             certificationName: skill.skillName || skill.skillCategory,
             expiresAt: skill.expiresAt,
             shiftDate: shift.startTime,
-          },,
+          },
           idempotencyKey: `compliance_alert-${Date.now()}-${employee.userId || ''}`
         }).catch(err => log.error(`[ComplianceAlerts] Notification error for shift-license conflict:`, err));
       }

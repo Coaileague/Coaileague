@@ -321,7 +321,7 @@ class StripeConnectPayoutService {
               type: 'payroll_tracking_error',
               title: 'Payroll Tracking Error',
               message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the internal tracking record failed to update. Please verify disbursement in your payroll records. Error: ${(err instanceof Error ? err.message : String(err))}`,
-              priority: 'high',,
+              priority: 'high',
               idempotencyKey: `payroll_tracking_error-${Date.now()}-${ws.ownerId}`
             });
           }
@@ -359,7 +359,7 @@ class StripeConnectPayoutService {
               type: 'payroll_tracking_error',
               title: 'Payroll Payout Log Error',
               message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the payout audit log failed to record. Manual reconciliation may be needed. Error: ${(err instanceof Error ? err.message : String(err))}`,
-              priority: 'high',,
+              priority: 'high',
               idempotencyKey: `payroll_tracking_error-${Date.now()}-${ws.ownerId}`
             });
           }

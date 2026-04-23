@@ -314,8 +314,7 @@ async function onInvoicePaid(event: PlatformEvent): Promise<void> {
       type: 'invoice_paid_confirmation',
       title: `Invoice ${invoiceNumber} Paid`,
       message: `Invoice ${invoiceNumber} for $${amount.toFixed(2)} has been paid in full via ${paymentMethod || 'manual'}. Your AR has been updated.`,
-      metadata: { invoiceId, invoiceNumber, total, paymentMethod, clientId, source: 'TrinityEvents' },,
-      idempotencyKey: `invoice_paid_confirmation-${Date.now()}-${workspace.ownerId}`
+      metadata: { invoiceId, invoiceNumber, total, paymentMethod, clientId, source: 'TrinityEvents' },
     });
   } catch (err: any) {
     log.warn('[TrinityEvents] onInvoicePaid notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
@@ -342,8 +341,7 @@ async function onInvoiceOverdue(event: PlatformEvent): Promise<void> {
       title: `Overdue Invoice Requires Action`,
       message: `Invoice ${invoiceNumber} for $${amount.toFixed(2)} is ${daysOverdue || 'now'} days overdue. Trinity recommends following up with the client immediately.`,
       actionUrl: `/invoices`,
-      metadata: { invoiceId, invoiceNumber, total, clientId, daysOverdue, source: 'TrinityEvents' },,
-      idempotencyKey: `invoice_overdue_alert-${Date.now()}-${workspace.ownerId}`
+      metadata: { invoiceId, invoiceNumber, total, clientId, daysOverdue, source: 'TrinityEvents' },
     });
   } catch (err: any) {
     log.warn('[TrinityEvents] onInvoiceOverdue notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
@@ -375,8 +373,7 @@ async function onPayrollRunPaid(event: PlatformEvent): Promise<void> {
       title: `Payroll Disbursement Confirmed`,
       message: `Payroll run ${payrollRunId} has been marked as paid. Funds disbursed via ${disbursementMethod || 'manual'}. Employees will receive their pay on the next business day.`,
       actionUrl: `/payroll`,
-      metadata: { payrollRunId, disbursementMethod, confirmedBy, source: 'TrinityEvents' },,
-      idempotencyKey: `payroll_disbursement_confirmed-${Date.now()}-${workspace.ownerId}`
+      metadata: { payrollRunId, disbursementMethod, confirmedBy, source: 'TrinityEvents' },
     });
   } catch (err: any) {
     log.warn('[TrinityEvents] onPayrollRunPaid notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
@@ -402,8 +399,7 @@ async function onStripePaymentReceived(event: PlatformEvent): Promise<void> {
       title: `Stripe Payment Received`,
       message: `Payment of $${parseFloat(String(amount || 0)).toFixed(2)} received via Stripe for invoice ${invoiceNumber || invoiceId}. Invoice has been automatically updated.`,
       actionUrl: `/invoices`,
-      metadata: { invoiceId, invoiceNumber, amount, stripeInvoiceId, source: 'TrinityEvents' },,
-      idempotencyKey: `stripe_payment_confirmed-${Date.now()}-${workspace.ownerId}`
+      metadata: { invoiceId, invoiceNumber, amount, stripeInvoiceId, source: 'TrinityEvents' },
     });
   } catch (err: any) {
     log.warn('[TrinityEvents] onStripePaymentReceived notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
@@ -437,7 +433,7 @@ async function onShiftCancelled(event: PlatformEvent): Promise<void> {
       priority: 'high',
       metadata: { shiftId, employeeId, clientId, startTime, reason, source: 'TrinityEvents' },
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      targetRoles: ['org_owner', 'manager', 'supervisor'],,
+      targetRoles: ['org_owner', 'manager', 'supervisor'],
       idempotencyKey: `shift_cancelled_alert-${Date.now()}-`
     });
 
@@ -477,8 +473,7 @@ async function onTrainingCertificateEarned(event: PlatformEvent): Promise<void> 
         message: `${officerName} completed ${moduleTitle} with a score of ${overallScore}%. Certificate #${certNumber} issued.`,
         actionUrl: `/training-certification`,
         isRead: false,
-        metadata: { source: 'trinity_training_cert_earned', certNumber, overallScore, employeeId },,
-        idempotencyKey: `compliance_alert-${Date.now()}-${ws.ownerId}`
+        metadata: { source: 'trinity_training_cert_earned', certNumber, overallScore, employeeId },
       });
     }
   } catch (err) {
@@ -508,8 +503,7 @@ async function onTrainingInterventionRequired(event: PlatformEvent): Promise<voi
         message: `${officerName} has failed ${moduleTitle} ${failCount} time${failCount !== 1 ? 's' : ''} (score: ${overallScore}%). Mandatory intervention required.${topicsSummary}`,
         actionUrl: `/training-certification?tab=interventions`,
         isRead: false,
-        metadata: { source: 'trinity_training_intervention', employeeId, moduleTitle, failCount },,
-        idempotencyKey: `compliance_alert-${Date.now()}-${ws.ownerId}`
+        metadata: { source: 'trinity_training_intervention', employeeId, moduleTitle, failCount },
       });
     }
   } catch (err) {
@@ -532,8 +526,8 @@ async function onTrainingCertificateExpired(event: PlatformEvent): Promise<void>
         workspaceId,
         userId: ws.ownerId,
         type: 'compliance_alert',
-        title: `Training Certificate Expired: ${officerName}`,,
-        idempotencyKey: `compliance_alert-${Date.now()}-${ws.ownerId}`
+        title: `Training Certificate Expired: ${officerName}`,
+        idempotencyKey: `compliance_alert-${Date.now()}-${ws.ownerId}`,
         message: `${officerName}'s ${moduleTitle} certificate (#${certNumber}) expired ${expiredDaysAgo} day${expiredDaysAgo !== 1 ? 's' : ''} ago. Renewal required before scheduling.`,
         actionUrl: `/training-certification?tab=compliance`,
         isRead: false,
@@ -941,7 +935,7 @@ export function initializeTrinityEventSubscriptions(): void {
                   type: 'qb_sync_failed',
                   title: 'QuickBooks Sync Failed',
                   message: `Invoice ${metadata?.invoiceNumber || invoiceId} failed to sync to QuickBooks: ${result.error}. Please sync manually or check your QB connection.`,
-                  priority: 'high',,
+                  priority: 'high',
                   idempotencyKey: `qb_sync_failed-${Date.now()}-${ws.ownerId}`
                 });
               }
@@ -1033,7 +1027,7 @@ export function initializeTrinityEventSubscriptions(): void {
                   type: 'qb_payroll_sync_failed',
                   title: 'QuickBooks Payroll Sync Failed',
                   message: `Payroll run ${payrollRunId} (approved) failed to sync to QuickBooks: ${result.error}. Please sync manually or check your QB connection.`,
-                  priority: 'high',,
+                  priority: 'high',
                   idempotencyKey: `qb_payroll_sync_failed-${Date.now()}-${ws.ownerId}`
                 });
               }
@@ -1116,8 +1110,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: 'Payroll Run Voided',
             message: `Payroll run ${payrollRunId} was voided by ${voidedBy}. Reason: ${reason || 'Not provided'}. Review your payroll schedule to avoid disbursement gaps.`,
             priority: 'high',
-            metadata: { payrollRunId, voidedBy, reason },,
-            idempotencyKey: `payroll_run_voided-${Date.now()}-${workspace.ownerId}`
+            metadata: { payrollRunId, voidedBy, reason },
           });
         }
       } catch (notifErr: any) {
@@ -1302,7 +1295,7 @@ export function initializeTrinityEventSubscriptions(): void {
             workspaceId, userId: o.userId, type: 'alert' as any,
             title: 'Payroll Funding Account Disconnected',
             message: `${metadata?.priorInstitution || 'Your bank account'} has been disconnected. ACH payroll disbursement is suspended until a funding account is reconnected.`,
-            priority: 'urgent',,
+            priority: 'urgent',
             idempotencyKey: `alert-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
@@ -1350,7 +1343,7 @@ export function initializeTrinityEventSubscriptions(): void {
               title: 'Your Direct Deposit Has Arrived',
               message: `Your payroll payment of $${parseFloat(String(metadata?.amount || 0)).toFixed(2)} has been deposited to your bank account.`,
               priority: 'normal',
-              metadata: { payStubId: metadata?.payStubId, transferId: metadata?.transferId },,
+              metadata: { payStubId: metadata?.payStubId, transferId: metadata?.transferId },
               idempotencyKey: `payroll_alert-${Date.now()}-${emp.userId}`
             }).catch(() => null);
           }
@@ -1427,7 +1420,7 @@ export function initializeTrinityEventSubscriptions(): void {
               type: 'payroll_transfer_failed' as any,
               title: 'ACH Transfer Failed',
               message: `An employee ACH payroll transfer ${metadata?.status}: ${metadata?.failureReason || 'Contact your bank'}. Pay stub ID: ${metadata?.payStubId}.`,
-              priority: 'high',,
+              priority: 'high',
               idempotencyKey: `payroll_transfer_failed-${Date.now()}-${ws.ownerId}`
             });
           }
@@ -1459,13 +1452,12 @@ export function initializeTrinityEventSubscriptions(): void {
             message: `Trinity's autonomous agent stopped execution of "${metadata?.goal}" at ${Math.round((metadata?.confidence || 0) * 100)}% confidence. ${isCritical ? 'CRITICAL: Immediate human review required.' : 'Please review and approve continuation or rollback.'}`,
             priority,
             idempotencyKey: `agent_escalation-${String(Date.now())}-${mgr.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] agent_escalation notification error:', (err instanceof Error ? err.message : String(err)));
       }
-    },,
-            idempotencyKey: `agent_escalation-${Date.now()}-${mgr.userId}`
+    },
   });
 
   // ── Schedule escalation → alert managers when LLM Judge blocks a schedule ────
@@ -1487,13 +1479,12 @@ export function initializeTrinityEventSubscriptions(): void {
             message: `Trinity's scheduling judge blocked a schedule from publishing. Risk score: ${metadata?.riskScore ?? 'N/A'}. Reason: ${metadata?.reason || 'Policy violation detected'}. Manual approval or revision required before the schedule can go live.`,
             priority: 'high',
             idempotencyKey: `schedule_escalation-${String(Date.now())}-${mgr.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] schedule_escalation notification error:', (err instanceof Error ? err.message : String(err)));
       }
-    },,
-            idempotencyKey: `schedule_escalation-${Date.now()}-${mgr.userId}`
+    },
   });
 
   // ── AI cost alert → notify org owners of unprofitable or low-margin operations ─
@@ -1517,13 +1508,12 @@ export function initializeTrinityEventSubscriptions(): void {
             message: `Operation "${metadata?.operationType}" exceeded AI cost budget. Loss: $${metadata?.loss?.toFixed(4)} (margin: ${metadata?.margin?.toFixed(2)}%). Review credit pricing in Settings > AI Usage to prevent revenue leakage.`,
             priority: 'high',
             idempotencyKey: `ai_cost_alert-${String(Date.now())}-${owner.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] ai_cost_alert notification error:', (err instanceof Error ? err.message : String(err)));
       }
-    },,
-            idempotencyKey: `ai_cost_alert-${Date.now()}-${owner.userId}`
+    },
   });
 
   // ── ROOT FIX 2 — 7 new subscribers for events that had no handler ──────────
@@ -1551,7 +1541,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'urgent',
             actionUrl: shiftId ? `/schedule?shiftId=${shiftId}` : '/schedule',
             idempotencyKey: `sla_breach-${String(Date.now())}-${m.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
@@ -1559,8 +1549,8 @@ export function initializeTrinityEventSubscriptions(): void {
           entityType: 'sla_breach',
           entityId: shiftId || clientId || 'unknown',
           action: 'sla_breach_detected',
-          description: 'SLA breach event received — managers notified, incident logged',,
-            idempotencyKey: `sla_breach-${Date.now()}-${m.userId}`
+          description: 'SLA breach event received — managers notified, incident logged',
+            idempotencyKey: `sla_breach-${Date.now()}-${m.userId}`,
           metadata: JSON.stringify({ breachType, clientId, shiftId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -1604,13 +1594,12 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
             actionUrl: '/settings',
             idempotencyKey: `circuit_breaker_opened-${String(Date.now())}-${o.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] circuit_breaker_opened handler error:', (err instanceof Error ? err.message : String(err)));
       }
-    },,
-            idempotencyKey: `circuit_breaker_opened-${Date.now()}-${o.userId}`
+    },
   });
 
   // Labor law flag → notify org owner + manager + create compliance record
@@ -1643,7 +1632,7 @@ export function initializeTrinityEventSubscriptions(): void {
             workspaceId, userId: o.userId, type: 'compliance_violation',
             title: 'Labor Law Compliance Flag',
             message: `Trinity detected a potential labor law violation: ${violation}. ${employeeId ? `Employee affected.` : ''} Review required before proceeding with this action.`,
-            actionUrl: employeeId ? `/employees/${employeeId}` : '/employees',,
+            actionUrl: employeeId ? `/employees/${employeeId}` : '/employees',
             idempotencyKey: `compliance_violation-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
@@ -1692,7 +1681,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
             actionUrl: '/settings',
             idempotencyKey: `trinity_action_blocked-${String(Date.now())}-${o.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
@@ -1700,8 +1689,8 @@ export function initializeTrinityEventSubscriptions(): void {
           entityType: 'trinity_action',
           entityId: actionId,
           action: 'action_blocked',
-          description: 'Trinity blocked an autonomous action — compliance or policy enforcement',,
-            idempotencyKey: `trinity_action_blocked-${Date.now()}-${o.userId}`
+          description: 'Trinity blocked an autonomous action — compliance or policy enforcement',
+            idempotencyKey: `trinity_action_blocked-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ actionId, reason, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -1777,7 +1766,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
             actionUrl: resolvedClientId ? `/clients/${resolvedClientId}` : contractId ? `/contracts/${contractId}` : '/contracts',
             idempotencyKey: `contract_executed-${String(Date.now())}-${o.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
@@ -1785,8 +1774,8 @@ export function initializeTrinityEventSubscriptions(): void {
           entityType: 'contract',
           entityId: contractId || 'unknown',
           action: 'contract_executed',
-          description: `Contract fully executed — ${autoCreatedClientId ? 'client auto-created' : existingClientId ? 'linked to existing client' : 'pending manual client creation'}`,,
-            idempotencyKey: `contract_executed-${Date.now()}-${o.userId}`
+          description: `Contract fully executed — ${autoCreatedClientId ? 'client auto-created' : existingClientId ? 'linked to existing client' : 'pending manual client creation'}`,
+            idempotencyKey: `contract_executed-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ contractId, clientName, title, autoCreatedClientId, existingClientId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -1947,14 +1936,13 @@ export function initializeTrinityEventSubscriptions(): void {
               priority: 'normal',
               actionUrl: '/profile',
               idempotencyKey: `document_bridged-${String(Date.now())}-${empUser[0].userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
           }
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] document_bridged handler error:', (err instanceof Error ? err.message : String(err)));
       }
-    },,
-              idempotencyKey: `document_bridged-${Date.now()}-${empUser[0].userId}`
+    },
   });
 
   // Approval granted → route downstream based on entityType (payroll → disburse, invoice → send, shift → confirm)
@@ -2009,7 +1997,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'urgent',
             actionUrl: '/payroll',
             idempotencyKey: `reconciliation_alert-${String(Date.now())}-${o.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
@@ -2017,8 +2005,8 @@ export function initializeTrinityEventSubscriptions(): void {
           entityType: 'finance',
           entityId: 'reconciliation',
           action: 'reconciliation_alert',
-          description: 'Financial reconciliation alert — math discrepancy detected, disbursement may be blocked',,
-            idempotencyKey: `reconciliation_alert-${Date.now()}-${o.userId}`
+          description: 'Financial reconciliation alert — math discrepancy detected, disbursement may be blocked',
+            idempotencyKey: `reconciliation_alert-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ discrepancy, amount, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2049,7 +2037,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'urgent',
             actionUrl: '/settings?tab=billing',
             idempotencyKey: `subscription_payment_blocked-${String(Date.now())}-${o.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
@@ -2057,8 +2045,8 @@ export function initializeTrinityEventSubscriptions(): void {
           entityType: 'billing',
           entityId: 'subscription',
           action: 'payment_blocked',
-          description: 'Subscription payment blocked — access enforcement triggered, owner notified',,
-            idempotencyKey: `subscription_payment_blocked-${Date.now()}-${o.userId}`
+          description: 'Subscription payment blocked — access enforcement triggered, owner notified',
+            idempotencyKey: `subscription_payment_blocked-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ reason, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2090,7 +2078,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
             actionUrl: '/settings',
             idempotencyKey: `content_moderation_alert-${String(Date.now())}-${o.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
@@ -2098,8 +2086,8 @@ export function initializeTrinityEventSubscriptions(): void {
           entityType: 'moderation',
           entityId: userId || 'unknown',
           action: 'content_moderation_alert',
-          description: 'HelpAI content moderation alert — critical flag raised during conversation',,
-            idempotencyKey: `content_moderation_alert-${Date.now()}-${o.userId}`
+          description: 'HelpAI content moderation alert — critical flag raised during conversation',
+            idempotencyKey: `content_moderation_alert-${Date.now()}-${o.userId}`,
           metadata: JSON.stringify({ flagType, userId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2137,8 +2125,8 @@ export function initializeTrinityEventSubscriptions(): void {
           for (const o of owners) {
             await createNotification({
               workspaceId: targetWs, userId: o.userId, type: 'scheduler_job_failed' as any,
-              title: `Automation Job Failed: ${jobName}`,,
-              idempotencyKey: `scheduler_job_failed-${Date.now()}-${o.userId}`
+              title: `Automation Job Failed: ${jobName}`,
+              idempotencyKey: `scheduler_job_failed-${Date.now()}-${o.userId}`,
               message: `A background automation job (${jobName}) failed with error: ${String(error).substring(0, 150)}. Trinity will attempt retry. If this persists, contact support.`,
               priority: 'high',
               actionUrl: '/settings',
@@ -2174,7 +2162,7 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'urgent',
             actionUrl: shiftId ? `/schedule?shiftId=${shiftId}&action=fill` : '/schedule',
             idempotencyKey: `coverage_gap_detected-${String(Date.now())}-${m.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
         // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
@@ -2182,8 +2170,8 @@ export function initializeTrinityEventSubscriptions(): void {
           entityType: 'shift',
           entityId: shiftId || 'unknown',
           action: 'coverage_gap_detected',
-          description: 'Coverage gap — automated pipeline exhausted, manual intervention required',,
-            idempotencyKey: `coverage_gap_detected-${Date.now()}-${m.userId}`
+          description: 'Coverage gap — automated pipeline exhausted, manual intervention required',
+            idempotencyKey: `coverage_gap_detected-${Date.now()}-${m.userId}`,
           metadata: JSON.stringify({ shiftId, shiftDate, site, payload }),
           createdAt: new Date(),
         }).catch(() => null);
@@ -2225,13 +2213,12 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'high',
             actionUrl: employeeId ? `/employees/${employeeId}` : '/employees',
             idempotencyKey: `employee_terminated-${String(Date.now())}-${o.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] employee_terminated handler error:', (err instanceof Error ? err.message : String(err)));
       }
-    },,
-            idempotencyKey: `employee_terminated-${Date.now()}-${o.userId}`
+    },
   });
 
   // Employee hired → HIGH: trigger onboarding automation + notify HR manager
@@ -2266,13 +2253,12 @@ export function initializeTrinityEventSubscriptions(): void {
             priority: 'normal',
             actionUrl: employeeId ? `/employees/${employeeId}` : '/employees',
             idempotencyKey: `employee_hired-${String(Date.now())}-${m.userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
         }
       } catch (err: any) {
         log.warn('[TrinityEvents] employee_hired handler error:', (err instanceof Error ? err.message : String(err)));
       }
-    },,
-            idempotencyKey: `employee_hired-${Date.now()}-${m.userId}`
+    },
   });
 
   // ── manual_override_submitted → flag habitual bypass pattern for supervisor review ──
@@ -2309,8 +2295,8 @@ export function initializeTrinityEventSubscriptions(): void {
           for (const s of supervisors) {
             await createNotification({
               workspaceId, userId: s.userId, type: 'geofence_override_required' as any,
-              title: 'GPS Override Submitted',,
-              idempotencyKey: `geofence_override_required-${Date.now()}-${s.userId}`
+              title: 'GPS Override Submitted',
+              idempotencyKey: `geofence_override_required-${Date.now()}-${s.userId}`,
               message: `An officer submitted a manual GPS/geofence override (${overrideType}): "${reason}". Trinity is monitoring for habitual bypass patterns.`,
               priority: 'normal',
               actionUrl: employeeId ? `/employees/${employeeId}` : '/compliance-scenarios',
@@ -2371,7 +2357,7 @@ export function initializeTrinityEventSubscriptions(): void {
             workspaceId, userId: o.userId, type: 'alert' as any,
             title: event.title || 'Approval Escalated',
             message: event.description || `Approval escalated to level ${payload?.newLevel}`,
-            priority: 'urgent',,
+            priority: 'urgent',
             idempotencyKey: `alert-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
@@ -2408,7 +2394,7 @@ export function initializeTrinityEventSubscriptions(): void {
             workspaceId, userId: o.userId, type: 'alert' as any,
             title: event.title || 'Approval Window Expired',
             message: event.description || `Approval for "${payload?.actionName}" expired — operation has been blocked`,
-            priority: 'high',,
+            priority: 'high',
             idempotencyKey: `alert-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
@@ -2446,8 +2432,8 @@ export function initializeTrinityEventSubscriptions(): void {
             userId: ownerEmp.userId,
             workspaceId,
             type: 'alert',
-            title: 'Payroll Bank Account Disconnected',,
-            idempotencyKey: `alert-${Date.now()}-${ownerEmp.userId}`
+            title: 'Payroll Bank Account Disconnected',
+            idempotencyKey: `alert-${Date.now()}-${ownerEmp.userId}`,
             message: `Your organization's funding bank account (${metadata?.priorInstitution || 'Bank'} ending ...${metadata?.priorMask || '????'}) has been disconnected. Automatic ACH payroll disbursement is suspended until you reconnect a bank account in Payroll Settings.`,
             priority: 'urgent',
             actionUrl: '/settings',
@@ -3350,7 +3336,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/safety-hub',
             relatedEntityType: 'employee',
             relatedEntityId: employeeId,
-            priority: requiresImmediateResponse ? 'urgent' : 'high',,
+            priority: requiresImmediateResponse ? 'urgent' : 'high',
             idempotencyKey: `notification-${employeeId}-${mgr.userId}`
           });
         }
@@ -3415,7 +3401,7 @@ export function initializeTrinityEventSubscriptions(): void {
             message: `Emergency SOS alert has been resolved${resolvedBy ? ` by ${resolvedBy}` : ''}.`,
             actionUrl: '/safety-hub',
             relatedEntityType: 'panic_alert',
-            relatedEntityId: alertId,,
+            relatedEntityId: alertId,
             idempotencyKey: `system-${alertId}-${mgr.userId}`
           });
         }
@@ -3455,7 +3441,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: employeeId ? `/compliance/employee-detail/${employeeId}` : '/compliance',
             relatedEntityType: 'employee',
             relatedEntityId: employeeId,
-            priority: 'urgent',,
+            priority: 'urgent',
             idempotencyKey: `compliance_alert-${employeeId}-${mgr.userId}`
           });
         }
@@ -3493,7 +3479,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/training-compliance',
             relatedEntityType: 'employee',
             relatedEntityId: employeeId,
-            priority: 'high',,
+            priority: 'high',
             idempotencyKey: `compliance-${employeeId}-${mgr.userId}`
           });
         }
@@ -3520,7 +3506,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: '📅 Training Expiring Soon',
             message: event.description || 'An officer training certification expires soon.',
             actionUrl: '/training-compliance',
-            priority: 'normal',,
+            priority: 'normal',
             idempotencyKey: `deadline_approaching-${Date.now()}-${mgr.userId}`
           });
         }
@@ -3550,7 +3536,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/employee-onboarding-dashboard',
             relatedEntityType: 'employee',
             relatedEntityId: employeeId,
-            priority: 'high',,
+            priority: 'high',
             idempotencyKey: `action_required-${employeeId}-${mgr.userId}`
           });
         }
@@ -3582,7 +3568,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/universal-schedule',
             relatedEntityType: 'shift',
             relatedEntityId: shiftId,
-            priority: 'urgent',,
+            priority: 'urgent',
             idempotencyKey: `staffing_critical_escalation-${shiftId}-${mgr.userId}`
           });
         }
@@ -3620,7 +3606,7 @@ export function initializeTrinityEventSubscriptions(): void {
           message: 'Your shift swap request has been approved.',
           actionUrl: '/universal-schedule',
           relatedEntityType: 'shift',
-          relatedEntityId: shiftId,,
+          relatedEntityId: shiftId,
           idempotencyKey: `request_approved-${shiftId}-${emp.userId}`
         });
       } catch (err: any) {
@@ -3649,7 +3635,7 @@ export function initializeTrinityEventSubscriptions(): void {
           message: 'Your shift swap request was not approved.',
           actionUrl: '/universal-schedule',
           relatedEntityType: 'shift',
-          relatedEntityId: shiftId,,
+          relatedEntityId: shiftId,
           idempotencyKey: `request_denied-${shiftId}-${emp.userId}`
         });
       } catch (err: any) {
@@ -3677,7 +3663,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: '📋 Subscription Canceled',
             message: 'Your CoAIleague subscription has been canceled. Access continues until the billing period ends.',
             actionUrl: '/billing',
-            priority: 'high',,
+            priority: 'high',
             idempotencyKey: `subscription_cancelled-${Date.now()}-${mgr.userId}`
           });
         }
@@ -3715,7 +3701,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/invoices',
             relatedEntityType: 'invoice',
             relatedEntityId: invoiceId,
-            priority: 'high',,
+            priority: 'high',
             idempotencyKey: `invoice_overdue_alert-${invoiceId}-${mgr.userId}`
           });
         }
@@ -3751,7 +3737,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: `⏳ Trial Ending in ${daysLeft ?? 'a few'} Days`,
             message: 'Your free trial is ending soon. Upgrade to keep your data and features.',
             actionUrl: '/billing',
-            priority: 'high',,
+            priority: 'high',
             idempotencyKey: `trial_expiry_warning-${Date.now()}-${mgr.userId}`
           });
         }
@@ -3778,7 +3764,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: '🏦 Bank Account Connected',
             message: 'A bank account has been successfully connected for payroll direct deposit.',
             actionUrl: '/payroll-dashboard',
-            priority: 'normal',,
+            priority: 'normal',
             idempotencyKey: `payroll_payment_method-${Date.now()}-${mgr.userId}`
           });
         }
@@ -3810,7 +3796,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/contract-renewals',
             relatedEntityType: 'contract',
             relatedEntityId: contractId,
-            priority: 'high',,
+            priority: 'high',
             idempotencyKey: `deadline_approaching-${contractId}-${mgr.userId}`
           });
         }
@@ -3840,7 +3826,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/rms-hub',
             relatedEntityType: 'dar',
             relatedEntityId: darId,
-            priority: 'low',,
+            priority: 'low',
             idempotencyKey: `dar_required-${darId}-${mgr.userId}`
           });
         }
@@ -3871,7 +3857,7 @@ export function initializeTrinityEventSubscriptions(): void {
             actionUrl: '/rms-hub',
             relatedEntityType: 'incident',
             relatedEntityId: incidentId,
-            priority: severity === 'critical' ? 'urgent' : 'high',,
+            priority: severity === 'critical' ? 'urgent' : 'high',
             idempotencyKey: `notification-${incidentId}-${mgr.userId}`
           });
         }

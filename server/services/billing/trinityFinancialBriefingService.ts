@@ -250,7 +250,7 @@ async function deliverBriefing(briefing: WeeklyBriefing, ownerId: string): Promi
       cashFlow: briefing.cashFlow,
       flagCount: briefing.flags.length,
     },
-    actionUrl: '/cash-flow',,
+    actionUrl: '/cash-flow',
     idempotencyKey: `trinity_financial_briefing-${Date.now()}-${ownerId}`
   });
 }

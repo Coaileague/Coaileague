@@ -113,7 +113,7 @@ class TrinityRecognitionEngine {
           message,
           priority: 'normal',
           idempotencyKey: `trinity_recognition-${String(Date.now())}-${emp[0].user_id}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
       }
     }
 
@@ -147,7 +147,7 @@ class TrinityRecognitionEngine {
         message: approvalNote,
         priority: 'normal',
         idempotencyKey: `trinity_recognition_pending-${String(Date.now())}-${target[0].user_id}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
   }
 
@@ -194,7 +194,7 @@ class TrinityRecognitionEngine {
         message,
         priority: 'normal',
         idempotencyKey: `trinity_raise_suggestion-${String(Date.now())}-${mgr[0].userId}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
   }
 
@@ -239,8 +239,8 @@ class TrinityRecognitionEngine {
         workspaceId,
         userId: owner[0].user_id,
         type: 'trinity_ootm_nomination',
-        title: `Officer of the Month Nomination: ${best.first_name} ${best.last_name}`,,
-        idempotencyKey: `trinity_ootm_nomination-${Date.now()}-${owner[0].user_id}`
+        title: `Officer of the Month Nomination: ${best.first_name} ${best.last_name}`,
+        idempotencyKey: `trinity_ootm_nomination-${Date.now()}-${owner[0].user_id}`,
         message: `Trinity nominates ${best.first_name} ${best.last_name} for Officer of the Month (score: ${Math.round(Number(best.composite_score))}). Approve to send the announcement to the team.\n\nMessage:\n"${message}"`,
         priority: 'normal'
       } as any).catch(() => null);
@@ -297,7 +297,7 @@ class TrinityRecognitionEngine {
           message,
           priority: 'normal',
           idempotencyKey: `trinity_fto_suggestion-${String(Date.now())}-${mgr[0].user_id}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
       }
     }
   }
@@ -336,8 +336,7 @@ class TrinityRecognitionEngine {
       // @ts-expect-error — TS migration: fix in refactoring sprint
       position: e.position || 'Security Officer',
       streakDays: String(m.context?.streakDays || 14),
-      currentRate: String(Number(e.hourly_rate) || 18),,
-          idempotencyKey: `trinity_fto_suggestion-${Date.now()}-${mgr[0].user_id}`
+      currentRate: String(Number(e.hourly_rate) || 18),
       ...Object.fromEntries(Object.entries(m.context || {}).map(([k, v]) => [k, String(v)]))
     };
   }
@@ -369,7 +368,7 @@ class TrinityRecognitionEngine {
         message: `${employeeName} has reached a ${milestoneType.replace(/_/g, ' ')} milestone. Trinity has sent them a recognition message. Context: ${context.slice(0, 200)}`,
         priority: 'normal',
         idempotencyKey: `milestone_alert-${String(Date.now())}-${rows[0].user_id}`,
-}) as any).catch(() => null);
+        }).catch(() => null);
     }
   }
 

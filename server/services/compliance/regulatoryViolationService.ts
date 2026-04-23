@@ -165,7 +165,7 @@ export async function createRegulatoryViolation(params: CreateViolationParams): 
       type: 'regulatory_violation',
       title: 'Regulatory Violation Recorded',
       message: notificationMessage,
-      metadata: { violationId, violationType: params.violationType, officerId: params.officerId },,
+      metadata: { violationId, violationType: params.violationType, officerId: params.officerId },
       idempotencyKey: `regulatory_violation-${Date.now()}-${owner.id}`
     }).catch((err) => log.warn('[regulatoryViolationService] Fire-and-forget failed:', err));
 

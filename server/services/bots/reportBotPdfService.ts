@@ -656,8 +656,8 @@ class ReportBotPdfService {
             scope: 'workspace',
             // @ts-expect-error — TS migration: fix in refactoring sprint
             category: 'schedule',
-            title: `Shift Report Ready — ${siteName}`,,
-            idempotencyKey: `system-${Date.now()}-${mgr.userId}`
+            title: `Shift Report Ready — ${siteName}`,
+            idempotencyKey: `system-${Date.now()}-${mgr.userId}`,
             message: `Shift report for ${siteName} on ${dateStr} (Officer: ${officerName}) is ready. View or send to client.`,
             relatedEntityType: 'org_document',
             relatedEntityId: docId,

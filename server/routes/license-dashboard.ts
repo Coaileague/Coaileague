@@ -263,8 +263,8 @@ router.post('/:certId/revoke', ensureWorkspaceAccess, async (req: Request, res: 
           workspaceId,
           userId: sup.userId,
           type: 'warning',
-          title: 'License Revoked — Active Shift Conflict',,
-          idempotencyKey: `warning-${Date.now()}-${sup.userId}`
+          title: 'License Revoked — Active Shift Conflict',
+          idempotencyKey: `warning-${Date.now()}-${sup.userId}`,
           message: `Officer (Employee ${cert.employeeId})'s "${cert.certificationName}" license has been REVOKED. They have a shift scheduled on ${new Date(shift.startTime).toLocaleDateString()} that must be reassigned immediately.`,
           actionUrl: '/scheduling',
           relatedEntityType: 'shift',

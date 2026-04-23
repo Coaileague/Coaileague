@@ -172,7 +172,7 @@ router.post('/', async (req: any, res) => {
           actionUrl: `/disputes/${dispute.id}`,
           relatedEntityType: 'dispute',
           relatedEntityId: dispute.id,
-          createdBy: userId,,
+          createdBy: userId,
           idempotencyKey: `dispute_filed-${dispute.id}-${manager.userId}`
         });
       }
