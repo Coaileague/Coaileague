@@ -28,6 +28,7 @@ import { spsDocumentRouter, spsDocumentSafeRouter } from "../spsDocumentRoutes";
 import { documentViewRouter } from "../documentViewRoutes";
 import { spsNegotiationRouter } from "../spsNegotiationRoutes";
 import { spsPublicRouter } from "../spsPublicRoutes";
+import { spsFormsRouter } from "../spsFormsRoutes";
 import complianceReportsRouter from "../complianceReportsRoutes";
 import regulatoryEnrollmentRouter from "../compliance/regulatoryEnrollment";
 import { complianceSprintRouter } from "../complianceSprintRoutes";
@@ -60,6 +61,9 @@ export function mountComplianceRoutes(app: Express): void {
   app.use(complianceInlineRouter);
   app.use("/api/uacp", requireAuth, ensureWorkspaceAccess, uacpRouter);
   app.use("/api/security", requireAuth, ensureWorkspaceAccess, securityAuditRouter);
+  // SPS 10-Step Onboarding — must come before /api/sps catch-all mounts
+  // /upload is handled inside the router without workspace middleware (multer + GCS)
+  app.use("/api/sps/forms", requireAuth, ensureWorkspaceAccess, spsFormsRouter);
   // SPS Document Management System
   // Document view/download routes MUST come before spsDocumentRouter (/:id catch-all)
   app.use("/api/sps/documents", requireAuth, ensureWorkspaceAccess, documentViewRouter);

@@ -238,4 +238,253 @@ export const insertSpsStateRequirementSchema = createInsertSchema(spsStateRequir
 export type InsertSpsStateRequirement = z.infer<typeof insertSpsStateRequirementSchema>;
 export type SpsStateRequirement = typeof spsStateRequirements.$inferSelect;
 
+// ═══════════════════════════════════════════════════════════════
+// SPS 10-Step Employee Onboarding Schema
+// Tables: sps_onboarding (master) + 10 form tables + bank + trinity + audit
+// Routes: /api/sps/forms/*
+// ═══════════════════════════════════════════════════════════════
+
+// ── sps_onboarding ────────────────────────────────────────────────────────────
+export const spsOnboarding = pgTable('sps_onboarding', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id').notNull(),
+  employeeId: varchar('employee_id'),
+  status: text('status').notNull().default('in_progress'), // in_progress|completed|abandoned
+  currentStep: integer('current_step').notNull().default(1),
+  completedSteps: jsonb('completed_steps').default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_1_checklist ──────────────────────────────────────────────────────
+export const spsForm1Checklist = pgTable('sps_form_1_checklist', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  fullLegalName: text('full_legal_name'),
+  dateOfBirth: text('date_of_birth'),
+  hireDate: text('hire_date'),
+  position: text('position'),
+  workAddress: text('work_address'),
+  phone: text('phone'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_2_offer_letter ───────────────────────────────────────────────────
+export const spsForm2OfferLetter = pgTable('sps_form_2_offer_letter', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  positionOffered: text('position_offered'),
+  startDate: text('start_date'),
+  salaryHourlyRate: decimal('salary_hourly_rate', { precision: 8, scale: 2 }),
+  employeeSignature: text('employee_signature'),
+  employerSignature: text('employer_signature'),
+  employeeSignedAt: timestamp('employee_signed_at'),
+  employerSignedAt: timestamp('employer_signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_3_w4 ─────────────────────────────────────────────────────────────
+export const spsForm3W4 = pgTable('sps_form_3_w4', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  ssnMasked: text('ssn_masked'),         // last 4 only — never store raw SSN in plaintext
+  ssnEncrypted: text('ssn_encrypted'),   // AES-256 encrypted full SSN
+  filingStatus: text('filing_status'),
+  multipleJobs: boolean('multiple_jobs').default(false),
+  dependentsAmount: decimal('dependents_amount', { precision: 10, scale: 2 }),
+  otherIncome: decimal('other_income', { precision: 10, scale: 2 }),
+  extraWithholding: decimal('extra_withholding', { precision: 10, scale: 2 }),
+  employeeSignature: text('employee_signature'),
+  signedAt: timestamp('signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_4_i9 ─────────────────────────────────────────────────────────────
+export const spsForm4I9 = pgTable('sps_form_4_i9', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  email: text('email'),
+  phone: text('phone'),
+  citizenshipStatus: text('citizenship_status'),
+  documentType: text('document_type'),
+  documentNumber: text('document_number'),
+  documentExpiry: text('document_expiry'),
+  employeeSignature: text('employee_signature'),
+  employerSignature: text('employer_signature'),
+  signedAt: timestamp('signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_5_direct_deposit ─────────────────────────────────────────────────
+export const spsForm5DirectDeposit = pgTable('sps_form_5_direct_deposit', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  bankName: text('bank_name'),
+  routingNumber: text('routing_number'),
+  accountNumberEncrypted: text('account_number_encrypted'), // AES-256 encrypted
+  accountNumberMasked: text('account_number_masked'),       // last 4 only
+  accountType: text('account_type'), // checking|savings
+  voidedCheckImageUrl: text('voided_check_image_url'),
+  employeeSignature: text('employee_signature'),
+  signedAt: timestamp('signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_6_handbook_ack ───────────────────────────────────────────────────
+export const spsForm6HandbookAck = pgTable('sps_form_6_handbook_ack', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  ack1: boolean('ack_1').default(false),
+  ack2: boolean('ack_2').default(false),
+  ack3: boolean('ack_3').default(false),
+  ack4: boolean('ack_4').default(false),
+  ack5: boolean('ack_5').default(false),
+  employeeSignature: text('employee_signature'),
+  signedAt: timestamp('signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_7_at_will ────────────────────────────────────────────────────────
+export const spsForm7AtWill = pgTable('sps_form_7_at_will', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  employeeSignature: text('employee_signature'),
+  employerSignature: text('employer_signature'),
+  employeeSignedAt: timestamp('employee_signed_at'),
+  employerSignedAt: timestamp('employer_signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_8_uniform ────────────────────────────────────────────────────────
+export const spsForm8Uniform = pgTable('sps_form_8_uniform', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  uniformShirtSize: text('uniform_shirt_size'),
+  uniformPantsSize: text('uniform_pants_size'),
+  deductionAck1: boolean('deduction_ack_1').default(false),
+  deductionAck2: boolean('deduction_ack_2').default(false),
+  employeeSignature: text('employee_signature'),
+  signedAt: timestamp('signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_9_security_policy ────────────────────────────────────────────────
+export const spsForm9SecurityPolicy = pgTable('sps_form_9_security_policy', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  ack1: boolean('ack_1').default(false),
+  ack2: boolean('ack_2').default(false),
+  ack3: boolean('ack_3').default(false),
+  employeeSignature: text('employee_signature'),
+  signedAt: timestamp('signed_at'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_form_10_credentials ───────────────────────────────────────────────────
+export const spsForm10Credentials = pgTable('sps_form_10_credentials', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull().unique(),
+  workspaceId: varchar('workspace_id').notNull(),
+  driversLicenseFrontUrl: text('drivers_license_front_url'),
+  driversLicenseBackUrl: text('drivers_license_back_url'),
+  guardCardFrontUrl: text('guard_card_front_url'),
+  guardCardBackUrl: text('guard_card_back_url'),
+  ssnFrontUrl: text('ssn_front_url'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_employee_bank_setup ───────────────────────────────────────────────────
+export const spsEmployeeBankSetup = pgTable('sps_employee_bank_setup', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id').notNull(),
+  employeeId: varchar('employee_id').notNull(),
+  bankName: text('bank_name'),
+  routingNumber: text('routing_number'),
+  accountNumberEncrypted: text('account_number_encrypted'),
+  accountNumberMasked: text('account_number_masked'),
+  accountType: text('account_type'),
+  voidedCheckImageUrl: text('voided_check_image_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_employee_trinity_access ───────────────────────────────────────────────
+export const spsEmployeeTrinityAccess = pgTable('sps_employee_trinity_access', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id').notNull(),
+  employeeId: varchar('employee_id').notNull().unique(),
+  trinityEnabled: boolean('trinity_enabled').notNull().default(false),
+  hourlyRate: decimal('hourly_rate', { precision: 8, scale: 2 }),
+  rateSetAt: timestamp('rate_set_at'),
+  rateSetById: varchar('rate_set_by_id'),
+  visibleUntil: timestamp('visible_until'), // employee can see rate for 24h
+  contactEmail: text('contact_email'),
+  contactPhone: text('contact_phone'),
+  workAddress: text('work_address'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── sps_onboarding_audit_log ──────────────────────────────────────────────────
+export const spsOnboardingAuditLog = pgTable('sps_onboarding_audit_log', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  onboardingId: varchar('onboarding_id').notNull(),
+  workspaceId: varchar('workspace_id').notNull(),
+  action: text('action').notNull(), // step_submitted|draft_saved|finalized|rate_set|trinity_granted
+  step: integer('step'),
+  actorId: varchar('actor_id'),
+  details: jsonb('details').default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ── Onboarding Insert Schemas ──────────────────────────────────────────────────
+export const insertSpsOnboardingSchema = createInsertSchema(spsOnboarding).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSpsOnboarding = z.infer<typeof insertSpsOnboardingSchema>;
+export type SpsOnboarding = typeof spsOnboarding.$inferSelect;
+
+export const insertSpsForm1Schema = createInsertSchema(spsForm1Checklist).omit({ id: true, updatedAt: true });
+export type SpsForm1 = typeof spsForm1Checklist.$inferSelect;
+
+export const insertSpsForm2Schema = createInsertSchema(spsForm2OfferLetter).omit({ id: true, updatedAt: true });
+export type SpsForm2 = typeof spsForm2OfferLetter.$inferSelect;
+
+export const insertSpsForm3Schema = createInsertSchema(spsForm3W4).omit({ id: true, updatedAt: true });
+export type SpsForm3 = typeof spsForm3W4.$inferSelect;
+
+export const insertSpsForm4Schema = createInsertSchema(spsForm4I9).omit({ id: true, updatedAt: true });
+export type SpsForm4 = typeof spsForm4I9.$inferSelect;
+
+export const insertSpsForm5Schema = createInsertSchema(spsForm5DirectDeposit).omit({ id: true, updatedAt: true });
+export type SpsForm5 = typeof spsForm5DirectDeposit.$inferSelect;
+
+export const insertSpsForm6Schema = createInsertSchema(spsForm6HandbookAck).omit({ id: true, updatedAt: true });
+export type SpsForm6 = typeof spsForm6HandbookAck.$inferSelect;
+
+export const insertSpsForm7Schema = createInsertSchema(spsForm7AtWill).omit({ id: true, updatedAt: true });
+export type SpsForm7 = typeof spsForm7AtWill.$inferSelect;
+
+export const insertSpsForm8Schema = createInsertSchema(spsForm8Uniform).omit({ id: true, updatedAt: true });
+export type SpsForm8 = typeof spsForm8Uniform.$inferSelect;
+
+export const insertSpsForm9Schema = createInsertSchema(spsForm9SecurityPolicy).omit({ id: true, updatedAt: true });
+export type SpsForm9 = typeof spsForm9SecurityPolicy.$inferSelect;
+
+export const insertSpsForm10Schema = createInsertSchema(spsForm10Credentials).omit({ id: true, updatedAt: true });
+export type SpsForm10 = typeof spsForm10Credentials.$inferSelect;
+
+export const insertSpsEmployeeBankSetupSchema = createInsertSchema(spsEmployeeBankSetup).omit({ id: true, createdAt: true, updatedAt: true });
+export type SpsEmployeeBankSetup = typeof spsEmployeeBankSetup.$inferSelect;
+
+export const insertSpsEmployeeTrinityAccessSchema = createInsertSchema(spsEmployeeTrinityAccess).omit({ id: true, createdAt: true, updatedAt: true });
+export type SpsEmployeeTrinityAccess = typeof spsEmployeeTrinityAccess.$inferSelect;
+
 export * from './extended';

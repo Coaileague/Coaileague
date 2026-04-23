@@ -218,6 +218,7 @@ const DocumentSigningPortal = lazy(() => import("@/pages/document-signing-portal
 const SpsPacketPortal = lazy(() => import("@/pages/sps-packet-portal"));
 const SpsClientPipeline = lazy(() => import("@/pages/sps-client-pipeline"));
 const SpsDocumentSafe = lazy(() => import("@/pages/sps-document-safe"));
+const SpsOnboardingWizard = lazy(() => import("@/pages/sps-onboarding-wizard"));
 const EmployeePacketPortal = lazy(() => import("@/pages/employee-packet-portal"));
 const EmployeePackets = lazy(() => import("@/pages/employee-packets"));
 const TxServiceAgreement = lazy(() => import("@/pages/tx-service-agreement"));
@@ -1377,6 +1378,7 @@ function AppContent() {
               <Route path="/contract-portal/:token">{(params: { token: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><ContractSigningPortal token={params.token} /></Suspense></ErrorBoundary>}</Route>
               <Route path="/sign/:token">{(params: { token: string }) => <ErrorBoundary><Suspense fallback={<PageLoader />}><DocumentSigningPortal token={params.token} /></Suspense></ErrorBoundary>}</Route>
               <Route path="/sps-packet/:token"><ErrorBoundary><Suspense fallback={<PageLoader />}><SpsPacketPortal /></Suspense></ErrorBoundary></Route>
+              <Route path="/sps-forms/:id"><ErrorBoundary><Suspense fallback={<PageLoader />}><SpsOnboardingWizard /></Suspense></ErrorBoundary></Route>
               <Route path="/packet-portal/:token"><ErrorBoundary><Suspense fallback={<PageLoader />}><EmployeePacketPortal /></Suspense></ErrorBoundary></Route>
               <Route path="/client-signup"><ErrorBoundary><Suspense fallback={<PageLoader />}><ClientSignup /></Suspense></ErrorBoundary></Route>
               <Route path="/jobs/:workspaceId"><ErrorBoundary><Suspense fallback={<PageLoader />}><PublicJobBoard /></Suspense></ErrorBoundary></Route>
