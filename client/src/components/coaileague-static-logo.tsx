@@ -18,7 +18,7 @@ export function CoAIleagueStaticLogo({
   variant = "icon",
   className,
 }: CoAIleagueStaticLogoProps) {
-  const knotSizeMap: Record<string, "xs" | "sm" | "md" | "lg" | "xl"> = {
+  const markSizeMap: Record<string, "xs" | "sm" | "md" | "lg" | "xl"> = {
     sm: "xs",
     md: "sm",
     lg: "md",
@@ -49,7 +49,7 @@ export function CoAIleagueStaticLogo({
         data-testid="coaileague-static-logo-icon"
       >
         <TrinityMascotIcon 
-          size={knotSizeMap[size] || "sm"}
+          size={markSizeMap[size] || "sm"}
         />
       </div>
     );
@@ -59,7 +59,7 @@ export function CoAIleagueStaticLogo({
     <div className={cn("flex items-center gap-4", className)} data-testid="coaileague-static-logo-full">
       <div className="relative inline-flex items-center justify-center shrink-0">
         <TrinityMascotIcon 
-          size={knotSizeMap[size] || "sm"}
+          size={markSizeMap[size] || "sm"}
         />
       </div>
 

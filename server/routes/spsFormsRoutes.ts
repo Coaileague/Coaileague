@@ -8,6 +8,7 @@
  *   POST   /api/sps/forms/create              — start new onboarding session
  *   GET    /api/sps/forms/:id                 — fetch session + all 10 form data
  *   PUT    /api/sps/forms/:id/save-draft      — UPSERT form data (silent, no validation)
+ *   POST   /api/sps/forms/:id/save            — alias for save-draft (compat)
  *   POST   /api/sps/forms/:id/submit-step/:step — validate + advance step
  *   POST   /api/sps/forms/:id/finalize        — generate PDF, create employee/trinity records
  *   POST   /api/sps/forms/:id/set-rate        — owner/co_owner sets hourly rate
@@ -362,7 +363,7 @@ spsFormsRouter.get('/:id', async (req, res) => {
 });
 
 // ── PUT /:id/save-draft ───────────────────────────────────────────────────────
-spsFormsRouter.put('/:id/save-draft', async (req, res) => {
+const saveDraftHandler = async (req: any, res: any) => {
   try {
     const workspaceId = resolveWorkspace(req);
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
@@ -385,7 +386,11 @@ spsFormsRouter.put('/:id/save-draft', async (req, res) => {
     log.error(`[SpsForms] save-draft error: ${(err as Error).message}`);
     return res.status(500).json({ error: 'Failed to save draft' });
   }
-});
+};
+
+spsFormsRouter.put('/:id/save-draft', saveDraftHandler);
+// Backward-compatible alias expected by older SPS clients/integration tests.
+spsFormsRouter.post('/:id/save', saveDraftHandler);
 
 // ── POST /:id/submit-step/:step ───────────────────────────────────────────────
 spsFormsRouter.post('/:id/submit-step/:step', async (req, res) => {

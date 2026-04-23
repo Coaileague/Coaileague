@@ -2711,13 +2711,20 @@ function BubblePopup() {
     : <ConversationList onSelectRoom={(id, name) => openChat(id, name)} />;
 
   if (isMobile) {
+    const mobileHeight = stableHeight > 0 ? `${stableHeight}px` : "100dvh";
+    const mobileBottomInset = keyboardOffset > 0
+      ? `calc(env(safe-area-inset-bottom, 0px) + ${keyboardOffset}px)`
+      : "env(safe-area-inset-bottom, 0px)";
+
     return (
       <div
         className="fixed inset-0 z-[9998] bg-card flex flex-col animate-in slide-in-from-bottom-4 duration-200"
         style={{
-          height: "100dvh",
+          height: mobileHeight,
+          maxHeight: mobileHeight,
           paddingTop: "env(safe-area-inset-top, 0px)",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          paddingBottom: mobileBottomInset,
+          overflow: "hidden",
         }}
         data-testid="chat-bubble-popup-mobile"
         role="dialog"

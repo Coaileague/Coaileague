@@ -75,7 +75,7 @@
 - `pagination.tsx` - Page navigation
 
 ### Branding
-- `colorful-celtic-knot.tsx` - **Trinity Logo** (3-ribbon Celtic triquetra)
+- `trinity-arrow-spinner.tsx` - **Trinity Logo** (animated Trinity three-arrow spinner)
 - `trinity-animated-logo.tsx` - Animated Trinity logo
 - `logo-mark.tsx` - Platform logo mark
 
@@ -250,14 +250,14 @@
 
 ## Trinity Branding
 
-**Official Logo:** `ColorfulCelticKnot` (3-ribbon Celtic triquetra)  
-**Location:** `client/src/components/ui/colorful-celtic-knot.tsx`  
+**Official Logo:** `TrinityArrowSpinner` (animated Trinity three-arrow spinner)  
+**Location:** `client/src/components/ui/trinity-arrow-spinner.tsx`  
 **Colors:** Purple (#a855f7), Teal (#14b8a6), Gold (#f59e0b)
 
 **Usage:**
 ```tsx
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
-<ColorfulCelticKnot size="lg" animated state="thinking" />
+import { TrinityArrowSpinner } from "@/components/ui/trinity-arrow-spinner";
+<TrinityArrowSpinner size="lg" animated state="thinking" />
 ```
 
 ---

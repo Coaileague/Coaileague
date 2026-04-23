@@ -42,6 +42,7 @@ import {
 import { format, formatDistanceToNow } from 'date-fns';
 import { LogoMark } from '@/components/ui/coaileague-logo-mark';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
+import { TrinityEnhancedThoughtProcess } from '@/components/trinity-enhanced';
 
 import {
   type ConversationMode,
@@ -600,16 +601,24 @@ export default function TrinityChat() {
                     <LogoMark size="sm" />
                   </div>
                   <div className="bg-muted rounded-lg px-3 py-2">
-                    {thoughtPhase ? (
-                      <div className="flex items-center gap-2">
-                        <Activity className="w-3.5 h-3.5 text-primary animate-pulse" />
-                        <p className="text-sm text-muted-foreground">
-                          <span className="font-medium text-foreground">{THOUGHT_PHASE_LABELS[thoughtPhase] || thoughtPhase}</span>
-                          <span className="animate-pulse">...</span>
-                        </p>
-                      </div>
+                    {buddySettings?.showThoughtProcess ? (
+                      <TrinityEnhancedThoughtProcess
+                        request={message}
+                        isVisible={true}
+                        actionCategories={mode === 'business' ? ['schedule', 'payment', 'communication'] : ['communication', 'personalstate', 'ai']}
+                      />
                     ) : (
-                      <p className="text-sm text-muted-foreground animate-pulse">Trinity is thinking...</p>
+                      thoughtPhase ? (
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-3.5 h-3.5 text-primary animate-pulse" />
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">{THOUGHT_PHASE_LABELS[thoughtPhase] || thoughtPhase}</span>
+                            <span className="animate-pulse">...</span>
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground animate-pulse">Trinity is thinking...</p>
+                      )
                     )}
                   </div>
                 </div>

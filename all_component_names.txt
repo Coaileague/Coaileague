@@ -23,10 +23,10 @@ visually-hidden
 table
 accordion
 tabs
-celtic-trinity-knot
+trinity-arrow-spinner
 index
 modal-guard
-colorful-celtic-knot
+trinity-arrow-spinner
 toaster
 premium-badge
 badge

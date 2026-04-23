@@ -864,11 +864,12 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       }
       // ─────────────────────────────────────────────────────────────────────────────
 
-      if (!isValidPayrollTransition(run.status, 'approved')) {
-        const lifecycleStatus = resolvePayrollLifecycleStatus(run.status);
+      const currentStatus = run.status ?? 'draft';
+      if (!isValidPayrollTransition(currentStatus, 'approved')) {
+        const lifecycleStatus = resolvePayrollLifecycleStatus(currentStatus);
         return res.status(422).json({
           message: "Only payroll runs pending review can be approved",
-          currentStatus: lifecycleStatus || run.status,
+          currentStatus: lifecycleStatus || currentStatus,
         });
       }
 
@@ -893,36 +894,52 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       // Now we await the write; on failure we log loudly but do NOT block the approval —
       // the payroll run IS correctly approved and the error is surfaced in structured logs
       // where it can be caught by the log monitoring pipeline for SOC2 audit alerting.
-      await storage.createAuditLog({
-        workspaceId,
-        userId,
-        userEmail: req.user?.email || 'unknown',
-        userRole: req.user?.role || 'user',
-        action: 'update',
-        entityType: 'payroll_run',
-        entityId: id,
-        actionDescription: `Payroll run ${id} approved`,
-        changes: { before: { status: 'pending' }, after: { status: 'approved', approvedBy: userId } },
-        isSensitiveData: true,
-        complianceTag: 'soc2',
-      }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll approval', { runId: id, workspaceId, error: err?.message }));
+      try {
+        await storage.createAuditLog({
+          workspaceId,
+          userId,
+          userEmail: req.user?.email || 'unknown',
+          userRole: req.user?.role || 'user',
+          action: 'update',
+          entityType: 'payroll_run',
+          entityId: id,
+          actionDescription: `Payroll run ${id} approved`,
+          changes: { before: { status: 'pending' }, after: { status: 'approved', approvedBy: userId } },
+          isSensitiveData: true,
+          complianceTag: 'soc2',
+        });
+      } catch (err: unknown) {
+        log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll approval', {
+          runId: id,
+          workspaceId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
 
       // FIX-2: Financial audit log for payroll approval
-      await db.insert(billingAuditLog).values({
-        workspaceId,
-        eventType: 'payroll_run_approved',
-        eventCategory: 'payroll',
-        actorType: 'user',
-        actorId: userId,
-        actorEmail: req.user?.email || null,
-        description: `Payroll run ${run.id} approved for period ${run.periodStart} to ${run.periodEnd}`,
-        relatedEntityType: 'payroll_run',
-        relatedEntityId: id,
-        previousState: { status: 'pending' },
-        newState: { status: 'approved', approvedBy: userId, approvedAt: new Date().toISOString() },
-        ipAddress: req.ip || null,
-        userAgent: req.get('user-agent') || null,
-      }).catch(err => log.error('[BillingAudit] billing_audit_log write failed for payroll approval', { error: err?.message }));
+      try {
+        await db.insert(billingAuditLog).values({
+          workspaceId,
+          eventType: 'payroll_run_approved',
+          eventCategory: 'payroll',
+          actorType: 'user',
+          actorId: userId,
+          actorEmail: req.user?.email || null,
+          description: `Payroll run ${run.id} approved for period ${run.periodStart} to ${run.periodEnd}`,
+          relatedEntityType: 'payroll_run',
+          relatedEntityId: id,
+          previousState: { status: 'pending' },
+          newState: { status: 'approved', approvedBy: userId, approvedAt: new Date().toISOString() },
+          ipAddress: req.ip || null,
+          userAgent: req.get('user-agent') || null,
+        });
+      } catch (err: unknown) {
+        log.error('[BillingAudit] billing_audit_log write failed for payroll approval', {
+          runId: id,
+          workspaceId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
 
       let qbSyncResult = null;
       try {
@@ -995,11 +1012,12 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       }
       // ─────────────────────────────────────────────────────────────────────────────
 
-      if (!isValidPayrollTransition(run.status, 'processing')) {
-        const lifecycleStatus = resolvePayrollLifecycleStatus(run.status);
+      const currentStatus = run.status ?? 'draft';
+      if (!isValidPayrollTransition(currentStatus, 'processing')) {
+        const lifecycleStatus = resolvePayrollLifecycleStatus(currentStatus);
         return res.status(422).json({
           message: "Only approved payroll runs can be processed",
-          currentStatus: lifecycleStatus || run.status,
+          currentStatus: lifecycleStatus || currentStatus,
         });
       }
 
@@ -2584,10 +2602,11 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
     const run = await storage.getPayrollRun(runId, workspaceId);
     if (!run) return res.status(404).json({ message: 'Payroll run not found' });
 
-    if (!isValidPayrollTransition(run.status, 'paid')) {
-      const lifecycleStatus = resolvePayrollLifecycleStatus(run.status);
+    const currentStatus = run.status ?? 'draft';
+    if (!isValidPayrollTransition(currentStatus, 'paid')) {
+      const lifecycleStatus = resolvePayrollLifecycleStatus(currentStatus);
       return res.status(422).json({
-        message: `Only processing payroll runs can be marked as paid. Current status: ${lifecycleStatus || run.status}`,
+        message: `Only processing payroll runs can be marked as paid. Current status: ${lifecycleStatus || currentStatus}`,
       });
     }
 

@@ -3,7 +3,7 @@
  *
  * STRICT BRAND RULE (2026-04-09): this component renders the canonical
  * CoAIleagueLogoMark (3-arrow Trinity symbol) with a state-driven CSS
- * animation class. It NEVER renders the old 5-petal ribbon knot or any
+ * animation class. It NEVER renders any legacy floral mascot geometry.
  * "blob/flower" mascot geometry.
  *
  * Animation states (applied as CSS classes):
@@ -12,7 +12,7 @@
  *   - responding → `animate-trinity-fade`  (fade-in as text appears)
  *
  * For richer 10-state animation (speaking, listening, success, error, etc.)
- * use `ColorfulCelticKnot` from `@/components/ui/colorful-celtic-knot`.
+ * use `TrinityArrowSpinner` from `@/components/ui/trinity-arrow-spinner`.
  *
  * Size + mode props are preserved for backward compatibility with any
  * existing callers. `mode` is a no-op; the arrow mark has one canonical

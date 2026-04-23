@@ -34,7 +34,7 @@ camera-capture.tsx
 CanvasHubRegistry.tsx
 card.tsx
 carousel.tsx
-celtic-trinity-knot.tsx
+trinity-arrow-spinner.tsx
 chart.tsx
 chat-agreement-modal.tsx
 ChatDock.tsx
@@ -44,7 +44,7 @@ checkbox.tsx
 checkpoint-alert.tsx
 clients-table.tsx
 collapsible.tsx
-colorful-celtic-knot.tsx
+trinity-arrow-spinner.tsx
 command-palette.tsx
 command.tsx
 CompactBubble.tsx

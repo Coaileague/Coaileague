@@ -21,6 +21,7 @@ import { sendCanSpamCompliantEmail } from '../emailCore';
 import { createLogger } from '../../lib/logger';
 import { PLATFORM } from '../../config/platformConfig';
 const log = createLogger('trinityInvoiceEmailActions');
+let invoiceEmailActionsRegistrationState: 'unregistered' | 'registering' | 'registered' = 'unregistered';
 
 // Helper: result factory
 function createResult(actionId: string, success: boolean, message: string, data?: any, startTime?: number): ActionResult {
@@ -34,6 +35,17 @@ function createResult(actionId: string, success: boolean, message: string, data?
 }
 
 export function registerInvoiceEmailActions() {
+  if (invoiceEmailActionsRegistrationState === 'registered') {
+    log.info('[Trinity Invoice+Email] Actions already registered; skipping duplicate registration');
+    return;
+  }
+  if (invoiceEmailActionsRegistrationState === 'registering') {
+    log.info('[Trinity Invoice+Email] Registration already in progress; skipping duplicate registration');
+    return;
+  }
+
+  invoiceEmailActionsRegistrationState = 'registering';
+
   log.info('[Trinity Invoice+Email] Registering actions...');
 
   // ─── INVOICE ACTIONS ───────────────────────────────────────────────────────
@@ -434,18 +446,25 @@ export function registerInvoiceEmailActions() {
     }
   };
 
-  // Register all actions
-  helpaiOrchestrator.registerAction(sendInvoiceEmail); // billing.invoice_send (consolidated — replaces send_invoice_email + send_invoice_bulk + mark_invoice_sent)
-  // Consolidated into billing.invoice_send above — not registering separately:
-  // helpaiOrchestrator.registerAction(sendBulkInvoices);
-  // helpaiOrchestrator.registerAction(markInvoiceSent);
-  // Consolidated into billing.invoice_status (checkOverdue) — not registering separately:
-  // helpaiOrchestrator.registerAction(checkOverdue);
-  helpaiOrchestrator.registerAction(generatePdf); // billing.invoice_pdf
-  helpaiOrchestrator.registerAction(markPaid); // billing.invoice_status (consolidated — replaces mark_invoice_paid + mark_invoice_sent + check_invoices_overdue)
-  helpaiOrchestrator.registerAction(runEmailOrchestration);
-  helpaiOrchestrator.registerAction(sendSingleEmail);
-  helpaiOrchestrator.registerAction(sendBroadcast);
+  try {
+    // Register all actions
+    helpaiOrchestrator.registerAction(sendInvoiceEmail); // billing.invoice_send (consolidated — replaces send_invoice_email + send_invoice_bulk + mark_invoice_sent)
+    // Consolidated into billing.invoice_send above — not registering separately:
+    // helpaiOrchestrator.registerAction(sendBulkInvoices);
+    // helpaiOrchestrator.registerAction(markInvoiceSent);
+    // Consolidated into billing.invoice_status (checkOverdue) — not registering separately:
+    // helpaiOrchestrator.registerAction(checkOverdue);
+    helpaiOrchestrator.registerAction(generatePdf); // billing.invoice_pdf
+    helpaiOrchestrator.registerAction(markPaid); // billing.invoice_status (consolidated — replaces mark_invoice_paid + mark_invoice_sent + check_invoices_overdue)
+    helpaiOrchestrator.registerAction(runEmailOrchestration);
+    helpaiOrchestrator.registerAction(sendSingleEmail);
+    helpaiOrchestrator.registerAction(sendBroadcast);
+    invoiceEmailActionsRegistrationState = 'registered';
 
-  log.info(`[Trinity Invoice+Email] Registered 6 actions (3 consolidated, 3 email)`);
+    log.info(`[Trinity Invoice+Email] Registered 6 actions (3 consolidated, 3 email)`);
+  } catch (error: unknown) {
+    invoiceEmailActionsRegistrationState = 'unregistered';
+    log.error('[Trinity Invoice+Email] Registration failed; state reset to unregistered', error);
+    throw error;
+  }
 }

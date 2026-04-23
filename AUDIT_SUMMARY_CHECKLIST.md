@@ -459,3 +459,155 @@ export function MobileNavigationSheet({ open, onOpenChange }) {
 **Total Time to Generate**: < 5 minutes  
 **Actionable Items**: 80+ files ready for migration  
 **Priority: CRITICAL** - Z-index and mobile responsiveness issues affect user experience
+
+---
+
+## 2026-04-23 Master Holistic Production Readiness Audit (CoAIleague + Trinity)
+
+**Audit Mode:** Canonical, domain-first, one-source-of-truth (SSOT).  
+**Scope:** Public pages, private workspaces, auditor portal, client portal, dashboards, APIs, storage (Document Safe), forms, sync pipelines, automations, tenancy boundaries (tenant/sub-tenant), and support tooling.  
+**Execution Date:** April 23, 2026.
+
+### 0) Fresh-Repo Baseline Gate (Required Before Any Fixes)
+
+- [x] Confirm branch + local cleanliness: `git status --short --branch`.
+- [x] Confirm upstream remotes availability: `git remote -v`.
+- [ ] Pull latest upstream (`git fetch --all --prune && git pull --rebase`) **blocked until a remote is configured**.
+
+**Baseline finding:** current clone has no configured git remotes; full "fresh upstream" sync is blocked in this environment and must be done once origin/upstream is added.
+
+---
+
+### 1) Canonical Audit Domains and Phases
+
+#### Domain A — Platform Inventory & SSOT Mapping
+**Goal:** one canonical registry for every route, page, component, asset, icon, loader/spinner, service, and datastore touchpoint.
+
+- **Phase A1 — Route/Page registry**
+  - Build definitive map of public, auth, workspace, auditor, and client portal routes.
+  - Mark route owner, auth guard, role matrix, and feature flag dependencies.
+- **Phase A2 — UI/UX asset registry**
+  - Catalog reusable UI primitives, icons, empty states, loaders, and skeletons.
+  - Detect duplicated visuals and conflicting component patterns.
+- **Phase A3 — Integration registry**
+  - Map every API endpoint ↔ frontend caller ↔ DB/table ↔ queue/webhook side effect.
+
+#### Domain B — Identity, Tenancy, and Authorization
+**Goal:** enforce tenant and sub-tenant isolation and role-correct action boundaries.
+
+- **Phase B1 — AuthN flows** (login, session, token refresh, logout, SSO where applicable).
+- **Phase B2 — AuthZ matrix validation** (end user, client, tenant admin, support, auditor).
+- **Phase B3 — Tenant boundary tests** (cross-tenant leakage, impersonation safeguards, audit traces).
+
+#### Domain C — Trinity Experience & Orchestration
+**Goal:** ensure Trinity is the single AI interface with correct routing, fallback, and escalation behavior.
+
+- **Phase C1 — UX contract checks**
+  - One-FAB-per-screen rules, sheet sizing, safe-area behavior, no overlap regressions.
+- **Phase C2 — Bot routing and domain execution checks**
+  - Payroll/scheduling/compliance/notification handoffs with role-aware permissions.
+- **Phase C3 — Reliability checks**
+  - Fallback chain and escalation pathways; logging attribution by org/workspace.
+
+#### Domain D — Data Lifecycle, Document Safe, and Persistence
+**Goal:** verify end-to-end data correctness for CRUD + uploads + retention.
+
+- **Phase D1 — CRUD contract audit**
+  - For each entity: create/read/update/delete paths, validation, and conflict behavior.
+- **Phase D2 — Document Safe flows**
+  - Upload, scan, metadata indexing, permission checks, retrieval, archival/deletion policy.
+- **Phase D3 — Sync and idempotency**
+  - Online forms, retry jobs, duplicate suppression, and replay safety.
+
+#### Domain E — Workflow Automation & Pipelines
+**Goal:** prove operational automations match business intent and do not silently fail.
+
+- **Phase E1 — Event map** (triggers, subscribers, cron jobs, webhooks).
+- **Phase E2 — Failure semantics** (dead-letter/alerts/retry policy).
+- **Phase E3 — Human-in-the-loop requirements** (approval gates for high-risk actions).
+
+#### Domain F — Quality Gates (TypeScript, Imports, Runtime Errors)
+**Goal:** surface and clear compile/runtime defects before first-tenant launch.
+
+- **Phase F1 — Static checks**
+  - TypeScript strict pass, import resolution, circular dependency scan.
+- **Phase F2 — Runtime checks**
+  - Silent failure detection, unhandled promise rejections, boundary error coverage.
+- **Phase F3 — Regression harness**
+  - Smoke tests per portal + core workflows + tenancy isolation tests.
+
+#### Domain G — Production Readiness, Security, and Observability
+**Goal:** production-safe release controls and traceable operations.
+
+- **Phase G1 — Security hardening** (secrets, CSP, headers, auth/session config).
+- **Phase G2 — Observability** (logs/metrics/traces with tenant context).
+- **Phase G3 — Launch checklist** (rollback, incident runbook, support escalation matrix).
+
+---
+
+### 2) Master Audit Checklist (Execution Tracker)
+
+#### Domain A (Inventory & SSOT)
+- [ ] A1 route matrix completed.
+- [ ] A2 UI/asset/icon/spinner matrix completed.
+- [ ] A3 caller↔API↔DB lineage completed.
+
+#### Domain B (Identity & Tenancy)
+- [ ] B1 auth flow verification complete.
+- [ ] B2 RBAC/ABAC matrix validated.
+- [ ] B3 cross-tenant isolation tests passing.
+
+#### Domain C (Trinity)
+- [ ] C1 FAB + sheet contract validated across key screens.
+- [ ] C2 routing to specialized bots validated by role.
+- [ ] C3 fallback/escalation and org attribution validated.
+
+#### Domain D (Data & Document Safe)
+- [ ] D1 CRUD matrix validated for all critical entities.
+- [ ] D2 Document Safe permissions and lifecycle validated.
+- [ ] D3 sync/idempotency protections validated.
+
+#### Domain E (Automations)
+- [ ] E1 trigger/subscriber canonical map created.
+- [ ] E2 failure/retry/dead-letter behavior validated.
+- [ ] E3 approval gates tested on high-risk workflows.
+
+#### Domain F (Code Health)
+- [ ] F1 TypeScript and import integrity pass.
+- [ ] F2 silent-failure and unhandled rejection scan clean.
+- [ ] F3 smoke + regression checks passing.
+
+#### Domain G (Launch Readiness)
+- [ ] G1 security baseline complete.
+- [ ] G2 observability coverage complete.
+- [ ] G3 go-live/rollback/support runbooks approved.
+
+---
+
+### 3) Kickoff Results — Phase F1 (Started)
+
+Executed static quality gate commands to begin systematic remediation:
+
+1. `npm run check --silent`  
+   - **Result:** failed due Node.js heap exhaustion (OOM) during full-project TypeScript compile.
+2. `NODE_OPTIONS=--max-old-space-size=8192 npm run check --silent`  
+   - **Result:** long-running compile initiated to reduce false negatives from memory pressure; treat as in-progress baseline run.
+3. `npx tsc --noEmit --project tsconfig.server.json`  
+   - **Result:** started as a scoped server-side baseline to isolate/triage type errors from the full build graph.
+
+**Immediate remediation plan (next execution cycle):**
+- Split TS checks by project slices (client/server/tests) and capture deterministic error inventory per slice.
+- Prioritize blockers: missing imports, unresolved types, obvious cascading definitions, and unsafe any/unknown hotspots in critical workflows.
+- Close issues domain-by-domain and re-run smoke checks after each phase.
+
+---
+
+### 4) Canonical Definition of Done (First Tenant + Client Go-Live)
+
+The platform is considered production-ready only when all are true:
+
+- [ ] Every domain (A–G) is complete with artifacts and ownership sign-off.
+- [ ] No unresolved P0/P1 issues in auth, tenancy, Trinity core workflows, payroll/scheduling/compliance paths, or document storage lifecycle.
+- [ ] TypeScript quality gate and regression smoke tests pass in CI.
+- [ ] Public + private portal core journeys pass with no blocking UX regressions.
+- [ ] Audit trail completeness validated for support and compliance review.

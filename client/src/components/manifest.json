@@ -21,7 +21,7 @@
         { "name": "carousel", "file": "carousel.tsx", "tags": ["display", "gallery"] },
         { "name": "checkbox", "file": "checkbox.tsx", "tags": ["input", "form"] },
         { "name": "collapsible", "file": "collapsible.tsx", "tags": ["layout", "disclosure"] },
-        { "name": "colorful-celtic-knot", "file": "colorful-celtic-knot.tsx", "tags": ["branding", "trinity", "logo"] },
+        { "name": "trinity-arrow-spinner", "file": "trinity-arrow-spinner.tsx", "tags": ["branding", "trinity", "logo"] },
         { "name": "command", "file": "command.tsx", "tags": ["input", "search"] },
         { "name": "context-menu", "file": "context-menu.tsx", "tags": ["menu", "action"] },
         { "name": "dialog", "file": "dialog.tsx", "tags": ["modal", "overlay"] },

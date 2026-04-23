@@ -352,7 +352,7 @@ What Trinity can do:
 • Generate custom reports on demand
 
 How to reach Trinity:
-• Click the Celtic knot icon in the bottom corner of any page
+• Click the Trinity three-arrow icon in the bottom corner of any page
 • Or go to Chat → Business Mode for operational queries
 • Guru Mode for platform troubleshooting and configuration
 
@@ -472,7 +472,7 @@ Things employees ask Trinity:
 • "Where do I upload my certifications?"
 
 How to reach Trinity:
-• Click the Celtic knot icon in the bottom corner of any page
+• Click the Trinity three-arrow icon in the bottom corner of any page
 • Or go to Chat from the main menu
 
 Trinity speaks plainly — no manual, no support ticket, just ask. If something isn't working or you can't find a feature, Trinity will walk you through it step by step.`,

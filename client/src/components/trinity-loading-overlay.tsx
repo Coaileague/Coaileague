@@ -35,7 +35,7 @@ const LOADING_MESSAGES = [
 ];
 
 /**
- * Animated Trinity Celtic Knot Logo - Flowing ribbon animation
+ * Animated Trinity three-arrow spinner logo - flowing directional animation
  * Three interwoven ribbon paths with animated color flow
  * Distinctly Trinity branding - NOT similar to Claude's starburst
  */

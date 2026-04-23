@@ -1,5 +1,5 @@
 /**
- * Trinity Arrow Mark — animated 3-arrow indicator for inline Trinity surfaces.
+ * Trinity Arrow Spinner — animated 3-arrow indicator for inline Trinity surfaces.
  *
  * Three directional arrows radiate from a central glowing nexus:
  *   - Blue  (#3B82F6 / #60A5FA)  — top (12 o'clock)
@@ -37,7 +37,7 @@ export type TrinityEmotionState =
   | "happy"          // Sparkle burst bounce
   | "focused";       // Intense concentrated glow
 
-interface ColorfulCelticKnotProps {
+interface TrinityArrowSpinnerProps {
   size?: number | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
   animated?: boolean;
@@ -226,7 +226,7 @@ const ARROW_PATH = "M 50 5 L 59 15 L 56 15 L 56 42 L 50 50 L 44 42 L 44 15 L 41 
  *  2 × interval). Derived from index so changing the count stays consistent. */
 const WAVE_DELAYS = [0, 1, 2].map(i => `${i * 0.5}s`) as [string, string, string];
 
-export function ColorfulCelticKnot({ 
+export function TrinityArrowSpinner({ 
   size = "md", 
   className,
   animated = true,
@@ -234,7 +234,7 @@ export function ColorfulCelticKnot({
   state = "idle",
   randomize = false,
   randomInterval = 8000,
-}: ColorfulCelticKnotProps) {
+}: TrinityArrowSpinnerProps) {
   const uniqueId = useId().replace(/:/g, '-');
   const numericSize = typeof size === "number" ? size : sizeMap[size] || 32;
   
@@ -559,7 +559,7 @@ export function ColorfulCelticKnot({
   );
 }
 
-export default ColorfulCelticKnot;
+export default TrinityArrowSpinner;
 
 // CSS animations to add to index.css:
 // .animate-shake { animation: shake 0.5s ease-in-out infinite; }

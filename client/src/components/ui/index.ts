@@ -61,7 +61,7 @@ export * from "./navigation-menu";
 export * from "./pagination";
 
 // Branding & Special
-export * from "./colorful-celtic-knot";
+export * from "./trinity-arrow-spinner";
 export * from "./trinity-animated-logo";
 
 // Utility
