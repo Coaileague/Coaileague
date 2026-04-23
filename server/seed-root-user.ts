@@ -97,6 +97,8 @@ export async function seedRootUser() {
   }
 
   // Generate external identifiers for Operations workspace and root employee
+  // Wrapped in try/catch — external_identifiers failures are non-fatal
+  try {
   const { externalIdentifiers } = await import('@shared/schema');
   const { and } = await import('drizzle-orm');
   
@@ -145,6 +147,10 @@ export async function seedRootUser() {
 
   console.log('\n🎉 Root user setup complete!');
   console.log('Login URL: /api/root-login');
+  } catch (extIdErr: any) {
+    // Non-fatal: external identifier creation failed, core user/workspace/role are already set
+    console.warn('[seedRootUser] External identifier setup skipped (non-fatal):', extIdErr?.message);
+  }
   return { success: true };
 }
 

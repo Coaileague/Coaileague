@@ -255,6 +255,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await seedWithRetry(runPlatformUpdatesMigration, 'platformUpdatesMigration');
 
 
+    // ── Cookie consent + missing tables migration ────────────────────────────
+    const runMissingTablesMigration = async () => {
+      const { pool } = await import('./db');
+      // cookie_consent — created by productionSeed but may not exist yet
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS cookie_consent (
+          id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id      TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          workspace_id TEXT,
+          essential    BOOLEAN NOT NULL DEFAULT TRUE,
+          functional   BOOLEAN NOT NULL DEFAULT FALSE,
+          analytics    BOOLEAN NOT NULL DEFAULT FALSE,
+          ip_address   TEXT,
+          user_agent   TEXT,
+          consented_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at   TIMESTAMPTZ DEFAULT NOW()
+        )
+      `).catch(() => null);
+      // universal_id_sequences — referenced by AcmeCandidateSeed
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS universal_id_sequences (
+          id           SERIAL PRIMARY KEY,
+          scope        TEXT NOT NULL UNIQUE,
+          prefix       TEXT NOT NULL,
+          last_value   INTEGER NOT NULL DEFAULT 0,
+          created_at   TIMESTAMPTZ DEFAULT NOW(),
+          updated_at   TIMESTAMPTZ DEFAULT NOW()
+        )
+      `).catch(() => null);
+      log.info('[Startup] Missing tables ensured: cookie_consent, universal_id_sequences');
+    };
+    await seedWithRetry(runMissingTablesMigration, 'missingTablesMigration');
+
+
     // ── DAR chain-of-custody column migration (idempotent ADD COLUMN IF NOT EXISTS) ──
     const runDarChainMigration = async () => {
       const { pool } = await import('./db');

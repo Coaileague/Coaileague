@@ -591,7 +591,7 @@ export const platformUpdates = pgTable("platform_updates", {
   metadata: jsonb("metadata"),
   
   // Timestamps
-  date: timestamp("date").notNull().defaultNow(), // Original release date
+  // date: timestamp("date").notNull().defaultNow(), // Removed: column does not exist in actual DB yet. Use createdAt for ordering. Restore after migration confirmed.
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

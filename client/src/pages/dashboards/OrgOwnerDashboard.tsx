@@ -106,11 +106,15 @@ export default function OrgOwnerDashboard() {
     },
     onSuccess: () => {
       toast({
-        title: "Owner PIN saved",
+        title: "✅ Owner PIN saved",
         description: "Trinity and support agents can now verify you with this PIN.",
       });
       setPinInput("");
+      setModalPinInput("");
+      setShowPinSetupModal(false); // Always close modal on success
+      // Invalidate all PIN and workspace queries to update UI
       queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/owner/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workspace/current"] });
     },
     onError: (err: any) => {
       toast({
