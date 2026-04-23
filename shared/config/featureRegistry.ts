@@ -425,7 +425,7 @@ export const FEATURE_REGISTRY: Record<string, PlatformFeature> = {
     lastUpdated: "2025-12-01",
     synonyms: ["support tickets", "help desk", "customer support", "ticket system"],
     relatedFeatures: ["trinity_chat", "notifications"],
-    requiredRoles: ["support_staff", "manager", "org_owner"],
+    requiredRoles: ["support_agent", "support_manager", "manager", "org_owner"],
     changelog: [],
   },
 

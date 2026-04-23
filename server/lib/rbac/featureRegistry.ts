@@ -26,11 +26,9 @@ export const MATRIX_ROLES = [
   'department_manager',
   'manager',
   'supervisor',
-  'shift_leader',
-  'guard',
-  'security_officer',
-  'armed_officer',
-  'site_lead',
+  'staff',
+  'employee',
+  'auditor',
   'contractor',
 ] as const;
 
@@ -66,7 +64,7 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'page',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'site_lead',
+      'supervisor', 'supervisor', 'supervisor',
     ],
   },
   {
@@ -90,8 +88,8 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'page',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'guard', 'security_officer',
-      'armed_officer', 'site_lead', 'contractor',
+      'supervisor', 'supervisor', 'staff', 'staff',
+      'staff', 'supervisor', 'contractor',
     ],
   },
   {
@@ -101,8 +99,8 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'page',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'guard', 'security_officer',
-      'armed_officer', 'site_lead', 'contractor',
+      'supervisor', 'supervisor', 'staff', 'staff',
+      'staff', 'supervisor', 'contractor',
     ],
   },
   {
@@ -112,7 +110,7 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'page',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'site_lead',
+      'supervisor', 'supervisor', 'supervisor',
     ],
   },
   {
@@ -152,7 +150,7 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'action',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'site_lead',
+      'supervisor', 'supervisor', 'supervisor',
     ],
   },
   {
@@ -162,7 +160,7 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'action',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'site_lead',
+      'supervisor', 'supervisor', 'supervisor',
     ],
   },
   {
@@ -216,8 +214,8 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'report',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'guard', 'security_officer',
-      'armed_officer', 'site_lead', 'contractor',
+      'supervisor', 'supervisor', 'staff', 'staff',
+      'staff', 'supervisor', 'contractor',
     ],
   },
   {
@@ -227,8 +225,8 @@ export const FEATURE_REGISTRY: FeatureDefinition[] = [
     category: 'report',
     defaultRoles: [
       'org_admin', 'org_manager', 'department_manager', 'manager',
-      'supervisor', 'shift_leader', 'guard', 'security_officer',
-      'armed_officer', 'site_lead', 'contractor',
+      'supervisor', 'supervisor', 'staff', 'staff',
+      'staff', 'supervisor', 'contractor',
     ],
   },
   {
@@ -256,7 +254,21 @@ export function getFeature(key: string): FeatureDefinition | undefined {
 export function hasDefaultAccess(featureKey: string, role: string): boolean {
   const feature = getFeature(featureKey);
   if (!feature) return false;
-  return feature.defaultRoles.includes(role);
+  const normalizedRole = normalizeMatrixRole(role);
+  return feature.defaultRoles.includes(normalizedRole);
+}
+
+function normalizeMatrixRole(role: string): string {
+  const aliasMap: Record<string, string> = {
+    shift_leader: 'supervisor',
+    site_lead: 'supervisor',
+    guard: 'staff',
+    security_officer: 'staff',
+    armed_officer: 'staff',
+    owner: 'org_owner',
+    admin: 'org_admin',
+  };
+  return aliasMap[role] || role;
 }
 
 /** Group features by category for display in the editor */

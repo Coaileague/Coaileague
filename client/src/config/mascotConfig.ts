@@ -1345,7 +1345,7 @@ export const PUBLIC_PAGE_PROMO_CONFIG: PublicPagePromoConfig = {
     ],
     '/pricing': [
       { text: "I can help you compare our plans. What questions do you have?", priority: 'normal', emote: 'helpful' },
-      { text: "The Professional plan includes 8,000 AI credits for scheduling and automation.", priority: 'normal', emote: 'nodding' },
+      { text: "The Professional plan includes monthly AI token and action allotments for scheduling and automation.", priority: 'normal', emote: 'nodding' },
       { text: "New subscribers receive a discount on the first month.", priority: 'high', emote: 'nodding', showDiscount: true },
       { text: "I can provide a comparison based on your business requirements.", priority: 'normal', emote: 'helpful' },
       { text: "For enterprise requirements, our team offers custom solutions.", ctaText: "Contact Sales", ctaLink: "/contact", priority: 'normal', emote: 'helpful' },

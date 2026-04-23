@@ -562,7 +562,7 @@ class TrinityContextManager {
     
     let promptContext = '';
 
-    // Add workspace context with Trinity credit awareness
+    // Add workspace context with Trinity token/action awareness (legacy field names retained)
     if (context.memory.workspaceContext.workspaceName || context.memory.workspaceContext.creditBalance !== undefined) {
       promptContext += `## Current Context\n`;
       if (context.memory.workspaceContext.workspaceName) {
@@ -571,21 +571,21 @@ class TrinityContextManager {
       promptContext += `- User Role: ${context.memory.workspaceContext.userRole || 'unknown'}\n`;
       promptContext += `- Subscription: ${context.memory.workspaceContext.subscriptionTier || 'free'}\n`;
       
-      // TRINITY CREDIT AWARENESS: Include credit status for self-aware decision making
+      // TRINITY TOKEN/ACTION AWARENESS: Include monthly usage status for self-aware decision making
       if (context.memory.workspaceContext.creditBalance !== undefined) {
         const creditBalance = context.memory.workspaceContext.creditBalance;
         const creditAllocation = context.memory.workspaceContext.creditAllocation || 0;
         const creditPercentUsed = context.memory.workspaceContext.creditPercentUsed || 0;
         
-        promptContext += `\n## Credit Status (Trinity Awareness)\n`;
-        promptContext += `- Available Credits: ${creditBalance}/${creditAllocation}\n`;
-        promptContext += `- Usage: ${creditPercentUsed}% of monthly allocation used\n`;
+        promptContext += `\n## Token Status (Tenant Awareness)\n`;
+        promptContext += `- Tokens Remaining: ${creditBalance}/${creditAllocation}\n`;
+        promptContext += `- Usage: ${creditPercentUsed}% of monthly token allotment consumed\n`;
         
-        // Add contextual hints based on credit status
+        // Add contextual hints based on tenant token status
         if (creditBalance < 10) {
-          promptContext += `- ⚠️ LOW CREDITS: Consider recommending credit purchase or simpler operations\n`;
+          promptContext += `- ⚠️ LOW TOKEN HEADROOM: Tenant is near monthly soft-cap/overage zone; prioritize high-value actions\n`;
         } else if (creditPercentUsed > 80) {
-          promptContext += `- ⚠️ HIGH USAGE: ${100 - creditPercentUsed}% of monthly credits remaining\n`;
+          promptContext += `- ⚠️ HIGH USAGE: ${100 - creditPercentUsed}% of monthly token allotment remaining\n`;
         }
       }
       promptContext += '\n';

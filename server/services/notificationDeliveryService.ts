@@ -173,7 +173,6 @@ export interface SendNotificationPayload {
 
 export class NotificationDeliveryService {
   private static readonly DEFAULT_DEDUP_WINDOW_MS = 5 * 60 * 1000;
-  private static readonly EMPTY_BODY_FALLBACK = 'Notification received. Please log in for details.';
   private static readonly SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   private static hasMeaningfulContent(value: unknown): boolean {
