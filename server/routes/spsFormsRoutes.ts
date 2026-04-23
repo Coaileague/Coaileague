@@ -33,6 +33,11 @@ const log = createLogger('SpsFormsRoutes');
 
 export const spsFormsRouter = Router();
 
+// Lightweight readiness endpoint for onboarding route smoke checks
+spsFormsRouter.get('/status', (_req, res) => {
+  return res.status(200).json({ ok: true, route: 'sps_onboarding', status: 'ready' });
+});
+
 // ── Multer: memory storage, 5 MB limit, images only ──────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),

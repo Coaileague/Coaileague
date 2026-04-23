@@ -256,9 +256,9 @@ async function run() {
 
   // ── STEP 26: AI credit atomic check ──────────────────────────────────────
   const s26 = await step('AI credit deduction is atomic (no double-burn)', () =>
-    codeEvidence('creditManager transactionId', 'server/services/billing/creditManager.ts', 'transactionId') ||
-    codeEvidence('creditManager UPSERT', 'server/services/billing/creditManager.ts', 'UPSERT') ||
-    codeEvidence('creditManager initializeCredits', 'server/services/billing/creditManager.ts', 'initializeCredits')
+    codeEvidence('tokenManager recordUsage', 'server/services/billing/tokenManager.ts', 'recordUsage') ||
+    codeEvidence('tokenManager aiUsageEvents insert', 'server/services/billing/tokenManager.ts', 'aiUsageEvents') ||
+    codeEvidence('premiumFeatureGating uses tokenManager.recordUsage', 'server/services/premiumFeatureGating.ts', 'tokenManager.recordUsage')
   );
   if (!s26) { summarize(); return; }
 

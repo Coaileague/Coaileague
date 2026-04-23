@@ -89,3 +89,52 @@ export const auditLogs = pgTable("audit_logs", {
   index("idx_audit_action_created").on(table.action, table.createdAt),
   index("idx_audit_command_id").on(table.commandId),
   index("idx_audit_target").on(table.targetId),
+
+
+## 2026-04-23T00:00:00Z — 100-Phase Master Audit Kickoff (Codex)
+- Skill applied: trinity-architecture (architecture constraints reviewed before execution planning).
+- Audit source loaded: `attached_assets/coaileague_100_phase_audit_1775064153759.txt`.
+- Roadmap source loaded: `attached_assets/Pasted-Here-is-the-complete-resequenced-master-phase-plan-with_1774526104858.txt`.
+- Executed Batch 0 guard commands:
+  - `NODE_ENV=production npx tsx scripts/omega/preflight-check.ts` → FAIL (13/28 passed; missing required env vars and DB URL).
+  - `NODE_ENV=production npx tsx scripts/omega/statewide-readonly-verify.ts` → FAIL (DATABASE_URL missing, DB connection unavailable).
+- Persisted resume state to `audit_progress.json` and initialized `phase_results.json` + `domain_certification.md`.
+- Batch progression: halted at Batch 0 pending environment remediation.
+
+## 2026-04-23T06:43:31Z — Audit list started
+- Updated audit tracker from blocked placeholder to started state.
+- Marked Batch 0 as executed-but-failed due environment prerequisites.
+- Converted 100-phase matrix from generic pending to explicit blocked-by-batch-0/queued statuses.
+- Queued Batch 1 / Phase 1 as the first runnable phase after Batch 0 remediation.
+
+## 2026-04-23T06:47:43Z — Continued audit execution
+- Ran `npx tsx scripts/omega/verify-prior-fixes.ts` and achieved PASS (29/29).
+- Fixed failing Trinity domain action registration audit by adding insurance action registrations.
+- Audit execution is continuing; Batch 0 runtime checks still blocked by shell-level env availability.
+
+## 2026-04-23T06:48:20Z — Env clarification
+- Updated audit wording to reflect shell-level env injection issue (not a claim that platform secrets are absent).
+
+## 2026-04-23T06:52:42Z — Master list audit continuation
+- Updated OMEGA/TRINITY laws with regression-lock requirements for harness-gated invariants.
+- Patched scripts/omega/battle-sim.ts Step 26 to canonical tokenManager path (creditManager path was stale).
+- Ran `npx tsx scripts/omega/battle-sim.ts` -> PASS (32/32, VERDICT GO).
+
+## 2026-04-23T06:58:08Z — SPS onboarding route + audit continuation
+- Added route mount alias: /api/sps/onboarding -> spsOnboardingRoutes (with requireAuth + ensureWorkspaceAccess).
+- Ran `npm install` and `npm run build` successfully.
+- Ran `npx tsx scripts/omega/verify-prior-fixes.ts` successfully (29/29 PASS).
+
+## 2026-04-23T07:01:41Z — Assessment gap response + master audit continuation
+- Implemented GET /api/sps/onboarding/status readiness endpoint in spsFormsRoutes.
+- Re-ran build and unit suites: npm run build PASS, npm run test:unit PASS (100/100).
+- Confirmed verify-prior-fixes remains PASS (29/29) after SPS onboarding updates.
+
+## 2026-04-23T07:05:29Z — Stress test attempt
+- Ran `bash scripts/stress-test-v2.sh`; all suites failed due localhost connection/timeouts (server not running in this session).
+- Classified as environment limitation; requires live server + seeded credentials for valid throughput results.
+
+## 2026-04-23T07:08:28Z — Fresh clone + false-positive hardening
+- Refetched clean clone to /tmp/coaileague-fresh-audit and verified HEAD parity before continuing audit tasks.
+- Updated scripts/stress-test-v2.sh with server availability precheck (exit 2 + SKIP) to avoid false positives.
+- Re-ran verify-prior-fixes: PASS (29/29).

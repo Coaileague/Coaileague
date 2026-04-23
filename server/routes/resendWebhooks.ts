@@ -82,6 +82,35 @@ function generatePreRef(): string {
   return `SR-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 }
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildInboundBodyFallback(inboundEmail: any): { html: string; text: string } {
+  const rawHtml = String(inboundEmail?.html || '').trim();
+  const rawText = String(inboundEmail?.text || '').trim();
+  const textFromHtml = rawHtml ? stripHtml(rawHtml) : '';
+  const attachmentCount = Array.isArray(inboundEmail?.attachments) ? inboundEmail.attachments.length : 0;
+
+  const fallbackText = rawText || textFromHtml || (
+    attachmentCount > 0
+      ? `[No inline body. ${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'} included.]`
+      : '[No message body provided by sender.]'
+  );
+
+  const fallbackHtml = rawHtml || `<pre style="white-space:pre-wrap;font-size:13px;">${fallbackText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')}</pre>`;
+
+  return { html: fallbackHtml, text: fallbackText };
+}
+
 const router = Router();
 
 // Resend webhook signing secret for signature verification.
@@ -791,8 +820,9 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
         const rootFromEmail = rootFromRaw.match(/<([^>]+)>/)?.[1]?.trim() || rootFromRaw.trim();
         const rootFromName = rootFromRaw.split('<')[0].trim() || undefined;
         const rootSubject = inboundEmail.subject || '(no subject)';
-        const rootBody = inboundEmail.html || inboundEmail.text || '';
-        const rootBodyText = inboundEmail.text || '';
+        const normalizedBody = buildInboundBodyFallback(inboundEmail);
+        const rootBody = normalizedBody.html;
+        const rootBodyText = normalizedBody.text;
         scheduleNonBlocking('resend-inbound.root-forward', async () => {
           try {
             const fwdHtml = `

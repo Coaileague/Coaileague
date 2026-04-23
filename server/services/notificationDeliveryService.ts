@@ -23,7 +23,8 @@ const log = createLogger('NDS');
 
 import { db } from '../db';
 import { notificationDeliveries } from '@shared/schema';
-import { eq, and, lte, lt } from 'drizzle-orm';
+import { eq, and, lte, lt, gte } from 'drizzle-orm';
+import crypto from 'crypto';
 // Phase 49: Notification preference enforcement
 import { shouldDeliver } from './notificationPreferenceService';
 
@@ -171,6 +172,20 @@ export interface SendNotificationPayload {
 }
 
 export class NotificationDeliveryService {
+  private static readonly DEFAULT_DEDUP_WINDOW_MS = 5 * 60 * 1000;
+
+  private static computePayloadDigest(payload: SendNotificationPayload): string {
+    const stableBody = JSON.stringify(payload.body ?? {});
+    const raw = [
+      payload.workspaceId,
+      payload.recipientUserId,
+      payload.type,
+      payload.channel,
+      payload.subject ?? '',
+      stableBody,
+    ].join('|');
+    return crypto.createHash('sha256').update(raw).digest('hex');
+  }
 
   // ============================================================================
   // SEND — idempotent entry point for all notification delivery
@@ -196,6 +211,47 @@ export class NotificationDeliveryService {
 
     const idempotencyKey = payload.idempotencyKey ??
       `${payload.type}-${payload.recipientUserId}-${Date.now()}`;
+
+    // Loop guard: when caller does not provide an explicit idempotency key,
+    // dedupe near-identical sends for a short time window across ALL channels.
+    // This protects against accidental event fan-out/replay storms (email/SMS/push).
+    if (!payload.idempotencyKey) {
+      const windowStart = new Date(Date.now() - this.DEFAULT_DEDUP_WINDOW_MS);
+      const payloadDigest = this.computePayloadDigest(payload);
+      const recent = await db
+        .select()
+        .from(notificationDeliveries)
+        .where(
+          and(
+            eq(notificationDeliveries.workspaceId, payload.workspaceId),
+            eq(notificationDeliveries.recipientUserId, payload.recipientUserId),
+            eq(notificationDeliveries.notificationType, payload.type),
+            eq(notificationDeliveries.channel, payload.channel),
+            gte(notificationDeliveries.createdAt, windowStart),
+          )
+        )
+        .orderBy(notificationDeliveries.createdAt)
+        .limit(20);
+
+      for (const row of recent) {
+        const existingDigest = crypto
+          .createHash('sha256')
+          .update([
+            row.workspaceId,
+            row.recipientUserId,
+            row.notificationType,
+            row.channel,
+            row.subject ?? '',
+            JSON.stringify(row.payload ?? {}),
+          ].join('|'))
+          .digest('hex');
+
+        if (existingDigest === payloadDigest && row.status !== 'permanently_failed') {
+          log.warn(`[NotificationDeliveryService] Suppressed duplicate send (loop guard): ${row.id}`);
+          return row.id;
+        }
+      }
+    }
 
     const existing = await db
       .select()

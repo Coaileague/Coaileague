@@ -1304,6 +1304,41 @@ const bucket = bucketHours({
 
 ---
 
+## Section T — OMEGA/Trinity Regression Lock (Phase 100 Audit Continuity)
+
+**Terminology note (see Section S):** Trinity remains one singular system.
+This section governs verification workflows around Trinity and OMEGA laws.
+
+**Law:** OMEGA harness passes are now contractual regression locks.
+If a previously passing OMEGA verification step fails, the platform is treated
+as regressed until fixed or the harness is intentionally updated in the same
+change set with explicit rationale.
+
+**The bug it prevents:** Silent drift where code keeps compiling but core
+guarantees (financial atomicity, routing completeness, security checks, or
+tenant safety) degrade because verification scripts point at stale paths or
+missing actions.
+
+**Canonical enforcement points:**
+1. `scripts/omega/verify-prior-fixes.ts` — baseline invariant gate.
+2. `scripts/omega/battle-sim.ts` — sequential 32-step end-to-end law check.
+3. `server/services/ai-brain/trinityMissingDomainActions.ts` — domain action
+   registration continuity for canonical routing actions.
+
+**Required patterns:**
+- Update OMEGA/TRINITY laws whenever a new verified invariant is locked in.
+- Keep harness file paths aligned to current canonical source files.
+- If action IDs change, update both registration code and harness checks in the
+  same commit.
+
+**Forbidden patterns:**
+- Leaving harness checks pointing to deleted files.
+- Removing verified action IDs without equivalent replacement + harness update.
+- Accepting partial harness failures as "expected" without codifying a law-safe
+  exception and owner sign-off.
+
+---
+
 ## Section J — Process for Adding New Verified Laws
 
 When a new architectural invariant is discovered through any debug pass,
