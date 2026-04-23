@@ -48,6 +48,7 @@ import { useApprovalDecision } from "@/hooks/useApprovals";
 import { useTrinityTasks, type TrinityTask } from "@/hooks/useTrinityTasks";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
 const OPEN_EVENT = "trinity:open-task-widget";
 const CLOSE_EVENT = "trinity:close-task-widget";

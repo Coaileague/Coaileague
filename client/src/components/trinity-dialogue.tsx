@@ -8,6 +8,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { TrinityArrowMark } from "@/components/trinity-logo";
+import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
