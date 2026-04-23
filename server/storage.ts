@@ -7972,7 +7972,7 @@ export class DatabaseStorage implements IStorage {
       title: platformUpdates.title,
       description: platformUpdates.description,
       category: platformUpdates.category,
-      date: platformUpdates.date,
+      date: platformUpdates.createdAt, // platformUpdates has no date column — use createdAt
       version: platformUpdates.version,
       badge: platformUpdates.badge,
       isNew: platformUpdates.isNew,
