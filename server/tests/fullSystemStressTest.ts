@@ -7,10 +7,6 @@ import {
   shifts,
   clients,
   timeEntries,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  workspaceCredits,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  creditTransactions,
   auditLogs,
   trinityDecisionLog,
   notifications,

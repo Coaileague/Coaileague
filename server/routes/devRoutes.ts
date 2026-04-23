@@ -1948,4 +1948,134 @@ router.post("/retention-scan", requirePlatformAdmin, async (_req: AuthenticatedR
   }
 });
 
+// ──────────────────────────────────────────────────────────────────────────────
+// FULL SYSTEM STRESS TEST — POST /api/dev/stress-test
+// Runs all 14 phases: DB integrity, security, financials, Trinity, billing,
+// scheduling, communications, compliance, resilience, production readiness.
+// Returns pass/fail for every check. Platform admin only. Dev only.
+// ──────────────────────────────────────────────────────────────────────────────
+router.post('/stress-test', requirePlatformAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  if (isProduction()) {
+    return res.status(403).json({ error: 'Refused — production environment' });
+  }
+  try {
+    log.info('[Dev:StressTest] Starting full system stress test...');
+    const { runFullSystemStressTest } = await import('../tests/fullSystemStressTest');
+    const results = await runFullSystemStressTest();
+
+    const passed = results.filter(r => r.passed).length;
+    const failed = results.filter(r => !r.passed).length;
+    const critical = results.filter(r => !r.passed && r.severity === 'critical');
+    const high = results.filter(r => !r.passed && r.severity === 'high');
+
+    log.info(`[Dev:StressTest] Complete — ${passed} passed, ${failed} failed`);
+    return res.json({
+      summary: {
+        total: results.length,
+        passed,
+        failed,
+        pass_rate: `${Math.round((passed / results.length) * 100)}%`,
+        critical_failures: critical.length,
+        high_failures: high.length,
+        production_ready: critical.length === 0 && high.length === 0,
+      },
+      critical_failures: critical.map(r => ({ phase: r.phase, name: r.name, details: r.details })),
+      high_failures: high.map(r => ({ phase: r.phase, name: r.name, details: r.details })),
+      all_results: results,
+    });
+  } catch (error: unknown) {
+    log.error('[Dev:StressTest] Failed to run:', error);
+    return res.status(500).json({ error: 'Stress test runner failed', message: sanitizeError(error) });
+  }
+});
+
+// GET /api/dev/stress-test/quick — fast health check (DB + auth + financials only)
+router.get('/stress-test/quick', requirePlatformAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  if (isProduction()) {
+    return res.status(403).json({ error: 'Refused — production environment' });
+  }
+  try {
+    const checks: { name: string; ok: boolean; detail: string }[] = [];
+
+    // 1. Database reachable
+    try {
+      const r = await pool.query('SELECT COUNT(*) AS n FROM employees WHERE workspace_id = $1', ['dev-acme-security-ws']);
+      checks.push({ name: 'DB_reachable', ok: true, detail: `${r.rows[0].n} ACME employees in DB` });
+    } catch (e: any) { checks.push({ name: 'DB_reachable', ok: false, detail: e?.message }); }
+
+    // 2. Seed data present
+    try {
+      const [emps, clients, shifts, invoices] = await Promise.all([
+        pool.query(`SELECT COUNT(*) AS n FROM employees WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+        pool.query(`SELECT COUNT(*) AS n FROM clients WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+        pool.query(`SELECT COUNT(*) AS n FROM shifts WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+        pool.query(`SELECT COUNT(*) AS n FROM invoices WHERE workspace_id IN ('dev-acme-security-ws','dev-anvil-security-ws')`),
+      ]);
+      const seeded = parseInt(emps.rows[0].n) > 0;
+      checks.push({ name: 'seed_data', ok: seeded, detail: `${emps.rows[0].n} emps, ${clients.rows[0].n} clients, ${shifts.rows[0].n} shifts, ${invoices.rows[0].n} invoices` });
+    } catch (e: any) { checks.push({ name: 'seed_data', ok: false, detail: e?.message }); }
+
+    // 3. Open shifts exist for Trinity to fill
+    try {
+      const r = await pool.query(`SELECT COUNT(*) AS n FROM shifts WHERE status = 'open' AND date >= CURRENT_DATE`);
+      const hasOpen = parseInt(r.rows[0].n) > 0;
+      checks.push({ name: 'open_shifts_for_trinity', ok: hasOpen, detail: `${r.rows[0].n} open future shifts` });
+    } catch (e: any) { checks.push({ name: 'open_shifts_for_trinity', ok: false, detail: e?.message }); }
+
+    // 4. Payroll runs present
+    try {
+      const r = await pool.query(`SELECT COUNT(*) AS n FROM payroll_runs`);
+      checks.push({ name: 'payroll_runs', ok: parseInt(r.rows[0].n) > 0, detail: `${r.rows[0].n} payroll runs` });
+    } catch (e: any) { checks.push({ name: 'payroll_runs', ok: false, detail: e?.message }); }
+
+    // 5. Notifications working
+    try {
+      const r = await pool.query(`SELECT COUNT(*) AS n FROM notifications`);
+      checks.push({ name: 'notifications', ok: true, detail: `${r.rows[0].n} notifications in DB` });
+    } catch (e: any) { checks.push({ name: 'notifications', ok: false, detail: e?.message }); }
+
+    // 6. Trinity action registry
+    try {
+      const { platformActionHub } = await import('../services/ai-brain/platformActionHub');
+      const actions = platformActionHub.getRegisteredActions?.() || [];
+      checks.push({ name: 'trinity_actions', ok: actions.length > 0, detail: `${actions.length} actions registered` });
+    } catch (e: any) { checks.push({ name: 'trinity_actions', ok: false, detail: e?.message }); }
+
+    // 7. Financial calculator sanity
+    try {
+      const { sumFinancialValues, toFinancialString } = await import('../services/financialCalculator');
+      const sum = sumFinancialValues(['22.5000', '35.2500', '18.7500']);
+      const ok = sum === '76.5000';
+      checks.push({ name: 'financial_calculator', ok, detail: `22.5 + 35.25 + 18.75 = ${sum} (expected 76.5000)` });
+    } catch (e: any) { checks.push({ name: 'financial_calculator', ok: false, detail: e?.message }); }
+
+    // 8. Workspace isolation
+    try {
+      const r = await pool.query(`
+        SELECT COUNT(*) AS n FROM shifts s
+        WHERE s.employee_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM employees e
+            WHERE e.id = s.employee_id AND e.workspace_id = s.workspace_id
+          )
+      `);
+      const crossTenant = parseInt(r.rows[0].n);
+      checks.push({ name: 'workspace_isolation', ok: crossTenant === 0, detail: crossTenant === 0 ? 'No cross-tenant data leakage' : `${crossTenant} cross-tenant shift assignments detected` });
+    } catch (e: any) { checks.push({ name: 'workspace_isolation', ok: false, detail: e?.message }); }
+
+    const passed = checks.filter(c => c.ok).length;
+    return res.json({
+      quick_check: true,
+      passed,
+      failed: checks.length - passed,
+      all_ok: checks.every(c => c.ok),
+      checks,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    return res.status(500).json({ error: 'Quick check failed', message: sanitizeError(error) });
+  }
+});
+
+
 export default router;
