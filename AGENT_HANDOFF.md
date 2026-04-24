@@ -79,6 +79,7 @@ Both agents should read this file before starting new work and update it after m
 - `8c087c795` — Claude removed unused 310-line `STATE_TAX_CONFIG` dead code from `payrollAutomation.ts`. Build verified clean by Claude.
 - `d64f5ab4` — Jack/GPT centralized payroll ledger terminal/draft status semantics in `server/services/payroll/payrollLedger.ts`.
 - `d77a1c8e` — Jack/GPT exported payroll ledger terminal/draft status constants and predicates so other payroll services can reuse one status vocabulary instead of copying arrays.
+- `1aebfc39` — Jack/GPT added `server/services/payroll/payrollTimeEntryClaimer.ts`, a canonical bulk, workspace-scoped time-entry claim helper for payroll run paths.
 
 ### Legacy infrastructure containment
 
@@ -88,9 +89,9 @@ Both agents should read this file before starting new work and update it after m
 
 `development` current known tip after Jack/GPT update:
 
-`d77a1c8e1b0786f3a7a258cffc04145ec9622c48`
+`1aebfc39381723504f3f48a21be1d162771dc8ce`
 
-Commit message: `refactor: export payroll ledger status helpers`
+Commit message: `refactor: add canonical payroll time entry claimer`
 
 Claude should pull this tip before continuing.
 
@@ -106,6 +107,7 @@ Check:
 - `server/services/ai-brain/subagents/payrollSubagent.ts`
 - `server/services/payroll/payrollLedger.ts`
 - `server/services/automation/payrollHoursAggregator.ts`
+- `server/services/payroll/payrollTimeEntryClaimer.ts`
 
 Look for:
 - duplicate run creation paths
@@ -323,3 +325,20 @@ Changed `server/services/payroll/payrollLedger.ts` only:
 Reason: other payroll services can now import one canonical payroll status vocabulary instead of copying terminal/draft arrays. This supports route/domain consolidation without changing runtime behavior yet.
 
 Connector note: `payrollAutomation.ts` remains too large/truncated for safe full-file rewrites from Jack/GPT. Next lower-risk work is either Claude-local patching of payrollAutomation raw-math/claim-loop cleanup, or Jack/GPT mapping extractable handlers from `payrollRoutes.ts` into a precise handoff.
+
+### 2026-04-24 — Jack/GPT
+
+Commit: `1aebfc39381723504f3f48a21be1d162771dc8ce` — `refactor: add canonical payroll time entry claimer`.
+
+Added `server/services/payroll/payrollTimeEntryClaimer.ts`:
+- exports `claimPayrollTimeEntries()`
+- bulk updates time entries in one query
+- scopes by `workspaceId`
+- guards with `isNull(timeEntries.payrolledAt)`
+- sets `payrolledAt`, `payrollRunId`, and `updatedAt`
+- deduplicates incoming IDs
+- defaults to fail-fast `requireAll: true`
+
+Reason: large payroll paths should not each carry their own for-loop entry-claiming logic. This creates a compact canonical service that can be wired into `payrollAutomation.ts` and other payroll finalization paths by Claude/local build agent.
+
+Connector note: direct full-file edit of `payrollHoursAggregator.ts` was blocked by the tool safety layer. The new claimer service is the safer surgical path and should be used to replace scattered payrolled-entry update loops.
