@@ -78,6 +78,7 @@ Both agents should read this file before starting new work and update it after m
 - `f3e982b34` — Jack/GPT routed `payrollTaxService.ts` money rounding through `financialCalculator` helpers. Public API unchanged.
 - `8c087c795` — Claude removed unused 310-line `STATE_TAX_CONFIG` dead code from `payrollAutomation.ts`. Build verified clean by Claude.
 - `d64f5ab4` — Jack/GPT centralized payroll ledger terminal/draft status semantics in `server/services/payroll/payrollLedger.ts`.
+- `d77a1c8e` — Jack/GPT exported payroll ledger terminal/draft status constants and predicates so other payroll services can reuse one status vocabulary instead of copying arrays.
 
 ### Legacy infrastructure containment
 
@@ -87,9 +88,9 @@ Both agents should read this file before starting new work and update it after m
 
 `development` current known tip after Jack/GPT update:
 
-`d64f5ab41669a1f00ab977fde4a80cbbbd2e9587`
+`d77a1c8e1b0786f3a7a258cffc04145ec9622c48`
 
-Commit message: `refactor: centralize payroll ledger status semantics`
+Commit message: `refactor: export payroll ledger status helpers`
 
 Claude should pull this tip before continuing.
 
@@ -308,3 +309,17 @@ Precise Claude/local-build patch request:
 10. Append build result and commit SHA back to this file.
 
 Reason: payroll subagent is the highest-risk payroll path because it can create a payroll run header without atomically claiming/linking source time entries. This is the payroll equivalent of the duplicate-invoice gap already fixed in `timesheetInvoiceService.ts`.
+
+### 2026-04-24 — Jack/GPT
+
+Commit: `d77a1c8e1b0786f3a7a258cffc04145ec9622c48` — `refactor: export payroll ledger status helpers`.
+
+Changed `server/services/payroll/payrollLedger.ts` only:
+- exported `PAYROLL_TERMINAL_STATUSES`
+- exported `PAYROLL_DRAFT_STATUSES`
+- exported `PayrollTerminalStatus` / `PayrollDraftStatus`
+- exported `isTerminalPayrollStatus()` / `isDraftPayrollStatus()`
+
+Reason: other payroll services can now import one canonical payroll status vocabulary instead of copying terminal/draft arrays. This supports route/domain consolidation without changing runtime behavior yet.
+
+Connector note: `payrollAutomation.ts` remains too large/truncated for safe full-file rewrites from Jack/GPT. Next lower-risk work is either Claude-local patching of payrollAutomation raw-math/claim-loop cleanup, or Jack/GPT mapping extractable handlers from `payrollRoutes.ts` into a precise handoff.
