@@ -122,10 +122,10 @@ export default function Support() {
     status: service.status === 'operational' ? 'success' : 
             service.status === 'degraded' ? 'warning' : 'error',
   })) || [
-    { label: "Platform Core", value: "Loading...", status: "loading" },
-    { label: "AI Services", value: "Loading...", status: "loading" },
-    { label: "Real-time Services", value: "Loading...", status: "loading" },
-    { label: "Integrations", value: "Loading...", status: "loading" },
+    { label: "Platform Core", value: "Checking live status", status: "loading" },
+    { label: "AI Services", value: "Checking live status", status: "loading" },
+    { label: "Real-time Services", value: "Checking live status", status: "loading" },
+    { label: "Integrations", value: "Checking live status", status: "loading" },
   ];
 
   // Determine overall status - show 'loading' during initial load, 'unknown' on error

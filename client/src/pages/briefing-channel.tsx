@@ -200,7 +200,7 @@ function BriefingCard({ post }: { post: BriefingPost }) {
             ) : (
               <Volume2 className="h-3 w-3 mr-1" />
             )}
-            {ttsLoading ? "Loading..." : "Play Audio"}
+            {ttsLoading ? "Preparing audio..." : "Play Audio"}
           </Button>
         </div>
       </div>

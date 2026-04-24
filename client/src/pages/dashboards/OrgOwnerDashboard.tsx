@@ -174,22 +174,19 @@ export default function OrgOwnerDashboard() {
   } = useQuery<any[]>({
     queryKey: ["/api/invoices"],
     staleTime: 60_000,
+    retry: (failureCount: number, error: any) => {
+      // Don't retry on 429 — wait for rate limit to clear
+      if (error?.status === 429) return false;
+      return failureCount < 2;
+    },
   });
 
   const isDashboardLoading =
     workspaceLoading || clientsLoading || employeesLoading || invoicesLoading;
-  const isDashboardError =
-    workspaceIsError ||
-    pinStatusIsError ||
-    clientsIsError ||
-    employeesIsError ||
-    invoicesIsError;
-  const dashboardError =
-    workspaceError ||
-    pinStatusError ||
-    clientsError ||
-    employeesError ||
-    invoicesError;
+  // Only workspace is critical — clients/employees/invoices show with placeholder data
+  const isDashboardError = workspaceIsError;
+  const dashboardError = workspaceError;
+  // Non-critical errors are surfaced inline as empty states, not full page errors
 
   const orgCode = workspace?.orgId || workspace?.organizationId || null;
   const clientList = Array.isArray(clients) ? clients : (clients as any)?.data ?? [];

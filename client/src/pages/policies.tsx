@@ -111,7 +111,18 @@ export default function PoliciesPage() {
   const draftPolicies = policies.filter((p: any) => p.status === 'draft');
 
   if (isLoading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6 text-center space-y-2">
+            <p className="text-sm font-medium text-foreground">Loading policy records</p>
+            <p className="text-sm text-muted-foreground">
+              We are gathering published handbooks, acknowledgments, and draft updates.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const createPolicyButton = (
@@ -143,7 +154,11 @@ export default function PoliciesPage() {
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                No published policies yet
+                <p className="font-medium text-foreground">No published policies yet</p>
+                <p className="text-sm mt-2">
+                  Publish your handbook, safety standards, or SOP updates here so employees can review
+                  and acknowledge them from one place.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -196,7 +211,11 @@ export default function PoliciesPage() {
           {draftPolicies.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
-                No draft policies
+                <p className="font-medium text-foreground">No draft policies</p>
+                <p className="text-sm mt-2">
+                  Start a draft when you need to prepare a new policy revision before publishing it to
+                  the team.
+                </p>
               </CardContent>
             </Card>
           ) : (

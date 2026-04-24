@@ -12,6 +12,10 @@ import { createNotification } from "../services/notificationService";
 
 const router = Router();
 
+function getQueryString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 const BOT_COMMANDS = [
   { prefix: "/schedule", description: "Check your upcoming schedule", minRole: "staff" },
   { prefix: "/calloff", description: "Submit a call-off request", minRole: "staff" },
@@ -97,9 +101,9 @@ router.get("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedRequ
     const wid = req.workspaceId;
     if (!wid) return res.status(400).json({ error: "Workspace required" });
     const { roomId } = req.params;
-    const { page = 1 } = req.query;
+    const page = Number.parseInt(getQueryString(req.query.page) || "1", 10);
     const limit = 50;
-    const offset = (parseInt(page) - 1) * limit;
+    const offset = (page - 1) * limit;
 
     // Get conversation_id from the room
     const room = await pool.query(
@@ -130,7 +134,7 @@ router.get("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedRequ
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, limit);
 
-    res.json({ messages: combined.reverse(), page: parseInt(page), limit });
+    res.json({ messages: combined.reverse(), page, limit });
   } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 

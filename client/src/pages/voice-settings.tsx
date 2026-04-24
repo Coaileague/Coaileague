@@ -368,9 +368,19 @@ export default function VoiceSettingsPage() {
         </CardHeader>
         <CardContent>
           {callsLoading ? (
-            <div className="h-20 flex items-center justify-center text-sm text-muted-foreground">Loading...</div>
+            <div className="h-24 flex flex-col items-center justify-center text-sm text-muted-foreground space-y-2">
+              <Clock className="h-6 w-6 opacity-50 animate-pulse" />
+              <div className="text-center">
+                <p className="font-medium text-foreground">Loading recent call history</p>
+                <p className="text-xs text-muted-foreground">Pulling the latest Trinity-handled inbound calls.</p>
+              </div>
+            </div>
           ) : recentCalls.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No calls recorded yet.</p>
+            <div className="text-center py-6 text-sm text-muted-foreground space-y-2">
+              <PhoneCall className="h-8 w-8 mx-auto opacity-50" />
+              <p className="font-medium text-foreground">No calls recorded yet</p>
+              <p>Call history will appear here after Trinity answers your first inbound calls.</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

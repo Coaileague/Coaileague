@@ -19,8 +19,12 @@ export const employeeOnboardingRoutes = Router();
 // Get employee's own onboarding status (required documents, work eligibility)
 employeeOnboardingRoutes.get('/me', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
     const employee = await storage.getEmployeeByUserId(userId);
     
     if (!employee) {
@@ -43,8 +47,10 @@ employeeOnboardingRoutes.get('/me', async (req: AuthenticatedRequest, res: Respo
 // Get employee-specific required onboarding documents for checklist UI
 employeeOnboardingRoutes.get('/required-documents', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.json([]);
     const employee = await storage.getEmployeeByUserId(userId);
     if (!employee) return res.json([]);
 

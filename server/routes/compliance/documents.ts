@@ -68,7 +68,6 @@ const router = Router();
 
 router.get("/employee/:employeeId", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { employeeId } = req.params;
     
@@ -107,7 +106,6 @@ router.get("/employee/:employeeId", requireAuth, async (req: Request, res: Respo
 
 router.get("/record/:recordId", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { recordId } = req.params;
     
@@ -135,7 +133,6 @@ router.get("/record/:recordId", requireAuth, async (req: Request, res: Response)
 
 router.get("/:documentId", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     
@@ -182,7 +179,6 @@ router.get("/:documentId", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace required" });
@@ -368,7 +364,6 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/:documentId/lock", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     const lockParsed = lockDocumentSchema.safeParse(req.body);
@@ -437,7 +432,6 @@ router.post("/:documentId/lock", requireAuth, async (req: Request, res: Response
 
 router.patch("/:documentId", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     
@@ -534,7 +528,6 @@ router.patch("/:documentId", requireAuth, async (req: Request, res: Response) =>
 
 router.delete("/:documentId", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     
@@ -671,7 +664,6 @@ router.post("/validate-requirements", requireAuth, async (req: Request, res: Res
 
 router.post("/:documentId/verify-hash", requireAuth, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { documentId } = req.params;
     const hashParsed = verifyHashSchema.safeParse(req.body);

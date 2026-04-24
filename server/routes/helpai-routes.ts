@@ -182,7 +182,6 @@ helpaiRouter.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const startTime = Date.now();
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       const userId = req.user?.id;
 
@@ -270,7 +269,6 @@ helpaiRouter.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace required' });
@@ -305,7 +303,6 @@ helpaiRouter.get(
   requireHelpAIAccess,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace required' });
@@ -357,7 +354,6 @@ helpaiRouter.get(
   requireHelpAIAccess,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace required' });
@@ -398,7 +394,6 @@ helpaiRouter.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const registryStats = await helpaiRegistryService.getRegistryStats();
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
       let auditStats = null;
 

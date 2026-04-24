@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { supportActionsService } from '../services/supportActionsService';
 import { requireAuth } from '../auth';
-import { getUserPlatformRole, getPlatformRoleLevel, PLATFORM_ROLE_HIERARCHY } from '../rbac';
+import { getUserPlatformRole, getPlatformRoleLevel, PLATFORM_ROLE_HIERARCHY, type AuthenticatedRequest as RbacAuthenticatedRequest } from '../rbac';
 import { tokenManager } from '../services/billing/tokenManager';
 import { z } from 'zod';
 import { createLogger } from '../lib/logger';
@@ -10,11 +10,8 @@ import { executeSupportAction, listSupportActions, SupportActionType } from '../
 const log = createLogger('SupportActionRoutes');
 
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
-interface AuthenticatedRequest extends Request {
+interface AuthenticatedRequest extends RbacAuthenticatedRequest {
   userId?: string;
-  user?: any;
-  platformRole?: string;
 }
 
 const SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
@@ -50,6 +47,14 @@ async function requireSupportRole(req: AuthenticatedRequest, res: Response, next
   req.executorPlatformRole = platformRole;
   req.executorLevel = getPlatformRoleLevel(platformRole);
   next();
+}
+
+function requireSupportExecutor(req: AuthenticatedRequest, res: Response): string | null {
+  if (!req.supportExecutorId) {
+    res.status(401).json({ error: 'Support executor context missing' });
+    return null;
+  }
+  return req.supportExecutorId;
 }
 
 const router = Router();
@@ -101,7 +106,8 @@ router.post('/api/support/actions/view-user', requireAuth, requireSupportRole, a
     const parsed = targetUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = requireSupportExecutor(req, res);
+    if (!executorId) return;
     const result = await supportActionsService.getUserInfo(executorId, parsed.data.targetUserId);
     res.json(result);
   } catch (error) {
@@ -115,7 +121,8 @@ router.post('/api/support/actions/reset-password', requireAuth, requireSupportRo
     const parsed = targetEmailSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = requireSupportExecutor(req, res);
+    if (!executorId) return;
     const result = await supportActionsService.resetPassword(executorId, parsed.data.targetEmail);
     res.json(result);
   } catch (error) {
@@ -129,7 +136,8 @@ router.post('/api/support/actions/lock-account', requireAuth, requireSupportRole
     const parsed = lockAccountSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = requireSupportExecutor(req, res);
+    if (!executorId) return;
     const result = await supportActionsService.lockAccount(executorId, parsed.data.targetUserId, parsed.data.reason);
     res.json(result);
   } catch (error) {
@@ -143,7 +151,8 @@ router.post('/api/support/actions/unlock-account', requireAuth, requireSupportRo
     const parsed = targetUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = requireSupportExecutor(req, res);
+    if (!executorId) return;
     const result = await supportActionsService.unlockAccount(executorId, parsed.data.targetUserId);
     res.json(result);
   } catch (error) {
@@ -157,7 +166,8 @@ router.post('/api/support/actions/revoke-sessions', requireAuth, requireSupportR
     const parsed = targetUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = requireSupportExecutor(req, res);
+    if (!executorId) return;
     const result = await supportActionsService.revokeSessions(executorId, parsed.data.targetUserId);
     res.json(result);
   } catch (error) {
@@ -171,7 +181,8 @@ router.post('/api/support/actions/reset-email', requireAuth, requireSupportRole,
     const parsed = resetEmailSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const executorId = req.supportExecutorId;
+    const executorId = requireSupportExecutor(req, res);
+    if (!executorId) return;
     const result = await supportActionsService.resetEmail(executorId, parsed.data.targetUserId, parsed.data.newEmail);
     res.json(result);
   } catch (error) {
@@ -271,7 +282,8 @@ router.post('/api/support/actions/approve', requireAuth, requireSupportRole, asy
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
 
-    const approverId = req.supportExecutorId;
+    const approverId = requireSupportExecutor(req, res);
+    if (!approverId) return;
     const result = await supportActionsService.approveAction(parsed.data.approvalId, approverId);
     res.json(result);
   } catch (error) {

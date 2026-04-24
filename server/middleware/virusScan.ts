@@ -19,6 +19,7 @@
 
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { createLogger } from '../lib/logger';
+import type { AuthenticatedRequest } from '../rbac';
 const log = createLogger('virusScan');
 import {
   scanFile,
@@ -55,8 +56,9 @@ declare global {
  */
 function extractUserInfo(req: Request): { userId: string; workspaceId: string; ipAddress: string; userAgent: string } {
   const authReq = req as AuthenticatedRequest;
+  const claimSub = typeof authReq.user?.claims?.sub === 'string' ? authReq.user.claims.sub : undefined;
   return {
-    userId: authReq.user?.id || authReq.user?.(typeof claims?.sub === "string" ? claims.sub : undefined) || 'anonymous',
+    userId: authReq.user?.id || claimSub || 'anonymous',
     workspaceId: authReq.workspaceId || authReq.user?.currentWorkspaceId || 'unknown',
     ipAddress: req.ip || req.socket?.remoteAddress || 'unknown',
     userAgent: req.get('user-agent') || 'unknown',

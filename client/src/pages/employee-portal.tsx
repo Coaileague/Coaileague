@@ -142,7 +142,7 @@ export default function EmployeePortal() {
   const loadingConfig: CanvasPageConfig = {
     id: 'employee-portal',
     title: 'Employee Portal',
-    subtitle: 'Loading...',
+    subtitle: 'Loading your profile, schedule, and time records',
     category: 'operations',
   };
 

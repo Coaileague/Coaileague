@@ -282,7 +282,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/pending', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = req.workspaceId?.id || req.workspaceId;
+      const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const shifts = await getPendingShifts(workspaceId);
@@ -295,7 +295,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = req.workspaceId?.id || req.workspaceId;
+      const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const stats = await getApprovalStats(workspaceId);
@@ -2902,9 +2902,8 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
                       for (const mgr of mgrs) {
                         if (!mgr.userId) continue;
                         await NotificationDeliveryService.send({
-                          // @ts-expect-error — TS migration: fix in refactoring sprint
                           idempotencyKey: `notif-${Date.now()}`,
-            type: 'geo_fence_violation',
+                          type: 'incident_alert',
                           workspaceId: employee.workspaceId,
                           recipientUserId: mgr.userId,
                           channel: 'push',

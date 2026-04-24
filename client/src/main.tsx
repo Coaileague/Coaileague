@@ -1,4 +1,16 @@
 import { createRoot } from "react-dom/client";
+// ============================================================================
+// VITE CHUNK LOAD ERROR HANDLER — auto-reload on stale asset hash
+// ============================================================================
+// When a new deployment changes Vite asset hashes, any user with old HTML cached
+// will hit "Unable to preload CSS for /assets/xxx-[hash].css". This handler
+// catches that event and forces a hard reload so they get fresh chunks.
+window.addEventListener('vite:preloadError', (event) => {
+  console.warn('[CoAIleague] Stale asset detected, reloading for fresh chunks:', event);
+  window.location.reload();
+});
+
+
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import { HelmetProvider } from 'react-helmet-async';
 import App from "./App";

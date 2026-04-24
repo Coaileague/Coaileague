@@ -432,7 +432,7 @@ class HelpAIProactiveMonitor {
       if (alert.priority === 'critical' || alert.priority === 'high') {
         await trinityHelpaiCommandBus.sendAlert({
           alert_idempotencyKey: `notif-${Date.now()}`,
-          type: 'proactive_signal',
+          alert_type: 'proactive_signal',
           description: alert.description,
           severity: alert.priority === 'critical' ? 'immediate' : 'watch',
           source_thread: alert.sourceThread,

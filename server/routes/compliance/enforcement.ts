@@ -251,7 +251,6 @@ router.patch("/config", requireAuth, requireAdmin, async (req: Request, res: Res
 
 router.get("/hiring-score/:employeeId", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const requestingWorkspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const { employeeId } = req.params;
     const { authorizationToken } = req.query;
@@ -338,7 +337,6 @@ router.get("/hiring-score/:employeeId", requireAuth, requireManagerRole, async (
 
 router.post("/hiring-score/:employeeId/authorize", requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const userId = req.user?.id;
     const { employeeId } = req.params;

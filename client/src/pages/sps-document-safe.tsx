@@ -245,11 +245,14 @@ function CompanyTab() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : contracts.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">
-              No contracts or proposals on file.
+            <p className="text-sm text-muted-foreground">
+              Loading company credentials, insurance records, and contract history...
             </p>
+          ) : contracts.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              No contracts or proposals are on file yet. Client agreements and proposals will appear
+              here once they are generated or signed.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -352,9 +355,14 @@ function StaffTab() {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading staff packets...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading staff packets, licensing documents, and onboarding completeness...
+          </p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">No staff found.</p>
+          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            No staff packets match this view yet. Invite employees or contractors first, then their
+            compliance documents will appear here.
+          </div>
         ) : (
           <Card>
             <Table>
@@ -666,11 +674,14 @@ function ReportsTab() {
       </Select>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading reports...</p>
-      ) : reports.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic">
-          No documents found for this filter.
+        <p className="text-sm text-muted-foreground">
+          Loading generated reports, signed documents, and client-facing paperwork...
         </p>
+      ) : reports.length === 0 ? (
+        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+          No documents match this filter yet. Reports will show up here after proposals, contracts,
+          or operational paperwork are generated.
+        </div>
       ) : (
         <Card>
           <Table>
@@ -760,9 +771,14 @@ function AuditorTab() {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading auditor-ready licensing packets and guard credential status...
+          </p>
         ) : guards.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">No licensed guards found.</p>
+          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            No licensed guards are available for this auditor view yet. Guard packages appear here once
+            staff credentials are uploaded and linked to employee records.
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {guards.map(g => {

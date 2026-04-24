@@ -223,9 +223,17 @@ export default function OrchestrationDashboard() {
 
         <TabsContent value="active" className="space-y-4">
           {isLoading ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">Loading...</CardContent></Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground space-y-2">
+              <Activity className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
+              <p className="font-medium text-foreground">Loading active orchestration work</p>
+              <p className="text-sm">Checking live overlays and their current execution phases.</p>
+            </CardContent></Card>
           ) : activeCount === 0 ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">No active orchestration overlays</CardContent></Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground space-y-2">
+              <CheckCircle2 className="h-8 w-8 mx-auto opacity-50 text-green-600 dark:text-green-400" />
+              <p className="font-medium text-foreground">No active orchestration overlays</p>
+              <p className="text-sm">Current work orders are idle or already completed.</p>
+            </CardContent></Card>
           ) : (
             <ScrollArea className="h-[400px]">
               <div className="space-y-3">
@@ -265,9 +273,17 @@ export default function OrchestrationDashboard() {
 
         <TabsContent value="history" className="space-y-4">
           {isLoading ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">Loading...</CardContent></Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground space-y-2">
+              <Clock className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
+              <p className="font-medium text-foreground">Loading orchestration history</p>
+              <p className="text-sm">Pulling recent phase transitions, durations, and outcomes.</p>
+            </CardContent></Card>
           ) : (data?.recentHistory?.length || 0) === 0 ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">No recent orchestration history</CardContent></Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground space-y-2">
+              <Clock className="h-8 w-8 mx-auto opacity-50" />
+              <p className="font-medium text-foreground">No recent orchestration history</p>
+              <p className="text-sm">Completed orchestration runs will appear here once the first workflows finish.</p>
+            </CardContent></Card>
           ) : (
             <ScrollArea className="h-[400px]">
               <div className="space-y-3">
@@ -297,9 +313,17 @@ export default function OrchestrationDashboard() {
 
         <TabsContent value="tools" className="space-y-4">
           {isLoading ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">Loading...</CardContent></Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground space-y-2">
+              <Wrench className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
+              <p className="font-medium text-foreground">Loading tool health</p>
+              <p className="text-sm">Reviewing status, uptime, and response times across orchestration dependencies.</p>
+            </CardContent></Card>
           ) : (data?.toolHealth?.statuses?.length || 0) === 0 ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">No tool health data available</CardContent></Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground space-y-2">
+              <Wrench className="h-8 w-8 mx-auto opacity-50" />
+              <p className="font-medium text-foreground">No tool health data available</p>
+              <p className="text-sm">Health checks will appear after orchestration dependencies report their first status snapshots.</p>
+            </CardContent></Card>
           ) : (
             <ScrollArea className="h-[400px]">
               <div className="space-y-2">

@@ -109,7 +109,7 @@ async function recomputeThreadSla(threadId: string): Promise<void> {
  */
 async function resolveClientId(user: AuthenticatedRequest['user'], workspaceId: string): Promise<string | null> {
   if (!user) return null;
-  const u = user as Record<string, unknown>;
+  const u = user as unknown as Record<string, unknown>;
   const userId = typeof u.id === 'string' ? u.id : null;
   const userEmail = typeof u.email === 'string' ? u.email : null;
   if (!userId && !userEmail) return null;
@@ -144,7 +144,7 @@ async function resolveClientContactInfo(clientRecordId: string, workspaceId: str
 
 function getSenderName(user: AuthenticatedRequest['user'], fallback: string): string {
   if (!user) return fallback;
-  const u = user as Record<string, unknown>;
+  const u = user as unknown as Record<string, unknown>;
   const first = typeof u.firstName === 'string' ? u.firstName : '';
   const last = typeof u.lastName === 'string' ? u.lastName : '';
   return `${first} ${last}`.trim() || fallback;

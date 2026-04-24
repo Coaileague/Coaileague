@@ -72,8 +72,7 @@ async function resolveActiveWorkspace(req: AuthenticatedRequest): Promise<{ work
   if (!userId) return { workspaceId: null, error: 'Unauthorized' };
 
   // 1. Workspace set by middleware (ensureWorkspaceAccess) — highest priority
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  const middlewareWsId = req.workspaceId || (req.user)?.workspaceId;
+  const middlewareWsId = req.workspaceId || req.user?.workspaceId;
   if (middlewareWsId) {
     return { workspaceId: middlewareWsId };
   }

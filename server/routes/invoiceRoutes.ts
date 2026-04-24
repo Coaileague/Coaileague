@@ -48,7 +48,6 @@ import { format } from "date-fns";
 import PDFDocument from "pdfkit";
 
 async function requireManagerRole(req: AuthenticatedRequest): Promise<{ allowed: boolean; error?: string; status?: number }> {
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const userId = req.user?.id || (req.user)?.claims?.sub;
   if (!userId) return { allowed: false, error: 'Unauthorized', status: 401 };
 
@@ -835,7 +834,12 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user)?.claims?.sub;
+      const userId =
+        req.user?.id ||
+        (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+      if (!userId) {
+        return res.status(403).json({ message: 'User context not found' });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -894,7 +898,7 @@ import { createHash } from "crypto";
 
       // FIX 7: Financial anomaly check — warn if invoice total is unusually high (non-blocking)
       let financialAnomalyWarning: string | null = null;
-      const invoiceTotal = toFinancialString(invoice.total as string || '0');
+      const invoiceTotal = Number(invoice.total ?? 0);
       const INVOICE_ANOMALY_THRESHOLD = 50000;
       const INVOICE_EXTREME_THRESHOLD = 250000;
       if (invoiceTotal >= INVOICE_EXTREME_THRESHOLD) {
@@ -1138,7 +1142,12 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user)?.claims?.sub;
+      const userId =
+        req.user?.id ||
+        (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+      if (!userId) {
+        return res.status(403).json({ message: 'User context not found' });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1318,7 +1327,12 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user)?.claims?.sub;
+      const userId =
+        req.user?.id ||
+        (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+      if (!userId) {
+        return res.status(403).json({ message: 'User context not found' });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1533,7 +1547,12 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user)?.claims?.sub;
+      const userId =
+        req.user?.id ||
+        (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+      if (!userId) {
+        return res.status(403).json({ message: 'User context not found' });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1643,7 +1662,12 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user)?.claims?.sub;
+      const userId =
+        req.user?.id ||
+        (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+      if (!userId) {
+        return res.status(403).json({ message: 'User context not found' });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -1995,7 +2019,12 @@ import { createHash } from "crypto";
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const userId = req.user?.id || (req.user)?.claims?.sub;
+      const userId =
+        req.user?.id ||
+        (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+      if (!userId) {
+        return res.status(403).json({ message: 'User context not found' });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
@@ -2199,7 +2228,12 @@ import { createHash } from "crypto";
       // ISSUE-5 FIX: Resolve authenticated user's workspace and enforce tenant isolation.
       // Without this check, any authenticated user could create a PaymentIntent for an
       // invoice belonging to a different workspace by guessing its UUID.
-      const userId = req.user?.id || req.user?.claims?.sub;
+      const userId =
+        req.user?.id ||
+        (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+      if (!userId) {
+        return res.status(403).json({ message: 'User context not found' });
+      }
       const userWorkspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!userWorkspace) {
         return res.status(403).json({ message: 'Workspace not found' });
@@ -2572,8 +2606,10 @@ router.get('/tax-rates/resolve/:clientId', async (req: AuthenticatedRequest, res
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
     const { clientId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2610,8 +2646,10 @@ router.post('/tax-rates/client-override', async (req: AuthenticatedRequest, res)
     const { stateTaxService } = await import('../services/billing/stateTaxService');
     stateTaxService.setClientTaxOverride(clientId, rate, note || '');
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (userWorkspace) {
       storage.createAuditLog({
@@ -2686,8 +2724,10 @@ router.post('/:id/partial-payment', async (req: AuthenticatedRequest, res) => {
     const { amount, paymentMethod, payerEmail, payerName, notes } = partialParsed.data;
     if (businessRuleResponse(res, [validatePartialPaymentAmount(amount, undefined, 'amount')])) return;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2725,7 +2765,6 @@ router.post('/:id/partial-payment', async (req: AuthenticatedRequest, res) => {
       title: `Partial Payment Recorded`,
       description: `$${amount.toFixed(2)} partial payment recorded — $${result.remainingBalance.toFixed(2)} remaining`,
       workspaceId: userWorkspace.workspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user?.id || (req.user)?.claims?.sub,
       metadata: {
         invoiceId: id,
@@ -2768,8 +2807,10 @@ router.post('/:id/dispute', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ message: 'reason is required', code: 'MISSING_REASON' });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2877,8 +2918,10 @@ router.post('/:id/resolve-dispute', async (req: AuthenticatedRequest, res) => {
       ? resolvedStatus
       : 'sent';
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -2969,8 +3012,10 @@ router.post('/apply-late-fees', async (req: AuthenticatedRequest, res) => {
     const roleCheck = await requireManagerRole(req);
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -3018,8 +3063,10 @@ router.post('/credit-memo', async (req: AuthenticatedRequest, res) => {
     const roleCheck = await requireManagerRole(req);
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -3089,8 +3136,10 @@ router.post('/send-payment-reminders', async (req: AuthenticatedRequest, res) =>
     const roleCheck = await requireManagerRole(req);
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -3129,8 +3178,10 @@ router.get('/statement/:clientId', async (req: AuthenticatedRequest, res) => {
 
     const { clientId } = req.params;
     const { month, year } = req.query;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userId = req.user?.id || (req.user)?.claims?.sub;
+    const userId =
+      req.user?.id ||
+      (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
+    if (!userId) return res.status(404).json({ message: 'User context not found' });
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
     if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -3764,3 +3815,4 @@ router.post('/portal/:accessToken/invoice/:invoiceId/create-payment-intent', asy
 });
 
 export default router;
+

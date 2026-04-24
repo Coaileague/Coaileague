@@ -297,7 +297,7 @@ export default function EngagementDashboard() {
               {latestBenchmark ? `${parseFloat(latestBenchmark.overallScore).toFixed(1)}/5.0` : 'N/A'}
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-              {latestBenchmark ? `${latestBenchmark.percentileRank}th percentile` : 'No data yet'}
+              {latestBenchmark ? `${latestBenchmark.percentileRank}th percentile` : 'Benchmark pending'}
             </p>
           </CardContent>
         </Card>

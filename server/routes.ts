@@ -276,15 +276,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // universal_id_sequences — referenced by AcmeCandidateSeed
       await pool.query(`
         CREATE TABLE IF NOT EXISTS universal_id_sequences (
-          id           SERIAL PRIMARY KEY,
-          scope        TEXT NOT NULL UNIQUE,
-          prefix       TEXT NOT NULL,
-          last_value   INTEGER NOT NULL DEFAULT 0,
-          created_at   TIMESTAMPTZ DEFAULT NOW(),
-          updated_at   TIMESTAMPTZ DEFAULT NOW()
+          sequence_key  TEXT PRIMARY KEY,
+          current_value INTEGER NOT NULL DEFAULT 0,
+          created_at    TIMESTAMPTZ DEFAULT NOW(),
+          updated_at    TIMESTAMPTZ DEFAULT NOW()
         )
       `).catch(() => null);
+      // If universal_id_sequences exists with old schema (scope/prefix), migrate it
+      await pool.query(`
+        DO $$
+        BEGIN
+          -- Check if old schema (scope column) exists and migrate
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'universal_id_sequences' AND column_name = 'scope'
+          ) THEN
+            DROP TABLE universal_id_sequences;
+            CREATE TABLE universal_id_sequences (
+              sequence_key  TEXT PRIMARY KEY,
+              current_value INTEGER NOT NULL DEFAULT 0,
+              created_at    TIMESTAMPTZ DEFAULT NOW(),
+              updated_at    TIMESTAMPTZ DEFAULT NOW()
+            );
+          END IF;
+        END $$;
+      `).catch(() => null);
       log.info('[Startup] Missing tables ensured: cookie_consent, universal_id_sequences');
+      // Ensure workspace_ai_periods table exists (needed by AiMeteringService)
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS workspace_ai_periods (
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          workspace_id VARCHAR NOT NULL,
+          billing_period_start DATE NOT NULL,
+          billing_period_end DATE NOT NULL,
+          included_tokens_k INTEGER DEFAULT 1500,
+          soft_cap_tokens_k INTEGER DEFAULT 1200,
+          total_tokens_k DECIMAL(12,3) DEFAULT 0,
+          overage_tokens_k DECIMAL(12,3) DEFAULT 0,
+          overage_per_100k_tokens_cents INTEGER,
+          overage_charged_cents INTEGER DEFAULT 0,
+          status VARCHAR DEFAULT 'active',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `).catch(() => null);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_wap_workspace_period 
+        ON workspace_ai_periods (workspace_id, billing_period_start)
+      `).catch(() => null);
+      // Ensure user_platform_update_views table exists (needed by unread-count endpoint)
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS user_platform_update_views (
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          workspace_id VARCHAR,
+          user_id VARCHAR NOT NULL,
+          update_id VARCHAR NOT NULL,
+          viewed_at TIMESTAMP DEFAULT NOW(),
+          view_source VARCHAR(50) DEFAULT 'modal',
+          created_at TIMESTAMP DEFAULT NOW()
+        )
+      `).catch(() => null);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_upuv_user_update 
+        ON user_platform_update_views (user_id, update_id)
+      `).catch(() => null);
+      // Backfill shifts.date for any shifts with null date (from before date column was populated)
+      await pool.query(`
+        UPDATE shifts 
+        SET date = TO_CHAR(start_time AT TIME ZONE 'UTC', 'YYYY-MM-DD')
+        WHERE date IS NULL AND start_time IS NOT NULL
+      `).catch(() => null);
+      // Ensure workspace_members unique constraint (needed for ON CONFLICT in seedPlatformWorkspace)
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS workspace_members_user_workspace_idx
+        ON workspace_members (user_id, workspace_id)
+      `).catch(() => null);
     };
     await seedWithRetry(runMissingTablesMigration, 'missingTablesMigration');
 

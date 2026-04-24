@@ -200,8 +200,7 @@ async function applyAutomationUpdate(params: {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const userId = req.user?.id || (req.user)?.claims?.sub;
+        const userId = req.user?.id || (typeof req.user?.claims?.sub === 'string' ? req.user.claims.sub : undefined);
         if (userId) {
           const { getUserPlatformRole, hasPlatformWideAccess } = await import('../rbac');
           const platformRole = await getUserPlatformRole(userId);

@@ -362,7 +362,7 @@ class PlatformActionHub {
           isNew: true,
           priority: 1,
           visibility: 'all',
-          date: new Date()
+          date: new Date(),
         });
 
         return {

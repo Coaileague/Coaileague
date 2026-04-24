@@ -45,7 +45,13 @@ function mkAction(actionId: string, fn: (params: any, request: ActionRequest) =>
   };
 }
 
-async function notifyUser(workspaceId: string, userId: string, title: string, message: string, priority: string = 'normal') {
+async function notifyUser(
+  workspaceId: string,
+  userId: string,
+  title: string,
+  message: string,
+  priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal',
+) {
   await createNotification({ workspaceId, userId, type: 'drug_test', title, message, priority,
  idempotencyKey: `drug_test-${String(Date.now())}-${'system'}`,
         })

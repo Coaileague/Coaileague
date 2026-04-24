@@ -23,6 +23,7 @@ import {
   inboundEmailLog,
   employeeCertifications,
   workspaces,
+  type InsertNotification,
 } from '@shared/schema';
 import { getWorkspaceTier, hasTierAccess } from '../../tierGuards';
 import { eq, and, gte, lte, ilike, or, desc, sql } from 'drizzle-orm';
@@ -526,7 +527,7 @@ async function processIncident(
 
   // NOTIFY: route to supervisor
   await notifyAdmins(workspaceId, `New incident report submitted via email by ${sender.name}. ${confidence < 0.5 ? 'Low confidence — manual completion required.' : 'Ready for review.'}`, logId, {
-    type: 'incident_report_received',
+    type: 'incident',
     title: 'Incident Report — Email Submission',
     actionUrl: `/incidents/${report.id}`,
     relatedEntityType: 'incident_report',
@@ -666,7 +667,7 @@ async function processDocs(
     : 'Routed for HR review.';
 
   await notifyAdmins(workspaceId, `Document received via email from ${sender.name} (type: ${docType}). ${reviewerNote}`, logId, {
-    type: 'document_received',
+    type: 'document',
     title: `Document Received — ${docType}`,
     relatedEntityType: 'document_vault',
     relatedEntityId: vaultIds[0],
@@ -870,7 +871,7 @@ async function processSupport(
     : 'Routed to support.';
 
   await notifyAdmins(workspaceId, `New support ticket ${ticketNumber} from ${senderName} (${category}). ${routingNote}`, logId, {
-    type: 'support_ticket_created',
+    type: 'system',
     title: `Support Ticket — ${ticketNumber}`,
     actionUrl: `/helpdesk/${ticket.id}`,
     relatedEntityType: 'support_ticket',
@@ -916,7 +917,7 @@ async function notifyAdmins(
   message: string,
   logId: string,
   extra?: {
-    type?: string;
+    type?: InsertNotification['type'];
     title?: string;
     actionUrl?: string;
     relatedEntityType?: string;
@@ -941,7 +942,7 @@ async function notifyAdmins(
       await storage.createNotification({
         workspaceId,
         userId,
-        type: extra?.type || 'inbound_email',
+        type: extra?.type || 'system',
         title: extra?.title || 'Inbound Email Processed',
         message,
         actionUrl: extra?.actionUrl || `/audit?ref=email-${logId}`,
@@ -1076,7 +1077,7 @@ async function processCareersApplication(
       `New job application received from ${firstName} ${lastName} (${email.fromEmail}). Trinity score: ${screenResult.score}/100. ${screenResult.score >= 60 ? 'Qualified — Round 1 email sent.' : 'Below threshold — not qualified.'}`,
       logId,
       {
-        type: 'new_job_application',
+        type: 'info',
         title: 'New Job Application',
         actionUrl: `/recruitment/candidates/${candidate.id}`,
         relatedEntityType: 'interview_candidate',
@@ -1272,7 +1273,7 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
       await (storage.createNotification({
         workspaceId: PLATFORM_WORKSPACE_ID,
         userId: 'root',
-        type: 'inbound_email_unmatched',
+        type: 'system',
         title: 'Inbound Email — Unmatched Sender',
         message: `Email from ${email.fromEmail} to ${email.toEmail} could not be matched to any workspace. Manual review required.`,
         actionUrl: `/audit?ref=email-${logId}`,
@@ -1301,7 +1302,6 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
             needsReview: true,
             reviewReason: `Document routing requires Professional plan. Workspace is on ${workspaceTier} plan.`,
             processedAt: new Date(),
-        idempotencyKey: `inbound_email_unmatched-${logId}-${'root'}`
           })
           .where(eq(inboundEmailLog.id, logId));
         // @ts-expect-error — TS migration: fix in refactoring sprint

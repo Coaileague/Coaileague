@@ -264,14 +264,17 @@ class TrinityCognitiveLoadMonitor {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     if (recentNotify.length > 0) return;
 
+    const ownerUserId = typeof ownerRows[0]?.user_id === 'string' ? ownerRows[0].user_id : undefined;
+    if (!ownerUserId) return;
+
     await createNotification({
       workspaceId,
-      userId: ownerRows[0].user_id,
+      userId: ownerUserId,
       type: 'cognitive_overload',
       title: 'Trinity: High Operational Capacity',
       message: `Trinity is at high operational capacity (load score: ${state.currentLoadScore}/100). Critical items are being prioritized. Non-urgent autonomous work resumes in tonight's processing cycle. Active tasks: ${state.activeAutonomousTasks}, Pending: ${state.pendingAutonomousTasks}, Critical escalations: ${state.activeCriticalEscalations}.`,
       priority: 'high',
-      idempotencyKey: `cognitive_overload-${String(Date.now())}-${ownerRows[0].user_id}`,
+      idempotencyKey: `cognitive_overload-${String(Date.now())}-${ownerUserId}`,
       }).catch(() => null);
   }
 }

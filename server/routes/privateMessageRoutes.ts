@@ -7,10 +7,34 @@ import { db } from "../db";
 import { chatConversations } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { createLogger } from '../lib/logger';
+
+import { isProtectedDirectMessageRole, isSupportStaffRole, canManageDirectMessageLifecycle } from '../services/chat/chatPolicyService';
+import { broadcastToUser } from '../websocket';
 const log = createLogger('PrivateMessageRoutes');
 
 
 const router = Router();
+
+// ── Shared recipient validation (Copilot handoff: unified DM access) ─────────
+async function validatePrivateMessageRecipient(
+  senderId: string,
+  recipientId: string,
+  workspaceId: string | undefined
+): Promise<{ valid: boolean; error?: string }> {
+  // Block self-DMs
+  if (senderId === recipientId) {
+    return { valid: false, error: 'Cannot send a direct message to yourself' };
+  }
+  // Block cross-workspace DMs (recipient must be in same workspace)
+  if (workspaceId) {
+    const recipientMember = await storage.getWorkspaceMemberByUserId(recipientId);
+    if (recipientMember && recipientMember.workspaceId !== workspaceId) {
+      return { valid: false, error: 'Recipient is not in your workspace' };
+    }
+  }
+  return { valid: true };
+}
+
 
 router.get('/conversations', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
@@ -163,7 +187,21 @@ router.post('/send', requireAuth, async (req: AuthenticatedRequest, res) => {
       attachmentName,
     });
 
-    res.json(sentMessage);
+    
+      // Broadcast to both participants via WebSocket for socket-first live updates
+      try {
+        const { broadcastToUser } = await import('../websocket');
+        const wsPayload = {
+          type: 'private_message_received',
+          conversationId: newMessage?.conversationId,
+          message: newMessage,
+        };
+        if (recipientId) broadcastToUser(recipientId, wsPayload);
+        if (userId) broadcastToUser(userId, wsPayload);
+      } catch (_wsErr) {
+        // WebSocket broadcast is best-effort — REST response still succeeds
+      }
+      res.json(sentMessage);
   } catch (error: unknown) {
     log.error("Error sending message:", error);
     res.status(500).json({ message: "Failed to send message" });
@@ -297,7 +335,6 @@ router.post('/group', requireAuth, async (req: AuthenticatedRequest, res) => {
 
     const participantOrgIds = allowedOrgIds || [workspaceId];
     const userRole = req.user?.role || 'employee';
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = (req.user)?.platformRole || null;
 
     const groupCheck = await chatParityService.canStartGroupDM({

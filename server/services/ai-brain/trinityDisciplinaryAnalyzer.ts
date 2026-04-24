@@ -347,7 +347,7 @@ class TrinityDisciplinaryAnalyzer {
       ORDER BY created_at ASC LIMIT 1
     `, [pattern.workspaceId, pattern.routeTo === 'owner' ? 'org_owner' : pattern.routeTo === 'manager' ? 'org_manager' : 'supervisor']);
 
-    const targetUserId = target[0]?.user_id;
+    const targetUserId = typeof target[0]?.user_id === 'string' ? target[0].user_id : undefined;
     if (targetUserId) {
       await createNotification({
         workspaceId: pattern.workspaceId,

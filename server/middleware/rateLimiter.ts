@@ -360,7 +360,7 @@ export const chatConversationLimiter = rateLimit({
  */
 export const financialLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30,
+  max: 120, // Increased from 30 — dashboard makes multiple financial calls simultaneously
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {

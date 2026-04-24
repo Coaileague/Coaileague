@@ -22,6 +22,10 @@ const log = createLogger('VisitorManagementRoutes');
 
 export const visitorManagementRouter = Router();
 
+function getQueryString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
 const VISITOR_TYPES = ['guest', 'vendor', 'contractor', 'employee', 'delivery', 'law_enforcement', 'other'] as const;
 const PRE_REG_STATUSES = ['pending', 'checked_in', 'completed', 'cancelled'] as const;
 
@@ -71,7 +75,12 @@ visitorManagementRouter.get('/logs', requireAuth, async (req: AuthenticatedReque
     const workspaceId = wid(req);
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
-    const { siteId, visitorType, date, search, limit = 50, offset = 0 } = req.query;
+    const siteId = getQueryString(req.query.siteId);
+    const visitorType = getQueryString(req.query.visitorType);
+    const date = getQueryString(req.query.date);
+    const search = getQueryString(req.query.search);
+    const limit = Number.parseInt(getQueryString(req.query.limit) || '50', 10);
+    const offset = Number.parseInt(getQueryString(req.query.offset) || '0', 10);
 
     const conditions = ['workspace_id = $1'];
     const params: any[] = [workspaceId];
@@ -92,7 +101,7 @@ visitorManagementRouter.get('/logs', requireAuth, async (req: AuthenticatedReque
     const where = conditions.join(' AND ');
     const { rows } = await pool.query(
       `SELECT * FROM visitor_logs WHERE ${where} ORDER BY checked_in_at DESC LIMIT $${p} OFFSET $${p + 1}`,
-      [...params, parseInt(limit), parseInt(offset)]
+      [...params, limit, offset]
     );
     const { rows: countRows } = await pool.query(`SELECT COUNT(*) FROM visitor_logs WHERE ${where}`, params);
 
@@ -209,9 +218,8 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
     // Alert if banned
     if (isBanned) {
       NotificationDeliveryService.send({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         idempotencyKey: `notif-${Date.now()}`,
-            type: 'security_alert',
+        type: 'alert_notification',
         workspaceId,
         recipientUserId: workspaceId,
         channel: 'in_app',
@@ -310,9 +318,8 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
     for (const o of overstays) {
       if (!o.alert_sent) {
         NotificationDeliveryService.send({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           idempotencyKey: `notif-${Date.now()}`,
-            type: 'security_alert',
+          type: 'alert_notification',
           workspaceId,
           recipientUserId: workspaceId,
           channel: 'in_app',
@@ -352,7 +359,11 @@ visitorManagementRouter.get('/pre-registrations', requireAuth, async (req: Authe
     const workspaceId = wid(req);
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
-    const { status, clientId, siteId, limit = 50, offset = 0 } = req.query;
+    const status = getQueryString(req.query.status);
+    const clientId = getQueryString(req.query.clientId);
+    const siteId = getQueryString(req.query.siteId);
+    const limit = Number.parseInt(getQueryString(req.query.limit) || '50', 10);
+    const offset = Number.parseInt(getQueryString(req.query.offset) || '0', 10);
 
     const conditions = ['workspace_id = $1'];
     const params: any[] = [workspaceId];
@@ -365,7 +376,7 @@ visitorManagementRouter.get('/pre-registrations', requireAuth, async (req: Authe
     const where = conditions.join(' AND ');
     const { rows } = await pool.query(
       `SELECT * FROM visitor_pre_registrations WHERE ${where} ORDER BY expected_arrival ASC LIMIT $${p} OFFSET $${p + 1}`,
-      [...params, parseInt(limit), parseInt(offset)]
+      [...params, limit, offset]
     );
     const { rows: countRows } = await pool.query(`SELECT COUNT(*) FROM visitor_pre_registrations WHERE ${where}`, params);
 
@@ -571,9 +582,8 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
         const mins = elapsed % 60;
 
         NotificationDeliveryService.send({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           idempotencyKey: `notif-${Date.now()}`,
-            type: 'security_alert',
+          type: 'alert_notification',
           workspaceId,
           recipientUserId: workspaceId,
           channel: 'in_app',

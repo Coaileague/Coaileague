@@ -4,7 +4,7 @@ import { PLATFORM } from '../config/platformConfig';
 import { validatePayrollPeriod, validateDeductionAmount, validateNonNegativeAmount, businessRuleResponse } from '../lib/businessRules';
 import { Router } from "express";
 import type { AuthenticatedRequest } from "../rbac";
-import { sumFinancialValues, formatCurrency } from '../services/financialCalculator';
+import { sumFinancialValues, formatCurrency, toFinancialString } from '../services/financialCalculator';
 import { platformEventBus } from '../services/platformEventBus';
 import { hasManagerAccess, hasPlatformWideAccess } from "../rbac";
 import PDFDocument from "pdfkit";
@@ -1820,7 +1820,7 @@ router.post("/calculate-taxes", async (req, res) => {
 
 router.get("/entries", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const entries = await db.select().from(payrollEntries).where(eq(payrollEntries.workspaceId, workspaceId));
@@ -1833,7 +1833,7 @@ router.get("/entries", async (req: AuthenticatedRequest, res) => {
 
 router.get("/deductions", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const payrollEntryId = req.query.payrollEntryId as string | undefined;
@@ -1851,7 +1851,7 @@ router.get("/deductions", async (req: AuthenticatedRequest, res) => {
 
 router.get("/garnishments", async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const payrollEntryId = req.query.payrollEntryId as string | undefined;
@@ -1946,7 +1946,7 @@ router.post("/deductions/:payrollEntryId", async (req: AuthenticatedRequest, res
     if (!parsed.success) return res.status(400).json({ error: 'Invalid deduction data', details: parsed.error.flatten() });
     const { employeeId, deductionType, amount, isPreTax, description } = parsed.data;
     if (businessRuleResponse(res, [validateDeductionAmount(amount, undefined, 'amount')])) return;
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const deduction = await addDeduction(
@@ -1971,7 +1971,7 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
     const parsed = payrollGarnishmentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid garnishment data', details: parsed.error.flatten() });
     const { employeeId, garnishmentType, amount, priority, caseNumber, description } = parsed.data;
-    const workspaceId = req.workspaceId?.id;
+    const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const garnishment = await addGarnishment(
@@ -2000,11 +2000,11 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
 
       if (entry) {
         // RC4: All payroll arithmetic via FinancialCalculator (Decimal.js) — no native Number
-        const grossPay     = toFinancialString(entry.grossPay     ?? '0');
-        const federalTax   = toFinancialString(entry.federalTax   ?? '0');
-        const stateTax     = toFinancialString(entry.stateTax     ?? '0');
-        const socialSec    = toFinancialString(entry.socialSecurity ?? '0');
-        const medicare     = toFinancialString(entry.medicare     ?? '0');
+        const grossPay = Number(toFinancialString(entry.grossPay ?? '0'));
+        const federalTax = Number(toFinancialString(entry.federalTax ?? '0'));
+        const stateTax = Number(toFinancialString(entry.stateTax ?? '0'));
+        const socialSec = Number(toFinancialString(entry.socialSecurity ?? '0'));
+        const medicare = Number(toFinancialString(entry.medicare ?? '0'));
 
         const allGarnishments = await db.select({ amount: payrollGarnishments.amount })
           .from(payrollGarnishments)
@@ -2012,10 +2012,10 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
             eq(payrollGarnishments.payrollEntryId, payrollEntryId),
             eq(payrollGarnishments.workspaceId, workspaceId),
           ));
-        const totalGarnishments = sumFinancialValues(allGarnishments.map(g => toFinancialString(g.amount ?? '0')));
+        const totalGarnishments = Number(sumFinancialValues(allGarnishments.map(g => toFinancialString(g.amount ?? '0'))));
 
-        const preTaxDeductions  = toFinancialString((entry as any).preTaxDeductions  ?? '0');
-        const postTaxDeductions = toFinancialString((entry as any).postTaxDeductions ?? '0');
+        const preTaxDeductions = Number(toFinancialString((entry as any).preTaxDeductions ?? '0'));
+        const postTaxDeductions = Number(toFinancialString((entry as any).postTaxDeductions ?? '0'));
         const totalTaxes = federalTax + stateTax + socialSec + medicare;
 
         let newNetPay = grossPay - preTaxDeductions - totalTaxes - postTaxDeductions - totalGarnishments;
@@ -2039,7 +2039,7 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
           const runTotalNet   = sumFinancialValues(runEntries.map(e => toFinancialString(e.netPay   ?? '0')));
           const runTotalGross = sumFinancialValues(runEntries.map(e => toFinancialString(e.grossPay ?? '0')));
           await db.update(payrollRuns)
-            .set({ totalNetPay: runTotalNet.toFixed(2) as any, totalGrossPay: runTotalGross.toFixed(2) as any, updatedAt: new Date() })
+            .set({ totalNetPay: runTotalNet as any, totalGrossPay: runTotalGross as any, updatedAt: new Date() })
             .where(and(
               eq(payrollRuns.id, entry.payrollRunId),
               eq(payrollRuns.workspaceId, workspaceId),
@@ -3665,7 +3665,7 @@ router.patch('/employees/:employeeId/bank-accounts/:accountId', async (req: Auth
       updateFields.accountNumberLast4 = String(accountNumber).trim().slice(-4);
     }
 
-    let updated: typeof employeeBankAccounts.$inferSelect;
+    let updated: typeof employeeBankAccounts.$inferSelect | undefined;
     await db.transaction(async (tx) => {
       if (isPrimary) {
         // Atomically clear existing primary before setting new
@@ -3679,6 +3679,10 @@ router.patch('/employees/:employeeId/bank-accounts/:accountId', async (req: Auth
           eq(employeeBankAccounts.employeeId, employeeId)
         )).returning();
     });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Bank account not found' });
+    }
 
     storage.createAuditLog({
       workspaceId, userId, userEmail: req.user?.email || 'unknown', userRole: req.user?.role || 'user',

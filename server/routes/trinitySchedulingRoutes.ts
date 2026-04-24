@@ -21,8 +21,11 @@ router.get('/insights', async (req: any, res) => {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
-      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      const workspaceIdResolved: string = req.workspaceId || 
+        (await storage.getWorkspaceMemberByUserId(userId))?.workspaceId ||
+        (await storage.getWorkspaceByOwnerId(userId))?.id || '';
+      if (!workspaceIdResolved) return res.status(404).json({ message: "Workspace not found" });
+      const userWorkspace = { workspaceId: workspaceIdResolved };
       
       const weekStart = req.query.weekStart ? new Date(req.query.weekStart as string) : new Date();
       const weekEnd = req.query.weekEnd ? new Date(req.query.weekEnd as string) : new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -101,8 +104,12 @@ router.get('/insights', async (req: any, res) => {
 router.post('/auto-fill', async (req: any, res) => {
     try {
       const userId = req.user?.id || req.user?.id;
-      const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
-      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      // Use middleware-resolved workspaceId first, fall back to DB lookup
+      const workspaceId: string = req.workspaceId || 
+        (await storage.getWorkspaceMemberByUserId(userId))?.workspaceId ||
+        (await storage.getWorkspaceByOwnerId(userId))?.id || '';
+      if (!workspaceId) return res.status(404).json({ message: "Workspace not found" });
+      const userWorkspace = { workspaceId };
       
       const { shiftIds, weekStart, weekEnd, prioritizeBy = 'urgency', useContractorFallback = true } = req.body;
       
@@ -192,8 +199,11 @@ router.post('/ask', async (req: any, res) => {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
-      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
+      const workspaceIdResolved: string = req.workspaceId || 
+        (await storage.getWorkspaceMemberByUserId(userId))?.workspaceId ||
+        (await storage.getWorkspaceByOwnerId(userId))?.id || '';
+      if (!workspaceIdResolved) return res.status(404).json({ message: "Workspace not found" });
+      const userWorkspace = { workspaceId: workspaceIdResolved };
       
       const { question, weekStart, weekEnd } = req.body;
       

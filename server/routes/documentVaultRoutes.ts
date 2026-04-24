@@ -103,9 +103,8 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
     // ── Check 12: Officer document scope ─────────────────────────────────────
     // Employees and contractors must only see documents they are a signatory on
     // or that are explicitly addressed to them (relatedEntityId = their employeeId).
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const role = req.workspaceRole || req.session?.workspaceRole || (req.user)?.platformRole;
-    if (OFFICER_ROLES.includes(role)) {
+    const role = req.workspaceRole || req.session?.workspaceRole || req.user?.platformRole || undefined;
+    if (role && OFFICER_ROLES.includes(role)) {
       const userId = req.user?.id;
       if (!userId) return res.status(403).json({ error: "Unauthorized" });
 

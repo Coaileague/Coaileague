@@ -4,7 +4,6 @@ import {
   employees,
   workspaces,
   platformRoles,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   users
 } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
@@ -183,16 +182,15 @@ export function hasPlatformWideAccess(platformRole?: PlatformRole | string): boo
   return PLATFORM_WIDE_ROLES.includes(platformRole as PlatformRole);
 }
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
-import type { User, users } from "@shared/schema";
+import type { User } from '@shared/schema';
 
 export interface AuthenticatedRequest extends Request {
-  user?: typeof users.$inferSelect;
+  user?: Request["user"];
   workspaceId?: string;
   currentWorkspaceId?: string;
-  workspaceRole?: WorkspaceRole;
+  workspaceRole?: string;
   employeeId?: string;
-  platformRole?: PlatformRole;
+  platformRole?: string;
   isTestMode?: boolean;
   assertOwnsResource?: (resourceWorkspaceId: string | null | undefined, resourceType?: string) => void;
   getWorkspaceId?: () => string;
@@ -200,7 +198,7 @@ export interface AuthenticatedRequest extends Request {
   // Support session middleware fields
   supportExecutorId?: string;
   executorPlatformRole?: string;
-  executorLevel?: string;
+  executorLevel?: number;
 
   // Auditor session middleware fields
   auditorId?: string;
@@ -228,7 +226,7 @@ export interface AuthenticatedRequest extends Request {
   rawBody?: Buffer | string;
 
   // Request correlation ID
-  requestId?: string;
+  requestId: string;
 }
 
 // NOTE: A narrowed AuthedRequest type was attempted but broke Express
@@ -773,7 +771,6 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
     // Trinity Bot bypass — the bot token was already validated by requireAuth which
     // set isTrinityBot=true and platformRole='Bot'.  We honour it only if 'Bot' is
     // explicitly listed in this route's allowedRoles; otherwise the bot is denied.
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.isTrinityBot) {
       if (!allowedRoles.includes('Bot')) {
         return res.status(403).json({
@@ -809,10 +806,10 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
         return res.status(401).json({ error: 'User not found' });
       }
       
-      req.user = user;
+      req.user = user as NonNullable<typeof req.user>;
     }
 
-    const platformRole = await getUserPlatformRole(req.user.id);
+    const platformRole = await getUserPlatformRole(req.user!.id);
     
     if (!allowedRoles.includes(platformRole)) {
       return res.status(403).json({

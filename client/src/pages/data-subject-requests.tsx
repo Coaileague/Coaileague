@@ -430,9 +430,9 @@ export default function DataSubjectRequests() {
         <Card data-testid="empty-dsr">
           <CardContent className="pt-8 pb-8 text-center">
             <Shield className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground">No data subject requests yet</p>
+            <p className="text-muted-foreground">No privacy requests yet</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Submit a request to access, correct, or delete your personal data.
+              Submit a request to access, correct, or delete personal data and it will appear here for tracking.
             </p>
           </CardContent>
         </Card>

@@ -1027,7 +1027,12 @@ export default function PerformancePage() {
   if (accessLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground text-sm">Loading...</p>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-medium">Loading performance records</p>
+          <p className="text-xs text-muted-foreground">
+            We are checking your permissions and pulling reviews, acknowledgments, and risk signals.
+          </p>
+        </div>
       </div>
     );
   }
@@ -1177,7 +1182,9 @@ export default function PerformancePage() {
           )}
 
           {disciplinaryQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">Loading records...</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Loading disciplinary records and acknowledgment status...
+            </p>
           ) : disciplinaryRecordsData.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -1266,7 +1273,9 @@ export default function PerformancePage() {
           })()}
 
           {reviewsQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">Loading reviews...</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Loading review history and acknowledgment activity...
+            </p>
           ) : reviews.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -1290,14 +1299,17 @@ export default function PerformancePage() {
         {canManage && (
           <TabsContent value="roster" className="space-y-3" data-testid="section-risk-roster">
             {riskRosterQuery.isLoading ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Loading officer roster...</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Loading officer roster, risk flags, and review activity...
+              </p>
             ) : riskRoster.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-sm font-medium text-muted-foreground">No officers in roster</p>
                   <p className="text-xs text-muted-foreground/60 mt-1">
-                    Officers will appear here once added to your workspace.
+                    Officers will appear here once they join the workspace and start generating review
+                    or disciplinary history.
                   </p>
                 </CardContent>
               </Card>

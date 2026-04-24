@@ -131,7 +131,7 @@ const scheduleLoadingConfig: CanvasPageConfig = {
   id: 'schedule-loading',
   category: 'operations',
   title: 'Schedule',
-  subtitle: 'Loading...',
+  subtitle: 'Loading shifts, staffing coverage, and Trinity scheduling context',
 };
 
 // POST_ORDER_TEMPLATES, ShiftFormData, and DAYS_OF_WEEK are imported from ShiftCreationModal
@@ -1156,7 +1156,21 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       const filled = data?.shiftsUpdated || 0;
       const total = data?.totalOpen || 0;
       const tokensUsed = data?.tokensUsed ?? data?.creditsDeducted ?? 0;
-      if (!data?.sessionId) {
+      if (data?.sessionId) {
+        // Async mode — WebSocket will deliver the real result
+        const shiftCount = data?.totalShifts || 0;
+        if (shiftCount > 0) {
+          toast({
+            title: 'Trinity is analyzing shifts...',
+            description: `Processing ${shiftCount} open shifts. Results will update automatically.`,
+          });
+        } else {
+          toast({
+            title: 'Schedule is fully staffed',
+            description: 'Trinity scanned this workspace and found no open shifts needing assignment.',
+          });
+        }
+      } else if (!data?.sessionId) {
         toast({
           title: 'Trinity AI Auto-Fill Complete',
           description: filled > 0

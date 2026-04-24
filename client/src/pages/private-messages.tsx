@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { secureFetch } from "@/lib/csrf";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { CameraCapture } from "@/components/camera-capture";
 import { usePasteImageHandler, PasteImageHint } from "@/components/paste-image-handler";
 import { cn } from "@/lib/utils";
 import { sanitizeMessage } from "@/lib/sanitize";
+import { useWebSocketBus } from '@/providers/WebSocketProvider';
 
 interface Conversation {
   id: string;
@@ -57,6 +58,7 @@ export default function PrivateMessages() {
   const isMobile = useIsMobile();
   const { isMobile: isMobileDevice, isIOS } = useMobile();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
@@ -86,6 +88,25 @@ export default function PrivateMessages() {
     refetchInterval: 5000, // Poll for new messages
     select: (data: any[]) => {
       if (!Array.isArray(data)) return [];
+  // Socket-first DM updates (Codex: socket-first instead of polling-first)
+  const wsBus = useWebSocketBus();
+  useEffect(() => {
+    const unsub = wsBus.subscribe('private_message_received', (data: any) => {
+      const { conversationId: incomingConvId, message } = data;
+      // Update active conversation thread live
+      if (incomingConvId && queryClient) {
+        queryClient.setQueryData(
+          ['/api/private-messages', incomingConvId],
+          (old: any) => old ? [...(Array.isArray(old) ? old : []), message] : [message]
+        );
+        // Refresh conversation list for unread counts
+        queryClient.invalidateQueries({ queryKey: ['/api/private-messages/conversations'] });
+      }
+    });
+    return unsub;
+  }, [wsBus]);
+
+
       return data.map((conv) => ({
         id: conv.id,
         recipientId: conv.recipientId,
@@ -103,7 +124,7 @@ export default function PrivateMessages() {
   const { data: messages = [], isLoading: messagesLoading, isError: messagesError, error: messagesErrorObj, refetch: refetchMessages } = useQuery<PrivateMessage[]>({
     queryKey: ['/api/private-messages', selectedConversation],
     enabled: !!selectedConversation,
-    refetchInterval: 3000, // Poll for new messages
+    refetchInterval: 30000 // Socket-first — polling is fallback only, // Poll for new messages
     select: (data: any[]) => {
       if (!Array.isArray(data)) return [];
       return data.map((msg) => ({

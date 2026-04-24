@@ -365,7 +365,7 @@ export default function AIAuditLogViewer() {
         {isLoading && (
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3 animate-spin" />
-            <span>Loading...</span>
+            <span>Refreshing audit feed...</span>
           </div>
         )}
       </div>

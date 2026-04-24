@@ -175,15 +175,21 @@ export default function RegulatorAccessManagement() {
     const loadingConfig: CanvasPageConfig = {
       id: 'regulator-access-loading',
       title: 'Regulator Access',
-      subtitle: 'Loading...',
+      subtitle: 'Loading active regulator sessions and secure portal links',
       category: 'operations',
       backButton: true,
       onBack: () => navigate('/security-compliance'),
     };
     return (
       <CanvasHubPage config={loadingConfig}>
-        <div className="flex justify-center items-center py-12">
+        <div className="flex flex-col justify-center items-center py-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div>
+            <p className="font-medium text-foreground">Loading regulator access records</p>
+            <p className="text-sm text-muted-foreground">
+              Checking live portal access, expiration windows, and historical revocations.
+            </p>
+          </div>
         </div>
       </CanvasHubPage>
     );
@@ -254,7 +260,10 @@ export default function RegulatorAccessManagement() {
             {activeAccess.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Key className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No active regulator access</p>
+                <p className="font-medium text-foreground">No active regulator access</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Grant access when a state regulator needs a temporary read-only portal session.
+                </p>
                 <Button 
                   className="mt-4" 
                   onClick={() => setCreateDialogOpen(true)}

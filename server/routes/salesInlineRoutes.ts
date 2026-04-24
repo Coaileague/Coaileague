@@ -149,7 +149,6 @@ router.use(requirePlatformStaff);
       if (!salesWorkspaceId) {
         return res.status(400).json({ success: false, error: 'Workspace context required for AI lead generation' });
       }
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user?.id || (req.user)?.claims?.sub;
 
       const aiResult = await getMeteredOpenAICompletion({
@@ -353,7 +352,6 @@ Return ONLY valid JSON array with this exact structure:
             if (!emailWorkspaceId) {
               throw new Error('Workspace context required for AI email generation');
             }
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             const emailUserId = req.user?.id || (req.user)?.claims?.sub;
 
             const emailAiResult = await getMeteredOpenAICompletion({

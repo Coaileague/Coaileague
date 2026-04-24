@@ -591,14 +591,14 @@ export const platformUpdates = pgTable("platform_updates", {
   metadata: jsonb("metadata"),
   
   // Timestamps
-  // date: timestamp("date").notNull().defaultNow(), // Removed: column does not exist in actual DB yet. Use createdAt for ordering. Restore after migration confirmed.
+  // date: original release date — kept for ordering/display. Column ensured by startup migration.
+  date: timestamp("date").defaultNow(), // nullable: rows before migration have null, default NOW() for new rows
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   categoryIdx: index("platform_updates_category_idx").on(table.category),
   priorityIdx: index("platform_updates_priority_idx").on(table.isNew, table.priority, table.createdAt),
   workspaceIdx: index("platform_updates_workspace_idx").on(table.workspaceId),
-  dateIdx: index("platform_updates_date_idx").on(table.date),
   visibilityIdx: index("platform_updates_visibility_idx").on(table.visibility),
 }));
 

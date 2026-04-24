@@ -103,16 +103,18 @@ class TrinityRecognitionEngine {
       SELECT user_id, workspace_id FROM employees WHERE id = $1
     `, [m.employeeId]);
 
+    const employeeUserId = typeof emp[0]?.user_id === 'string' ? emp[0].user_id : undefined;
+
     if (template.delivery_channel === 'dm' || template.delivery_channel === 'both') {
-      if (emp[0]?.user_id) {
+      if (employeeUserId) {
         await createNotification({
           workspaceId: m.workspaceId,
-          userId: emp[0].user_id,
+          userId: employeeUserId,
           type: 'trinity_recognition',
           title: this.getTitleForMilestone(m.milestoneType, m.employeeName),
           message,
           priority: 'normal',
-          idempotencyKey: `trinity_recognition-${String(Date.now())}-${emp[0].user_id}`,
+          idempotencyKey: `trinity_recognition-${String(Date.now())}-${employeeUserId}`,
         }).catch(() => null);
       }
     }
@@ -137,16 +139,17 @@ class TrinityRecognitionEngine {
       ORDER BY created_at ASC LIMIT 1
     `, [m.workspaceId, role === 'owner' ? 'org_owner' : role === 'manager' ? 'org_manager' : 'supervisor']);
 
-    if (target[0]?.user_id) {
+    const targetUserId = typeof target[0]?.user_id === 'string' ? target[0].user_id : undefined;
+    if (targetUserId) {
       const approvalNote = `Trinity has drafted the following recognition message. Review and approve:\n\n"${message}"\n\nOfficer: ${m.employeeName} | Milestone: ${m.milestoneType}`;
       await createNotification({
         workspaceId: m.workspaceId,
-        userId: target[0].user_id,
+        userId: targetUserId,
         type: 'trinity_recognition_pending',
         title: `Recognition Pending Approval: ${m.employeeName}`,
         message: approvalNote,
         priority: 'normal',
-        idempotencyKey: `trinity_recognition_pending-${String(Date.now())}-${target[0].user_id}`,
+        idempotencyKey: `trinity_recognition_pending-${String(Date.now())}-${targetUserId}`,
         }).catch(() => null);
     }
   }
@@ -224,7 +227,6 @@ class TrinityRecognitionEngine {
       // @ts-expect-error — TS migration: fix in refactoring sprint
       firstName: best.first_name, lastName: best.last_name, companyName,
       compositeScore: String(Math.round(Number(best.composite_score))),
-        idempotencyKey: `trinity_raise_suggestion-${Date.now()}-${mgr[0].userId}`
     }) : `Officer of the Month: ${best.first_name} ${best.last_name}! Exceptional performance this month. — Trinity`;
 
     // CATEGORY C — Raw SQL retained: LIMIT | Tables: workspace_members | Verified: 2026-03-23
@@ -234,13 +236,14 @@ class TrinityRecognitionEngine {
       LIMIT 1
     `, [workspaceId]);
 
-    if (owner[0]?.user_id) {
+    const ownerUserId = typeof owner[0]?.user_id === 'string' ? owner[0].user_id : undefined;
+    if (ownerUserId) {
       await createNotification({
         workspaceId,
-        userId: owner[0].user_id,
+        userId: ownerUserId,
         type: 'trinity_ootm_nomination',
         title: `Officer of the Month Nomination: ${best.first_name} ${best.last_name}`,
-        idempotencyKey: `trinity_ootm_nomination-${Date.now()}-${owner[0].user_id}`,
+        idempotencyKey: `trinity_ootm_nomination-${Date.now()}-${ownerUserId}`,
         message: `Trinity nominates ${best.first_name} ${best.last_name} for Officer of the Month (score: ${Math.round(Number(best.composite_score))}). Approve to send the announcement to the team.\n\nMessage:\n"${message}"`,
         priority: 'normal'
       } as any).catch(() => null);
@@ -288,15 +291,16 @@ class TrinityRecognitionEngine {
         LIMIT 1
       `, [workspaceId]);
 
-      if (mgr[0]?.user_id) {
+      const managerUserId = typeof mgr[0]?.user_id === 'string' ? mgr[0].user_id : undefined;
+      if (managerUserId) {
         await createNotification({
           workspaceId,
-          userId: mgr[0].user_id,
+          userId: managerUserId,
           type: 'trinity_fto_suggestion',
           title: `FTO Eligibility: ${r.first_name} ${r.last_name}`,
           message,
           priority: 'normal',
-          idempotencyKey: `trinity_fto_suggestion-${String(Date.now())}-${mgr[0].user_id}`,
+          idempotencyKey: `trinity_fto_suggestion-${String(Date.now())}-${managerUserId}`,
         }).catch(() => null);
       }
     }
@@ -360,14 +364,15 @@ class TrinityRecognitionEngine {
       LIMIT 1
     `, [workspaceId]);
 
-    if (rows[0]?.user_id) {
+    const supervisorUserId = typeof rows[0]?.user_id === 'string' ? rows[0].user_id : undefined;
+    if (supervisorUserId) {
       await createNotification({
-        workspaceId, userId: rows[0].user_id,
+        workspaceId, userId: supervisorUserId,
         type: 'milestone_alert',
         title: `Milestone Alert: ${employeeName}`,
         message: `${employeeName} has reached a ${milestoneType.replace(/_/g, ' ')} milestone. Trinity has sent them a recognition message. Context: ${context.slice(0, 200)}`,
         priority: 'normal',
-        idempotencyKey: `milestone_alert-${String(Date.now())}-${rows[0].user_id}`,
+        idempotencyKey: `milestone_alert-${String(Date.now())}-${supervisorUserId}`,
         }).catch(() => null);
     }
   }

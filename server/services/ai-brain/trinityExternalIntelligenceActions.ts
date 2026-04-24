@@ -48,7 +48,12 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
   };
 }
 
-async function notifyManagers(workspaceId: string, title: string, message: string, priority: string = 'high') {
+async function notifyManagers(
+  workspaceId: string,
+  title: string,
+  message: string,
+  priority: 'low' | 'normal' | 'high' | 'urgent' = 'high',
+) {
   // Import dynamically to avoid circular dependencies if any
   const { workspaceMembers } = await import('@shared/schema');
   const { sql } = await import('drizzle-orm');

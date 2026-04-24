@@ -27,7 +27,12 @@ function LoadingSpinner() {
       <Suspense fallback={<div className="w-20 h-20" />}>
         <TrinityArrowMark size={80} />
       </Suspense>
-      <span className="text-muted-foreground">Loading...</span>
+      <div className="text-center space-y-1">
+        <p className="text-sm font-medium text-foreground">Loading your dashboard</p>
+        <p className="text-xs text-muted-foreground">
+          We are checking your workspace access, role, and starting view.
+        </p>
+      </div>
     </div>
   );
 }

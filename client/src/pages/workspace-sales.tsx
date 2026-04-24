@@ -285,11 +285,18 @@ export default function WorkspaceSales() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {invitationsLoading ? (
-                    <p className="text-sm text-muted-foreground">Loading...</p>
+                    <div className="text-sm text-muted-foreground py-8 text-center space-y-2">
+                      <Mail className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
+                      <p className="font-medium text-foreground">Loading invitation pipeline</p>
+                      <p>Checking pending invites and onboarding progress for invited organizations.</p>
+                    </div>
                   ) : activeInvitations.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No active invitations yet</p>
+                      <p className="text-sm font-medium text-foreground">No active invitations yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Send a trial invite to start your first external onboarding motion.
+                      </p>
                     </div>
                   ) : (
                     activeInvitations.map((inv) => (
@@ -408,11 +415,18 @@ export default function WorkspaceSales() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {proposalsLoading ? (
-                    <p className="text-sm text-muted-foreground">Loading...</p>
+                    <div className="text-sm text-muted-foreground py-8 text-center space-y-2">
+                      <FileText className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
+                      <p className="font-medium text-foreground">Loading proposal pipeline</p>
+                      <p>Pulling live proposal drafts, sent offers, and linked deal progress.</p>
+                    </div>
                   ) : sentProposals.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No proposals sent yet</p>
+                      <p className="text-sm font-medium text-foreground">No proposals sent yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Create a deal first, then generate a proposal when the opportunity is ready for pricing.
+                      </p>
                     </div>
                   ) : (
                     sentProposals.map((proposal) => (

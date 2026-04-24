@@ -47,7 +47,7 @@ const log = createLogger('Health');
 
 // Authenticated request type
 interface AuthenticatedRequest extends Request {
-  user?: User;
+  user?: Request["user"];
   workspaceId?: string;
 }
 
@@ -355,7 +355,6 @@ apiHealthRouter.get('/detailed', async (req: Request, res: Response) => {
   try {
     // Gate to platform_staff role
     const authReq = req as AuthenticatedRequest;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (authReq.workspaceRole !== 'platform_staff' && authReq.workspaceRole !== 'org_owner') {
       return res.status(403).json({ error: 'Unauthorized. Platform staff access required.' });
     }

@@ -176,7 +176,10 @@ export async function runAnvilOperationalSeed(): Promise<{ success: boolean; mes
           billableToClient: true,
           createdAt: sql`now()`,
           updatedAt: sql`now()`,
-        }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: [shifts.id],
+          set: { date: shiftDateStr, updatedAt: sql`now()` }
+        });
       }
     }
   });

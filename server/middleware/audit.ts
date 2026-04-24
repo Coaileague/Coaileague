@@ -9,23 +9,6 @@ import { universalAudit } from '../services/universalAuditService';
 import { createLogger } from '../lib/logger';
 const log = createLogger('auditMiddleware');
 
-// Extend Express Request to include audit context
-declare global {
-  namespace Express {
-    interface Request {
-      auditContext?: {
-        workspaceId: string;
-        userId: string;
-        userEmail: string;
-        userRole: string;
-        ipAddress: string;
-        userAgent: string;
-        requestId: string;
-      };
-    }
-  }
-}
-
 // Extract IP address from request (handles proxies)
 function getClientIp(req: Request): string {
   const forwarded = req.headers['x-forwarded-for'];
@@ -102,7 +85,26 @@ export async function createAuditLog(
     return;
   }
 
-  const { workspaceId, userId, userEmail, userRole, ipAddress, userAgent, requestId } = req.auditContext;
+  const {
+    workspaceId,
+    userId,
+    userEmail,
+    userRole,
+    ipAddress,
+    userAgent,
+    requestId,
+  } = req.auditContext;
+
+  if (!workspaceId || !userId || !userEmail || !userRole) {
+    log.warn('Incomplete audit context - skipping audit log write', {
+      workspaceId,
+      userId,
+      userEmail,
+      userRole,
+      requestId: requestId || req.requestId,
+    });
+    return;
+  }
 
   try {
     await storage.createAuditLog({
@@ -120,7 +122,7 @@ export async function createAuditLog(
       },
       ipAddress,
       userAgent,
-      requestId,
+      requestId: requestId || req.requestId,
       isSensitiveData: options?.isSensitiveData || false,
       complianceTag: options?.complianceTag || null,
     });
@@ -143,7 +145,7 @@ export async function createAuditLog(
       entityId,
       changeType: (changeTypeMap[action] || 'action') as any,
       changes: changes ? { data: { old: null, new: changes } } : null,
-      metadata: { endpoint: `${req.method} ${req.path}`, requestId, ...(options?.metadata || {}) },
+      metadata: { endpoint: `${req.method} ${req.path}`, requestId: requestId || req.requestId, ...(options?.metadata || {}) },
       sourceRoute: `${req.method} ${req.path}`,
     }).catch((err: any) => log.warn('[AuditLog] Async write failed (non-blocking):', err?.message));
   } catch (error) {

@@ -31,7 +31,6 @@ const router = Router();
 router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { enabled, workspaceId } = req.body;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user?.id || (req.user)?.claims?.sub;
       
       if (!workspaceId) {
@@ -92,7 +91,6 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
   router.post('/ai/trigger-session', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId, mode = 'fill_gaps' } = req.body;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user?.id || (req.user)?.claims?.sub;
       
       if (!workspaceId) {
@@ -109,6 +107,10 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
         return res.status(404).json({ message: "Workspace not found" });
       }
       
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
       const { resolveWorkspaceForUser } = await import('../rbac');
       const { role, error: rbacError } = await resolveWorkspaceForUser(userId, workspaceId);
       if (rbacError || !role) {

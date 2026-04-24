@@ -316,7 +316,7 @@ export default function CompanyReports() {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No data available for selected criteria
+              No report data matches the selected criteria yet. Adjust the filters or generate more activity for this reporting window.
             </div>
           )}
         </CardContent>

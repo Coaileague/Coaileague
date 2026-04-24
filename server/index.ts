@@ -169,7 +169,7 @@ import { platformEventBus } from "./services/platformEventBus";
 import { startNotificationCleanupScheduler } from "./services/notificationCleanupService";
 import { initTokenCleanupScheduler } from "./services/tokenCleanupService";
 import { initializeOrchestrationServices, setOrchestrationWebSocketBroadcaster } from "./services/ai-brain/orchestrationBridge";
-import { broadcastToWorkspace, setupWebSocket } from "./websocket";
+import { broadcastToWorkspace } from "./websocket";
 import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader";
 import "./services/scheduleLiveNotifier";
 import { tracingMiddleware } from "./services/infrastructure/distributedTracing";
@@ -1659,7 +1659,9 @@ process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
 
 // Handle uncaught exceptions - be resilient to Neon serverless errors
 process.on('uncaughtException', (err: any) => {
-  log.error('Uncaught exception', { error: err instanceof Error ? { message: err.message, stack: err.stack } : String(err) });
+  const errMsg = err instanceof Error ? err.message : String(err);
+  const errStack = err instanceof Error ? (err.stack || '').split('\n').slice(0,5).join(' | ') : '';
+  log.error(`Uncaught exception: ${errMsg} | code=${err?.code || 'none'} | ${errStack.slice(0,200)}`);
   
   if (err.message?.includes('Cannot set property message') && 
       err.message?.includes('ErrorEvent')) {
@@ -1669,6 +1671,11 @@ process.on('uncaughtException', (err: any) => {
   
   if (err.code === '57P01' || err.message?.includes('terminating connection due to administrator command')) {
     log.warn('Database connection terminated by administrator (non-fatal), continuing');
+    return;
+  }
+  
+  if (errMsg?.includes('column "date" does not exist') || errMsg?.includes("column 'date' does not exist")) {
+    log.warn('platform_updates.date column missing (non-fatal) — migration will add it');
     return;
   }
   
@@ -1698,10 +1705,23 @@ process.on('unhandledRejection', (reason: any, promise) => {
 (async () => {
   const startupStart = Date.now();
   let server;
-  
+
+  // ── EARLIEST CRITICAL MIGRATION ─────────────────────────────────────────────
+  // Must run before ANYTHING — Phase 0 route registration fires background tasks
+  // that immediately insert to platform_updates with the 'date' column.
+  // Running here (before Phase 0, before bindToPort) eliminates the race condition.
+  try {
+    const { pool: earlyPool } = await import('./db');
+    await earlyPool.query(`ALTER TABLE platform_updates ADD COLUMN IF NOT EXISTS date TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
+    await earlyPool.query(`ALTER TABLE platform_updates ALTER COLUMN date DROP NOT NULL`);
+  } catch (e: any) {
+    // Non-fatal: table may not exist yet (first boot) or column already exists
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // Port is cleaned up right before server.listen() for maximum reliability
   const port = parseInt(process.env.PORT || '5000', 10);
-  
+
   // Environment validation — comprehensive check of critical and billing vars
   validateEnvironment();
 
@@ -2122,11 +2142,6 @@ process.on('unhandledRejection', (reason: any, promise) => {
     process.exit(1);
   }
 
-  // Attach WebSocket server immediately after port is bound.
-  // Must happen before any clients can connect; broadcastToWorkspace depends on this.
-  setupWebSocket(server);
-  log.info('WebSocket server initialized on /ws/chat');
-
   // Dev only: Vite HMR setup requires the bound server reference
   if (app.get("env") === "development") {
     const { crawlerPrerenderMiddleware } = await import('./middleware/crawlerPrerender');
@@ -2149,6 +2164,18 @@ process.on('unhandledRejection', (reason: any, promise) => {
     log.info('Server listening', { port, listenTimeMs: listenTime });
     
     viteLog(`serving on port ${port}`);
+
+    // ── PRE-GRACE CRITICAL MIGRATION ─────────────────────────────────────────
+    // Run before the grace period so HTTP requests during those 3s don't hit
+    // missing columns. platform_updates.date must exist before any SELECT/INSERT.
+    try {
+      const { pool } = await import('./db');
+      await pool.query(`ALTER TABLE platform_updates ADD COLUMN IF NOT EXISTS date TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
+      log.info('[PreGrace] platform_updates.date column ensured');
+    } catch (e: any) {
+      log.warn('[PreGrace] platform_updates migration failed (non-fatal):', e.message);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // STARTUP GRACE: Brief pause for old TCP connections to drain before DB access
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -2177,7 +2204,11 @@ process.on('unhandledRejection', (reason: any, promise) => {
 
     // PHASE 1: Critical services (run first, before any seeding tasks)
     log.info('Phase 1: Critical services');
-    await initializeCriticalServices();
+    try {
+      await initializeCriticalServices();
+    } catch (err: any) {
+      log.error(`[CriticalServices] Failed (non-fatal): ${err.message}`);
+    }
 
     // Non-critical seeding tasks — fire-and-forget (do NOT block Phase 2+)
     void (async () => {
@@ -2308,7 +2339,10 @@ process.on('unhandledRejection', (reason: any, promise) => {
       } catch (error) {
         log.error('Onboarding task migration failed (non-fatal)', { error: error instanceof Error ? error.message : String(error) });
       }
-    })();
+    })().catch((err: any) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error(`[PostListen] Unhandled crash: ${msg}`);
+    });
 
     // PHASE 2: Initialize AI Brain core (parallel, after listen)
     log.info('Phase 2: AI Brain core services (parallel)');

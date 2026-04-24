@@ -564,8 +564,8 @@ export default function Analytics() {
   const handleExport = (format: 'csv' | 'pdf') => {
     if (!dashboard?.data) {
       toast({
-        title: "No data available",
-        description: "Cannot export - please wait for data to load",
+        title: "Analytics not ready yet",
+        description: "Export becomes available after this dashboard finishes loading data for the selected period.",
         variant: "destructive",
       });
       return;

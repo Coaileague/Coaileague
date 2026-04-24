@@ -702,7 +702,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   trinityOrchestration.auth.requestAuthenticated(user.id, endpoint, method, user.currentWorkspaceId || undefined);
 
   // Attach user to request
-  req.user = user;
+  req.user = user as typeof req.user;
 
   if (req.session && !req.session.activeWorkspaceId) {
     const wsId = req.session.workspaceId || user.currentWorkspaceId;
@@ -722,10 +722,8 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
   // Propagate workspaceId onto req.user so routes reading req.user?.workspaceId work correctly.
   // The user DB model has 'currentWorkspaceId' but many routes expect 'req.user?.workspaceId'.
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  if (req.workspaceId && !(req.user).workspaceId) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    (req.user).workspaceId = req.workspaceId;
+  if (req.workspaceId && req.user && !req.user.workspaceId) {
+    req.user.workspaceId = req.workspaceId;
   }
 
   next();
@@ -785,13 +783,13 @@ export const requireAuthWithElevation: RequestHandler = async (req, res, next) =
         return res.status(403).json({ message: lockStatus.message });
       }
 
-      req.user = user;
+      req.user = user as typeof req.user;
       req.auditContext = {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+        requestId: req.requestId,
         isSupportElevated: true,
         elevationId: elevationContext.elevationId,
         platformRole: elevationContext.platformRole,
-        actionsExecuted: elevationContext.actionsExecuted
+        actionsExecuted: elevationContext.actionsExecuted,
       };
       return next();
     }
@@ -817,9 +815,8 @@ export const requireAuthWithElevation: RequestHandler = async (req, res, next) =
     return res.status(403).json({ message: lockStatus.message });
   }
 
-  req.user = user;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  req.auditContext = { isSupportElevated: false };
+  req.user = user as typeof req.user;
+  req.auditContext = { requestId: req.requestId, isSupportElevated: false };
   next();
 };
 
@@ -838,7 +835,7 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
     return res.status(403).json({ message: "Admin access required" });
   }
 
-  req.user = user;
+  req.user = user as typeof req.user;
   next();
 };
 
@@ -859,7 +856,7 @@ export const requireSupportStaff: RequestHandler = async (req, res, next) => {
       .json({ message: "Support staff access required" });
   }
 
-  req.user = user;
+  req.user = user as typeof req.user;
   next();
 };
 
@@ -869,7 +866,7 @@ export const requireAnyAuth: RequestHandler = async (req: any, res, next) => {
   if (req.session?.userId) {
     const [user] = await db.select().from(users).where(eq(users.id, req.session.userId)).limit(1);
     if (user) {
-      req.user = user;
+      req.user = user as typeof req.user;
       return next();
     }
   }
@@ -879,7 +876,7 @@ export const requireAnyAuth: RequestHandler = async (req: any, res, next) => {
     const userId = req.user?.id || req.user?.claims?.sub;
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (user) {
-      req.user = user;
+      req.user = user as typeof req.user;
       return next();
     }
   }

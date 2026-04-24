@@ -65,3 +65,8 @@ export function assertEnvironment() {
     process.exit(1);
   }
 }
+
+// ── Compatibility wrapper (Copilot handoff) ────────────────────────────────
+// Re-exports getEnvironmentValidationReport from the canonical startup validator.
+// This preserves the older API shape while routing to the single source of truth.
+export { getEnvironmentValidationReport } from '../startup/validateEnvironment';

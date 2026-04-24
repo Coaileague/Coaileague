@@ -647,7 +647,15 @@ function TrainingPipelineTab() {
     queryKey: ["/api/hiring/training-pipeline"],
   });
 
-  if (isLoading) return <div className="py-8 text-center text-muted-foreground text-sm">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="py-8 text-center text-muted-foreground text-sm space-y-2">
+        <GraduationCap className="w-8 h-8 mx-auto opacity-50 animate-pulse" />
+        <p className="font-medium text-foreground">Loading sponsorship candidates</p>
+        <p>Checking applicants who may need training or licensing support before deployment.</p>
+      </div>
+    );
+  }
 
   if (!trainees?.length) return (
     <div className="text-center py-10 text-muted-foreground">
@@ -764,7 +772,7 @@ export default function HiringPipeline() {
               data-testid="button-seed-hiring"
             >
               <Bot className="w-3.5 h-3.5 mr-1.5" />
-              {seedMut.isPending ? "Loading..." : "Load Test Data"}
+              {seedMut.isPending ? "Seeding..." : "Load Test Data"}
             </Button>
             <a
               href={`/jobs/${encodeURIComponent(currentWorkspaceId)}`}
@@ -804,7 +812,11 @@ export default function HiringPipeline() {
           {/* KANBAN */}
           <TabsContent value="kanban">
             {isLoading ? (
-              <div className="py-10 text-center text-muted-foreground text-sm">Loading pipeline...</div>
+              <div className="py-10 text-center text-muted-foreground text-sm space-y-2">
+                <Users className="w-8 h-8 mx-auto opacity-50 animate-pulse" />
+                <p className="font-medium text-foreground">Loading hiring pipeline</p>
+                <p>Pulling applicants, stage counts, and active hiring motions.</p>
+              </div>
             ) : (
               <div className="mt-4 overflow-x-auto">
                 <div className="flex gap-3 min-w-max pb-4">

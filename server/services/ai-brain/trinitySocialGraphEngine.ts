@@ -228,14 +228,17 @@ class TrinitySocialGraphEngine {
 
     if (recentlyNotified.length > 0) return;
 
+    const targetUserId = typeof rows[0]?.user_id === 'string' ? rows[0].user_id : undefined;
+    if (!targetUserId) return;
+
     await createNotification({
       workspaceId,
-      userId: rows[0].user_id,
+      userId: targetUserId,
       type: 'social_graph_insight',
       title: `Social Intelligence: ${insight.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
       message: insight.message,
       priority: insight.severity === 'high' ? 'high' : 'normal',
-      idempotencyKey: `social_graph_insight-${String(Date.now())}-${rows[0].user_id}`,
+      idempotencyKey: `social_graph_insight-${String(Date.now())}-${targetUserId}`,
         }).catch(() => null);
   }
 

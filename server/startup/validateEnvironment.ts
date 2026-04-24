@@ -90,3 +90,24 @@ export function validateEnvironment(): void {
     console.log('Environment validation passed');
   }
 }
+
+// ── Environment Validation Report (Copilot handoff) ──────────────────────────
+export function getEnvironmentValidationReport(): {
+  required: string[];
+  optional: string[];
+  missing: string[];
+  warnings: string[];
+} {
+  const required = [
+    'DATABASE_URL', 'SESSION_SECRET', 'ENCRYPTION_KEY',
+    'GEMINI_API_KEY', 'OPENAI_API_KEY', 'RESEND_API_KEY',
+  ];
+  const optional = [
+    'BASE_URL', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN',
+    'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'ANTHROPIC_API_KEY',
+    'GRANDFATHERED_TENANT_ID', 'GCS_KEY_JSON',
+  ];
+  const missing = required.filter(k => !process.env[k]);
+  const warnings = optional.filter(k => !process.env[k]).map(k => `Optional: ${k} not set`);
+  return { required, optional, missing, warnings };
+}

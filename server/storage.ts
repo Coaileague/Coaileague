@@ -876,7 +876,7 @@ export interface IStorage {
   // ========================================================================
   // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS (Dual-Scope Model)
   // ========================================================================
-  createNotification(notification: InsertNotification): Promise<Notification>;
+  createNotification(notification: InsertNotification & { idempotencyKey?: string; targetRole?: string }): Promise<Notification>;
   createUserScopedNotification(userId: string, type: string, title: string, message: string, metadata?: any): Promise<Notification>;
   getNotificationsByUser(userId: string, workspaceId: string, limit?: number, offset?: number): Promise<Notification[]>;
   getAllNotificationsForUser(userId: string, workspaceId?: string, limit?: number, offset?: number): Promise<Notification[]>;
@@ -7414,10 +7414,11 @@ export class DatabaseStorage implements IStorage {
   // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS
   // ========================================================================
   
-  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+  async createNotification(notificationData: InsertNotification & { idempotencyKey?: string; targetRole?: string }): Promise<Notification> {
+    const { idempotencyKey: _idempotencyKey, targetRole: _targetRole, ...insertableNotification } = notificationData;
     const [notification] = await db
       .insert(notifications)
-      .values(notificationData)
+      .values(insertableNotification)
       .returning();
     return notification;
   }
@@ -7972,7 +7973,7 @@ export class DatabaseStorage implements IStorage {
       title: platformUpdates.title,
       description: platformUpdates.description,
       category: platformUpdates.category,
-      date: platformUpdates.createdAt, // platformUpdates has no date column — use createdAt
+      date: platformUpdates.date,
       version: platformUpdates.version,
       badge: platformUpdates.badge,
       isNew: platformUpdates.isNew,

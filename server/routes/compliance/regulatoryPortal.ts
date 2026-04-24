@@ -389,8 +389,7 @@ router.post('/request/:id/dispute', requireAuth, async (req: Request, res: Respo
 router.post('/request/:id/grant', requireAuth, async (req: Request, res: Response) => {
   try {
     // Only platform-wide admins (cron or internal staff) may grant auditor access.
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const platformRole = req.platformRole || (req.user)?.platformRole;
+    const platformRole = req.platformRole || req.user?.platformRole || undefined;
     if (!hasPlatformWideAccess(platformRole)) {
       return res.status(403).json({ success: false, error: 'Platform admin access required' });
     }
@@ -523,7 +522,6 @@ router.get('/dashboard/:workspaceId/overview', requireAuditorPortalAuth, async (
 router.get('/dashboard/:workspaceId/insurance', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -559,7 +557,6 @@ router.get('/dashboard/:workspaceId/insurance', requireAuditorPortalAuth, async 
 router.get('/dashboard/:workspaceId/posting', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -594,7 +591,6 @@ router.get('/dashboard/:workspaceId/posting', requireAuditorPortalAuth, async (r
 router.get('/dashboard/:workspaceId/uniform', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -627,7 +623,6 @@ router.get('/dashboard/:workspaceId/uniform', requireAuditorPortalAuth, async (r
 router.get('/dashboard/:workspaceId/vehicles', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -665,7 +660,6 @@ router.get('/dashboard/:workspaceId/vehicles', requireAuditorPortalAuth, async (
 router.get('/dashboard/:workspaceId/officers', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -734,7 +728,6 @@ router.get('/dashboard/:workspaceId/officers', requireAuditorPortalAuth, async (
 router.get('/dashboard/:workspaceId/violations', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -755,7 +748,6 @@ router.get('/dashboard/:workspaceId/violations', requireAuditorPortalAuth, async
 router.get('/dashboard/:workspaceId/shifts', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -805,7 +797,6 @@ router.get('/dashboard/:workspaceId/shifts', requireAuditorPortalAuth, async (re
 router.get('/dashboard/:workspaceId/incidents', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -824,7 +815,6 @@ router.get('/dashboard/:workspaceId/incidents', requireAuditorPortalAuth, async 
 router.get('/dashboard/:workspaceId/documents', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -861,7 +851,6 @@ router.get('/dashboard/:workspaceId/documents', requireAuditorPortalAuth, async 
 router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.auditorWorkspaceId !== workspaceId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -869,6 +858,9 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
     const { reportUrl, auditOutcome, findings, correctiveActions } = req.body;
 
     const requestId = req.auditorAccountId;
+    if (!requestId) {
+      return res.status(400).json({ success: false, error: 'Auditor account context missing' });
+    }
     await db.update(auditorVerificationRequests).set({
       auditReportUrl: reportUrl,
       auditReportUploadedAt: new Date(),
@@ -933,7 +925,6 @@ router.post(
       const workspaceId = req.workspaceId;
       const userId = req.user?.id;
       const userEmail = req.user?.email;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userRole = (req.user)?.workspaceRole || req.workspaceRole;
 
       const { docKey, docLabel } = req.body as { docKey?: string; docLabel?: string };

@@ -160,7 +160,7 @@ router.get('/pending-count', requireAuth, async (req: AuthenticatedRequest, res)
 
 router.get('/pending-approval', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    const workspaceId = req.workspaceId?.id || req.workspaceId || req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const pendingExpenses = await db.select().from(expenses)

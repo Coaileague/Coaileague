@@ -543,8 +543,11 @@ export default function OwnerAnalytics() {
             ) : (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No Data</AlertTitle>
-                <AlertDescription>No analytics data available for the selected period.</AlertDescription>
+                <AlertTitle>No analytics activity yet</AlertTitle>
+                <AlertDescription>
+                  No analytics data is available for the selected period yet. Activity will appear here
+                  after users, billing events, or Trinity usage start generating history.
+                </AlertDescription>
               </Alert>
             )}
           </TabsContent>

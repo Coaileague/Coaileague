@@ -292,11 +292,11 @@ export function TrinityThoughtBar({
           <TrinityIcon color={colors.primary} active={isProcessing || state === "active"} />
           <span
             style={{
-              fontSize: "10px",
-              letterSpacing: "0.14em",
+              fontSize: "11px",
+              letterSpacing: "0.12em",
               textTransform: "uppercase",
               color: colors.text,
-              fontWeight: 600,
+              fontWeight: 700,
             }}
           >
             TRINITY
@@ -304,7 +304,7 @@ export function TrinityThoughtBar({
           {state === "fallback" && (
             <span
               style={{
-                fontSize: "8px",
+                fontSize: "10px",
                 color: "#FBBF24",
                 letterSpacing: "0.1em",
                 animation: "coai-fallback-amber-blink 3s infinite",
@@ -317,7 +317,7 @@ export function TrinityThoughtBar({
 
         {/* Left-center: Current action */}
         <div className="flex-shrink-0 w-52 min-w-0">
-          <div style={{ fontSize: "8px", color: colors.dim === "#7C3AED33" ? "#8B5CF6" : colors.text, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "1px" }}>
+          <div style={{ fontSize: "10px", color: colors.dim === "#7C3AED33" ? "#8B5CF6" : colors.text, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "1px" }}>
             {state === "critical" ? "CRITICAL ALERT" : state === "fallback" ? "FALLBACK MODE" : "CURRENT ACTION"}
           </div>
           <div
@@ -444,7 +444,7 @@ function ThreadPills({
           <span
             key={t.name}
             style={{
-              fontSize: "8px",
+              fontSize: "10px",
               letterSpacing: "0.06em",
               padding: "1px 5px",
               borderRadius: "3px",
@@ -485,7 +485,7 @@ function CognitiveLayers({
       <div className="flex items-center gap-1">
         <span
           style={{
-            fontSize: "8px",
+            fontSize: "10px",
             letterSpacing: "0.1em",
             color: badgeColor,
             animation: isOffline ? undefined : "coai-fallback-amber-blink 3s infinite",
@@ -516,7 +516,7 @@ function CognitiveLayers({
           <span
             key={key}
             style={{
-              fontSize: "8px",
+              fontSize: "10px",
               letterSpacing: "0.06em",
               padding: "1px 4px",
               borderRadius: "3px",

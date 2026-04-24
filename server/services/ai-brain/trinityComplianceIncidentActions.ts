@@ -162,16 +162,17 @@ export function registerComplianceIncidentActions() {
     if (!workspaceId || !incidentId) return { error: 'workspaceId and incidentId required' };
     if (clientId) {
       const client = await db.query.clients?.findFirst({ where: eq(clients.id, clientId) } as any).catch(() => null);
-      if (client && (client as any).email) {
+      const clientUserId = typeof (client as any)?.userId === 'string' ? (client as any).userId : undefined;
+      if (client && (client as any).email && clientUserId) {
         await createNotification({
           workspaceId,
-          userId: null,
+          userId: clientUserId,
           type: 'incident',
           title: 'Incident Report Filed at Your Site',
           message: message || `An incident has been filed and routed to your assigned supervisor. Incident ID: ${incidentId}`,
           priority: 'high',
           metadata: { incidentId, clientId, clientEmail: (client as any).email },
-          idempotencyKey: `incident-${String(Date.now())}-${null}`,
+          idempotencyKey: `incident-${String(Date.now())}-${clientUserId}`,
         }).catch(() => null);
       }
     }

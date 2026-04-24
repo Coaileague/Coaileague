@@ -61,11 +61,11 @@ export type Priority =
 
 export const TRINITY_COLORS: Record<CoAIStatusState, ColorToken> = {
   idle: {
-    primary: "#7C3AED",
-    dim: "#7C3AED33",
-    glow: "#7C3AED44",
-    text: "#C4B5FD",
-    border: "#7C3AED44",
+    primary: "#8B5CF6",
+    dim: "#8B5CF633",
+    glow: "#8B5CF644",
+    text: "#DDD6FE",
+    border: "#8B5CF666",
   },
   active: {
     primary: "#7C3AED",

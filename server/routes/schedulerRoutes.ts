@@ -709,7 +709,7 @@ router.post('/schedules/:scheduleId/rollback', async (req: Request, res: Respons
     }
 
     const allowedRoles = ['org_owner', 'co_owner', 'org_admin', 'manager', 'root_admin', 'deputy_admin', 'sysop'];
-    if (!allowedRoles.includes(userRole)) {
+    if (!userRole || !allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'Only admins and managers can rollback schedules' });
     }
 

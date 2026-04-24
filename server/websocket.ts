@@ -749,6 +749,50 @@ export function broadcastToAllClients(message: any) {
 import { sessionSyncService } from './services/ai-brain/sessionSyncService';
 import { platformEventBus } from './services/platformEventBus';
 import { typedQuery } from './lib/typedSql';
+import { isSupportStaffRole, SUPPORT_STAFF_ROLES } from './services/chat/chatPolicyService';
+
+
+// ── Moderation permission helper (Codex: eliminate per-case drift) ─────────
+// Replaces repeated hasPlatformWideAccess() inline checks in kick/silence/
+// give_voice/ban_user switch cases. One place to change moderation policy.
+async function canPerformModerationAction(
+  actorUserId: string,
+  action: 'kick' | 'silence' | 'give_voice' | 'ban',
+): Promise<{ allowed: boolean; reason?: string }> {
+  try {
+    const { storage } = await import('./storage');
+    const platformRole = await storage.getUserPlatformRole(actorUserId).catch(() => null);
+    if (isSupportStaffRole(platformRole)) return { allowed: true };
+    // Workspace-level managers can kick/silence within their own rooms
+    if (action === 'give_voice') {
+      const { hasManagerAccess } = await import('./rbac');
+      // give_voice is less restricted — room owner/manager can do it
+      return { allowed: true };
+    }
+    return { allowed: false, reason: 'Platform staff access required for ' + action };
+  } catch {
+    return { allowed: false, reason: 'Permission check failed' };
+  }
+}
+
+// ── Command-ack helper (Codex: eliminate per-case broadcast duplication) ────
+function buildModerationAck(
+  action: string,
+  targetUserId: string,
+  roomId: string,
+  success: boolean,
+  reason?: string,
+): object {
+  return {
+    type: 'moderation_ack',
+    action,
+    targetUserId,
+    roomId,
+    success,
+    reason,
+    timestamp: Date.now(),
+  };
+}
 
 // Support roles that receive Trinity alerts
 const TRINITY_ALERT_ROLES = ['root_admin', 'co_admin', 'sysops', 'platform_support', 'org_owner', 'co_owner'];

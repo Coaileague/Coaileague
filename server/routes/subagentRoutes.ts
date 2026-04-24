@@ -8,6 +8,7 @@
 
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response, NextFunction } from 'express';
+import type { Request } from 'express';
 import { db } from '../db';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
@@ -99,7 +100,6 @@ async function requireSubagentAccess(req: AuthenticatedRequest, res: Response, n
     });
   }
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   req.platformRole = platformRole;
   // @ts-expect-error — TS migration: fix in refactoring sprint
   req.user = userId;
@@ -110,7 +110,6 @@ async function requireSubagentAccess(req: AuthenticatedRequest, res: Response, n
 // SUBAGENT REGISTRY ENDPOINTS
 // ============================================================================
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/subagents', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const subagents = await subagentSupervisor.getAllSubagents();
@@ -121,10 +120,8 @@ router.get('/subagents', requireSubagentAccess, async (req: Request, res: Respon
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/subagents/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const subagent = await subagentSupervisor.getSubagent(req.params.id);
     if (!subagent) {
       return res.status(404).json({ success: false, error: 'Subagent not found' });
@@ -135,10 +132,8 @@ router.get('/subagents/:id', requireSubagentAccess, async (req: Request, res: Re
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/subagents/domain/:domain', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const subagents = await subagentSupervisor.getSubagentsByDomain(req.params.domain as any);
     res.json({ success: true, subagents });
   } catch (error: unknown) {
@@ -146,7 +141,6 @@ router.get('/subagents/domain/:domain', requireSubagentAccess, async (req: Reque
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.patch('/subagents/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -176,7 +170,6 @@ router.patch('/subagents/:id', requireSubagentAccess, async (req: Request, res: 
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/subagents/:id/toggle', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -209,7 +202,6 @@ router.post('/subagents/:id/toggle', requireSubagentAccess, async (req: Request,
 // SUBAGENT HEALTH & TELEMETRY
 // ============================================================================
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/health', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const health = await subagentSupervisor.getSubagentHealth();
@@ -219,7 +211,6 @@ router.get('/health', requireSubagentAccess, async (req: Request, res: Response)
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/telemetry', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const { subagentId, workspaceId, limit = 50 } = req.query;
@@ -243,7 +234,6 @@ router.get('/telemetry', requireSubagentAccess, async (req: Request, res: Respon
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/telemetry/:executionId', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const [telemetry] = await db.select().from(subagentTelemetry)
@@ -263,7 +253,6 @@ router.get('/telemetry/:executionId', requireSubagentAccess, async (req: Request
 // SELF-CORRECTION METRICS (Observability for retry loop monitoring)
 // ============================================================================
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/metrics/self-correction', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const { workspaceId, subagentId, since } = req.query;
@@ -375,7 +364,6 @@ router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedR
 // SUPPORT INTERVENTIONS (Approval Workflow)
 // ============================================================================
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/interventions', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const { workspaceId, status = 'pending' } = req.query;
@@ -400,7 +388,6 @@ router.get('/interventions', requireSubagentAccess, async (req: Request, res: Re
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/interventions/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const [intervention] = await db.select().from(supportInterventions)
@@ -416,17 +403,19 @@ router.get('/interventions/:id', requireSubagentAccess, async (req: Request, res
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/interventions/:id/approve', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id || authReq.session?.userId || req.user?.id;
     const platformRole = req.platformRole;
     
+    if (!userId || !platformRole) {
+      return res.status(401).json({ success: false, error: 'Platform-authenticated support user required' });
+    }
+
     const approved = await subagentSupervisor.approveIntervention(
       req.params.id,
-      userId!,
+      userId,
       platformRole
     );
     
@@ -440,10 +429,8 @@ router.post('/interventions/:id/approve', requireSubagentAccess, async (req: Req
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id || authReq.session?.userId || req.user?.id;
     
@@ -481,7 +468,6 @@ router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Requ
 // TRINITY ACCESS CONTROL (Per-workspace/feature RBAC)
 // ============================================================================
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/access-control', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const { workspaceId, resourceType } = req.query;
@@ -502,7 +488,6 @@ router.get('/access-control', requireSubagentAccess, async (req: Request, res: R
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/access-control/:workspaceId/:resourceType/:resourceId', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const { workspaceId, resourceType, resourceId } = req.params;
@@ -524,10 +509,8 @@ router.get('/access-control/:workspaceId/:resourceType/:resourceId', requireSuba
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/access-control', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id || authReq.session?.userId || req.user?.id;
     
@@ -557,10 +540,8 @@ router.post('/access-control', requireSubagentAccess, async (req: Request, res: 
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id || authReq.session?.userId || req.user?.id;
     
@@ -594,7 +575,6 @@ router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, 
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.delete('/access-control/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const [deleted] = await db.delete(trinityAccessControl)
@@ -615,10 +595,8 @@ router.delete('/access-control/:id', requireSubagentAccess, async (req: Request,
 // SUBAGENT EXECUTION (Test/Debug)
 // ============================================================================
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/execute', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id || authReq.session?.userId || req.user?.id;
     const platformRole = req.platformRole;
@@ -640,6 +618,10 @@ router.post('/execute', requireSubagentAccess, async (req: Request, res: Respons
       return { executed: true, params, timestamp: new Date().toISOString() };
     };
     
+    if (!platformRole) {
+      return res.status(401).json({ success: false, error: 'Platform role required' });
+    }
+
     const result = await subagentSupervisor.executeAction(
       domain,
       actionId,
@@ -664,10 +646,8 @@ const meetingModeSchema = z.object({
   mode: z.enum(['standard', 'fast', 'emergency']).optional(),
 }).strict();
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/performance-meetings/conduct', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authReq = req as AuthenticatedRequest;
     const workspaceId = req.workspaceId || authReq.session?.workspaceId || 'platform-system';
     
@@ -690,10 +670,8 @@ router.post('/performance-meetings/conduct', requireSubagentAccess, async (req: 
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/performance-meetings/fast', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authReq = req as AuthenticatedRequest;
     const workspaceId = req.workspaceId || authReq.session?.workspaceId || 'platform-system';
     
@@ -706,10 +684,8 @@ router.post('/performance-meetings/fast', requireSubagentAccess, async (req: Req
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/performance-meetings/history', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const meetings = subagentPerformanceMeetingService.getMeetingHistory(limit);
     
@@ -719,7 +695,6 @@ router.get('/performance-meetings/history', requireSubagentAccess, async (req: R
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/performance-meetings/supervisors/status', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const supervisors = subagentPerformanceMeetingService.getHandlerSupervisors();
@@ -730,7 +705,6 @@ router.get('/performance-meetings/supervisors/status', requireSubagentAccess, as
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/performance-meetings/schedule', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const config = subagentPerformanceMeetingService.getScheduleConfig();
@@ -741,10 +715,8 @@ router.get('/performance-meetings/schedule', requireSubagentAccess, async (req: 
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/performance-meetings/:meetingId', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const meeting = subagentPerformanceMeetingService.getMeeting(req.params.meetingId);
     
     if (!meeting) {
@@ -757,7 +729,6 @@ router.get('/performance-meetings/:meetingId', requireSubagentAccess, async (req
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.put('/performance-meetings/schedule', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const configSchema = z.object({

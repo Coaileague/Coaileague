@@ -136,7 +136,6 @@ app.post('/api/helpos/faqs', requirePlatformStaff, async (req: AuthenticatedRequ
     // Generate embedding for semantic search using OpenAI
     let embeddingVector: string | null = null;
     if (process.env.OPENAI_API_KEY) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
       const poolAvailable = await checkSupportPoolAvailable();
       if (!poolAvailable) {
@@ -188,7 +187,6 @@ app.patch('/api/helpos/faqs/:id', requirePlatformStaff, async (req: Authenticate
     // If question or answer changed, regenerate embedding
     let embeddingVector: string | null | undefined = undefined;
     if ((updateData.question || updateData.answer) && process.env.OPENAI_API_KEY) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
       const poolAvailable = await checkSupportPoolAvailable();
       if (!poolAvailable) {
@@ -320,7 +318,6 @@ app.post('/api/helpos/faqs/search/semantic', readLimiter, requireAuth, async (re
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const canSearchUnpublished = isPlatformStaff(req.user);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
@@ -422,7 +419,6 @@ app.post('/api/helpos/faqs/generate/from-ticket', requirePlatformStaff, async (r
       return res.status(400).json({ message: 'Ticket must have a resolution to generate FAQ' });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
@@ -493,7 +489,6 @@ app.post('/api/helpos/faqs/generate/from-conversation', requirePlatformStaff, as
       return res.status(503).json({ message: 'AI generation not available - OpenAI API key not configured' });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
@@ -563,7 +558,6 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
       return res.status(503).json({ message: 'Bulk import requires OpenAI API key for generating embeddings' });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
     const poolAvailable = await checkSupportPoolAvailable();
     if (!poolAvailable) {
@@ -663,7 +657,6 @@ app.get('/api/ai/faq/search', readLimiter, requireAuth, async (req: Authenticate
     }
 
     const searchLimit = Math.min(Number(limit) || 5, 20); // Cap at 20 results
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const convId = (conversationId as string) || undefined;
 
@@ -739,8 +732,8 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
 
     try {
       const geminiResponse = await geminiClient.generate({
-        workspaceId: wsId,
-        userId: req.user?.id,
+        workspaceId: wsId ?? undefined,
+        userId: req.user?.id ?? undefined,
         featureKey: 'faq_search',
         systemPrompt,
         userMessage,
@@ -852,7 +845,7 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
       try {
         await ChatServerHub.emitAIAction({
           conversationId: convId,
-          workspaceId: wsId,
+          workspaceId: wsId ?? undefined,
           actionType: 'suggestion',
           title: 'FAQ Suggestions Found',
           description: resultSummary,

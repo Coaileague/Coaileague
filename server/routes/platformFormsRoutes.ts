@@ -13,10 +13,33 @@ import { generateAndStorePdf, generateAndGetPdf } from '../services/formsPdfServ
 const log = createLogger('PlatformFormsRoutes');
 const router = Router();
 
+function getAuthenticatedUser(
+  req: Request,
+  res: Response
+): (NonNullable<Request['user']> & { workspaceId: string }) | null {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return null;
+  }
+  const workspaceId = user.workspaceId || user.currentWorkspaceId || req.workspaceId;
+  if (!workspaceId) {
+    res.status(400).json({ error: 'Workspace context required' });
+    return null;
+  }
+
+  if (!user.workspaceId) {
+    user.workspaceId = workspaceId;
+  }
+
+  return user as NonNullable<Request['user']> & { workspaceId: string };
+}
+
 // GET /api/forms — list forms for workspace (auth required)
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const workspaceId = user.workspaceId;
     const result = await pool.query(
       `SELECT id, form_type, title, description, fields, submit_action,
@@ -38,7 +61,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 // GET /api/forms/invitations — list invitations for workspace (forms manager)
 router.get('/invitations', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const wid = user.workspaceId;
     const status = (req.query.status as string) || null;
     const formId = (req.query.formId as string) || null;
@@ -68,7 +92,8 @@ router.get('/invitations', requireAuth, async (req: Request, res: Response) => {
 // POST /api/forms/:invId/reminder — send reminder
 router.post('/:invId/reminder', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const inv = await pool.query(
       `SELECT fi.*, pf.title FROM form_invitations fi
        JOIN platform_forms pf ON pf.id = fi.form_id
@@ -97,7 +122,8 @@ router.post('/:invId/reminder', requireAuth, async (req: Request, res: Response)
 // POST /api/forms — create a custom form
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const {
       formType, title, description, fields, submitAction, successMessage,
       requiresSignature, signatureLabel, prePopulationSource
@@ -438,7 +464,8 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
 // GET /api/forms/:formId/submissions — get submissions for a form (auth required)
 router.get('/:formId/submissions', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const result = await pool.query(
       `SELECT fs.id, fs.submitted_by_email, fs.submitted_by_name, fs.data,
               fs.submitted_at, fs.processed_at, fs.trinity_action_taken,
@@ -463,7 +490,8 @@ router.get('/:formId/submissions', requireAuth, async (req: Request, res: Respon
 // POST /api/forms/signing/sequences — create a multi-party signing sequence
 router.post('/signing/sequences', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const { documentTitle, documentId, formId, signers, expiresInDays = 30 } = req.body;
     if (!documentTitle || !signers?.length) {
       return res.status(400).json({ error: 'documentTitle and signers are required' });
@@ -573,7 +601,8 @@ router.post('/signing/sequences', requireAuth, async (req: Request, res: Respons
 // GET /api/forms/signing/sequences — list sequences for workspace
 router.get('/signing/sequences', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const result = await pool.query(
       `SELECT dss.id, dss.document_title, dss.status, dss.signers,
               dss.current_signer_index, dss.created_at, dss.completed_at, dss.expires_at,
@@ -761,7 +790,8 @@ router.post('/sign/:token', async (req: Request, res: Response) => {
 // POST /api/forms/proposals — create an online proposal
 router.post('/proposals', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const { title, leadId, clientId, clientName, clientEmail, content, totalMonthlyValue } = req.body;
     if (!title) return res.status(400).json({ error: 'title is required' });
 
@@ -864,7 +894,8 @@ router.post('/proposals/public/:token/action', async (req: Request, res: Respons
 // GET /api/forms/:id — get a specific form (auth required)
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const result = await pool.query(
       `SELECT * FROM platform_forms
        WHERE id = $1 AND (workspace_id = $2 OR workspace_id IS NULL)`,
@@ -881,7 +912,8 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
 // POST /api/forms/:formId/invite — send a form invitation via secure token
 router.post('/:formId/invite', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const { email, phone, name, contextType, contextId, expiresHours = 168, prePopulatedData: manualData } = req.body;
 
     if (!email && !phone) {
@@ -1034,7 +1066,8 @@ router.post('/:formId/invite', requireAuth, async (req: Request, res: Response) 
 // GET /api/forms/submissions/:id/pdf — download generated PDF for a submission
 router.get('/submissions/:id/pdf', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const sub = await pool.query(
       `SELECT fs.*, pf.title, pf.form_type, pf.fields, pf.requires_signature, pf.signature_label
        FROM form_submissions fs
@@ -1079,7 +1112,8 @@ router.get('/submissions/:id/pdf', requireAuth, async (req: Request, res: Respon
 // POST /api/forms/submissions/:id/forward — forward submission by email
 router.post('/submissions/:id/forward', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = getAuthenticatedUser(req, res);
+    if (!user) return;
     const { toEmail, toName, message } = req.body;
     if (!toEmail) return res.status(400).json({ error: 'toEmail is required' });
 
