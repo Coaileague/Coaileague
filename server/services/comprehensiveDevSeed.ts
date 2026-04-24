@@ -121,17 +121,24 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
 
     // 6. Shifts + Time Entries (past 30 days completed)
     const fieldStaff = STAFF.filter(s => ['staff', 'supervisor'].includes(s.wsRole));
-    let shiftIdx = 0;
+    // Assign employees by TEMPLATE to prevent overlapping shifts per employee per day.
+    // Each template group uses different starting employees so no overlap within a day.
+    const tmplEmpOffset = [0, 2, 4]; // Different starting offset per template
 
     for (let day = 30; day >= 1; day--) {
-      for (const client of CLIENTS) {
-        for (const tmpl of SHIFT_TEMPLATES) {
-          shiftIdx++;
-          const emp = fieldStaff[shiftIdx % fieldStaff.length];
+      for (let tIdx = 0; tIdx < SHIFT_TEMPLATES.length; tIdx++) {
+        const tmpl = SHIFT_TEMPLATES[tIdx];
+        for (let cIdx = 0; cIdx < CLIENTS.length; cIdx++) {
+          const client = CLIENTS[cIdx];
+          // Employee assigned by: which template × which client × which day
+          // Using template offset + client index to pick different employees per client/template
+          const empIdx = (tmplEmpOffset[tIdx] + cIdx) % fieldStaff.length;
+          const emp = fieldStaff[empIdx];
           const startISO = daysAgo(day, tmpl.startH);
           const endISO = daysAgo(day, tmpl.endH < tmpl.startH ? tmpl.endH + 24 : tmpl.endH);
-          const shiftId = 'dev-shift-past-' + String(shiftIdx).padStart(4, '0');
-          const teId = 'dev-te-' + String(shiftIdx).padStart(4, '0');
+          const shiftNum = (30 - day) * CLIENTS.length * SHIFT_TEMPLATES.length + tIdx * CLIENTS.length + cIdx + 1;
+          const shiftId = 'dev-shift-past-' + String(shiftNum).padStart(4, '0');
+          const teId = 'dev-te-' + String(shiftNum).padStart(4, '0');
           const hours = calcHours(tmpl.startH, tmpl.endH);
           const regularH = Math.min(hours, 8);
           const otH = Math.max(hours - 8, 0);
@@ -143,7 +150,7 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
           await pool.query(
             `INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, date, start_time, end_time, status, pay_rate, bill_rate, billable_to_client, ai_generated, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,'completed',$9,$10,true,false,NOW(),NOW())
-             ON CONFLICT (id) DO UPDATE SET employee_id=EXCLUDED.employee_id, status=EXCLUDED.status, date=EXCLUDED.date, updated_at=NOW()`,
+             ON CONFLICT (id) DO NOTHING`,
             [shiftId, WS, emp.empId, client.id, (client.companyName || client.firstName) + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, emp.payRate, client.billRate]
           );
           counts.shifts++;
@@ -151,7 +158,7 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
           await pool.query(
             `INSERT INTO time_entries (id, workspace_id, shift_id, employee_id, client_id, captured_bill_rate, captured_pay_rate, regular_hours, overtime_hours, billable_amount, payable_amount, clock_in, clock_out, total_hours, hourly_rate, total_amount, status, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::timestamptz,$13::timestamptz,$14,$6,$10,'approved',NOW(),NOW())
-             ON CONFLICT (id) DO UPDATE SET status='approved', clock_out=EXCLUDED.clock_out, total_hours=EXCLUDED.total_hours, updated_at=NOW()`,
+             ON CONFLICT (id) DO NOTHING`,
             [teId, WS, shiftId, emp.empId, client.id, client.billRate, emp.payRate, regularH.toFixed(2), otH.toFixed(2), billable, payable, startISO, endISO, hours.toFixed(2)]
           );
           counts.timeEntries++;
@@ -160,21 +167,24 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
     }
 
     // Future 14 days (open + assigned)
-    let futureIdx = 0;
     for (let day = 1; day <= 14; day++) {
-      for (const client of CLIENTS) {
-        for (const tmpl of SHIFT_TEMPLATES) {
-          futureIdx++;
-          const isOpen = futureIdx % 3 === 0;
-          const emp = isOpen ? null : fieldStaff[futureIdx % fieldStaff.length];
+      for (let tIdx2 = 0; tIdx2 < SHIFT_TEMPLATES.length; tIdx2++) {
+        const tmpl = SHIFT_TEMPLATES[tIdx2];
+        for (let cIdx2 = 0; cIdx2 < CLIENTS.length; cIdx2++) {
+          const client = CLIENTS[cIdx2];
+          // ~50% open, 50% assigned — use day+client index to vary
+          const isOpen = (day + cIdx2) % 2 === 0;
+          const empIdx2 = (tmplEmpOffset[tIdx2] + cIdx2) % fieldStaff.length;
+          const emp = isOpen ? null : fieldStaff[empIdx2];
           const startISO = daysFromNow(day, tmpl.startH);
           const endISO = daysFromNow(day, tmpl.endH < tmpl.startH ? tmpl.endH + 24 : tmpl.endH);
-          const shiftId = 'dev-shift-future-' + String(futureIdx).padStart(4, '0');
+          const futureNum = (day - 1) * CLIENTS.length * SHIFT_TEMPLATES.length + tIdx2 * CLIENTS.length + cIdx2 + 1;
+          const shiftId = 'dev-shift-future-' + String(futureNum).padStart(4, '0');
 
           await pool.query(
             `INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, date, start_time, end_time, status, pay_rate, bill_rate, billable_to_client, ai_generated, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,true,false,NOW(),NOW())
-             ON CONFLICT (id) DO UPDATE SET employee_id=EXCLUDED.employee_id, status=EXCLUDED.status, date=EXCLUDED.date, updated_at=NOW()`,
+             ON CONFLICT (id) DO NOTHING`,
             [shiftId, WS, emp?.empId || null, client.id, (client.companyName || client.firstName) + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, isOpen ? 'published' : 'scheduled', emp?.payRate || '17.00', client.billRate]
           );
           counts.shifts++;
