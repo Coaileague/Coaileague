@@ -9,6 +9,7 @@ declare module "express-session" {
     workspaceRole?: string;
     employeeId?: string;
     workspaceName?: string;
+    activeWorkspaceId?: string;
     csrfToken?: string;
     csrfTokenCreatedAt?: number;
     passport?: {

@@ -33,6 +33,7 @@ interface CreateNotificationParams {
   priority?: 'low' | 'normal' | 'high' | 'urgent';
   data?: Record<string, any>;
   category?: string;
+  idempotencyKey?: string;
 }
 
 // All notification_type enum values that exist in the DB.

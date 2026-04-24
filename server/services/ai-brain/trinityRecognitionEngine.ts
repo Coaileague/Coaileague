@@ -224,7 +224,6 @@ class TrinityRecognitionEngine {
       // @ts-expect-error — TS migration: fix in refactoring sprint
       firstName: best.first_name, lastName: best.last_name, companyName,
       compositeScore: String(Math.round(Number(best.composite_score))),
-        idempotencyKey: `trinity_raise_suggestion-${Date.now()}-${mgr[0].userId}`
     }) : `Officer of the Month: ${best.first_name} ${best.last_name}! Exceptional performance this month. — Trinity`;
 
     // CATEGORY C — Raw SQL retained: LIMIT | Tables: workspace_members | Verified: 2026-03-23

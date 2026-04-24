@@ -167,6 +167,7 @@ export interface NotificationPayload {
   source?: string;
   skipFeatureCheck?: boolean;
   pushTag?: string;
+  idempotencyKey?: string;
 }
 
 export class UniversalNotificationEngine {

@@ -388,6 +388,7 @@ async function phase5_billing_credits() {
   if (!ws) return;
 
   try {
+    // @ts-expect-error — workspaceCredits table removed, wrapped in try/catch
     const [credits] = await db.select().from(workspaceCredits).where(eq(workspaceCredits.workspaceId, ws.id)).limit(1);
     record({
       name: 'Credit Account Exists',
@@ -399,6 +400,7 @@ async function phase5_billing_credits() {
   } catch (e: any) { record({ name: 'Credit Account', phase: 'BILLING', passed: false, details: e.message, severity: 'critical' }); }
 
   try {
+    // @ts-expect-error — creditTransactions table removed, wrapped in try/catch
     const txns = await db.select().from(creditTransactions).where(eq(creditTransactions.workspaceId, ws.id)).orderBy(desc(creditTransactions.createdAt)).limit(5);
     record({
       name: 'Credit Transaction History',

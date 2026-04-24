@@ -797,7 +797,6 @@ class ShiftRoomBotOrchestrator {
         relatedEntityId: conversationId,
         metadata: { shiftId: params.shiftId, siteName: params.siteName },
         createdBy: 'reportbot',
-        idempotencyKey: `shift_assigned-${conversationId}-${params.officerUserId}`
       });
 
       log.info(`[ShiftBotOrchestrator] Created shift room ${conversationId} for shift ${params.shiftId}`);
@@ -1709,7 +1708,6 @@ class ShiftRoomBotOrchestrator {
           relatedEntityId: entryId,
           metadata: { clockInMethod: 'supervisor_override', authorizedBy: managerName },
           createdBy: 'clockbot',
-          idempotencyKey: `shift_assigned-${entryId}-${pending.officerUserId}`
         });
       }
 

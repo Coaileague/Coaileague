@@ -941,13 +941,12 @@ async function notifyAdmins(
       await storage.createNotification({
         workspaceId,
         userId,
-        type: extra?.type || 'inbound_email',
+        type: (extra?.type || 'system') as any,
         title: extra?.title || 'Inbound Email Processed',
         message,
         actionUrl: extra?.actionUrl || `/audit?ref=email-${logId}`,
         relatedEntityType: extra?.relatedEntityType || 'inbound_email_log',
         relatedEntityId: extra?.relatedEntityId || logId,
-        idempotencyKey: `notification-${extra?.relatedEntityId || logId}-${'system'}`,
         }).catch((err: unknown) => {
         log.warn('[TrinityInboundEmail] notifyAdmins createNotification failed:', err instanceof Error ? err.message : String(err));
       });
