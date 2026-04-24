@@ -27,6 +27,7 @@ import { platformEventBus } from './platformEventBus';
 import { assertNoPeriodOverlap } from './payroll/payrollLedger';
 import { calculatePayrollTaxes, type PayPeriod as TaxPayPeriod, type FilingStatus as TaxFilingStatus } from './billing/payrollTaxService';
 import { getTaxRules, computeProgressiveStateTax, TAX_REGISTRY_VERSION, TAX_REGISTRY_EFFECTIVE_YEAR } from './tax/taxRulesRegistry';
+import { claimPayrollTimeEntries } from './payroll/payrollTimeEntryClaimer';
 const PRE_TAX_BENEFIT_TYPES = ['401k', 'health_insurance', 'dental_insurance', 'vision_insurance'];
 const POST_TAX_BENEFIT_TYPES = ['life_insurance', 'other'];
 
@@ -1451,20 +1452,17 @@ export class PayrollAutomationEngine {
         });
       }
 
-      // Inline time entry marking within the transaction for full atomicity.
-      // Using tx (not db) so this rolls back with the run if anything fails.
+      // Bulk-claim source time entries atomically via canonical claimer.
+      // Uses tx so the claim rolls back with the run if anything else fails.
       if (allTimeEntryIds.length > 0) {
-        let markedCount = 0;
-        for (const entryId of allTimeEntryIds) {
-          const marked = await tx
-            .update(timeEntries)
-            .set({ payrolledAt: new Date(), payrollRunId: run.id, updatedAt: new Date() })
-            .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.payrolledAt)))
-            .returning({ id: timeEntries.id });
-          if (marked.length > 0) markedCount++;
-          else log.warn(`[AI Payroll™] Entry ${entryId} already payrolled — skipping (idempotency guard)`);
-        }
-        log.info(`[AI Payroll™] Marked ${markedCount}/${allTimeEntryIds.length} entries as payrolled (run ${run.id}) — within transaction`);
+        const claimed = await claimPayrollTimeEntries({
+          workspaceId,
+          timeEntryIds: allTimeEntryIds,
+          payrollRunId: run.id,
+          requireAll: true,
+          tx,
+        });
+        log.info(`[AI Payroll™] Claimed ${claimed.claimedCount}/${claimed.requestedCount} entries for run ${run.id} — within transaction`);
       }
 
       // FIX-3: Ledger write INSIDE the payroll transaction.
@@ -1607,19 +1605,16 @@ export class PayrollAutomationEngine {
         throw new Error(`Payroll run ${payrollRunId} not found`);
       }
 
-      // Inline time-entry marking within the same transaction
+      // Bulk-claim source time entries atomically via canonical claimer.
       if (timeEntryIds && timeEntryIds.length > 0) {
-        let markedCount = 0;
-        for (const entryId of timeEntryIds) {
-          const result = await tx
-            .update(timeEntries)
-            .set({ payrolledAt: now, payrollRunId, updatedAt: now })
-            .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.payrolledAt)))
-            .returning({ id: timeEntries.id });
-          if (result.length > 0) markedCount++;
-          else log.warn(`[AI Payroll™] Entry ${entryId} already payrolled - skipping`);
-        }
-        log.info(`[AI Payroll™] Marked ${markedCount}/${timeEntryIds.length} entries as payrolled in run ${payrollRunId}`);
+        const claimed = await claimPayrollTimeEntries({
+          workspaceId,
+          timeEntryIds,
+          payrollRunId,
+          requireAll: true,
+          tx,
+        });
+        log.info(`[AI Payroll™] Claimed ${claimed.claimedCount}/${claimed.requestedCount} entries for run ${payrollRunId}`);
       } else {
         log.warn(`[AI Payroll™] Approved payroll ${payrollRunId} without marking entries - timeEntryIds not provided`);
       }

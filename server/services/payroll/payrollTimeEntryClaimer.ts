@@ -30,7 +30,9 @@ export async function claimPayrollTimeEntries({
   timeEntryIds,
   payrollRunId,
   requireAll = true,
-}: ClaimPayrollTimeEntriesParams): Promise<PayrollTimeEntryClaimResult> {
+  tx: client,
+}: ClaimPayrollTimeEntriesParams & { tx?: typeof db }): Promise<PayrollTimeEntryClaimResult> {
+  const client_ = client ?? db;
   if (!workspaceId) {
     throw new Error('[PayrollTimeEntryClaimer] workspaceId is required');
   }
@@ -43,7 +45,7 @@ export async function claimPayrollTimeEntries({
     return { requestedCount: 0, claimedCount: 0, claimedIds: [] };
   }
 
-  const claimed = await db
+  const claimed = await client_
     .update(timeEntries)
     .set({
       payrolledAt: new Date(),

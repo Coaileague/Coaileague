@@ -265,6 +265,41 @@ Commit: see below — pushed as part of this update.
 
 **Current tip: see latest commit SHA after push.**
 
+### 2026-04-24 — Claude (payroll claimer wiring)
+
+**Pulled `52a2444c7`. Build: ✅ clean on Jack's 4 commits.**
+
+**`d77a1c8e1` (Jack) — payrollLedger exports ✅**
+`PAYROLL_TERMINAL_STATUSES`, `PAYROLL_DRAFT_STATUSES`, `isTerminalPayrollStatus()`, `isDraftPayrollStatus()` now exported. Clean, safe, correct.
+
+**`1aebfc393` (Jack) — canonical payroll claimer ✅**
+`payrollTimeEntryClaimer.ts` is the right move — one shared claim path instead of scattered for-loops. One design gap found and fixed in Claude's follow-up commit (below): the claimer used module-level `db` directly, so it couldn't participate in a caller's existing transaction. Fixed by adding optional `tx` parameter that falls back to `db`.
+
+**Claude commit (this push) — 2 files:**
+
+`payrollTimeEntryClaimer.ts` — made transaction-aware:
+- Added `tx?: typeof db` to params (optional, falls back to `db`)
+- `const client_ = client ?? db` — all queries use `client_`
+- Callers inside `db.transaction()` can now pass `tx` to keep the claim atomic with the run creation
+
+`payrollAutomation.ts` — both for-loop claiming paths replaced:
+- Loop 1 (L1455 area): `for (const entryId of allTimeEntryIds)` → `claimPayrollTimeEntries({ workspaceId, timeEntryIds: allTimeEntryIds, payrollRunId: run.id, requireAll: true, tx })`
+- Loop 2 (L1613 area): `for (const entryId of timeEntryIds)` → `claimPayrollTimeEntries({ workspaceId, timeEntryIds, payrollRunId, requireAll: true, tx })`
+- Both pass `tx` → claims remain inside the caller's transaction
+- Added `claimPayrollTimeEntries` import
+
+**Payroll spine status:**
+- `payrollSubagent.ts` — hardened `476ccbc36` (inline tx, inline claim/link)
+- `payrollAutomation.ts` — now uses canonical claimer in both finalization paths
+- `payrollTimeEntryClaimer.ts` — canonical, tx-aware, single bulk update
+
+**Remaining for Jack or next Claude pass:**
+- 3 raw `rate * value` multiplications → `multiplyFinancialValues()` (payrollAutomation L552, L813 + payrollSubagent)
+- `payrollRoutes.ts` (3753 lines) — route consolidation, next major target
+- `payrollHoursAggregator.ts` — read-heavy, lower priority
+
+**Current tip after this commit: see SHA below.**
+
 ## Jack/GPT Notes
 
 ### 2026-04-24 — Jack/GPT
