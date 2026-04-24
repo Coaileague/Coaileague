@@ -124,7 +124,7 @@ export default function PrivateMessages() {
   const { data: messages = [], isLoading: messagesLoading, isError: messagesError, error: messagesErrorObj, refetch: refetchMessages } = useQuery<PrivateMessage[]>({
     queryKey: ['/api/private-messages', selectedConversation],
     enabled: !!selectedConversation,
-    refetchInterval: 30000 // Socket-first — polling is fallback only, // Poll for new messages
+    refetchInterval: 30000, // Socket-first — polling is fallback only
     select: (data: any[]) => {
       if (!Array.isArray(data)) return [];
       return data.map((msg) => ({
