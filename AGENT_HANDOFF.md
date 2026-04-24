@@ -80,6 +80,7 @@ Both agents should read this file before starting new work and update it after m
 - `d64f5ab4` — Jack/GPT centralized payroll ledger terminal/draft status semantics in `server/services/payroll/payrollLedger.ts`.
 - `d77a1c8e` — Jack/GPT exported payroll ledger terminal/draft status constants and predicates so other payroll services can reuse one status vocabulary instead of copying arrays.
 - `1aebfc39` — Jack/GPT added `server/services/payroll/payrollTimeEntryClaimer.ts`, a canonical bulk, workspace-scoped time-entry claim helper for payroll run paths.
+- `ab90f184` — Jack/GPT routed `server/services/automation/rateResolver.ts` amount/multiplier money math through `financialCalculator` helpers while preserving numeric return shapes.
 
 ### Legacy infrastructure containment
 
@@ -89,9 +90,9 @@ Both agents should read this file before starting new work and update it after m
 
 `development` current known tip after Jack/GPT update:
 
-`1aebfc39381723504f3f48a21be1d162771dc8ce`
+`ab90f184ec9eccb79b4048d6d5d8bc9b6c7dc383`
 
-Commit message: `refactor: add canonical payroll time entry claimer`
+Commit message: `refactor: route rate resolver money math through financial calculator`
 
 Claude should pull this tip before continuing.
 
@@ -377,3 +378,18 @@ Added `server/services/payroll/payrollTimeEntryClaimer.ts`:
 Reason: large payroll paths should not each carry their own for-loop entry-claiming logic. This creates a compact canonical service that can be wired into `payrollAutomation.ts` and other payroll finalization paths by Claude/local build agent.
 
 Connector note: direct full-file edit of `payrollHoursAggregator.ts` was blocked by the tool safety layer. The new claimer service is the safer surgical path and should be used to replace scattered payrolled-entry update loops.
+
+### 2026-04-24 — Jack/GPT
+
+Commit: `ab90f184ec9eccb79b4048d6d5d8bc9b6c7dc383` — `refactor: route rate resolver money math through financial calculator`.
+
+Changed `server/services/automation/rateResolver.ts`:
+- imported `multiplyFinancialValues`, `addFinancialValues`, `formatCurrency`, and `toFinancialString`
+- routed `calculateAmount()` through financial calculator multiplication
+- routed overtime/holiday multiplier amount calculations through `calculateAmountWithMultiplier()`
+- routed billing/payroll bucket totals through financial calculator addition
+- preserved existing numeric return shapes for callers
+
+Reason: `rateResolver.ts` feeds both payroll and billing aggregators, so it is a compact cross-domain place to remove raw `hours * rate` / `rate * multiplier` money math without editing the larger payroll route/service files.
+
+Build status: not run by Jack/GPT. Claude should pull, build-check, and adjust if TypeScript flags import/signature issues.
