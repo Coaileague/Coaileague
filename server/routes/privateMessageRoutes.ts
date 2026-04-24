@@ -12,6 +12,27 @@ const log = createLogger('PrivateMessageRoutes');
 
 const router = Router();
 
+// ── Shared recipient validation (Copilot handoff: unified DM access) ─────────
+async function validatePrivateMessageRecipient(
+  senderId: string,
+  recipientId: string,
+  workspaceId: string | undefined
+): Promise<{ valid: boolean; error?: string }> {
+  // Block self-DMs
+  if (senderId === recipientId) {
+    return { valid: false, error: 'Cannot send a direct message to yourself' };
+  }
+  // Block cross-workspace DMs (recipient must be in same workspace)
+  if (workspaceId) {
+    const recipientMember = await storage.getWorkspaceMemberByUserId(recipientId);
+    if (recipientMember && recipientMember.workspaceId !== workspaceId) {
+      return { valid: false, error: 'Recipient is not in your workspace' };
+    }
+  }
+  return { valid: true };
+}
+
+
 router.get('/conversations', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const authReq = req as AuthenticatedRequest;

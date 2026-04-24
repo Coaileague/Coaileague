@@ -165,7 +165,7 @@ export function mountBillingRoutes(app: Express): void {
   app.use("/api/trinity/revenue", requireAuth, trinityRevenueRouter);
   app.use("/api/disputes", requireAuth, ensureWorkspaceAccess, disputeRouter);
   app.use("/api", requireAuth, ensureWorkspaceAccess, financeSettingsRouter);
-  app.use("/api/invoices", invoiceRouter);
+  app.use("/api/invoices", requireAuth, ensureWorkspaceAccess, invoiceRouter);
   app.use("/api/billing-settings", requireAuth, ensureWorkspaceAccess, billingSettingsRouter);
   app.use("/api/qb-reports", requireAuth, ensureWorkspaceAccess, qbReportsRouter);
   app.use("/api/budgets", requireAuth, ensureWorkspaceAccess, budgetRouter);
