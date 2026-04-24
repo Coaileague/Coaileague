@@ -34,6 +34,7 @@ import {
   type ValidatedPayrollDecision,
 } from './automation-schemas';
 import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { multiplyFinancialValues, toFinancialString } from './financialCalculator';
 
 export interface GeminiResponse<T = any> {
   decision: T;
@@ -230,10 +231,12 @@ function buildDeterministicPayrollDecision(employee: Employee, employeeId: strin
   const regularPay = roundMoney(regularHours * hourlyRate);
   const overtimePay = roundMoney(overtimeHours * overtimeRate);
   const totalPay = roundMoney(regularPay + overtimePay);
+  // NOTE: These are estimation rates used when canonical tax service is unavailable.
+  // Primary path should use calculatePayrollTaxes() from payrollTaxService.
   const deductions = {
-    fica: roundMoney(totalPay * 0.0765),
-    federal: roundMoney(totalPay * 0.15),
-    state: roundMoney(totalPay * 0.05),
+    fica: roundMoney(Number(multiplyFinancialValues(toFinancialString(totalPay), toFinancialString(0.0765)))),
+    federal: roundMoney(Number(multiplyFinancialValues(toFinancialString(totalPay), toFinancialString(0.15)))),
+    state: roundMoney(Number(multiplyFinancialValues(toFinancialString(totalPay), toFinancialString(0.05)))),
   };
   const netPay = roundMoney(totalPay - Object.values(deductions).reduce((sum, value) => sum + value, 0));
   const warnings = new Set<string>(['Deterministic payroll fallback used. Review before approval.']);

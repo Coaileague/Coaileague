@@ -28,6 +28,7 @@ import { assertNoPeriodOverlap } from './payroll/payrollLedger';
 import { calculatePayrollTaxes, type PayPeriod as TaxPayPeriod, type FilingStatus as TaxFilingStatus } from './billing/payrollTaxService';
 import { getTaxRules, computeProgressiveStateTax, TAX_REGISTRY_VERSION, TAX_REGISTRY_EFFECTIVE_YEAR } from './tax/taxRulesRegistry';
 import { claimPayrollTimeEntries } from './payroll/payrollTimeEntryClaimer';
+import { multiplyFinancialValues, addFinancialValues, toFinancialString } from './financialCalculator';
 const PRE_TAX_BENEFIT_TYPES = ['401k', 'health_insurance', 'dental_insurance', 'vision_insurance'];
 const POST_TAX_BENEFIT_TYPES = ['life_insurance', 'other'];
 
@@ -240,7 +241,7 @@ export class PayrollAutomationEngine {
     
     if (!stateRule) {
       log.warn(`Unknown state ${state}, defaulting to CA rates (registry v${TAX_REGISTRY_VERSION})`);
-      return parseFloat((grossPay * 0.0575).toFixed(2));
+      return Number(multiplyFinancialValues(toFinancialString(grossPay), toFinancialString(0.0575)));
     }
     
     if (stateRule.type === 'none') return 0;
@@ -501,7 +502,7 @@ export class PayrollAutomationEngine {
     const threshold = thresholds[filingStatus] || 200000;
     
     // Regular Medicare tax on all wages
-    let medicareTax = grossPay * MEDICARE_RATE;
+    let medicareTax = Number(multiplyFinancialValues(toFinancialString(grossPay), toFinancialString(MEDICARE_RATE)));
     
     // Calculate Additional Medicare Tax on wages exceeding threshold
     const totalWagesWithCurrent = ytdWages + grossPay;
@@ -513,7 +514,7 @@ export class PayrollAutomationEngine {
       const taxableThisPeriod = amountOverThreshold - priorAmountOverThreshold;
       
       if (taxableThisPeriod > 0) {
-        const additionalTax = taxableThisPeriod * ADDITIONAL_MEDICARE_RATE;
+        const additionalTax = Number(multiplyFinancialValues(toFinancialString(taxableThisPeriod), toFinancialString(ADDITIONAL_MEDICARE_RATE)));
         medicareTax += additionalTax;
         log.info(`[AI Payroll™] Additional Medicare Tax: $${additionalTax.toFixed(2)} on $${taxableThisPeriod.toFixed(2)} exceeding $${threshold} threshold`);
       }

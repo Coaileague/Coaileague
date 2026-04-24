@@ -19,6 +19,7 @@ import {
   idempotencyKeys
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, inArray, isNull } from 'drizzle-orm';
+import { multiplyFinancialValues, toFinancialString } from '../../financialCalculator';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { tokenManager, TOKEN_COSTS } from '../../billing/tokenManager';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
@@ -638,7 +639,7 @@ class PayrollSubagentService {
           totalEmployeeTax = taxes.totalDeductions;
         } catch (taxErr: any) {
           log.warn(`[PayrollSubagent] Tax calc error for employee ${emp.id}, using 22% estimate: ${taxErr.message}`);
-          totalEmployeeTax = gross * 0.22;
+          totalEmployeeTax = Number(multiplyFinancialValues(toFinancialString(gross), toFinancialString(0.22)));
         }
       }
 
