@@ -169,7 +169,7 @@ import { platformEventBus } from "./services/platformEventBus";
 import { startNotificationCleanupScheduler } from "./services/notificationCleanupService";
 import { initTokenCleanupScheduler } from "./services/tokenCleanupService";
 import { initializeOrchestrationServices, setOrchestrationWebSocketBroadcaster } from "./services/ai-brain/orchestrationBridge";
-import { broadcastToWorkspace, setupWebSocket } from "./websocket";
+import { broadcastToWorkspace } from "./websocket";
 import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader";
 import "./services/scheduleLiveNotifier";
 import { tracingMiddleware } from "./services/infrastructure/distributedTracing";
@@ -2134,11 +2134,6 @@ process.on('unhandledRejection', (reason: any, promise) => {
     log.error('Could not bind to port after all retries', { error: err.message, port });
     process.exit(1);
   }
-
-  // Attach WebSocket server immediately after port is bound.
-  // Must happen before any clients can connect; broadcastToWorkspace depends on this.
-  setupWebSocket(server);
-  log.info('WebSocket server initialized on /ws/chat');
 
   // Dev only: Vite HMR setup requires the bound server reference
   if (app.get("env") === "development") {
