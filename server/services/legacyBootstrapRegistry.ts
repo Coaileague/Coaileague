@@ -44,10 +44,25 @@ interface BootstrapEntry {
   ran: boolean;
 }
 
+export interface LegacyBootstrapStatus {
+  name: string;
+  ran: boolean;
+}
+
 const registry: BootstrapEntry[] = [];
 
 export function registerLegacyBootstrap(name: string, fn: BootstrapFn): void {
+  const existing = registry.find(entry => entry.name === name);
+  if (existing) {
+    log.warn(`[legacyBootstrap] Duplicate registration skipped: ${name}`);
+    return;
+  }
+
   registry.push({ name, fn, ran: false });
+}
+
+export function getLegacyBootstrapRegistryStatus(): LegacyBootstrapStatus[] {
+  return registry.map(({ name, ran }) => ({ name, ran }));
 }
 
 export async function runLegacyBootstraps(): Promise<void> {
@@ -74,7 +89,8 @@ export async function runLegacyBootstraps(): Promise<void> {
     }
   }
 
-  log.info(`[legacyBootstrap] Complete: ${results.ok} ok, ${results.failed} failed`);
+  const pending = registry.filter(entry => !entry.ran).map(entry => entry.name);
+  log.info(`[legacyBootstrap] Complete: ${results.ok} ok, ${results.failed} failed`, { pending });
 }
 
 /** Seed regulatory rules if the table is empty (idempotent). */
