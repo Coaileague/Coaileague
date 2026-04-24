@@ -30,10 +30,10 @@ const STAFF: StaffMember[] = [
 ];
 
 const CLIENTS = [
-  { id: 'dev-client-downtown-mall', name: 'Downtown SA Mall', billRate: '28.50', contactEmail: 'security@dtmall.com', address: '255 E Commerce St, San Antonio, TX 78205' },
-  { id: 'dev-client-tech-corp', name: 'TechCorp HQ', billRate: '32.00', contactEmail: 'facilities@techcorp.com', address: '7800 IH-10 W, San Antonio, TX 78230' },
-  { id: 'dev-client-hospital', name: 'Memorial Hospital', billRate: '35.00', contactEmail: 'safety@memorial.health', address: '4502 Medical Dr, San Antonio, TX 78229' },
-  { id: 'dev-client-airport', name: 'SAT Regional Airport', billRate: '38.00', contactEmail: 'ops@satairport.com', address: '9800 Airport Blvd, San Antonio, TX 78216' },
+  { id: 'dev-client-downtown-mall', firstName: 'Downtown', lastName: 'Mall Security', companyName: 'Downtown SA Mall', billRate: '28.50', email: 'security@dtmall.com', address: '255 E Commerce St, San Antonio, TX 78205' },
+  { id: 'dev-client-tech-corp', firstName: 'TechCorp', lastName: 'Facilities', companyName: 'TechCorp HQ', billRate: '32.00', email: 'facilities@techcorp.com', address: '7800 IH-10 W, San Antonio, TX 78230' },
+  { id: 'dev-client-hospital', firstName: 'Memorial', lastName: 'Hospital Security', companyName: 'Memorial Hospital', billRate: '35.00', email: 'safety@memorial.health', address: '4502 Medical Dr, San Antonio, TX 78229' },
+  { id: 'dev-client-airport', firstName: 'SAT', lastName: 'Airport Security', companyName: 'SAT Regional Airport', billRate: '38.00', email: 'ops@satairport.com', address: '9800 Airport Blvd, San Antonio, TX 78216' },
 ];
 
 const SHIFT_TEMPLATES = [
@@ -62,14 +62,6 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
   try {
     info('Starting...');
 
-    // 1. Workspace
-    await pool.query(
-      `INSERT INTO workspaces (id, name, owner_id, company_name, subscription_tier, subscription_status, max_employees, platform_fee_percentage, created_at, updated_at)
-       VALUES ($1,'ACME Security Services','dev-owner-001','ACME Security Services, LLC','enterprise','active',500,'8.00',NOW(),NOW())
-       ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, subscription_tier=EXCLUDED.subscription_tier, updated_at=NOW()`,
-      [WS]
-    );
-
     // 2. Users
     for (const s of STAFF) {
       await pool.query(
@@ -81,6 +73,14 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
       counts.users++;
     }
     info(counts.users + ' users');
+
+    // 1. Workspace
+    await pool.query(
+      `INSERT INTO workspaces (id, name, owner_id, company_name, subscription_tier, subscription_status, max_employees, platform_fee_percentage, created_at, updated_at)
+       VALUES ($1,'ACME Security Services','dev-owner-001','ACME Security Services, LLC','enterprise','active',500,'8.00',NOW(),NOW())
+       ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, subscription_tier=EXCLUDED.subscription_tier, updated_at=NOW()`,
+      [WS]
+    );
 
     // 3. Employees with userId FK
     for (const s of STAFF) {
@@ -110,10 +110,10 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
     // 5. Clients
     for (const c of CLIENTS) {
       await pool.query(
-        `INSERT INTO clients (id, workspace_id, name, bill_rate, contact_email, address, status, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,'active',NOW(),NOW())
-         ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, bill_rate=EXCLUDED.bill_rate, status=EXCLUDED.status, updated_at=NOW()`,
-        [c.id, WS, c.name, c.billRate, c.contactEmail, c.address]
+        `INSERT INTO clients (id, workspace_id, first_name, last_name, company_name, billable_hourly_rate, email, address, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
+         ON CONFLICT (id) DO UPDATE SET company_name=EXCLUDED.company_name, billable_hourly_rate=EXCLUDED.billable_hourly_rate, email=EXCLUDED.email, updated_at=NOW()`,
+        [c.id, WS, c.firstName, c.lastName, c.companyName, c.billRate, c.email, c.address]
       );
       counts.clients++;
     }
@@ -144,7 +144,7 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
             `INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, date, start_time, end_time, status, pay_rate, bill_rate, billable_to_client, ai_generated, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,'completed',$9,$10,true,false,NOW(),NOW())
              ON CONFLICT (id) DO UPDATE SET employee_id=EXCLUDED.employee_id, status=EXCLUDED.status, date=EXCLUDED.date, updated_at=NOW()`,
-            [shiftId, WS, emp.empId, client.id, client.name + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, emp.payRate, client.billRate]
+            [shiftId, WS, emp.empId, client.id, (client.companyName || client.firstName) + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, emp.payRate, client.billRate]
           );
           counts.shifts++;
 
@@ -175,7 +175,7 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
             `INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, date, start_time, end_time, status, pay_rate, bill_rate, billable_to_client, ai_generated, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,true,false,NOW(),NOW())
              ON CONFLICT (id) DO UPDATE SET employee_id=EXCLUDED.employee_id, status=EXCLUDED.status, date=EXCLUDED.date, updated_at=NOW()`,
-            [shiftId, WS, emp?.empId || null, client.id, client.name + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, isOpen ? 'published' : 'scheduled', emp?.payRate || '17.00', client.billRate]
+            [shiftId, WS, emp?.empId || null, client.id, (client.companyName || client.firstName) + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, isOpen ? 'published' : 'scheduled', emp?.payRate || '17.00', client.billRate]
           );
           counts.shifts++;
         }
@@ -254,7 +254,7 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
             `INSERT INTO invoice_line_items (id, invoice_id, workspace_id, description, quantity, unit_price, amount, created_at, updated_at)
              VALUES (gen_random_uuid(),$1,$2,$3,$4,$5,$6,NOW(),NOW())
              ON CONFLICT DO NOTHING`,
-            [invId, WS, client.name + ' — ' + tmpl.label + ' (' + qty + ' days x 8h @ $' + client.billRate + '/hr)', qty, unitPrice, lineTotal]
+            [invId, WS, (client.companyName || client.firstName) + ' — ' + tmpl.label + ' (' + qty + ' days x 8h @ $' + client.billRate + '/hr)', qty, unitPrice, lineTotal]
           );
           counts.lineItems++;
         }
