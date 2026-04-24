@@ -39,10 +39,10 @@ const ACME_EMPLOYEES = [
 ];
 
 const ACME_SHIFT_TEMPLATES = [
-  { startH: 6, endH: 14, title: 'Day Shift — Security Officer' },
-  { startH: 14, endH: 22, title: 'Evening Shift — Security Officer' },
-  { startH: 22, endH: 6, title: 'Night Shift — Security Officer' },
-  { startH: 8, endH: 16, title: 'Business Hours Post' },
+  { startH: 12, endH: 20, title: 'Day Shift — Security Officer' },     // 7AM CST / 8AM EST
+  { startH: 20, endH: 28, title: 'Evening Shift — Security Officer' },  // 3PM CST / 4PM EST
+  { startH: 4, endH: 12, title: 'Night Shift — Security Officer' },    // 11PM CST / midnight EST
+  { startH: 14, endH: 22, title: 'Business Hours Post' },              // 9AM CST / 10AM EST
 ];
 
 const ANVIL_CLIENTS = [
