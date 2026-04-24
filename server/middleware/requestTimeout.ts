@@ -6,6 +6,10 @@
 import { Request, Response, NextFunction } from 'express';
 
 const AI_ROUTE_PREFIXES = ['/api/trinity', '/api/ai-brain', '/api/ai-orchestra', '/api/insights'];
+const LONG_RUNNING_ROUTE_PREFIXES = [
+  '/api/automation/invoice/anchor-close',
+  '/api/automation/payroll/anchor-close',
+];
 const WEBHOOK_ROUTE_PREFIXES = ['/api/stripe/webhook', '/api/webhooks'];
 const EXEMPT_PREFIXES = ['/health', '/api/csrf-token'];
 
@@ -13,6 +17,7 @@ function getTimeoutMs(path: string): number {
   if (EXEMPT_PREFIXES.some(p => path.startsWith(p))) return 0;
   if (WEBHOOK_ROUTE_PREFIXES.some(p => path.startsWith(p))) return 10_000;
   if (AI_ROUTE_PREFIXES.some(p => path.startsWith(p))) return 90_000;
+  if (LONG_RUNNING_ROUTE_PREFIXES.some(p => path.startsWith(p))) return 90_000;
   return 20_000;
 }
 
