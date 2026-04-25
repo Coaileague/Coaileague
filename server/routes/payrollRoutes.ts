@@ -135,6 +135,7 @@ import { isValidPayrollTransition, resolvePayrollLifecycleStatus } from "../serv
 import { createLogger } from '../lib/logger';
 import { isTerminalPayrollStatus, isDraftPayrollStatus, isValidPayrollTransition, PAYROLL_TERMINAL_STATUSES, PAYROLL_DRAFT_STATUSES } from '../services/payroll/payrollStatus';
 import { getPayrollTaxFilingDeadlines, getPayrollTaxFilingGuide, getPayrollStatePortals } from '../services/payroll/payrollTaxFilingGuideService';
+import { buildPayrollCsvExport } from '../services/payroll/payrollCsvExportService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -165,100 +166,32 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       if (!roleCheck.allowed) {
         return res.status(roleCheck.status || 403).json({ error: roleCheck.error || 'Insufficient permissions' });
       }
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.id;
-      
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        return res.status(400).json({ error: "Workspace context required" });
+        return res.status(400).json({ error: 'Workspace context required' });
       }
+
       const { startDate, endDate } = req.query;
+      const result = await buildPayrollCsvExport({
+        workspaceId,
+        userId,
+        ipAddress: req.ip || null,
+        startDate: typeof startDate === 'string' ? startDate : null,
+        endDate: typeof endDate === 'string' ? endDate : null,
+      });
 
-      // Get payroll runs
-      const runs = await db.select({
-        id: payrollRuns.id,
-        periodStart: payrollRuns.periodStart,
-        periodEnd: payrollRuns.periodEnd,
-        status: payrollRuns.status,
-        totalGrossPay: payrollRuns.totalGrossPay,
-        totalNetPay: payrollRuns.totalNetPay,
-        createdAt: payrollRuns.createdAt,
-      }).from(payrollRuns)
-        .where(eq(payrollRuns.workspaceId, workspaceId))
-        .orderBy(desc(payrollRuns.createdAt));
-
-      // Get all payroll entries
-      const entries = await db.select({
-        id: payrollEntries.id,
-        employeeId: payrollEntries.employeeId,
-        periodStart: payrollRuns.periodStart,
-        periodEnd: payrollRuns.periodEnd,
-        regularHours: payrollEntries.regularHours,
-        overtimeHours: payrollEntries.overtimeHours,
-        hourlyRate: payrollEntries.hourlyRate,
-        grossPay: payrollEntries.grossPay,
-        federalTax: payrollEntries.federalTax,
-        stateTax: payrollEntries.stateTax,
-        socialSecurity: payrollEntries.socialSecurity,
-        medicare: payrollEntries.medicare,
-        netPay: payrollEntries.netPay,
-        createdAt: payrollEntries.createdAt,
-      })
-        .from(payrollEntries)
-        .leftJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))
-        .where(eq(payrollEntries.workspaceId, workspaceId));
-
-      // Generate CSV
-      const csvHeader = 'Employee Name,Period Start,Period End,Regular Hours,Overtime Hours,Hourly Rate,Gross Pay,Deductions,Federal Tax,State Tax,Social Security,Medicare,Net Pay,Date\n';
-      
-      const employeeIds = [...new Set(entries.map((e: any) => e.employeeId))];
-      const employeeMap = new Map();
-      if (employeeIds.length > 0) {
-        const emps = await db.select().from(employees).where(inArray(employees.id, employeeIds));
-        emps.forEach(emp => employeeMap.set(emp.id, `${emp.firstName} ${emp.lastName}`));
-      }
-
-      const csvRows = entries.map((e: any) => {
-        const employeeName = employeeMap.get(e.employeeId) || e.employeeId;
-        // RC4 (Phase 2): sumFinancialValues uses Decimal.js — eliminates 4-field floating-point accumulation.
-        const deductions = formatCurrency(sumFinancialValues([e.federalTax || '0', e.stateTax || '0', e.socialSecurity || '0', e.medicare || '0']));
-        return `"${employeeName}",${e.periodStart ? format(new Date(e.periodStart), 'yyyy-MM-dd') : ''},${e.periodEnd ? format(new Date(e.periodEnd), 'yyyy-MM-dd') : ''},${e.regularHours},${e.overtimeHours},${e.hourlyRate},${e.grossPay},${deductions},${e.federalTax},${e.stateTax},${e.socialSecurity},${e.medicare},${e.netPay},${format(new Date(e.createdAt), 'yyyy-MM-dd')}`;
-      }).join('\n');
-
-      // Audit log: payroll data exports are sensitive — always record who exported what
-      try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        await db.insert((await import('@shared/schema')).auditLogs).values({
-          id: crypto.randomUUID(),
-          workspaceId,
-          userId,
-          action: 'payroll.export.csv',
-          entityType: 'payroll',
-          entityId: workspaceId,
-          details: JSON.stringify({
-            exportedRows: entries.length,
-            dateRange: { startDate: startDate || null, endDate: endDate || null },
-            exportedAt: new Date().toISOString(),
-          }),
-          ipAddress: req.ip || null,
-          createdAt: new Date(),
-        });
-      } catch (auditErr) {
-        log.warn('[Payroll] Failed to write export audit log (non-blocking):', auditErr);
-      }
-
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="payroll-export-${format(new Date(), 'yyyy-MM-dd')}.csv"`);
-      res.send(csvHeader + csvRows);
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.send(result.csv);
     } catch (error: unknown) {
       log.error("Error exporting payroll CSV:", error);
       res.status(500).json({ message: "Failed to export payroll" });
     }
   });
-
   router.get('/proposals', async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = checkManagerRole(req);

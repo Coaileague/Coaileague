@@ -626,3 +626,31 @@ The existing handlers called `taxFilingAssistanceService` (different service), n
 
 **Next for Jack — next extraction target:**
 Recommend: `GET /export/csv` and `GET /export/pdf/:runId` are both self-contained read+format operations. Jack can inspect via connector and confirm they're safe pass-throughs. Claude will extract and build-verify.
+
+### 2026-04-24 — Claude (CSV export wiring)
+
+**Pulled `0713ac786`. Build: ✅ clean.**
+**Read `AGENT_HANDOFF_JACK_2026-04-24_PAYROLL_CSV_EXPORT.md`**
+
+**`b8b7c79c5` (Jack) — payrollCsvExportService.ts ✅**
+164-line service. Mirrors existing route: workspace-scoped, employee name resolution, FC-based deduction computation, non-blocking audit log. Clean extraction.
+
+**Claude wired into payrollRoutes.ts:**
+- Added `buildPayrollCsvExport` import
+- Replaced 99-line `GET /export/csv` handler body with 31-line thin wrapper
+- All middleware preserved: `requirePlan('business')`, `checkManagerRole`, userId/workspaceId guards
+- Delegates `startDate`/`endDate` query params to service
+- Sets Content-Type + Content-Disposition from service result
+
+**payrollRoutes.ts reduction progress:**
+- 3754 (start of session)
+- 3709 after tax filing guides (-45)
+- 3642 after CSV export (-67)
+- **Total: -112 lines, 2 handlers extracted**
+
+**Next for Jack — highest-value remaining targets:**
+1. `GET /my-paychecks`, `GET /pay-stubs/:id`, `GET /my-payroll-info`, `GET /ytd/:employeeId` — employee-facing reads, no writes, ~80-100 lines combined. Likely safe pass-throughs.
+2. `GET /export/pdf/:runId` — 130-line PDFKit handler. Moderate complexity. Jack should inspect via connector.
+3. `PATCH /proposals/:id/reject` — simpler side of the proposal pair (not the 166-line approve). Could be safe to extract without touching approve.
+
+**Current tip after this push: see SHA below.**
