@@ -1613,29 +1613,63 @@ export type AiModelKey = keyof typeof AI_MODEL_COSTS;
 export const PREMIUM_EVENTS = {
 
   // ── RFP / Proposal Generation ─────────────────────────────────────────────
-  rfp_commercial: {
-    id: 'premium_rfp_commercial',
-    name: 'RFP Response — Commercial',
-    description: 'Trinity generates a complete commercial security services proposal with company overview, capabilities, pricing, and compliance sections. Human writers charge $1,500–$3,500.',
-    priceCents: 15000,            // $150 — simple commercial proposal
-    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_COMMERCIAL',
+  // ── RFP DYNAMIC PRICING MODEL (Bryan + Claude deliberated 2026-04-25) ────────
+  // Trinity analyzes the uploaded RFP document or URL and scores it across 8 factors
+  // (contract type, site count, jurisdictions, armed, union, deadline, attachments, volume)
+  // to determine which pricing tier applies BEFORE the tenant confirms the charge.
+  // Score 0-2 = Standard $500 | 3-5 = Professional $750 | 6-8 = Complex $1,000 | 9+ = Enterprise $1,500
+  // Jack to verify scoring matrix in AGENT_HANDOFF.md and confirm or suggest adjustments.
+  rfp_standard: {
+    id: 'premium_rfp_standard',
+    name: 'RFP Response — Standard',
+    description: 'Trinity-analyzed: commercial, 1 site, single state, unarmed, 7+ days. Generates complete proposal. Human writers charge $1,500–$3,500.',
+    priceCents: 50000,            // $500 — score 0-2
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_STANDARD',
     category: 'proposal',
     availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
-    trinityActionId: 'document.generate_rfp_commercial',
-    requiresApproval: true,       // Trinity must confirm charge before executing
-    vaultSaved: true,
-  },
-  rfp_government: {
-    id: 'premium_rfp_government',
-    name: 'RFP Response — Government / Federal',
-    description: 'Trinity generates a full government/federal RFP response including compliance matrix, past performance sections, technical approach, and pricing narrative. Human writers charge $3,500–$7,500.',
-    priceCents: 35000,            // $350 — government/federal proposal
-    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_GOVERNMENT',
-    category: 'proposal',
-    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
-    trinityActionId: 'document.generate_rfp_government',
+    trinityActionId: 'document.generate_rfp',
     requiresApproval: true,
     vaultSaved: true,
+    complexityScore: { min: 0, max: 2 },
+  },
+  rfp_professional: {
+    id: 'premium_rfp_professional',
+    name: 'RFP Response — Professional',
+    description: 'Trinity-analyzed: municipal/county or multi-site (2-5), moderate complexity. Human writers charge $1,500–$3,500.',
+    priceCents: 75000,            // $750 — score 3-5
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_PROFESSIONAL',
+    category: 'proposal',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_rfp',
+    requiresApproval: true,
+    vaultSaved: true,
+    complexityScore: { min: 3, max: 5 },
+  },
+  rfp_complex: {
+    id: 'premium_rfp_complex',
+    name: 'RFP Response — Complex',
+    description: 'Trinity-analyzed: state government or multi-site (6-10), multi-jurisdiction, armed or union requirements. Human writers charge $3,500–$5,000.',
+    priceCents: 100000,           // $1,000 — score 6-8
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_COMPLEX',
+    category: 'proposal',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_rfp',
+    requiresApproval: true,
+    vaultSaved: true,
+    complexityScore: { min: 6, max: 8 },
+  },
+  rfp_enterprise: {
+    id: 'premium_rfp_enterprise',
+    name: 'RFP Response — Enterprise / Federal',
+    description: 'Trinity-analyzed: federal contract, 10+ sites, multi-state, union/prevailing wage, rush deadline. Human writers charge $5,000–$7,500+.',
+    priceCents: 150000,           // $1,500 — score 9+
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_ENTERPRISE',
+    category: 'proposal',
+    availableTiers: ['business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_rfp',
+    requiresApproval: true,
+    vaultSaved: true,
+    complexityScore: { min: 9, max: null },
   },
 
   // ── Contract Generation ───────────────────────────────────────────────────

@@ -1080,3 +1080,110 @@ Rather than per-unit charges on routine ops, each tier includes a bundle. Overag
 
 **The platform never absorbs a single token of AI cost without a corresponding billing record. Every overage bundle is pre-authorized or triggers a warning before execution. Trinity's non-critical functions throttle at 95% — core operations (payroll, calloffs, scheduling, invoicing) are never throttled regardless of token state.**
 
+
+---
+
+## RFP DYNAMIC PRICING DELIBERATION
+### 2026-04-25 — Bryan direction + Claude analysis (Jack to weigh in)
+
+**Bryan's direction:** Base RFP price $500 (not $150). Scales with complexity. Trinity analyzes the uploaded RFP document or URL to calculate the price before the tenant commits. Both agents deliberate and agree before implementing.
+
+---
+
+### Claude's Proposed Model
+
+**Why dynamic pricing makes sense:**
+- A 1-site commercial proposal takes Trinity ~20 min of compute and produces ~10 pages
+- A 12-site federal proposal with union clauses takes ~2 hrs and produces 50+ pages + compliance matrix
+- Charging both the same flat fee leaves money on the table or overcharges small operators
+
+**Scoring Factors Trinity Evaluates on Upload:**
+
+| Factor | Options | Score |
+|---|---|---|
+| Contract type | Commercial=0, Municipal=1, State gov=2, Federal=3 | 0–3 |
+| Number of sites | 1=0, 2–5=1, 6–10=2, 10+=3 | 0–3 |
+| Jurisdictions | 1=0, 2=1, 3+=2 | 0–2 |
+| Armed required | No=0, Yes=1 | 0–1 |
+| Union/prevailing wage | No=0, Yes=2 | 0–2 |
+| Deadline pressure | 7+ days=0, 3–7 days=1, <3 days=2 | 0–2 |
+| Attachments required | <5=0, 5–10=1, 10+=2 | 0–2 |
+| Contract volume (hrs/wk) | <200=0, 200–1000=1, 1000+=2 | 0–2 |
+| **Max possible score** | | **17** |
+
+**Price Tiers (score → price):**
+
+| Score | Label | Price | Example |
+|---|---|---|---|
+| 0–2 | Standard | $500 | 1-site commercial, unarmed, 10+ days |
+| 3–5 | Professional | $750 | 3-site municipal, 5 days |
+| 6–8 | Complex | $1,000 | 6-site state gov, armed, multi-state |
+| 9+ | Enterprise | $1,500 | Federal, 12 sites, union, armed, rush |
+
+**Validated scenarios:**
+- Simple 1-site commercial (score 0) → **$500** ✅
+- 3-site municipal, tight deadline (score 4) → **$750** ✅
+- State gov, 6 sites, armed, multi-state (score 8) → **$1,000** ✅
+- Federal, 12 sites, armed, union, rush (score 16) → **$1,500** ✅
+
+**How Trinity Does the Analysis:**
+
+When tenant uploads an RFP PDF or pastes a URL:
+1. Trinity extracts: contract type, site list, jurisdiction(s), officer type requirements, deadline, attachment list, estimated hours
+2. Runs the scoring matrix above
+3. Returns: "This is a [Label] proposal. Trinity will generate your full RFP response for **$X**. Authorize charge to proceed?"
+4. Tenant confirms → charge fires → Trinity generates → branded PDF saved to vault → tenant downloads
+
+**What Trinity extracts from the RFP document:**
+- `contract_type` — scans for "federal", "FAR", "GSA", "state contract", "municipality"
+- `site_count` — counts locations/addresses listed in scope of work
+- `jurisdiction_count` — scans for state names, licensing requirements by state
+- `armed_requirement` — looks for "armed", "firearm", "Level III", "weapon"
+- `prevailing_wage` — looks for "Davis-Bacon", "prevailing wage", "union", "CBA"
+- `deadline` — extracts proposal due date, calculates days remaining
+- `attachments` — counts "provide", "submit", "attach", "include" sections
+- `volume` — looks for officer hours, shift counts, total hours per week
+
+---
+
+### Jack's Input Needed
+
+**Claude's position:** The scoring model above is logically sound and produces defensible prices. The $500–$1,500 range is well below human writers ($1,500–$7,500) and scales with real complexity factors.
+
+**Questions for Jack to weigh in on:**
+1. Does the scoring matrix cover all the factors you'd expect to see in security RFPs?
+2. Should rush deadline scoring cap at 2 or go higher (e.g., same-day = 3)?
+3. Should we add a "page count" factor? (RFPs over 50 pages = +1 complexity)
+4. Should $1,500 be the hard cap or should Enterprise+ tier allow custom pricing above that?
+
+**Jack: add your notes below this line before implementing.**
+
+---
+
+### BROADER PLATFORM NOTES (Bryan + Claude conversation, 2026-04-25)
+
+**Platform vision reminder (Bryan's words):**
+> "Making a platform so convenient, an AI so smart, dependable, reasonable, and proactive like a human manager but supervised... like Lisa. Trinity does it all and more. We need to get regulatory services to say yes to a deal with us — making us a needed necessity, not just a nice to have."
+
+**Regulatory partnership strategy:**
+- Target: Texas DPS (Dept. of Public Safety), other state licensing bodies
+- Angle: CoAIleague can be the automated compliance backbone for TDPS to verify guard licenses, incident history, and training records across all tenants
+- Value to regulators: Real-time compliance data vs. manual annual audits
+- Value to tenants: Regulatory portal built-in — no more emergency document scrambles during audits
+- This makes CoAIleague a regulated middleware, not just a SaaS tool — changes the competitive moat entirely
+
+**Security domain (flagged for future sprint):**
+- Bryan flagged: protect code from being scraped or stolen
+- Items to address when we reach Security domain:
+  - Rate limiting + WAF (Web Application Firewall) on all API routes
+  - Code obfuscation for client-side bundle
+  - IP allowlisting for sensitive admin routes
+  - Source code legal protection (license, copyright headers, proprietary markers)
+  - Trinity self-edit governance already exists (`trinitySelfEditGovernance.ts`) — verify it's enforced
+  - Secrets scanning in CI/CD pipeline
+
+**Agent protocol reminder:**
+- Claude: build-verify, strategic architect, autonomous passes when no Jack commits
+- Jack: targeted surgical commits via GitHub connector, reason-checked patches
+- Both: deliberate on major decisions, document in AGENT_HANDOFF.md, escalate to Bryan when disagreeing
+- Deal confirmed: both agents research, agree, then implement. Disagreements go to Bryan.
