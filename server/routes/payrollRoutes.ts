@@ -142,6 +142,7 @@ import { listPayrollProposals, getPayrollProposal } from '../services/payroll/pa
 import { getMyEmployeeTaxForms, getMyEmployeeTaxForm } from '../services/payroll/payrollEmployeeTaxFormsService';
 import { listPayrollRuns, getPayrollRun } from '../services/payroll/payrollRunReadService';
 import { deletePayrollRun } from '../services/payroll/payrollRunDeleteService';
+import { approvePayrollProposal } from '../services/payroll/payrollProposalApprovalService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -221,162 +222,25 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       const { id } = req.params;
       const userId = req.user?.id;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId!);
-      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
-      
-      const { payrollProposals } = await import("@shared/schema");
+      if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
 
-      // Phase 29 / Phase 27 guard: SELECT FOR UPDATE inside a transaction prevents
-      // two concurrent managers from approving the same payroll proposal simultaneously.
-      let proposal: any;
-      let approvedProposal: any;
-      try {
-        ({ proposal, approvedProposal } = await db.transaction(async (tx) => {
-          // Lock the row — concurrent requests wait here instead of racing
-          const [locked] = await tx
-            .select()
-            .from(payrollProposals)
-            .where(
-              and(
-                eq(payrollProposals.id, id),
-                eq(payrollProposals.workspaceId, userWorkspace.workspaceId),
-              )
-            )
-            .for('update')
-            .limit(1);
-
-          if (!locked) throw Object.assign(new Error('NOT_FOUND'), { status: 404 });
-
-          if (locked.status !== 'pending') {
-            throw Object.assign(new Error('ALREADY_PROCESSED'), { status: 409 });
-          }
-
-          // FIX [FOUR-EYES PAYROLL APPROVAL]: four-eyes check inside transaction so
-          // it cannot be bypassed by a concurrent request that reads stale state.
-          if (locked.createdBy && locked.createdBy === userId) {
-            throw Object.assign(new Error('SELF_APPROVAL_FORBIDDEN'), { status: 403 });
-          }
-
-          // FIX [PAYROLL PROPOSAL STALENESS]: 30-day stale guard
-          if (locked.createdAt) {
-            const proposalAgeMs = Date.now() - new Date(locked.createdAt).getTime();
-            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-            if (proposalAgeMs > thirtyDaysMs) {
-              throw Object.assign(new Error('PROPOSAL_EXPIRED'), {
-                status: 409,
-                extra: {
-                  createdAt: locked.createdAt,
-                  ageInDays: Math.floor(proposalAgeMs / (24 * 60 * 60 * 1000)),
-                },
-              });
-            }
-          }
-
-          const [approved] = await tx.update(payrollProposals).set({
-            status: 'approved',
-            approvedBy: userId,
-            approvedAt: new Date(),
-            updatedAt: new Date(),
-          }).where(and(
-            eq(payrollProposals.id, id),
-            eq(payrollProposals.status, 'pending'),
-          )).returning();
-
-          if (!approved) throw Object.assign(new Error('ALREADY_PROCESSED'), { status: 409 });
-
-          return { proposal: locked, approvedProposal: approved };
-        }));
-      } catch (txErr: any) {
-        const status = txErr?.status || 500;
-        if (status === 404) return res.status(404).json({ message: "Proposal not found" });
-        if (status === 409 && txErr?.message === 'ALREADY_PROCESSED') return res.status(409).json({ message: "Proposal was already processed by another user" });
-        if (status === 403) return res.status(403).json({ message: "You cannot approve a payroll proposal that you created. A different authorised manager must approve it.", code: 'SELF_APPROVAL_FORBIDDEN' });
-        if (status === 409 && txErr?.message === 'PROPOSAL_EXPIRED') return res.status(409).json({ message: "This payroll proposal is more than 30 days old and can no longer be approved. Please create a new proposal with current data.", code: 'PROPOSAL_EXPIRED', ...txErr?.extra });
-        throw txErr;
-      }
-
-      if (!approvedProposal) {
-        return res.status(409).json({ message: "Proposal was already processed by another user" });
-      }
-
-      // FIX 7: Financial anomaly check on payroll approval — non-blocking warning
-      let payrollAnomalyWarning: string | null = null;
-      const proposalData = (proposal as any).data ?? {};
-      const payrollTotal = parseFloat(toFinancialString(proposalData.totalGross ?? proposalData.totalAmount ?? proposalData.total ?? '0')); // billing boundary
-      const PAYROLL_ANOMALY_THRESHOLD = 100000;
-      const PAYROLL_EXTREME_THRESHOLD = 500000;
-      if (payrollTotal >= PAYROLL_EXTREME_THRESHOLD) {
-        payrollAnomalyWarning = `EXTREME_PAYROLL: Total payroll $${payrollTotal.toLocaleString()} far exceeds normal range ($500k+). Verify with finance team before processing.`;
-        log.warn(`[FinancialAnomaly] Payroll proposal ${id} total $${payrollTotal} ≥ $${PAYROLL_EXTREME_THRESHOLD} threshold`);
-      } else if (payrollTotal >= PAYROLL_ANOMALY_THRESHOLD) {
-        payrollAnomalyWarning = `HIGH_PAYROLL: Total payroll $${payrollTotal.toLocaleString()} is above typical range ($100k+). Please confirm this is correct.`;
-        log.warn(`[FinancialAnomaly] Payroll proposal ${id} total $${payrollTotal} ≥ $${PAYROLL_ANOMALY_THRESHOLD} threshold`);
-      }
-
-      storage.createAuditLog({
+      const result = await approvePayrollProposal({
+        proposalId: id,
         workspaceId: userWorkspace.workspaceId,
         userId: userId!,
         userEmail: req.user?.email || 'unknown',
         userRole: req.user?.role || 'user',
-        action: 'update',
-        entityType: 'payroll_proposal',
-        entityId: id,
-        actionDescription: `Payroll proposal ${id} approved`,
-        changes: { before: { status: 'pending' }, after: { status: 'approved', approvedBy: userId } },
-        isSensitiveData: true,
-        complianceTag: 'soc2',
-      }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll proposal approval', { error: err?.message }));
-
-      // Webhook Emission
-      try {
-        const { deliverWebhookEvent } = await import('../services/webhookDeliveryService');
-        deliverWebhookEvent(userWorkspace.workspaceId, 'payroll.run_completed', {
-          proposalId: id,
-          approvedBy: userId,
-          totalGross: (proposal as any).data?.totalGross,
-          approvedAt: new Date().toISOString()
-        });
-      } catch (webhookErr: any) {
-        log.warn('[Payroll] Failed to log webhook error to audit log', { error: webhookErr.message });
-      }
-
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const { broadcastToWorkspace: bcastProposalApprove } = await import('../services/websocketService');
-      bcastProposalApprove(userWorkspace.workspaceId, { type: 'payroll_updated', action: 'proposal_approved', proposalId: id });
-      platformEventBus.publish({
-        type: 'payroll_run_approved',
-        category: 'automation',
-        title: 'Payroll Proposal Approved',
-        description: `Payroll proposal ${id} approved by ${userId} — payroll will be processed`,
-        workspaceId: userWorkspace.workspaceId,
-        userId: userId!,
-        metadata: {
-          proposalId: id,
-          approvedBy: userId,
-          source: 'proposal_approve',
-        },
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
-
-      // Notify managers about payroll approval
-      const { universalNotificationEngine } = await import('../services/universalNotificationEngine');
-      await universalNotificationEngine.sendNotification({
-        workspaceId: userWorkspace.workspaceId,
-        type: 'payroll_approved',
-        priority: 'high',
-        title: 'Payroll Approved',
-        message: `Payroll proposal ${id} has been approved and is moving to processing.`,
-        severity: 'info',
-        metadata: { proposalId: id, approvedBy: userId }
-      }).catch(err => log.error('[Payroll] Failed to send approval notification:', (err instanceof Error ? err.message : String(err))));
-
-      res.json({
-        success: true,
-        proposalId: id,
-        message: 'Payroll proposal approved. Payroll will be processed.',
-        ...(payrollAnomalyWarning ? { anomalyWarning: payrollAnomalyWarning } : {}),
       });
+
+      res.json(result);
     } catch (error: unknown) {
-      log.error("OperationsOS™ Payroll Approval Error:", error);
-      res.status(500).json({ message: (error instanceof Error ? sanitizeError(error) : null) || "Failed to approve payroll" });
+      const status = (error as any)?.status || 500;
+      const extra = (error as any)?.extra || {};
+      log.error('OperationsOS™ Payroll Approval Error:', error);
+      res.status(status).json({
+        message: error instanceof Error ? sanitizeError(error) : 'Failed to approve payroll',
+        ...extra,
+      });
     }
   });
 

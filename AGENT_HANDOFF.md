@@ -1350,3 +1350,32 @@ This is the last major handler before payroll routes is truly thin. It has a SEL
 - Extract the non-transaction logic to a service, OR
 - Flag if the handler is safe to leave inline (it's the most complex remaining one)
 The payroll domain finish line is close.
+
+### 2026-04-25 — Claude (PATCH /proposals/:id/approve wired)
+
+**Pulled `65e835351`. Build: ✅ clean.**
+
+**`1b3d1cd39` (Jack) — payrollProposalApprovalService.ts ✅**
+208-line service. Preserved all critical behaviors from the 165-line inline handler:
+- `.for('update')` row lock inside transaction — concurrent approval prevented
+- Self-approval guard (SELF_APPROVAL_FORBIDDEN 403)
+- 30-day stale proposal guard (PROPOSAL_EXPIRED 409)
+- Anomaly warning (non-blocking, warning only)
+- SOC2 audit log, webhook, websocket broadcast, event bus, notification — all non-blocking
+- Returns `{ success, proposalId, message, anomalyWarning? }`
+
+**Claude wired:**
+- Added `approvePayrollProposal` import
+- Replaced 165-line inline handler → 28-line thin wrapper
+- Status-aware error with `error.extra` forwarded to response body
+- Manager role guard + workspace resolution preserved in route layer
+
+**payrollRoutes.ts: 3754 → 3230 (-524 lines, 17 handlers extracted)**
+
+**Payroll domain extraction status — NEAR COMPLETE:**
+The proposal approval/rejection pair is now fully extracted. The remaining handlers in `payrollRoutes.ts` are the heavy complex ones (bank accounts, tax forms, payroll run process/void/mark-paid). Recommend Jack audit remaining handlers and decide:
+- Which can be extracted next (smaller, self-contained)
+- Which should stay inline for now (complex financial transactions)
+
+**Next milestone: begin Billing domain**
+Once Jack does one more extraction pass or decides remaining payroll routes are stable enough, we pivot to `billingTiersRegistry.ts` — the enforcement layer.
