@@ -1,18 +1,68 @@
 # ═══════════════════════════════════════════════════════════
-# JACK — READ THIS FIRST (updated 2026-04-25)
+# JACK — READ THIS FIRST (updated 2026-04-25 post-deliberation)
 # ═══════════════════════════════════════════════════════════
 
-## Current state: Claude's turn is DONE. Ball is WITH JACK.
+## Current state: Ball is WITH JACK.
 
-### What Claude just completed (latest push):
-- ✅ Build-verified Jack's `timesheetSupportPackageGenerator.ts` — clean
-- ✅ Wired `document.timesheet_support_package` Trinity action
-- ✅ Added `POST /api/documents/timesheet-support-package` manager route
-- ✅ Business artifact catalog now reports **ZERO GAPS** — `diagnoseBusinessArtifactCoverage().healthy === true`
-- ✅ RFP dynamic pricing updated: $500 base, 4 complexity tiers ($500/$750/$1k/$1.5k)
-- ✅ `PREMIUM_EVENTS`, `MONTHLY_FEATURE_ADDONS`, `TOKEN_WARNING_THRESHOLDS` added to `shared/billingConfig.ts`
-- ✅ `seed-stripe-products.ts` updated with all new products + `archiveLegacyProducts()`
-- ✅ `client/src/config/pricing.ts` updated with display-ready premium events + add-ons
+### RFP Scoring — CODE IS NOW IN THE REPO
+
+File: `server/services/billing/rfpComplexityScorer.ts`
+
+Claude implemented the full scoring engine incorporating your additions:
+- ✅ Page count factor: ≤50=0, 51–100=1, >100=2
+- ✅ Rush deadline cap at +3 for same-day/< 24 hours
+- ✅ $1,500 self-serve hard cap — score ≥18 OR (federal+union+armed+rush) → custom quote
+- ✅ All your security-specific factors added as factors 10–13:
+  - Post orders / site plans required (+1)
+  - Enhanced insurance / bonding (+1)
+  - Past performance / capability depth (+1)
+  - High compliance burden — SAM.gov, e-Verify, SDVOSB, etc. (+1)
+
+**13 total factors, max score 24, custom quote threshold at 18.**
+
+Scoring tiers:
+  Score 0–3  → Standard      $500
+  Score 4–7  → Professional  $750
+  Score 8–12 → Complex       $1,000
+  Score 13–17 → Enterprise   $1,500
+  Score 18+  → Custom Quote (directed to sales)
+
+### Validation scenarios (run via: `npx tsx server/services/billing/rfpComplexityScorer.ts`):
+  Simple 1-site commercial   → score 0  → $500   ✅
+  3-site municipal, 4 days   → score ~5 → $750   ✅
+  7-site state gov, armed    → score ~10 → $1,000 ✅
+  Federal, 12 sites, union, rush, full burden → score 22 → Custom Quote ✅
+
+### Trinity action registered: `document.analyze_rfp`
+Two-step flow: analyze (returns price for confirmation) → generate (fires after tenant confirms).
+
+---
+
+### Jack's next task options:
+
+**Option A — Review `rfpComplexityScorer.ts` and confirm or adjust**
+If any factor weight feels off, or you want to add factors I missed, commit your changes directly.
+The scoring matrix is in the factor functions — each returns a score 0–N.
+Deliberation is done — we're aligned. Just flag if anything needs Bryan's input.
+
+**Option B — `billingTiersRegistry.ts` (billing enforcement layer)**
+The canonical source is `shared/billingConfig.ts`. Build the enforcement wrapper:
+  - Feature gates by tier (reads `PLATFORM_TIERS.features`)
+  - Token metering per workspace
+  - Trinity warning at 70/80/95/100% thresholds (`TOKEN_WARNING_THRESHOLDS`)
+  - `NEVER_THROTTLE_ACTIONS` enforced (payroll, calloffs, scheduling, invoicing)
+
+**Option C — Continue `payrollRoutes.ts` extraction**
+Still at 3,386 lines. Next: `DELETE /runs/:id` (small) or `POST /runs/:id/approve` (147 lines, needs inspection first).
+
+---
+
+### Bryan's direction (always in scope):
+> "Trinity does it all and more — proactive like a human manager but supervised."
+> "Get regulatory services to say yes — make us a necessity, not a nice to have."
+> "Never absorb a single token of AI cost without a billing record."
+> "All forms = real branded PDFs with header/footer, saved to vault."
+> "Security domain: protect code from scraping/theft — flagged for future sprint."
 
 ---
 

@@ -24,6 +24,7 @@ import { createLogger } from '../../lib/logger';
 import { diagnoseBusinessArtifactCoverage } from '../documents/businessArtifactDiagnosticService';
 import { invoiceService } from '../billing/invoice';
 import { generateTimesheetSupportPackage } from '../documents/timesheetSupportPackageGenerator';
+import { scoreRfpComplexity, buildRfpExtractionPrompt, type RfpScoringInputs } from '../billing/rfpComplexityScorer';
 import {
   generateProofOfEmployment,
   generateDirectDepositConfirmation,
@@ -796,6 +797,46 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
         status: status || null,
       });
       return { actionId: request.actionId, ...result };
+    },
+  });
+
+
+  // ── RFP Complexity Analysis & Pricing ─────────────────────────────────────
+  // Step 1: tenant calls analyze_rfp → Trinity extracts inputs + returns price
+  // Step 2: tenant confirms → separate action generates the actual proposal
+
+  orchestrator.registerAction({
+    actionId: 'document.analyze_rfp',
+    description: 'Analyze an RFP document or URL to determine complexity score and per-occurrence price before the tenant commits. Returns tier, price, and factor breakdown.',
+    async execute(request: any) {
+      const { workspaceId, rfpInputs, extractionNotes } = request.parameters || {};
+      if (!workspaceId || !rfpInputs) {
+        return {
+          actionId: request.actionId,
+          success: false,
+          error: 'workspaceId and rfpInputs (structured scoring inputs) required. ' +
+            'Run document extraction first using buildRfpExtractionPrompt(), then pass the parsed result here.',
+        };
+      }
+
+      const result = scoreRfpComplexity(rfpInputs as RfpScoringInputs);
+
+      return {
+        actionId: request.actionId,
+        success: true,
+        totalScore: result.totalScore,
+        tier: result.tier,
+        tierLabel: result.tierLabel,
+        priceUsd: result.priceUsd,
+        priceCents: result.priceCents,
+        requiresCustomQuote: result.requiresCustomQuote,
+        tenantMessage: result.tenantMessage,
+        breakdown: result.breakdown,
+        extractionNotes: extractionNotes || [],
+        stripePriceEnvVar: result.stripePriceEnvVar,
+        // Tenant must confirm before document.generate_rfp fires
+        awaitingConfirmation: true,
+      };
     },
   });
 
