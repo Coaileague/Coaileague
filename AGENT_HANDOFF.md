@@ -916,3 +916,167 @@ This is the reconciliation artifact (timesheet export with shift details, hours 
 **Recommended next for Jack:**
 - `GET /api/invoices/:id/pdf` — expose `generateInvoicePDF` as a route so managers/clients can download
 - Timesheet support package generator (closes last catalog gap)
+
+---
+
+## BILLING STRATEGY & PREMIUM PRICING — Researched Plan
+### 2026-04-25 — Bryan + Claude deliberation, research-backed
+
+**Context:** CoAIleague is a middleware platform for security companies. Billing must be airtight before any other domain is polished. This section captures the agreed pricing philosophy, market research, and implementation roadmap for Jack and future Claude passes.
+
+---
+
+### MARKET RESEARCH SUMMARY
+
+**RFP/Proposal Writing — What the market charges:**
+- Human proposal writers (government RFPs): $3,500–$7,500 flat per submission
+- Security-specific guard service proposals: ~$1,500–$3,500 (commercial), $3,500–$7,500 (government)
+- In-house RFP writer salary: $86,000–$106,000/year — impossible to justify for SMBs
+- One source states proposal prep costs ~1.2% of contract value for O&M/guard service contracts
+- A 3–5 year security contract can be worth $500K–$2M, making a $2,000 AI proposal a bargain vs. $5,000+ for a human writer
+
+**Conclusion:** Trinity-generated security RFP/proposal → **$150–$350 per proposal** is the right price. Not $7K (that's a full human engagement). Not $25 (that's too cheap for something worth tens of thousands in contract value). $150–$350 positions it as a steal vs. human writers while generating real revenue per use.
+
+**Payroll Software — Competitor pricing (2026):**
+- Gusto: $6–$8/employee/month + $19–$49/month base
+- ADP RUN: ~$8/employee/month + base
+- Justworks: $8–$12/employee/month
+- Rippling: custom, ~$8/employee/month for payroll core
+- Industry standard per-employee: $6–$12/month
+- Usage event fees (add-ons): $1–$3 per event
+
+**Conclusion:** CoAIleague should undercut on per-seat but stack value through Trinity automation. Target $8–$15/officer/month depending on tier. The AI manager capability justifies a premium over bare payroll tools.
+
+**Workforce/Scheduling Software — What CoAIleague replaces:**
+- GetSling: ~$1.70–$6/user/month
+- Homebase: $24.95–$99.95/month flat
+- When I Work: $2.50–$6/user/month
+- Deputy: $2.50–$6/user/month
+
+**Conclusion:** CoAIleague replaces ALL of these plus adds payroll + invoicing + Trinity. Even at $12–$18/officer/month it's a better deal than buying 3 separate tools.
+
+---
+
+### RECOMMENDED PRICING MODEL
+
+#### TIER STRUCTURE (Per-Seat Monthly Base)
+
+| Tier | Officers | Price/seat/mo | Included |
+|---|---|---|---|
+| **Starter** | 1–25 | $12/seat | Scheduling, time tracking, basic payroll, invoicing, HelpAI |
+| **Professional** | 26–100 | $10/seat | + Trinity AI Manager, compliance tracking, document vault, NACHA |
+| **Business** | 101–300 | $9/seat | + Multi-client, advanced reporting, API access, priority support |
+| **Enterprise** | 300+ | $8/seat | + Umbrella/sub-tenant management, SLA, dedicated support, custom integrations |
+
+> Minimum commitment: $149/month (covers up to ~12 seats at Starter). No one pays less than this — it covers base infrastructure.
+
+---
+
+#### TOKEN ALLOTMENTS PER TIER
+
+| Tier | Tokens/Month | Overage Bundle | Bundle Price |
+|---|---|---|---|
+| Starter | 500K | 250K bundle | $19 |
+| Professional | 2M | 1M bundle | $49 |
+| Business | 8M | 5M bundle | $149 |
+| Enterprise | 30M | 10M bundle | $249 |
+
+**Sub-tenant token flow:** Sub-workspaces consume from parent's pool. Parent gets visibility + control. Parent is billed for all sub-tenant overages consolidated on one invoice.
+
+**Trinity proactive warning rule (code it this way):**
+- 70% threshold → Trinity notifies tenant via dashboard banner + email
+- 80% threshold → Trinity proactively messages operator: "At current usage pace, you'll hit your limit in ~X days. Authorize a bundle now to avoid service interruption?"
+- 95% threshold → Trinity throttles non-critical AI calls (suggestions, summaries, low-priority scans). Core ops (calloffs, scheduling, payroll) never throttled.
+- 100% → Auto-purchase bundle IF tenant has pre-authorized auto-refill. Otherwise: non-critical AI disabled, operator alerted.
+
+---
+
+#### MONTHLY FEATURE ADD-ONS (Flat toggle)
+
+| Add-On | Monthly Price | What it Unlocks |
+|---|---|---|
+| Trinity AI Manager Pro | +$99/workspace | Proactive ops mode — Trinity runs the business, not just assists |
+| NACHA/ACH Direct Deposit | +$49/workspace | Full direct deposit processing via NACHA file generation |
+| Client Portal | +$39/workspace | Clients can log in, view invoices, approve timesheets, sign docs |
+| E-Verify Integration | +$29/workspace | Automated I-9 / E-Verify on new hires |
+| Compliance Guard Package | +$49/workspace | Auto DPS license tracking, expiry alerts, renewal reminders, audit reports |
+| Multi-Workspace Umbrella | +$99/parent | Sub-tenant management, consolidated billing, roll-up reporting |
+| API Access | +$29/workspace | Developer API for custom integrations |
+| Advanced Analytics | +$39/workspace | Predictive labor cost, shift coverage forecasting, revenue intelligence |
+| White-Label Mode | +$199/workspace | Remove CoAIleague branding (enterprise only) |
+
+---
+
+#### PER-OCCURRENCE PREMIUM CHARGES
+
+These are high-value AI deliverables where Trinity produces something worth real money:
+
+| Event | Charge | Why |
+|---|---|---|
+| **RFP/Proposal Generation** | $150–$350/proposal | Human writers charge $1,500–$7,500. Trinity does it in minutes with security-specific language, formatting, past performance sections, compliance matrices. Even at $350 it's a 10x bargain. Tier the price: simple commercial proposal $150, government/federal proposal $350. |
+| **AI-Drafted Contract Generation** | $75–$150/contract | Legal-grade document with relevant clauses for security services. Saves attorney review time. |
+| **Annual Compliance Audit Report** | $49/report | Year-end or quarter-end deliverable — compiles license status, incident history, compliance gaps. |
+| **Tax Season Package (W-2/1099 batch)** | $49/workspace/year | One-time annual charge covers all W-2s + 1099s generated for the year. Not per-form. |
+| **Background Check (pass-through)** | Cost + 15% margin | Hard cost passed through at margin. Platform never absorbs. |
+| **Incident Intelligence BOLO Package** | $25/report | Trinity-analyzed BOLO with pattern detection, risk scoring, recommended actions. |
+| **Proof of Employment (rush/certified)** | $9/letter | Standard POE is free. Certified letterhead version with digital signature is premium. |
+| **Payroll Funding Analysis** | $29/report | Trinity analyzes cash flow vs. payroll obligations and produces a funding readiness report. |
+
+**What we explicitly do NOT charge per-occurrence:**
+- Pay stubs (routine, covered by seat)
+- Invoice generation (routine, covered by tier invoicing bundle)
+- Timesheet approvals
+- Notifications and alerts
+- Basic shift creation
+- Standard direct deposit
+
+---
+
+#### INVOICE/PAYROLL BUNDLE LIMITS (Per Tier)
+
+Rather than per-unit charges on routine ops, each tier includes a bundle. Overages are bought in bundles, not per-unit.
+
+| | Starter | Professional | Business | Enterprise |
+|---|---|---|---|---|
+| Payroll runs/month | 2 | 4 | unlimited | unlimited |
+| Invoices/month | 25 | 100 | 500 | unlimited |
+| Document vault storage | 1 GB | 5 GB | 25 GB | 100 GB |
+| Overage: payroll run | +$19/run | +$15/run | N/A | N/A |
+| Overage: invoice batch | +$15/25 invoices | +$10/50 invoices | N/A | N/A |
+
+---
+
+### IMPLEMENTATION ROADMAP FOR JACK + CLAUDE
+
+**Phase 1 — `billingTiersRegistry.ts` (canonical source of truth)**
+- Single file that defines ALL of the above: tier names, seat prices, token limits, bundle sizes, bundle prices, add-on keys and prices, per-occurrence event prices
+- Everything else reads from this file — routes, Trinity, UI, invoice generation, token metering
+- This is the `payrollStatus.ts` equivalent for billing — one source, no hardcoding anywhere
+
+**Phase 2 — Token metering enforcement**
+- Every Trinity API call records `{ workspaceId, tokens_used, model, action_id, timestamp }`
+- Running total maintained in `workspace_token_ledger` table
+- Trinity proactive warning system fires at 70/80/95/100% thresholds
+- Auto-bundle purchase if pre-authorized
+
+**Phase 3 — Per-occurrence billing events**
+- When `document.generate_proposal` fires → check tier → charge per-occurrence → create billing record → Trinity confirms charge to operator before executing
+- Same pattern for contracts, BOLO packages, compliance audit reports
+
+**Phase 4 — Sub-tenant umbrella billing**
+- Parent workspace absorbs all sub-workspace usage
+- Consolidated monthly invoice generated for parent
+- Parent dashboard shows per-sub-workspace cost breakdown
+- Volume discounts applied at parent level automatically
+
+**Phase 5 — Stripe integration hardening**
+- Every billing event creates a Stripe billing record or usage line item
+- No charge is absorbed silently — everything has a paper trail
+- Overage bundle purchases trigger immediate Stripe charge + confirmation email
+
+---
+
+### RULE FOR BOTH AGENTS
+
+**The platform never absorbs a single token of AI cost without a corresponding billing record. Every overage bundle is pre-authorized or triggers a warning before execution. Trinity's non-critical functions throttle at 95% — core operations (payroll, calloffs, scheduling, invoicing) are never throttled regardless of token state.**
+
