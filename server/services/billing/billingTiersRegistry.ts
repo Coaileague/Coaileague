@@ -1,4 +1,8 @@
-import { BILLING } from '@shared/billingConfig';
+import {
+  BILLING,
+  getClientPortalSeatLimit,
+  hasClientPortalAccess,
+} from '@shared/billingConfig';
 import {
   type TierName,
   getMinimumTierForFeature,
@@ -26,6 +30,24 @@ export interface BillingFeatureGateResult {
   featureKey: string;
   requiredTier?: BillingTierKey;
   requiredAddon?: string;
+  reason?: string;
+}
+
+export interface ClientPortalSeatPolicyContext {
+  tier: string | null | undefined;
+  currentClientPortalSeats: number;
+  seatsToAdd?: number;
+}
+
+export interface ClientPortalSeatPolicyResult {
+  allowed: boolean;
+  tier: BillingTierKey;
+  hasAccess: boolean;
+  seatLimit: number | null;
+  currentClientPortalSeats: number;
+  projectedClientPortalSeats: number;
+  remainingSeats: number | null;
+  requiredTier?: BillingTierKey;
   reason?: string;
 }
 
@@ -73,11 +95,14 @@ export interface BillingTierSnapshot {
   maxManagers: number;
   monthlyTokens: number | null;
   hardTokenLimit: number | null;
+  clientPortalSeatLimit: number | null;
+  clientPortalIncluded: boolean;
   features: string[];
 }
 
 const TIER_ALIASES: Record<string, BillingTierKey> = {
   free: 'free',
+  free_trial: 'trial',
   trial: 'trial',
   starter: 'starter',
   professional: 'professional',
@@ -122,8 +147,24 @@ export function normalizeBillingTier(tier: string | null | undefined): BillingTi
 export function getBillingTierConfig(tier: string | null | undefined): any {
   const key = normalizeBillingTier(tier);
   const tiers = configAny().PLATFORM_TIERS || configAny().tiers || {};
-  if (key === 'trial') return tiers.trial || tiers.free;
+  if (key === 'trial') return tiers.trial || tiers.free_trial || tiers.free;
   return tiers[key] || tiers.free;
+}
+
+export function getClientPortalSeatLimitForTier(tier: string | null | undefined): number | null {
+  const key = normalizeBillingTier(tier);
+  if (key === 'trial') {
+    return getClientPortalSeatLimit('free_trial');
+  }
+  return getClientPortalSeatLimit(key);
+}
+
+export function tierHasClientPortalAccess(tier: string | null | undefined): boolean {
+  const key = normalizeBillingTier(tier);
+  if (key === 'trial') {
+    return hasClientPortalAccess('free_trial');
+  }
+  return hasClientPortalAccess(key);
 }
 
 export function getBillingTierSnapshot(tier: string | null | undefined): BillingTierSnapshot {
@@ -138,6 +179,8 @@ export function getBillingTierSnapshot(tier: string | null | undefined): Billing
     maxManagers: Number(config.maxManagers || 0),
     monthlyTokens: typeof config.monthlyTokens === 'number' && config.monthlyTokens > 0 ? config.monthlyTokens : null,
     hardTokenLimit: getTierHardTokenLimit(key),
+    clientPortalSeatLimit: getClientPortalSeatLimitForTier(key),
+    clientPortalIncluded: tierHasClientPortalAccess(key),
     features: Array.isArray(config.features) ? config.features : [],
   };
 }
@@ -200,6 +243,23 @@ export function evaluateBillingFeatureGate({
   activeAddons = [],
 }: BillingFeatureGateContext): BillingFeatureGateResult {
   const normalizedTier = normalizeBillingTier(tier);
+
+  if (featureKey === 'client_portal' || featureKey === 'client_portal_access') {
+    const portalPolicy = evaluateClientPortalSeatPolicy({
+      tier: normalizedTier,
+      currentClientPortalSeats: 0,
+      seatsToAdd: 1,
+    });
+    return {
+      decision: portalPolicy.allowed ? 'allowed' : 'denied',
+      allowed: portalPolicy.allowed,
+      tier: normalizedTier,
+      featureKey,
+      requiredTier: portalPolicy.requiredTier,
+      reason: portalPolicy.reason,
+    };
+  }
+
   const featureMatrix = configAny().featureMatrix || {};
   const matrixEntry = featureMatrix[featureKey];
 
@@ -242,6 +302,70 @@ export function evaluateBillingFeatureGate({
     featureKey,
     requiredTier,
     reason: allowed ? undefined : `Feature ${featureKey} requires ${requiredTier} tier`,
+  };
+}
+
+export function evaluateClientPortalSeatPolicy({
+  tier,
+  currentClientPortalSeats,
+  seatsToAdd = 1,
+}: ClientPortalSeatPolicyContext): ClientPortalSeatPolicyResult {
+  const normalizedTier = normalizeBillingTier(tier);
+  const seatLimit = getClientPortalSeatLimitForTier(normalizedTier);
+  const hasAccess = tierHasClientPortalAccess(normalizedTier);
+  const current = Math.max(0, Number(currentClientPortalSeats || 0));
+  const requested = Math.max(0, Number(seatsToAdd || 0));
+  const projected = current + requested;
+
+  if (!hasAccess) {
+    return {
+      allowed: false,
+      tier: normalizedTier,
+      hasAccess,
+      seatLimit,
+      currentClientPortalSeats: current,
+      projectedClientPortalSeats: projected,
+      remainingSeats: 0,
+      requiredTier: 'professional',
+      reason: 'Client Portal is included in Professional and above. Upgrade to enable client logins.',
+    };
+  }
+
+  if (seatLimit === null) {
+    return {
+      allowed: true,
+      tier: normalizedTier,
+      hasAccess,
+      seatLimit,
+      currentClientPortalSeats: current,
+      projectedClientPortalSeats: projected,
+      remainingSeats: null,
+    };
+  }
+
+  const remainingSeats = Math.max(0, seatLimit - current);
+  if (projected > seatLimit) {
+    return {
+      allowed: false,
+      tier: normalizedTier,
+      hasAccess,
+      seatLimit,
+      currentClientPortalSeats: current,
+      projectedClientPortalSeats: projected,
+      remainingSeats,
+      requiredTier: normalizedTier === 'professional' ? 'business' : 'enterprise',
+      reason: `Client Portal seat limit exceeded for ${normalizedTier}: ${projected}/${seatLimit}. Upgrade to add more client logins.`,
+    };
+  }
+
+  return {
+    allowed: true,
+    tier: normalizedTier,
+    hasAccess,
+    seatLimit,
+    currentClientPortalSeats: current,
+    projectedClientPortalSeats: projected,
+    remainingSeats: Math.max(0, seatLimit - projected),
   };
 }
 
@@ -389,8 +513,11 @@ export const billingTiersRegistry = {
   getBillingTierConfig,
   getBillingTierSnapshot,
   evaluateBillingFeatureGate,
+  evaluateClientPortalSeatPolicy,
   evaluateTokenUsagePolicy,
   recordBillingTokenUsage,
+  getClientPortalSeatLimitForTier,
+  tierHasClientPortalAccess,
   getTokenWarningThresholds,
   getNeverThrottleActions,
   isNeverThrottleAction,
