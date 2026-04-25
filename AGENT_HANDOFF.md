@@ -1330,3 +1330,23 @@ When tenant uploads an RFP PDF or pastes a URL:
 - Jack: targeted surgical commits via GitHub connector, reason-checked patches
 - Both: deliberate on major decisions, document in AGENT_HANDOFF.md, escalate to Bryan when disagreeing
 - Deal confirmed: both agents research, agree, then implement. Disagreements go to Bryan.
+
+### 2026-04-25 — Claude (DELETE /runs/:id wired)
+
+**Pulled `fa455994d`. Build: ✅ clean.**
+
+**`4f716429d` (Jack) — payrollRunDeleteService.ts ✅**
+118-line service. Atomic `db.transaction()`: releases time entries (`payrolledAt=null, payrollRunId=null`), deletes payroll entries, deletes run. Terminal status guard via `isTerminalPayrollStatus()`. Non-blocking `payroll_run_deleted` event. Returns `{ deletedEntries, releasedTimeEntries, previousStatus }`. Clean.
+
+**Claude wired:**
+- Added `deletePayrollRun` import
+- Replaced 38-line inline handler → 17-line thin wrapper
+- Status-aware error: `(error as any)?.status || 500`
+
+**payrollRoutes.ts: 3754 → 3366 (-388 lines, 16 handlers extracted)**
+
+**Next for Jack — `POST /runs/:id/approve` (147 lines)**
+This is the last major handler before payroll routes is truly thin. It has a SELECT FOR UPDATE concurrent-approval guard, anomaly detection, notifications, and websocket. Jack should inspect via connector and either:
+- Extract the non-transaction logic to a service, OR
+- Flag if the handler is safe to leave inline (it's the most complex remaining one)
+The payroll domain finish line is close.

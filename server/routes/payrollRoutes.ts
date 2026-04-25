@@ -141,6 +141,7 @@ import { getMyPaychecks, getMyPayStub, getMyPayrollInfo, updateMyPayrollInfo, ge
 import { listPayrollProposals, getPayrollProposal } from '../services/payroll/payrollProposalReadService';
 import { getMyEmployeeTaxForms, getMyEmployeeTaxForm } from '../services/payroll/payrollEmployeeTaxFormsService';
 import { listPayrollRuns, getPayrollRun } from '../services/payroll/payrollRunReadService';
+import { deletePayrollRun } from '../services/payroll/payrollRunDeleteService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -1156,39 +1157,18 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
     try {
       const roleCheck = checkManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
-
       const workspaceId = req.workspaceId!;
-      const { id } = req.params;
-
-      const run = await storage.getPayrollRun(id, workspaceId);
-      if (!run) {
-        return res.status(404).json({ message: "Payroll run not found" });
-      }
-
-      if (run.status !== 'draft') {
-        return res.status(422).json({ message: "Only draft payroll runs can be deleted. This run has already been " + run.status });
-      }
-
-      await db.transaction(async (tx) => {
-        await tx.delete(payrollEntries).where(eq(payrollEntries.payrollRunId, id));
-        await tx.delete(payrollRuns).where(and(eq(payrollRuns.id, id), eq(payrollRuns.workspaceId, workspaceId)));
-      });
-
-      const userId = req.user?.id;
-      storage.createAuditLog({
+      const result = await deletePayrollRun({
         workspaceId,
-        userId,
-        action: 'delete',
-        entityType: 'payroll_run',
-        entityId: id,
-        changes: { before: { status: run.status, payPeriodStart: run.periodStart, payPeriodEnd: run.periodEnd }, after: { status: 'deleted' } },
-        metadata: { isSensitiveData: true, complianceTag: 'soc2' },
-      }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll delete', { error: err?.message }));
-
-      res.json({ message: "Payroll run deleted successfully" });
+        payrollRunId: req.params.id,
+        userId: req.user?.id || null,
+        reason: typeof req.body?.reason === 'string' ? req.body.reason : null,
+      });
+      res.json(result);
     } catch (error: unknown) {
-      log.error("Error deleting payroll run:", error);
-      res.status(500).json({ message: "Failed to delete payroll run" });
+      const status = (error as any)?.status || 500;
+      log.error('Error deleting payroll run:', error);
+      res.status(status).json({ message: error instanceof Error ? sanitizeError(error) : 'Failed to delete payroll run' });
     }
   });
 
