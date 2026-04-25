@@ -1836,3 +1836,34 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
     res.status(500).json({ error: 'Failed to fetch invoice preview' });
   }
 });
+
+// ── AI Usage (migrated from domains/billing.ts) ───────────────────────────────
+// Frontend caller: client/src/components/billing/AiUsageDashboard.tsx
+router.get('/ai-usage', requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      const { aiMeteringService } = await import('../../services/billing/aiMeteringService');
+      const usage = await aiMeteringService.getCurrentPeriodUsage(workspaceId);
+      if (!usage) return res.json({ empty: true });
+
+      const { rows: recentCalls } = await (await import('../../db')).pool.query(`
+        SELECT model_name, call_type, total_tokens, cost_microcents, created_at
+        FROM ai_call_log
+        WHERE workspace_id=$1
+        ORDER BY created_at DESC
+        LIMIT 20
+      `, [workspaceId]);
+
+      const { rows: daily } = await (await import('../../db')).pool.query(`
+        SELECT summary_date, total_tokens_k, total_cost_microcents, call_count
+        FROM ai_usage_daily_summary
+        WHERE workspace_id=$1
+        ORDER BY summary_date DESC
+        LIMIT 30
+      `, [workspaceId]);
+
+      res.json({ ...usage, recentCalls, dailyHistory: daily });
+    } catch (error: unknown) { res.status(500).json({ error: sanitizeError(error) }); }
+  });
+

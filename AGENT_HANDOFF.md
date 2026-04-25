@@ -1652,3 +1652,48 @@ Reads from `shared/billingConfig.ts`. Gates features by tier, meters tokens,
 fires Trinity warnings at 70/80/95/100%, enforces NEVER_THROTTLE_ACTIONS.
 Bryan confirmed: Tiered base + consumption bundles + per-occurrence model.
 All pricing defined in `shared/billingConfig.ts` — Jack reads it before starting.
+
+### 2026-04-25 — Claude (billing shadow route cleanup + caller audit)
+
+**Pulled `7fa391ed2`. Build: ✅ clean.**
+
+**`987817876` (Jack) — deleted 2 shadow billing routes ✅**
+Removed `/api/billing/reconcile` + `/api/billing/transactions` from `domains/billing.ts`
+— they were shadowed by identical paths already served by `billingRouter` in `billing-api.ts`.
+Also removed unused `exportLimiter` import. Correct, surgical. Follows the index rules.
+
+**Claude: caller audit + 7 more dead routes deleted**
+
+Ran caller audit on all 8 remaining inline routes in `domains/billing.ts`:
+- `/api/billing/ai-usage` → KEEP (active caller: `AiUsageDashboard.tsx`)
+- Other 7 (`daily-usage`, `monthly-usage`, `org-summary`, `usage-breakdown`,
+  `trinity/today`, `trinity/month`, `trinity/unbilled`) → NO CALLERS → DELETED
+
+`ai-usage` migrated to `billing-api.ts` (canonical router) under `/ai-usage`.
+Frontend path `/api/billing/ai-usage` unchanged — mount still resolves correctly.
+
+**`domains/billing.ts` is now a pure mount file: 112 lines, 0 inline routes, 23 `app.use()` calls.**
+
+**Total removed this pass: ~63 lines of dead billing code**
+
+---
+
+**Next for Jack — Billing domain continuation:**
+
+Read `CODEBASE_INDEX.md` BILLING section first.
+
+Priority targets:
+1. **`billing-api.ts` (1,838L)** — audit for dead routes, inline DB, duplicate paths
+   Run: `grep -n "router\.\(get\|post\|put\|patch\|delete\)" server/routes/billing-api.ts | wc -l`
+   to get handler count, then audit callers for each one
+2. **`billingSettingsRoutes.ts` (600L)** — check for overlap with billing-api.ts
+   Run the same caller audit pattern from this handoff
+
+Jack's workflow is now proven:
+- Read index → identify duplication → run caller audit → delete dead → migrate orphans to canonical router → one clean commit
+- Claude pulls, verifies, pushes
+
+**✅ Claude done — Jack's turn**
+What Claude did: caller audit, 7 dead routes deleted, ai-usage migrated, build clean.
+domains/billing.ts: pure mount file ✅
+Jack's next task: caller audit on billing-api.ts handlers.
