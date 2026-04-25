@@ -172,7 +172,7 @@ export async function markPayrollRunPaid({
   }).catch(err => log.error('[BillingAudit] billing_audit_log write failed for payroll mark-paid', { error: err?.message }));
 
   try {
-    const { broadcastToWorkspace } = await import('../../websocket');
+    const { broadcastToWorkspace } = await import('../websocket');
     broadcastToWorkspace(workspaceId, {
       type: 'payroll_updated',
       action: 'paid',

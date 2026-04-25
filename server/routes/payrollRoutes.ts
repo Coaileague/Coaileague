@@ -144,6 +144,7 @@ import { approvePayrollProposal } from '../services/payroll/payrollProposalAppro
 import { broadcastToWorkspace } from '../websocket';
 import { universalNotificationEngine } from '../services/universalNotificationEngine';
 import { taxFormGeneratorService } from '../services/taxFormGeneratorService';
+import { markPayrollRunPaid } from '../services/payroll/payrollRunMarkPaidService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -2067,135 +2068,27 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
     const workspaceId = req.workspaceId!;
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    // ACH payroll is a Professional-tier feature — gate here at service layer
-    const { getWorkspaceTier, hasTierAccess } = await import('../tierGuards');
-    const tier = await getWorkspaceTier(workspaceId);
-    if (!hasTierAccess(tier, 'professional')) {
-      return res.status(402).json({ error: 'ACH payroll requires the Professional plan or higher', currentTier: tier, minimumTier: 'professional', requiresTierUpgrade: true });
-    }
-
-    const { id: runId } = req.params;
-    const parsed = payrollMarkPaidSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: 'Invalid mark-paid payload', details: parsed.error.flatten() });
-    const { disbursementMethod = 'ach', notes } = parsed.data;
-
-    const run = await storage.getPayrollRun(runId, workspaceId);
-    if (!run) return res.status(404).json({ message: 'Payroll run not found' });
-
-    const currentStatus = run.status ?? 'draft';
-    if (!isValidPayrollTransition(currentStatus, 'paid')) {
-      const lifecycleStatus = resolvePayrollLifecycleStatus(currentStatus);
-      return res.status(422).json({
-        message: `Only processing payroll runs can be marked as paid. Current status: ${lifecycleStatus || currentStatus}`,
-      });
-    }
-
-    const updated = await storage.updatePayrollRunStatus(runId, 'paid', userId, workspaceId);
-    if (!updated) {
-      return res.status(409).json({ message: 'Payroll run status could not be updated — concurrent modification detected' });
-    }
-
-    // Bulk-stamp disbursedAt and disbursementMethod on all payroll entries for this run
-    const now = new Date();
-    await db.update(payrollEntries)
-      .set({
-        disbursedAt: now,
-        disbursementMethod,
-      })
-      .where(and(
-        eq(payrollEntries.payrollRunId, runId),
-        eq(payrollEntries.workspaceId, workspaceId),
-      ));
-
-    try {
-      const { writeLedgerEntry } = await import('../services/orgLedgerService');
-      await writeLedgerEntry({
-        workspaceId,
-        entryType: 'payroll_disbursed',
-        direction: 'credit',
-        // G14 FIX: use ?? not || — totalNetPay of 0 (fully garnished) must record as 0 in the ledger
-        amount: parseFloat(String(run.totalNetPay ?? run.totalGrossPay ?? 0)),
-        relatedEntityType: 'payroll_run',
-        relatedEntityId: runId,
-        payrollRunId: runId,
-        description: `Payroll run ${runId.substring(0, 8)} disbursed via ${disbursementMethod.toUpperCase()} — confirmed by ${req.user?.email || userId}${notes ? ` — ${notes}` : ''}`,
-        createdBy: userId,
-        metadata: { disbursementMethod, confirmedBy: userId, notes },
-      });
-    } catch (ledgerErr: unknown) {
-      log.error('[PayrollRoute] Ledger write failed on mark-paid:', (ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr)));
-    }
-
-    storage.createAuditLog({
+    const result = await markPayrollRunPaid({
       workspaceId,
-      userId,
+      payrollRunId: req.params.id,
+      userId: req.user!.id,
       userEmail: req.user?.email || 'unknown',
       userRole: req.user?.role || 'user',
-      action: 'update',
-      entityType: 'payroll_run',
-      entityId: runId,
-      actionDescription: `Payroll run ${runId} marked as paid via ${disbursementMethod}`,
-      changes: { before: { status: 'processed' }, after: { status: 'paid', disbursementMethod, confirmedBy: userId } },
-      isSensitiveData: true,
-      complianceTag: 'soc2',
-    }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll mark-paid', { error: err?.message }));
-
-      // FIX-2: Financial audit log for payroll disbursement
-      await db.insert(billingAuditLog).values({
-        workspaceId,
-        eventType: 'payroll_run_paid',
-        eventCategory: 'payroll',
-        actorType: 'user',
-        actorId: userId,
-        actorEmail: req.user?.email || null,
-        description: `Payroll run marked as paid via ${disbursementMethod}`,
-        relatedEntityType: 'payroll_run',
-        relatedEntityId: runId,
-        previousState: { status: 'processed' },
-        newState: { status: 'paid', disbursementMethod, disbursedAt: now.toISOString(), confirmedBy: userId },
-        metadata: { notes, totalNetPay: run.totalNetPay, totalGrossPay: run.totalGrossPay },
-        ipAddress: req.ip || null,
-        userAgent: req.get('user-agent') || null,
-      }).catch(err => log.error('[BillingAudit] billing_audit_log write failed for payroll mark-paid', { error: err?.message }));
-
-    try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      // broadcastToWorkspace — now static import at top
-      broadcastToWorkspace(workspaceId, {
-        type: 'payroll_updated',
-        action: 'paid',
-        runId,
-        disbursementMethod,
-      });
-    } catch (err: any) {
-      log.warn('[Payroll] Failed to process batch completion', { error: err.message });
-    }
-
-    platformEventBus.publish({
-      type: 'payroll_run_paid',
-      category: 'automation',
-      title: `Payroll Disbursed`,
-      description: `Payroll run ${runId} marked as paid — funds disbursed via ${disbursementMethod}`,
-      workspaceId,
-      userId,
-      metadata: { payrollRunId: runId, disbursementMethod, confirmedBy: userId, paidAt: new Date().toISOString() },
-      visibility: 'manager',
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
-
-    res.json({
-      success: true,
-      runId,
-      status: 'paid',
-      disbursementMethod,
-      confirmedBy: userId,
-      message: 'Payroll run marked as paid. Disbursement confirmed.',
+      ipAddress: req.ip || null,
+      userAgent: req.get('user-agent') || null,
+      reason: typeof req.body?.reason === 'string' ? req.body.reason : null,
     });
+
+    res.json(result);
   } catch (error: unknown) {
-    log.error('[PayrollRoute] Error marking payroll run as paid:', error);
-    res.status(500).json({ message: sanitizeError(error) || 'Failed to mark payroll run as paid' });
+    const status = (error as any)?.status || 500;
+    const extra = (error as any)?.extra || {};
+    log.error('Error marking payroll run paid:', error);
+    res.status(status).json({
+      message: error instanceof Error ? sanitizeError(error) : 'Failed to mark payroll run paid',
+      ...extra,
+    });
   }
 });
 
