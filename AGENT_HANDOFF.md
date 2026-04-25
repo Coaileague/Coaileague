@@ -1,3 +1,94 @@
+
+---
+
+## 🎯 GO-LIVE PLAN — End of Month Target
+### Bryan directive 2026-04-25 | Both agents read this before ANY work
+
+**The real problem:** 361 route files, 200,508 lines of route code, 125 files over 500 lines.
+The schema is huge. The routes are huge. The complaint is valid.
+
+**The wrong fix:** Create more service files that add complexity.
+**The right fix:** Consolidate duplicate paths, delete dead code, use what we have universally.
+
+---
+
+### RULES FOR BOTH AGENTS — NON-NEGOTIABLE
+
+1. **No new files unless absolutely necessary.** If the operation already exists somewhere, wire to it. Don't create a parallel path.
+
+2. **One canonical path per operation.** If `POST /api/invoices` and `POST /api/billing/invoices` do the same thing — one dies. The other uses the canonical service.
+
+3. **Delete > Extract.** Before creating a service file, ask: does this handler need to exist at all? Dead routes, dev-only routes, and duplicates get deleted first.
+
+4. **Domain services are singletons.** `invoiceService`, `storage`, `platformEventBus`, `db` — use them. Don't re-implement DB queries that already have a canonical home.
+
+5. **If a route file is bloated, find the duplicates first.** `miscRoutes.ts` (2,776L) and `devRoutes.ts` (2,458L) are almost certainly full of dead code — audit before touching.
+
+---
+
+### STRATEGIC PRIORITY ORDER (end of month go-live)
+
+**Tier 1 — Must ship (core business operations):**
+| Domain | Biggest file | Action |
+|---|---|---|
+| ✅ Payroll | payrollRoutes.ts (was 3,754L → 2,068L) | DONE |
+| Billing | billing-api.ts (1,838L) | Thin routes → billingTiersRegistry enforcement |
+| Scheduling | shiftRoutes.ts (3,622L) | Audit for duplicates, extract shift mutation service |
+| Time | time-entry-routes.ts (2,707L) | Consolidate with timeEntryRoutes.ts (924L) — likely 60% overlap |
+| Invoicing | invoiceRoutes.ts (3,818L) | Extract to invoiceService (partially done) |
+
+**Tier 2 — Ship if time allows:**
+| Domain | Action |
+|---|---|
+| HR | hrInlineRoutes.ts (1,795L) → employeeRoutes.ts (2,451L) — find overlap |
+| Compliance | complianceRoutes.ts (1,823L) → use existing complianceEngine |
+| Chat/Comms | chat.ts (1,666L) + chat-rooms.ts (2,828L) → consolidate |
+
+**Tier 3 — Post go-live cleanup:**
+- miscRoutes.ts (2,776L) — audit + delete dead code
+- devRoutes.ts (2,458L) — production should strip this entirely
+- voiceRoutes.ts (5,059L) — largest file, needs dedicated sprint
+- mascot-routes.ts (2,580L) — non-critical, schedule for later
+
+---
+
+### WHAT GO-LIVE ACTUALLY REQUIRES
+
+1. **Billing enforcement** — without it, nothing gets charged. Priority #1 after payroll.
+2. **Shift scheduling** — the heartbeat of a security company. Must work end to end.
+3. **Time entry** — feeds payroll. Must be one clean canonical path.
+4. **Invoicing** — generates revenue. Must create, send, mark paid without errors.
+5. **Trinity autonomy** — proactive calloff response, compliance alerts, shift fill.
+6. **RESEND_WEBHOOK_SECRET** — set in Railway to unlock calloff/incident email autonomy.
+
+Everything else is enhancement. Ship those 5 and the platform is functional.
+
+---
+
+### FOR JACK — IMMEDIATE NEXT TASK
+
+**Do NOT create more service files for payroll.** Payroll is done.
+
+**START: Billing domain.**
+
+Files to audit first (find duplicates before touching):
+- `server/routes/billing-api.ts` (1,838L)
+- `server/routes/billingSettingsRoutes.ts` (600L)
+- `server/routes/domains/billing.ts` (217L)
+- `server/routes/stripeInlineRoutes.ts` (923L)
+
+These 4 files total ~3,578L. They likely cover overlapping billing operations.
+Before extracting anything: map what each file does, find the duplicates, consolidate to 2 files max.
+
+Strategy:
+1. `billing-api.ts` + `billingSettingsRoutes.ts` → one `billingRoutes.ts` using `billingTiersRegistry`
+2. `stripeInlineRoutes.ts` → Stripe webhook handler (keep separate, it has different middleware)
+3. `domains/billing.ts` → thin mount file only (stays thin)
+
+Jack: read all 4 files first, identify overlapping routes, propose consolidation plan in handoff before writing code.
+
+---
+
 # ═══════════════════════════════════════════════════════════
 # JACK — READ THIS FIRST (updated 2026-04-25 post-deliberation)
 # ═══════════════════════════════════════════════════════════
