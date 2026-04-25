@@ -184,7 +184,15 @@ const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || '';
  */
 function verifyResendSignature(rawBody: Buffer | string, headers: Record<string, string | string[] | undefined>): boolean {
   if (!WEBHOOK_SECRET) {
-    log.warn('[InboundEmail] RESEND_WEBHOOK_SECRET not set — skipping signature verification in dev');
+    if (isProduction()) {
+      log.error(
+        '[InboundEmail] RESEND_WEBHOOK_SECRET is not set in production. ' +
+        'All inbound webhook calls will fail signature verification and be rejected. ' +
+        'Fix: In Resend dashboard → Webhooks → copy signing secret → set RESEND_WEBHOOK_SECRET in Railway env vars.'
+      );
+    } else {
+      log.warn('[InboundEmail] RESEND_WEBHOOK_SECRET not set — skipping signature verification in dev');
+    }
     return !isProduction();
   }
 
@@ -486,9 +494,9 @@ async function handleInboundWebhook(
   // Check 1: Signature verification
   const signatureValid = verifyResendSignature(rawBody, req.headers as any);
   if (!signatureValid) {
-    log.warn(`[InboundEmail] Invalid signature for ${targetAddress} — returning 401`);
-    // Per spec: still return a safe response; 401 is acceptable for signature failure
-    res.status(401).json({ error: 'Invalid webhook signature' });
+    log.warn(`[InboundEmail] Signature mismatch for ${targetAddress} — returning 200 to prevent Resend retry loop`);
+    // Per Resend spec: non-2xx responses trigger indefinite retries — always return 200.
+    res.status(200).json({ received: false, reason: 'signature_invalid' });
     return;
   }
 
@@ -541,8 +549,8 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
 
   // Step 1: Signature verification
   if (!verifyResendSignature(rawBody, req.headers as any)) {
-    log.warn('[InboundEmail/root] Invalid signature');
-    res.status(401).json({ error: 'Invalid webhook signature' });
+    log.warn('[InboundEmail/root] Signature mismatch — returning 200 to prevent Resend retry loop');
+    res.status(200).json({ received: false, reason: 'signature_invalid' });
     return;
   }
 
@@ -955,8 +963,8 @@ inboundEmailRouter.post('/per-org', async (req: Request, res: Response) => {
 
   const signatureValid = verifyResendSignature(rawBody, req.headers as any);
   if (!signatureValid) {
-    log.warn('[InboundEmail/per-org] Invalid signature');
-    res.status(401).json({ error: 'Invalid webhook signature' });
+    log.warn('[InboundEmail/per-org] Signature mismatch — returning 200 to prevent Resend retry loop');
+    res.status(200).json({ received: false, reason: 'signature_invalid' });
     return;
   }
 
@@ -1013,10 +1021,17 @@ inboundEmailRouter.post('/per-org', async (req: Request, res: Response) => {
 
 // Health probe
 inboundEmailRouter.get('/health', (_req: Request, res: Response) => {
+  const secretConfigured = !!WEBHOOK_SECRET;
   res.json({
     status: 'ok',
     endpoints: ['calloffs', 'incidents', 'docs', 'support', 'per-org'],
     perOrgRouting: 'enabled',
-    signatureVerification: !!WEBHOOK_SECRET ? 'enabled' : 'disabled (no secret set)',
+    signatureVerification: secretConfigured ? 'enabled' : 'disabled',
+    production_ready: secretConfigured,
+    ...(!secretConfigured && {
+      action_required: 'Set RESEND_WEBHOOK_SECRET in Railway env vars. ' +
+        'Get the value from: Resend dashboard → Webhooks → your endpoint → Signing Secret. ' +
+        'All inbound email processing is blocked until this is set in production.',
+    }),
   });
 });

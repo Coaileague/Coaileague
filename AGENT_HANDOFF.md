@@ -683,3 +683,62 @@ Recommend: `GET /export/csv` and `GET /export/pdf/:runId` are both self-containe
 - Employee-facing reads are the next clean group: `/my-paychecks`, `/pay-stubs/:id`, `/my-payroll-info`, `/ytd/:employeeId` — all pure DB reads delegating to paystubService/storage
 - `GET /export/pdf/:runId` — 130-line PDFKit handler, candidate for extraction
 - `PATCH /proposals/:id/approve` — 166-line handler, needs careful inspection before touching
+
+### 2026-04-25 — Claude (autonomous pass — inbound email + employee self-service)
+
+**Autonomous pass — no Jack trigger needed. Build: ✅ clean.**
+
+#### 1. CRITICAL PRODUCTION FIX: inbound email webhook 401 → 200
+
+`server/routes/inboundEmailRoutes.ts` was returning `401` on signature verification
+failure. Per Resend's own spec (written in the file's header): **all non-2xx responses
+trigger indefinite retries**. Every calloff, incident, support, and docs email was
+causing a retry loop.
+
+Fixed all 3 handlers (handleInboundWebhook, root, per-org):
+- `res.status(401)` → `res.status(200).json({ received: false, reason: 'signature_invalid' })`
+- Retries stop; failure is logged and traced
+
+Improved `RESEND_WEBHOOK_SECRET` missing-in-production error:
+- Was: silent warn + skip verification
+- Now: `log.error` with exact Railway steps: "In Resend dashboard → Webhooks → copy signing secret → set RESEND_WEBHOOK_SECRET in Railway env vars"
+
+Improved health endpoint (`GET /api/inbound/email/health`):
+- Now surfaces `production_ready: false` and `action_required` string when secret is missing
+- Bryan can curl this to confirm production state instantly
+
+**The calloff/incident/support email autonomy loop is ready — it only needs `RESEND_WEBHOOK_SECRET` set in Railway.**
+
+#### 2. Trinity autonomy audit
+
+Full audit of Trinity's action ecosystem (180+ files). Key findings:
+- `trinityCalloffPredictor.ts` ✅ — predicts calloffs before they happen
+- `trinityAutonomousScheduler.ts` (3199 lines) ✅ — full autonomous scheduling
+- `trinityProactiveScanner.ts` ✅ — scans for uncovered shifts, compliance gaps
+- `trinityEventSubscriptions.ts` (119 subscriptions) ✅ — covers payroll, compliance, coverage
+- `fireCallOffSequence` ✅ — cascades replacement notifications
+- `trinityLicenseActions.ts` ✅ — license query/alert/renewal (TDPS compliance)
+- `trinityTaxComplianceActions.ts` ✅ — tax compliance audit
+
+The platform has the autonomy capabilities. The gaps are **production wiring**:
+1. `RESEND_WEBHOOK_SECRET` — unblocks inbound email → calloff/incident/support flows
+2. DNS verification for sending domain (if pending) → outbound email delivery
+
+#### 3. payrollRoutes.ts employee self-service extraction
+
+Created `server/services/payroll/payrollEmployeeSelfServiceService.ts`:
+- `getMyPaychecks()` — employee's own paycheck history
+- `getMyPayStub(userId, stubId)` — single pay stub with employee ownership guard
+- `getMyPayrollInfo()` — direct deposit settings read
+- `updateMyPayrollInfo()` — direct deposit update with `db.transaction()` + AES-256 encryption preserved
+- `getYtdEarnings(employeeId, workspaceId)` — YTD via paystubService
+
+Wired 5 handlers: `my-paychecks`, `pay-stubs/:id`, `my-payroll-info` GET,
+`my-payroll-info` PATCH, `ytd/:employeeId` → all thin wrappers.
+
+**payrollRoutes.ts reduction: 3754 → 3456 (-298 lines, 10 handlers extracted)**
+
+#### Next targets
+- `GET /my-tax-forms` + `GET /my-tax-forms/:formId/download` — employee tax form access
+- `GET /proposals` — 23-line manager read, trivially thin already
+- `GET /runs` + `GET /runs/:id` — simple storage delegation

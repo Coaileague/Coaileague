@@ -137,6 +137,7 @@ import { isTerminalPayrollStatus, isDraftPayrollStatus, isValidPayrollTransition
 import { getPayrollTaxFilingDeadlines, getPayrollTaxFilingGuide, getPayrollStatePortals } from '../services/payroll/payrollTaxFilingGuideService';
 import { buildPayrollCsvExport } from '../services/payroll/payrollCsvExportService';
 import { rejectPayrollProposal } from '../services/payroll/payrollProposalRejectionService';
+import { getMyPaychecks, getMyPayStub, getMyPayrollInfo, updateMyPayrollInfo, getYtdEarnings } from '../services/payroll/payrollEmployeeSelfServiceService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -1206,50 +1207,22 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
   router.get('/my-paychecks', async (req: AuthenticatedRequest, res) => {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.id;
-      
-      // For unauthenticated users, return success (frontend handles localStorage)
-      if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-
-      // Find employee record for this user
-      const allEmployees = await db
-        .select()
-        .from(employees)
-        .where(eq(employees.userId, userId));
-
-      if (!allEmployees || allEmployees.length === 0) {
-        return res.status(404).json({ message: "Employee record not found" });
-      }
-
-      // Use the first employee record (users typically belong to one workspace)
-      const employee = allEmployees[0];
-      const workspaceId = employee.workspaceId;
-
-      const paychecks = await storage.getPayrollEntriesByEmployee(employee.id, workspaceId);
-      res.json(paychecks);
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      const result = await getMyPaychecks(userId);
+      if (!result.success) return res.status(result.status || 500).json({ message: result.error });
+      res.json(result.data);
     } catch (error: unknown) {
-      log.error("Error fetching paychecks:", error);
-      res.status(500).json({ message: "Failed to fetch paychecks" });
+      log.error('Error fetching paychecks:', error);
+      res.status(500).json({ message: 'Failed to fetch paychecks' });
     }
   });
 
 router.get('/pay-stubs/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user!.id;
-    // Resolve the employee record for this user so we can scope by employeeId.
-    const userEmployees = await db.select({ id: employees.id })
-      .from(employees)
-      .where(eq(employees.userId, userId));
-    if (!userEmployees.length) return res.status(404).json({ error: 'Pay stub not found' });
-    const employeeIds = userEmployees.map(e => e.id);
-    const [stub] = await db.select().from(payStubs)
-      .where(and(eq(payStubs.id, req.params.id), inArray(payStubs.employeeId, employeeIds)))
-      .limit(1);
-    if (!stub) return res.status(404).json({ error: 'Pay stub not found' });
-    res.json(stub);
+    const result = await getMyPayStub(req.user!.id, req.params.id);
+    if (!result.success) return res.status(result.status || 500).json({ error: result.error });
+    res.json(result.data);
   } catch (error: unknown) {
     log.error('Error fetching pay stub:', error);
     res.status(500).json({ error: 'Failed to fetch pay stub' });
@@ -1260,27 +1233,9 @@ router.get('/my-payroll-info', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-
-    const allEmployees = await db.select().from(employees).where(eq(employees.userId, userId));
-    if (!allEmployees.length) return res.status(404).json({ message: 'Employee record not found' });
-
-    const employee = allEmployees[0];
-    const info = await db.query.employeePayrollInfo.findFirst({
-      where: and(
-        eq(employeePayrollInfo.employeeId, employee.id),
-        eq(employeePayrollInfo.workspaceId, employee.workspaceId)
-      ),
-    });
-
-    if (!info) return res.json({ directDepositEnabled: false, preferredPayoutMethod: 'direct_deposit' });
-
-    res.json({
-      directDepositEnabled: info.directDepositEnabled,
-      bankAccountType: info.bankAccountType,
-      preferredPayoutMethod: info.preferredPayoutMethod,
-      hasRoutingNumber: !!(info.bankRoutingNumber),
-      hasAccountNumber: !!(info.bankAccountNumber),
-    });
+    const result = await getMyPayrollInfo(userId);
+    if (!result.success) return res.status(result.status || 500).json({ message: result.error });
+    res.json(result.data);
   } catch (error: unknown) {
     log.error('Error fetching payroll info:', error);
     res.status(500).json({ message: 'Failed to fetch payroll info' });
@@ -1291,92 +1246,9 @@ router.patch('/my-payroll-info', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-
-    const allEmployees = await db.select().from(employees).where(eq(employees.userId, userId));
-    if (!allEmployees.length) return res.status(404).json({ message: 'Employee record not found' });
-
-    const employee = allEmployees[0];
-    const parsed = payrollInfoUpdateSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid payroll info', details: parsed.error.flatten() });
-    const { bankAccountType, bankRoutingNumber, bankAccountNumber, directDepositEnabled, preferredPayoutMethod } = parsed.data;
-
-    const existing = await db.query.employeePayrollInfo.findFirst({
-      where: and(
-        eq(employeePayrollInfo.employeeId, employee.id),
-        eq(employeePayrollInfo.workspaceId, employee.workspaceId)
-      ),
-    });
-
-    const updateFields: Record<string, any> = {};
-    if (bankAccountType !== undefined) updateFields.bankAccountType = bankAccountType;
-    if (directDepositEnabled !== undefined) updateFields.directDepositEnabled = directDepositEnabled;
-    if (preferredPayoutMethod !== undefined) updateFields.preferredPayoutMethod = preferredPayoutMethod;
-
-    // ACH COMPLIANCE: Encrypt routing/account numbers at rest before storage
-    let encryptedRouting: string | undefined;
-    let encryptedAccount: string | undefined;
-    if (bankRoutingNumber !== undefined && bankRoutingNumber.trim()) {
-      encryptedRouting = encryptToken(bankRoutingNumber.trim());
-      updateFields.bankRoutingNumber = encryptedRouting;
-    }
-    if (bankAccountNumber !== undefined && bankAccountNumber.trim()) {
-      encryptedAccount = encryptToken(bankAccountNumber.trim());
-      updateFields.bankAccountNumber = encryptedAccount;
-    }
-
-    // Wrap both table writes in a single transaction — if bank account upsert fails,
-    // the payrollInfo update rolls back too, keeping the two tables consistent.
-    await db.transaction(async (tx) => {
-      if (existing) {
-        await tx.update(employeePayrollInfo)
-          .set(updateFields)
-          .where(and(
-            eq(employeePayrollInfo.employeeId, employee.id),
-            eq(employeePayrollInfo.workspaceId, employee.workspaceId)
-          ));
-      } else {
-        await tx.insert(employeePayrollInfo).values({
-          employeeId: employee.id,
-          workspaceId: employee.workspaceId,
-          ...updateFields,
-        });
-      }
-
-      // Also upsert into canonical encrypted employee_bank_accounts table if bank data provided
-      if (encryptedRouting || encryptedAccount) {
-        const routingLast4 = bankRoutingNumber?.trim().slice(-4) || null;
-        const accountLast4 = bankAccountNumber?.trim().slice(-4) || null;
-
-        const [existingBankAcct] = await tx.select({ id: employeeBankAccounts.id })
-          .from(employeeBankAccounts)
-          .where(and(eq(employeeBankAccounts.employeeId, employee.id), eq(employeeBankAccounts.isPrimary, true), eq(employeeBankAccounts.isActive, true)))
-          .limit(1);
-
-        if (existingBankAcct) {
-          await tx.update(employeeBankAccounts).set({
-            ...(encryptedRouting ? { routingNumberEncrypted: encryptedRouting, routingNumberLast4: routingLast4 } : {}),
-            ...(encryptedAccount ? { accountNumberEncrypted: encryptedAccount, accountNumberLast4: accountLast4 } : {}),
-            ...(bankAccountType ? { accountType: bankAccountType } : {}),
-            updatedAt: new Date(),
-          }).where(eq(employeeBankAccounts.id, existingBankAcct.id));
-        } else {
-          await tx.insert(employeeBankAccounts).values({
-            workspaceId: employee.workspaceId,
-            employeeId: employee.id,
-            routingNumberEncrypted: encryptedRouting || null,
-            accountNumberEncrypted: encryptedAccount || null,
-            routingNumberLast4: routingLast4,
-            accountNumberLast4: accountLast4,
-            accountType: bankAccountType || 'checking',
-            isPrimary: true,
-            isActive: true,
-            addedBy: userId,
-          });
-        }
-      }
-    });
-
-    res.json({ success: true, message: 'Direct deposit settings updated' });
+    const result = await updateMyPayrollInfo({ userId, body: req.body });
+    if (!result.success) return res.status(result.status || 500).json({ message: result.error, ...(result.data ? { details: result.data } : {}) });
+    res.json(result.data);
   } catch (error: unknown) {
     log.error('Error updating payroll info:', error);
     res.status(500).json({ message: 'Failed to update payroll info' });
@@ -2262,32 +2134,9 @@ router.get('/ytd/:employeeId', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { employeeId } = req.params;
-
-    if (!employeeId) {
-      return res.status(400).json({ message: 'Employee ID is required' });
-    }
-
-    const { paystubService } = await import('../services/paystubService');
-    const ytdData = await paystubService.getYTDEarnings(employeeId, workspaceId);
-
-    if (!ytdData) {
-      return res.json({
-        taxYear: new Date().getFullYear(),
-        grossPay: 0,
-        netPay: 0,
-        federalTax: 0,
-        stateTax: 0,
-        socialSecurity: 0,
-        medicare: 0,
-        totalDeductions: 0,
-        totalHours: 0,
-        regularHours: 0,
-        overtimeHours: 0,
-        payPeriodCount: 0,
-      });
-    }
-
-    res.json(ytdData);
+    if (!employeeId) return res.status(400).json({ message: 'Employee ID is required' });
+    const result = await getYtdEarnings(employeeId, workspaceId);
+    res.json(result.data);
   } catch (error: unknown) {
     log.error('Error fetching YTD earnings:', error);
     res.status(500).json({ message: sanitizeError(error) || 'Failed to fetch YTD earnings' });
