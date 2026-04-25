@@ -133,6 +133,7 @@ import { idempotencyMiddleware } from "../middleware/idempotency";
 import { mutationLimiter } from "../middleware/rateLimiter";
 import { isValidPayrollTransition, resolvePayrollLifecycleStatus } from "../services/payroll/payrollStateMachine";
 import { createLogger } from '../lib/logger';
+import { isTerminalPayrollStatus, isDraftPayrollStatus, isValidPayrollTransition, PAYROLL_TERMINAL_STATUSES, PAYROLL_DRAFT_STATUSES } from '../services/payroll/payrollStatus';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -3184,7 +3185,7 @@ router.get('/runs/:id/nacha', async (req: AuthenticatedRequest, res) => {
     const run = await storage.getPayrollRun(runId, workspaceId);
     if (!run) return res.status(404).json({ message: 'Payroll run not found' });
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    if (!['processed', 'paid'].includes(run.status)) {
+    if (!isTerminalPayrollStatus(run.status)) {
       return res.status(400).json({ message: 'NACHA file is only available for processed or paid payroll runs' });
     }
 

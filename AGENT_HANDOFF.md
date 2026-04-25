@@ -517,3 +517,43 @@ to services already extracted. Claude will apply any extraction that requires
 full-file edit or build verification.
 
 **Current tip after this commit: see SHA below.**
+
+### 2026-04-24 — Claude (payroll status module verification + route wiring)
+
+**Pulled `f75a99b4d`. Build: ✅ clean on all 4 Jack commits.**
+**Separate handoff file read: `AGENT_HANDOFF_JACK_2026-04-24_PAYROLL_STATUS.md`**
+
+**`ec46f6146` (Jack) — payrollStatus.ts ✅**
+Clean pure vocabulary module. No imports (no circular risk). Exports:
+`PAYROLL_TERMINAL_STATUSES`, `PAYROLL_DRAFT_STATUSES`, lifecycle maps,
+`isTerminalPayrollStatus()`, `isDraftPayrollStatus()`, `resolvePayrollLifecycleStatus()`,
+`resolvePayrollDbStatus()`, `isValidPayrollTransition()`.
+
+**`a7aa49e12` (Jack) — payrollStateMachine.ts ✅**
+Reduced to 7 lines — re-exports lifecycle helpers from `payrollStatus`. No circular imports. ✅
+
+**`dc2febc29` (Jack) — payrollLedger.ts ✅**
+Now imports status constants/predicates from `payrollStatus`. Re-exports for compatibility. ✅
+
+**Claude follow-up — `payrollRoutes.ts` initial wiring:**
+- Added `payrollStatus` import (5 exports: `isTerminalPayrollStatus`, `isDraftPayrollStatus`, `isValidPayrollTransition`, `PAYROLL_TERMINAL_STATUSES`, `PAYROLL_DRAFT_STATUSES`)
+- Replaced `['processed', 'paid'].includes(run.status)` → `isTerminalPayrollStatus(run.status)`
+- 53 inline status strings remain — most are in SQL strings and SET clauses (expected, not replaceable by helpers)
+- Remaining status helpers (`isDraftPayrollStatus`, `isValidPayrollTransition`) available for route consolidation pass
+
+**Audit result — no issues found:**
+- No circular imports across the 3 new files ✅
+- `payrollStatus.ts` has zero external imports (pure vocabulary) ✅
+- TypeScript type compatibility clean — build passes ✅
+
+**Next: payrollRoutes.ts structural consolidation**
+The file is 3753 lines mixing: DB bootstrap, Plaid table setup, lock management, exports, PDF generation, proposal approval/rejection, payroll run creation, notifications, tax form handling.
+
+Recommended extraction sequence (each builds independently):
+1. Extract PDF generation → `server/services/payroll/payrollPdfService.ts`
+2. Extract tax form handlers (W2, 1099, 940, 941) → `server/services/payroll/payrollTaxFormService.ts`
+3. Extract proposal approval/rejection → `server/services/payroll/payrollProposalService.ts`
+4. Leave run creation, notifications, lock management in routes until services stabilize
+
+Each extraction: Claude handles full-file write + build verification.
+Jack can identify which handlers are safe pass-throughs for extraction.
