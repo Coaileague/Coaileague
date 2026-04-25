@@ -4,7 +4,7 @@ import { PLATFORM } from '../config/platformConfig';
 import { validatePayrollPeriod, validateDeductionAmount, validateNonNegativeAmount, businessRuleResponse } from '../lib/businessRules';
 import { Router } from "express";
 import type { AuthenticatedRequest } from "../rbac";
-import { sumFinancialValues, formatCurrency, toFinancialString } from '../services/financialCalculator';
+import { sumFinancialValues,  toFinancialString } from '../services/financialCalculator';
 import { platformEventBus } from '../services/platformEventBus';
 import { hasManagerAccess, hasPlatformWideAccess } from "../rbac";
 import PDFDocument from "pdfkit";
@@ -17,17 +17,15 @@ import {
   payrollGarnishments,
   payStubs,
   employees,
-  stagedShifts,
+  
   employeePayrollInfo,
   employeeBankAccounts,
   timeEntries,
   billingAuditLog,
-  payrollRunLocks,
-} from '@shared/schema';
+  payrollRunLocks} from '@shared/schema';
 import { employeeOnboardingProgress } from '@shared/schema/domains/workforce/extended';
 import { encryptToken, decryptToken } from '../security/tokenEncryption';
 import * as taxCalculator from "../services/taxCalculator";
-import { calculateStateTax, calculateBonusTaxation } from "../services/taxCalculator";
 import { getWorkspaceTier, hasTierAccess, requirePlan } from "../tierGuards";
 import { payrollDeductions } from '@shared/schema';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
@@ -133,16 +131,19 @@ import { idempotencyMiddleware } from "../middleware/idempotency";
 import { mutationLimiter } from "../middleware/rateLimiter";
 import { isValidPayrollTransition, resolvePayrollLifecycleStatus } from "../services/payroll/payrollStateMachine";
 import { createLogger } from '../lib/logger';
-import { isTerminalPayrollStatus, isDraftPayrollStatus, isValidPayrollTransition, PAYROLL_TERMINAL_STATUSES, PAYROLL_DRAFT_STATUSES } from '../services/payroll/payrollStatus';
+import { isTerminalPayrollStatus,  isValidPayrollTransition} from '../services/payroll/payrollStatus';
 import { getPayrollTaxFilingDeadlines, getPayrollTaxFilingGuide, getPayrollStatePortals } from '../services/payroll/payrollTaxFilingGuideService';
 import { buildPayrollCsvExport } from '../services/payroll/payrollCsvExportService';
 import { rejectPayrollProposal } from '../services/payroll/payrollProposalRejectionService';
 import { getMyPaychecks, getMyPayStub, getMyPayrollInfo, updateMyPayrollInfo, getYtdEarnings } from '../services/payroll/payrollEmployeeSelfServiceService';
-import { listPayrollProposals, getPayrollProposal } from '../services/payroll/payrollProposalReadService';
+import { listPayrollProposals } from '../services/payroll/payrollProposalReadService';
 import { getMyEmployeeTaxForms, getMyEmployeeTaxForm } from '../services/payroll/payrollEmployeeTaxFormsService';
 import { listPayrollRuns, getPayrollRun } from '../services/payroll/payrollRunReadService';
 import { deletePayrollRun } from '../services/payroll/payrollRunDeleteService';
 import { approvePayrollProposal } from '../services/payroll/payrollProposalApprovalService';
+import { broadcastToWorkspace } from '../websocket';
+import { universalNotificationEngine } from '../services/universalNotificationEngine';
+import { taxFormGeneratorService } from '../services/taxFormGeneratorService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -710,7 +711,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       // Real-time: update payroll dashboard for all managers in this workspace
       try {
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        const { broadcastToWorkspace } = await import('../services/websocketService');
+        // broadcastToWorkspace — now static import at top
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'approved', runId: run.id });
       } catch (_wsErr: any) {
         log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });
@@ -968,7 +969,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       // Real-time: update payroll dashboard for all managers in this workspace
       try {
         // @ts-expect-error — TS migration: fix in refactoring sprint
-        const { broadcastToWorkspace } = await import('../services/websocketService');
+        // broadcastToWorkspace — now static import at top
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'processed', runId: id });
       } catch (_wsErr: any) {
         log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });
@@ -1111,7 +1112,7 @@ router.get('/my-tax-forms/:formId/download', async (req: AuthenticatedRequest, r
     // Enforce ownership via service — verifies formId belongs to this employee
     const access = await getMyEmployeeTaxForm({ userId, workspaceId, formId: req.params.formId });
 
-    const { taxFormGeneratorService } = await import('../services/taxFormGeneratorService');
+    // taxFormGeneratorService — now static import at top
     let result;
     const { form, employeeId } = access;
 
@@ -1646,7 +1647,7 @@ router.post('/tax-forms/941', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ message: 'Invalid year' });
     }
 
-    const { taxFormGeneratorService } = await import('../services/taxFormGeneratorService');
+    // taxFormGeneratorService — now static import at top
     const result = await taxFormGeneratorService.generate941Report(workspaceId, quarterNum, yearNum);
 
     if (!result.success) {
@@ -1696,7 +1697,7 @@ router.get('/tax-forms/941/:year/:quarter', async (req: AuthenticatedRequest, re
       return res.status(400).json({ message: 'Invalid year' });
     }
 
-    const { taxFormGeneratorService } = await import('../services/taxFormGeneratorService');
+    // taxFormGeneratorService — now static import at top
     const result = await taxFormGeneratorService.generate941Report(workspaceId, quarterNum, yearNum);
 
     if (!result.success) {
@@ -1750,7 +1751,7 @@ router.post('/tax-forms/generate', async (req: AuthenticatedRequest, res) => {
       log.warn(`[TaxPrep] Credit deduction failed for ${formType} (non-blocking):`, billingErr);
     }
 
-    const { taxFormGeneratorService } = await import('../services/taxFormGeneratorService');
+    // taxFormGeneratorService — now static import at top
 
     let result;
     if (formType === 'w2') {
@@ -1837,7 +1838,7 @@ router.post('/tax-forms/940', async (req: AuthenticatedRequest, res) => {
       log.warn('[TaxPrep] Credit deduction failed for 940 (non-blocking):', billingErr);
     }
 
-    const { taxFormGeneratorService } = await import('../services/taxFormGeneratorService');
+    // taxFormGeneratorService — now static import at top
     const result = await taxFormGeneratorService.generate940Report(workspaceId, year);
 
     if (!result.success) {
@@ -1883,7 +1884,7 @@ router.get('/tax-forms/940/:year', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ message: 'Invalid year parameter' });
     }
 
-    const { taxFormGeneratorService } = await import('../services/taxFormGeneratorService');
+    // taxFormGeneratorService — now static import at top
     const result = await taxFormGeneratorService.generate940Report(workspaceId, year);
 
     if (!result.success) {
@@ -2162,7 +2163,7 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
 
     try {
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      const { broadcastToWorkspace } = await import('../services/websocketService');
+      // broadcastToWorkspace — now static import at top
       broadcastToWorkspace(workspaceId, {
         type: 'payroll_updated',
         action: 'paid',
@@ -3174,7 +3175,7 @@ router.patch('/employees/:employeeId/bank-accounts/:accountId', async (req: Auth
     if (changedSensitive) {
       (async () => {
         try {
-          const { universalNotificationEngine } = await import('../services/universalNotificationEngine');
+          // universalNotificationEngine — now static import at top
           await universalNotificationEngine.sendNotification({
             workspaceId,
             type: 'security_alert',
