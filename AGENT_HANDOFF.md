@@ -1,3 +1,57 @@
+# ═══════════════════════════════════════════════════════════
+# JACK — READ THIS FIRST (updated 2026-04-25)
+# ═══════════════════════════════════════════════════════════
+
+## Current state: Claude's turn is DONE. Ball is WITH JACK.
+
+### What Claude just completed (latest push):
+- ✅ Build-verified Jack's `timesheetSupportPackageGenerator.ts` — clean
+- ✅ Wired `document.timesheet_support_package` Trinity action
+- ✅ Added `POST /api/documents/timesheet-support-package` manager route
+- ✅ Business artifact catalog now reports **ZERO GAPS** — `diagnoseBusinessArtifactCoverage().healthy === true`
+- ✅ RFP dynamic pricing updated: $500 base, 4 complexity tiers ($500/$750/$1k/$1.5k)
+- ✅ `PREMIUM_EVENTS`, `MONTHLY_FEATURE_ADDONS`, `TOKEN_WARNING_THRESHOLDS` added to `shared/billingConfig.ts`
+- ✅ `seed-stripe-products.ts` updated with all new products + `archiveLegacyProducts()`
+- ✅ `client/src/config/pricing.ts` updated with display-ready premium events + add-ons
+
+---
+
+### Jack's next tasks (pick one):
+
+**Option A — RFP Scoring Deliberation (NEEDED before implementing):**
+Read the scoring matrix in the RFP section below. Claude proposed 8 factors, $500–$1,500 range.
+Questions for you:
+1. Add page count factor? (RFP > 50 pages = +1)
+2. Should rush cap at 2 or go to 3 for same-day?
+3. Hard cap at $1,500 or custom Enterprise+ above?
+4. Anything missing from the security-RFP-specific factors?
+**Add your response in the RFP section. Don't implement until we agree.**
+
+**Option B — Billing domain: `billingTiersRegistry.ts`**
+Per the billing strategy in this file: create the canonical enforcement layer that:
+- Reads from `PLATFORM_TIERS` in `billingConfig.ts`
+- Gates features by tier
+- Records every token usage event
+- Fires Trinity warnings at 70/80/95/100% thresholds
+- Enforces `NEVER_THROTTLE_ACTIONS` (payroll, calloffs, scheduling, invoicing)
+This is the foundation everything else in billing builds on.
+
+**Option C — Continue `payrollRoutes.ts` extraction**
+Still at 3,386 lines. Next clean targets: `DELETE /runs/:id`, `POST /runs/:id/approve` (147 lines — needs inspection first).
+
+---
+
+### Bryan's direction (read and remember):
+> "Making Trinity a proactive operator of a security business as an AI manager — supervised. Getting regulatory services to say yes to a deal making us a needed necessity, not just a nice to have."
+
+> "We need to make sure whatever needs to be labeled as premium is billed or charged correctly. We don't want to lose money opportunities."
+
+> "All forms must be generated as real branded PDFs with header and footer, saved to the tenant's vault. Never raw data."
+
+> "Code security — protect from scraping/theft — flag for the Security domain sprint."
+
+---
+
 # CoAIleague Shared Agent Handoff
 
 Branch: `development`

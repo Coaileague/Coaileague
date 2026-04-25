@@ -11,6 +11,7 @@ import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { createLogger } from '../lib/logger';
 import { listBusinessArtifactCatalog, listBusinessArtifactGaps, listBusinessArtifactsByCategory } from '../services/documents/businessArtifactCatalog';
 import { getBusinessArtifactCoverageSummary, diagnoseBusinessArtifactCoverage } from '../services/documents/businessArtifactDiagnosticService';
+import { generateTimesheetSupportPackage } from '../services/documents/timesheetSupportPackageGenerator';
 const log = createLogger('DocumentLibraryRoutes');
 
 
@@ -497,6 +498,41 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
   router.get('/business-artifacts/category/:category', async (req, res) => {
     try {
       res.json(listBusinessArtifactsByCategory(req.params.category as any));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+
+  // ── Timesheet Support Package ──────────────────────────────────────────────
+
+  router.post('/timesheet-support-package', async (req: any, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
+
+      const { periodStart, periodEnd, clientId, status } = req.body;
+      if (!periodStart || !periodEnd) {
+        return res.status(400).json({ error: 'periodStart and periodEnd required' });
+      }
+
+      const result = await generateTimesheetSupportPackage({
+        workspaceId,
+        periodStart: new Date(periodStart),
+        periodEnd: new Date(periodEnd),
+        clientId: clientId || null,
+        generatedBy: req.user?.id || 'system',
+        status: status || null,
+      });
+
+      if (!result.success) return res.status(500).json({ error: result.error });
+
+      res.json({
+        vaultId: result.vaultId,
+        documentNumber: result.documentNumber,
+        entryCount: result.entryCount,
+        totalHours: result.totalHours,
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

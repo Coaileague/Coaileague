@@ -23,6 +23,7 @@ import { universalAudit } from '../universalAuditService';
 import { createLogger } from '../../lib/logger';
 import { diagnoseBusinessArtifactCoverage } from '../documents/businessArtifactDiagnosticService';
 import { invoiceService } from '../billing/invoice';
+import { generateTimesheetSupportPackage } from '../documents/timesheetSupportPackageGenerator';
 import {
   generateProofOfEmployment,
   generateDirectDepositConfirmation,
@@ -773,6 +774,27 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
         return { actionId: request.actionId, success: false, error: 'invoiceId and workspaceId required' };
       }
       const result = await invoiceService.generateInvoicePDF(invoiceId, workspaceId);
+      return { actionId: request.actionId, ...result };
+    },
+  });
+
+
+  orchestrator.registerAction({
+    actionId: 'document.timesheet_support_package',
+    description: 'Generate a branded timesheet support package PDF for payroll/invoice/audit reconciliation. Saves to vault.',
+    async execute(request: any) {
+      const { workspaceId, periodStart, periodEnd, clientId, status, generatedBy } = request.parameters || {};
+      if (!workspaceId || !periodStart || !periodEnd) {
+        return { actionId: request.actionId, success: false, error: 'workspaceId, periodStart, and periodEnd required' };
+      }
+      const result = await generateTimesheetSupportPackage({
+        workspaceId,
+        periodStart: new Date(periodStart),
+        periodEnd: new Date(periodEnd),
+        clientId: clientId || null,
+        generatedBy: generatedBy || 'trinity',
+        status: status || null,
+      });
       return { actionId: request.actionId, ...result };
     },
   });
