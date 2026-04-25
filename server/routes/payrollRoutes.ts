@@ -167,6 +167,8 @@ import { retryFailedPayrollTransfers } from '../services/payroll/payrollRetrySer
 import { PLATFORM } from '@shared/platformConfig';
 import { getMiddlewareFees } from '@shared/billingConfig';
 import { createBonusPayEntry, createCommissionPayEntry } from '../services/payroll/payrollSupplementalPayService';
+import { getTaxCenterData, getPreRunChecklist } from '../services/payroll/payrollTaxCenterService';
+import { writeLedgerEntry } from '../services/orgLedgerService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -546,7 +548,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       }
 
       try {
-        const { writeLedgerEntry } = await import('../services/orgLedgerService');
+        // writeLedgerEntry — static import at top
         await writeLedgerEntry({
           workspaceId,
           entryType: 'payroll_processed',
@@ -885,118 +887,11 @@ router.get('/tax-center', async (req: AuthenticatedRequest, res) => {
   try {
     const roleCheck = checkManagerRole(req);
     if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
-
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
-
-    const currentYear = new Date().getFullYear();
-    const priorYear = currentYear - 1;
-    const taxYear = req.query.taxYear ? parseInt(req.query.taxYear as string, 10) : priorYear;
-
-    // 1. Classify employees (W-2 vs 1099) for the current roster
-    const roster = await db
-      .select({
-        id: employees.id,
-        workerType: employees.workerType,
-        firstName: employees.firstName,
-        lastName: employees.lastName,
-      })
-      .from(employees)
-      .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
-
-    const w2Employees = roster.filter(e => (e.workerType || 'employee') !== 'contractor');
-    const contractorRoster = roster.filter(e => (e.workerType || 'employee') === 'contractor');
-
-    // 2. Scan prior-year payroll totals for contractors and find $600+ candidates
-    const FORM_1099_THRESHOLD = 600;
-    const yearStart = new Date(taxYear, 0, 1);
-    const yearEnd = new Date(taxYear, 11, 31, 23, 59, 59);
-
-    let contractorsAbove600 = 0;
-    const contractorDetails: Array<{ employeeId: string; name: string; totalPaid: number; requiresFiling: boolean }> = [];
-
-    for (const contractor of contractorRoster) {
-      try {
-        const totals = await db
-          .select({ totalPaid: sql<string>`COALESCE(SUM(${payrollEntries.grossPay}), 0)` })
-          .from(payrollEntries)
-          .innerJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))
-          .where(
-            and(
-              eq(payrollEntries.employeeId, contractor.id),
-              eq(payrollRuns.workspaceId, workspaceId),
-              gte(payrollRuns.periodStart, yearStart),
-              lte(payrollRuns.periodEnd, yearEnd),
-            )
-          );
-        const totalPaid = parseFloat(totals[0]?.totalPaid || '0');
-        const requiresFiling = totalPaid >= FORM_1099_THRESHOLD;
-        if (requiresFiling) contractorsAbove600 += 1;
-        contractorDetails.push({
-          employeeId: contractor.id,
-          name: `${contractor.firstName || ''} ${contractor.lastName || ''}`.trim(),
-          totalPaid,
-          requiresFiling,
-        });
-      } catch (err: unknown) {
-        log.warn('Tax center contractor total calc failed', { employeeId: contractor.id });
-      }
-    }
-
-    // 3. Generated forms for the tax year
-    // @shared/schema symbols — now static import at top
-    const forms = await db
-      .select()
-      .from(employeeTaxForms)
-      .where(
-        and(
-          eq(employeeTaxForms.workspaceId, workspaceId),
-          eq(employeeTaxForms.taxYear, taxYear),
-        )
-      );
-    const w2sGenerated = forms.filter(f => f.formType === 'w2').length;
-    const form1099sGenerated = forms.filter(f => f.formType === '1099').length;
-
-    // 4. Deadlines
-    // taxFilingAssistanceService — now static import at top
-    const deadlines = taxFilingAssistanceService.getFilingDeadlines(taxYear);
-
-    // 5. Fees — pull tier discount and compute
-    const tierId = (await getWorkspaceTier(workspaceId)) as any;
-    // getMiddlewareFees — now static import at top
-    const fees = getMiddlewareFees(tierId);
-    const w2PerFormDollars = fees.taxForms.w2PerFormCents / 100;
-    const form1099PerFormDollars = fees.taxForms.form1099PerFormCents / 100;
-
-    return res.json({
-      taxYear,
-      employees: {
-        w2Count: w2Employees.length,
-        total1099Count: contractorRoster.length,
-        contractorsAbove600,
-        contractorDetails,
-      },
-      forms: {
-        w2sGenerated,
-        form1099sGenerated,
-        w2sExpected: w2Employees.length,
-        form1099sExpected: contractorsAbove600,
-      },
-      deadlines,
-      filingGuides: {
-        w2:       { url: 'https://www.ssa.gov/employer',              label: 'SSA Business Services Online' },
-        form1099: { url: 'https://www.irs.gov/filing/e-file-providers', label: 'IRS FIRE System' },
-        form941:  { url: 'https://www.eftps.gov',                     label: 'Electronic Federal Tax System (EFTPS)' },
-        texasTWC: { url: 'https://apps.twc.state.tx.us',              label: 'Texas Workforce Commission' },
-      },
-      fees: {
-        w2PerForm: w2PerFormDollars,
-        form1099PerForm: form1099PerFormDollars,
-        tierDiscountPercent: fees.tierDiscount,
-        estimatedTotal: +(w2Employees.length * w2PerFormDollars + contractorsAbove600 * form1099PerFormDollars).toFixed(2),
-      },
-      disclaimer: `${PLATFORM.name} is middleware — we generate and deliver tax forms but do not file them with the IRS, SSA, or state agencies. Verify all figures with your CPA or tax professional before filing.`,
-    });
+    const taxYear = req.query.taxYear ? parseInt(req.query.taxYear as string, 10) : undefined;
+    const data = await getTaxCenterData(workspaceId, taxYear);
+    res.json(data);
   } catch (error: unknown) {
     log.error('Error fetching tax center data:', error);
     res.status(500).json({ message: sanitizeError(error) || 'Failed to fetch tax center data' });
@@ -1333,7 +1228,7 @@ router.post('/tax-forms/941', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      // tokenManager — now static import at top
+      // tokenManager (static)
       await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
@@ -1444,7 +1339,7 @@ router.post('/tax-forms/generate', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      // tokenManager — now static import at top
+      // tokenManager (static)
       const creditKey = formType === 'w2' ? 'tax_prep_w2' : 'tax_prep_1099';
       const formLabel = formType === 'w2' ? 'W-2 Employee Tax Form' : '1099-NEC Contractor Tax Form';
       await tokenManager.recordUsage({
@@ -1535,7 +1430,7 @@ router.post('/tax-forms/940', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      // tokenManager — now static import at top
+      // tokenManager (static)
       await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
@@ -1653,7 +1548,7 @@ router.post('/runs/:id/execute-internal', async (req: AuthenticatedRequest, res)
 
       if (result.processedEntries > 0) {
         try {
-          // tokenManager — now static import at top
+          // tokenManager (static)
           await tokenManager.recordUsage({
             workspaceId,
             userId: userId || 'system',
@@ -1911,100 +1806,11 @@ router.get('/export/pdf/:runId', async (req: AuthenticatedRequest, res) => {
 router.get('/pre-run-checklist', async (req: AuthenticatedRequest, res) => {
   try {
     const roleCheck = checkManagerRole(req);
-    if (!roleCheck.allowed) {
-      return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
-    }
+    if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
-
-    // invoices, clients, eq, and, inArray, sql — all static imports at top
-    const invoicesTable = invoices;
-    const { eq: eqI, and: andI, inArray: inArrayI, sql: sqlI } = { eq, and, inArray, sql };
-
-    const workspace = await storage.getWorkspace(workspaceId);
-    const blob = (workspace?.billingSettingsBlob as any) || {};
-    const cycle = blob.payrollCycle || 'bi-weekly';
-
-    // date-fns functions — now static import at top
-    const subDaysI = subDays;
-    const now = new Date();
-
-    let periodStart: Date;
-    let periodEnd: Date;
-    if (cycle === 'weekly') {
-      periodStart = startOfWeek(now, { weekStartsOn: 0 });
-      periodEnd = endOfWeek(now, { weekStartsOn: 0 });
-    } else if (cycle === 'monthly') {
-      periodStart = startOfMonth(now);
-      periodEnd = endOfMonth(now);
-    } else {
-      const twoWeeksAgo = subDaysI(now, 13);
-      // FIX [GAP-2 UTC REGRESSION]: Use setUTCHours not setHours — local-time midnight
-      // produces inconsistent period boundaries across timezones, breaking bi-weekly period
-      // calculations in the same way the Phase 11 UTC fix corrected the canonical period detector.
-      twoWeeksAgo.setUTCHours(0, 0, 0, 0);
-      periodStart = twoWeeksAgo;
-      periodEnd = now;
-    }
-
-    const outstandingInvoices = await db
-      .select({
-        id: invoicesTable.id,
-        invoiceNumber: invoicesTable.invoiceNumber,
-        clientId: invoicesTable.clientId,
-        total: invoicesTable.total,
-        status: invoicesTable.status,
-        dueDate: invoicesTable.dueDate,
-        createdAt: invoicesTable.createdAt,
-      })
-      .from(invoicesTable)
-      .where(andI(
-        eqI(invoicesTable.workspaceId, workspaceId),
-        sqlI`${invoicesTable.status} IN ('draft', 'sent')`,
-        sqlI`${invoicesTable.createdAt} >= ${periodStart}`,
-        sqlI`${invoicesTable.createdAt} <= ${periodEnd}`,
-      ));
-
-    const clientIds = [...new Set(outstandingInvoices.map(i => i.clientId).filter(Boolean))];
-    const clientMap = new Map<string, string>();
-    if (clientIds.length > 0) {
-      const clientRows = await db.select({ id: clients.id, companyName: clients.companyName })
-        .from(clients).where(inArrayI(clients.id, clientIds));
-      for (const c of clientRows) clientMap.set(c.id, c.companyName || 'Unknown');
-    }
-
-    const totalOutstanding = outstandingInvoices.reduce((s, i) => s + parseFloat(i.total), 0);
-    const unsentDrafts = outstandingInvoices.filter(i => i.status === 'draft');
-    const sentUnpaid = outstandingInvoices.filter(i => i.status === 'sent');
-
-    const [payrollObligation] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${payrollRuns.totalNetPay}), 0)` })
-      .from(payrollRuns)
-      .where(andI(
-        eqI(payrollRuns.workspaceId, workspaceId),
-        sqlI`${payrollRuns.status} IN ('draft', 'pending')`,
-      ));
-
-    res.json({
-      payPeriod: { start: periodStart.toISOString(), end: periodEnd.toISOString(), cycle },
-      payrollObligation: parseFloat(payrollObligation?.total || '0'),
-      outstandingInvoices: outstandingInvoices.map(i => ({
-        ...i,
-        clientName: clientMap.get(i.clientId) || 'Unknown',
-        amount: parseFloat(i.total),
-      })),
-      summary: {
-        totalOutstanding,
-        unsentDrafts: unsentDrafts.length,
-        sentUnpaid: sentUnpaid.length,
-        totalCount: outstandingInvoices.length,
-      },
-      recommendation: unsentDrafts.length > 0
-        ? `You have ${unsentDrafts.length} unsent draft invoice${unsentDrafts.length === 1 ? '' : 's'} totaling $${unsentDrafts.reduce((s, i) => s + parseFloat(i.total), 0).toFixed(2)}. Consider sending them before approving payroll to ensure cash is on the way.`
-        : totalOutstanding > 0
-          ? `You have ${sentUnpaid.length} outstanding invoice${sentUnpaid.length === 1 ? '' : 's'} awaiting payment. Monitor collections before payroll disbursement.`
-          : 'All invoices for this period are settled. You are clear to approve payroll.',
-    });
+    const data = await getPreRunChecklist(workspaceId);
+    res.json(data);
   } catch (error: unknown) {
     log.error('Error generating pre-payroll checklist:', error);
     res.status(500).json({ message: 'Failed to generate pre-payroll checklist' });

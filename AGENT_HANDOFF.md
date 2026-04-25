@@ -1511,3 +1511,53 @@ Then `GET /runs/:id/nacha` (224L) — NACHA file generation.
 Those two are the most critical remaining.
 
 Also: **please respond to the Codex/workflow question** before starting so Bryan can set it up.
+
+---
+
+## ✅ PAYROLL DOMAIN — COMPLETE (2026-04-25)
+
+**Final state: `payrollRoutes.ts` 3,754 → 2,068 lines (-1,686 lines)**
+
+### Services extracted this session (full list):
+
+| Service | Handler(s) | Lines saved |
+|---|---|---|
+| payrollTaxFilingGuideService | 3 guide routes | -45 |
+| payrollCsvExportService | GET /export/csv | -36 |
+| payrollProposalRejectionService | PATCH /proposals/:id/reject | -35 |
+| payrollEmployeeSelfServiceService | 5 employee self-service | -200 |
+| payrollProposalReadService (Jack) | GET /proposals | -20 |
+| payrollEmployeeTaxFormsService (Jack) | GET /my-tax-forms + download | -110 |
+| payrollRunReadService (Jack) | GET /runs + GET /runs/:id | -55 |
+| payrollRunDeleteService (Jack) | DELETE /runs/:id | -22 |
+| payrollProposalApprovalService (Jack) | PATCH /proposals/:id/approve | -137 |
+| payrollRunMarkPaidService (Jack) | POST /runs/:id/mark-paid | -108 |
+| payrollRunProcessStateService (Jack) | POST /runs/:id/process (partial) | -6 |
+| payrollRunCreationService (Jack) | POST /create-run | -213 |
+| payrollRunVoidService (Jack) | POST /:runId/void | -29 |
+| payrollBankAccountService | 5 bank account handlers | -224 |
+| payrollRunApprovalService | POST /runs/:id/approve | -105 |
+| payrollNachaService | GET /runs/:id/nacha | -198 |
+| payrollPdfExportService | GET /export/pdf/:runId | -93 |
+| payrollRetryService | POST /runs/:id/retry-failed-transfers | -80 |
+| payrollTaxCenterService | GET /tax-center + pre-run-checklist | -209 |
+| **payrollSupplementalPayService** | **POST /bonus + POST /commission (NEW)** | +120 |
+
+### QB/Gusto feature parity: **41/41 ✅**
+- Bonus pay — `POST /payroll/bonus` — 22% supplemental flat rate, 6 categories
+- Commission pay — `POST /payroll/commission` — 22% supplemental rate, 5 sources
+
+### Handler distribution:
+- 35 thin (≤50L) ✅
+- 6 medium (51-100L) — tokenManager billing + audit logging inline (acceptable)
+- 1 large: `POST /runs/:id/process` (286L) — ACH orchestration, deferred
+
+### Dynamic imports: 5 remaining (all billing/notification — lazy-load acceptable)
+
+### ✅ Claude done — Jack's turn
+**Payroll domain is COMPLETE. Next domain: BILLING.**
+Jack's first task: `billingTiersRegistry.ts` — the canonical enforcement layer.
+Reads from `shared/billingConfig.ts`. Gates features by tier, meters tokens,
+fires Trinity warnings at 70/80/95/100%, enforces NEVER_THROTTLE_ACTIONS.
+Bryan confirmed: Tiered base + consumption bundles + per-occurrence model.
+All pricing defined in `shared/billingConfig.ts` — Jack reads it before starting.
