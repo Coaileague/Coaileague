@@ -7,10 +7,10 @@
 
 ---
 
-## CURRENT POSITION IN PLATFORM REFACTOR
+## CURRENT POSITION
 
-**Domain:** BILLING — cleanup complete, enforcement layer wired ✅
-**Next domain:** SCHEDULING → TIME → HR (after Jack's billing pass)
+**Domain:** SCHEDULING (active)
+**Order:** ✅ Payroll → ✅ Billing → 🔄 Scheduling → Time → HR → Client → Compliance → ...
 
 ---
 
@@ -18,89 +18,60 @@
 
 | Commit | Agent | What | Result |
 |---|---|---|---|
-| `538bb69e0` | Claude | invoiceRoutes.ts caller audit — 28 dead routes deleted | 3,819 → 2,462 lines (-1,357L) |
-| `40f3b8cd6` | Claude | billingSettings verified + stripe-health deleted + sync updated | stripeInlineRoutes: 924→857L |
-| `51db32b4f` | Jack | Deleted 4 unused billing-settings routes | billingSettingsRoutes: 600→448L |
-
----
-
-## JUST COMPLETED (this commit — Claude)
-
-**`billingEnforcement.ts` middleware created** — the canonical billing gate.
-
-5 exports ready to use in any route:
-```typescript
-import { requireBillingFeature, requireBillingTier, enforceClientPortalSeats, enforceTokenPolicy, attachBillingContext } from '../middleware/billingEnforcement';
-
-// Feature gate — returns 402 if feature not on tier
-router.get('/analytics/advanced', requireBillingFeature('advanced_analytics'), handler)
-
-// Tier gate — returns 402 if tier too low
-router.post('/payroll/run', requireBillingTier('professional'), handler)
-
-// Client portal seat enforcement
-router.post('/client-portal/invite', enforceClientPortalSeats, handler)
-
-// Token policy (never blocks core ops)
-router.post('/trinity/analyze', enforceTokenPolicy('trinity.analyze'), handler)
-```
-
-`attachBillingContext` wired into `billingRouter` — all billing API requests
-now have `req.billingTier` and `req.billingSnapshot` available.
+| Claude (this) | Claude | shiftRoutes.ts — 21 dead routes deleted, all alive routes verified | 3,623 → 2,240 lines (-1,383L) |
+| `bae2e6a6f` | Jack | shiftRoutes.ts audit doc + scheduling domain analysis | Handed off to Claude |
+| `b982a0ae9` | Claude | billingEnforcement.ts middleware created + wired | Billing enforcement live |
 
 ---
 
 ## JACK'S NEXT TASK
 
-**Option A (recommended):** Wire `billingEnforcement` middleware into routes that need it.
-Target routes in `billing-api.ts`, `billingSettingsRoutes.ts`:
-- POST /subscription/change → add `requireBillingTier('starter')`
-- POST /create-checkout-session → add `attachBillingContext`
-- Routes for premium features → add `requireBillingFeature('feature_key')`
+**Target:** Continue scheduling domain — pick ONE of:
 
-**Option B:** Move to next domain — SCHEDULING
-`shiftRoutes.ts` (3,622L) is the biggest untouched file.
-Same pattern: caller audit → delete dead → consolidate duplicates.
-Read CODEBASE_INDEX.md SCHEDULING section first.
+**Option A: `scheduleosRoutes.ts` (1,325L)**
+Same pattern: `grep -n "router\." server/routes/scheduleosRoutes.ts | grep -E "get|post|put|patch|delete"`
+Then caller audit each path against `/api/scheduleos/PATH` in client/ server/
 
-**Jack: pick A or B and go. Leave the choice in your commit message.**
+**Option B: `schedulerRoutes.ts` (886L)**
+Same pattern but mount prefix is `/api/scheduler`
+
+**Option C: Overlap audit**
+`scheduleosRoutes.ts` + `schedulerRoutes.ts` + `schedulesRoutes.ts` + `advancedSchedulingRoutes.ts`
+may ALL cover shift scheduling. Run:
+```bash
+grep -n "router\." server/routes/scheduleosRoutes.ts server/routes/schedulerRoutes.ts | grep -E "get|post|put|patch|delete"
+```
+Find duplicate paths across files — delete the duplicates from the smaller/older file.
+
+**Jack: pick and go. Note your choice in commit message.**
 
 ---
 
-## BILLING DOMAIN STATUS
+## SCHEDULING DOMAIN STATUS
 
 | File | Before | After | Status |
 |---|---|---|---|
-| `domains/billing.ts` | ~155L | 112L | ✅ Pure mount |
-| `billing-api.ts` | 1,870L | 912L | ✅ -958L |
-| `billingSettingsRoutes.ts` | 600L | 448L | ✅ -152L |
-| `stripeInlineRoutes.ts` | 924L | 857L | ✅ -67L |
-| `invoiceRoutes.ts` | 3,819L | 2,462L | ✅ -1,357L |
-| `billingEnforcement.ts` | NEW | 243L | ✅ Wired |
-| `billingTiersRegistry.ts` | 527L | 527L | ✅ Enforcement live |
-
-**Billing domain total removed: ~2,577L**
+| `shiftRoutes.ts` | 3,623L | 2,240L | ✅ -1,383L, 17 handlers |
+| `scheduleosRoutes.ts` | 1,325L | TBD | 🔄 Jack's turn |
+| `schedulerRoutes.ts` | 886L | TBD | ⏳ |
+| `schedulesRoutes.ts` | 557L | TBD | ⏳ |
+| `advancedSchedulingRoutes.ts` | 1,219L | TBD | ⏳ |
 
 ---
 
-## FAST CALLER AUDIT (copy-paste)
+## FAST CALLER AUDIT
 ```bash
-# List handlers
 grep -n "router\." server/routes/TARGET.ts | grep -E "get|post|put|patch|delete"
-# Check callers  
 grep -rn "/api/MOUNT/PATH" client/ server/ | grep -v "TARGET.ts"
-# Zero = delete
+# Zero results = dead = delete
 ```
 
----
-
-## NON-NEGOTIABLE RULES
-1. Read CODEBASE_INDEX.md for domain before touching any file
-2. Caller audit before any deletion
-3. No new files unless operation genuinely missing
-4. Every commit reduces line count
-5. Update this SYNC BLOCK after every commit
-6. Build clean before pushing
+## RULES
+1. Read CODEBASE_INDEX.md for domain
+2. Caller audit before any deletion  
+3. Every commit reduces line count
+4. Update this SYNC BLOCK after every commit
+5. Build clean before pushing
 
 ---
 
