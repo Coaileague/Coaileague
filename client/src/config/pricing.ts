@@ -495,3 +495,153 @@ export function calculateOverage(
   const overageCharge    = overageEmployees * rate;
   return { overageEmployees, overageCharge };
 }
+
+// ─── Premium Per-Occurrence Events (for pricing page display) ────────────────
+// These match server/shared/billingConfig.ts PREMIUM_EVENTS exactly.
+
+export interface PremiumEvent {
+  id: string;
+  name: string;
+  description: string;
+  price: number;         // USD, not cents
+  category: 'proposal' | 'contract' | 'compliance' | 'tax' | 'operations' | 'hr';
+  tiers: SubscriptionTier[];
+  comparisonNote: string;   // What human services charge
+}
+
+export const PREMIUM_EVENTS_DISPLAY: PremiumEvent[] = [
+  {
+    id: 'rfp_commercial',
+    name: 'RFP Response — Commercial',
+    description: 'Trinity generates a complete commercial security services proposal: company overview, capabilities, pricing, and compliance sections.',
+    price: 150,
+    category: 'proposal',
+    tiers: ['professional', 'business', 'enterprise', 'strategic'],
+    comparisonNote: 'Human proposal writers charge $1,500–$3,500',
+  },
+  {
+    id: 'rfp_government',
+    name: 'RFP Response — Government / Federal',
+    description: 'Full government/federal RFP response with compliance matrix, past performance sections, technical approach, and pricing narrative.',
+    price: 350,
+    category: 'proposal',
+    tiers: ['professional', 'business', 'enterprise', 'strategic'],
+    comparisonNote: 'Human writers charge $3,500–$7,500 per federal proposal',
+  },
+  {
+    id: 'contract_ai_draft',
+    name: 'AI Contract Draft',
+    description: 'Fully drafted security services contract with relevant clauses, liability language, and scope of work.',
+    price: 75,
+    category: 'contract',
+    tiers: ['professional', 'business', 'enterprise', 'strategic'],
+    comparisonNote: 'Attorney drafting starts at $500/contract',
+  },
+  {
+    id: 'contract_ai_complex',
+    name: 'AI Contract Draft — Complex / Multi-Site',
+    description: 'Complex multi-site or multi-jurisdiction security contract with specialized clauses.',
+    price: 150,
+    category: 'contract',
+    tiers: ['business', 'enterprise', 'strategic'],
+    comparisonNote: 'Complex contracts typically $1,500+ with an attorney',
+  },
+  {
+    id: 'compliance_audit_report',
+    name: 'Annual Compliance Audit Report',
+    description: 'Full compliance audit: license status, incident history, training completion, regulatory gaps, and recommended actions.',
+    price: 49,
+    category: 'compliance',
+    tiers: ['professional', 'business', 'enterprise', 'strategic'],
+    comparisonNote: 'Compliance consultants charge $200–$500 per audit',
+  },
+  {
+    id: 'tax_season_package',
+    name: 'Tax Season Package (W-2 / 1099 Batch)',
+    description: 'Annual charge covering all W-2s and 1099s generated for the tax year. Branded PDFs saved to your secure vault.',
+    price: 49,
+    category: 'tax',
+    tiers: ['professional', 'business', 'enterprise', 'strategic'],
+    comparisonNote: 'Payroll bureaus charge $3–$10 per form at year-end',
+  },
+  {
+    id: 'bolo_intelligence_report',
+    name: 'BOLO Intelligence Report',
+    description: 'Trinity analyzes a BOLO with pattern detection, risk scoring, and recommended officer actions.',
+    price: 25,
+    category: 'operations',
+    tiers: ['professional', 'business', 'enterprise', 'strategic'],
+    comparisonNote: 'Manual analyst work — typically 2–4 hours at $50+/hr',
+  },
+  {
+    id: 'proof_of_employment_certified',
+    name: 'Proof of Employment — Certified',
+    description: 'Certified letter with digital letterhead, authorized signatory block, and notary-ready formatting. Standard POE is free.',
+    price: 9,
+    category: 'hr',
+    tiers: ['starter', 'professional', 'business', 'enterprise', 'strategic'],
+    comparisonNote: 'HR services charge $25–$50 for certified letters',
+  },
+];
+
+// ─── Monthly Feature Add-Ons (for pricing page display) ──────────────────────
+
+export interface MonthlyAddon {
+  id: string;
+  name: string;
+  description: string;
+  monthlyPrice: number;   // USD/month
+  availableTiers: SubscriptionTier[];
+  highlight: string;      // One-line value prop
+}
+
+export const MONTHLY_ADDONS_DISPLAY: MonthlyAddon[] = [
+  {
+    id: 'trinity_ai_manager_pro',
+    name: 'Trinity AI Manager Pro',
+    description: 'Upgrades Trinity from reactive assistant to proactive autonomous operator. Trinity runs the business without being asked.',
+    monthlyPrice: 99,
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    highlight: 'Replaces a $5K/month operations manager',
+  },
+  {
+    id: 'nacha_ach_direct_deposit',
+    name: 'NACHA / ACH Direct Deposit',
+    description: 'Full NACHA file generation and ACH direct deposit processing for officer payroll.',
+    monthlyPrice: 49,
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    highlight: 'Pay your team directly — no third-party payroll bureau',
+  },
+  {
+    id: 'client_portal_access',
+    name: 'Client Portal',
+    description: 'Your clients get their own portal: live GPS coverage, invoices, incident reports, timesheet approvals.',
+    monthlyPrice: 39,
+    availableTiers: ['starter', 'professional', 'business', 'enterprise', 'strategic'],
+    highlight: 'Increase client retention by giving them visibility',
+  },
+  {
+    id: 'compliance_guard_package',
+    name: 'Compliance Guard Package',
+    description: 'Automatic DPS license tracking, expiry alerts, renewal reminders, and quarterly compliance reports.',
+    monthlyPrice: 49,
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    highlight: 'Never lose a license to an expired guard again',
+  },
+  {
+    id: 'multi_workspace_umbrella',
+    name: 'Multi-Workspace Umbrella',
+    description: 'Manage sub-workspaces (regional divisions, subsidiaries) with consolidated billing and roll-up reporting.',
+    monthlyPrice: 99,
+    availableTiers: ['business', 'enterprise', 'strategic'],
+    highlight: 'Run your entire company from one parent account',
+  },
+  {
+    id: 'advanced_analytics',
+    name: 'Advanced Analytics',
+    description: 'Predictive labor cost forecasting, shift coverage gap analysis, revenue intelligence, and client profitability.',
+    monthlyPrice: 39,
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    highlight: 'Know your margins before you sign a contract',
+  },
+];

@@ -16,7 +16,7 @@
  */
 
 import Stripe from 'stripe';
-import { BILLING } from '../../shared/billingConfig';
+import { BILLING, PREMIUM_EVENTS, MONTHLY_FEATURE_ADDONS } from '../../shared/billingConfig';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -127,7 +127,58 @@ async function createOneTimePrice(
   return price.id;
 }
 
-async function seedProducts() {
+async function /**
+ * Archives Stripe products that are no longer in the canonical billing config.
+ * These are products whose names suggest old/retired pricing structures.
+ * Does NOT delete — Stripe keeps price history for existing subscriptions.
+ * Sets active=false so they don't appear in new checkouts.
+ */
+async function archiveLegacyProducts(): Promise<void> {
+  // Patterns that indicate legacy products to archive
+  const legacyNamePatterns = [
+    /^CoAIleague.*v1$/i,
+    /^WorkforceOS/i,
+    /^AutoForce/i,
+    /^Drill Consulting/i,
+    /legacy/i,
+    /^CoAIleague AI Credits — (5,000|25,000|100,000|500,000) Pack$/i, // Old credit pack names
+  ];
+
+  // Product names that MUST NOT be archived (even if they match a pattern)
+  const protectedNames = [
+    'CoAIleague Starter',
+    'CoAIleague Professional',
+    'CoAIleague Business',
+    'CoAIleague Enterprise',
+    'CoAIleague Strategic',
+  ];
+
+  let archived = 0;
+  let page = await stripe.products.list({ active: true, limit: 100 });
+
+  while (true) {
+    for (const product of page.data) {
+      const isProtected = protectedNames.some(n => product.name.includes(n));
+      const isLegacy = !isProtected && legacyNamePatterns.some(p => p.test(product.name));
+
+      if (isLegacy) {
+        await stripe.products.update(product.id, { active: false });
+        console.log(`  [archived] ${product.name} (${product.id})`);
+        archived++;
+      }
+    }
+    if (!page.has_more) break;
+    page = await stripe.products.list({ active: true, limit: 100, starting_after: page.data[page.data.length - 1].id });
+  }
+
+  if (archived === 0) {
+    console.log('  No legacy products found — catalog is clean ✅');
+  } else {
+    console.log(`  Archived ${archived} legacy product(s)`);
+  }
+}
+
+seedProducts() {
   console.log('\nCoAIleague Stripe Product Catalog Sync\n');
   console.log('='.repeat(60));
 
@@ -615,6 +666,64 @@ async function seedProducts() {
   envVars['STRIPE_AI_SMS_AUTH_METERED_PRICE_ID'] = aiSmsMeteredPriceId;
 
   // ==========================================================================
+  // 9. PREMIUM PER-OCCURRENCE EVENTS — High-value AI deliverables
+  // ==========================================================================
+  console.log('\n--- PREMIUM PER-OCCURRENCE EVENTS ---\n');
+
+  for (const [key, event] of Object.entries(PREMIUM_EVENTS)) {
+    const productId = await findOrCreateProduct(
+      `CoAIleague ${event.name}`,
+      event.description,
+      { type: 'premium_event', event_key: key, category: event.category }
+    );
+    // One-time price (not recurring)
+    const existingPrices = await stripe.prices.list({ product: productId, active: true });
+    const existing = existingPrices.data.find(p => p.unit_amount === event.priceCents && !p.recurring);
+    let priceId: string;
+    if (existing) {
+      console.log(`    [exists] ${event.name} ($${event.priceCents / 100})`);
+      priceId = existing.id;
+    } else {
+      const price = await stripe.prices.create({
+        product: productId,
+        unit_amount: event.priceCents,
+        currency: 'usd',
+        nickname: `${event.name} (per occurrence)`,
+      });
+      console.log(`    [created] ${event.name} ($${event.priceCents / 100})`);
+      priceId = price.id;
+    }
+    envVars[event.stripePriceEnvVar] = priceId;
+  }
+
+  // ==========================================================================
+  // 10. MONTHLY FEATURE ADD-ONS — Flat monthly toggles for premium capabilities
+  // ==========================================================================
+  console.log('\n--- MONTHLY FEATURE ADD-ONS ---\n');
+
+  for (const [key, addon] of Object.entries(MONTHLY_FEATURE_ADDONS)) {
+    const productId = await findOrCreateProduct(
+      `CoAIleague ${addon.name}`,
+      addon.description,
+      { type: 'monthly_addon', addon_key: key }
+    );
+    const priceId = await findOrCreatePrice(
+      productId,
+      addon.monthlyPriceCents,
+      'month',
+      `${addon.name} ($${addon.monthlyPriceCents / 100}/month)`,
+      'licensed'
+    );
+    envVars[addon.stripePriceEnvVar] = priceId;
+  }
+
+  // ==========================================================================
+  // 11. LEGACY CLEANUP — Archive old products that no longer match the catalog
+  // ==========================================================================
+  console.log('\n--- LEGACY CLEANUP ---\n');
+  await archiveLegacyProducts();
+
+    // ==========================================================================
   // OUTPUT — ENV VARS + PRICING SUMMARY
   // ==========================================================================
   console.log('\n' + '='.repeat(60));
@@ -647,6 +756,57 @@ async function seedProducts() {
   console.log(`Credit Bundles: $${BILLING.creditPacks.starter.price / 100} - $${BILLING.creditPacks.enterprise.price / 100}`);
 
   return envVars;
+}
+
+/**
+ * Archives Stripe products that are no longer in the canonical billing config.
+ * These are products whose names suggest old/retired pricing structures.
+ * Does NOT delete — Stripe keeps price history for existing subscriptions.
+ * Sets active=false so they don't appear in new checkouts.
+ */
+async function archiveLegacyProducts(): Promise<void> {
+  // Patterns that indicate legacy products to archive
+  const legacyNamePatterns = [
+    /^CoAIleague.*v1$/i,
+    /^WorkforceOS/i,
+    /^AutoForce/i,
+    /^Drill Consulting/i,
+    /legacy/i,
+    /^CoAIleague AI Credits — (5,000|25,000|100,000|500,000) Pack$/i, // Old credit pack names
+  ];
+
+  // Product names that MUST NOT be archived (even if they match a pattern)
+  const protectedNames = [
+    'CoAIleague Starter',
+    'CoAIleague Professional',
+    'CoAIleague Business',
+    'CoAIleague Enterprise',
+    'CoAIleague Strategic',
+  ];
+
+  let archived = 0;
+  let page = await stripe.products.list({ active: true, limit: 100 });
+
+  while (true) {
+    for (const product of page.data) {
+      const isProtected = protectedNames.some(n => product.name.includes(n));
+      const isLegacy = !isProtected && legacyNamePatterns.some(p => p.test(product.name));
+
+      if (isLegacy) {
+        await stripe.products.update(product.id, { active: false });
+        console.log(`  [archived] ${product.name} (${product.id})`);
+        archived++;
+      }
+    }
+    if (!page.has_more) break;
+    page = await stripe.products.list({ active: true, limit: 100, starting_after: page.data[page.data.length - 1].id });
+  }
+
+  if (archived === 0) {
+    console.log('  No legacy products found — catalog is clean ✅');
+  } else {
+    console.log(`  Archived ${archived} legacy product(s)`);
+  }
 }
 
 seedProducts()
