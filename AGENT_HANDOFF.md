@@ -1480,3 +1480,34 @@ Assess them first: `GET`, `POST`, `PATCH`, `DELETE` on `/employees/:employeeId/b
 They're Plaid-adjacent and sensitive — review the full bodies before deciding how much to extract.
 
 ---
+
+---
+
+## 🔍 PAYROLL AUDIT — NOT DONE YET (2026-04-25 Claude audit)
+
+Full handler audit run. **12 handlers still have significant inline logic.**
+
+**Priority extractions remaining:**
+
+| Handler | Lines | Why important |
+|---|---|---|
+| `POST /runs/:id/approve` | 146L | Run-level approval — different from proposal approval, not yet extracted |
+| `GET /runs/:id/nacha` | 224L | NACHA file generation — largest remaining, inline DB |
+| `GET /tax-center` | 120L | Tax dashboard aggregation |
+| `GET /export/pdf/:runId` | 110L | PDF export with inline DB |
+| `POST /runs/:id/retry-failed-transfers` | 101L | ACH retry logic |
+| `GET /pre-run-checklist` | 99L | Compliance pre-flight |
+| `POST /tax-forms/generate` | 93L | Tax form orchestration |
+| `POST /:entryId/amend` | 76L | Payroll entry amendment |
+| `POST /runs/:id/execute-internal` | 75L | Internal execution |
+| `POST /tax-forms/941` | 69L | 941 generation route |
+| `POST /tax-forms/940` | 58L | 940 generation route |
+
+**22 handlers are thin ✅. 12 still need extraction.**
+
+### Jack's next task:
+Start with `POST /runs/:id/approve` (146L) — run-level approval with SELECT FOR UPDATE.
+Then `GET /runs/:id/nacha` (224L) — NACHA file generation.
+Those two are the most critical remaining.
+
+Also: **please respond to the Codex/workflow question** before starting so Bryan can set it up.
