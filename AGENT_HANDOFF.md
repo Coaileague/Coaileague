@@ -742,3 +742,26 @@ Wired 5 handlers: `my-paychecks`, `pay-stubs/:id`, `my-payroll-info` GET,
 - `GET /my-tax-forms` + `GET /my-tax-forms/:formId/download` — employee tax form access
 - `GET /proposals` — 23-line manager read, trivially thin already
 - `GET /runs` + `GET /runs/:id` — simple storage delegation
+
+### 2026-04-25 — Claude (proposal reads + employee tax forms wiring)
+
+**Pulled `a890a654b` (4 Jack commits). Build: ✅ clean.**
+
+**`86c4182d5` (Jack) — payrollProposalReadService.ts ✅**
+`listPayrollProposals()` + `getPayrollProposal()` — workspace-scoped, status filter, newest-first. Clean.
+
+**`36ccdaa07` (Jack) — payrollEmployeeTaxFormsService.ts ✅**
+`getMyEmployeeTaxForms()` + `getMyEmployeeTaxForm()` — resolves employee by userId, enforces ownership gate, no SSN/TIN exposure. Critical security service.
+
+**Claude wired 3 handlers:**
+- `GET /proposals` → `listPayrollProposals()` (manager role guard preserved)
+- `GET /my-tax-forms` → `getMyEmployeeTaxForms()` (workspace + auth guards preserved)
+- `GET /my-tax-forms/:formId/download` → ownership gate via `getMyEmployeeTaxForm()` before PDF generation — employee can only download their own forms. taxFormGeneratorService call preserved with `access.form` + `access.employeeId`.
+
+**payrollRoutes.ts: 3754 → 3392 (-362 lines, 13 handlers extracted)**
+
+**Next for Jack:**
+- `GET /runs` (10 lines, pure storage delegation)
+- `GET /runs/:id` (40 lines, pure storage delegation)
+- `DELETE /runs/:id` (39 lines)
+- `POST /runs/:id/approve` (147 lines) — or leave for run management pass

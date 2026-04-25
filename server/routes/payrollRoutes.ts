@@ -138,6 +138,8 @@ import { getPayrollTaxFilingDeadlines, getPayrollTaxFilingGuide, getPayrollState
 import { buildPayrollCsvExport } from '../services/payroll/payrollCsvExportService';
 import { rejectPayrollProposal } from '../services/payroll/payrollProposalRejectionService';
 import { getMyPaychecks, getMyPayStub, getMyPayrollInfo, updateMyPayrollInfo, getYtdEarnings } from '../services/payroll/payrollEmployeeSelfServiceService';
+import { listPayrollProposals, getPayrollProposal } from '../services/payroll/payrollProposalReadService';
+import { getMyEmployeeTaxForms, getMyEmployeeTaxForm } from '../services/payroll/payrollEmployeeTaxFormsService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -197,24 +199,15 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
   router.get('/proposals', async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = checkManagerRole(req);
-      if (!roleCheck.allowed) {
-        return res.status(roleCheck.status || 403).json({ message: roleCheck.error || 'Insufficient permissions' });
-      }
-      const userId = req.user?.id;
-      const userWorkspace = await storage.getWorkspaceMemberByUserId(userId!);
-      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
-      
-      const { payrollProposals } = await import("@shared/schema");
-      
-      const proposals = await db.select().from(payrollProposals)
-        .where(eq(payrollProposals.workspaceId, userWorkspace.workspaceId))
-        .orderBy(desc(payrollProposals.id))
-        .limit(100);
-      
+      if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
+      const userWorkspace = await storage.getWorkspaceMemberByUserId(req.user?.id!);
+      if (!userWorkspace) return res.status(404).json({ message: 'Workspace not found' });
+      const status = typeof req.query.status === 'string' ? req.query.status : null;
+      const proposals = await listPayrollProposals({ workspaceId: userWorkspace.workspaceId, status });
       res.json(proposals);
     } catch (error: unknown) {
-      log.error("Error fetching payroll proposals:", error);
-      res.status(500).json({ message: (error instanceof Error ? sanitizeError(error) : null) || "Failed to fetch proposals" });
+      log.error('Error fetching payroll proposals:', error);
+      res.status(500).json({ message: sanitizeError(error) || 'Failed to fetch proposals' });
     }
   });
 
@@ -1259,47 +1252,14 @@ router.get('/my-tax-forms', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
-
-    const taxYear = req.query.taxYear ? parseInt(req.query.taxYear as string) : undefined;
-
-    const empRecords = await db
-      .select()
-      .from(employees)
-      .where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)));
-
-    if (!empRecords || empRecords.length === 0) {
-      return res.status(404).json({ message: 'No employee record found for your account in this workspace' });
-    }
-
-    const employee = empRecords[0];
-
-    const { taxFilingAssistanceService } = await import('../services/taxFilingAssistanceService');
-    const forms = await taxFilingAssistanceService.getEmployeeTaxForms(employee.id, workspaceId, taxYear);
-
-    res.json({
-      employeeId: employee.id,
-      employeeName: `${(employee as any).firstName || ''} ${(employee as any).lastName || ''}`.trim(),
-      forms: forms.map(f => ({
-        id: f.id,
-        formType: f.formType,
-        taxYear: f.taxYear,
-        wages: f.wages,
-        federalTaxWithheld: f.federalTaxWithheld,
-        stateTaxWithheld: f.stateTaxWithheld,
-        socialSecurityWages: f.socialSecurityWages,
-        socialSecurityTaxWithheld: f.socialSecurityTaxWithheld,
-        medicareWages: f.medicareWages,
-        medicareTaxWithheld: f.medicareTaxWithheld,
-        generatedAt: f.generatedAt,
-        isActive: f.isActive,
-      })),
-    });
+    const result = await getMyEmployeeTaxForms({ userId, workspaceId });
+    res.json(result);
   } catch (error: unknown) {
+    const status = (error as any)?.status || 500;
     log.error('Error fetching my tax forms:', error);
-    res.status(500).json({ message: 'Failed to fetch tax forms' });
+    res.status(status).json({ message: error instanceof Error ? sanitizeError(error) : 'Failed to fetch tax forms' });
   }
 });
 
@@ -1307,45 +1267,20 @@ router.get('/my-tax-forms/:formId/download', async (req: AuthenticatedRequest, r
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
 
-    const { formId } = req.params;
-
-    const empRecords = await db
-      .select()
-      .from(employees)
-      .where(eq(employees.userId, userId));
-
-    if (!empRecords || empRecords.length === 0) {
-      return res.status(404).json({ message: 'Employee record not found' });
-    }
-
-    const employee = empRecords[0];
-
-    const { employeeTaxForms } = await import('@shared/schema');
-    const forms = await db
-      .select()
-      .from(employeeTaxForms)
-      .where(
-        and(
-          eq(employeeTaxForms.id, formId),
-          eq(employeeTaxForms.employeeId, employee.id),
-          eq(employeeTaxForms.workspaceId, employee.workspaceId)
-        )
-      );
-
-    if (!forms || forms.length === 0) {
-      return res.status(404).json({ message: 'Tax form not found or access denied' });
-    }
-
-    const form = forms[0];
+    // Enforce ownership via service — verifies formId belongs to this employee
+    const access = await getMyEmployeeTaxForm({ userId, workspaceId, formId: req.params.formId });
 
     const { taxFormGeneratorService } = await import('../services/taxFormGeneratorService');
     let result;
+    const { form, employeeId } = access;
 
     if (form.formType === 'w2') {
-      result = await taxFormGeneratorService.generateW2ForEmployee(employee.id, employee.workspaceId, form.taxYear);
+      result = await taxFormGeneratorService.generateW2ForEmployee(employeeId, workspaceId, form.taxYear);
     } else if (form.formType === '1099') {
-      result = await taxFormGeneratorService.generate1099ForEmployee(employee.id, employee.workspaceId, form.taxYear);
+      result = await taxFormGeneratorService.generate1099ForEmployee(employeeId, workspaceId, form.taxYear);
     } else {
       return res.status(400).json({ message: 'Only W-2 and 1099 forms are available for employee download' });
     }
@@ -1358,8 +1293,9 @@ router.get('/my-tax-forms/:formId/download', async (req: AuthenticatedRequest, r
     res.setHeader('Content-Disposition', `attachment; filename="${form.formType}-${form.taxYear}.pdf"`);
     return res.send(result.pdfBuffer);
   } catch (error: unknown) {
+    const status = (error as any)?.status || 500;
     log.error('Error downloading tax form:', error);
-    res.status(500).json({ message: 'Failed to download tax form' });
+    res.status(status).json({ message: error instanceof Error ? sanitizeError(error) : 'Failed to download tax form' });
   }
 });
 
