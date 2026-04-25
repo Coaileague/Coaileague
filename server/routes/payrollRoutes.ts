@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { sanitizeError } from '../middleware/errorHandler';
 import { PLATFORM } from '../config/platformConfig';
-import { validatePayrollPeriod, validateDeductionAmount, validateNonNegativeAmount, businessRuleResponse } from '../lib/businessRules';
+import {  validateDeductionAmount, validateNonNegativeAmount, businessRuleResponse } from '../lib/businessRules';
 import { Router } from "express";
 import type { AuthenticatedRequest } from "../rbac";
 import { sumFinancialValues,  toFinancialString } from '../services/financialCalculator';
@@ -10,7 +10,7 @@ import { hasManagerAccess, hasPlatformWideAccess } from "../rbac";
 import PDFDocument from "pdfkit";
 import { db } from "../db";
 import { storage } from "../storage";
-import { and, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and,  desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import {
   payrollRuns,
   payrollEntries,
@@ -110,7 +110,6 @@ import {
   calculateTotalDeductions,
   calculateTotalGarnishments,
 } from "../services/payrollDeductionService";
-import { detectPayPeriod, createAutomatedPayrollRun } from "../services/payrollAutomation";
 import { broadcastNotificationToUser as broadcastNotification } from "../websocket";
 import * as notificationHelpers from "../notifications";
 import { format } from "date-fns";
@@ -147,6 +146,7 @@ import { taxFormGeneratorService } from '../services/taxFormGeneratorService';
 import { markPayrollRunPaid } from '../services/payroll/payrollRunMarkPaidService';
 import { processPayrollRunState } from '../services/payroll/payrollRunProcessStateService';
 import { voidPayrollRun } from '../services/payroll/payrollRunVoidService';
+import { createPayrollRunForPeriod } from '../services/payroll/payrollRunCreationService';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -281,267 +281,54 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       const roleCheck = checkManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
 
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.id;
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
       const workspaceId = req.workspaceId!;
 
-      const workspaceTier = await getWorkspaceTier(workspaceId);
-      if (!hasTierAccess(workspaceTier, 'professional')) {
-        return res.status(402).json({ error: 'This feature requires professional plan or higher', currentTier: workspaceTier, minimumTier: 'professional', requiresTierUpgrade: true });
-      }
-
-      // GAP-45 FIX: Block suspended/cancelled workspaces from creating payroll runs.
-      // Invoice routes already guard this; payroll creation was missing the same check.
-      // A workspace with subscriptionStatus='suspended' or 'cancelled' must NOT be able
-      // to generate payroll — doing so would create financial obligations for an org that
-      // has been administratively locked, creating reconciliation debt and audit exposure.
-      const ws = await storage.getWorkspace(workspaceId);
-      if (!ws || ws.subscriptionStatus === 'suspended' || ws.subscriptionStatus === 'cancelled') {
-        return res.status(403).json({
-          error: 'SUBSCRIPTION_INACTIVE',
-          message: 'Organization subscription is not active — payroll cannot be run until the subscription is restored',
-        });
-      }
-
-      const lockResult = await acquirePayrollRunLock(workspaceId, userId);
-      if (!lockResult.acquired) {
-        return res.status(409).json({ error: "A payroll run is already being created for this workspace", lockedBy: lockResult.holder });
-      }
-
-      // Validate input
       const schema = z.object({
         payPeriodStart: z.string().optional(),
         payPeriodEnd: z.string().optional(),
       });
-      
+
       const validationResult = schema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(422).json({ 
-          message: "Invalid request",
-          errors: validationResult.error.errors
-        });
-      }
-
-      const { payPeriodStart, payPeriodEnd } = validationResult.data;
-
-      // Auto-detect pay period if not provided
-      let periodStart: Date;
-      let periodEnd: Date;
-      
-      if (payPeriodStart && payPeriodEnd) {
-        periodStart = new Date(payPeriodStart);
-        periodEnd = new Date(payPeriodEnd);
-      } else {
-        const detected = await detectPayPeriod(workspaceId);
-        periodStart = detected.periodStart;
-        periodEnd = detected.periodEnd;
-      }
-
-      const periodViolation = validatePayrollPeriod(periodStart, periodEnd);
-      if (periodViolation) {
-        await releasePayrollRunLock(workspaceId);
-        if (businessRuleResponse(res, [periodViolation])) return;
-      }
-
-      // Check for overlapping runs
-      const overlappingRun = await db.select().from(payrollRuns)
-        .where(and(
-          eq(payrollRuns.workspaceId, workspaceId),
-          sql`(${payrollRuns.periodStart}, ${payrollRuns.periodEnd}) OVERLAPS (${periodStart.toISOString()}, ${periodEnd.toISOString()})`
-        ))
-        .limit(1);
-
-      if (overlappingRun.length > 0) {
-        await releasePayrollRunLock(workspaceId);
-        return res.status(409).json({
-          message: "Payroll period overlaps with an existing run",
-          existingRunId: overlappingRun[0].id 
-        });
-      }
-
-      // ── PRE-GATE: Workspace-wide compliance scan (runs regardless of approved hours) ──
-      // Checks ALL active employees for guard card issues, missing onboarding, missing pay type.
-      // Returns warnings even when payroll is blocked by ZERO_APPROVED_HOURS.
-      const complianceWarnings: Array<{ employeeId: string; name: string; issue: string }> = [];
-      try {
-        const allWorkspaceEmployees = await db
-          .select({
-            id: employees.id,
-            firstName: employees.firstName,
-            lastName: employees.lastName,
-            onboardingStatus: employees.onboardingStatus,
-            guardCardNumber: employees.guardCardNumber,
-            guardCardExpiryDate: employees.guardCardExpiryDate,
-            compliancePayType: employees.compliancePayType,
-            licenseType: employees.licenseType,
-            status: employees.status,
-          })
-          .from(employees)
-          .where(and(
-            eq(employees.workspaceId, workspaceId),
-            sql`${employees.status} NOT IN ('terminated', 'inactive')`
-          ));
-        const today = new Date();
-        const thirtyDaysOut = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-        for (const emp of allWorkspaceEmployees) {
-          const name = `${emp.firstName} ${emp.lastName}`;
-          if (emp.onboardingStatus !== 'completed') {
-            complianceWarnings.push({ employeeId: emp.id, name, issue: 'Onboarding packet not completed — I-9/W-4 may be missing' });
-          }
-          if (!emp.guardCardNumber) {
-            complianceWarnings.push({ employeeId: emp.id, name, issue: 'Guard card number not on file — required for licensed security work' });
-          } else if (emp.guardCardExpiryDate) {
-            const expiry = new Date(emp.guardCardExpiryDate);
-            if (expiry < today) {
-              complianceWarnings.push({ employeeId: emp.id, name, issue: `Guard card expired on ${expiry.toLocaleDateString()} — officer cannot legally work` });
-            } else if (expiry < thirtyDaysOut) {
-              complianceWarnings.push({ employeeId: emp.id, name, issue: `Guard card expires soon — ${expiry.toLocaleDateString()} (within 30 days)` });
-            }
-          }
-          if (!emp.compliancePayType) {
-            complianceWarnings.push({ employeeId: emp.id, name, issue: 'Pay classification (W-2/1099) not set — required for tax reporting' });
-          }
-        }
-      } catch (compErr) {
-        log.warn('[Payroll] Compliance pre-check failed (non-blocking):', (compErr as Error).message);
-      }
-
-      // ── FIX 2: HARD GATE — zero approved hours blocks payroll run creation ──
-      // Reasoning audit Section 5 #2: was PARTIAL (deferred warning), now hard block.
-      // complianceWarnings are included in the 400 response so the caller still gets them.
-      const [approvedHoursCheck] = await db
-        .select({ approvedCount: count(timeEntries.id) })
-        .from(timeEntries)
-        .where(and(
-          eq(timeEntries.workspaceId, workspaceId),
-          eq(timeEntries.status, 'approved'),
-          gte(timeEntries.clockIn, periodStart),
-          lte(timeEntries.clockIn, periodEnd),
-        ));
-
-      if (!approvedHoursCheck || approvedHoursCheck.approvedCount === 0) {
-        await releasePayrollRunLock(workspaceId);
         return res.status(422).json({
-          error: 'ZERO_APPROVED_HOURS',
-          message: `No approved timesheets found for ${periodStart.toLocaleDateString()} – ${periodEnd.toLocaleDateString()}. Approve timesheets before running payroll.`,
-          periodStart: periodStart.toISOString(),
-          periodEnd: periodEnd.toISOString(),
-          complianceWarnings,
+          message: 'Invalid request',
+          errors: validationResult.error.errors,
         });
       }
 
-      const payrollRun = await db.transaction(async (tx) => {
-        const existingRun = await tx
-          .select()
-          .from(payrollRuns)
-          .where(and(
-            eq(payrollRuns.workspaceId, workspaceId),
-            eq(payrollRuns.periodStart, periodStart),
-            eq(payrollRuns.periodEnd, periodEnd),
-          ))
-          .for('update')
-          .limit(1);
-
-        if (existingRun.length > 0) {
-          throw Object.assign(new Error(
-            `A payroll run for this pay period (${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}) already exists.`
-          ), {
-            statusCode: 409,
-            code: 'DUPLICATE_PAYROLL_RUN',
-            existingRunId: existingRun[0].id,
-            existingRunStatus: existingRun[0].status,
-          });
-        }
-
-        return await createAutomatedPayrollRun({
-          workspaceId,
-          periodStart,
-          periodEnd,
-          createdBy: userId
-        });
-      });
-
-      storage.createAuditLog({
+      const result = await createPayrollRunForPeriod({
         workspaceId,
         userId,
         userEmail: req.user?.email || 'unknown',
         userRole: req.user?.role || 'user',
-        action: 'create',
-        entityType: 'payroll_run',
-        entityId: (payrollRun as any).id,
-        actionDescription: `Payroll run created for period ${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}`,
-        changes: { after: { payrollRunId: (payrollRun as any).id, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), status: 'pending' } },
-        isSensitiveData: true,
-        complianceTag: 'soc2',
-      }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll run creation', { error: err?.message }));
-
-      const periodStartStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const periodEndStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      notificationHelpers.createPayrollRunCreatedNotification(
-        { storage, broadcastNotification },
-        {
-          workspaceId,
-          userId,
-          payrollRunId: (payrollRun as any).id,
-          periodStart: periodStartStr,
-          periodEnd: periodEndStr,
-          createdBy: userId,
-        }
-      ).catch(err => log.error('Failed to create payroll notification:', err));
-
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const { broadcastToWorkspace: bcastRunCreated } = await import('../services/websocketService');
-      bcastRunCreated(workspaceId, { type: 'payroll_updated', action: 'run_created', runId: (payrollRun as any).id });
-      platformEventBus.publish({
-        type: 'payroll_run_created',
-        category: 'automation',
-        title: 'Payroll Run Created',
-        description: `Payroll run created for ${periodStartStr} – ${periodEndStr}`,
-        workspaceId,
-        userId,
-        metadata: {
-          payrollRunId: (payrollRun as any).id,
-          periodStart: periodStart.toISOString(),
-          periodEnd: periodEnd.toISOString(),
-          createdBy: userId,
-        },
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
-
-
-      // FIX-2: Financial audit log for payroll run creation
-      await db.insert(billingAuditLog).values({
-        workspaceId,
-        eventType: 'payroll_run_created',
-        eventCategory: 'payroll',
-        actorType: 'user',
-        actorId: userId,
-        actorEmail: req.user?.email || null,
-        description: `Payroll run created for period ${periodStartStr} to ${periodEndStr}`,
-        relatedEntityType: 'payroll_run',
-        relatedEntityId: (payrollRun as any).id,
-        newState: { status: (payrollRun as any).status, periodStart, periodEnd, totalGross: payrollRun.totalGrossPay },
+        payPeriodStart: validationResult.data.payPeriodStart || null,
+        payPeriodEnd: validationResult.data.payPeriodEnd || null,
         ipAddress: req.ip || null,
         userAgent: req.get('user-agent') || null,
-      }).catch(err => log.error('[BillingAudit] billing_audit_log write failed for payroll create', { error: err?.message }));
-      res.json({ ...payrollRun, complianceWarnings });
+      });
+
+      res.json({ ...result.payrollRun, complianceWarnings: result.complianceWarnings });
     } catch (error: unknown) {
-      if (error instanceof Error && (error as any).code === 'DUPLICATE_PAYROLL_RUN') {
+      const status = (error as any)?.status || (error as any)?.statusCode || 500;
+      const extra = (error as any)?.extra || {};
+
+      if ((error as any)?.code === 'DUPLICATE_PAYROLL_RUN') {
         return res.status(409).json({
-          message: sanitizeError(error),
+          message: error instanceof Error ? sanitizeError(error) : 'Duplicate payroll run',
           code: (error as any).code,
           existingRunId: (error as any).existingRunId,
           existingRunStatus: (error as any).existingRunStatus,
         });
       }
-      log.error("Error creating payroll run:", error);
-      res.status(500).json({ message: (error instanceof Error ? sanitizeError(error) : null) || "Failed to create payroll run" });
-    } finally {
-      const workspaceId = req.workspaceId;
-      if (workspaceId) await releasePayrollRunLock(workspaceId);
+
+      log.error('Error creating payroll run:', error);
+      res.status(status).json({
+        message: error instanceof Error ? sanitizeError(error) : 'Failed to create payroll run',
+        ...extra,
+      });
     }
   });
 
