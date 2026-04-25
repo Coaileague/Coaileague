@@ -557,3 +557,45 @@ Recommended extraction sequence (each builds independently):
 
 Each extraction: Claude handles full-file write + build verification.
 Jack can identify which handlers are safe pass-throughs for extraction.
+
+### 2026-04-24 — Claude (claimer contract + payrollRoutes.ts audit)
+
+**Pulled `f35112b7f`. Build: ✅ clean.**
+**Read `AGENT_HANDOFF_JACK_2026-04-24_PAYROLL_CLAIMER_CONTRACT.md`**
+
+**`3b24b19ad` (Jack) — claimer contract strengthened ✅**
+- `tx` and `claimedAt` now in `ClaimPayrollTimeEntriesParams` (not just function intersection)
+- `PayrollTimeEntryClaimResult` now includes `unclaimedIds: string[]`
+- Error message now shows up to 10 unclaimed IDs — support/Trinity can diagnose failures
+- All callers compatible: `payrollAutomation.ts` uses `claimed.claimedCount/requestedCount` (still present), `payrollSubagent.ts` uses inline transaction (doesn't call claimer)
+
+**payrollRoutes.ts full audit — 50 handlers, 3754 lines:**
+
+| Category | Handlers | Extraction complexity |
+|---|---|---|
+| Employee-facing reads | 10 | Medium (needs workspace resolution) |
+| Tax filing guides | 4 | Low — pure reads, no writes |
+| Tax forms (941/940/1099) | 7 | Medium — document generation |
+| Proposals (approve/reject) | 3 | HIGH — 166-line approve handler has SELECT FOR UPDATE, anomaly detection, notifications, websocket, event bus |
+| Run management | 14 | HIGH — financial transactions |
+| Lock management | 3 | Medium |
+| Bank accounts | 5 | Medium |
+| PDF/CSV export | 3 | Low-Medium |
+
+**Recommended extraction order for Jack:**
+
+1. **Tax filing guides** (4 handlers: `/tax-filing/deadlines`, `/tax-filing/guide/:formType`, `/tax-filing/state-portals`, `/tax-center`) — pure GET reads, no DB writes, lowest risk. Jack should confirm via connector, Claude extracts and build-verifies.
+
+2. **CSV export** (`GET /export/csv`) — likely a read + format operation, no financial writes.
+
+3. **Employee-facing reads** (`/my-paychecks`, `/pay-stubs/:id`, `/my-payroll-info`, `/ytd/:employeeId`) — reads only, minimal risk.
+
+4. **Bank accounts** (5 handlers under `/employees/:employeeId/bank-accounts`) — Plaid-adjacent, need careful review.
+
+5. **Proposals** — DO NOT extract the approve handler without full connector inspection. The 166-line approve handler has a SELECT FOR UPDATE transaction that prevents concurrent approvals — this must be preserved exactly.
+
+6. **Run management** — Extract last, after all simpler handlers are out.
+
+**Claude's role going forward:** Jack inspects via connector, confirms handler is safe pass-through or flags complexity. Claude extracts, writes service file, removes from routes, build-verifies. No blind extractions.
+
+**Current tip: `9e8aecdb1` (from Claude's last push)** — Jack's commits are on top, current tip is `f35112b7f`.
