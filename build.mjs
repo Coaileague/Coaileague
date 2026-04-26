@@ -79,6 +79,7 @@ async function build() {
         'sharp',
         'bcrypt',
         'fsevents',
+        'typescript',
       ],
       alias: {
         '@shared': path.resolve(__dirname, 'shared'),
