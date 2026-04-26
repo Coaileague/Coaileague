@@ -1,7 +1,6 @@
 // Domain Workforce — Route Mounts
 // THE LAW: No new routes without Bryan's approval.
 // Canonical prefixes: /api/employees, /api/engagement, /api/training, /api/feedback, /api/availability,
-//   /api/benefits, /api/owner-employee, /api/gamification, /api/hris, /api (hr inline, termination, leader, deactivate),
 //   /api/role-labels, /api/hr/*, /api/onboarding-forms, /api/smart-onboarding, /api/ats,
 //   /api/officers (intelligence dashboard — Phase 11)
 import type { Express } from "express";
@@ -18,7 +17,6 @@ import officerScoreRouter from "../officerScoreRoutes";
 import officerIntelligenceRouter from "../officerIntelligenceRoutes";
 import employeeRouter from "../employeeRoutes";
 import engagementRouter from "../engagementRoutes";
-import gamificationEnhancedRoutes from "../gamificationRoutes";
 import officerCertificationRouter, { publicCertRouter } from "../officerCertificationRoutes";
 import feedbackRouter from "../feedbackRoutes";
 import availabilityRouter from "../availabilityRoutes";
@@ -61,7 +59,6 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api", requireAuth, ensureWorkspaceAccess, officerIntelligenceRouter);
   app.use("/api/employees", requireAuth, ensureWorkspaceAccess, employeeRouter);
   app.use("/api/engagement", requireAuth, ensureWorkspaceAccess, engagementRouter);
-  app.use("/api/gamification/enhanced", requireAuth, ensureWorkspaceAccess, gamificationEnhancedRoutes);
   app.use("/api/training/certification", requireAuth, ensureWorkspaceAccess, officerCertificationRouter);
   // Public certificate verification — no auth, accessed via QR code
   app.use("/api/public/training/certification", publicCertRouter);

@@ -63,7 +63,6 @@ import { platformEventBus, PlatformEvent, EventCategory, EventVisibility } from 
 import { trinityOrchestrationGovernance } from './ai-brain/trinityOrchestrationGovernance';
 import { scanOverdueI9s } from './ai-brain/trinityDocumentActions';
 import { weeklyPlatformAudit } from './trinity/weeklyPlatformAudit';
-import { gamificationService } from './gamification/gamificationService';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
 
@@ -4076,70 +4075,8 @@ export function startAutonomousScheduler() {
   });
   log.info('Weekly Platform Audit registered', { schedule: '0 2 * * 0', description: 'Comprehensive platform health check' });
 
-  // Weekly Gamification Points Reset - Every Sunday at midnight
-  cron.schedule(CRON.gamificationWeeklyReset, () => {
-    log.debug('Gamification weekly points reset triggered', { timestamp: new Date().toISOString() });
-    const startTime = Date.now();
-    (async () => {
-      try {
-        await gamificationService.resetWeeklyPoints();
-        const duration = Date.now() - startTime;
-        log.info('Gamification weekly points reset complete', { durationMs: duration });
-
-        await emitAutomationEvent({
-          jobName: 'Gamification Weekly Reset',
-          category: 'maintenance',
-          success: true,
-          duration,
-          details: {
-            resetType: 'weekly',
-            resetAt: new Date().toISOString(),
-          },
-        });
-      } catch (error: any) {
-        log.error('Gamification weekly reset error', { error: error instanceof Error ? error.message : String(error) });
-        await emitAutomationEvent({
-          jobName: 'Gamification Weekly Reset',
-          category: 'maintenance',
-          success: false,
-          details: { error: (error instanceof Error ? error.message : String(error)) },
-        });
-      }
-    })();
-  });
   log.info('Gamification Weekly Reset registered', { schedule: '0 0 * * 0', description: 'Resets weekly leaderboard points' });
 
-  // Monthly Gamification Points Reset - 1st of each month at midnight
-  cron.schedule(CRON.gamificationMonthlyReset, () => {
-    log.debug('Gamification monthly points reset triggered', { timestamp: new Date().toISOString() });
-    const startTime = Date.now();
-    (async () => {
-      try {
-        await gamificationService.resetMonthlyPoints();
-        const duration = Date.now() - startTime;
-        log.info('Gamification monthly points reset complete', { durationMs: duration });
-
-        await emitAutomationEvent({
-          jobName: 'Gamification Monthly Reset',
-          category: 'maintenance',
-          success: true,
-          duration,
-          details: {
-            resetType: 'monthly',
-            resetAt: new Date().toISOString(),
-          },
-        });
-      } catch (error: any) {
-        log.error('Gamification monthly reset error', { error: error instanceof Error ? error.message : String(error) });
-        await emitAutomationEvent({
-          jobName: 'Gamification Monthly Reset',
-          category: 'maintenance',
-          success: false,
-          details: { error: (error instanceof Error ? error.message : String(error)) },
-        });
-      }
-    })();
-  });
   log.info('Gamification Monthly Reset registered', { schedule: '0 0 1 * *', description: 'Resets monthly leaderboard points' });
 
   // Trinity Proactive Daily Scan — 6am every day (COO morning briefing)
