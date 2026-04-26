@@ -199,7 +199,7 @@ function hasManagerRole(req: any): boolean {
   return false;
 }
 
-ncidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     if (!hasManagerRole(req)) {
       return res.status(403).json({ error: "Insufficient permissions. Manager or above role required to use Trinity polish." });
