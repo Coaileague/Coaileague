@@ -833,13 +833,7 @@ async function initializeCriticalServices() {
     log.error('Founder exemption guarantee failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
   }
 
-  // STATE REGULATORY CONFIG SEED — Texas (idempotent, safe on dev)
-  try {
-    const { seedTexasRegulatoryConfig } = await import('./routes/stateRegulatoryRoutes');
-    await seedTexasRegulatoryConfig();
-  } catch (error) {
-    log.error('Texas regulatory config seed failed', { error: error instanceof Error ? { message: error.message } : String(error) });
-  }
+  // STATE REGULATORY CONFIG SEED — removed (stateRegulatoryRoutes deleted in refactor)
 
   // ── ALL DB-DEPENDENT SEEDING: skip entirely if DB unreachable ───────────────
   const dbAvailableForSeed = await (async () => {

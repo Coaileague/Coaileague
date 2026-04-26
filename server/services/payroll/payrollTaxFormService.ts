@@ -10,7 +10,7 @@
 import { db } from '../../db';
 import { storage } from '../../storage';
 import { createLogger } from '../../lib/logger';
-import { sanitizeError } from '../../lib/sanitizeError';
+import { sanitizeError } from '../../middleware/errorHandler';
 
 const log = createLogger('payrollTaxFormService');
 

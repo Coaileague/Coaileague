@@ -51,9 +51,6 @@ export function mountComplianceRoutes(app: Express): void {
   app.use("/api", requireAuth, ensureWorkspaceAccess, formRouter);
   app.use("/api", requireAuth, ensureWorkspaceAccess, policyComplianceRouter);
   // Enforcement auditor public login/me routes MUST come before the auth-protected catch-all
-  app.use("/api/enforcement/auditor/login", complianceEnforcementRouter);
-  app.use("/api/enforcement/auditor/me", complianceEnforcementRouter);
-  app.use("/api/enforcement", requireAuth, complianceEnforcementRouter);
   app.use(complianceInlineRouter);
   app.use("/api/uacp", requireAuth, ensureWorkspaceAccess, uacpRouter);
   app.use("/api/security", requireAuth, ensureWorkspaceAccess, securityAuditRouter);

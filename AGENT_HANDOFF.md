@@ -1,155 +1,189 @@
 # ════════════════════════════════════════════════════════════════════════
 # COAILEAGUE REFACTOR — MASTER AGENT HANDOFF
-# Updated: 2026-04-26 | Agents: Claude (execute) + Jack/GPT (audit)
+# Updated: 2026-04-26 | Branch: refactor/service-layer
 # ════════════════════════════════════════════════════════════════════════
 
 ## PLATFORM STATUS
-- development: 63962de69 STABLE
-- refactor/service-layer: 99a085dfb (active)
-- Railway: deploying 63962de69
+- development:          34e110853  STABLE ✅ (Railway green)
+- refactor/service-layer: active branch for Phase 2
+- Real DB URL available for local testing (see Crash Rule 5)
 
 ---
 
-## CRASH RULES (READ EVERY TURN)
+## WHAT JUST HAPPENED — IMPORTANT CONTEXT FOR JACK
 
-### CRASH 1 - Route mount prefix (not individual paths)
+Phase 1 (route cleanup) is DONE and merged. But we had 5 deployment crashes
+after merging because esbuild passes even when router variable names are
+truncated. We found and fixed all of them:
+
+  3f8fa625a  require('stripe') — ESM crash
+  efb67b46a  ncidentPipelineRouter (1-char truncation)
+  624ac4cf2  msRouter + stale stateRegulatoryRoutes import
+  d9c9d498f  payrollTaxFormService broken import path
+  6409ad5af  sRouter + complianceEnforcementRouter stale mount
+
+All fixed. 41 routes smoke-tested against real Railway DB. Platform confirmed
+stable. Phase 1 is truly complete.
+
+---
+
+## CRASH RULES (READ EVERY TURN — MANDATORY)
+
+### CRASH 1 — Route mount prefix (not individual paths)
 NEVER delete a route file based on individual path search alone.
 Check MOUNT PREFIX first:
   grep -rn "/api/PREFIX" client/ | wc -l
   0 = safe to delete | >0 = keep file, trim dead handlers inside only
-Individual handler: grep -rn "/api/PREFIX/path" client/ server/ | grep -v FILENAME.ts
 
-### CRASH 2 - ESM require() crashes Railway
+### CRASH 2 — ESM require() crashes Railway
 package.json has type:module. ALL require() at runtime = crash.
 SCAN BEFORE EVERY COMMIT:
-  grep -rn "require(" server/ --include="*.ts" | grep -v "node_modules|.d.ts|// |build.mjs|Binary"
-  Must return 0 lines.
-Fixed files: server/index.ts, rfpComplexityScorer.ts, seedRegulatoryRules.ts,
-  migrateExistingRates.ts, integrations-status.ts
-
-### CRASH 3 - Broken router prefixes
-After handler deletion brace-matcher cuts variable names: outer., uter., ter.
-esbuild passes it. Runtime crashes.
-SCAN AFTER EVERY ROUTE DELETION:
-  grep -rn "^outer.|^uter.|^ter.|^er." server/routes/ --include="*.ts" | grep -v "// "
+  grep -rn "require(" server/ --include="*.ts" | grep -v "node_modules|.d.ts|//|build.mjs"
   Must return 0 lines.
 
-### CRASH 4 - Client file deletion breaks Vite build (ENOENT)
-grep finds 0 import lines but Vite resolves through re-exports and barrel files.
-use-mobile.tsx had 75+ importers invisible to grep.
-RULE: Delete ONE file, run npx vite build, ENOENT = restore from git.
+### CRASH 3 — Broken router prefixes (IMPROVED SCANNER)
+Brace-matcher cuts router names. esbuild passes it. Runtime crashes.
+SCAN AFTER EVERY ROUTE/SERVICE DELETION:
+  python3 -c "
+import re, os
+for root, dirs, files in os.walk('server/routes'):
+  dirs[:] = [d for d in dirs if 'node_modules' not in d]
+  for f in files:
+    if not f.endswith('.ts'): continue
+    c = open(os.path.join(root, f)).read()
+    declared = set(re.findall(r'const (\w+Router)\s*=', c))
+    declared |= set(re.findall(r'export const (\w+Router)', c))
+    declared.add('router')
+    used = set(re.findall(r'^([a-z]\w+Router)\.(get|post|put|patch|delete)', c, re.MULTILINE))
+    diff = {v for v,_ in used} - declared
+    if diff: print(f'BROKEN: {f}: {diff}')
+  "
+Must print nothing.
+
+### CRASH 4 — Client file deletion breaks Vite build (ENOENT)
+grep misses barrel exports and re-exports. Vite sees everything.
+RULE: After any client file deletion, verify with:
   npx vite build 2>&1 | grep -E "ENOENT|error during|built in"
-  Never batch-delete client files without Vite verification.
+  ENOENT = restore from git immediately.
+Never batch-delete client files without Vite verification first.
+
+### CRASH 5 — Runtime crashes not caught by esbuild (MOST IMPORTANT)
+esbuild bundles even broken router vars. Only full boot catches them.
+MANDATORY BEFORE EVERY MERGE TO DEVELOPMENT:
+  export DATABASE_URL="postgresql://postgres:MmUbhSxdkRGFLhBGGXGaWQeBceaqNmlj@metro.proxy.rlwy.net:40051/railway"
+  export SESSION_SECRET="coaileague-dev-test-session-secret-32chars"
+  node dist/index.js > /tmp/boot_test.txt 2>&1 &
+  sleep 18
+  curl -s http://localhost:5000/api/workspace/health   # must return {"message":"Unauthorized"}
+  grep -E "ReferenceError|is not defined|CRITICAL.*Failed" /tmp/boot_test.txt | grep -v "GEMINI"
+  # must return 0 lines
 
 ---
 
-## MANDATORY CHECKLIST (ALL AGENTS, EVERY COMMIT)
+## MANDATORY PRE-MERGE CHECKLIST (ALL AGENTS, EVERY MERGE)
 
-1. node build.mjs                                    # Must: Server build complete
-2. grep -rn "require(" server/ --include="*.ts" ...  # Must: 0 lines
-3. grep -rn "^outer.|^uter.|^ter." server/routes/   # Must: 0 lines (after route changes)
-4. npx vite build                                    # Must: built in X.XXs (after client changes)
-5. node dist/index.js 2>&1 | head -6                # Must: DATABASE_URL only
+1. node build.mjs                          — Must: Server build complete
+2. grep require( server/ ...               — Must: 0 lines
+3. Python router scan                      — Must: 0 output
+4. Boot test with real DB + curl health    — Must: 401 + 0 error lines
+5. npx vite build (client changes only)    — Must: built in X.XXs
 
 ---
 
-## REFACTOR PLAN (Front to Back, Simplify then Enhance)
+## JACK'S FINAL PASS — PHASE 1 COMPLETION SWEEP
 
-### PHASE 1: Route Layer - COMPLETE (-24,335L merged to development)
+Jack: before we move to Phase 2, run a final audit sweep on the
+refactor/route-cleanup branch to confirm it matches development.
 
-### PHASE 2: Service Layer - IN PROGRESS (refactor/service-layer)
+Branch tips:
+  development:            34e110853
+  refactor/service-layer: e3777a93f
 
-DONE:
+### What Jack should audit on the current route layer:
+
+1. Check if refactor/service-layer has absorbed all development fixes:
+   git log --oneline development | head -10
+   git log --oneline refactor/service-layer | head -10
+   The service-layer branch needs to merge development to get the crash fixes.
+
+2. Verify no remaining broken prefixes in server/routes/ using Crash Rule 3 scanner.
+
+3. Verify no remaining stale imports of deleted route files:
+   grep -rn "trainingRoutes|performanceRoutes|complianceRoutes|schedulerRoutes|workflowRoutes|workflowConfigRoutes|dispatchRouter|gpsRoutes|offboardingRoutes|stateRegulatoryRoutes|complianceEnforcementRouter|aiOrchestraRoutes" server/ --include="*.ts" | grep "import|require|app.use"
+
+4. Verify no remaining require() calls:
+   grep -rn "require(" server/ --include="*.ts" | grep -v "node_modules|.d.ts|//|build.mjs"
+
+5. Run full boot test (Crash Rule 5) on the service-layer branch.
+
+Once clean: open PR from refactor/service-layer → development.
+
+---
+
+## PHASE 2 — SERVICE LAYER REFACTOR (CURRENT BRANCH: refactor/service-layer)
+
+### What's done on refactor/service-layer so far:
   server/services/github/githubClient.ts          DELETED  -61L
-  server/services/autonomy/migrateExistingRates.ts DELETED -226L
+  server/services/autonomy/migrateExistingRates   DELETED  -226L
   server/services/ai-brain/aiOrchestraService.ts  DELETED  -766L
   server/services/ai-brain/codebaseAwareness.ts   DELETED  -670L
-  server/services/ai-brain/autonomousWorkflowSvc  DELETED  -242L
+  server/services/ai-brain/autonomousWorkflow...  DELETED  -242L
   server/services/ai-brain/alertManager.ts        DELETED  -230L
   server/services/ai-brain/agentCache.ts          DELETED  -176L
   server/services/ai-brain/agentHealthMonitor.ts  DELETED  -160L
+  server/services/ai-brain/skills/timeAnomaly...  DELETED  -441L
+  server/services/ai-brain/skills/seasonalOrch... DELETED  -915L
+  server/services/ai-brain/streaming/trinityWS... DELETED  -221L
   server/routes/aiOrchestraRoutes.ts              DELETED  -576L (cascade)
-  client/src/config/apiEndpoints.ts               TRIMMED  -28L (34 dead entries)
-  TOTAL: -3,135L
+  client/src/config/apiEndpoints.ts               TRIMMED  -28L
+  PHASE 2 TOTAL SO FAR: ~4,712L
 
-JACK NEXT - AI Brain subdirectories (audit for dead files):
-  server/services/ai-brain/skills/           scan all .ts files
-  server/services/ai-brain/subagents/        scan all .ts files
-  server/services/ai-brain/tools/            scan all .ts files
-  server/services/ai-brain/streaming/        scan all .ts files
-  server/services/ai-brain/agent/            scan all .ts files
-  server/services/ai-brain/trinity-orch.../  scan all .ts files
-  server/services/ai-brain/providers/        geminiClient.ts 3481L - verify alive
+### Jack's Phase 2 audit targets (service directories):
 
-JACK NEXT - Standalone candidates:
-  server/services/businessInsights/businessContextService.ts  551L  1 caller (verify chain)
-  server/services/ai/tokenExtractor.ts                         51L  0 callers - DELETE
-  server/services/advancedAnalyticsService.ts                 740L  2 callers - verify
-  server/services/helposService/helposService.ts              709L  2 callers - verify
+**METHODOLOGY — same as routes but for services:**
+  # Check if a service FILE is imported anywhere
+  base="serviceName"
+  grep -rn "import.*${base}" server/ client/ --include="*.ts" --include="*.tsx" | grep -v "${base}.ts"
+  # 0 results = safe to delete
 
-JACK NEXT - Large service domains (trim dead exported functions, not whole files):
-  server/services/compliance/    9113L  14 files  - audit exported functions
-  server/services/scheduling/    6156L  12 files  - audit exported functions
-  server/services/payroll/       5244L  29 files  - audit exported functions
-  server/services/training/      3147L   4 files  - low callers, check for deletion
+**Priority targets for Jack to audit:**
 
-Audit command for exported functions:
-  grep -n "^export function\|^export const\|^export async" FILEPATH
-  For each export: grep -rn "EXPORT_NAME" server/ client/ | grep -v FILEPATH | grep import
-  0 callers = remove that function
+1. server/services/ai-brain/ subdirectories (partially done):
+   - agent/          (stateVerificationService, alternativeStrategyService, goalMetricsService, goalExecutionService)
+   - subagents/      (notificationSubagent, invoiceSubagent, gamificationActivationAgent — 1 caller each)
+   - tools/          (all have 2-5 callers — keep, but verify callers are real)
+   - trinity-orchestration/  (scan all)
 
-### PHASE 3: Client Dead Code - PAUSED (Vite required per file)
+2. server/services/scheduling/
+   - trinityAutonomousScheduler.ts (3,199L) — verify callers
+   - advancedSchedulingService.ts  — verify callers
 
-Current surface: 337 pages, 456 components, 91 hooks (~340,000L total)
-Correct process:
-  1. Baseline: npx vite build (confirm green)
-  2. Delete ONE file
-  3. npx vite build - ENOENT = restore + skip
-  4. Clean = commit
-  5. Repeat one at a time
+3. server/services/businessInsights/
+   - businessContextService.ts (551L) — 1 caller in trinityChatService
 
-Priority targets (pages never in App.tsx lazy imports):
-  grep the page component name in App.tsx - if absent, candidate for deletion
+4. server/services/gamification/   (1,512L) — 14 callers, but verify they are real routes
 
-### PHASE 4: Database Schema - PENDING
-  661 tables, audit for never-queried tables
-  grep table/model name across server/ - 0 callers = drop candidate
+5. server/services/uacp/            (2,142L) — 6 callers, verify
 
-### PHASE 5: Enhancement - PENDING (after cleanup complete)
-  Trinity action registry (<100 target, currently 101)
-  TypeScript any-cast reduction in route handlers
-  Service interface contracts (typed I/O)
-  Query optimization on high-traffic routes
+6. server/services/helposService/   (708L) — 2 callers, verify
+
+**Format Jack's audit should deliver:**
+  For each service file:
+    DEAD: server/services/X/Y.ts — 0 callers confirmed
+    ALIVE: server/services/X/Y.ts — N callers at [list files]
 
 ---
 
-## BRANCH RULES
-
-development           = stable production ONLY
-                        Crash fixes go here directly
-                        NEVER push bulk deletions here directly
-
-refactor/[domain]     = all cleanup work
-                        PR -> Railway preview -> merge to development
-                        Full 5-step checklist before every merge
-
-CURRENT BRANCHES:
-  development             63962de69  stable, Railway deploying
-  refactor/service-layer  99a085dfb  active work
+## PROCESS RULES (UNCHANGED)
+- All cleanup work on refactor/service-layer branch, NOT development
+- PR → boot test with real DB → merge to development
+- Commit after every domain, not after every file
+- Build + boot test before every push
 
 ---
 
-## HANDOFF PROTOCOL
-
-Jack turn end:
-  Commit file: AGENT_HANDOFF_JACK_YYYY-MM-DD_DOMAIN.md
-  Include: files audited | caller counts | local commands for Claude | why no runtime patch
-
-Claude turn end:
-  Run full 5-step checklist
-  Commit to refactor/service-layer with clear message
-  Update THIS file with what was done + new totals
-  Push so Jack sees it on next pull
-
-Turn order: Jack audits -> Claude executes -> Jack audits -> ...
-Target pace: full domain or half domain per turn, commit and finish before handoff
+## DB ACCESS (Claude has this, share with context for Jack)
+Real Railway DB for local testing:
+  DATABASE_URL=postgresql://postgres:MmUbhSxdkRGFLhBGGXGaWQeBceaqNmlj@metro.proxy.rlwy.net:40051/railway
+  SESSION_SECRET=coaileague-dev-test-session-secret-32chars
+Use for boot test only — never commit to files.

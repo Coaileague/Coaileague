@@ -58,7 +58,7 @@ rmsRouter.get("/incidents", requireAuth as any, ensureWorkspaceAccess as any, as
 // In-memory idempotency cache for RMS submissions (5-minute TTL)
 const rmsIdempotencyCache = new Map<string, { result: any; expiresAt: number }>();
 
-sRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const rows = await q(`SELECT * FROM incident_reports WHERE id = $1 AND workspace_id = $2`, [req.params.id, workspaceId]);
@@ -93,7 +93,7 @@ rmsRouter.get("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const authUserId = req.user?.id;
@@ -113,7 +113,7 @@ msRouter.post("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/dars/:id/approve", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars/:id/approve", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { supervisorId } = req.body;
@@ -127,7 +127,7 @@ msRouter.post("/dars/:id/approve", requireAuth as any, ensureWorkspaceAccess as 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const authenticatedUserId = req.user?.id;
@@ -208,7 +208,7 @@ msRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as a
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/dars/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { generateDarPdf } = await import("../services/darPdfService");
@@ -222,7 +222,7 @@ msRouter.post("/dars/:id/generate-pdf", requireAuth as any, ensureWorkspaceAcces
 
 // ── DAR Narrative: Download as formatted HTML document ─────────────────────
 // ── Incident Narrative: Download formatted document ─────────────────────────
-msRouter.post("/shift-reports/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/shift-reports/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { generateShiftTransparencyPdf } = await import("../services/darPdfService");
@@ -264,7 +264,7 @@ async function streamPdfFromStorage(pdfPath: string, filename: string, res: any)
   }
 }
 
-sRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
@@ -280,7 +280,7 @@ sRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any, 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     await q(`UPDATE dar_reports SET status='pending_review', updated_at=NOW() WHERE id=$1 AND workspace_id=$2`, [req.params.id, workspaceId]);
@@ -338,7 +338,7 @@ msRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceAc
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/shift-reports/:id/send-to-client", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/shift-reports/:id/send-to-client", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { recipientEmail } = req.body;
@@ -488,7 +488,7 @@ rmsRouter.get("/visitors", requireAuth as any, ensureWorkspaceAccess as any, asy
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.put("/visitors/:id", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.put("/visitors/:id", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { notes, visitorBadgeNumber, hostName, purpose } = req.body;
@@ -507,7 +507,7 @@ msRouter.put("/visitors/:id", requireAuth as any, ensureWorkspaceAccess as any, 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/visitors", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/visitors", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { siteId, siteName, visitorName, visitorCompany, visitorIdType, visitorIdNumber, visitorBadgeNumber, hostName, hostEmployeeId, purpose, vehiclePlate, vehicleDescription, checkedInBy, notes, idPhotoUrl, vehicleFrontPhotoUrl, vehicleRearPhotoUrl, visitorPhotoUrl, expectedDeparture } = req.body;
@@ -641,7 +641,7 @@ rmsRouter.get("/cases", requireAuth as any, ensureWorkspaceAccess as any, async 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.post("/cases", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/cases", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { title, category, priority = "medium", description, siteId, siteName, assignedToEmployeeId, assignedToName, incidentReportIds, policeCaseNumber } = req.body;
@@ -721,7 +721,7 @@ rmsRouter.post("/evidence", requireAuth as any, ensureWorkspaceAccess as any, as
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 
-msRouter.get("/evidence/:id/custody-log", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/evidence/:id/custody-log", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const log = await q(`SELECT * FROM evidence_custody_log WHERE evidence_id=$1 AND workspace_id=$2 ORDER BY transferred_at ASC`, [req.params.id, wid(req)]);
     res.json({ log });
@@ -830,7 +830,7 @@ const reportAuditTrail: Map<string, Array<{
   metadata: any; createdAt: string;
 }>> = new Map();
 
-msRouter.get("/reports/:id/audit-trail", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/reports/:id/audit-trail", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const reportId = req.params.id;
