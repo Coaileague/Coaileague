@@ -9,8 +9,8 @@
 
 ## CURRENT POSITION
 
-**Domain:** SCHEDULING (nearly done)
-**Order:** ✅ Payroll → ✅ Billing → 🔄 Scheduling → Time → HR → ...
+**Domain:** TIME (active) — SCHEDULING ✅ COMPLETE
+**Order:** ✅ Payroll → ✅ Billing → ✅ Scheduling → 🔄 Time → HR → ...
 
 ---
 
@@ -18,43 +18,59 @@
 
 | Commit | Agent | What | Result |
 |---|---|---|---|
-| Claude (this) | Claude | advancedSchedulingRoutes.ts — 17 dead routes deleted | 1,220→799L (-421L) |
-| `9fbdaa8c3` | Claude | schedulerRoutes.ts DELETED + schedulesRoutes.ts -40L | -927L total |
+| Claude (this) | Claude | autonomousSchedulingRoutes verified + time-entry-routes.ts -1,493L | Scheduling DONE, TIME started |
+| `907e2cc2a` | Jack | autonomousSchedulingRoutes.ts — 10 dead routes deleted | 523 → 118 lines (-405L) |
+
+---
+
+## SCHEDULING DOMAIN — COMPLETE ✅
+
+Total removed: **~3,757L** across 6 files
+| File | Result |
+|---|---|
+| shiftRoutes.ts | -1,383L |
+| scheduleosRoutes.ts | -621L |
+| schedulerRoutes.ts | DELETED (-887L) |
+| schedulesRoutes.ts | -40L |
+| advancedSchedulingRoutes.ts | -421L |
+| autonomousSchedulingRoutes.ts | -405L |
 
 ---
 
 ## JACK'S NEXT TASK
 
-**Target:** `autonomousSchedulingRoutes.ts` (523L)
+**Target:** `timeEntryRoutes.ts` (924L) — caller audit, mount `/api/time-entries`
 
 ```bash
-# Find mount
-grep -n "autonomous" server/routes/domains/scheduling.ts
+# List handlers
+grep -n "router\." server/routes/timeEntryRoutes.ts | grep -E "get|post|put|patch|delete"
 
-# List handlers  
-grep -n "router\." server/routes/autonomousSchedulingRoutes.ts | grep -E "get|post|put|patch|delete"
-
-# Caller audit each
-grep -rn "/api/MOUNT/PATH" client/ server/ | grep -v "autonomousSchedulingRoutes.ts"
+# Caller audit (mount is /api/time-entries)
+grep -rn "/api/time-entries/PATH" client/ server/ | grep -v "timeEntryRoutes.ts"
 ```
 
-**After that:** Scheduling domain is DONE → move to TIME domain.
-TIME: `time-entry-routes.ts` (2,707L) + `timeEntryRoutes.ts` (924L) — known 60% overlap.
+Note: `time-entry-routes.ts` (was 2,708L → now 1,215L) is a DIFFERENT system:
+- `time-entry-routes.ts` = clock-in/out/status/active (IoT/clock operations)
+- `timeEntryRoutes.ts` = CRUD/approve/reject (management operations)
+Both mount on `/api/time-entries` — NOT duplicates, different endpoints.
 
 ---
 
-## SCHEDULING DOMAIN STATUS
+## TIME DOMAIN STATUS
 
 | File | Before | After | Status |
 |---|---|---|---|
-| `shiftRoutes.ts` | 3,623L | 2,240L | ✅ -1,383L |
-| `scheduleosRoutes.ts` | 1,326L | 705L | ✅ -621L |
-| `schedulerRoutes.ts` | 887L | DELETED | ✅ -887L |
-| `schedulesRoutes.ts` | 558L | 518L | ✅ -40L |
-| `advancedSchedulingRoutes.ts` | 1,220L | 799L | ✅ -421L |
-| `autonomousSchedulingRoutes.ts` | 523L | TBD | 🔄 Jack's turn |
+| `time-entry-routes.ts` | 2,708L | 1,215L | ✅ -1,493L |
+| `timeEntryRoutes.ts` | 924L | TBD | 🔄 Jack's turn |
+| `timeOffRoutes.ts` | 708L | TBD | ⏳ |
 
-**Scheduling removed so far: ~3,352L**
+---
+
+## RULES
+1. Caller audit before any deletion
+2. Every commit reduces line count
+3. Update SYNC BLOCK after every commit
+4. Build clean before pushing
 
 ---
 
