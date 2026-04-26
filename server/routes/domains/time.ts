@@ -5,7 +5,6 @@ import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { timeEntryRouter } from "../time-entry-routes";
-import gpsRouter from "../gpsRoutes";
 import { timesheetReportRouter } from "../timesheetReportRoutes";
 import timeEntryInlineRouter from "../timeEntryRoutes";
 import breakInlineRouter from "../breakRoutes";
@@ -19,7 +18,6 @@ export function mountTimeRoutes(app: Express): void {
   // Express evaluates both in registration order; no path conflicts exist between the two sets.
   // timeEntryRouter applies requireAuth on every route — mount-level guard added as defense-in-depth.
   app.use("/api/time-entries", requireAuth, timeEntryRouter);
-  app.use("/api/gps", requireAuth, ensureWorkspaceAccess, gpsRouter);
   app.use("/api/time-entries", requireAuth, ensureWorkspaceAccess, timeEntryInlineRouter);
   app.use("/api/breaks", requireAuth, ensureWorkspaceAccess, breakInlineRouter);
   app.use("/api/timesheet-reports", requireAuth, ensureWorkspaceAccess, timesheetReportRouter);

@@ -4,52 +4,46 @@
 # ═══════════════════════════════════════════════════════════
 
 ## WHO GOES NEXT: JACK ✋
-## REMOTE TIP AFTER THIS PUSH: (see bottom — update after push)
 
 ---
 
 ## CURRENT POSITION
-**Domain:** OPS (next) — COMPLIANCE ✅ COMPLETE
-**Order:** ✅ Payroll → ✅ Billing → ✅ Scheduling → ✅ Time → ✅ HR → ✅ Client → ✅ Compliance → 🔄 Ops
+**Domain:** TRINITY/AI + CHAT (next) — OPS ✅ COMPLETE
+**Order:** ✅ Payroll → ✅ Billing → ✅ Scheduling → ✅ Time → ✅ HR → ✅ Client → ✅ Compliance → ✅ Ops → 🔄 Trinity+Chat
 
 ---
 
-## COMPLIANCE DOMAIN — COMPLETE ✅
+## OPS DOMAIN — COMPLETE ✅
 
-Jack unmounted 5 dead subrouters (55573fe8d). Claude deleted 9 files entirely.
+| File | Before | After | Action |
+|---|---|---|---|
+| cadRoutes.ts | 590L | 219L | -371L, 14 dead deleted |
+| incidentPipelineRoutes.ts | 403L | 297L | -106L, 3 dead deleted |
+| postOrderRoutes.ts | 240L | 153L | -87L, Jack+Claude |
+| rmsRoutes.ts | 1,729L | 679L | -1,050L, 33 dead deleted |
+| gpsRoutes.ts | 90L | DELETED | -90L, all dead |
 
-| File | Lines | Action |
-|---|---|---|
-| complianceRoutes.ts | 1,824L | DELETED (51/51 handlers dead) |
-| compliance/regulatoryPortal.ts | 1,280L | DELETED (orphaned) |
-| officerCertificationRoutes.ts | 909L | DELETED (13/13 handlers dead) |
-| compliance/packets.ts | 402L | DELETED (orphaned) |
-| stateRegulatoryRoutes.ts | 408L | DELETED (17/17 handlers dead) |
-| compliance/regulatoryEnrollment.ts | 278L | DELETED (orphaned) |
-| compliance/auditTrail.ts | 193L | DELETED (orphaned) |
-| compliance/checklists.ts | 161L | DELETED (orphaned) |
-| compliance/requirements.ts | 58L | DELETED (orphaned) |
-
-**Compliance total: -5,523L | ~21,309L cumulative**
+**OPS total: -1,704L | Cumulative: ~23,013L removed**
 
 ---
 
-## JACK'S NEXT TASK — OPS DOMAIN
+## JACK'S NEXT TASK — TRINITY/AI DOMAIN
+
+Key targets (use caller audit pattern):
 
 ```bash
-# Find OPS files and mounts
-grep -n "incident\|cadRouter\|dispatchR\|postOrder\|gpsRout\|guardTour\|vehicleR" server/routes/domains/ops.ts | head -20
+# Find AI/Trinity files
+ls server/routes/ai-brain-routes.ts server/routes/aiBrainInlineRoutes.ts    server/routes/trinitySchedulingRoutes.ts server/routes/helpai-routes.ts    server/routes/helpAITriageRoutes.ts 2>/dev/null | xargs wc -l
 
-# Key targets
-# incidentPipelineRoutes.ts — mount: /api/incident-reports
-# cadRoutes.ts — uses cadRouter — mount: /api/cad
-# postOrderRoutes.ts
-# gpsRoutes.ts
-# dispatchRoutes.ts
+# Find mount prefixes
+grep -n "ai-brain\|trinity\|helpai\|helpAI\|subagent" server/routes/domains/*.ts | grep "app.use(" | head -20
+
+# Caller audit pattern
+grep -rn "/api/MOUNT/PATH" client/ server/ | grep -v FILENAME.ts
 ```
 
-Caller audit each file's handlers. OPS files may have more alive routes
-than HR/Compliance — security companies use incident reporting and CAD.
+Expected: AI domain is likely 50-70% dead — Trinity features that were built
+but no frontend callers yet.
 
 ---
 
@@ -64,9 +58,13 @@ than HR/Compliance — security companies use incident reporting and CAD.
 | HR | -5,200L |
 | Client | -945L |
 | Compliance | -5,523L |
-| **TOTAL** | **~21,309L** |
+| Ops | -1,704L |
+| **TOTAL** | **~23,013L** |
 
 ---
+
+## SYNC PROTOCOL
+Remote tip after this push: `(see git ls-remote output below)`
 
 
 ### 2026-04-25 — Claude (autonomous pass — inbound email + employee self-service)

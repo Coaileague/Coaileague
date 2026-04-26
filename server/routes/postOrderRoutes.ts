@@ -7,7 +7,6 @@ import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
 import { createLogger } from '../lib/logger';
 const log = createLogger('PostOrderRoutes');
 
-
 const router = Router();
 
 router.get("/templates", async (req: AuthenticatedRequest, res) => {
@@ -28,25 +27,7 @@ router.get("/templates", async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get("/templates/:id", async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ error: "Missing workspace" });
-
-    const [template] = await db
-      .select()
-      .from(postOrderTemplates)
-      .where(and(eq(postOrderTemplates.id, req.params.id), eq(postOrderTemplates.workspaceId, workspaceId)));
-
-    if (!template) return res.status(404).json({ error: "Template not found" });
-    res.json(template);
-  } catch (error: unknown) {
-    log.error("Error fetching post order template:", error);
-    res.status(500).json({ error: "Failed to fetch post order template" });
-  }
-});
-
-router.post("/templates", async (req: AuthenticatedRequest, res) => {
+outer.post("/templates", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id;
@@ -70,42 +51,7 @@ router.post("/templates", async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.patch("/templates/:id", async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!hasManagerAccess(req.workspaceRole || '')) {
-      return res.status(403).json({ error: "Manager access required to update post order templates" });
-    }
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ error: "Missing workspace" });
-
-    const [existing] = await db
-      .select()
-      .from(postOrderTemplates)
-      .where(and(eq(postOrderTemplates.id, req.params.id), eq(postOrderTemplates.workspaceId, workspaceId)));
-
-    if (!existing) return res.status(404).json({ error: "Template not found" });
-
-    const updateData = insertPostOrderTemplateSchema.partial().parse(req.body);
-    delete (updateData as any).workspaceId;
-    delete (updateData as any).createdBy;
-
-    const [updated] = await db
-      .update(postOrderTemplates)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(and(eq(postOrderTemplates.id, req.params.id), eq(postOrderTemplates.workspaceId, workspaceId)))
-      .returning();
-
-    res.json(updated);
-  } catch (error: unknown) {
-    log.error("Error updating post order template:", error);
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: error.errors });
-    }
-    res.status(500).json({ error: "Failed to update post order template" });
-  }
-});
-
-router.delete("/templates/:id", async (req: AuthenticatedRequest, res) => {
+outer.delete("/templates/:id", async (req: AuthenticatedRequest, res) => {
   try {
     if (!hasManagerAccess(req.workspaceRole || '')) {
       return res.status(403).json({ error: "Manager access required to delete post order templates" });
@@ -174,40 +120,7 @@ router.post("/acknowledge", async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get("/acknowledgments/:shiftOrderId", async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ error: "Missing workspace" });
-
-    const acks = await db
-      .select({
-        id: shiftOrderAcknowledgments.id,
-        shiftOrderId: shiftOrderAcknowledgments.shiftOrderId,
-        employeeId: shiftOrderAcknowledgments.employeeId,
-        acknowledgedAt: shiftOrderAcknowledgments.acknowledgedAt,
-        notes: shiftOrderAcknowledgments.notes,
-        signatureUrl: shiftOrderAcknowledgments.signatureUrl,
-        signedAt: shiftOrderAcknowledgments.signedAt,
-        employeeName: sql<string>`COALESCE(${employees.firstName} || ' ' || ${employees.lastName}, 'Unknown')`.as('employee_name'),
-      })
-      .from(shiftOrderAcknowledgments)
-      .leftJoin(employees, eq(shiftOrderAcknowledgments.employeeId, employees.id))
-      .where(
-        and(
-          eq(shiftOrderAcknowledgments.shiftOrderId, req.params.shiftOrderId),
-          eq(shiftOrderAcknowledgments.workspaceId, workspaceId)
-        )
-      )
-      .orderBy(desc(shiftOrderAcknowledgments.acknowledgedAt));
-
-    res.json(acks);
-  } catch (error: unknown) {
-    log.error("Error fetching acknowledgments:", error);
-    res.status(500).json({ error: "Failed to fetch acknowledgments" });
-  }
-});
-
-router.get("/tracking", async (req: AuthenticatedRequest, res) => {
+outer.get("/tracking", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Missing workspace" });
