@@ -95,71 +95,7 @@ cadRouter.post("/calls", requireAuth as any, ensureWorkspaceAccess as any, async
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 
-cadRouter.post("/calls/:id/on-scene", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
-  try {
-    const workspaceId = wid(req);
-    const { unitId, reportedBy } = req.body;
-    await q(`UPDATE cad_calls SET status='on_scene', on_scene_at=NOW(), updated_at=NOW() WHERE id=$1 AND workspace_id=$2`, [req.params.id, workspaceId]);
-    if (unitId) await q(`UPDATE cad_units SET current_status='on_scene', updated_at=NOW() WHERE id=$1 AND workspace_id=$2`, [unitId, workspaceId]);
-    await q(`INSERT INTO cad_dispatch_log (id,workspace_id,call_id,unit_id,action,action_by_name,notes,logged_at) VALUES($1,$2,$3,$4,'on_scene',$5,'Unit arrived on scene',NOW())`,
-      [randomUUID(), workspaceId, req.params.id, unitId||null, reportedBy||"Officer"]);
-    const updated = await q(`SELECT * FROM cad_calls WHERE id=$1 AND workspace_id=$2`, [req.params.id, workspaceId]);
-    await broadcastToWorkspace(workspaceId, { type: "cad:call_updated", data: updated[0] });
-    res.json(updated[0]);
-  } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
-});
-
 // CAD UNITS
-
-cadRouter.get("/units", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
-  try {
-    res.json({ units: await q(`SELECT * FROM cad_units WHERE workspace_id=$1 ORDER BY unit_identifier`, [wid(req)]) });
-  } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
-});
-
-cadRouter.delete("/units/:id", requireAuth as any, ensureWorkspaceAccess as any, requireManager as any, async (req: any, res: any) => {
-  try {
-    await q(`DELETE FROM cad_units WHERE id=$1 AND workspace_id=$2`, [req.params.id, wid(req)]);
-    res.json({ success: true });
-  } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
-});
-
-// CAD CALL LOCKING
-
-cadRouter.post("/calls/:id/unlock", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
-  try {
-    const callId = req.params.id;
-    const workspaceId = wid(req);
-    const { userId } = req.body;
-    const lockKey = `${workspaceId}:${callId}`;
-    const existing = cadCallLocks.get(lockKey);
-
-    if (existing && existing.lockedBy !== userId && !isLockExpired(existing)) {
-      return res.status(403).json({ error: "Cannot unlock — locked by another dispatcher" });
-    }
-
-    cadCallLocks.delete(lockKey);
-    await broadcastToWorkspace(workspaceId, { type: "cad:call_unlocked", data: { callId } });
-    res.json({ unlocked: true });
-  } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
-});
-
-cadRouter.get("/calls/:id/lock-status", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
-  try {
-    const lockKey = `${wid(req)}:${req.params.id}`;
-    const existing = cadCallLocks.get(lockKey);
-    if (!existing || isLockExpired(existing)) {
-      return res.json({ locked: false });
-    }
-    res.json({
-      locked: true,
-      lockedBy: existing.lockedBy,
-      lockedByName: existing.lockedByName,
-      lockedAt: new Date(existing.lockedAt).toISOString(),
-      expiresAt: new Date(existing.lockedAt + CAD_LOCK_TTL_MS).toISOString(),
-    });
-  } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
-});
 
 // GEOFENCE DEPARTURES
 
@@ -173,18 +109,6 @@ cadRouter.get("/geofence-departures", requireAuth as any, ensureWorkspaceAccess 
       LIMIT 50
     `, [workspaceId]);
     res.json({ departures: rows });
-  } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
-});
-
-cadRouter.post("/geofence-departures/:id/returned", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
-  try {
-    const workspaceId = wid(req);
-    const row = await q(`UPDATE geofence_departure_log SET returned_at=NOW() WHERE id=$1 AND workspace_id=$2 RETURNING employee_id`, [req.params.id, workspaceId]);
-    if (row[0]?.employee_id) {
-      await q(`UPDATE cad_units SET current_status='available', updated_at=NOW() WHERE employee_id=$1 AND workspace_id=$2 AND current_status='needs_check'`,
-        [row[0].employee_id, workspaceId]);
-    }
-    res.json({ success: true });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
