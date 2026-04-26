@@ -1,6 +1,6 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
-import { requireAuth, type AuthenticatedRequest, hasManagerAccess, resolveWorkspaceForUser, getUserPlatformRole, hasPlatformWideAccess } from "../rbac";
+import { requireAuth, type AuthenticatedRequest } from "../rbac";
 import { storage } from "../storage";
 import { createLogger } from '../lib/logger';
 const log = createLogger('BenefitRoutes');
@@ -22,7 +22,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   }
 });
 
-outer.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) {
