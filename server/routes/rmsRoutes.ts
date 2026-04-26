@@ -58,7 +58,7 @@ rmsRouter.get("/incidents", requireAuth as any, ensureWorkspaceAccess as any, as
 // In-memory idempotency cache for RMS submissions (5-minute TTL)
 const rmsIdempotencyCache = new Map<string, { result: any; expiresAt: number }>();
 
-sRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const rows = await q(`SELECT * FROM incident_reports WHERE id = $1 AND workspace_id = $2`, [req.params.id, workspaceId]);
@@ -264,7 +264,7 @@ async function streamPdfFromStorage(pdfPath: string, filename: string, res: any)
   }
 }
 
-sRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
