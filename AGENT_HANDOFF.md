@@ -49,6 +49,29 @@ RULE: Delete ONE file, run npx vite build, ENOENT = restore from git.
   npx vite build 2>&1 | grep -E "ENOENT|error during|built in"
   Never batch-delete client files without Vite verification.
 
+### CRASH 5 — Runtime crashes not caught by esbuild (broken prefix, stale mounts)
+esbuild bundles successfully even when router variable names are truncated.
+The only way to catch these is a full server boot with a real database.
+
+MANDATORY BEFORE EVERY MERGE TO DEVELOPMENT:
+```bash
+export DATABASE_URL="postgresql://postgres:MmUbhSxdkRGFLhBGGXGaWQeBceaqNmlj@metro.proxy.rlwy.net:40051/railway"
+export SESSION_SECRET="coaileague-dev-test-session-secret-32chars"
+node dist/index.js > /tmp/boot_test.txt 2>&1 &
+SERVER_PID=$!
+sleep 18
+# Must return {"message":"Unauthorized"}:
+curl -s http://localhost:5000/api/workspace/health
+# Must return 0:
+grep -E "ReferenceError|is not defined|CRITICAL.*Failed" /tmp/boot_test.txt | grep -v "GEMINI"
+kill $SERVER_PID
+```
+
+Known crashes caught this way (NOT caught by node build.mjs):
+  ncidentPipelineRouter — efb67b46a
+  sRouter (rmsRoutes.ts) — 6409ad5af
+  complianceEnforcementRouter (domains/compliance.ts) — 6409ad5af
+
 ---
 
 ## MANDATORY CHECKLIST (ALL AGENTS, EVERY COMMIT)
