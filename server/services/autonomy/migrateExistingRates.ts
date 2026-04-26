@@ -223,14 +223,3 @@ export async function migrateAllRates(): Promise<MigrationStats> {
 }
 
 // Allow running as standalone script
-if (require.main === module) {
-  migrateAllRates()
-    .then((stats) => {
-      log.info('\n✅ Migration complete!');
-      process.exit(stats.errors.length > 0 ? 1 : 0);
-    })
-    .catch((error) => {
-      log.error('\n❌ Migration failed:', error);
-      process.exit(1);
-    });
-}
