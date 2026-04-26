@@ -28,11 +28,19 @@ Fixed files: server/index.ts, rfpComplexityScorer.ts, seedRegulatoryRules.ts,
   migrateExistingRates.ts, integrations-status.ts
 
 ### CRASH 3 - Broken router prefixes
-After handler deletion brace-matcher cuts variable names: outer., uter., ter.
-esbuild passes it. Runtime crashes.
-SCAN AFTER EVERY ROUTE DELETION:
-  grep -rn "^outer.|^uter.|^ter.|^er." server/routes/ --include="*.ts" | grep -v "// "
-  Must return 0 lines.
+After handler deletion brace-matcher cuts variable names (outer., uter., ter., ncident...)
+esbuild passes it. Runtime crashes. Old scanner missed 1-char truncations.
+SCAN AFTER EVERY ROUTE DELETION (improved — catches any truncation length):
+  python3 -c "
+import subprocess, re, os
+for f in os.popen('find server/routes -name *.ts').read().split():
+    c = open(f).read()
+    declared = set(re.findall(r'const (\w+Router) = .*Router\(\)', c))
+    used = set(re.findall(r'^([a-z]\w+Router)\.(get|post|put|patch|delete)', c, re.MULTILINE))
+    diff = used - declared
+    if diff: print(f'BROKEN: {f}: {diff}')
+  "
+Must print nothing.
 
 ### CRASH 4 - Client file deletion breaks Vite build (ENOENT)
 grep finds 0 import lines but Vite resolves through re-exports and barrel files.
