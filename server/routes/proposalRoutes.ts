@@ -9,7 +9,6 @@ import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
 const log = createLogger('ProposalRoutes');
 
-
 const router = Router();
 
 const PROPOSAL_TEMPLATES = [
@@ -67,17 +66,7 @@ router.get("/templates", async (_req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get("/templates/:id", async (req: AuthenticatedRequest, res) => {
-  try {
-    const template = PROPOSAL_TEMPLATES.find(t => t.id === req.params.id);
-    if (!template) return res.status(404).json({ error: "Template not found" });
-    res.json(template);
-  } catch (error: unknown) {
-    res.status(500).json({ error: "Failed to fetch template" });
-  }
-});
-
-router.get("/", async (req: AuthenticatedRequest, res) => {
+outer.get("/", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
@@ -95,25 +84,7 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get("/:id", async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
-
-    const [proposal] = await db
-      .select()
-      .from(proposals)
-      .where(and(eq(proposals.id, req.params.id), eq(proposals.workspaceId, workspaceId)));
-
-    if (!proposal) return res.status(404).json({ error: "Proposal not found" });
-    res.json(proposal);
-  } catch (error: unknown) {
-    log.error("Error fetching proposal:", error);
-    res.status(500).json({ error: "Failed to fetch proposal" });
-  }
-});
-
-router.post("/", async (req: AuthenticatedRequest, res) => {
+outer.post("/", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id;
@@ -133,47 +104,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.patch("/:id", async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
-
-    const {
-      workspaceId: _,
-      id: __,
-      createdBy: ___,
-      createdAt: ____,
-      status: _status,
-      version: _version,
-      ...updateData
-    } = req.body;
-
-    const allowedFields = [
-      'proposalName', 'dealId', 'rfpId', 'templateId',
-      'clientName', 'clientAddress', 'clientContact', 'clientEmail', 'clientPhone',
-      'companyName', 'companyAddress', 'companyPhone', 'companyEmail', 'companyLogo',
-      'totalValue', 'notes', 'expiresAt', 'validUntil',
-    ];
-    const safeUpdate: Record<string, any> = {};
-    for (const key of allowedFields) {
-      if (key in updateData) safeUpdate[key] = updateData[key];
-    }
-
-    const [updated] = await db
-      .update(proposals)
-      .set({ ...safeUpdate, updatedAt: new Date() })
-      .where(and(eq(proposals.id, req.params.id), eq(proposals.workspaceId, workspaceId)))
-      .returning();
-
-    if (!updated) return res.status(404).json({ error: "Proposal not found" });
-    res.json(updated);
-  } catch (error: unknown) {
-    log.error("Error updating proposal:", error);
-    res.status(400).json({ error: sanitizeError(error) || "Failed to update proposal" });
-  }
-});
-
-router.patch("/:id/status", requireManager, async (req: AuthenticatedRequest, res) => {
+outer.patch("/:id/status", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
@@ -198,25 +129,7 @@ router.patch("/:id/status", requireManager, async (req: AuthenticatedRequest, re
   }
 });
 
-router.delete("/:id", async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
-
-    const [deleted] = await db
-      .delete(proposals)
-      .where(and(eq(proposals.id, req.params.id), eq(proposals.workspaceId, workspaceId)))
-      .returning();
-
-    if (!deleted) return res.status(404).json({ error: "Proposal not found" });
-    res.json({ success: true });
-  } catch (error: unknown) {
-    log.error("Error deleting proposal:", error);
-    res.status(500).json({ error: "Failed to delete proposal" });
-  }
-});
-
-router.post("/:id/generate-pdf", async (req: AuthenticatedRequest, res) => {
+outer.post("/:id/generate-pdf", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Workspace required" });

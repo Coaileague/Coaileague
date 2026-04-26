@@ -11,7 +11,6 @@ import { typedPool } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 const log = createLogger('IncidentPipelineRoutes');
 
-
 export const incidentPipelineRouter = Router();
 
 function wid(req: any): string {
@@ -200,82 +199,7 @@ function hasManagerRole(req: any): boolean {
   return false;
 }
 
-incidentPipelineRouter.patch("/:id/status", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
-  try {
-    if (!hasManagerRole(req)) {
-      return res.status(403).json({ error: "Insufficient permissions. Manager or above role required." });
-    }
-    const workspaceId = wid(req);
-    const userId = uid(req);
-    const parsed = statusUpdateSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
-
-    const { status: newStatus, reviewNotes } = parsed.data;
-
-    const rows = await q(
-      `SELECT * FROM incident_reports WHERE id = $1 AND workspace_id = $2`,
-      [req.params.id, workspaceId]
-    );
-    if (!rows.length) return res.status(404).json({ error: "Incident not found" });
-
-    const current = rows[0];
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const allowed = statusTransitions[current.status];
-    if (allowed && !allowed.includes(newStatus)) {
-      return res.status(400).json({
-        error: `Cannot transition from '${current.status}' to '${newStatus}'`,
-        allowedTransitions: allowed,
-      });
-    }
-
-    const updates: string[] = [`status = $2`, `updated_at = NOW()`];
-    const params: any[] = [req.params.id, newStatus];
-    let pi = 3;
-
-    if (reviewNotes !== undefined) {
-      updates.push(`review_notes = $${pi++}`);
-      params.push(reviewNotes);
-    }
-
-    if (["approved", "rejected", "revision_requested", "pending_review"].includes(newStatus)) {
-      updates.push(`reviewed_by = $${pi++}`);
-      params.push(userId);
-      updates.push(`reviewed_at = NOW()`);
-    }
-
-    if (newStatus === "sent_to_client") {
-      updates.push(`sent_to_client_at = NOW()`);
-      updates.push(`sent_to_client_by = $${pi++}`);
-      params.push(userId);
-    }
-
-    // Tenant isolation: enforce workspace_id in WHERE clause atomically
-    // even though row was already verified above (TRINITY.md §1).
-    params.push(workspaceId);
-    await q(
-      `UPDATE incident_reports SET ${updates.join(", ")} WHERE id = $1 AND workspace_id = $${pi}`,
-      params
-    );
-
-    await q(
-      `INSERT INTO incident_report_activity (id, incident_id, action, performed_by, performed_by_role, details, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-      [
-        randomUUID(), req.params.id, `status_changed_to_${newStatus}`,
-        userId, req.workspaceRole || 'unknown',
-        JSON.stringify({ previousStatus: current.status, newStatus, reviewNotes }),
-      ]
-    );
-
-    const updated = await q(`SELECT * FROM incident_reports WHERE id = $1`, [req.params.id]);
-    res.json(updated[0]);
-  } catch (e: unknown) {
-    log.error("[IncidentPipeline] Status update error:", e);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+ncidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     if (!hasManagerRole(req)) {
       return res.status(403).json({ error: "Insufficient permissions. Manager or above role required to use Trinity polish." });
@@ -370,33 +294,3 @@ const activitySchema = z.object({
   performedByRole: z.string().optional().default("user"),
 });
 
-incidentPipelineRouter.post("/:id/activity", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
-  try {
-    const workspaceId = wid(req);
-    const userId = uid(req);
-
-    const incidentRows = await q(
-      `SELECT id FROM incident_reports WHERE id = $1 AND workspace_id = $2`,
-      [req.params.id, workspaceId]
-    );
-    if (!incidentRows.length) return res.status(404).json({ error: "Incident not found" });
-
-    const parsed = activitySchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
-
-    const data = parsed.data;
-    const activityId = randomUUID();
-
-    await q(
-      `INSERT INTO incident_report_activity (id, incident_id, action, performed_by, performed_by_role, details, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-      [activityId, req.params.id, data.action, userId, data.performedByRole, JSON.stringify(data.details)]
-    );
-
-    const rows = await q(`SELECT * FROM incident_report_activity WHERE id = $1`, [activityId]);
-    res.status(201).json(rows[0]);
-  } catch (e: unknown) {
-    log.error("[IncidentPipeline] Activity error:", e);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
