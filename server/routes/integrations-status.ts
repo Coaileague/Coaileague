@@ -270,7 +270,8 @@ integrationsStatusRouter.post('/:id/test', requireAuth, async (req: Request, res
       case 'stripe':
         if (process.env.STRIPE_SECRET_KEY) {
           try {
-            const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+            const { default: Stripe } = await import('stripe');
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
             await stripe.balance.retrieve();
             testResult = { success: true, message: 'Stripe connection successful' };
           } catch (err: any) {
