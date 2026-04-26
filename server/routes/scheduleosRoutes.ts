@@ -25,7 +25,6 @@ import * as notificationHelpers from "../notifications";
 import { createLogger } from '../lib/logger';
 const log = createLogger('ScheduleosRoutes');
 
-
 const router = Router();
 
 router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res) => {
@@ -88,63 +87,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
     }
   });
 
-  router.post('/ai/trigger-session', requireManager, async (req: AuthenticatedRequest, res) => {
-    try {
-      const { workspaceId, mode = 'fill_gaps' } = req.body;
-      const userId = req.user?.id || (req.user)?.claims?.sub;
-      
-      if (!workspaceId) {
-        return res.status(400).json({ message: "workspaceId is required" });
-      }
-      
-      const validModes = ['optimize', 'fill_gaps', 'full_generate'];
-      if (!validModes.includes(mode)) {
-        return res.status(400).json({ message: "Invalid mode. Must be one of: optimize, fill_gaps, full_generate" });
-      }
-      
-      const workspace = await storage.getWorkspace(workspaceId);
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-
-      const { resolveWorkspaceForUser } = await import('../rbac');
-      const { role, error: rbacError } = await resolveWorkspaceForUser(userId, workspaceId);
-      if (rbacError || !role) {
-        return res.status(403).json({ message: "You do not have access to this workspace" });
-      }
-      if (!['org_owner', 'co_owner', 'manager'].includes(role)) {
-        return res.status(403).json({ message: "Only organization owners, admins, and managers can trigger autonomous scheduling" });
-      }
-      const { trinitySchedulingOrchestrator } = await import('../services/orchestration/trinitySchedulingOrchestrator');
-      
-      
-      const result = await trinitySchedulingOrchestrator.startSchedulingSession({
-        workspaceId,
-        triggeredBy: userId || 'system',
-        mode: mode as 'optimize' | 'fill_gaps' | 'full_generate',
-      });
-      
-      res.json({
-        success: true,
-        sessionId: result.sessionId,
-        executionId: result.executionId,
-        totalMutations: result.totalMutations,
-        summary: result.summary,
-        aiSummary: result.aiSummary,
-        requiresVerification: result.requiresVerification,
-        verificationDeadline: result.verificationDeadline,
-      });
-    } catch (error: unknown) {
-      log.error("Error triggering Trinity scheduling session:", error);
-      res.status(500).json({ message: sanitizeError(error) || "Failed to start scheduling session" });
-    }
-  });
-  
-  router.get('/ai/status', requireAuth, async (req: any, res) => {
+router.get('/ai/status', requireAuth, async (req: any, res) => {
     try {
       const { workspaceId } = req.query;
       if (!workspaceId) return res.status(400).json({ message: "workspaceId query parameter is required" });
@@ -476,50 +419,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
     }
   });
   
-  router.post('/migrate-schedule', requireManager, async (req: any, res) => {
-    try {
-      const { fileData, mimeType, sourceApp } = req.body;
-
-      if (!fileData || !mimeType) {
-        return res.status(400).json({ message: "fileData and mimeType are required" });
-      }
-
-      const allowedTypes = ['image/png', 'image/jpeg', 'application/pdf'];
-      if (!allowedTypes.includes(mimeType)) {
-        return res.status(400).json({ message: "Unsupported file type. Use PNG, JPEG, or PDF" });
-      }
-
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.id;
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-      // M09: Workspace resolved from auth-middleware to prevent workspace confusion
-      const { workspaceId } = await resolveWorkspaceForUser(userId, req.workspaceId);
-
-      if (!workspaceId) {
-        return res.status(400).json({ message: 'Could not resolve workspace' });
-      }
-
-      const { extractScheduleFromFile } = await import('../services/scheduleMigration');
-
-      const migrationResult = await extractScheduleFromFile({
-        fileData,
-        mimeType,
-        sourceApp,
-        workspaceId,
-        userId,
-      });
-
-      res.json(migrationResult);
-    } catch (error: unknown) {
-      log.error("Schedule migration error:", error);
-      res.status(500).json({ message: sanitizeError(error) || "Failed to migrate schedule" });
-    }
-  });
-
-  router.post('/import-migrated-shifts', requireManager, async (req: any, res) => {
+router.post('/import-migrated-shifts', requireManager, async (req: any, res) => {
     try {
       const { extractedShifts, sourceApp } = req.body;
 
@@ -589,7 +489,6 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
 
       const createdShifts = await db.insert(shifts).values(validatedShifts).returning();
 
-
       res.json({
         success: true,
         shiftsCreated: createdShifts.length,
@@ -603,77 +502,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
     }
   });
   
-  router.post('/request-service', requireManager, async (req: any, res) => {
-    try {
-      const userId = req.user?.id || req.user?.claims?.sub;
-      const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
-      if (!userWorkspace) return res.status(404).json({ message: "Workspace not found" });
-      const workspace = await storage.getWorkspace(userWorkspace.workspaceId);
-      if (!workspace) return res.status(404).json({ message: "Workspace not found" });
-      
-      const aiEnabled = workspace.featureScheduleosEnabled ?? false;
-      if (!aiEnabled) return res.status(403).json({ message: "SmartSchedule AI is disabled" });
-      
-      const serviceCoverageBodySchema = z.object({
-        startTime: z.string().min(1, 'Start time is required'),
-        endTime: z.string().min(1, 'End time is required'),
-        title: z.string().min(1, 'Title is required'),
-        clientId: z.string().optional(),
-        numberOfEmployeesNeeded: z.number().int().positive().optional(),
-        requiredSkills: z.array(z.string()).optional(),
-        jobSiteAddress: z.string().optional(),
-        jobSiteCity: z.string().optional(),
-        jobSiteState: z.string().optional(),
-        jobSiteZipCode: z.string().optional(),
-        jobSiteLatitude: z.number().optional(),
-        jobSiteLongitude: z.number().optional(),
-        requiredCertifications: z.array(z.string()).optional(),
-        description: z.string().optional(),
-      });
-      const serviceCoverageParsed = serviceCoverageBodySchema.safeParse(req.body);
-      if (!serviceCoverageParsed.success) {
-        return res.status(400).json({ error: 'Invalid request', details: serviceCoverageParsed.error.flatten() });
-      }
-      const scData = serviceCoverageParsed.data;
-
-      const { serviceCoverageRequests, workspaceAiUsage } = await import("@shared/schema");
-      const count = await db.select({ count: sql<number>`count(*)` }).from(serviceCoverageRequests).where(eq(serviceCoverageRequests.workspaceId, workspace.id));
-      const requestNumber = `REQ-${new Date().getFullYear()}-${String(count[0].count + 1).padStart(3, '0')}`;
-      
-      const { startTime, endTime, title, clientId, numberOfEmployeesNeeded, requiredSkills, jobSiteAddress, jobSiteCity, jobSiteState, jobSiteZipCode, jobSiteLatitude, jobSiteLongitude, requiredCertifications, description } = scData;
-      const safeValues: Record<string, any> = { workspaceId: workspace.id, requestNumber, requestedBy: userId, status: 'processing' };
-      if (startTime !== undefined) safeValues.startTime = new Date(startTime);
-      if (endTime !== undefined) safeValues.endTime = new Date(endTime);
-      if (title !== undefined) safeValues.title = title;
-      if (clientId !== undefined) safeValues.clientId = clientId;
-      if (numberOfEmployeesNeeded !== undefined) safeValues.numberOfEmployeesNeeded = numberOfEmployeesNeeded;
-      if (requiredSkills !== undefined) safeValues.requiredSkills = requiredSkills;
-      if (jobSiteAddress !== undefined) safeValues.jobSiteAddress = jobSiteAddress;
-      if (jobSiteCity !== undefined) safeValues.jobSiteCity = jobSiteCity;
-      if (jobSiteState !== undefined) safeValues.jobSiteState = jobSiteState;
-      if (jobSiteZipCode !== undefined) safeValues.jobSiteZipCode = jobSiteZipCode;
-      if (jobSiteLatitude !== undefined) safeValues.jobSiteLatitude = jobSiteLatitude;
-      if (jobSiteLongitude !== undefined) safeValues.jobSiteLongitude = jobSiteLongitude;
-      if (requiredCertifications !== undefined) safeValues.requiredCertifications = requiredCertifications;
-      if (description !== undefined) safeValues.description = description;
-      const [request] = await db.insert(serviceCoverageRequests).values(safeValues as any).returning();
-      
-      const { SchedulingAI } = await import("../ai/scheduleos");
-      const result = await (new SchedulingAI()).generateSchedule({ workspaceId: workspace.id, weekStartDate: new Date(scData.startTime), clientIds: scData.clientId ? [scData.clientId] : [], shiftRequirements: [{ title: scData.title || '', clientId: scData.clientId || '', startTime: new Date(scData.startTime), endTime: new Date(scData.endTime), requiredEmployees: scData.numberOfEmployeesNeeded || 1, requiredSkills: scData.requiredSkills }] });
-      
-      const tokens = 1500 + (result.shiftsGenerated * 40);
-      const cost = (tokens / 1000) * 0.045 * 4;
-      const [log] = await db.insert(workspaceAiUsage).values({ workspaceId: workspace.id, feature: 'smart_schedule_ai', operation: 'find_coverage', requestId: requestNumber, tokensUsed: tokens, model: 'gpt-4', providerCostUsd: ((tokens/1000)*0.045).toFixed(6), markupPercentage: "300", clientChargeUsd: cost.toFixed(6), status: 'pending', billingPeriod: new Date().toISOString().slice(0,7), inputData: req.body, outputData: { matchesFound: result.shiftsGenerated } }).returning();
-      
-      await db.update(serviceCoverageRequests).set({ aiProcessed: true, aiProcessedAt: new Date(), aiSuggestedEmployees: result.generatedShifts.map((s: any) => ({ employeeId: s.employeeId, employeeName: s.employeeName, confidenceScore: s.aiConfidenceScore })), aiConfidenceScore: "0.85", status: 'matched', aiUsageLogId: log.id }).where(eq(serviceCoverageRequests.id, request.id));
-      
-      res.json({ request: { ...request, requestNumber }, matches: result.generatedShifts, billing: { aiUsageId: log.id, tokensUsed: tokens, costUsd: parseFloat(cost.toFixed(2)) } });
-    } catch (error: unknown) {
-      res.status(500).json({ message: sanitizeError(error) || "Failed to find coverage" });
-    }
-  });
-
-  router.post('/start-trial', requireAuth, async (req: any, res) => {
+router.post('/start-trial', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
@@ -714,104 +543,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
     }
   });
 
-  router.post('/payment-intent', requireManager, async (req: any, res) => {
-    try {
-      const userId = req.user?.id || req.user?.claims?.sub;
-      
-      const employee = await storage.getEmployeeByUserId(userId);
-      if (!employee) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-
-      const [workspace] = await db.select()
-        .from(workspaces)
-        .where(eq(workspaces.id, employee.workspaceId))
-        .limit(1);
-
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
-      }
-
-      if (workspace.scheduleosActivatedAt) {
-        return res.status(400).json({
-          error: "Scheduling already activated",
-          alreadyActivated: true,
-          activatedAt: workspace.scheduleosActivatedAt,
-        });
-      }
-
-      if (!isStripeConfigured()) {
-        return res.status(500).json({ error: "Payment processing is not configured" });
-      }
-
-      const SCHEDULEOS_ACTIVATION_FEE = 9900;
-
-      if (workspace.scheduleosPaymentIntentId) {
-        try {
-          const existingIntent = await stripe.paymentIntents.retrieve(
-            workspace.scheduleosPaymentIntentId
-          );
-          
-          if (existingIntent.status === 'succeeded') {
-            return res.json({
-              alreadyPaid: true,
-              clientSecret: existingIntent.client_secret,
-              paymentIntentId: existingIntent.id,
-              amount: SCHEDULEOS_ACTIVATION_FEE,
-              status: existingIntent.status,
-            });
-          }
-          
-          await storage.updateWorkspace(workspace.id, {
-            scheduleosPaymentIntentId: null,
-          });
-        } catch (stripeError: unknown) {
-          await storage.updateWorkspace(workspace.id, {
-            scheduleosPaymentIntentId: null,
-          });
-        }
-      }
-
-      let customerId = workspace.stripeCustomerId;
-      if (!customerId) {
-        const { subscriptionManager } = await import('../services/billing/subscriptionManager');
-        customerId = await subscriptionManager.ensureStripeCustomer(workspace.id);
-      }
-
-      const paymentIntent = await stripe.paymentIntents.create({
-        automatic_payment_methods: { enabled: true },
-        amount: SCHEDULEOS_ACTIVATION_FEE,
-        currency: 'usd',
-        customer: customerId,
-        metadata: {
-          workspaceId: workspace.id,
-          userId: userId,
-          purpose: 'scheduleos_activation',
-          createdAt: new Date().toISOString(),
-        },
-        description: 'Scheduling Activation - One-time payment',
-      }, { idempotencyKey: `pi-scheduleos-${workspace.id}` });
-
-
-      await storage.updateWorkspace(workspace.id, {
-        scheduleosPaymentIntentId: paymentIntent.id,
-      });
-
-      res.json({
-        success: true,
-        requiresPayment: true,
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-        amount: SCHEDULEOS_ACTIVATION_FEE,
-        status: paymentIntent.status,
-      });
-    } catch (error: unknown) {
-      log.error('[Stripe] Error creating Payment Intent:', error);
-      res.status(500).json({ error: "Failed to create payment intent", details: sanitizeError(error) });
-    }
-  });
-
-  router.post('/activate', requireManager, async (req: any, res) => {
+router.post('/activate', requireManager, async (req: any, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       
@@ -873,7 +605,6 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
             requiresUpgrade: true,
           });
         }
-
 
         await storage.updateWorkspace(workspace.id, {
           scheduleosActivatedAt: new Date(),
@@ -946,7 +677,6 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
             });
           }
 
-
           await storage.updateWorkspace(workspace.id, {
             scheduleosActivatedAt: new Date(),
             scheduleosActivatedBy: userId,
@@ -980,35 +710,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
     }
   });
 
-  router.get('/overview', async (req: any, res) => {
-    try {
-      const workspaceId = req.workspaceId || req.workspaceId;
-      if (!workspaceId) return res.status(400).json({ message: 'Workspace required' });
-      const workspace = await storage.getWorkspace(workspaceId);
-      if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
-      const response: any = {
-        isActivated: !!workspace.scheduleosActivatedAt,
-        activatedAt: workspace.scheduleosActivatedAt || null,
-        activatedBy: workspace.scheduleosActivatedBy || null,
-        paymentMethod: workspace.scheduleosPaymentMethod || null,
-        trialStartedAt: workspace.scheduleosTrialStartedAt || null,
-      };
-      if (workspace.scheduleosTrialStartedAt && !workspace.scheduleosActivatedAt) {
-        const trialStart = new Date(workspace.scheduleosTrialStartedAt);
-        const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const daysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        response.isTrialActive = daysLeft > 0;
-        response.trialEndsAt = trialEnd;
-        response.daysLeft = Math.max(0, daysLeft);
-        response.trialExpired = daysLeft <= 0;
-      }
-      res.json(response);
-    } catch (err: unknown) {
-      res.status(500).json({ message: 'Failed to fetch ScheduleOS overview' });
-    }
-  });
-
-  router.get('/status', async (req: any, res) => {
+router.get('/status', async (req: any, res) => {
     try {
       let userId: string;
       let user: any;
@@ -1089,205 +791,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
     }
   });
 
-  router.post('/generate', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user?.id || req.user?.claims?.sub;
-      const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
-      
-      if (!workspace) {
-        return res.status(404).json({ message: "Workspace not found" });
-      }
-
-      const platformRole = await storage.getUserPlatformRole(userId);
-      const isPlatformStaff = platformRole && ['root_admin', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole);
-
-      if (!isPlatformStaff) {
-        // Check the workspace has an active token ledger (row may be absent
-        // for brand-new workspaces with zero AI usage — treat as active).
-        const creditAccount = await tokenManager.getWorkspaceState(workspace.id);
-        const hasCreditAccount = creditAccount !== null;
-
-        if (!hasCreditAccount) {
-          const isActivated = !!workspace.scheduleosActivatedAt;
-          let isInTrial = false;
-          
-          if (workspace.scheduleosTrialStartedAt && !isActivated) {
-            const trialStart = new Date(workspace.scheduleosTrialStartedAt);
-            const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-            const now = new Date();
-            const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-            isInTrial = daysLeft > 0;
-          }
-
-          if (!isActivated && !isInTrial) {
-            return res.status(403).json({
-              message: "AI Scheduling™ requires payment activation or active trial",
-              trialExpired: workspace.scheduleosTrialStartedAt ? true : false,
-              requiresPayment: true,
-              feature: "scheduleOS"
-            });
-          }
-        }
-      }
-
-      const { scheduleOSAI } = await import('../ai/scheduleos');
-
-      const { weekStartDate, shiftRequirements, clientIds } = req.body;
-
-      if (!weekStartDate || !shiftRequirements) {
-        return res.status(400).json({
-          message: "Missing required fields: weekStartDate and shiftRequirements"
-        });
-      }
-
-      const { withTokens } = await import('../services/billing/tokenWrapper');
-
-      const creditResult = await withTokens(
-        {
-          workspaceId: workspace.id,
-          featureKey: 'ai_scheduling',
-          description: `AI schedule generation for week ${weekStartDate}`,
-          userId,
-        },
-        async () => {
-          return await scheduleOSAI.generateSchedule({
-            workspaceId: workspace.id,
-            weekStartDate: new Date(weekStartDate),
-            clientIds: clientIds || [],
-            shiftRequirements,
-          });
-        }
-      );
-
-      if (!creditResult.success) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        if (creditResult.insufficientCredits) {
-          return res.status(402).json({
-            message: creditResult.error || 'Insufficient credits for AI scheduling',
-            feature: 'ai_scheduling',
-            creditsRequired: 25,
-          });
-        }
-        
-        return res.status(500).json({
-          message: creditResult.error || 'Failed to generate AI schedule',
-        });
-      }
-
-      const result = creditResult.result;
-
-      if (!result) {
-        return res.status(500).json({ error: "Schedule generation returned no result" });
-      }
-
-      const tier = workspace.subscriptionTier || 'free';
-
-      await db.insert(smartScheduleUsage).values({
-        workspaceId: workspace.id,
-        scheduleDate: new Date(weekStartDate),
-        employeesScheduled: result.employeesScheduled,
-        shiftsGenerated: result.shiftsGenerated,
-        billingModel: tier === 'elite' ? 'tier_included' : 'tier_included',
-        chargeAmount: '0',
-        aiModel: 'gpt-4',
-        processingTimeMs: result.processingTimeMs,
-      });
-
-      const billableShifts = result.generatedShifts.filter(s => s.clientId);
-      const invoiceLineItems: any[] = [];
-
-      for (const shift of billableShifts) {
-        try {
-          const client = await storage.getClient(shift.clientId, workspace.id);
-          if (!client) continue;
-
-          const hours = shift.billableHours;
-          const rateStr = hours > 0 ? divideFinancialValues(toFinancialString(shift.estimatedCost), toFinancialString(hours)) : '0';
-          const amountStr = calculateInvoiceLineItem(toFinancialString(hours), rateStr);
-
-          const invoiceMonth = new Date(shift.startTime);
-          invoiceMonth.setDate(1);
-          invoiceMonth.setHours(0, 0, 0, 0);
-
-          const existingInvoices = await storage.getInvoicesByClient(shift.clientId, workspace.id);
-          let invoice = existingInvoices.find((inv: any) => {
-            const invDate = new Date(inv.createdAt);
-            return invDate.getMonth() === invoiceMonth.getMonth() && 
-                   invDate.getFullYear() === invoiceMonth.getFullYear() &&
-                   inv.status === 'draft';
-          });
-
-          if (!invoice) {
-            invoice = await storage.createInvoice({
-              workspaceId: workspace.id,
-              clientId: shift.clientId,
-              invoiceNumber: `INV-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-              status: 'draft',
-              // @ts-expect-error — TS migration: fix in refactoring sprint
-              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              subtotal: '0',
-              taxRate: '0',
-              taxAmount: '0',
-              total: '0',
-              notes: `Auto-generated by AI Scheduling™ for ${invoiceMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
-            });
-          }
-
-          const lineItem = await storage.createInvoiceLineItem({
-            invoiceId: invoice.id,
-            description: `${shift.title} - ${shift.employeeName} (${new Date(shift.startTime).toLocaleDateString()})`,
-            quantity: hours.toString(),
-            unitPrice: rateStr,
-            amount: amountStr,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
-            metadata: {
-              shiftId: shift.employeeId,
-              aiGenerated: true,
-              scheduleOSGenerated: true,
-              billableHours: hours,
-            },
-          });
-
-          invoiceLineItems.push(lineItem);
-
-          const allLineItems = await storage.getInvoiceLineItems(invoice.id);
-          const newSubtotalStr = calculateInvoiceTotal(allLineItems.map((item: any) => item.amount || '0'));
-          const newTaxAmountStr = applyTax(newSubtotalStr, toFinancialString(invoice.taxRate || '0'));
-          const newTotalStr = addFinancialValues(newSubtotalStr, newTaxAmountStr);
-
-          await storage.updateInvoice(invoice.id, workspace.id, {
-            subtotal: newSubtotalStr,
-            taxAmount: newTaxAmountStr,
-            total: newTotalStr,
-          });
-
-        } catch (billingError: unknown) {
-          log.error(`[Billing Platform] Failed to create invoice line item for shift:`, billingError);
-        }
-      }
-
-      res.json({
-        ...result,
-        message: `AI Scheduling™ generated ${result.shiftsGenerated} shifts for ${result.employeesScheduled} employees in ${result.processingTimeMs}ms`,
-        billosIntegration: {
-          invoiceLineItemsCreated: invoiceLineItems.length,
-          totalBillableHours: billableShifts.reduce((sum, s) => sum + s.billableHours, 0),
-          totalEstimatedRevenue: billableShifts.reduce((sum, s) => sum + s.estimatedCost, 0),
-          message: invoiceLineItems.length > 0 
-            ? `Auto-created ${invoiceLineItems.length} invoice line items for client billing`
-            : 'No billable shifts generated for this schedule',
-        },
-      });
-    } catch (error: unknown) {
-      log.error("AI Scheduling™ error:", error);
-      res.status(500).json({
-        message: sanitizeError(error) || "AI Scheduling™ failed to generate schedule",
-        error: "SCHEDULEOS_ERROR"
-      });
-    }
-  });
-
-  router.post('/acknowledge/:shiftId', requireAuth, async (req: any, res) => {
+router.post('/acknowledge/:shiftId', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const { shiftId } = req.params;

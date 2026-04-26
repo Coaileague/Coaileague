@@ -16,7 +16,6 @@ import { createLogger } from '../lib/logger';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('SchedulesRoutes');
 
-
 const router = Router();
 
 router.get('/week/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -512,45 +511,6 @@ router.get('/ai-insights', requireAuth, async (req: AuthenticatedRequest, res) =
   } catch (error: unknown) {
     log.error('Error generating schedule insights:', error);
     res.status(500).json({ error: 'Failed to generate insights' });
-  }
-});
-
-router.get('/export/csv', requireManager, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const { startDate, endDate } = req.query;
-
-    const queryStartDate = startDate ? new Date(startDate as string) : new Date();
-    const queryEndDate = endDate ? new Date(endDate as string) : new Date(queryStartDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const allShifts = await storage.getShiftsByWorkspace(
-      workspaceId,
-      queryStartDate,
-      queryEndDate
-    );
-
-    const allEmployees = await storage.getEmployeesByWorkspace(workspaceId);
-    const employeeMap = new Map(allEmployees.map(e => [e.id, `${e.firstName} ${e.lastName}`]));
-
-    const csvHeader = 'Employee,Date,Start Time,End Time,Position,Status,Notes\n';
-    const csvRows = allShifts.map(s => {
-      const empName = s.employeeId ? (employeeMap.get(s.employeeId) || 'Unknown') : 'Unassigned';
-      const date = s.date;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const start = format(new Date(s.startTime), 'HH:mm');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const end = format(new Date(s.endTime), 'HH:mm');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      return `"${empName}","${date}","${start}","${end}","${s.title || ''}","${s.status}","${(s.notes || '').replace(/"/g, '""')}"`;
-    }).join('\n');
-
-    res.setHeader('Content-Type', 'text/csv');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    res.setHeader('Content-Disposition', `attachment; filename="schedule-export-${format(new Date(), 'yyyy-MM-dd')}.csv"`);
-    res.send(csvHeader + csvRows);
-  } catch (error) {
-    log.error("Error exporting schedule:", error);
-    res.status(500).json({ message: "Failed to export schedule" });
   }
 });
 
