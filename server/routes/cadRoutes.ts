@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { pool, db } from "../db";
-import { sql } from "drizzle-orm";
+import { db } from "../db";
 import { requireAuth } from "../auth";
 import { requireManager } from "../rbac";
 import { ensureWorkspaceAccess } from "../middleware/workspaceScope";
@@ -47,7 +46,7 @@ async function q(text: string, params: any[] = []) {
   return r.rows;
 }
 
-// ─── CAD CALLS ───────────────────────────────────────────────────────────────
+// CAD CALLS
 
 cadRouter.get("/calls", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
@@ -62,13 +61,12 @@ cadRouter.get("/calls", requireAuth as any, ensureWorkspaceAccess as any, async 
     if (status) { query += ` AND cc.status=$${i++}`; params.push(status); }
     if (priority) { query += ` AND cc.priority=$${i++}`; params.push(priority); }
     if (siteId) { query += ` AND cc.site_id=$${i++}`; params.push(siteId); }
-    // Clamp pagination to safe bounds (Phase 7 security audit)
     query += ` ORDER BY cc.received_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     res.json({ calls: await q(query, params) });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-adRouter.post("/calls", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+cadRouter.post("/calls", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { callType, priority = 2, siteId, siteName, locationDescription, callerName, callerPhone, callerType, incidentDescription, createdBy, latitude, longitude } = req.body;
@@ -97,7 +95,7 @@ adRouter.post("/calls", requireAuth as any, ensureWorkspaceAccess as any, async 
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 
-adRouter.post("/calls/:id/on-scene", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+cadRouter.post("/calls/:id/on-scene", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const { unitId, reportedBy } = req.body;
@@ -111,7 +109,7 @@ adRouter.post("/calls/:id/on-scene", requireAuth as any, ensureWorkspaceAccess a
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-// ─── CAD UNITS ───────────────────────────────────────────────────────────────
+// CAD UNITS
 
 cadRouter.get("/units", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
@@ -119,17 +117,16 @@ cadRouter.get("/units", requireAuth as any, ensureWorkspaceAccess as any, async 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-// Schedule-view: joins CAD units with today's active shifts for 3-state officer view
-Router.delete("/units/:id", requireAuth as any, ensureWorkspaceAccess as any, requireManager as any, async (req: any, res: any) => {
+cadRouter.delete("/units/:id", requireAuth as any, ensureWorkspaceAccess as any, requireManager as any, async (req: any, res: any) => {
   try {
     await q(`DELETE FROM cad_units WHERE id=$1 AND workspace_id=$2`, [req.params.id, wid(req)]);
     res.json({ success: true });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-// ─── CAD CALL LOCKING ────────────────────────────────────────────────────────
+// CAD CALL LOCKING
 
-adRouter.post("/calls/:id/unlock", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+cadRouter.post("/calls/:id/unlock", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const callId = req.params.id;
     const workspaceId = wid(req);
@@ -147,7 +144,7 @@ adRouter.post("/calls/:id/unlock", requireAuth as any, ensureWorkspaceAccess as 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-adRouter.get("/calls/:id/lock-status", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+cadRouter.get("/calls/:id/lock-status", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const lockKey = `${wid(req)}:${req.params.id}`;
     const existing = cadCallLocks.get(lockKey);
@@ -164,7 +161,7 @@ adRouter.get("/calls/:id/lock-status", requireAuth as any, ensureWorkspaceAccess
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-// ─── GEOFENCE DEPARTURES ─────────────────────────────────────────────────────
+// GEOFENCE DEPARTURES
 
 cadRouter.get("/geofence-departures", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
@@ -179,7 +176,7 @@ cadRouter.get("/geofence-departures", requireAuth as any, ensureWorkspaceAccess 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-dRouter.post("/geofence-departures/:id/returned", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+cadRouter.post("/geofence-departures/:id/returned", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
     const workspaceId = wid(req);
     const row = await q(`UPDATE geofence_departure_log SET returned_at=NOW() WHERE id=$1 AND workspace_id=$2 RETURNING employee_id`, [req.params.id, workspaceId]);
@@ -191,11 +188,7 @@ dRouter.post("/geofence-departures/:id/returned", requireAuth as any, ensureWork
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-// ─── MANUAL CLOCK-IN OVERRIDES ───────────────────────────────────────────────
-
-// ─── DISPATCH LOG ────────────────────────────────────────────────────────────
-
-// ─── STATS ───────────────────────────────────────────────────────────────────
+// STATS
 
 cadRouter.get("/stats", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
