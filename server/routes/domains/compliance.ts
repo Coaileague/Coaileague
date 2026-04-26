@@ -35,7 +35,6 @@ import { complianceSprintRouter } from "../complianceSprintRoutes";
 import complianceScenarioRouter from "../complianceScenarioRoutes";
 import { regulatoryPortalRoutes } from "../compliance/regulatoryPortal";
 import trainingComplianceRouter from "../trainingComplianceRoutes";
-import stateRegulatoryRouter from "../stateRegulatoryRoutes";
 import licenseDashboardRouter from "../license-dashboard";
 import insuranceRouter from "../insuranceRoutes";
 import complianceEvidenceRouter from "../complianceEvidenceRoutes";
@@ -90,7 +89,6 @@ export function mountComplianceRoutes(app: Express): void {
   // Compliance Sprint — Phases F (handbook audit), G (contract protection), H (translation), M (verification)
   app.use("/api/compliance", complianceSprintRouter);
   // State regulatory config + post requirements — multi-state architecture
-  app.use("/api/regulatory", stateRegulatoryRouter);
   // License Dashboard — bulk status, DPS CSV export, revoke handler (Phase 17)
   app.use("/api/compliance/licenses", requireAuth, ensureWorkspaceAccess, licenseDashboardRouter);
   // Insurance — certificates, bonding, coverage management (Phase 35R)
