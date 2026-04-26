@@ -1,60 +1,68 @@
 # ═══════════════════════════════════════════════════════════
-# AGENT SYNC BLOCK — READ THIS BEFORE ANY WORK
+# AGENT SYNC BLOCK
 # Updated: 2026-04-25
 # ═══════════════════════════════════════════════════════════
 
-## WHO GOES NEXT: JACK ✋
-## REMOTE TIP: 2721bdac8
+## STATUS: PLATFORM STABLE ✅
+
+development branch = stable production (do not push route changes here)
+refactor/route-cleanup branch = where all cleanup work happens
 
 ---
 
-## ⚠️ PLATFORM RECOVERY — READ BEFORE ANY COMMIT
+## ROOT CAUSE OF CRASH — FIXED
 
-**What happened:**
-Refactoring commits deleted route files that caused a runtime crash on Railway.
-esbuild bundled clean but the running server had broken runtime references.
+Our per-route caller audit missed frontend usage routed through:
+  - apiEndpoints.ts config (shows as "1 caller" but used by many components)
+  - Dynamic path construction in components
 
-**What was done:**
-Commit `da0f58f4d` → `2721bdac8` restored ALL server/routes/ files to the
-pre-refactoring baseline (99d48c8c1). Platform should be back up on Railway.
+Files like trainingRoutes.ts, performanceRoutes.ts had "0 callers" per route
+but 57 and 3 callers respectively under their MOUNT PREFIX.
 
-**All refactoring work is preserved in git history** — nothing lost.
-`git log --oneline 99d48c8c1..2721bdac8` shows every refactor commit still there.
+**New rule: Check mount prefix callers, not just individual route paths.**
 
 ---
 
-## NEW PROCESS — MANDATORY
+## CORRECT METHODOLOGY (going forward)
 
-We do NOT push refactoring directly to `development` anymore.
-
-1. Jack creates a feature branch: `git checkout -b refactor/route-cleanup`
-2. Jack does all route deletion work on that branch
-3. Claude verifies build + runtime on that branch
-4. Railway preview deploy confirms no crash
-5. THEN merge to `development`
-
-**Current `development` branch = stable production. Do not touch route files on it.**
-
----
-
-## JACK'S IMMEDIATE TASK
-
-Confirm Railway deploy succeeded:
-- Platform back up? ✅ or ❌
-
-If ✅ stable: create the refactor branch and continue.
-If ❌ still down: report error from Railway logs — we need the actual crash message.
-
+Before deleting ANY route file:
 ```bash
-# When ready to continue refactoring (NOT on development):
-git checkout 2721bdac8
-git checkout -b refactor/route-cleanup
-# All work goes here, NOT on development
+# Check the mount prefix — if ANY frontend caller exists, KEEP the file
+grep -rn "/api/MOUNT_PREFIX" client/ | wc -l
+# Only delete if result is 0
+```
+
+For trimming dead handlers WITHIN a file (safe, doesn't break mount):
+```bash
+# Check the specific full path
+grep -rn "/api/MOUNT_PREFIX/specific-path" client/ server/ | grep -v FILENAME.ts
 ```
 
 ---
 
-## CUMULATIVE STATS (all preserved in history)
-~23,363L of dead routes identified and deleted across 8 domains.
-Ready to re-apply safely once we confirm the right process.
+## CONFIRMED SAFE TO DELETE (zero mount-prefix callers)
 
+Already deleted on refactor/route-cleanup branch:
+  offboardingRoutes.ts (-236L) — /api/offboarding: 0 callers
+  stateRegulatoryRoutes.ts (-408L) — /api/regulatory: 0 callers
+  dispatch.ts (-350L) — /api/dispatch: 0 callers
+  gpsRoutes.ts (-90L) — /api/gps: 0 callers
+
+MUST KEEP (active frontend callers under mount prefix):
+  trainingRoutes.ts — /api/training: 57 callers
+  terminationRoutes.ts — /api/terminations: 5 callers
+  performanceRoutes.ts — /api/performance-notes: 3 callers
+  complianceRoutes.ts — /api/security-compliance: 39 callers
+  schedulerRoutes.ts — /api/schedules: 20 callers
+
+---
+
+## NEXT WORK — ON refactor/route-cleanup BRANCH ONLY
+
+Jack: checkout refactor/route-cleanup, do cleanup there.
+Claude: verify on refactor branch, test build + startup before any merge.
+
+Within-file handler trimming is safe (individual dead handlers in active files).
+File deletion only when mount prefix = 0 frontend callers (confirmed above).
+
+Total still achievable safely: significant line reduction within files.
