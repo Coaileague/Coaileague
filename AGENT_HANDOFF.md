@@ -8,51 +8,42 @@
 ---
 
 ## CURRENT POSITION
-**Domain:** HR (nearly done) → CLIENT next
-**Order:** ✅ Payroll → ✅ Billing → ✅ Scheduling → ✅ Time → 🔄 HR → Client → Compliance → Ops
+**Domain:** CLIENT (next) — HR ✅ COMPLETE
+**Order:** ✅ Payroll → ✅ Billing → ✅ Scheduling → ✅ Time → ✅ HR → 🔄 Client → Compliance → Ops
 
 ---
 
-## WHAT WAS JUST DONE
-
-| Commit | Agent | What | Result |
-|---|---|---|---|
-| Claude (this) | Claude | hrisRoutes+hiringRoutes deleted + 4 all-dead files deleted | -3,329L this pass |
-| `de5c9212b` | Jack | hris+hiring delete lists from DEEP_ROUTE_INDEX | Index workflow confirmed |
-
----
-
-## HR DOMAIN — NEARLY COMPLETE
+## WHAT WAS JUST DONE (this commit — Claude)
 
 | File | Before | After | Status |
 |---|---|---|---|
-| employeeRoutes.ts | 2,452L | 1,541L | ✅ |
-| hrInlineRoutes.ts | 1,795L | 1,312L | ✅ |
-| hrisRoutes.ts | 249L | 93L | ✅ |
-| hiringRoutes.ts | 417L | 99L | ✅ |
-| trainingRoutes.ts | 1,291L | DELETED | ✅ |
-| terminationRoutes.ts | 573L | DELETED | ✅ |
-| performanceRoutes.ts | 755L | DELETED | ✅ |
-| offboardingRoutes.ts | 236L | DELETED | ✅ |
-| onboardingRoutes.ts | 820L | TBD | 🔄 Jack |
-| onboardingInlineRoutes.ts | 1,546L | TBD | 🔄 Jack |
-| benefitRoutes.ts | 114L | TBD | 🔄 Jack |
-
-**HR total removed: -4,723L | Cumulative: ~15,275L**
+| onboardingRoutes.ts | 820L | 400L | ✅ -420L |
+| onboardingInlineRoutes.ts | 1,545L | 483L | ✅ -1,062L |
+| DEEP_ROUTE_INDEX.md | — | Updated | ✅ CLIENT pre-audited |
 
 ---
 
-## JACK'S NEXT TASK
+## HR DOMAIN — COMPLETE ✅
 
-**Option A: Finish HR** — onboarding files + benefitRoutes
-Mount for onboardingRoutes.ts: `/api/sps/onboarding`
-Mount for onboardingInlineRoutes.ts: find with `grep -n "onboardingInline" server/routes/domains/workforce.ts`
-benefitRoutes.ts: `/api/benefits` — only 1 dead route (`/employee/:employeeId`)
+Total removed: **-5,205L across 11 files (4 deleted)**
+| employeeRoutes -911L | hrInlineRoutes -483L | hrisRoutes -156L | hiringRoutes -318L |
+| training DELETED -1,291L | termination DELETED -573L | performance DELETED -755L | offboarding DELETED -236L |
+| onboardingRoutes -420L | onboardingInlineRoutes -1,062L | benefitRoutes (Jack) |
 
-**Option B: Move to CLIENT domain** — clientRoutes.ts (1,604L)
-Mount: `/api/clients` — run caller audit, same pattern
+---
 
-Jack: pick and state in commit message.
+## JACK'S NEXT TASK — CLIENT DOMAIN
+
+**DEEP_ROUTE_INDEX.md has all 3 CLIENT files fully pre-audited.**
+
+Read `DEEP_ROUTE_INDEX.md` CLIENT section → copy DELETE rows → handoff → Claude deletes.
+
+| File | Lines | Dead | Action |
+|---|---|---|---|
+| clientRoutes.ts | 1,605L | 12 delete | Read index → list paths |
+| contractPipelineRoutes.ts | 787L | 20 delete | Read index → list paths |
+| proposalRoutes.ts | 237L | 6 delete | Read index → list paths |
+| salesRoutes.ts | 393L | TBD | Run local audit |
 
 ---
 
@@ -64,8 +55,17 @@ Jack: pick and state in commit message.
 | Billing | -2,577L |
 | Scheduling | -3,757L |
 | Time | -1,621L |
-| HR | -4,723L (4 files DELETED) |
-| **TOTAL** | **~14,364L** |
+| HR | -5,205L |
+| **TOTAL** | **~14,846L** |
+
+---
+
+## RULES
+1. Read DEEP_ROUTE_INDEX.md — most files pre-audited
+2. Caller audit before any deletion NOT in index
+3. Every commit reduces line count
+4. Update SYNC BLOCK after every commit
+5. Build clean before pushing
 
 ---
 

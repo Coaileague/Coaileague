@@ -247,3 +247,100 @@ Uses different router pattern — `grep -n "router\." server/routes/onboardingRo
 ## trainingRoutes.ts — 1,290L | mount: `/api/training-compliance` — 26 handlers, run full audit
 ## benefitRoutes.ts — 113L | mount: `/api/benefits` — small, run audit
 
+
+---
+
+# CLIENT DOMAIN
+
+## clientRoutes.ts — 1,605L | mount: `/api/clients` | 16 alive / 12 dead
+
+| Status | Method | Path | Caller |
+|---|---|---|---|
+| ALIVE(45) | GET | `/` | pages/clients.tsx |
+| ALIVE(10) | GET | `/lookup` | components/client-search.tsx |
+| ALIVE(45) | POST | `/` | pages/clients.tsx |
+| ALIVE(4) | PATCH | `/:id` | components/client-edit.tsx |
+| ALIVE(5) | GET | `/deactivated` | pages/clients.tsx |
+| ALIVE(1) | POST | `/:id/deactivate` | components/client-actions.tsx |
+| ALIVE(1) | POST | `/:id/reactivate` | components/client-actions.tsx |
+| **DELETE** | POST | `/:id/collections/start` | — |
+| **DELETE** | POST | `/:id/collections/decline` | — |
+| **DELETE** | POST | `/:id/collections/resolve` | — |
+| **DELETE** | POST | `/:id/collections/write-off` | — |
+| **DELETE** | GET | `/:id/collections/log` | — |
+| ALIVE(4) | DELETE | `/:id` | pages/clients.tsx |
+| **DELETE** | GET | `/:clientId/payments` | — |
+| ALIVE(1) | POST | `/dockchat/start` | components/dockchat.tsx |
+| ALIVE(1) | POST | `/dockchat/message` | components/dockchat.tsx |
+| ALIVE(1) | POST | `/dockchat/close` | components/dockchat.tsx |
+| ALIVE(3) | GET | `/dockchat/reports` | components/dockchat.tsx |
+| **DELETE** | GET | `/dockchat/reports/:reportId` | — |
+| **DELETE** | POST | `/dockchat/reports/:reportId/acknowledge` | — |
+| **DELETE** | POST | `/dockchat/reports/:reportId/resolve` | — |
+| ALIVE(1) | GET | `/my-communications` | pages/client-comms.tsx |
+| ALIVE(1) | POST | `/contract-renewal-request` | components/renewal.tsx |
+| ALIVE(2) | POST | `/coi-request` | components/coi.tsx |
+| **DELETE** | GET | `/:clientId/coverage-schedule` | — |
+| **DELETE** | PATCH | `/:clientId/coverage-schedule` | — |
+| **DELETE** | GET | `/:id/export` | — |
+| ALIVE(1) | GET | `/my-portal-token` | components/portal.tsx |
+
+**Jack: delete 12 handlers from clientRoutes.ts**
+
+---
+
+## contractPipelineRoutes.ts — 787L | mount: `/api/contracts` | 5 alive / 20 dead
+
+| Status | Method | Path | Caller |
+|---|---|---|---|
+| **DELETE** | GET | `/templates` | — |
+| **DELETE** | POST | `/templates` | — |
+| **DELETE** | GET | `/templates/:id` | — |
+| **DELETE** | PATCH | `/templates/:id` | — |
+| **DELETE** | DELETE | `/templates/:id` | — |
+| ALIVE(17) | GET | `/` | pages/contracts.tsx |
+| ALIVE(17) | POST | `/` | pages/contracts.tsx |
+| **DELETE** | GET | `/usage` | — |
+| **DELETE** | GET | `/access` | — |
+| ALIVE(2) | GET | `/stats` | components/contract-stats.tsx |
+| ALIVE(1) | GET | `/:id` | pages/contract-detail.tsx |
+| ALIVE(1) | PATCH | `/:id` | pages/contract-detail.tsx |
+| **DELETE** | POST | `/:id/send` | — |
+| **DELETE** | POST | `/:id/accept` | — |
+| **DELETE** | POST | `/:id/request-changes` | — |
+| **DELETE** | POST | `/:id/decline` | — |
+| **DELETE** | GET | `/:id/signatures` | — |
+| **DELETE** | POST | `/:id/sign` | — |
+| **DELETE** | POST | `/:id/signers` | — |
+| **DELETE** | GET | `/:id/signers` | — |
+| **DELETE** | POST | `/:id/remind` | — |
+| **DELETE** | PATCH | `/:id/signers/reorder` | — |
+| **DELETE** | GET | `/:id/audit` | — |
+| **DELETE** | GET | `/:id/evidence` | — |
+| **DELETE** | GET | `/:id/verify` | — |
+
+**Jack: delete 20 handlers from contractPipelineRoutes.ts**
+
+---
+
+## proposalRoutes.ts — 237L | mount: `/api/proposals` | 3 alive / 6 dead
+
+| Status | Method | Path | Caller |
+|---|---|---|---|
+| ALIVE(2) | GET | `/templates` | components/proposal-templates.tsx |
+| **DELETE** | GET | `/templates/:id` | — |
+| ALIVE(5) | GET | `/` | pages/proposals.tsx |
+| **DELETE** | GET | `/:id` | — |
+| ALIVE(5) | POST | `/` | pages/proposals.tsx |
+| **DELETE** | PATCH | `/:id` | — |
+| **DELETE** | PATCH | `/:id/status` | — |
+| **DELETE** | DELETE | `/:id` | — |
+| **DELETE** | POST | `/:id/generate-pdf` | — |
+
+**Jack: delete 6 handlers from proposalRoutes.ts**
+
+---
+
+## salesRoutes.ts — 393L
+Find route pattern + mount: `grep -n "router\." server/routes/salesRoutes.ts | head -5` then `grep -n "salesRouter" server/routes/domains/sales.ts`
+
