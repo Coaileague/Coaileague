@@ -1,10 +1,9 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
-import { requireAuth, type AuthenticatedRequest, hasManagerAccess, resolveWorkspaceForUser, getUserPlatformRole, hasPlatformWideAccess } from "../rbac";
+import { requireAuth, type AuthenticatedRequest } from "../rbac";
 import { storage } from "../storage";
 import { createLogger } from '../lib/logger';
 const log = createLogger('BenefitRoutes');
-
 
 const router = Router();
 
@@ -20,22 +19,6 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   } catch (error) {
     log.error("Error fetching benefits:", error);
     res.status(500).json({ message: "Failed to fetch benefits" });
-  }
-});
-
-router.get('/employee/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      return res.status(403).json({ message: "Workspace context required" });
-    }
-
-    const { employeeId } = req.params;
-    const benefits = await storage.getEmployeeBenefitsByEmployee(employeeId, workspaceId);
-    res.json(benefits);
-  } catch (error) {
-    log.error("Error fetching employee benefits:", error);
-    res.status(500).json({ message: "Failed to fetch employee benefits" });
   }
 });
 
