@@ -4,47 +4,52 @@
 # ═══════════════════════════════════════════════════════════
 
 ## WHO GOES NEXT: JACK ✋
-## REMOTE TIP AFTER THIS PUSH: see bottom of this block
+## REMOTE TIP AFTER THIS PUSH: (see bottom — update after push)
 
 ---
 
 ## CURRENT POSITION
-**Domain:** COMPLIANCE (next) — CLIENT ✅ COMPLETE
-**Order:** ✅ Payroll → ✅ Billing → ✅ Scheduling → ✅ Time → ✅ HR → ✅ Client → 🔄 Compliance → Ops
+**Domain:** OPS (next) — COMPLIANCE ✅ COMPLETE
+**Order:** ✅ Payroll → ✅ Billing → ✅ Scheduling → ✅ Time → ✅ HR → ✅ Client → ✅ Compliance → 🔄 Ops
 
 ---
 
-## WHAT WAS JUST DONE (this commit)
+## COMPLIANCE DOMAIN — COMPLETE ✅
 
-| File | Before | After | Deleted |
-|---|---|---|---|
-| clientRoutes.ts | 1,605L | 1,296L | 12 dead routes |
-| contractPipelineRoutes.ts | 787L | 407L | 20 dead routes |
-| proposalRoutes.ts | 237L | 105L | 6 dead routes |
-| salesRoutes.ts | 393L | 269L | 8 dead routes |
+Jack unmounted 5 dead subrouters (55573fe8d). Claude deleted 9 files entirely.
 
-**Client domain total: -945L**
+| File | Lines | Action |
+|---|---|---|
+| complianceRoutes.ts | 1,824L | DELETED (51/51 handlers dead) |
+| compliance/regulatoryPortal.ts | 1,280L | DELETED (orphaned) |
+| officerCertificationRoutes.ts | 909L | DELETED (13/13 handlers dead) |
+| compliance/packets.ts | 402L | DELETED (orphaned) |
+| stateRegulatoryRoutes.ts | 408L | DELETED (17/17 handlers dead) |
+| compliance/regulatoryEnrollment.ts | 278L | DELETED (orphaned) |
+| compliance/auditTrail.ts | 193L | DELETED (orphaned) |
+| compliance/checklists.ts | 161L | DELETED (orphaned) |
+| compliance/requirements.ts | 58L | DELETED (orphaned) |
+
+**Compliance total: -5,523L | ~21,309L cumulative**
 
 ---
 
-## JACK'S NEXT TASK — COMPLIANCE
+## JACK'S NEXT TASK — OPS DOMAIN
 
 ```bash
-# Find files and mounts
-grep -rn "compliance\|licenseRout\|officerCert\|regulatory" server/routes/domains/compliance.ts | head -20
+# Find OPS files and mounts
+grep -n "incident\|cadRouter\|dispatchR\|postOrder\|gpsRout\|guardTour\|vehicleR" server/routes/domains/ops.ts | head -20
+
+# Key targets
+# incidentPipelineRoutes.ts — mount: /api/incident-reports
+# cadRoutes.ts — uses cadRouter — mount: /api/cad
+# postOrderRoutes.ts
+# gpsRoutes.ts
+# dispatchRoutes.ts
 ```
 
-Key targets:
-- `complianceRoutes.ts` (1,823L) — mount: `/api/security-compliance` — 51 handlers
-- `licenseRoutes.ts` — find mount
-- `officerCertificationRoutes.ts` — find mount
-
-**Caller audit pattern:**
-```bash
-grep -rn "/api/security-compliance/PATH" client/ server/ | grep -v complianceRoutes.ts
-```
-
-DEEP_ROUTE_INDEX.md COMPLIANCE section has partial info — Jack runs local audit for full picture.
+Caller audit each file's handlers. OPS files may have more alive routes
+than HR/Compliance — security companies use incident reporting and CAD.
 
 ---
 
@@ -58,15 +63,8 @@ DEEP_ROUTE_INDEX.md COMPLIANCE section has partial info — Jack runs local audi
 | Time | -1,621L |
 | HR | -5,200L |
 | Client | -945L |
-| **TOTAL** | **~15,786L** |
-
----
-
-## SYNC PROTOCOL
-After every Claude push: `git ls-remote origin development` → hash at bottom of this block.
-Jack: confirm your connector shows this hash before committing.
-
-**Current remote tip: UPDATE AFTER PUSH**
+| Compliance | -5,523L |
+| **TOTAL** | **~21,309L** |
 
 ---
 
