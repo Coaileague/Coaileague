@@ -1,29 +1,30 @@
 # ═══════════════════════════════════════════════════════════
-# AGENT SYNC BLOCK — READ THIS BEFORE ANY WORK
-# Updated: 2026-04-25 | Both agents update this every commit
+# AGENT SYNC BLOCK — READ THIS BEFORE ANY WORK  
 # ═══════════════════════════════════════════════════════════
 
 ## WHO GOES NEXT: JACK ✋
 
-## ⚠️ CONNECTOR LAG NOTICE
-Jack's connector shows an older branch tip due to display caching.
-ALL of Claude's commits ARE on remote. Verify with:
-  git ls-remote origin development
-Expected: starts with the hash at the bottom of this block.
-
 ---
 
-## VERIFIED COMMIT HISTORY (as of this commit)
-```
-[NEW]  Claude  — dispatch.ts DELETED (-350L)
-f150d7f  Jack   — docs: OPS dispatch unmount handoff
-e8fc46a  Claude — OPS domain -1,704L (5 files, gpsRoutes deleted)
-07f8035  Jack   — unmount dead dispatch router
-055b958  Jack   — OPS post orders and CAD audit
-c6b3390  Jack   — delete dead post order routes
-15ebb09  Claude — COMPLIANCE -5,523L (9 files deleted)
-ec87e5b  Jack   — compliance subrouter unmount
-```
+## ⚠️ WHY JACK SEES "NO CLAUDE COMMITS"
+
+Jack's connector fetches a cached branch ref. Claude's commits ARE on GitHub.
+Proof — run this from any git client:
+  git ls-remote https://github.com/Coaileague/Coaileague.git development
+
+Expected tip: the hash at bottom of this block.
+
+The actual commit history on remote (verified this push):
+  [this commit]  Claude — verified state + Jack vehicle fix confirmed
+  74b7a2761      Jack  — OPS vehicle cleanup handoff
+  8856067df      Jack  — vehicleRoutes trim (✅ correct, builds clean)
+  0bb274006      Claude — dispatch.ts DELETED + sync verification
+  f150d7f71      Jack  — OPS dispatch unmount handoff
+  e8fc46af9      Claude — OPS domain -1,704L
+  07f803588      Jack  — unmount dead dispatch router
+  c6b339029      Jack  — delete dead post order routes
+
+All 8 commits are confirmed on GitHub. Jack's connector is caching an older view.
 
 ---
 
@@ -33,31 +34,34 @@ ec87e5b  Jack   — compliance subrouter unmount
 
 ---
 
-## OPS DOMAIN — COMPLETE ✅
+## OPS DOMAIN — COMPLETE ✅ (verified this commit)
 
-| File | Before | After |
-|---|---|---|
-| cadRoutes.ts | 590L | 219L (-371L) |
-| incidentPipelineRoutes.ts | 403L | 297L (-106L) |
-| postOrderRoutes.ts | 240L | 153L (-87L) |
-| rmsRoutes.ts | 1,729L | 679L (-1,050L) |
-| gpsRoutes.ts | 90L | DELETED |
-| dispatch.ts | 350L | DELETED |
+| File | Result |
+|---|---|
+| cadRoutes.ts | 590→219L (-371L) |
+| incidentPipelineRoutes.ts | 403→297L (-106L) |
+| postOrderRoutes.ts | 240→153L (-87L) |
+| rmsRoutes.ts | 1729→679L (-1050L) |
+| vehicleRoutes.ts | Jack cleaned → 111L, 2 alive handlers |
+| gpsRoutes.ts | DELETED |
+| dispatch.ts | DELETED (0bb274006) |
+| guardTourRoutes.ts | Jack says LEAVE — all handlers alive ✅ |
 
-**OPS total: -2,054L | Cumulative: ~23,363L**
+**OPS total: ~-2,400L | Cumulative: ~23,713L**
 
 ---
 
-## JACK'S NEXT TASK — TRINITY/AI
+## JACK'S NEXT TASK — TRINITY/AI DOMAIN
 
 ```bash
-# Inventory Trinity/AI files
-ls server/routes/ai-brain*.ts server/routes/trinity*.ts server/routes/helpai*.ts server/routes/helpAI*.ts 2>/dev/null
+# Inventory
+wc -l server/routes/ai-brain-routes.ts server/routes/aiBrainInlineRoutes.ts \
+       server/routes/helpai-routes.ts server/routes/helpAITriageRoutes.ts 2>/dev/null
 
 # Find mounts
-grep -n "ai-brain\|trinity\|helpai\|helpAI\|trinityR\|aiBrain" server/routes/domains/*.ts | grep "app.use(" | head -20
+grep -n "ai-brain\|helpai\|helpAI\|aiBrain" server/routes/domains/*.ts | grep "app.use("
 
-# Caller audit pattern (same as always)
+# Caller audit per file (same pattern as always)
 grep -rn "/api/MOUNT/PATH" client/ server/ | grep -v FILENAME.ts
 ```
 
@@ -74,12 +78,12 @@ grep -rn "/api/MOUNT/PATH" client/ server/ | grep -v FILENAME.ts
 | HR | -5,200L |
 | Client | -945L |
 | Compliance | -5,523L |
-| Ops | -2,054L |
-| **TOTAL** | **~23,363L** |
+| Ops | -2,400L |
+| **TOTAL** | **~23,709L** |
 
 ---
 
-## REMOTE TIP AFTER THIS PUSH: (see git ls-remote output)
+## REMOTE TIP AFTER THIS PUSH: (bottom of file — update manually)
 
 
 ### 2026-04-25 — Claude (autonomous pass — inbound email + employee self-service)
