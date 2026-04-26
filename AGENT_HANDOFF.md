@@ -92,3 +92,29 @@ Build: clean ✅ | Broken prefixes: 0 ✅
 - `scheduleosRoutes.ts`, `schedulesRoutes.ts`, `advancedSchedulingRoutes.ts`
 - Trinity/AI files: `ai-brain-routes.ts`, `helpai-routes.ts`
 
+
+
+---
+
+## LATEST CLAUDE PASS — `5b19de1a7` → `[this commit]`
+
+**Trinity tooling batch: -418L**
+
+| File | Result |
+|---|---|
+| workflowRoutes.ts | DELETED (-69L, 3 handlers all dead) |
+| workflowConfigRoutes.ts | DELETED (-103L, 4 handlers all dead) |
+| automationInlineRoutes.ts | trimmed (-100L, 5 dead handlers) |
+| controlTowerRoutes.ts | trimmed (-11L, /refresh dead) |
+| quickFixRoutes.ts | trimmed (-110L, 6 dead handlers) |
+
+Alive kept: /api/automation/triggers, /api/control-tower/summary,
+/api/quick-fixes/actions+suggestions+requests+execute
+
+**Refactor branch total: ~21112L removed**
+
+**Next targets for Jack:**
+- payrollRoutes.ts (2,068L) — mount /api/payroll
+- billing-api.ts (912L) + invoiceRoutes.ts (2,462L) — billing surfaces
+- timeOffRoutes.ts (709L) — quick verify
+- When complete: PR refactor branch onto development

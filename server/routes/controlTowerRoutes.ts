@@ -26,7 +26,6 @@ import { requirePlatformRole } from '../rbac';
 import { createLogger } from '../lib/logger';
 const log = createLogger('ControlTowerRoutes');
 
-
 const router = Router();
 
 // Apply authentication to all Control Tower routes - root admin only
@@ -205,14 +204,4 @@ router.get('/summary', async (req: Request, res: Response) => {
  * POST /api/control-tower/refresh
  * Force refresh all metrics
  */
-router.post('/refresh', async (req: Request, res: Response) => {
-  try {
-    // For now, just confirm refresh - actual data is fetched on each GET
-    res.json({ success: true, message: 'Metrics will be refreshed on next fetch' });
-  } catch (error: unknown) {
-    log.error('[Control Tower] Error refreshing metrics:', error);
-    res.status(500).json({ error: 'Failed to refresh metrics' });
-  }
-});
-
 export default router;

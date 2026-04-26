@@ -52,8 +52,6 @@ import trinityMiscRouter from "../trinityMiscRoutes";
 import trinityTrainingRouter from "../trinityTrainingRoutes";
 import { trinityThoughtStatusRouter } from "../trinityThoughtStatusRoutes";
 import vqaRouter from "../vqaRoutes";
-import workflowConfigRouter from "../workflowConfigRoutes";
-import workflowRouter from "../workflowRoutes";
 import automationGovernanceRouter from "../automationGovernanceRoutes";
 import trinityIntelligenceRouter from "../trinityIntelligenceRoutes";
 import empireRouter from "../empireRoutes"; // /api/trinity/empire/* + /api/trinity/bluedot/*
@@ -225,8 +223,6 @@ export function mountTrinityRoutes(app: Express): void {
   app.use("/api/code-editor", codeEditorRouter);
 
   // ── Workflows ─────────────────────────────────────────────────────────────
-  app.use("/api/workflow-configs", workflowConfigRouter);
-  app.use("/api/workflows", requireAuth, ensureWorkspaceAccess, workflowRouter);
 
   // ── Agent Spawning Activity (Phase 6) ─────────────────────────────────────
   app.use("/api/agent-activity", requireAuth, ensureWorkspaceAccess, agentActivityRouter);
