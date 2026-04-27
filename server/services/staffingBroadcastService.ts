@@ -22,7 +22,7 @@ import {
   shiftCoverageRequests,
   timeEntries,
 } from '@shared/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, and, isNull } from 'drizzle-orm';
 import { storage } from '../storage';
 import {
   sendShiftBroadcastEmail,
@@ -257,18 +257,37 @@ export async function acceptShiftToken(token: string): Promise<AcceptTokenResult
     return { success: false, alreadyTaken: true };
   }
 
-  // Mark this recipient as accepted
-  await db.update(broadcastRecipients)
-    .set({
-      actionTakenAt: new Date(),
-      responseData: { ...data, accepted: true },
-    })
-    .where(eq(broadcastRecipients.id, recipient.id));
+  // Atomic claim: wrap recipient mark + broadcast deactivation in one transaction
+  // with conditional guards to prevent double-accept race conditions
+  const claimed = await db.transaction(async (tx) => {
+    // Only claim if recipient hasn't acted yet (prevents two simultaneous accepts)
+    const [claimedRecipient] = await tx.update(broadcastRecipients)
+      .set({
+        actionTakenAt: new Date(),
+        responseData: { ...data, accepted: true },
+      })
+      .where(and(
+        eq(broadcastRecipients.id, recipient.id),
+        isNull(broadcastRecipients.actionTakenAt)  // guard: only if not yet taken
+      ))
+      .returning({ id: broadcastRecipients.id });
 
-  // Deactivate the broadcast so other tokens become invalid
-  await db.update(broadcasts)
-    .set({ isActive: false, updatedAt: new Date() })
-    .where(eq(broadcasts.id, recipient.broadcastId!));
+    if (!claimedRecipient) return false; // Another worker already claimed this token
+
+    // Only deactivate if broadcast is still active (idempotent if already deactivated)
+    await tx.update(broadcasts)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(
+        eq(broadcasts.id, recipient.broadcastId!),
+        eq(broadcasts.isActive, true)
+      ));
+
+    return true;
+  });
+
+  if (!claimed) {
+    return { success: false, alreadyTaken: true };
+  }
 
   // Resolve officer name
   let officerName = 'Officer';
