@@ -69,7 +69,7 @@ assistedOnboardingRouter.post(
       }
 
       const result = await assistedOnboardingService.createAssistedWorkspace({
-        supportUserId: req.user.id,
+        supportUserId: req.user?.id,
         ...parsed.data,
       });
 
@@ -94,7 +94,7 @@ assistedOnboardingRouter.get(
   requirePlatformRole([...SUPPORT_ROLES]),
   async (req: any, res: any) => {
     try {
-      const workspaceList = await assistedOnboardingService.getAssistedWorkspaces(req.user.id);
+      const workspaceList = await assistedOnboardingService.getAssistedWorkspaces(req.user?.id);
       
       res.json({
         success: true,

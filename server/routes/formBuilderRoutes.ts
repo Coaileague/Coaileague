@@ -690,7 +690,7 @@ router.post("/forms/:formId/submissions/:submissionId/approve", async (req: Auth
         await db.insert(formSignatures).values({
           submissionId,
           workspaceId,
-          signedBy: req.user.id,
+          signedBy: req.user?.id,
           signatureType: signatureData.startsWith("data:image") ? "canvas" : "typed",
           signatureData,
           ipAddress: req.ip || null,

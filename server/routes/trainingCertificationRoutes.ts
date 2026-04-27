@@ -184,7 +184,7 @@ router.post("/curriculums/:id/modules", async (req: any, res) => {
 router.post("/progress", async (req: any, res) => {
   try {
     const { moduleId, status, score } = req.body;
-    const officerId = req.user.id; // Assuming the logged-in user is the officer
+    const officerId = req.user?.id;
     const completedAt = status === 'completed' ? 'NOW()' : 'NULL';
     
     const result = await pool.query(`
@@ -206,7 +206,7 @@ router.post("/progress", async (req: any, res) => {
 // GET /api/training/officer/progress — get current officer's progress
 router.get("/officer/progress", async (req: any, res) => {
   try {
-    const officerId = req.user.id;
+    const officerId = req.user?.id;
     const result = await pool.query(`
       SELECT otp.*, tm.title as module_title, tc.name as curriculum_name
       FROM officer_training_progress otp

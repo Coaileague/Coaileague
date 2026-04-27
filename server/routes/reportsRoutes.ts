@@ -190,7 +190,7 @@ router.post('/share', requireManager, async (req: AuthenticatedRequest, res) => 
 router.get('/billable-hours', requireSupervisor, requireStarter, async (req: AuthenticatedRequest, res) => {
   try {
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    const workspace = await storage.getWorkspaceByOwnerId(req.user.id) || await storage.getWorkspaceByMembership(req.user.id);
+    const workspace = await storage.getWorkspaceByOwnerId(req.user?.id) || await storage.getWorkspaceByMembership(req.user.id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
