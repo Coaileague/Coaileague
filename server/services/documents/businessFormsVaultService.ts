@@ -30,6 +30,7 @@
  */
 
 import PDFDocument from 'pdfkit';
+import { PDFDocument as LibPDFDocument } from 'pdf-lib';
 import { db } from '../../db';
 import { documentVault } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
@@ -126,6 +127,8 @@ function generateDocumentNumber(category: FormCategory): string {
  * the header/footer prepended as a separate first/last page overlay.
  */
 async function stampBrandedFrame(opts: StampOptions, docNumber: string): Promise<Buffer> {
+  // Use pdf-lib to merge: branded cover page (frame) + actual content from rawBuffer
+  // This replaces the previous approach that dropped rawBuffer content entirely.
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({
@@ -196,27 +199,13 @@ async function stampBrandedFrame(opts: StampOptions, docNumber: string): Promise
     doc.moveDown(3);
     doc.fillColor('black');
 
-    // ── Content placeholder notice ────────────────────────────────────────────
-    // The actual form content is rendered by the calling generator service.
-    // This stamper adds the frame; the content buffer is appended separately.
-    // Here we add a divider and the content section will follow in the buffer.
+    // ── Category + doc number metadata line ──────────────────────────────────
     doc
       .fontSize(8)
       .fillColor('#64748b')
       .text(`${PLATFORM_NAME} · ${opts.category.toUpperCase()} DOCUMENT · ${docNumber}`, {
         align: 'center',
       });
-    doc.moveDown(0.5);
-
-    // ── Content area — embed raw content ──────────────────────────────────────
-    // Since we can't merge PDFKit buffers natively without pdf-lib,
-    // we embed the content as text/data. For full fidelity this would use
-    // pdf-lib merge. For now we draw the data inline.
-    doc
-      .fontSize(10)
-      .fillColor('black')
-      .font('Helvetica');
-
     doc.moveDown(1);
 
     // ── Footer (on every page via buffered pages) ──────────────────────────────
@@ -338,10 +327,31 @@ export async function saveToVault(opts: StampOptions): Promise<SaveToVaultResult
   try {
     const docNumber = generateDocumentNumber(opts.category);
 
-    // 1. Stamp branded header + footer
-    const stampedBuffer = await stampBrandedFrame(opts, docNumber);
+    // 1. Generate branded cover/frame page (header, footer, metadata)
+    const frameBuffer = await stampBrandedFrame(opts, docNumber);
 
-    // 2. Persist to vault
+    // 2. Merge frame page + content using pdf-lib
+    // This embeds the actual rawBuffer content after the branded frame page.
+    let stampedBuffer: Buffer;
+    try {
+      const mergedDoc = await LibPDFDocument.create();
+      // Copy frame page(s) first
+      const frameDoc = await LibPDFDocument.load(frameBuffer);
+      const framePages = await mergedDoc.copyPages(frameDoc, frameDoc.getPageIndices());
+      framePages.forEach(p => mergedDoc.addPage(p));
+      // Copy content page(s) from rawBuffer
+      const contentDoc = await LibPDFDocument.load(opts.rawBuffer);
+      const contentPages = await mergedDoc.copyPages(contentDoc, contentDoc.getPageIndices());
+      contentPages.forEach(p => mergedDoc.addPage(p));
+      stampedBuffer = Buffer.from(await mergedDoc.save());
+    } catch (mergeErr: any) {
+      // Fallback: if rawBuffer isn't a valid PDF (e.g. PDFKit stream mid-render),
+      // use the frame buffer alone and log a warning
+      log.warn('[BusinessForms] PDF merge failed, using frame-only fallback:', mergeErr?.message);
+      stampedBuffer = frameBuffer;
+    }
+
+    // 3. Persist to vault
     const vault = await persistToVault(stampedBuffer, opts, docNumber);
 
     log.info(

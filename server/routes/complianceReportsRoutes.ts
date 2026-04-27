@@ -145,7 +145,7 @@ router.get("/:id", requireManager, async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// GET /api/compliance-reports/:id/pdf — Download a compliance report as a printable HTML document
+// GET /api/compliance-reports/:id/pdf — Download a compliance report as a real branded PDF
 router.get("/:id/pdf", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
@@ -156,106 +156,98 @@ router.get("/:id/pdf", requireManager, async (req: AuthenticatedRequest, res) =>
       .limit(1);
     if (!report) return res.status(404).json({ error: "Report not found" });
 
+    // Check if a vaulted PDF already exists for this report
+    if ((report as any).vaultDocumentNumber) {
+      const vaultRecord = await getVaultRecord(workspaceId, (report as any).vaultDocumentNumber);
+      if (vaultRecord) {
+        return res.json({ success: true, vaultRecord, cached: true });
+      }
+    }
+
+    // Generate real PDF using PDFKit + saveToVault
+    const { default: PDFDocument } = await import('pdfkit');
     const reportData = (report.reportData || {}) as Record<string, any>;
     const summaryStats = (report.summaryStats || {}) as Record<string, any>;
     const periodStart = report.periodStart ? new Date(report.periodStart).toLocaleDateString() : 'N/A';
     const periodEnd = report.periodEnd ? new Date(report.periodEnd).toLocaleDateString() : 'N/A';
-    const generatedAt = report.generatedAt ? new Date(report.generatedAt).toLocaleString() : 'N/A';
 
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${report.reportTitle} — ${PLATFORM.name} Compliance</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a2e; background: #fff; padding: 32px; }
-    header { border-bottom: 3px solid #c8a84b; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
-    .logo-area h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; }
-    .logo-area p { font-size: 11px; color: #555; margin-top: 2px; }
-    .meta-area { text-align: right; font-size: 10px; color: #777; }
-    .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #c8a84b; border-bottom: 1px solid #e5e5e5; padding-bottom: 6px; margin: 24px 0 12px; }
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 16px; }
-    .detail-item { display: flex; flex-direction: column; }
-    .detail-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 2px; }
-    .detail-value { font-size: 12px; font-weight: 600; color: #1a1a2e; }
-    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
-    .stat-card { border: 1px solid #e5e5e5; border-radius: 6px; padding: 12px; text-align: center; }
-    .stat-num { font-size: 24px; font-weight: 700; color: #c8a84b; }
-    .stat-label { font-size: 10px; color: #666; margin-top: 4px; }
-    .regulations-list { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
-    .reg-tag { background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; padding: 3px 8px; font-size: 10px; color: #444; }
-    .summary-box { background: #f8f8f0; border-left: 4px solid #c8a84b; padding: 14px; border-radius: 0 6px 6px 0; margin-bottom: 16px; line-height: 1.6; }
-    .violation-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
-    .badge-ok { background: #e6f4ea; color: #1e7e34; }
-    .badge-warn { background: #fff3cd; color: #856404; }
-    .badge-crit { background: #fde8e8; color: #c62828; }
-    footer { margin-top: 40px; border-top: 1px solid #e5e5e5; padding-top: 12px; font-size: 9px; color: #aaa; display: flex; justify-content: space-between; }
-    @media print {
-      body { padding: 16px; }
-      @page { margin: 1in; }
+    const contentBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const doc = new PDFDocument({ size: 'LETTER', margins: { top: 60, bottom: 60, left: 72, right: 72 } });
+      doc.on('data', (c: Buffer) => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // Report title
+      doc.fontSize(16).font('Helvetica-Bold').text(report.reportTitle, { align: 'left' });
+      doc.moveDown(0.5);
+      doc.fontSize(10).font('Helvetica').fillColor('#555')
+        .text(`Period: ${periodStart} – ${periodEnd}  |  Jurisdiction: ${report.jurisdiction || 'US-FEDERAL'}  |  Status: ${(report.status || 'complete').toUpperCase()}`);
+      doc.moveDown(1);
+
+      // Compliance summary
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000').text('Compliance Summary');
+      doc.moveDown(0.3);
+      doc.fontSize(10).font('Helvetica')
+        .text(`Total Records: ${summaryStats.totalRecords ?? 0}`)
+        .text(`Compliance Rate: ${summaryStats.complianceRate ?? 100}%`)
+        .text(`Issues Found: ${summaryStats.issuesFound ?? 0}`)
+        .text(`Violations: ${report.hasViolations ? `${report.violationCount} (${report.criticalViolationCount ?? 0} critical)` : 'None — Compliant'}`);
+      doc.moveDown(1);
+
+      // Description / findings
+      if (report.description) {
+        doc.fontSize(11).font('Helvetica-Bold').text('Description');
+        doc.moveDown(0.3);
+        doc.fontSize(10).font('Helvetica').text(report.description);
+        doc.moveDown(1);
+      }
+      if (reportData.summary) {
+        doc.fontSize(11).font('Helvetica-Bold').text('Findings Summary');
+        doc.moveDown(0.3);
+        doc.fontSize(10).font('Helvetica').text(String(reportData.summary));
+        doc.moveDown(1);
+      }
+
+      // Regulations
+      if (report.regulations && (report.regulations as string[]).length > 0) {
+        doc.fontSize(11).font('Helvetica-Bold').text('Applicable Regulations');
+        doc.moveDown(0.3);
+        doc.fontSize(10).font('Helvetica').text((report.regulations as string[]).join(', '));
+      }
+
+      doc.end();
+    });
+
+    // Vault it
+    const { saveToVault, getVaultRecord } = await import('../services/documents/businessFormsVaultService');
+    const workspace = await db.select({ name: workspaces.name }).from(workspaces)
+      .where(eq(workspaces.id, workspaceId)).limit(1);
+    const workspaceName = workspace[0]?.name ?? 'Workspace';
+
+    const result = await saveToVault({
+      workspaceId,
+      workspaceName,
+      documentTitle: report.reportTitle,
+      category: 'operations',
+      period: `${periodStart} – ${periodEnd}`,
+      relatedEntityType: 'compliance_report',
+      relatedEntityId: report.id,
+      generatedBy: req.user?.id,
+      rawBuffer: contentBuffer,
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error ?? 'Failed to generate PDF' });
     }
-  </style>
-</head>
-<body>
-<header>
-  <div class="logo-area">
-    <h1>${PLATFORM.name}</h1>
-    <p>Workforce Compliance Platform &mdash; Security Division</p>
-  </div>
-  <div class="meta-area">
-    <div>Generated: ${generatedAt}</div>
-    <div>Jurisdiction: ${report.jurisdiction || 'US-FEDERAL'}</div>
-    <div>Report ID: ${report.id.slice(0, 8).toUpperCase()}</div>
-  </div>
-</header>
 
-<div class="section-title">Report Information</div>
-<div class="detail-grid">
-  <div class="detail-item"><span class="detail-label">Report Title</span><span class="detail-value">${report.reportTitle}</span></div>
-  <div class="detail-item"><span class="detail-label">Report Type</span><span class="detail-value">${report.reportType}</span></div>
-  <div class="detail-item"><span class="detail-label">Period Start</span><span class="detail-value">${periodStart}</span></div>
-  <div class="detail-item"><span class="detail-label">Period End</span><span class="detail-value">${periodEnd}</span></div>
-  <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">${(report.status || 'complete').toUpperCase()}</span></div>
-  <div class="detail-item"><span class="detail-label">Violations Found</span><span class="detail-value">
-    <span class="violation-badge ${report.hasViolations ? (report.criticalViolationCount && report.criticalViolationCount > 0 ? 'badge-crit' : 'badge-warn') : 'badge-ok'}">
-      ${report.hasViolations ? `${report.violationCount} Issue(s)` : 'Compliant'}
-    </span>
-  </span></div>
-</div>
-
-<div class="section-title">Compliance Summary</div>
-<div class="stat-grid">
-  <div class="stat-card"><div class="stat-num">${summaryStats.totalRecords ?? 0}</div><div class="stat-label">Total Records</div></div>
-  <div class="stat-card"><div class="stat-num">${summaryStats.complianceRate ?? 100}%</div><div class="stat-label">Compliance Rate</div></div>
-  <div class="stat-card"><div class="stat-num">${summaryStats.issuesFound ?? 0}</div><div class="stat-label">Issues Found</div></div>
-</div>
-
-${report.description ? `<div class="section-title">Description</div><div class="summary-box">${report.description}</div>` : ''}
-${reportData.summary ? `<div class="section-title">Findings Summary</div><div class="summary-box">${reportData.summary}</div>` : ''}
-
-${report.regulations && (report.regulations as string[]).length > 0 ? `
-<div class="section-title">Applicable Regulations</div>
-<ul class="regulations-list">
-  ${(report.regulations as string[]).map(r => `<li class="reg-tag">${r}</li>`).join('')}
-</ul>` : ''}
-
-<footer>
-  <span>${PLATFORM.name} Compliance &mdash; Confidential</span>
-  <span>Auto-generated &mdash; For internal use only</span>
-</footer>
-<script>window.onload = function() { window.print(); }</script>
-</body>
-</html>`;
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="compliance-report-${report.id.slice(0, 8)}.html"`);
-    res.send(html);
+    res.json({ success: true, vaultRecord: result.vault });
   } catch (err: unknown) {
     log.error("[compliance-reports/pdf]", sanitizeError(err));
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
+
+
 
 export default router;
