@@ -1,6 +1,6 @@
 # COAILEAGUE REFACTOR - MASTER HANDOFF
 # ONE FILE ONLY. Update in place. Never create new handoff files.
-# Last updated: 2026-04-27 - Copilot (narrow acceleration complete, turn passed to Codex)
+# Last updated: 2026-04-27 - Codex (Phase H verified + hardening applied; Claude next)
 
 ---
 
@@ -8,489 +8,269 @@
 
 ### Roles
 
-**CLAUDE — Implementation lead (executes on `development`)**
-- Audits + executes entire domains
-- Boot-tests before every push
-- One domain = one complete sweep = one coherent commit
-- Syncs `development → refactor/service-layer` after every turn
+**CLAUDE - Implementation lead (executes on `development`)**
+- Audits + executes entire domains.
+- Integrates reviewed Codex/Copilot changes from `refactor/service-layer` into `development`.
+- Boot-tests before every push to `development`.
+- One domain = one complete sweep = one coherent commit.
+- Syncs `development -> refactor/service-layer` after every turn.
 
-**COPILOT — Acceleration helper (works on `refactor/service-layer`)**
-- Narrow, repeated boilerplate only: Zod schemas, test scaffolds, helper replacements, repeated guard patterns
-- Accelerates what Claude/Codex define — no architecture decisions, no merges to development independently
-- Documents every change with line numbers before Claude integrates
+**COPILOT - Acceleration helper**
+- Works only on narrow repeated patterns after Claude/Codex define the canonical fix.
+- Good targets: Zod boilerplate, test scaffolds, helper replacements, repeated route guards.
+- No architecture decisions, no direct merge to `development`, no independent safety calls.
+- Copilot branches are helper branches; Claude or Codex integrates reviewed work.
 
-**CODEX — Verification + hardening lead (works on `refactor/service-layer`)**
-- Verifies Claude's fixes are correct and complete
-- Strengthens weak code, removes bandaids, refactors within same domain
-- Documents exact risks, line numbers, and either makes the fix on `refactor/service-layer` OR gives Claude exact instructions
-- Decides: next domain needed? Or AUDIT COMPLETE?
-- After Codex patches code, Claude integrates on `development` (or documents why a different implementation was used)
+**CODEX - Verification + hardening lead (works on `refactor/service-layer`)**
+- Verifies Claude's fixes are correct and complete.
+- Strengthens weak code, removes bandaids, and performs scoped refactors within the same domain.
+- Documents exact risks, line numbers, validation, and either makes the fix on `refactor/service-layer` or gives Claude exact instructions.
+- Decides: next domain needed, or AUDIT COMPLETE.
 
 ### Whole-Domain Definition
 
-Every domain sweep must cover ALL of these before marking done:
-```
-Routes           → all HTTP endpoints, middleware, guards
-Services         → business logic, calculations, transformations
-Jobs             → cron jobs, scheduled tasks, recurring automations
-Workers          → background workers, queue consumers, processors
-Queues           → message queues, job queues, retry logic
-Automations      → workflow automations, triggers, pipelines
-Webhooks         → inbound/outbound webhook handlers
-Storage          → file storage, vault, blob handling
-Events           → platform event bus, event handlers, listeners
-Migrations       → any DB changes implied by fixes
-Tests            → test stubs or tests for critical paths
-Validation       → Zod at every API boundary
-User-facing paths → confirm workflows produce intended outcomes end-to-end
+Every domain sweep must cover all of these before marking done:
+```text
+Routes             all HTTP endpoints, middleware, guards
+Services           business logic, calculations, transformations
+Jobs               cron jobs, scheduled tasks, recurring automations
+Workers            background workers, queue consumers, processors
+Queues             message queues, job queues, retry logic
+Automations        workflow automations, triggers, pipelines
+Webhooks           inbound/outbound webhook handlers
+Storage            file storage, vault, blob handling
+Events             platform event bus, event handlers, listeners
+Migrations         DB changes implied by fixes
+Tests              test stubs or tests for critical paths
+Validation         Zod at every API boundary
+User-facing paths  workflows produce intended outcomes end-to-end
 ```
 
 ### Speed Rule
-**One domain, one complete sweep, one coherent commit. Nothing left half-done.**
+
+One domain, one complete sweep, one coherent commit. Nothing left half-done.
 
 ### Ownership Rule
-No two agents edit the same files simultaneously.
+
+No two agents edit the same files simultaneously. Copilot should not open or merge
+PRs to `development`; Claude integrates reviewed Copilot/Codex work in one sweep.
 
 ---
 
 ## TURN TRACKER
 
 ```text
-Current turn: CODEX
-  → Verify Phase H (bulk-operations, platform feedback, dev-execute)
-  → Strengthen any weak Phase H code
-  → Integrate Copilot changes below (already on refactor/service-layer)
-  → Scan for any remaining domains not yet audited
-  → Signal AUDIT COMPLETE or document Phase I targets
+Current turn: CLAUDE
+  -> Integrate Codex-reviewed Copilot + Codex hardening from refactor/service-layer into development.
+  -> Run build/boot validation before pushing development.
+  -> Sync development back to refactor/service-layer and update this file.
+  -> Then execute Phase I (jobs/workers/queues/schedulers) if integration is clean.
 
-After Codex: CLAUDE
-  → Integrate Codex + Copilot changes into development
-  → Boot-test before push
+After Claude: CODEX
+  -> Verify Phase I from remote truth.
+  -> Strengthen/refactor Phase I weak code if safely scoped.
+  -> Decide next domain or AUDIT COMPLETE.
 ```
 
 ---
 
-## CURRENT COMMIT
+## CURRENT COMMIT STATE
 
 ```text
-origin/development           -> 8aca7e864  (Railway STABLE GREEN ✅)
-origin/refactor/service-layer -> copilot/refactor-service-layer branch (Copilot acceleration complete)
+origin/development            -> 13b5e513 (latest fetched before Codex merge)
+origin/refactor/service-layer  -> Codex will push this handoff + merged dev/Copilot hardening
+origin/copilot/refactor-service-layer -> reviewed and integrated into Codex branch
 ```
 
-Boot test (run before every push to development):
+Boot test before every push to `development`:
 ```bash
-export DATABASE_URL="postgresql://postgres:MmUbhSxdkRGFLhBGGXGaWQeBceaqNmlj@metro.proxy.rlwy.net:40051/railway"
-export SESSION_SECRET="coaileague-dev-test-session-secret-32chars"
-node build.mjs && node dist/index.js > /tmp/boot.txt 2>&1 &
-sleep 18 && curl -s http://localhost:5000/api/workspace/health   # → {"message":"Unauthorized"}
-grep -cE "ReferenceError|is not defined|CRITICAL.*Failed" /tmp/boot.txt  # → 0
+# Use deployment-provided DATABASE_URL and SESSION_SECRET. Do not commit live secrets here.
+node build.mjs
+node dist/index.js > /tmp/boot.txt 2>&1 &
+sleep 18
+curl -s http://localhost:5000/api/workspace/health   # must return {"message":"Unauthorized"}
+grep -cE "ReferenceError|is not defined|CRITICAL.*Failed" /tmp/boot.txt  # must return 0
 kill %1
 ```
 
 ---
 
-## AUDIT STATUS — ALL PHASES
+## AUDIT STATUS
 
 | Phase | Domain | Status | Dev Commit |
 |---|---|---|---|
-| 1-6 | Broad refactor (~97k lines removed) | ✅ | various |
-| A | Auth/session (11 null-deref fixes) | ✅ | 5c7aef271 |
-| B | Financial flows (Zod, transactions, FinancialCalc) | ✅ | 9273a3af3 |
-| C | Scheduling/shift (Grade A, schedulingMath.ts) | ✅ | 443e8bce2 |
-| D | Trinity action flows (validator, dual-AI, payroll gate) | ✅ | 0db5ac212 |
-| E | Documents/compliance (PDF vault, signing, auditor portal) | ✅ | 3fca1f009 |
-| F | Notifications/broadcasting (SMS consent, panic chain, NDS race) | ✅ | 3f868caef |
-| G | Integrations (Plaid, QB, Stripe) | ✅ | e9e0e20a2 |
-| H | Admin routes, upload security, platform guards | ✅ | 8aca7e864 |
-| **I** | **Jobs, workers, queues, schedulers** | **🔄 NOT STARTED** | — |
-
-**Queued Phase I target: background jobs and workers**
+| 1-6 | Broad refactor (~97k lines removed) | complete | various |
+| A | Auth/session | complete | 5c7aef271 |
+| B | Financial flows | complete | 9273a3af3 |
+| C | Scheduling/shift | complete | 443e8bce2 |
+| D | Trinity action flows | complete | 0db5ac212 |
+| E | Documents/compliance | complete | 3fca1f009 |
+| F | Notifications/broadcasting | complete | 3f868caef |
+| G | Integrations (Plaid, QB, Stripe) | complete | e9e0e20a2 |
+| H | Admin routes, upload security, platform guards | verified + Codex hardened | 8aca7e864 + Codex |
+| I | Jobs, workers, queues, schedulers | NOT STARTED | - |
 
 ---
 
-## COPILOT COMPLETED — 2026-04-27
+## CODEX PHASE H VERIFICATION RESULT
 
-### Task 1: `server/lib/isDeliverableEmployee.ts` ✅
-Created shared helper at `server/lib/isDeliverableEmployee.ts`.
-Applied in 3 files:
+Result: Phase H is verified after Codex hardening below. Not AUDIT COMPLETE yet:
+Phase I jobs/workers/queues/schedulers still needs a whole-domain sweep.
 
-**`server/services/trinity/preExecutionValidator.ts`**
-- Line 132-134: replaced inline `BLOCKED_STATUSES` + double-check with `isDeliverableEmployee(emp)`
-- Import added line 17
+Codex reconciled branch drift by merging latest `origin/development` into the
+Codex verification branch, then fast-forwarding/reviewing Copilot's helper branch.
 
-**`server/services/universalNotificationEngine.ts`**
-- Import added
-- Lines ~519-529 (RBAC broadcast): added `isActive: true, status: true` to columns; added `.filter(isDeliverableEmployee)` before role filter
-- Lines ~602-611 (workspace broadcast): added `isActive: true, status: true`; changed `for (const emp of workspaceEmployees)` → `.filter(isDeliverableEmployee)` first
-- Lines ~725-732 (platform-wide admin query): added `isActive: true, status: true`; added `.filter(isDeliverableEmployee)`
+### Phase H Verified
 
-**`server/services/ops/panicAlertService.ts`**
-- Import added
-- Supervisor chain query: added `eq(employees.isActive, true)` to WHERE, added `isActive` and `status` columns to `.select()`
-- Added post-query `const activeChain = chain.filter(isDeliverableEmployee)`
-- All downstream uses of `chain` changed to `activeChain`
+- `server/routes/bulk-operations.ts`
+  - Import endpoints now require `requireAuth` + `requireManager`.
+  - Multer memory upload has 5 MB cap.
+  - CSV/Excel MIME and extension guard exists.
 
-### Task 2: Zod safeParse sweep ✅
-Added inline Zod schemas + `.safeParse()` at every unprotected `req.body` destructuring in:
+- `server/routes/platformFeedbackRoutes.ts`
+  - Survey creation route has `requirePlatformStaff`.
+  - Codex hardened the rest of the platform-feedback surface; see below.
 
-**`server/routes/timeEntryRoutes.ts`** (z already imported)
-- `rejectBodySchema` — `{ reason? }` — route ~317
-- `bulkApproveSchema` — `{ timeEntryIds: string[] }` (replaces manual array check) — route ~434
-- `gpsSchema` — `{ latitude, longitude, accuracy? }` (replaces manual check) — route ~615
-- `manualOverrideSchema` — `{ shiftId?, siteId?, siteName?, reasonCode (enum), reasonDetail }` (replaces manual checks) — route ~686
-- `breakSchema` — `{ breakType? }` — route ~849
-- `calcHoursSchema` — `{ employeeId, startDate, endDate }` (replaces manual check) — route ~924
+- `server/routes/adminRoutes.ts`
+  - Mounted `/api/admin/dev-execute` route now has explicit production hard block.
+  - Token check remains constant-time and command whitelist-only.
 
-**`server/routes/time-entry-routes.ts`** (z import added)
-- `geofenceOverrideSchema` — `{ approved: boolean, reason: string }` (replaces manual type checks) — route ~1349
-- `timeEntryEditSchema` — `{ clockIn?, clockOut?, totalHours?, notes?, reason, hourlyRate?, clientId? }` (replaces manual check) — route ~1784
-- `postOrdersSchema` — `{ clientId }` (replaces manual check) — route ~2573
+### Codex Hardening Applied
 
-**`server/routes/clientRoutes.ts`** (z already imported)
-- `dockChatStartSchema` — `{ orgWorkspaceId, reportType (enum), clientId?, clientName?, clientEmail?, initialMessage? }` (replaces manual checks) — route ~987
-- `dockChatMsgSchema` — `{ sessionId, message, evidenceText? }` (replaces manual checks) — route ~1017
-- `dockChatCloseSchema` — `{ sessionId, title? }` (replaces manual checks) — route ~1040
-- `contractRenewalReqSchema` — `{ contractTitle, notes? }` — route ~1109
-- `coiReqSchema` — `{ reason, additionalInfo?, clientName?, certificateHolder? }` — route ~1155
+1. `server/routes/adminRoutes.ts`
+   - Added production hard block directly to the mounted `/api/admin/dev-execute`
+     route. The separate `adminDevExecuteRoute.ts` already had this guard, but
+     Codex did not find that route mounted. The mounted route needed the fix.
 
-**`server/routes/contractPipelineRoutes.ts`** (z already imported)
-- `declineSchema` — `{ reason? }` — route ~234
-- `portalDeclineSchema` — `{ reason? }` — route ~490
-- `requestChangesSchema` — `{ changesRequested }` (replaces manual check) — route ~516
+2. `server/routes/platformFeedbackRoutes.ts`
+   - Added `requireAuth` to the platform feedback router.
+   - Added `requirePlatformStaff` to admin list/update/analytics routes:
+     `GET /surveys`, `PUT /surveys/:id`, `GET /analytics`.
+   - Removed trust in body-supplied `workspaceId` for feedback responses; response
+     attribution now uses authenticated request workspace context.
 
-**`server/routes/contractRenewalRoutes.ts`** (z import added)
-- `renewalUpdateSchema` — `{ renewal_status?, renewal_proposed_at?, auto_renew?, annual_value?, renewal_notice_days? }` — route ~78
-- `renewalTaskSchema` — `{ task_type, due_date, trinity_action_taken? }` (replaces manual check) — route ~105
-- `contractAliasSchema` — `{ renewal_status?, auto_renew?, annual_value? }` — route ~225
+3. `server/lib/isDeliverableEmployee.ts`
+   - Accepted Copilot helper, then normalized `status` with trim/lowercase before
+     checking blocked lifecycle states.
 
-### Task 3: @ts-expect-error cleanup ✅ (no changes)
-All 40 instances are in `server/websocket.ts` (WebSocket core).
-Per handoff: "DO NOT touch Trinity persona, action registry, or WebSocket core."
-All left in place. Claude/Codex to address in a dedicated WebSocket type-safety sprint.
-
-### Task 4: Security test stubs ✅
-Created `tests/security/` directory with 4 stub files:
-- `tests/security/notificationAckOwnership.test.ts` — ack IDOR (GET+PATCH /notifications/:id must check userId ownership)
-- `tests/security/panicAlertStateTransitions.test.ts` — double-ack/resolve race + invalid transitions
-- `tests/security/broadcastTokenDoubleAccept.test.ts` — concurrent token consumption, expiry, wrong workspace
-- `tests/security/plaidEmployeeOwnership.test.ts` — self vs manager link, cross-workspace guard
-
-All stubs use `it.todo()` — Claude wires to test runner with real fixtures.
+4. `server/services/scheduling/index.ts`
+   - Latest development merge removes the previously truncated export tail that
+     blocked TypeScript parsing.
 
 ---
 
-## PHASE I — JOBS/WORKERS/QUEUES (Claude executes next after Copilot/Codex)
+## COPILOT WORK REVIEWED + INTEGRATED
 
-### Known background job files to audit
-```
-server/jobs/                          (if directory exists)
-server/services/shiftMonitoringService.ts  (auto-replacement, NCNS detection)
-server/services/automation/            (workflow automations)
-server/services/ai-brain/seasonalSubagent.ts
-server/services/ai-brain/approvalResumeOrchestrator.ts
-server/services/helpOsQueue.ts         (support queue manager)
-server/services/billing/platformAIBudgetService.ts
-server/services/queueManager.ts        (if exists)
-server/services/retryService.ts        (if exists)
-```
+Copilot branch: `origin/copilot/refactor-service-layer` at `6911e96b`.
 
-### What to check per job/worker
-- Does every scheduled job scope queries by workspaceId?
-- Are cron intervals configurable or hardcoded?
-- Do workers handle errors without crashing the whole process?
-- Are any intervals not cleared on process shutdown? (memory leak)
-- Do financial jobs use FinancialCalculator (not raw math)?
-- Do any jobs send notifications without consent/delivery checks?
-- Are any jobs duplicating work also done in routes (single source of truth)?
+Codex reviewed and integrated the helper branch into the audit branch. Do not PR
+merge Copilot directly to `development`; Claude should integrate the reviewed
+audit branch instead.
 
----
+### Accepted
 
-## QUEUED — POST-AUDIT ENHANCEMENT SPRINT
+- `server/lib/isDeliverableEmployee.ts`
+  - Shared helper for active/not-blocked employee lifecycle checks.
+  - Applied in:
+    - `server/services/trinity/preExecutionValidator.ts`
+    - `server/services/universalNotificationEngine.ts`
+    - `server/services/ops/panicAlertService.ts`
 
-After AUDIT COMPLETE signal from Codex:
-
-**Priority 1 — Core Infrastructure**
-- RBAC + IRC mode consolidation (RBAC = permissions, room type = behavior)
-- Action registry consolidation to <300 (currently ~561, warns at boot)
-- E-P0-2: compliance report real PDF service
-- E-P1-5: compliance document vault intake service
-
-**Priority 2 — ChatDock Enhancement Sprint**
-Full list in Claude's memory. Sequence:
-1. Durable message store + Redis pub/sub
-2. FCM + four-tier delivery (WS→FCM→RCS→SMS)
-3. Typed WebSocket event protocol (Trinity/HelpAI streaming)
-4. Read receipts + acknowledgment receipts
-5. Reactions, replies, pins, polls, media gallery, archive, search
-6. Presence tied to shift status
-7. HelpAI scheduled messages + shift close summary cards
-8. Moderation + report queue + legal hold + evidence export
-9. Live call/radio button (WebRTC wired)
-10. Async voice + Whisper transcription
-KEEP: emoji, emoticons, picker, Seen/Acknowledged/Reviewed
-SKIP: stickers, games, themes, word effects
-
-**Priority 3 — Holistic Enhancement**
-- All services as unified whole: ChatDock, email, forms, PDF, workflows, storage
-- Login/logout/session persistence verification
-- All action-triggering buttons/icons verified
-- Auditor portal, client portal, workspace dashboards → Grade A
-
-**Priority 4 — Trinity + UI**
-- Gemini+Claude+GPT triad: genuine reasoning (not just routing)
-- Seasonal/holiday theming restored on public pages
-- Mobile offline-first (op-sqlite, optimistic sends)
-- Update notification toast: Vivaldi-style minimal
-
----
-
-## STANDARD: NO BANDAIDS
-
-```text
-No raw money math (FinancialCalculator only).
-No raw scheduling hour math (schedulingMath.ts only).
-No workspace IDOR — every query scoped by workspaceId.
-No state transitions without expected-status conditional WHERE guard.
-No user-facing legacy branding (Trinity Schedule, not ScheduleOS).
-Every generated document = real branded PDF saved to tenant vault.
-Every Trinity action = workspace scope + fail-closed gates + audit trail.
-Trinity is one individual. No mode switching.
-HelpAI is the only bot field workers see.
-One domain, one complete sweep, one coherent commit.
-Jobs/workers/queues are part of every domain — nothing left out.
-```
-
----
-
-## THREE-AGENT RELAY PROTOCOL
-
-### Roles
-
-**CLAUDE — Implementation lead (executes on `development`)**
-- Audits + executes entire domains
-- Boot-tests before every push
-- One domain = one complete sweep = one coherent commit
-- Syncs `development → refactor/service-layer` after every turn
-
-**COPILOT — Acceleration helper (works on `refactor/service-layer`)**
-- Narrow, repeated boilerplate only: Zod schemas, test scaffolds, helper replacements, repeated guard patterns
-- Accelerates what Claude/Codex define — no architecture decisions, no merges to development independently
-- Documents every change with line numbers before Claude integrates
-
-**CODEX — Verification + hardening lead (works on `refactor/service-layer`)**
-- Verifies Claude's fixes are correct and complete
-- Strengthens weak code, removes bandaids, refactors within same domain
-- Documents exact risks, line numbers, and either makes the fix on `refactor/service-layer` OR gives Claude exact instructions
-- Decides: next domain needed? Or AUDIT COMPLETE?
-- After Codex patches code, Claude integrates on `development` (or documents why a different implementation was used)
-
-### Whole-Domain Definition
-
-Every domain sweep must cover ALL of these before marking done:
-```
-Routes           → all HTTP endpoints, middleware, guards
-Services         → business logic, calculations, transformations
-Jobs             → cron jobs, scheduled tasks, recurring automations
-Workers          → background workers, queue consumers, processors
-Queues           → message queues, job queues, retry logic
-Automations      → workflow automations, triggers, pipelines
-Webhooks         → inbound/outbound webhook handlers
-Storage          → file storage, vault, blob handling
-Events           → platform event bus, event handlers, listeners
-Migrations       → any DB changes implied by fixes
-Tests            → test stubs or tests for critical paths
-Validation       → Zod at every API boundary
-User-facing paths → confirm workflows produce intended outcomes end-to-end
-```
-
-### Speed Rule
-**One domain, one complete sweep, one coherent commit. Nothing left half-done.**
-
-### Ownership Rule
-No two agents edit the same files simultaneously.
-
----
-
-## TURN TRACKER
-
-```text
-Current turn: COPILOT
-  → Read this handoff
-  → Narrow boilerplate targets (see Copilot Scope below)
-  → Commit findings/changes to refactor/service-layer
-  → Update this file with what was done and what's next
-
-After Copilot: CODEX
-  → Verify Phase H (bulk-operations, platform feedback, dev-execute)
-  → Strengthen any weak Phase H code
-  → Scan for any remaining domains not yet audited
-  → Signal AUDIT COMPLETE or document Phase I targets
-```
-
----
-
-## CURRENT COMMIT
-
-```text
-origin/development           -> 8aca7e864  (Railway STABLE GREEN ✅)
-origin/refactor/service-layer -> 16f21237d  (Codex role clarification)
-```
-
-Boot test (run before every push to development):
-```bash
-export DATABASE_URL="postgresql://postgres:MmUbhSxdkRGFLhBGGXGaWQeBceaqNmlj@metro.proxy.rlwy.net:40051/railway"
-export SESSION_SECRET="coaileague-dev-test-session-secret-32chars"
-node build.mjs && node dist/index.js > /tmp/boot.txt 2>&1 &
-sleep 18 && curl -s http://localhost:5000/api/workspace/health   # → {"message":"Unauthorized"}
-grep -cE "ReferenceError|is not defined|CRITICAL.*Failed" /tmp/boot.txt  # → 0
-kill %1
-```
-
----
-
-## AUDIT STATUS — ALL PHASES
-
-| Phase | Domain | Status | Dev Commit |
-|---|---|---|---|
-| 1-6 | Broad refactor (~97k lines removed) | ✅ | various |
-| A | Auth/session (11 null-deref fixes) | ✅ | 5c7aef271 |
-| B | Financial flows (Zod, transactions, FinancialCalc) | ✅ | 9273a3af3 |
-| C | Scheduling/shift (Grade A, schedulingMath.ts) | ✅ | 443e8bce2 |
-| D | Trinity action flows (validator, dual-AI, payroll gate) | ✅ | 0db5ac212 |
-| E | Documents/compliance (PDF vault, signing, auditor portal) | ✅ | 3fca1f009 |
-| F | Notifications/broadcasting (SMS consent, panic chain, NDS race) | ✅ | 3f868caef |
-| G | Integrations (Plaid, QB, Stripe) | ✅ | e9e0e20a2 |
-| H | Admin routes, upload security, platform guards | ✅ | 8aca7e864 |
-| **I** | **Jobs, workers, queues, schedulers** | **🔄 NOT STARTED** | — |
-
-**Queued Phase I target: background jobs and workers**
-
----
-
-## COPILOT SCOPE (narrow — acceleration only)
-
-Suggested targets — all narrow, repeated patterns:
-
-**1. Shared isDeliverableEmployee helper**
-Create `server/lib/isDeliverableEmployee.ts`:
-```ts
-export function isDeliverableEmployee(emp: { isActive: boolean; status?: string }): boolean {
-  const BLOCKED = ['terminated','inactive','deactivated','suspended'];
-  return emp.isActive === true && !BLOCKED.includes(emp.status || '');
-}
-```
-Then replace the 3 duplicate `isActive + status` checks in:
-  - `server/services/trinity/preExecutionValidator.ts`
-  - `server/services/universalNotificationEngine.ts`
-  - `server/services/ops/panicAlertService.ts`
-
-**2. Zod schema sweep — remaining manual destructuring**
-Search: `const { ... } = req.body` without a preceding `.safeParse()`
-Priority files:
+- Zod safeParse sweep in:
   - `server/routes/timeEntryRoutes.ts`
-  - `server/routes/incidentRoutes.ts`
+  - `server/routes/time-entry-routes.ts`
   - `server/routes/clientRoutes.ts`
-  - `server/routes/contractRoutes.ts`
-Add minimal Zod object schemas and wire `.safeParse()`. Document changes.
+  - `server/routes/contractPipelineRoutes.ts`
+  - `server/routes/contractRenewalRoutes.ts`
 
-**3. @ts-expect-error cleanup**
-Search: `// @ts-expect-error — TS migration: fix in refactoring sprint`
-For each: check if the underlying type issue is trivially fixable.
-If yes: fix and remove the comment.
-If no: leave and note in handoff.
+- Security test stubs in `tests/security/`:
+  - notification ACK ownership
+  - panic alert state transitions
+  - broadcast token double-accept
+  - Plaid employee ownership
 
-**4. Test stubs for critical security fixes**
-Add stub test files (no test runner required yet) at `server/tests/`:
-  - `security/notificationAckOwnership.test.ts` — ack IDOR
-  - `security/panicAlertStateTransitions.test.ts` — double-ack/resolve
-  - `security/broadcastTokenDoubleAccept.test.ts` — concurrent accept
-  - `security/plaidEmployeeOwnership.test.ts` — self vs manager link
-Document what each test should assert — Claude will wire to test runner.
+### Notes for Claude
 
-**DO NOT:**
-- Change auth patterns or architecture
-- Merge to development independently
-- Touch Trinity persona, action registry, or WebSocket core
+- Copilot test stubs use `it.todo()` and are scaffolds only. Wire real fixtures
+  when test infrastructure is ready.
+- Keep an eye on Zod numeric form fields. Codex did not broaden every schema to
+  `z.coerce.number()` because that should match the actual frontend payloads.
 
 ---
 
-## PHASE I — JOBS/WORKERS/QUEUES (Claude executes next after Copilot/Codex)
+## PHASE I - JOBS / WORKERS / QUEUES / SCHEDULERS
+
+Claude executes this next after integrating Codex-reviewed changes into
+`development`.
 
 ### Known background job files to audit
-```
-server/jobs/                          (if directory exists)
-server/services/shiftMonitoringService.ts  (auto-replacement, NCNS detection)
-server/services/automation/            (workflow automations)
+
+```text
+server/jobs/                                   if present
+server/services/shiftMonitoringService.ts     auto-replacement, NCNS detection
+server/services/automation/                   workflow automations
+server/services/automation/loneWorkerSafetyService.ts
+server/services/fieldOperations/presenceMonitorService.ts
 server/services/ai-brain/seasonalSubagent.ts
 server/services/ai-brain/approvalResumeOrchestrator.ts
-server/services/helpOsQueue.ts         (support queue manager)
+server/services/helpOsQueue.ts
 server/services/billing/platformAIBudgetService.ts
-server/services/queueManager.ts        (if exists)
-server/services/retryService.ts        (if exists)
+server/services/queueManager.ts               if present
+server/services/retryService.ts               if present
 ```
 
 ### What to check per job/worker
-- Does every scheduled job scope queries by workspaceId?
-- Are cron intervals configurable or hardcoded?
-- Do workers handle errors without crashing the whole process?
-- Are any intervals not cleared on process shutdown? (memory leak)
-- Do financial jobs use FinancialCalculator (not raw math)?
-- Do any jobs send notifications without consent/delivery checks?
-- Are any jobs duplicating work also done in routes (single source of truth)?
+
+- Every scheduled job scopes tenant data by `workspaceId`.
+- Cron/interval timing is configurable or deliberately documented.
+- Workers handle errors without crashing the process.
+- Intervals/timers clear on shutdown and do not duplicate on hot reload/import.
+- Financial jobs use `FinancialCalculator`, never raw money math.
+- Scheduling jobs use `schedulingMath.ts`, never raw duration math.
+- Notification jobs respect consent, workspace isolation, and delivery idempotency.
+- Queue consumers have retry limits, dead-letter behavior, and duplicate protection.
+- State transitions use expected-status guards.
+- Multi-table job writes use `db.transaction()`.
 
 ---
 
-## QUEUED — POST-AUDIT ENHANCEMENT SPRINT
+## QUEUED - POST-AUDIT ENHANCEMENT SPRINT
 
-After AUDIT COMPLETE signal from Codex:
+After Codex signals AUDIT COMPLETE:
 
-**Priority 1 — Core Infrastructure**
-- RBAC + IRC mode consolidation (RBAC = permissions, room type = behavior)
-- Action registry consolidation to <300 (currently ~561, warns at boot)
-- E-P0-2: compliance report real PDF service
-- E-P1-5: compliance document vault intake service
+1. RBAC + IRC mode consolidation: RBAC owns permissions, room type owns behavior.
+2. Action registry to fewer than 300 actions.
+3. Compliance report PDF service.
+4. Compliance document vault intake service.
+5. ChatDock full enhancement sprint:
+   durable store, Redis pub/sub, FCM/RCS/SMS fallback, typed events, receipts,
+   acknowledgments, replies, emoji reactions, pins, polls, media gallery, archive,
+   search, presence, HelpAI scheduled messages, shift close cards, moderation,
+   report queue, legal hold, evidence export, live call, voice notes.
+6. Holistic audit of ChatDock, email, online forms, PDF generation, tax forms,
+   paychecks, ACH deposits, portals, dashboards, login/logout/session persistence,
+   and every action button/icon workflow.
+7. Trinity biological brain wiring enhancement.
+8. UI polish: update toast, seasonal effects, mobile offline.
 
-**Priority 2 — ChatDock Enhancement Sprint**
-Full list in Claude's memory. Sequence:
-1. Durable message store + Redis pub/sub
-2. FCM + four-tier delivery (WS→FCM→RCS→SMS)
-3. Typed WebSocket event protocol (Trinity/HelpAI streaming)
-4. Read receipts + acknowledgment receipts
-5. Reactions, replies, pins, polls, media gallery, archive, search
-6. Presence tied to shift status
-7. HelpAI scheduled messages + shift close summary cards
-8. Moderation + report queue + legal hold + evidence export
-9. Live call/radio button (WebRTC wired)
-10. Async voice + Whisper transcription
-KEEP: emoji, emoticons, picker, Seen/Acknowledged/Reviewed
-SKIP: stickers, games, themes, word effects
-
-**Priority 3 — Holistic Enhancement**
-- All services as unified whole: ChatDock, email, forms, PDF, workflows, storage
-- Login/logout/session persistence verification
-- All action-triggering buttons/icons verified
-- Auditor portal, client portal, workspace dashboards → Grade A
-
-**Priority 4 — Trinity + UI**
-- Gemini+Claude+GPT triad: genuine reasoning (not just routing)
-- Seasonal/holiday theming restored on public pages
-- Mobile offline-first (op-sqlite, optimistic sends)
-- Update notification toast: Vivaldi-style minimal
+Skip entertainment chat features: stickers, games, themes, word effects.
+Keep operational expression: emoji reactions, emoticons, picker, seen,
+acknowledged, reviewed states.
 
 ---
 
 ## STANDARD: NO BANDAIDS
 
 ```text
-No raw money math (FinancialCalculator only).
-No raw scheduling hour math (schedulingMath.ts only).
-No workspace IDOR — every query scoped by workspaceId.
-No state transitions without expected-status conditional WHERE guard.
-No user-facing legacy branding (Trinity Schedule, not ScheduleOS).
+No raw money math: FinancialCalculator only.
+No raw scheduling duration math: schedulingMath.ts only.
+No workspace IDOR: every tenant query scoped by workspaceId.
+No state transition without expected-status WHERE guard.
+No user-facing legacy branding.
 Every generated document = real branded PDF saved to tenant vault.
-Every Trinity action = workspace scope + fail-closed gates + audit trail.
+Trinity action mutations = workspace scope + fail-closed gates + audit trail.
 Trinity is one individual. No mode switching.
 HelpAI is the only bot field workers see.
 One domain, one complete sweep, one coherent commit.
-Jobs/workers/queues are part of every domain — nothing left out.
+Jobs/workers/queues are part of every domain.
 ```

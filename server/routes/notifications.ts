@@ -10,6 +10,7 @@ import { aiNotificationService } from '../services/aiNotificationService';
 import {
   chatMessages,
   editChatMessageSchema,
+  employees,
   internalEmailRecipients,
   internalMailboxes,
   updateNotificationPreferencesSchema
@@ -1675,6 +1676,16 @@ router.post('/api/notifications/send', requireManager, async (req: Authenticated
     const parsed = sendSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: 'Validation failed', details: parsed.error.flatten() });
     const { type, recipientUserId, channel, subject, body, idempotencyKey } = parsed.data;
+
+    // Verify recipient belongs to the active workspace (prevent cross-workspace notification injection)
+    const [recipientEmployee] = await db
+      .select({ id: employees.id })
+      .from(employees)
+      .where(and(eq(employees.userId, recipientUserId), eq(employees.workspaceId, workspaceId)))
+      .limit(1);
+    if (!recipientEmployee) {
+      return res.status(403).json({ message: 'Recipient is not a member of this workspace' });
+    }
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({

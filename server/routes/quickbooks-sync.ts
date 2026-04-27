@@ -76,7 +76,7 @@ const qboInvoiceSchema = z.object({
 
 // Run initial sync on OAuth connect
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.post("/api/quickbooks/sync/initial", requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/api/quickbooks/sync/initial", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) {
@@ -124,7 +124,7 @@ router.post("/api/quickbooks/sync/initial", requireAuth, requireProfessional, as
 
 // Create invoice with idempotency - Zod validated
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.post("/api/quickbooks/invoice/create", requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/api/quickbooks/invoice/create", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) {
@@ -158,7 +158,7 @@ router.post("/api/quickbooks/invoice/create", requireAuth, requireProfessional, 
 
 // Run CDC poll for changes
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.post("/api/quickbooks/sync/cdc", requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/api/quickbooks/sync/cdc", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) {
@@ -231,7 +231,7 @@ router.get("/api/quickbooks/review-queue", requireAuth, requireProfessional, asy
 });
 
 // Resolve manual review item
-router.post("/api/quickbooks/review-queue/:itemId/resolve", requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/api/quickbooks/review-queue/:itemId/resolve", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { itemId } = req.params;
     const { resolution, selectedCoaileagueEntityId } = req.body;
@@ -349,7 +349,7 @@ router.post("/api/webhooks/quickbooks", async (req: Request, res: Response) => {
 // POST /api/admin/quickbooks/sync-staffing-clients
 // ─────────────────────────────────────────────────────────────────────────────
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.post('/api/admin/quickbooks/sync-staffing-clients', requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/api/admin/quickbooks/sync-staffing-clients', requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace required' });
@@ -529,7 +529,7 @@ router.get('/api/quickbooks/sync/retry-queue', requireAuth, requireProfessional,
 });
 
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.post('/api/quickbooks/sync/retry-queue/:logId', requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/api/quickbooks/sync/retry-queue/:logId', requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });

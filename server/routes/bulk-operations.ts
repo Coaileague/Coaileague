@@ -16,6 +16,9 @@ import multer from 'multer';
 export const bulkOperationsRouter: Router = express.Router();
 
 // Secure multer config: 5 MB cap, CSV/Excel only, memory storage
+// Both MIME type and file extension are checked because some browsers send
+// 'application/octet-stream' for CSV files instead of 'text/csv', so relying
+// on MIME alone would reject valid uploads from those browsers.
 const BULK_IMPORT_LIMITS = { fileSize: 5 * 1024 * 1024 }; // 5 MB
 const BULK_ALLOWED_MIME = [
   'text/csv', 'text/plain', 'application/csv',

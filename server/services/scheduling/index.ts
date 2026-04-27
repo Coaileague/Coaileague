@@ -16,7 +16,3 @@ export {
   // @ts-expect-error — TS migration: fix in refactoring sprint
   escalationChainService 
 } from './trinityAutonomousScheduler';
-export { 
-  registerSchedulingWithOrchestration,
-  checkSchedulingGovernance,
-  getSchedulingOrchestrationStatus
