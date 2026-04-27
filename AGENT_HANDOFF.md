@@ -58,63 +58,9 @@ After Codex: CLAUDE
 
 ```text
 origin/development                           -> 8aca7e864  (Railway STABLE GREEN ✅)
-origin/copilot/refactor-three-agent-protocol -> 5e1b54ac   (Copilot acceleration pass)
+origin/copilot/refactor-three-agent-protocol -> merged development (conflict-free ✅)
 origin/refactor/service-layer                -> 9ba04e70   (latest Codex handoff)
 ```
-
----
-
-## MERGE CONFLICT — CLAUDE MUST RESOLVE BEFORE INTEGRATING
-
-When merging `copilot/refactor-three-agent-protocol` into `development`, there is
-**exactly one git conflict**, in `server/routes/bulk-operations.ts`.
-
-### Conflict (trivial — keep Copilot's version)
-
-```
-// Secure multer config: 5 MB cap, CSV/Excel only, memory storage
-<<<<<<< HEAD (Copilot branch)
-// Both MIME type and file extension are checked because some browsers send
-// 'application/octet-stream' for CSV files instead of 'text/csv', so relying
-// on MIME alone would reject valid uploads from those browsers.
-=======
->>>>>>> origin/development
-const BULK_IMPORT_LIMITS = { fileSize: 5 * 1024 * 1024 }; // 5 MB
-```
-
-**Resolution:** keep the three comment lines (Copilot's side). The comment explains
-the dual MIME+extension check — it is correct and useful. `origin/development` just
-doesn't have it. Remove the conflict markers, keep the comment.
-
-### Why this conflict exists
-
-- Merge base (`e9e0e20a2`) has the old unbounded multer config.
-- `origin/development` (Phase H commit `8aca7e86`) added multer limits and
-  `requireManager` without the comment.
-- Copilot's branch independently added the same multer limits AND the 3 comment
-  lines. Git cannot auto-resolve the region where both sides edited adjacently.
-
-### All other divergences — NOT git conflicts
-
-These differences resolve automatically in Copilot's favour (only Copilot changed
-them from the merge base; development left them unchanged):
-
-| File | Copilot change | Development |
-|---|---|---|
-| `quickbooks-sync.ts` | 6 mutating POSTs → `requireManager` | Unchanged from base (`requireProfessional`) |
-| `notifications.ts` | Employee workspace membership check added | Unchanged from base (no check) |
-| `scheduling/index.ts` | Removed truncated/broken export block | Unchanged from base (still has broken export) |
-| `AGENT_HANDOFF.md` | 3-agent protocol version | Unchanged from base (Phase B version) |
-| `tests/api/quickbooks-guards.test.ts` | New file | Not present |
-| `tests/api/notifications-isolation.test.ts` | New file | Not present |
-| `tests/regression/phase-g-integrations.test.ts` | New file | Not present |
-| `tests/regression/phase-h-admin-guards.test.ts` | New file | Not present |
-
-Claude's integration steps:
-1. `git merge origin/copilot/refactor-three-agent-protocol` on `development`
-2. Resolve `bulk-operations.ts` by keeping the 3 comment lines
-3. `git add server/routes/bulk-operations.ts && git commit`
-4. Boot-test, then sync back to `refactor/service-layer`
 
 ---
 
