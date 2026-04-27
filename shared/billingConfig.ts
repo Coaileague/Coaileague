@@ -1603,6 +1603,336 @@ export type AiModelKey = keyof typeof AI_MODEL_COSTS;
 // Single source of truth for token budgets, seat limits, and pricing
 // Imported by aiMeteringService, aiCallWrapper, and billing routes
 // ============================================================================
+// ============================================================================
+// PREMIUM PER-OCCURRENCE EVENTS — à la carte charges for high-value AI outputs
+// These fire when Trinity produces a deliverable worth real money to the tenant.
+// Platform never absorbs these costs — every occurrence creates a billing record.
+// Research basis: Human RFP writers charge $3,500–$7,500. Trinity at $150–$350
+// is a 10x+ bargain. Contract writers $75–$150, compliance audits $200–$500.
+// ============================================================================
+export const PREMIUM_EVENTS = {
+
+  // ── RFP / Proposal Generation ─────────────────────────────────────────────
+  // ── RFP DYNAMIC PRICING MODEL (Bryan + Claude deliberated 2026-04-25) ────────
+  // Trinity analyzes the uploaded RFP document or URL and scores it across 8 factors
+  // (contract type, site count, jurisdictions, armed, union, deadline, attachments, volume)
+  // to determine which pricing tier applies BEFORE the tenant confirms the charge.
+  // Score 0-2 = Standard $500 | 3-5 = Professional $750 | 6-8 = Complex $1,000 | 9+ = Enterprise $1,500
+  // Jack to verify scoring matrix in AGENT_HANDOFF.md and confirm or suggest adjustments.
+  rfp_standard: {
+    id: 'premium_rfp_standard',
+    name: 'RFP Response — Standard',
+    description: 'Trinity-analyzed: commercial, 1 site, single state, unarmed, 7+ days. Generates complete proposal. Human writers charge $1,500–$3,500.',
+    priceCents: 50000,            // $500 — score 0-2
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_STANDARD',
+    category: 'proposal',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_rfp',
+    requiresApproval: true,
+    vaultSaved: true,
+    complexityScore: { min: 0, max: 2 },
+  },
+  rfp_professional: {
+    id: 'premium_rfp_professional',
+    name: 'RFP Response — Professional',
+    description: 'Trinity-analyzed: municipal/county or multi-site (2-5), moderate complexity. Human writers charge $1,500–$3,500.',
+    priceCents: 75000,            // $750 — score 3-5
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_PROFESSIONAL',
+    category: 'proposal',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_rfp',
+    requiresApproval: true,
+    vaultSaved: true,
+    complexityScore: { min: 3, max: 5 },
+  },
+  rfp_complex: {
+    id: 'premium_rfp_complex',
+    name: 'RFP Response — Complex',
+    description: 'Trinity-analyzed: state government or multi-site (6-10), multi-jurisdiction, armed or union requirements. Human writers charge $3,500–$5,000.',
+    priceCents: 100000,           // $1,000 — score 6-8
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_COMPLEX',
+    category: 'proposal',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_rfp',
+    requiresApproval: true,
+    vaultSaved: true,
+    complexityScore: { min: 6, max: 8 },
+  },
+  rfp_enterprise: {
+    id: 'premium_rfp_enterprise',
+    name: 'RFP Response — Enterprise / Federal',
+    description: 'Trinity-analyzed: federal contract, 10+ sites, multi-state, union/prevailing wage, rush deadline. Human writers charge $5,000–$7,500+.',
+    priceCents: 150000,           // $1,500 — score 9+
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_RFP_ENTERPRISE',
+    category: 'proposal',
+    availableTiers: ['business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_rfp',
+    requiresApproval: true,
+    vaultSaved: true,
+    complexityScore: { min: 9, max: null },
+  },
+
+  // ── Contract Generation ───────────────────────────────────────────────────
+  contract_ai_draft: {
+    id: 'premium_contract_draft',
+    name: 'AI Contract Draft',
+    description: 'Trinity generates a fully drafted security services contract with relevant clauses, liability language, and scope of work. Legal review still recommended.',
+    priceCents: 7500,             // $75 — standard contract
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_CONTRACT_DRAFT',
+    category: 'contract',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_contract',
+    requiresApproval: true,
+    vaultSaved: true,
+  },
+  contract_ai_complex: {
+    id: 'premium_contract_complex',
+    name: 'AI Contract Draft — Complex / Multi-Site',
+    description: 'Trinity generates a complex multi-site or multi-jurisdiction security contract with specialized clauses.',
+    priceCents: 15000,            // $150 — complex/multi-site contract
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_CONTRACT_COMPLEX',
+    category: 'contract',
+    availableTiers: ['business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.generate_contract_complex',
+    requiresApproval: true,
+    vaultSaved: true,
+  },
+
+  // ── Compliance Reports ────────────────────────────────────────────────────
+  compliance_audit_report: {
+    id: 'premium_compliance_audit',
+    name: 'Annual Compliance Audit Report',
+    description: 'Trinity compiles a full compliance audit report: license status, incident history, training completion, regulatory gaps, and recommended actions.',
+    priceCents: 4900,             // $49 — per report
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_COMPLIANCE_AUDIT',
+    category: 'compliance',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.compliance_audit_report',
+    requiresApproval: false,      // Auto-charge — tenant expects this at year/quarter end
+    vaultSaved: true,
+  },
+
+  // ── Tax Season Package ────────────────────────────────────────────────────
+  tax_season_package: {
+    id: 'premium_tax_season',
+    name: 'Tax Season Package (W-2 / 1099 Batch)',
+    description: 'One-time annual charge covering all W-2s and 1099s generated for the tax year. Stamped PDFs saved to vault. Not per-form — per workspace per year.',
+    priceCents: 4900,             // $49 — flat annual per workspace
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_TAX_SEASON',
+    category: 'tax',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.tax_season_package',
+    cadence: 'annual',
+    requiresApproval: false,
+    vaultSaved: true,
+  },
+
+  // ── Intelligence Reports ──────────────────────────────────────────────────
+  bolo_intelligence_report: {
+    id: 'premium_bolo_report',
+    name: 'BOLO Intelligence Report',
+    description: 'Trinity analyzes a BOLO with pattern detection, risk scoring, recommended officer actions, and incident history cross-reference.',
+    priceCents: 2500,             // $25 — per BOLO package
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_BOLO_REPORT',
+    category: 'operations',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.bolo_intelligence_report',
+    requiresApproval: false,
+    vaultSaved: true,
+  },
+  payroll_funding_analysis: {
+    id: 'premium_payroll_funding',
+    name: 'Payroll Funding Analysis',
+    description: 'Trinity analyzes cash flow vs. upcoming payroll obligations and produces a funding readiness report with recommendations.',
+    priceCents: 2900,             // $29 — per report
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_PAYROLL_FUNDING',
+    category: 'payroll',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.payroll_funding_analysis',
+    requiresApproval: false,
+    vaultSaved: true,
+  },
+
+  // ── HR Documents ─────────────────────────────────────────────────────────
+  proof_of_employment_certified: {
+    id: 'premium_poe_certified',
+    name: 'Proof of Employment — Certified Version',
+    description: 'Standard POE letter is free. This certified version includes digital letterhead, authorized signatory block, and notary-ready formatting.',
+    priceCents: 900,              // $9 — per letter
+    stripePriceEnvVar: 'STRIPE_PRICE_PREMIUM_POE_CERTIFIED',
+    category: 'hr',
+    availableTiers: ['starter', 'professional', 'business', 'enterprise', 'strategic'],
+    trinityActionId: 'document.proof_of_employment_certified',
+    requiresApproval: false,
+    vaultSaved: true,
+  },
+} as const;
+
+export type PremiumEventKey = keyof typeof PREMIUM_EVENTS;
+
+export function getPremiumEvent(key: PremiumEventKey) {
+  return PREMIUM_EVENTS[key];
+}
+
+export function getPremiumEventsByCategory(category: string) {
+  return Object.values(PREMIUM_EVENTS).filter(e => e.category === category);
+}
+
+export function getPremiumEventsForTier(tierId: string) {
+  return Object.values(PREMIUM_EVENTS).filter(
+    e => (e.availableTiers as readonly string[]).includes(tierId)
+  );
+}
+
+// ============================================================================
+// MONTHLY FEATURE ADD-ONS — flat monthly toggles for premium capabilities
+// These are additive to the base seat subscription. Tenant turns them on/off.
+// ============================================================================
+export const MONTHLY_FEATURE_ADDONS = {
+
+  trinity_ai_manager_pro: {
+    id: 'addon_trinity_ai_manager_pro',
+    name: 'Trinity AI Manager Pro',
+    description: 'Upgrades Trinity from reactive assistant to proactive autonomous operator. Trinity runs schedules, fills calloffs, monitors compliance, and manages the business without being asked.',
+    monthlyPriceCents: 9900,      // $99/workspace/month
+    stripePriceEnvVar: 'STRIPE_PRICE_ADDON_TRINITY_AI_MANAGER_PRO',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityFeatureFlag: 'trinity_ai_manager_pro',
+  },
+  nacha_ach_direct_deposit: {
+    id: 'addon_nacha_direct_deposit',
+    name: 'NACHA / ACH Direct Deposit',
+    description: 'Full NACHA file generation and ACH direct deposit processing for payroll.',
+    monthlyPriceCents: 4900,      // $49/workspace/month
+    stripePriceEnvVar: 'STRIPE_PRICE_ADDON_NACHA_ACH',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityFeatureFlag: 'nacha_direct_deposit',
+  },
+  // client_portal_access: REMOVED as paid add-on (2026-04-25)
+  // Bryan + Claude deliberated: charging $39/portal × 1,000 clients = $39K/month add-on
+  // is a deal-killer for enterprise tenants (e.g. Securitas with 1,000 clients).
+  // Client sessions burn minimal tokens (read-only views, invoice payments via Stripe redirect).
+  // Portal is now INCLUDED in Professional+ tiers, gated by client seat count.
+  // Revenue captured via: per-transaction processing fee + tenant seat subscription.
+  // Jack: agree or flag before implementing client-portal seat count enforcement.
+  e_verify_integration: {
+    id: 'addon_everify',
+    name: 'E-Verify Integration',
+    description: 'Automated I-9 and E-Verify processing on new hires. Trinity handles the workflow.',
+    monthlyPriceCents: 2900,      // $29/workspace/month
+    stripePriceEnvVar: 'STRIPE_PRICE_ADDON_EVERIFY',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityFeatureFlag: 'e_verify',
+  },
+  compliance_guard_package: {
+    id: 'addon_compliance_guard',
+    name: 'Compliance Guard Package',
+    description: 'Automatic DPS license tracking, expiry alerts, renewal reminders, and quarterly compliance audit reports. Keeps you regulator-ready 365 days a year.',
+    monthlyPriceCents: 4900,      // $49/workspace/month
+    stripePriceEnvVar: 'STRIPE_PRICE_ADDON_COMPLIANCE_GUARD',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityFeatureFlag: 'compliance_guard',
+  },
+  multi_workspace_umbrella: {
+    id: 'addon_umbrella',
+    name: 'Multi-Workspace Umbrella',
+    description: 'Parent company manages sub-workspaces (regional divisions, subsidiaries). Consolidated billing, roll-up reporting, shared token pool.',
+    monthlyPriceCents: 9900,      // $99/parent/month
+    stripePriceEnvVar: 'STRIPE_PRICE_ADDON_UMBRELLA',
+    availableTiers: ['business', 'enterprise', 'strategic'],
+    trinityFeatureFlag: 'multi_workspace_umbrella',
+  },
+  api_access: {
+    id: 'addon_api',
+    name: 'API Access',
+    description: 'Developer API for custom integrations. Full read/write access with webhook support.',
+    monthlyPriceCents: 2900,      // $29/workspace/month
+    stripePriceEnvVar: 'STRIPE_PRICE_ADDON_API',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityFeatureFlag: 'api_access',
+  },
+  advanced_analytics: {
+    id: 'addon_advanced_analytics',
+    name: 'Advanced Analytics',
+    description: 'Predictive labor cost forecasting, shift coverage gap analysis, revenue intelligence, and client profitability breakdowns.',
+    monthlyPriceCents: 3900,      // $39/workspace/month
+    stripePriceEnvVar: 'STRIPE_PRICE_ADDON_ANALYTICS',
+    availableTiers: ['professional', 'business', 'enterprise', 'strategic'],
+    trinityFeatureFlag: 'advanced_analytics',
+  },
+} as const;
+
+export type MonthlyAddonKey = keyof typeof MONTHLY_FEATURE_ADDONS;
+
+export function getMonthlyAddon(key: MonthlyAddonKey) {
+  return MONTHLY_FEATURE_ADDONS[key];
+}
+
+export function getMonthlyAddonsForTier(tierId: string) {
+  return Object.values(MONTHLY_FEATURE_ADDONS).filter(
+    a => (a.availableTiers as readonly string[]).includes(tierId)
+  );
+}
+
+// ============================================================================
+// TOKEN WARNING THRESHOLDS — canonical thresholds for Trinity proactive alerts
+// These match TOKEN_ALERT_THRESHOLDS but structured for the warning system.
+// ============================================================================
+export const TOKEN_WARNING_THRESHOLDS = {
+  // At 70%: dashboard banner + informational email
+  info: 70,
+  // At 80%: Trinity proactively messages operator in chat — "At current usage,
+  // you'll hit your limit in ~X days. Authorize a bundle now?"
+  warning: 80,
+  // At 95%: Trinity throttles non-critical AI calls (suggestions, summaries,
+  // low-priority scans). Core ops NEVER throttle.
+  throttleNonCritical: 95,
+  // At 100%: If no auto-refill authorized — non-critical AI disabled.
+  // Core ops (payroll, calloffs, scheduling, invoicing) still execute.
+  softBlock: 100,
+} as const;
+
+// Actions that are NEVER throttled regardless of token state
+export const NEVER_THROTTLE_ACTIONS = [
+  'payroll.run',
+  'payroll.approve',
+  'calloff.process',
+  'shift.schedule',
+  'shift.fill',
+  'invoice.generate',
+  'invoice.send',
+  'compliance.alert',
+  'emergency.escalate',
+] as const;
+
+
+// ============================================================================
+// CLIENT PORTAL SEAT LIMITS — Included in tier, not a paid add-on
+// Bryan + Claude decision (2026-04-25): portal included in Professional+,
+// gated by how many client logins the workspace can provision.
+// Client token usage flows from their sessions into the TENANT's allotment.
+// No separate client billing — tenant's subscription covers it.
+// Jack to confirm before enforcement layer is built.
+// ============================================================================
+export const CLIENT_PORTAL_SEAT_LIMITS: Record<string, number | null> = {
+  free_trial:   0,      // No client portal access
+  starter:      0,      // No client portal access
+  professional: 50,     // Up to 50 client logins — natural upgrade trigger
+  business:     200,    // Up to 200 client logins
+  enterprise:   null,   // Unlimited
+  strategic:    null,   // Unlimited
+};
+
+export function getClientPortalSeatLimit(tierId: string): number | null {
+  return CLIENT_PORTAL_SEAT_LIMITS[tierId] ?? 0;
+}
+
+export function hasClientPortalAccess(tierId: string): boolean {
+  const limit = getClientPortalSeatLimit(tierId);
+  return limit === null || limit > 0;
+}
+
+
 export const PLATFORM_TIERS = {
   free_trial: {
     name: 'Free Trial',

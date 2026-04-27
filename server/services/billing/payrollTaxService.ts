@@ -6,6 +6,15 @@ import {
   TAX_REGISTRY_VERSION,
   TAX_REGISTRY_EFFECTIVE_YEAR,
 } from '../tax/taxRulesRegistry';
+import {
+  addFinancialValues,
+  divideFinancialValues,
+  formatCurrency,
+  multiplyFinancialValues,
+  subtractFinancialValues,
+  sumFinancialValues,
+  toFinancialString,
+} from '../financialCalculator';
 
 export type FilingStatus = 'single' | 'married_jointly' | 'married_separately' | 'head_of_household';
 export type PayPeriod = 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
@@ -44,6 +53,30 @@ export interface PayrollTaxBreakdown {
   };
 }
 
+function asMoneyNumber(value: string | number): number {
+  return Number(formatCurrency(toFinancialString(value)));
+}
+
+function multiplyMoney(a: string | number, b: string | number): number {
+  return asMoneyNumber(multiplyFinancialValues(toFinancialString(a), toFinancialString(b)));
+}
+
+function divideMoney(a: string | number, b: string | number): number {
+  return asMoneyNumber(divideFinancialValues(toFinancialString(a), toFinancialString(b)));
+}
+
+function addMoney(a: string | number, b: string | number): number {
+  return asMoneyNumber(addFinancialValues(toFinancialString(a), toFinancialString(b)));
+}
+
+function subtractMoney(a: string | number, b: string | number): number {
+  return asMoneyNumber(subtractFinancialValues(toFinancialString(a), toFinancialString(b)));
+}
+
+function sumMoney(values: Array<string | number>): number {
+  return asMoneyNumber(sumFinancialValues(values.map(toFinancialString)));
+}
+
 function computeStateWithholding(
   grossWage: number,
   stateCode: string,
@@ -60,16 +93,16 @@ function computeStateWithholding(
 
   if (stateRule.type === 'flat' && stateRule.rate != null) {
     return {
-      withholding: Math.round(grossWage * stateRule.rate * 100) / 100,
+      withholding: multiplyMoney(grossWage, stateRule.rate),
       hasIncomeTax: true,
     };
   }
 
   if (stateRule.type === 'progressive') {
-    const annualGross = grossWage * periodsPerYear;
+    const annualGross = Number(multiplyFinancialValues(toFinancialString(grossWage), toFinancialString(periodsPerYear)));
     const annualTax = computeProgressiveStateTax(annualGross, stateCode);
     return {
-      withholding: Math.round((annualTax / periodsPerYear) * 100) / 100,
+      withholding: divideMoney(annualTax, periodsPerYear),
       hasIncomeTax: true,
     };
   }
@@ -91,15 +124,15 @@ export function calculatePayrollTaxes(input: PayrollTaxInput): PayrollTaxBreakdo
 
   const rules = getTaxRules();
   const periodsPerYear = REGISTRY_PAY_PERIODS[payPeriod];
-  const annualGross = grossWage * periodsPerYear;
+  const annualGross = Number(multiplyFinancialValues(toFinancialString(grossWage), toFinancialString(periodsPerYear)));
   const stateCode = state.toUpperCase().trim().slice(0, 2);
 
   const { ssRate, medicareRate, additionalMedicareRate, ssWageBase,
     additionalMedicareThresholdSingle } = rules.fica;
 
   const ssWageBasis = Math.min(grossWage, Math.max(0, ssWageBase - ytdSocialSecurity));
-  const socialSecurity = Math.round(ssWageBasis * ssRate * 100) / 100;
-  const medicare = Math.round(grossWage * medicareRate * 100) / 100;
+  const socialSecurity = multiplyMoney(ssWageBasis, ssRate);
+  const medicare = multiplyMoney(grossWage, medicareRate);
 
   const additionalMedicareThreshold = additionalMedicareThresholdSingle;
 
@@ -107,20 +140,26 @@ export function calculatePayrollTaxes(input: PayrollTaxInput): PayrollTaxBreakdo
   const cumulativeMedicareWages = ytdMedicareWages + grossWage;
   if (cumulativeMedicareWages > additionalMedicareThreshold) {
     const wagesOverThreshold = Math.min(grossWage, cumulativeMedicareWages - additionalMedicareThreshold);
-    additionalMedicare = Math.round(wagesOverThreshold * additionalMedicareRate * 100) / 100;
+    additionalMedicare = multiplyMoney(wagesOverThreshold, additionalMedicareRate);
   }
-  const totalMedicare = medicare + additionalMedicare;
+  const totalMedicare = sumMoney([medicare, additionalMedicare]);
 
   const standardDeduction = rules.standardDeductions[filingStatus];
-  const withholdingAllowance = rules.withholdingAllowanceValue * allowances;
-  const annualTaxableIncome = Math.max(0, annualGross - standardDeduction - withholdingAllowance);
+  const withholdingAllowance = multiplyMoney(rules.withholdingAllowanceValue, allowances);
+  const annualTaxableIncome = Math.max(0, subtractMoney(subtractMoney(annualGross, standardDeduction), withholdingAllowance));
   const annualFederal = registryComputeFederal(annualTaxableIncome, filingStatus);
-  const federalWithholding = Math.round((annualFederal / periodsPerYear + additionalWithholding) * 100) / 100;
+  const federalWithholding = addMoney(divideMoney(annualFederal, periodsPerYear), additionalWithholding);
 
   const { withholding: stateWithholding, hasIncomeTax: stateHasIncomeTax } = computeStateWithholding(grossWage, stateCode, payPeriod);
 
-  const totalDeductions = federalWithholding + socialSecurity + totalMedicare + stateWithholding;
-  const netWage = Math.round((grossWage - totalDeductions) * 100) / 100;
+  const totalDeductions = sumMoney([federalWithholding, socialSecurity, totalMedicare, stateWithholding]);
+  const netWage = subtractMoney(grossWage, totalDeductions);
+  const effectiveTaxRate = grossWage > 0
+    ? asMoneyNumber(multiplyFinancialValues(
+        divideFinancialValues(toFinancialString(totalDeductions), toFinancialString(grossWage)),
+        toFinancialString(100),
+      ))
+    : 0;
 
   return {
     grossWage,
@@ -128,9 +167,9 @@ export function calculatePayrollTaxes(input: PayrollTaxInput): PayrollTaxBreakdo
     socialSecurity,
     medicare: totalMedicare,
     stateWithholding,
-    totalDeductions: Math.round(totalDeductions * 100) / 100,
+    totalDeductions,
     netWage,
-    effectiveTaxRate: grossWage > 0 ? Math.round(totalDeductions / grossWage * 10000) / 100 : 0,
+    effectiveTaxRate,
     taxRegistryVersion: TAX_REGISTRY_VERSION,
     taxYear: TAX_REGISTRY_EFFECTIVE_YEAR,
     details: {

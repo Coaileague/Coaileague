@@ -35,7 +35,8 @@ export type ViolationType =
   | 'unethical'       // Manipulation, deception, harm
   | 'harassment'      // Threats, bullying
   | 'self_harm'       // Self-harm, suicide content
-  | 'spam';           // Repeated meaningless requests
+  | 'spam'            // Repeated meaningless requests
+  | 'legal_advice';   // Legal conclusions, liability predictions, duty-of-care assumptions
 
 export interface ContentAnalysis {
   isSafe: boolean;
@@ -82,6 +83,19 @@ const VIOLATION_PATTERNS: Record<ViolationType, RegExp[]> = {
     /\b(fire\s*(them|him|her)\s*illegally)\b/i,
     /\b(discriminate|retaliate\s*against)\b/i,
     /\b(avoid\s*paying\s*(taxes|wages|overtime))\b/i,
+  ],
+  // Legal advice detection — deterministic guard, pre-LLM
+  // Trinity provides compliance reference and operational guidance only.
+  // For legal conclusions, contract interpretation, or liability predictions
+  // the user must consult qualified legal counsel.
+  legal_advice: [
+    /\b(am\s*I|are\s*we|is\s*(this|it))\s+(legally?\s+)?(liable|responsible|at\s+fault|guilty|in\s+violation)\b/i,
+    /\b(can\s+I|can\s+we)\s+(legally?\s+)?(fire|terminate|sue|garnish|withhold)\b/i,
+    /\b(is\s+(this|it)\s+legal|legally?\s+required|legally?\s+binding)\b/i,
+    /\b(interpret|construe)\s+this\s+(contract|agreement|clause)\b/i,
+    /\b(use\s+of\s+force|duty\s+of\s+care|negligence\s+(claim|lawsuit))\b/i,
+    /\b(liability\s+(exposure|risk|protection))\b/i,
+    /\b(breach\s+of\s+contract|tortious|indemnif)\b/i,
   ],
   harassment: [
     /\b(kill|murder|hurt|attack)\s*(him|her|them|someone)\b/i,
@@ -338,6 +352,8 @@ class TrinityContentGuardrails {
         return 'medium';
       case 'spam':
         return 'low';
+      case 'legal_advice':
+        return 'low'; // Not abuse lockout — redirect to counsel, not a policy violation
       default:
         return 'medium';
     }

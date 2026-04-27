@@ -3,34 +3,16 @@ import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { 
-  Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
-  Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck,
-  MessageCircle, Trash2, CheckCircle2
-} from "lucide-react";
+import { Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck, MessageCircle, Trash2, CheckCircle2 } from "lucide-react";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger,  } from "@/components/ui/popover";
 import { UniversalModal, UniversalModalContent } from '@/components/ui/universal-modal'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { MobileResponsiveSheet } from "@/components/canvas-hub";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,  } from "@/components/ui/alert-dialog";
+;
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { AnimatedNotificationBell } from "./animated-notification-bell";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -43,9 +25,7 @@ import { useChatDock } from "@/contexts/ChatDockContext";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { humanizeTitle, humanizeText, generateEndUserSummary, generateStructuredBreakdown, type StructuredBreakdown } from "@shared/utils/humanFriendlyCopy";
 import { Suspense, lazy } from "react";
-import { UNSCommandCenter } from "./uns-command-center";
 import { SwipeToDelete } from "./swipe-to-delete";
-import { BroadcastNotificationAdapter } from "./broadcasts/BroadcastNotificationAdapter";
 import { PushNotificationPrompt } from "./push-notification-prompt";
 
 // Generic template phrases to detect - these should be replaced with actual content
@@ -2157,7 +2137,6 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       className="flex flex-col h-full min-h-0"
     >
       {/* UNS Header with Trinity Branding - Polished Gradient */}
-      {/* Skip on mobile since MobileResponsiveSheet already provides header */}
       {!skipHeader && (
       <div className={`${compact ? 'px-3 py-2.5' : 'px-4 py-3'} border-b bg-gradient-to-r from-primary to-primary/85 flex-shrink-0`}>
         <div className="flex items-center justify-between gap-2">
@@ -2439,19 +2418,6 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         ) : sortedNotifications.length > 0 ? (
           <div className="divide-y min-h-0">
             {sortedNotifications.map((notification) => {
-              // Check if this is a broadcast notification
-              const isBroadcast = notification.metadata?.broadcastId;
-              
-              if (isBroadcast) {
-                return (
-                  <BroadcastNotificationAdapter
-                    key={notification.id}
-                    notification={notification}
-                    onDismiss={() => handleDismiss(notification.id)}
-                  />
-                );
-              }
-              
               return enableSwipeDelete ? (
                 <SwipeToDelete
                   key={notification.id}
@@ -2583,38 +2549,10 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       <>
         {/* Notification Bell Trigger */}
         <div onClick={() => { chatDock?.closeBubble(); setOpen(true); }}>
-          <AnimatedNotificationBell
-            notificationCount={totalUnread}
-            onClick={() => { chatDock?.closeBubble(); setOpen(true); }}
-          />
+          <Bell className="h-5 w-5 text-foreground" />
         </div>
         
-        {/* Notifications Sheet - Uses Canvas Hub MobileResponsiveSheet for proper layer management */}
         {/* No title so we control our own header; showCloseButton=false hides the built-in sheet buttons */}
-        <MobileResponsiveSheet
-          open={open}
-          onOpenChange={setOpen}
-          side="bottom"
-          className="p-0"
-          maxHeight="100dvh"
-          showDragIndicator={true}
-          showCloseButton={false}
-        >
-          {/* Full GetSling-style Mobile Notifications */}
-          <div
-            data-testid="notification-sheet-content"
-            data-trinity-avoid="true"
-            className="flex flex-col"
-            style={{ height: 'calc(100dvh - 36px)' }}
-          >
-            <div className="flex-1 min-h-0 overflow-hidden">
-              {MobileNotificationsContent}
-            </div>
-            <div className="flex-shrink-0">
-              <Footer compact={true} onAskTrinity={openTrinityModal} />
-            </div>
-          </div>
-        </MobileResponsiveSheet>
         
         {/* Notification Detail Modal - Shows structured breakdown */}
         <NotificationDetailModal
@@ -2646,10 +2584,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
             aria-expanded={open}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!open); } }}
           >
-            <AnimatedNotificationBell
-              notificationCount={totalUnread}
-              onClick={() => setOpen(!open)}
-            />
+            <Bell className="h-5 w-5" />
           </div>
         </PopoverTrigger>
         <PopoverContent 

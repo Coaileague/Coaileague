@@ -627,8 +627,11 @@ router.post("/api/webhooks/resend", async (req, res) => {
                   .set({ status: 'bounced', updatedAt: new Date() })
                   .where(eq(emailEvents.resendId, bounceResendId));
               }
-              if (bouncedAddresses.length > 0) {
-                const normalizedBounced = bouncedAddresses.map((e) => e.toLowerCase().trim()).filter(Boolean);
+              // F-P1-5 FIX: Scope bounce status update to specific Resend message ID
+              // rather than email address across all workspaces — prevents cross-tenant
+              // delivery rows from being marked failed due to address reuse.
+              if (bounceResendId) {
+                // Primary: update by Resend message ID stored on the delivery row
                 await tx.update(notificationDeliveries)
                   .set({
                     status: 'failed',
@@ -637,21 +640,27 @@ router.post("/api/webhooks/resend", async (req, res) => {
                   })
                   .where(
                     and(
+                      sql`${notificationDeliveries.payload}->>'resendId' = ${bounceResendId}`,
+                      eq(notificationDeliveries.channel, 'email'),
+                      inArray(notificationDeliveries.status, ['sent', 'pending'])
+                    )
+                  );
+              } else if (bouncedAddresses.length > 0) {
+                // Fallback: address-based match — only when no resendId is available
+                // This may affect multiple tenants with the same address (known limitation,
+                // acceptable for hard bounce suppression where the address itself is invalid)
+                const normalizedBounced = bouncedAddresses.map((e) => e.toLowerCase().trim()).filter(Boolean);
+                await tx.update(notificationDeliveries)
+                  .set({
+                    status: 'failed',
+                    lastError: `Hard bounce reported by Resend (address-based match — no message ID)`,
+                    updatedAt: new Date(),
+                  })
+                  .where(
+                    and(
                       or(
-                        inArray(notificationDeliveries.recipientUserId, normalizedBounced),
                         sql`LOWER(COALESCE(${notificationDeliveries.payload}->>'to', '')) = ANY(${normalizedBounced}::text[])`,
-                        sql`LOWER(COALESCE(${notificationDeliveries.payload}->>'recipientEmail', '')) = ANY(${normalizedBounced}::text[])`,
-                        sql`EXISTS (
-                          SELECT 1
-                          FROM jsonb_array_elements_text(
-                            CASE
-                              WHEN jsonb_typeof(${notificationDeliveries.payload}->'to') = 'array'
-                                THEN ${notificationDeliveries.payload}->'to'
-                              ELSE '[]'::jsonb
-                            END
-                          ) AS addr(value)
-                          WHERE LOWER(addr.value) = ANY(${normalizedBounced}::text[])
-                        )`
+                        sql`LOWER(COALESCE(${notificationDeliveries.payload}->>'recipientEmail', '')) = ANY(${normalizedBounced}::text[])`
                       ),
                       eq(notificationDeliveries.channel, 'email'),
                       inArray(notificationDeliveries.status, ['sent', 'pending'])

@@ -95,28 +95,31 @@ export async function creditInvoice(
   const newTotalStr = subtractFinancialValues(invoiceTotalStr, toFinancialString(String(amount)));
   const newTotal = parseFloat(newTotalStr);
 
-  // Update invoice
-  const updated = await db
-    .update(invoices)
-    .set({
-      total: newTotalStr,
-      notes: `${invoice.notes || ""}\n[CREDIT] ${description} (${formatCurrency(toFinancialString(String(-amount)))}) by ${adjustedBy} at ${new Date().toISOString()}`,
-    })
-    .where(eq(invoices.id, invoiceId))
-    .returning();
+  // Atomically update invoice + insert adjustment record
+  const [updated] = await db.transaction(async (tx) => {
+    const [inv] = await tx
+      .update(invoices)
+      .set({
+        total: newTotalStr,
+        notes: `${invoice.notes || ""}\n[CREDIT] ${description} (${formatCurrency(toFinancialString(String(-amount)))}) by ${adjustedBy} at ${new Date().toISOString()}`,
+      })
+      .where(eq(invoices.id, invoiceId))
+      .returning();
 
-  // Save adjustment record
-  await db.insert(invoiceAdjustments).values({
-    invoiceId,
-    workspaceId: invoice.workspaceId,
-    adjustmentType: 'credit',
-    description,
-    amount: String(-amount), // Negative for credit
-    reason: description,
-    createdBy: adjustedBy,
-    approvedBy: adjustedBy,
-    approvedAt: new Date(),
-    status: 'applied',
+    await tx.insert(invoiceAdjustments).values({
+      invoiceId,
+      workspaceId: invoice.workspaceId,
+      adjustmentType: 'credit',
+      description,
+      amount: String(-amount), // Negative for credit
+      reason: description,
+      createdBy: adjustedBy,
+      approvedBy: adjustedBy,
+      approvedAt: new Date(),
+      status: 'applied',
+    });
+
+    return [inv];
   });
 
   // GAP-7 FIX: Write ledger entry so the AR reduction is reflected in the org ledger.
@@ -203,27 +206,31 @@ export async function discountInvoice(
   const newTotalStr = subtractFinancialValues(invoiceTotalStr, discountAmountStr);
   const newTotal = parseFloat(newTotalStr);
 
-  const updated = await db
-    .update(invoices)
-    .set({
-      total: newTotalStr,
-      notes: `${invoice.notes || ""}\n[DISCOUNT] ${discountPercent}% discount (${reason}) approved by ${approvedBy}`,
-    })
-    .where(eq(invoices.id, invoiceId))
-    .returning();
+  // Atomically update invoice + insert adjustment record
+  const [updated] = await db.transaction(async (tx) => {
+    const [inv] = await tx
+      .update(invoices)
+      .set({
+        total: newTotalStr,
+        notes: `${invoice.notes || ""}\n[DISCOUNT] ${discountPercent}% discount (${reason}) approved by ${approvedBy}`,
+      })
+      .where(eq(invoices.id, invoiceId))
+      .returning();
 
-  // Save adjustment record
-  await db.insert(invoiceAdjustments).values({
-    invoiceId,
-    workspaceId: invoice.workspaceId,
-    adjustmentType: 'discount',
-    description: `${discountPercent}% discount: ${reason}`,
-    amount: String(-discountAmount), // Negative for discount
-    reason,
-    createdBy: approvedBy,
-    approvedBy,
-    approvedAt: new Date(),
-    status: 'applied',
+    await tx.insert(invoiceAdjustments).values({
+      invoiceId,
+      workspaceId: invoice.workspaceId,
+      adjustmentType: 'discount',
+      description: `${discountPercent}% discount: ${reason}`,
+      amount: String(-discountAmount), // Negative for discount
+      reason,
+      createdBy: approvedBy,
+      approvedBy,
+      approvedAt: new Date(),
+      status: 'applied',
+    });
+
+    return [inv];
   });
 
   // GAP-7 FIX: Write ledger entry so the AR reduction is reflected in the org ledger.
@@ -339,29 +346,36 @@ export async function refundInvoice(
     }
   }
 
-  // Update invoice status
-  const updated = await db
-    .update(invoices)
-    .set({
-      status: newStatus as any,
-      total: newTotalStr,
-      notes: `${invoice.notes || ""}\n[REFUND] ${formatCurrency(refundAmountStr)} refunded (${reason}) by ${processedBy}${stripeRefundId ? ` — Stripe refund ${stripeRefundId}` : ' — manual/offline refund (no Stripe PI recorded)'}`,
-    })
-    .where(eq(invoices.id, invoiceId))
-    .returning();
+  // Atomically update invoice + insert adjustment record
+  // Stripe refund (external call) is intentionally outside this transaction —
+  // external side effects cannot be rolled back. If the Stripe call succeeds
+  // but the DB write fails, the stripeRefundId is logged and the operator can
+  // reconcile. This is the industry-standard pattern for Stripe + DB ordering.
+  const [updated] = await db.transaction(async (tx) => {
+    const [inv] = await tx
+      .update(invoices)
+      .set({
+        status: newStatus as any,
+        total: newTotalStr,
+        notes: `${invoice.notes || ""}\n[REFUND] ${formatCurrency(refundAmountStr)} refunded (${reason}) by ${processedBy}${stripeRefundId ? ` — Stripe refund ${stripeRefundId}` : ' — manual/offline refund (no Stripe PI recorded)'}`,
+      })
+      .where(eq(invoices.id, invoiceId))
+      .returning();
 
-  // Save adjustment record
-  await db.insert(invoiceAdjustments).values({
-    invoiceId,
-    workspaceId: invoice.workspaceId,
-    adjustmentType: 'refund',
-    description: `Refund: ${reason}`,
-    amount: String(-refundAmount), // Negative for refund
-    reason,
-    createdBy: processedBy,
-    approvedBy: processedBy,
-    approvedAt: new Date(),
-    status: 'applied',
+    await tx.insert(invoiceAdjustments).values({
+      invoiceId,
+      workspaceId: invoice.workspaceId,
+      adjustmentType: 'refund',
+      description: `Refund: ${reason}`,
+      amount: String(-refundAmount), // Negative for refund
+      reason,
+      createdBy: processedBy,
+      approvedBy: processedBy,
+      approvedAt: new Date(),
+      status: 'applied',
+    });
+
+    return [inv];
   });
 
   // GAP-11 FIX: Only write the ledger entry here for offline/manual refunds (no Stripe PI).
@@ -467,43 +481,45 @@ export async function correctInvoiceLineItem(
   const differenceStr = subtractFinancialValues(newAmountStr, oldAmountStr);
   const difference = parseFloat(differenceStr);
 
-  // Update line item
-  await db
-    .update(invoiceLineItems)
-    .set({
-      quantity: newItemQuantityStr,
-      unitPrice: newItemUnitPriceStr,
-      amount: newAmountStr,
-    })
-    .where(eq(invoiceLineItems.id, item.id));
-
-  // Update invoice total
+  // Atomically update line item + invoice total + insert adjustment record
   const invoiceTotalStr = toFinancialString(String(invoice.total || 0));
   const invoiceTotal = parseFloat(invoiceTotalStr);
   const newTotalStr = addFinancialValues(invoiceTotalStr, differenceStr);
   const newTotal = parseFloat(newTotalStr);
 
-  const updated = await db
-    .update(invoices)
-    .set({
-      total: newTotalStr,
-      notes: `${invoice.notes || ""}\n[CORRECTION] Line item adjusted: ${reason || "Manual correction"} by ${approvedBy}`,
-    })
-    .where(eq(invoices.id, invoiceId))
-    .returning();
+  const [updated] = await db.transaction(async (tx) => {
+    await tx
+      .update(invoiceLineItems)
+      .set({
+        quantity: newItemQuantityStr,
+        unitPrice: newItemUnitPriceStr,
+        amount: newAmountStr,
+      })
+      .where(eq(invoiceLineItems.id, item.id));
 
-  // Save adjustment record
-  await db.insert(invoiceAdjustments).values({
-    invoiceId,
-    workspaceId: invoice.workspaceId,
-    adjustmentType: 'correction',
-    description: reason || 'Line item correction',
-    amount: String(difference), // Can be positive or negative
-    reason: reason || 'Manual correction',
-    createdBy: approvedBy || 'system',
-    approvedBy: approvedBy || 'system',
-    approvedAt: new Date(),
-    status: 'applied',
+    const [inv] = await tx
+      .update(invoices)
+      .set({
+        total: newTotalStr,
+        notes: `${invoice.notes || ""}\n[CORRECTION] Line item adjusted: ${reason || "Manual correction"} by ${approvedBy}`,
+      })
+      .where(eq(invoices.id, invoiceId))
+      .returning();
+
+    await tx.insert(invoiceAdjustments).values({
+      invoiceId,
+      workspaceId: invoice.workspaceId,
+      adjustmentType: 'correction',
+      description: reason || 'Line item correction',
+      amount: String(difference), // Can be positive or negative
+      reason: reason || 'Manual correction',
+      createdBy: approvedBy || 'system',
+      approvedBy: approvedBy || 'system',
+      approvedAt: new Date(),
+      status: 'applied',
+    });
+
+    return [inv];
   });
 
   return {

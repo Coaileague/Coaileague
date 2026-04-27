@@ -12,6 +12,14 @@ import { paystubService } from '../services/paystubService';
 import { db } from '../db';
 import { employees, payStubs } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
+
+const BatchGenerateSchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  employeeIds: z.array(z.string().uuid()).optional(),
+  sendNotifications: z.boolean().optional().default(false),
+});
 
 const router = Router();
 
@@ -229,7 +237,11 @@ router.post('/api/paystubs/batch', requireAuth, attachWorkspaceId, requireManage
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.workspaceId;
-    const { startDate, endDate, employeeIds, sendNotifications } = req.body;
+    const batchParsed = BatchGenerateSchema.safeParse(req.body);
+    if (!batchParsed.success) {
+      return res.status(400).json({ error: batchParsed.error.errors[0].message });
+    }
+    const { startDate, endDate, employeeIds, sendNotifications } = batchParsed.data;
 
     if (!workspaceId) {
       return res.status(400).json({ message: 'Workspace context required' });

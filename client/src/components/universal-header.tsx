@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { UniversalModal, UniversalModalTrigger } from '@/components/ui/universal-modal';
-import { MobileResponsiveSheet, NavigationSheetSection } from "@/components/canvas-hub";
+;
 import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings, Search, Home } from "lucide-react";
 import { useState, useEffect, useMemo, useId } from "react";
 import { HeaderLogo } from "@/components/unified-brand-logo";
@@ -103,13 +103,7 @@ function TrinityDesktopButton({
   );
 }
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,  } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HEADER_CONFIG, HEADER_SPACING, HEADER_HEIGHTS } from "@/config/headerConfig";
 import { getCurrentHoliday } from "@/config/mascotConfig";
@@ -122,7 +116,6 @@ const PUBLIC_ROUTES = new Set([
   "/pricing", "/trinity-features", "/contact", "/support", "/terms", "/privacy",
   "/error-403", "/error-404", "/error-500"
 ]);
-
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace" | "auto";
@@ -384,134 +377,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
-                <MobileResponsiveSheet
-                  open={mobileMenuOpen}
-                  onOpenChange={setMobileMenuOpen}
-                  title="Menu"
-                  titleIcon={<TrinityLogo size={24} />}
-                  subtitle="Navigate the platform"
-                  side="right"
-                  className="px-3 py-3 pb-6"
-                >
-                  <nav className="flex flex-col gap-3 min-w-0">
-                    <NavigationSheetSection title="Navigation">
-                      {HEADER_CONFIG.public.navItems.map((item) => (
-                        <Button
-                          key={item.href}
-                          variant="ghost"
-                          className="justify-start text-xs sm:text-sm h-auto py-2.5 px-3 w-full rounded-md min-w-0"
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            // @ts-expect-error — TS migration: fix in refactoring sprint
-                            item.isSpecial ? handleFeaturesClick() : setLocation(item.href);
-                          }}
-                          data-testid={`mobile-${item.testid}`}
-                        >
-                          <span className="truncate">{item.label}</span>
-                        </Button>
-                      ))}
-                    </NavigationSheetSection>
-                    
-                    <NavigationSheetSection title="Quick Actions">
-                      {showNotificationFeatures && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            className="justify-start text-xs sm:text-sm w-full h-auto py-2.5 px-3 rounded-md min-w-0"
-                            onClick={() => {
-                              setMobileMenuOpen(false);
-                              setLocation("/inbox");
-                            }}
-                            data-testid="mobile-menu-inbox"
-                          >
-                            <Mail className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="truncate">Messages</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="justify-start text-xs sm:text-sm w-full h-auto py-2.5 px-3 rounded-md min-w-0"
-                            onClick={() => {
-                              setMobileMenuOpen(false);
-                              (window as any).openCommandPalette?.();
-                            }}
-                            data-testid="mobile-menu-search"
-                          >
-                            <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="truncate">Search</span>
-                          </Button>
-                        </>
-                      )}
-                      
-                      <Button
-                        variant="ghost"
-                        className="justify-start text-xs sm:text-sm w-full h-auto py-2.5 px-3 rounded-md min-w-0"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLocation("/support");
-                        }}
-                        data-testid="mobile-button-support"
-                      >
-                        <Bug className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                        <span className="truncate">Get Help</span>
-                      </Button>
-                    </NavigationSheetSection>
-                    
-                    <NavigationSheetSection title="Account">
-                      {!user ? (
-                        <>
-                          <Button
-                            variant="outline"
-                            className="justify-center w-full text-xs sm:text-sm h-auto py-2.5 min-w-0"
-                            onClick={() => {
-                              setMobileMenuOpen(false);
-                              setLocation("/login");
-                            }}
-                            data-testid="mobile-button-login"
-                          >
-                            Login
-                          </Button>
-                          <Button
-                            className="justify-center w-full text-xs sm:text-sm h-auto py-2.5 bg-gradient-to-r from-primary to-secondary border-primary/50 text-primary-foreground min-w-0"
-                            onClick={() => {
-                              setMobileMenuOpen(false);
-                              setLocation("/register");
-                            }}
-                            data-testid="mobile-button-register"
-                          >
-                            Start Free Trial
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            variant="outline"
-                            className="justify-center w-full text-xs sm:text-sm h-auto py-2.5 min-w-0"
-                            onClick={() => {
-                              setMobileMenuOpen(false);
-                              setLocation("/dashboard");
-                            }}
-                            data-testid="mobile-button-dashboard"
-                          >
-                            <LayoutDashboard className="mr-2 h-4 w-4 shrink-0" />
-                            <span className="truncate">Dashboard</span>
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            className="justify-center w-full text-xs sm:text-sm h-auto py-2.5 min-w-0"
-                            onClick={() => {
-                              setMobileMenuOpen(false);
-                              handleLogout();
-                            }}
-                            data-testid="mobile-button-logout"
-                          >
-                            <LogOut className="mr-2 h-4 w-4 shrink-0" />
-                            <span className="truncate">Sign Out</span>
-                          </Button>
-                        </>
-                      )}
-                    </NavigationSheetSection>
-                  </nav>
-                </MobileResponsiveSheet>
               </div>
             </>
           ) : (
@@ -652,17 +517,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     <Menu className="h-5 w-5" />
                   </Button>
                 )}
-                <MobileResponsiveSheet
-                  open={mobileMenuOpen}
-                  onOpenChange={setMobileMenuOpen}
-                  title="Navigation"
-                  titleIcon={
-                    <Home className="h-4 w-4 text-primary shrink-0" />
-                  }
-                  subtitle="Core workforce tools"
-                  side="right"
-                  className="px-3 py-3 pb-6"
-                >
                   <div className="flex flex-col gap-2">
                     {mobileWorkspaceFamilies.length > 0 ? (
                       <div className="space-y-2 min-w-0">
@@ -746,7 +600,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       </Button>
                     </div>
                   </div>
-                </MobileResponsiveSheet>
               </div>
             </>
           )}

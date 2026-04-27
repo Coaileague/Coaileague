@@ -11,7 +11,6 @@ import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { registerAutonomousSchedulingRoutes } from "../autonomousSchedulingRoutes";
 import approvalRoutes from "../approvalRoutes";
-import schedulerRouter from "../schedulerRoutes";
 import orchestratedScheduleRouter from "../orchestratedScheduleRoutes";
 import { coverageRouter } from "../coverageRoutes";
 import { calendarRouter } from "../calendarRoutes";
@@ -31,7 +30,6 @@ import { storage } from "../../storage";
 import { shiftHandoffService } from "../../services/fieldOperations/shiftHandoffService";
 import { createLogger } from '../../lib/logger';
 const log = createLogger('SchedulingDomain');
-
 
 export function mountSchedulingRoutes(app: Express): void {
   // Internal-only auto-fill endpoint (localhost IP + service key required)
@@ -83,7 +81,6 @@ export function mountSchedulingRoutes(app: Express): void {
 
   app.use("/api/approvals", requireAuth, ensureWorkspaceAccess, approvalRoutes);
   registerAutonomousSchedulingRoutes(app);
-  app.use("/api/scheduler", requireAuth, ensureWorkspaceAccess, schedulerRouter);
   app.use("/api/orchestrated-schedule", requireAuth, ensureWorkspaceAccess, orchestratedScheduleRouter);
   app.use("/api/coverage", requireAuth, ensureWorkspaceAccess, coverageRouter);
   app.use("/api/calendar", requireAuth, ensureWorkspaceAccess, calendarRouter);

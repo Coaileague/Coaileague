@@ -21,6 +21,10 @@ import { randomUUID } from 'crypto';
 import { format } from 'date-fns';
 import { universalAudit } from '../universalAuditService';
 import { createLogger } from '../../lib/logger';
+import { diagnoseBusinessArtifactCoverage } from '../documents/businessArtifactDiagnosticService';
+import { invoiceService } from '../billing/invoice';
+import { generateTimesheetSupportPackage } from '../documents/timesheetSupportPackageGenerator';
+import { scoreRfpComplexity, buildRfpExtractionPrompt, type RfpScoringInputs } from '../billing/rfpComplexityScorer';
 const log = createLogger('trinityDocumentActions');
 const I9_COMPLIANCE_WINDOW_DAYS = 90;
 const I9_DEADLINE_DAYS = 3;
@@ -685,4 +689,145 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
       updatedAt: new Date(),
     });
   }
+
+  // ── Business Document Generators (Phase: Business Forms) ──────────────────
+
+  orchestrator.registerAction({
+    actionId: 'document.proof_of_employment',
+    description: 'Generate a branded Proof of Employment letter for an employee and save to tenant vault',
+    async execute(request: any) {
+      const { workspaceId, employeeId, requestedBy, employerNote } = request.parameters || {};
+      if (!workspaceId || !employeeId) {
+        return { actionId: request.actionId, success: false, error: 'workspaceId and employeeId required' };
+      }
+      const result = await generateProofOfEmployment({ workspaceId, employeeId, requestedBy, employerNote });
+      return { actionId: request.actionId, ...result };
+    },
+  });
+
+  orchestrator.registerAction({
+    actionId: 'document.direct_deposit_confirmation',
+    description: 'Generate a Direct Deposit Confirmation PDF for a payroll disbursement and save to vault',
+    async execute(request: any) {
+      const { workspaceId, employeeId, payrollRunId, netPay, payDate, bankRoutingLast4, bankAccountLast4, accountType } = request.parameters || {};
+      if (!workspaceId || !employeeId || !payrollRunId) {
+        return { actionId: request.actionId, success: false, error: 'workspaceId, employeeId, payrollRunId required' };
+      }
+      const result = await generateDirectDepositConfirmation({
+        workspaceId, employeeId, payrollRunId,
+        netPay: Number(netPay || 0),
+        payDate: payDate ? new Date(payDate) : new Date(),
+        bankRoutingLast4, bankAccountLast4, accountType,
+      });
+      return { actionId: request.actionId, ...result };
+    },
+  });
+
+  orchestrator.registerAction({
+    actionId: 'document.payroll_run_summary',
+    description: 'Generate a branded Payroll Run Summary report for the employer and save to vault',
+    async execute(request: any) {
+      const { workspaceId, payrollRunId, generatedBy } = request.parameters || {};
+      if (!workspaceId || !payrollRunId) {
+        return { actionId: request.actionId, success: false, error: 'workspaceId and payrollRunId required' };
+      }
+      const result = await generatePayrollRunSummary({ workspaceId, payrollRunId, generatedBy });
+      return { actionId: request.actionId, ...result };
+    },
+  });
+
+  orchestrator.registerAction({
+    actionId: 'document.w3_transmittal',
+    description: 'Generate a W-3 Transmittal summary for a given tax year and save to vault',
+    async execute(request: any) {
+      const { workspaceId, taxYear, generatedBy } = request.parameters || {};
+      if (!workspaceId || !taxYear) {
+        return { actionId: request.actionId, success: false, error: 'workspaceId and taxYear required' };
+      }
+      const result = await generateW3Transmittal({ workspaceId, taxYear: Number(taxYear), generatedBy });
+      return { actionId: request.actionId, ...result };
+    },
+  });
+
+  orchestrator.registerAction({
+    actionId: 'document.business_artifact_diagnostics',
+    description: 'Read-only diagnostic: returns coverage summary and gaps for all business artifact types. Support/admin use only.',
+    async execute(request: any) {
+      const result = diagnoseBusinessArtifactCoverage();
+      return { actionId: request.actionId, success: true, ...result };
+    },
+  });
+
+  orchestrator.registerAction({
+    actionId: 'document.generate_invoice_pdf',
+    description: 'Generate a branded per-invoice PDF and save to tenant vault. Returns vaultId and documentNumber.',
+    async execute(request: any) {
+      const { invoiceId, workspaceId } = request.parameters || {};
+      if (!invoiceId || !workspaceId) {
+        return { actionId: request.actionId, success: false, error: 'invoiceId and workspaceId required' };
+      }
+      const result = await invoiceService.generateInvoicePDF(invoiceId, workspaceId);
+      return { actionId: request.actionId, ...result };
+    },
+  });
+
+  orchestrator.registerAction({
+    actionId: 'document.timesheet_support_package',
+    description: 'Generate a branded timesheet support package PDF for payroll/invoice/audit reconciliation. Saves to vault.',
+    async execute(request: any) {
+      const { workspaceId, periodStart, periodEnd, clientId, status, generatedBy } = request.parameters || {};
+      if (!workspaceId || !periodStart || !periodEnd) {
+        return { actionId: request.actionId, success: false, error: 'workspaceId, periodStart, and periodEnd required' };
+      }
+      const result = await generateTimesheetSupportPackage({
+        workspaceId,
+        periodStart: new Date(periodStart),
+        periodEnd: new Date(periodEnd),
+        clientId: clientId || null,
+        generatedBy: generatedBy || 'trinity',
+        status: status || null,
+      });
+      return { actionId: request.actionId, ...result };
+    },
+  });
+
+  // ── RFP Complexity Analysis & Pricing ─────────────────────────────────────
+  // Step 1: tenant calls analyze_rfp → Trinity extracts inputs + returns price
+  // Step 2: tenant confirms → separate action generates the actual proposal
+
+  orchestrator.registerAction({
+    actionId: 'document.analyze_rfp',
+    description: 'Analyze an RFP document or URL to determine complexity score and per-occurrence price before the tenant commits. Returns tier, price, and factor breakdown.',
+    async execute(request: any) {
+      const { workspaceId, rfpInputs, extractionNotes } = request.parameters || {};
+      if (!workspaceId || !rfpInputs) {
+        return {
+          actionId: request.actionId,
+          success: false,
+          error: 'workspaceId and rfpInputs (structured scoring inputs) required. ' +
+            'Run document extraction first using buildRfpExtractionPrompt(), then pass the parsed result here.',
+        };
+      }
+
+      const result = scoreRfpComplexity(rfpInputs as RfpScoringInputs);
+
+      return {
+        actionId: request.actionId,
+        success: true,
+        totalScore: result.totalScore,
+        tier: result.tier,
+        tierLabel: result.tierLabel,
+        priceUsd: result.priceUsd,
+        priceCents: result.priceCents,
+        requiresCustomQuote: result.requiresCustomQuote,
+        tenantMessage: result.tenantMessage,
+        breakdown: result.breakdown,
+        extractionNotes: extractionNotes || [],
+        stripePriceEnvVar: result.stripePriceEnvVar,
+        // Tenant must confirm before document.generate_rfp fires
+        awaitingConfirmation: true,
+      };
+    },
+  });
+
 }

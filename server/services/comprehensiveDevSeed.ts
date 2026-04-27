@@ -30,10 +30,10 @@ const STAFF: StaffMember[] = [
 ];
 
 const CLIENTS = [
-  { id: 'dev-client-downtown-mall', name: 'Downtown SA Mall', billRate: '28.50', contactEmail: 'security@dtmall.com', address: '255 E Commerce St, San Antonio, TX 78205' },
-  { id: 'dev-client-tech-corp', name: 'TechCorp HQ', billRate: '32.00', contactEmail: 'facilities@techcorp.com', address: '7800 IH-10 W, San Antonio, TX 78230' },
-  { id: 'dev-client-hospital', name: 'Memorial Hospital', billRate: '35.00', contactEmail: 'safety@memorial.health', address: '4502 Medical Dr, San Antonio, TX 78229' },
-  { id: 'dev-client-airport', name: 'SAT Regional Airport', billRate: '38.00', contactEmail: 'ops@satairport.com', address: '9800 Airport Blvd, San Antonio, TX 78216' },
+  { id: 'dev-client-downtown-mall', firstName: 'Downtown', lastName: 'Mall Security', companyName: 'Downtown SA Mall', billRate: '28.50', email: 'security@dtmall.com', address: '255 E Commerce St, San Antonio, TX 78205' },
+  { id: 'dev-client-tech-corp', firstName: 'TechCorp', lastName: 'Facilities', companyName: 'TechCorp HQ', billRate: '32.00', email: 'facilities@techcorp.com', address: '7800 IH-10 W, San Antonio, TX 78230' },
+  { id: 'dev-client-hospital', firstName: 'Memorial', lastName: 'Hospital Security', companyName: 'Memorial Hospital', billRate: '35.00', email: 'safety@memorial.health', address: '4502 Medical Dr, San Antonio, TX 78229' },
+  { id: 'dev-client-airport', firstName: 'SAT', lastName: 'Airport Security', companyName: 'SAT Regional Airport', billRate: '38.00', email: 'ops@satairport.com', address: '9800 Airport Blvd, San Antonio, TX 78216' },
 ];
 
 const SHIFT_TEMPLATES = [
@@ -61,6 +61,19 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
 
   try {
     info('Starting...');
+
+    info('Repairing stale finance data for workspace...');
+    await pool.query(`DELETE FROM invoice_line_items WHERE workspace_id = $1`, [WS]);
+    await pool.query(`DELETE FROM invoices WHERE workspace_id = $1`, [WS]);
+    await pool.query(`DELETE FROM payroll_entries WHERE workspace_id = $1`, [WS]);
+    await pool.query(`DELETE FROM payroll_runs WHERE workspace_id = $1`, [WS]);
+    await pool.query(`DELETE FROM time_entries WHERE workspace_id = $1`, [WS]);
+    await pool.query(
+      `DELETE FROM shifts
+       WHERE workspace_id = $1
+         AND id LIKE 'dev-shift-%'`,
+      [WS]
+    );
 
     // 1. Workspace
     await pool.query(
@@ -110,10 +123,17 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
     // 5. Clients
     for (const c of CLIENTS) {
       await pool.query(
-        `INSERT INTO clients (id, workspace_id, name, bill_rate, contact_email, address, status, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,'active',NOW(),NOW())
-         ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, bill_rate=EXCLUDED.bill_rate, status=EXCLUDED.status, updated_at=NOW()`,
-        [c.id, WS, c.name, c.billRate, c.contactEmail, c.address]
+        `INSERT INTO clients (id, workspace_id, first_name, last_name, company_name, contract_rate, billable_hourly_rate, email, address, is_active, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6::numeric,$7::numeric,$8,$9,true,NOW(),NOW())
+         ON CONFLICT (id) DO UPDATE
+         SET company_name=EXCLUDED.company_name,
+             contract_rate=EXCLUDED.contract_rate,
+             billable_hourly_rate=EXCLUDED.billable_hourly_rate,
+             email=EXCLUDED.email,
+             address=EXCLUDED.address,
+             is_active=true,
+             updated_at=NOW()`,
+        [c.id, WS, c.firstName, c.lastName, c.companyName, c.billRate, c.billRate, c.email, c.address]
       );
       counts.clients++;
     }
@@ -121,17 +141,24 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
 
     // 6. Shifts + Time Entries (past 30 days completed)
     const fieldStaff = STAFF.filter(s => ['staff', 'supervisor'].includes(s.wsRole));
-    let shiftIdx = 0;
+    // Assign employees by TEMPLATE to prevent overlapping shifts per employee per day.
+    // Each template group uses different starting employees so no overlap within a day.
+    const tmplEmpOffset = [0, 2, 4]; // Different starting offset per template
 
     for (let day = 30; day >= 1; day--) {
-      for (const client of CLIENTS) {
-        for (const tmpl of SHIFT_TEMPLATES) {
-          shiftIdx++;
-          const emp = fieldStaff[shiftIdx % fieldStaff.length];
+      for (let tIdx = 0; tIdx < SHIFT_TEMPLATES.length; tIdx++) {
+        const tmpl = SHIFT_TEMPLATES[tIdx];
+        for (let cIdx = 0; cIdx < CLIENTS.length; cIdx++) {
+          const client = CLIENTS[cIdx];
+          // Employee assigned by: which template × which client × which day
+          // Using template offset + client index to pick different employees per client/template
+          const empIdx = (tmplEmpOffset[tIdx] + cIdx) % fieldStaff.length;
+          const emp = fieldStaff[empIdx];
           const startISO = daysAgo(day, tmpl.startH);
           const endISO = daysAgo(day, tmpl.endH < tmpl.startH ? tmpl.endH + 24 : tmpl.endH);
-          const shiftId = 'dev-shift-past-' + String(shiftIdx).padStart(4, '0');
-          const teId = 'dev-te-' + String(shiftIdx).padStart(4, '0');
+          const shiftNum = (30 - day) * CLIENTS.length * SHIFT_TEMPLATES.length + tIdx * CLIENTS.length + cIdx + 1;
+          const shiftId = 'dev-shift-past-' + String(shiftNum).padStart(4, '0');
+          const teId = 'dev-te-' + String(shiftNum).padStart(4, '0');
           const hours = calcHours(tmpl.startH, tmpl.endH);
           const regularH = Math.min(hours, 8);
           const otH = Math.max(hours - 8, 0);
@@ -143,16 +170,16 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
           await pool.query(
             `INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, date, start_time, end_time, status, pay_rate, bill_rate, billable_to_client, ai_generated, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,'completed',$9,$10,true,false,NOW(),NOW())
-             ON CONFLICT (id) DO UPDATE SET employee_id=EXCLUDED.employee_id, status=EXCLUDED.status, date=EXCLUDED.date, updated_at=NOW()`,
-            [shiftId, WS, emp.empId, client.id, client.name + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, emp.payRate, client.billRate]
+             ON CONFLICT (id) DO NOTHING`,
+            [shiftId, WS, emp.empId, client.id, (client.companyName || client.firstName) + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, emp.payRate, client.billRate]
           );
           counts.shifts++;
 
           await pool.query(
             `INSERT INTO time_entries (id, workspace_id, shift_id, employee_id, client_id, captured_bill_rate, captured_pay_rate, regular_hours, overtime_hours, billable_amount, payable_amount, clock_in, clock_out, total_hours, hourly_rate, total_amount, status, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::timestamptz,$13::timestamptz,$14,$6,$10,'approved',NOW(),NOW())
-             ON CONFLICT (id) DO UPDATE SET status='approved', clock_out=EXCLUDED.clock_out, total_hours=EXCLUDED.total_hours, updated_at=NOW()`,
-            [teId, WS, shiftId, emp.empId, client.id, client.billRate, emp.payRate, regularH.toFixed(2), otH.toFixed(2), billable, payable, startISO, endISO, hours.toFixed(2)]
+             VALUES ($1,$2,$3,$4,$5,$6::numeric,$7::numeric,$8::numeric,$9::numeric,$10::numeric,$11::numeric,$12::timestamptz,$13::timestamptz,$14::numeric,$15::numeric,$16::numeric,'approved',NOW(),NOW())
+             ON CONFLICT (id) DO NOTHING`,
+            [teId, WS, shiftId, emp.empId, client.id, client.billRate, emp.payRate, regularH.toFixed(2), otH.toFixed(2), billable, payable, startISO, endISO, hours.toFixed(2), emp.payRate, payable]
           );
           counts.timeEntries++;
         }
@@ -160,22 +187,26 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
     }
 
     // Future 14 days (open + assigned)
-    let futureIdx = 0;
     for (let day = 1; day <= 14; day++) {
-      for (const client of CLIENTS) {
-        for (const tmpl of SHIFT_TEMPLATES) {
-          futureIdx++;
-          const isOpen = futureIdx % 3 === 0;
-          const emp = isOpen ? null : fieldStaff[futureIdx % fieldStaff.length];
+      for (let tIdx2 = 0; tIdx2 < SHIFT_TEMPLATES.length; tIdx2++) {
+        const tmpl = SHIFT_TEMPLATES[tIdx2];
+        for (let cIdx2 = 0; cIdx2 < CLIENTS.length; cIdx2++) {
+          const client = CLIENTS[cIdx2];
+          // ~50% open, 50% assigned — use day+client index to vary
           const startISO = daysFromNow(day, tmpl.startH);
           const endISO = daysFromNow(day, tmpl.endH < tmpl.startH ? tmpl.endH + 24 : tmpl.endH);
-          const shiftId = 'dev-shift-future-' + String(futureIdx).padStart(4, '0');
+          const employeeId = null;
+          const payRate = '17.00';
+          const emp = { empId: employeeId, payRate };
+          const isOpen = true;
+          const futureNum = (day - 1) * CLIENTS.length * SHIFT_TEMPLATES.length + tIdx2 * CLIENTS.length + cIdx2 + 1;
+          const shiftId = 'dev-shift-future-' + String(futureNum).padStart(4, '0');
 
           await pool.query(
             `INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, date, start_time, end_time, status, pay_rate, bill_rate, billable_to_client, ai_generated, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,true,false,NOW(),NOW())
-             ON CONFLICT (id) DO UPDATE SET employee_id=EXCLUDED.employee_id, status=EXCLUDED.status, date=EXCLUDED.date, updated_at=NOW()`,
-            [shiftId, WS, emp?.empId || null, client.id, client.name + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, isOpen ? 'published' : 'scheduled', emp?.payRate || '17.00', client.billRate]
+             ON CONFLICT (id) DO NOTHING`,
+            [shiftId, WS, emp?.empId || null, client.id, (client.companyName || client.firstName) + ' — ' + tmpl.label, dateStr(startISO), startISO, endISO, isOpen ? 'published' : 'scheduled', emp?.payRate || '17.00', client.billRate]
           );
           counts.shifts++;
         }
@@ -240,9 +271,9 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
 
         await pool.query(
           `INSERT INTO invoices (id, workspace_id, client_id, invoice_number, issue_date, due_date, subtotal, tax_rate, tax_amount, total, platform_fee_percentage, platform_fee_amount, business_amount, status, paid_at, amount_paid, sent_at, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$5::timestamptz,$6::timestamptz,$7,'0.00','0.00',$7,'8.00',$8,$9,$10,$11::timestamptz,$7,$5::timestamptz,NOW(),NOW())
+           VALUES ($1,$2,$3,$4,$5::timestamptz,$6::timestamptz,$7::numeric,'0.00','0.00',$8::numeric,'8.00',$9::numeric,$10::numeric,$11,$12::timestamptz,$13::numeric,$14::timestamptz,NOW(),NOW())
            ON CONFLICT (id) DO UPDATE SET status=EXCLUDED.status, paid_at=EXCLUDED.paid_at, amount_paid=EXCLUDED.amount_paid, updated_at=NOW()`,
-          [invId, WS, client.id, invoiceNumber, issueDate.toISOString(), dueDate.toISOString(), subtotal.toFixed(2), platformFee.toFixed(2), businessAmt.toFixed(2), isPaid ? 'paid' : 'sent', isPaid ? issueDate.toISOString() : null]
+          [invId, WS, client.id, invoiceNumber, issueDate.toISOString(), dueDate.toISOString(), subtotal.toFixed(2), subtotal.toFixed(2), platformFee.toFixed(2), businessAmt.toFixed(2), isPaid ? 'paid' : 'sent', isPaid ? issueDate.toISOString() : null, subtotal.toFixed(2), issueDate.toISOString()]
         );
         counts.invoices++;
 
@@ -254,7 +285,7 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
             `INSERT INTO invoice_line_items (id, invoice_id, workspace_id, description, quantity, unit_price, amount, created_at, updated_at)
              VALUES (gen_random_uuid(),$1,$2,$3,$4,$5,$6,NOW(),NOW())
              ON CONFLICT DO NOTHING`,
-            [invId, WS, client.name + ' — ' + tmpl.label + ' (' + qty + ' days x 8h @ $' + client.billRate + '/hr)', qty, unitPrice, lineTotal]
+            [invId, WS, (client.companyName || client.firstName) + ' — ' + tmpl.label + ' (' + qty + ' days x 8h @ $' + client.billRate + '/hr)', qty, unitPrice, lineTotal]
           );
           counts.lineItems++;
         }

@@ -892,78 +892,10 @@ router.post('/:id/reactivate', requireManagerOrPlatformStaff, async (req: Authen
 });
 
 // ─── POST /:id/collections/start ─────────────────────────────────────────────
-router.post('/:id/collections/start', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    const userId = req.user?.id;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace ID required' });
-    const validation = z.object({ outstandingAmount: z.number().optional() }).safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: "Validation failed", details: validation.error.issues });
-    }
-    const body = validation.data;
-    const result = await startCollections(workspaceId, req.params.id, userId || 'system', body.outstandingAmount);
-    if (!result.success) return res.status(400).json({ message: result.error || 'Failed to start collections' });
-    res.json({ success: true, message: 'Collections pipeline started' });
-  } catch (err: unknown) {
-    res.status(400).json({ message: sanitizeError(err) || 'Failed to start collections' });
-  }
-});
-
 // ─── POST /:id/collections/decline ───────────────────────────────────────────
-router.post('/:id/collections/decline', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    const userId = req.user?.id;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace ID required' });
-    const body = z.object({ reason: z.string().optional() }).parse(req.body);
-    await declineCollections(workspaceId, req.params.id, userId || 'system', body.reason);
-    res.json({ success: true, message: 'Collections declined' });
-  } catch (err: unknown) {
-    res.status(400).json({ message: sanitizeError(err) || 'Failed to decline collections' });
-  }
-});
-
 // ─── POST /:id/collections/resolve ───────────────────────────────────────────
-router.post('/:id/collections/resolve', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    const userId = req.user?.id;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace ID required' });
-    const body = z.object({ notes: z.string().optional() }).parse(req.body);
-    await resolveCollections(workspaceId, req.params.id, userId || 'system', body.notes);
-    res.json({ success: true, message: 'Collections marked as resolved' });
-  } catch (err: unknown) {
-    res.status(400).json({ message: sanitizeError(err) || 'Failed to resolve collections' });
-  }
-});
-
 // ─── POST /:id/collections/write-off ─────────────────────────────────────────
-router.post('/:id/collections/write-off', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    const userId = req.user?.id;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace ID required' });
-    const body = z.object({ notes: z.string().optional() }).parse(req.body);
-    await writeOffCollections(workspaceId, req.params.id, userId || 'system', body.notes);
-    res.json({ success: true, message: 'Debt written off' });
-  } catch (err: unknown) {
-    res.status(400).json({ message: sanitizeError(err) || 'Failed to write off collections' });
-  }
-});
-
 // ─── GET /:id/collections/log ─────────────────────────────────────────────────
-router.get('/:id/collections/log', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace ID required' });
-    const log = await getCollectionsLog(workspaceId, req.params.id);
-    res.json(log);
-  } catch (err: unknown) {
-    res.status(500).json({ message: sanitizeError(err) || 'Failed to fetch collections log' });
-  }
-});
-
 router.delete('/:id', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
@@ -1015,41 +947,6 @@ router.delete('/:id', requireManagerOrPlatformStaff, async (req: AuthenticatedRe
   } catch (error) {
     log.error("Error deleting client:", error);
     res.status(500).json({ message: "Failed to delete client" });
-  }
-});
-
-router.get('/:clientId/payments', requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const { clientId } = req.params;
-
-    const payments = await db
-      .select({
-        id: invoicePayments.id,
-        invoiceId: invoicePayments.invoiceId,
-        invoiceNumber: invoices.invoiceNumber,
-        amount: invoicePayments.amount,
-        status: invoicePayments.status,
-        paymentMethod: invoicePayments.paymentMethod,
-        last4: invoicePayments.last4,
-        paidAt: invoicePayments.paidAt,
-        refundedAmount: invoicePayments.refundedAmount,
-        createdAt: invoicePayments.createdAt,
-      })
-      .from(invoicePayments)
-      .leftJoin(invoices, eq(invoicePayments.invoiceId, invoices.id))
-      .where(
-        and(
-          eq(invoicePayments.workspaceId, workspaceId),
-          eq(invoices.clientId, clientId)
-        )
-      )
-      .orderBy(desc(invoicePayments.createdAt));
-
-    res.json(payments);
-  } catch (error: unknown) {
-    log.error('Error getting client payments:', error);
-    res.status(500).json({ message: sanitizeError(error) || 'Failed to get payments' });
   }
 });
 
@@ -1164,56 +1061,8 @@ router.get('/dockchat/reports', requireManagerOrPlatformStaff, async (req: Authe
 });
 
 // ORG: Get a single report by ID
-router.get('/dockchat/reports/:reportId', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
-    if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
-
-    const report = await clientPortalHelpAIService.getReport(req.params.reportId, workspaceId);
-    if (!report) return res.status(404).json({ message: 'Report not found' });
-
-    res.json(report);
-  } catch (error: unknown) {
-    log.error('[DockChat] Error fetching report:', error);
-    res.status(500).json({ message: sanitizeError(error) || 'Failed to fetch report' });
-  }
-});
-
 // ORG: Acknowledge a report
-router.post('/dockchat/reports/:reportId/acknowledge', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
-    if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
-
-    const { note } = req.body;
-    const ok = await clientPortalHelpAIService.acknowledgeReport(req.params.reportId, workspaceId, note);
-    if (!ok) return res.status(404).json({ message: 'Report not found or not in your workspace' });
-
-    res.json({ success: true, message: 'Report acknowledged' });
-  } catch (error: unknown) {
-    log.error('[DockChat] Error acknowledging report:', error);
-    res.status(500).json({ message: sanitizeError(error) || 'Failed to acknowledge report' });
-  }
-});
-
 // ORG: Resolve a report
-router.post('/dockchat/reports/:reportId/resolve', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId;
-    if (!workspaceId) return res.status(403).json({ message: 'Workspace required' });
-
-    const { note } = req.body;
-    const userId = req.user?.id;
-    const ok = await clientPortalHelpAIService.resolveReport(req.params.reportId, workspaceId, userId!, note);
-    if (!ok) return res.status(404).json({ message: 'Report not found or not in your workspace' });
-
-    res.json({ success: true, message: 'Report resolved' });
-  } catch (error: unknown) {
-    log.error('[DockChat] Error resolving report:', error);
-    res.status(500).json({ message: sanitizeError(error) || 'Failed to resolve report' });
-  }
-});
-
 // ============================================================================
 // CLIENT-FACING: My Communications (DockChat report history for the client)
 // Clients can view their own report submissions — no manager auth needed
@@ -1395,46 +1244,6 @@ const coverageScheduleSchema = z.object({
   coverageNotes: z.string().optional().nullable(),
 });
 
-router.get('/:clientId/coverage-schedule', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { clientId } = req.params;
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace required' });
-
-    const [client] = await db.select({
-      id: clients.id,
-      companyName: clients.companyName,
-      coverageType: clients.coverageType,
-      coverageDays: clients.coverageDays,
-      coverageStartTime: clients.coverageStartTime,
-      coverageEndTime: clients.coverageEndTime,
-      coverageTimezone: clients.coverageTimezone,
-      coverageNotes: clients.coverageNotes,
-      minimumStaffing: clients.minimumStaffing,
-    }).from(clients).where(and(eq(clients.id, clientId), eq(clients.workspaceId, workspaceId)));
-
-    if (!client) return res.status(404).json({ message: 'Client not found' });
-
-    let displayLabel = 'Custom Schedule';
-    if (client.coverageType === '24_7') {
-      displayLabel = '24/7 — All days, all hours';
-    } else if (client.coverageType === 'business_hours') {
-      displayLabel = 'Business Hours — Mon-Fri, 08:00-18:00';
-    } else if (client.coverageDays && client.coverageStartTime) {
-      const days = client.coverageDays.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ');
-      displayLabel = `${days} ${client.coverageStartTime}-${client.coverageEndTime || '23:59'}`;
-    }
-
-    res.json({
-      success: true,
-      data: { ...client, displayLabel },
-    });
-  } catch (error: unknown) {
-    log.error('[ClientCoverage] Get error:', error);
-    res.status(500).json({ message: sanitizeError(error) || 'Failed to get coverage schedule' });
-  }
-});
-
 router.patch('/:clientId/coverage-schedule', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { clientId } = req.params;
@@ -1480,80 +1289,6 @@ router.patch('/:clientId/coverage-schedule', requireManagerOrPlatformStaff, asyn
 });
 
 // ─── GET /:id/export — data export package for departing client ───────────────
-router.get('/:id/export', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    const userId = req.user?.id;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace ID required' });
-
-    const [client] = await db.select().from(clients)
-      .where(and(eq(clients.id, req.params.id), eq(clients.workspaceId, workspaceId)))
-      .limit(1);
-
-    if (!client) return res.status(404).json({ message: 'Client not found' });
-
-    const { timeEntries, shifts: shiftsTable } = await import('@shared/schema');
-
-    const [clientInvoices, clientShifts, clientTimeEntries] = await Promise.all([
-      db.select().from(invoices)
-        .where(and(eq(invoices.workspaceId, workspaceId), eq(invoices.clientId, req.params.id)))
-        .orderBy(desc(invoices.createdAt)),
-      db.select().from(shiftsTable)
-        .where(and(eq(shiftsTable.workspaceId, workspaceId), eq(shiftsTable.clientId, req.params.id)))
-        .orderBy(desc(shiftsTable.startTime))
-        .limit(1000),
-      db.select().from(timeEntries)
-        .where(and(eq(timeEntries.workspaceId, workspaceId), eq(timeEntries.clientId, req.params.id)))
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        .orderBy(desc(timeEntries.clockInTime))
-        .limit(5000),
-    ]);
-
-    const exportPackage = {
-      exportedAt: new Date().toISOString(),
-      exportedBy: userId,
-      retentionPolicyYears: 7,
-      client: filterClientForResponse(client, createFilterContext(req)),
-      summary: {
-        totalInvoices: clientInvoices.length,
-        totalShifts: clientShifts.length,
-        totalTimeEntries: clientTimeEntries.length,
-        totalBilled: clientInvoices.reduce((sum, inv) => sum + parseFloat(String(inv.total || 0)), 0).toFixed(2),
-        totalPaid: clientInvoices.reduce((sum, inv) => sum + parseFloat(String(inv.amountPaid || 0)), 0).toFixed(2),
-      },
-      invoices: clientInvoices,
-      shifts: clientShifts,
-      timeEntries: clientTimeEntries,
-    };
-
-    try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      const { universalAuditService, AUDIT_ACTIONS } = await import('../services/universalAuditService');
-      await universalAuditService.log({
-        workspaceId,
-        actorId: userId,
-        actorType: 'user',
-        action: AUDIT_ACTIONS.CLIENT_DATA_EXPORTED,
-        entityType: 'client',
-        entityId: req.params.id,
-        entityName: client.companyName,
-        changeType: 'read',
-        metadata: {
-          invoiceCount: clientInvoices.length,
-          shiftCount: clientShifts.length,
-          timeEntryCount: clientTimeEntries.length,
-        },
-        sourceRoute: 'GET /clients/:id/export',
-      });
-    } catch { /* non-blocking */ }
-
-    res.json(exportPackage);
-  } catch (err: unknown) {
-    log.error('[ClientExport] Error generating export:', err);
-    res.status(500).json({ message: sanitizeError(err) || 'Failed to generate export' });
-  }
-});
-
 // ─── GET /api/workspace/seat-cap — get hard cap setting ──────────────────────
 // (mounted on the client router but serves as a general billing route)
 // This is handled via the billing routes. Hard cap toggle is on subscriptions table.

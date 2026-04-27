@@ -318,14 +318,19 @@ router.get('/executions', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/executions/:executionId', async (req: Request, res: Response) => {
+router.get('/executions/:executionId', async (req: any, res: Response) => {
   try {
     const { executionId } = req.params;
+    const workspaceId = req.user?.currentWorkspaceId || req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
 
     const [execution] = await db
       .select()
       .from(automationExecutions)
-      .where(eq(automationExecutions.id, executionId))
+      .where(and(
+        eq(automationExecutions.id, executionId),
+        eq(automationExecutions.workspaceId, workspaceId)
+      ))
       .limit(1);
 
     if (!execution) {
@@ -339,13 +344,21 @@ router.get('/executions/:executionId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/orchestration/:orchestrationId/steps', async (req: Request, res: Response) => {
+router.get('/orchestration/:orchestrationId/steps', async (req: any, res: Response) => {
   try {
     const { orchestrationId } = req.params;
+    const workspaceId = req.user?.currentWorkspaceId || req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
+
     const { universalStepLogger } = await import('../services/orchestration/universalStepLogger');
     
     const context = universalStepLogger.getOrchestration(orchestrationId);
     if (!context) {
+      return res.status(404).json({ message: 'Orchestration not found or already completed' });
+    }
+
+    // Workspace isolation: reject if orchestration belongs to a different workspace
+    if (context.workspaceId && context.workspaceId !== workspaceId) {
       return res.status(404).json({ message: 'Orchestration not found or already completed' });
     }
 

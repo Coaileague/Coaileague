@@ -346,44 +346,70 @@ router.get('/stress-seed', async (req: Request, res: Response) => {
 // Creates all data with proper FK relationships:
 //   users → employees → workspace_members → shifts → time_entries → payroll → invoices
 // ============================================================================
-// Track seed status globally
-let _seedStatus: { running: boolean; result?: any; startedAt?: number } = { running: false };
-
-router.get('/seed-status', (_req: Request, res: Response) => {
-  res.json(_seedStatus);
-});
-
 router.get('/comprehensive-seed', async (req: Request, res: Response) => {
   const key = req.query.key as string;
   if (key !== 'CoAIleague2026Dev') {
     return res.status(403).json({ error: 'Invalid key' });
   }
 
-  if (_seedStatus.running) {
-    return res.json({ status: 'running', startedAt: _seedStatus.startedAt,
-      message: 'Seed is already running. Check /api/bootstrap/seed-status for progress.' });
-  }
-
-  // Respond immediately — seed runs async to avoid Railway 30s proxy timeout
-  _seedStatus = { running: true, startedAt: Date.now() };
-  res.json({
-    status: 'started',
-    message: 'Comprehensive seed started in background. Check /api/bootstrap/seed-status for completion.',
-    statusUrl: '/api/bootstrap/seed-status',
-  });
-
-  // Run seed async (fire-and-forget from HTTP perspective)
-  setImmediate(async () => {
   try {
     const { runComprehensiveDevSeed } = await import('../services/comprehensiveDevSeed');
     const result = await runComprehensiveDevSeed();
-    _seedStatus = { running: false, result };
-    console.log('[ComprehensiveSeed] Background seed complete:', result.counts);
-  } catch(e: unknown) {
-    _seedStatus = { running: false, result: { success: false, error: String(e) } };
-    console.error('[ComprehensiveSeed] Background seed failed:', e);
+
+    res.setHeader('Content-Type', 'text/html');
+    const statusColor = result.success ? '#16a34a' : '#dc2626';
+    const statusIcon = result.success ? '✅' : '❌';
+    const c = result.counts;
+
+    return res.send(`<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:20px;background:#0f172a;color:#e2e8f0">
+      <h1 style="color:${statusColor}">${statusIcon} Comprehensive Dev Seed ${result.success ? 'Complete' : 'Failed'}</h1>
+      <h3 style="color:#94a3b8">Full relational data created for ACME Security Services</h3>
+      
+      <table border="0" cellpadding="8" style="border-collapse:collapse;width:100%;margin:16px 0">
+        <tr style="background:#1e293b"><th style="color:#64748b;text-align:left">Entity</th><th style="color:#64748b;text-align:right">Count</th></tr>
+        <tr><td>👤 Users</td><td style="text-align:right;color:#4ade80">${c.users}</td></tr>
+        <tr style="background:#1e293b"><td>🪪 Employees (with userId FK)</td><td style="text-align:right;color:#4ade80">${c.employees}</td></tr>
+        <tr><td>🏢 Workspace Members</td><td style="text-align:right;color:#4ade80">${c.members}</td></tr>
+        <tr style="background:#1e293b"><td>🏗️ Clients</td><td style="text-align:right;color:#4ade80">${c.clients}</td></tr>
+        <tr><td>📅 Shifts (30 past + 14 future)</td><td style="text-align:right;color:#4ade80">${c.shifts}</td></tr>
+        <tr style="background:#1e293b"><td>⏱️ Time Entries (clock in/out)</td><td style="text-align:right;color:#4ade80">${c.timeEntries}</td></tr>
+        <tr><td>💰 Payroll Runs (2 bi-weekly)</td><td style="text-align:right;color:#4ade80">${c.payrollRuns}</td></tr>
+        <tr style="background:#1e293b"><td>💵 Payroll Entries (per employee)</td><td style="text-align:right;color:#4ade80">${c.payrollEntries}</td></tr>
+        <tr><td>🧾 Invoices (per client per period)</td><td style="text-align:right;color:#4ade80">${c.invoices}</td></tr>
+        <tr style="background:#1e293b"><td>📋 Invoice Line Items</td><td style="text-align:right;color:#4ade80">${c.lineItems}</td></tr>
+      </table>
+
+      <div style="background:#1e293b;padding:16px;border-radius:8px;margin:16px 0">
+        <h3 style="color:#7c3aed;margin:0 0 8px">🔗 Relational Chain Verified</h3>
+        <p style="color:#94a3b8;margin:0;font-size:13px">
+          users.id → employees.user_id → workspace_members.user_id<br>
+          clients.id → shifts.client_id + time_entries.client_id<br>
+          employees.id → shifts.employee_id + time_entries.employee_id<br>
+          shifts.id → time_entries.shift_id<br>
+          payroll_runs.id → payroll_entries.payroll_run_id<br>
+          invoices.id → invoice_line_items.invoice_id
+        </p>
+      </div>
+
+      <div style="background:#1e293b;padding:16px;border-radius:8px;margin:16px 0">
+        <h3 style="color:#f59e0b;margin:0 0 8px">🧪 Now test:</h3>
+        <ul style="color:#94a3b8;font-size:13px;margin:0;padding-left:20px">
+          <li>Schedule → shows 30 days past + 14 future shifts</li>
+          <li>Invoices → 4 clients × 2 periods = 8 invoices (4 paid, 4 sent)</li>
+          <li>Payroll → 2 completed runs with per-employee breakdown</li>
+          <li>Employees → 8 staff with proper employee records</li>
+          <li>Time Entries → approved entries linking shifts to payroll</li>
+        </ul>
+      </div>
+
+      ${result.log.map(l => '<p style="font-size:11px;color:#64748b;margin:2px 0">' + l + '</p>').join('')}
+      
+      <br><a href="/dashboard" style="background:#7c3aed;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block">→ Go to Dashboard</a>
+      <a href="/invoices" style="background:#1e293b;color:#e2e8f0;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;margin-left:8px">→ View Invoices</a>
+    </body></html>`);
+  } catch(error: unknown) {
+    return res.status(500).send(`<h2 style="color:red">Error: ${sanitizeError(error)}</h2>`);
   }
-  }); // end setImmediate
 });
 
 

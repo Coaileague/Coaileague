@@ -1,4 +1,10 @@
 import type { TimeEntry } from "@shared/schema";
+import {
+  addFinancialValues,
+  formatCurrency,
+  multiplyFinancialValues,
+  toFinancialString,
+} from "../financialCalculator";
 import { createLogger } from '../../lib/logger';
 const log = createLogger('rateResolver');
 
@@ -110,7 +116,7 @@ export interface DailySegment {
  * Split a shift spanning multiple calendar days into daily segments
  * Critical for correct holiday hour calculation
  * 
- * Example: Shift from Dec 25 22:00 → Dec 26 06:00 (8 hours)
+ * Example: Shift from Dec 25 22:00 -> Dec 26 06:00 (8 hours)
  * Segments: [
  *   {date: "2025-12-25", hours: 2.0},  // 22:00-00:00
  *   {date: "2025-12-26", hours: 6.0}   // 00:00-06:00
@@ -256,7 +262,7 @@ export interface ResolvedRates {
 /**
  * Resolve billing and pay rates for a time entry
  *
- * Precedence order (highest → lowest):
+ * Precedence order (highest -> lowest):
  *   0. capturedBillRate / capturedPayRate  — snapshotted at clock-in (historical lock)
  *   1. hourlyRate                          — per-entry override from shift.hourlyRateOverride
  *   2. employeeHourlyRate                  — employee default rate
@@ -352,11 +358,30 @@ export function resolveRates(context: RateResolutionContext): ResolvedRates {
   };
 }
 
+function moneyNumber(amount: string | number): number {
+  return Number(formatCurrency(toFinancialString(amount)));
+}
+
+function multiplyMoney(a: string | number, b: string | number): number {
+  return moneyNumber(multiplyFinancialValues(toFinancialString(a), toFinancialString(b)));
+}
+
+function addMoney(...values: Array<string | number>): number {
+  return moneyNumber(values.reduce(
+    (total, value) => addFinancialValues(toFinancialString(total), toFinancialString(value)),
+    toFinancialString(0),
+  ));
+}
+
 /**
  * Calculate total amount for a time entry
  */
 export function calculateAmount(hours: number, rate: number): number {
-  return parseFloat((hours * rate).toFixed(2));
+  return multiplyMoney(hours, rate);
+}
+
+function calculateAmountWithMultiplier(hours: number, baseRate: number, multiplier: number): number {
+  return calculateAmount(hours, multiplyMoney(baseRate, multiplier));
 }
 
 // ============================================================================
@@ -424,7 +449,7 @@ export function applyDifferentialPremium(
   }
 
   return {
-    adjustedRate: parseFloat((basePayRate * multiplier).toFixed(4)),
+    adjustedRate: Number(toFinancialString(multiplyFinancialValues(toFinancialString(basePayRate), toFinancialString(multiplier)))),
     appliedDifferentials,
     multiplier,
   };
@@ -507,7 +532,7 @@ export function bucketHours(params: {
 
 /**
  * Apply rate multipliers to bucketed hours
- * Precedence for multipliers: per-holiday override → client override → workspace default
+ * Precedence for multipliers: per-holiday override -> client override -> workspace default
  */
 export interface MultiplierContext {
   baseRate: number;
@@ -548,12 +573,12 @@ export function calculateBillingAmounts(
     clientHolidayMultiplier,
   } = context;
 
-  // Resolve overtime multiplier (client override → workspace default)
+  // Resolve overtime multiplier (client override -> workspace default)
   const otMultiplier = clientOvertimeMultiplier !== null && clientOvertimeMultiplier !== undefined
     ? clientOvertimeMultiplier
     : overtimeBillableMultiplier;
 
-  // Resolve holiday multiplier (per-holiday → client override → workspace default)
+  // Resolve holiday multiplier (per-holiday -> client override -> workspace default)
   let holidayMultiplier = holidayBillableMultiplier;
   if (holidayEntry?.billMultiplier !== undefined) {
     holidayMultiplier = holidayEntry.billMultiplier;
@@ -563,14 +588,14 @@ export function calculateBillingAmounts(
 
   // Calculate amounts per bucket
   const regularAmount = calculateAmount(bucket.regularHours, baseRate);
-  const overtimeAmount = calculateAmount(bucket.overtimeHours, baseRate * otMultiplier);
-  const holidayAmount = calculateAmount(bucket.holidayHours, baseRate * holidayMultiplier);
+  const overtimeAmount = calculateAmountWithMultiplier(bucket.overtimeHours, baseRate, otMultiplier);
+  const holidayAmount = calculateAmountWithMultiplier(bucket.holidayHours, baseRate, holidayMultiplier);
 
   return {
     regularAmount,
     overtimeAmount,
     holidayAmount,
-    totalAmount: regularAmount + overtimeAmount + holidayAmount,
+    totalAmount: addMoney(regularAmount, overtimeAmount, holidayAmount),
     appliedMultipliers: {
       regular: 1.0,
       overtime: otMultiplier,
@@ -596,21 +621,21 @@ export function calculatePayrollAmounts(
   // For payroll, client overrides don't apply (employee-specific rates only)
   const otMultiplier = overtimePayMultiplier;
 
-  // Resolve holiday multiplier (per-holiday → workspace default)
+  // Resolve holiday multiplier (per-holiday -> workspace default)
   const holidayMultiplier = holidayEntry?.payMultiplier !== undefined
     ? holidayEntry.payMultiplier
     : holidayPayMultiplier;
 
   // Calculate amounts per bucket
   const regularAmount = calculateAmount(bucket.regularHours, baseRate);
-  const overtimeAmount = calculateAmount(bucket.overtimeHours, baseRate * otMultiplier);
-  const holidayAmount = calculateAmount(bucket.holidayHours, baseRate * holidayMultiplier);
+  const overtimeAmount = calculateAmountWithMultiplier(bucket.overtimeHours, baseRate, otMultiplier);
+  const holidayAmount = calculateAmountWithMultiplier(bucket.holidayHours, baseRate, holidayMultiplier);
 
   return {
     regularAmount,
     overtimeAmount,
     holidayAmount,
-    totalAmount: regularAmount + overtimeAmount + holidayAmount,
+    totalAmount: addMoney(regularAmount, overtimeAmount, holidayAmount),
     appliedMultipliers: {
       regular: 1.0,
       overtime: otMultiplier,

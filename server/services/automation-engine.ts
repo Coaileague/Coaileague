@@ -20,7 +20,7 @@ import { auditLogger, type AuditContext } from './audit-logger';
 import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
 import { db } from '../db';
 import { timeEntries } from '@shared/schema';
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, lte, isNotNull, isNull } from 'drizzle-orm';
 import type { Shift, Employee, Client, TimeEntry } from '@shared/schema';
 import {
   scheduleDecisionSchema,
@@ -34,6 +34,7 @@ import {
   type ValidatedPayrollDecision,
 } from './automation-schemas';
 import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { multiplyFinancialValues, toFinancialString } from './financialCalculator';
 
 export interface GeminiResponse<T = any> {
   decision: T;
@@ -76,6 +77,187 @@ export interface PayrollDecision {
   confidence: number;
   requiresApproval: boolean;
   warnings: string[];
+}
+
+interface InvoiceBatchDiagnostics {
+  eligibleTimeEntries: number;
+  processableClients: number;
+  orphanedClientIds: string[];
+}
+
+interface PayrollBatchDiagnostics {
+  eligibleTimeEntries: number;
+  processableEmployees: number;
+  orphanedEmployeeIds: string[];
+}
+
+function roundMoney(value: number): number {
+  return Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
+}
+
+function parseDecimal(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function getTimeEntryHours(entry: TimeEntry): number {
+  const totalHours = parseDecimal(entry.totalHours);
+  if (totalHours != null && totalHours > 0) return totalHours;
+  const clockIn = new Date(entry.clockIn);
+  const clockOut = entry.clockOut ? new Date(entry.clockOut) : null;
+  if (!clockOut || Number.isNaN(clockIn.getTime()) || Number.isNaN(clockOut.getTime())) return 0;
+  return Math.max(0, (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60));
+}
+
+function resolveInvoiceRate(client: Client, entries: TimeEntry[]): { rate: number; source: string; anomalies: string[] } {
+  const capturedRates = entries
+    .map((entry) => parseDecimal(entry.capturedBillRate))
+    .filter((rate): rate is number => rate != null && rate > 0);
+
+  if (capturedRates.length > 0) {
+    const frequencies = new Map<number, number>();
+    for (const rate of capturedRates) {
+      frequencies.set(rate, (frequencies.get(rate) || 0) + 1);
+    }
+    const [dominantRate] = [...frequencies.entries()].sort((a, b) => b[1] - a[1])[0];
+    const anomalies = new Set<string>();
+    if (frequencies.size > 1) {
+      anomalies.add('Time entries use multiple captured bill rates; invoice marked for review.');
+    }
+    return { rate: dominantRate, source: 'captured_bill_rate', anomalies: [...anomalies] };
+  }
+
+  const candidateRates: Array<[unknown, string]> = [
+    [(client as any).billableHourlyRate, 'client.billableHourlyRate'],
+    [client.contractRate, 'client.contractRate'],
+    [client.unarmedBillRate, 'client.unarmedBillRate'],
+    [client.armedBillRate, 'client.armedBillRate'],
+    [client.overtimeBillRate, 'client.overtimeBillRate'],
+  ];
+
+  for (const [value, source] of candidateRates) {
+    const rate = parseDecimal(value);
+    if (rate != null && rate > 0) {
+      return { rate, source, anomalies: [] };
+    }
+  }
+
+  const derivedRates = entries
+    .map((entry) => {
+      const billableAmount = parseDecimal(entry.billableAmount);
+      const hours = getTimeEntryHours(entry);
+      if (billableAmount == null || hours <= 0) return null;
+      return billableAmount / hours;
+    })
+    .filter((rate): rate is number => rate != null && rate > 0);
+
+  if (derivedRates.length > 0) {
+    return {
+      rate: roundMoney(derivedRates[0]),
+      source: 'timeEntry.billableAmount',
+      anomalies: ['Billing rate was inferred from billable amounts; invoice marked for review.'],
+    };
+  }
+
+  return {
+    rate: 0,
+    source: 'missing',
+    anomalies: ['No billable rate data found for this client; invoice marked for manual review.'],
+  };
+}
+
+function buildDeterministicInvoiceDecision(client: Client, timeEntries: TimeEntry[]): InvoiceDecision {
+  const { rate: resolvedRate, source, anomalies } = resolveInvoiceRate(client, timeEntries);
+  const lineItems = timeEntries.map((entry) => {
+    const hours = roundMoney(getTimeEntryHours(entry));
+    const entryAmount = parseDecimal(entry.billableAmount);
+    const amount = roundMoney(entryAmount != null && entryAmount > 0 ? entryAmount : hours * resolvedRate);
+    const entryRate = amount > 0 && hours > 0 ? roundMoney(amount / hours) : roundMoney(resolvedRate);
+    const serviceDate = new Date(entry.clockIn).toISOString().split('T')[0];
+    return {
+      description: `Security coverage on ${serviceDate}`,
+      quantity: hours,
+      rate: entryRate,
+      amount,
+      timeEntryIds: [entry.id],
+    };
+  }).filter((item) => item.quantity > 0 && item.amount > 0);
+
+  const subtotal = roundMoney(lineItems.reduce((sum, item) => sum + item.amount, 0));
+  const fallbackAnomalies = new Set(anomalies);
+  fallbackAnomalies.add(`Deterministic invoice fallback used (${source}). Review before sending.`);
+  if (lineItems.length === 0) {
+    fallbackAnomalies.add('No valid billable line items could be derived from approved time entries.');
+  }
+
+  return {
+    ...createFallbackInvoiceDecision(client.id),
+    lineItems,
+    subtotal,
+    total: subtotal,
+    confidence: subtotal > 0 ? 0.62 : 0,
+    requiresApproval: true,
+    anomalies: [...fallbackAnomalies],
+  };
+}
+
+function resolvePayrollRate(employee: Employee, timeEntries: TimeEntry[]): { rate: number; source: string } {
+  const employeeRate = parseDecimal(employee.hourlyRate);
+  if (employeeRate != null && employeeRate > 0) {
+    return { rate: employeeRate, source: 'employee.hourlyRate' };
+  }
+
+  const capturedRate = timeEntries
+    .map((entry) => parseDecimal(entry.capturedPayRate) ?? parseDecimal(entry.hourlyRate))
+    .find((rate): rate is number => rate != null && rate > 0);
+
+  if (capturedRate != null) {
+    return { rate: capturedRate, source: 'timeEntry.capturedPayRate' };
+  }
+
+  return { rate: 15, source: 'default_fallback' };
+}
+
+function buildDeterministicPayrollDecision(employee: Employee, employeeId: string, timeEntries: TimeEntry[]): PayrollDecision {
+  const totalHours = roundMoney(timeEntries.reduce((sum, entry) => sum + getTimeEntryHours(entry), 0));
+  const regularHours = Math.min(totalHours, 40);
+  const overtimeHours = Math.max(totalHours - 40, 0);
+  const { rate: hourlyRate, source } = resolvePayrollRate(employee, timeEntries);
+  const overtimeRate = hourlyRate * 1.5;
+  const regularPay = roundMoney(regularHours * hourlyRate);
+  const overtimePay = roundMoney(overtimeHours * overtimeRate);
+  const totalPay = roundMoney(regularPay + overtimePay);
+  // NOTE: These are estimation rates used when canonical tax service is unavailable.
+  // Primary path should use calculatePayrollTaxes() from payrollTaxService.
+  const deductions = {
+    fica: roundMoney(Number(multiplyFinancialValues(toFinancialString(totalPay), toFinancialString(0.0765)))),
+    federal: roundMoney(Number(multiplyFinancialValues(toFinancialString(totalPay), toFinancialString(0.15)))),
+    state: roundMoney(Number(multiplyFinancialValues(toFinancialString(totalPay), toFinancialString(0.05)))),
+  };
+  const netPay = roundMoney(totalPay - Object.values(deductions).reduce((sum, value) => sum + value, 0));
+  const warnings = new Set<string>(['Deterministic payroll fallback used. Review before approval.']);
+  warnings.add(`Base hourly rate source: ${source}`);
+  if (overtimeHours > 0) {
+    warnings.add('Overtime hours detected and included in fallback payroll calculation.');
+  }
+
+  return {
+    ...createFallbackPayrollDecision(employeeId),
+    regularHours: roundMoney(regularHours),
+    overtimeHours: roundMoney(overtimeHours),
+    regularPay,
+    overtimePay,
+    totalPay,
+    deductions,
+    netPay,
+    confidence: totalPay > 0 ? 0.64 : 0,
+    requiresApproval: true,
+    warnings: [...warnings],
+  };
 }
 
 export class AutomationEngine {
@@ -454,27 +636,33 @@ Return ONLY valid JSON (no markdown):
           return sum + hours;
         }, 0);
 
-        const billingRate = 75; // Default rate (client may not have this field)
+        const rateContext = resolveInvoiceRate(params.client, params.timeEntries);
+        const clientContractRate = parseDecimal(params.client.contractRate);
+        const clientBillableRate = parseDecimal((params.client as any).billableHourlyRate);
 
         const prompt = `You are an invoicing AI for CoAIleague. Generate an invoice for client services:
 
 **Client:** ${params.client.companyName || params.client.firstName || 'Unknown'}
 **Period:** ${params.startDate.toISOString().split('T')[0]} to ${params.endDate.toISOString().split('T')[0]}
-**Billing Rate:** $${billingRate}/hour
+**Client Contract Rate:** ${clientContractRate != null ? `$${clientContractRate}/hour` : 'not set'}
+**Canonical Billable Hourly Rate:** ${clientBillableRate != null ? `$${clientBillableRate}/hour` : 'not set'}
+**Resolved Billing Rate Context:** ${rateContext.rate > 0 ? `$${rateContext.rate}/hour from ${rateContext.source}` : 'no reliable rate found; use captured billable amounts and flag for review'}
 
 **Time Entries:**
 ${params.timeEntries.map(te => {
   const start = new Date(te.clockIn);
   const end = te.clockOut ? new Date(te.clockOut) : new Date();
   const hours = ((end.getTime() - start.getTime()) / (1000 * 60 * 60)).toFixed(2);
-  return `- Employee ${te.employeeId}: ${hours} hours on ${start.toISOString().split('T')[0]}`;
+  const capturedBillRate = parseDecimal(te.capturedBillRate);
+  const billableAmount = parseDecimal(te.billableAmount);
+  return `- Employee ${te.employeeId}: ${hours} hours on ${start.toISOString().split('T')[0]} | captured bill rate: ${capturedBillRate != null ? `$${capturedBillRate}/hour` : 'not set'} | billable amount: ${billableAmount != null ? `$${billableAmount.toFixed(2)}` : 'not set'} | timeEntryId: ${te.id}`;
 }).join('\n')}
 
 **Total Hours:** ${totalHours.toFixed(2)}
 
 **Task:** Create invoice line items:
 1. Group hours by service type/role if possible
-2. Apply correct billing rates
+2. Apply captured bill rates or client billing rates when available
 3. Flag any anomalies (excessive hours, rate discrepancies)
 4. Calculate totals
 5. Determine if manual approval needed (>10% variance from expected)
@@ -505,7 +693,7 @@ Return ONLY valid JSON (no markdown):
           aggregateId: transactionId,
           aggregateType: 'invoice',
           schema: invoiceDecisionSchema,
-          buildFallback: () => createFallbackInvoiceDecision(params.clientId),
+          buildFallback: () => buildDeterministicInvoiceDecision(params.client, params.timeEntries),
           transactionId,
         });
 
@@ -535,53 +723,82 @@ Return ONLY valid JSON (no markdown):
       workspaceId: string;
       anchorDate: Date;
     }
-  ): Promise<{ invoices: InvoiceDecision[]; requiresApproval: InvoiceDecision[] }> {
+  ): Promise<{ invoices: InvoiceDecision[]; requiresApproval: InvoiceDecision[]; diagnostics: InvoiceBatchDiagnostics }> {
     // Calculate anchor period (biweekly)
     const endDate = params.anchorDate;
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 14);
 
-    // Get all clients for workspace
     const clients = await storage.getClientsByWorkspace(params.workspaceId);
+    const eligibleEntries = await db
+      .select()
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.workspaceId, params.workspaceId),
+        eq(timeEntries.status, 'approved'),
+        isNotNull(timeEntries.clientId),
+        isNotNull(timeEntries.clockOut),
+        isNull(timeEntries.invoiceId),
+        isNull(timeEntries.billedAt),
+        gte(timeEntries.clockIn, startDate),
+        lte(timeEntries.clockIn, endDate)
+      ));
+
+    const entriesByClientId = new Map<string, TimeEntry[]>();
+    for (const entry of eligibleEntries) {
+      const clientId = entry.clientId;
+      if (!clientId) continue;
+      const list = entriesByClientId.get(clientId) || [];
+      list.push(entry);
+      entriesByClientId.set(clientId, list);
+    }
+
+    const knownClientIds = new Set(clients.map((client) => client.id));
+    const orphanedClientIds = [...entriesByClientId.keys()].filter((clientId) => !knownClientIds.has(clientId));
     
     const invoices: InvoiceDecision[] = [];
     const requiresApproval: InvoiceDecision[] = [];
 
     // Generate invoice for each client
     for (const client of clients) {
-      // Get time entries for this client in the anchor period from actual database
-      const clientTimeEntries = await db
-        .select()
-        .from(timeEntries)
-        .where(
-          and(
-            eq(timeEntries.clientId, client.id),
-            gte(timeEntries.clockIn, startDate),
-            lte(timeEntries.clockOut, endDate),
-            eq(timeEntries.workspaceId, params.workspaceId)
-          )
-        );
+      const clientTimeEntries = entriesByClientId.get(client.id) || [];
 
       if (clientTimeEntries.length === 0) {
         continue; // Skip clients with no billable time
       }
 
-      const result = await this.generateInvoice(context, {
-        clientId: client.id,
-        startDate,
-        endDate,
-        timeEntries: clientTimeEntries,
-        client,
+      const decision = buildDeterministicInvoiceDecision(client, clientTimeEntries);
+      await auditLogger.logEvent(context, {
+        eventType: 'invoice_batch_generated',
+        aggregateId: client.id,
+        aggregateType: 'invoice',
+        payload: {
+          clientId: client.id,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          timeEntryCount: clientTimeEntries.length,
+          total: decision.total,
+          requiresApproval: decision.requiresApproval,
+          anomalies: decision.anomalies,
+          mode: 'deterministic_batch',
+        },
       });
+      invoices.push(decision);
 
-      invoices.push(result.decision);
-
-      if (result.decision.requiresApproval) {
-        requiresApproval.push(result.decision);
+      if (decision.requiresApproval) {
+        requiresApproval.push(decision);
       }
     }
 
-    return { invoices, requiresApproval };
+    return {
+      invoices,
+      requiresApproval,
+      diagnostics: {
+        eligibleTimeEntries: eligibleEntries.length,
+        processableClients: invoices.length,
+        orphanedClientIds,
+      },
+    };
   }
 
   // ============================================================================
@@ -636,8 +853,8 @@ Return ONLY valid JSON (no markdown):
           regularHours = totalHours;
         }
 
-        const hourlyRateStr = params.employee.hourlyRate || '15';
-        const hourlyRate = typeof hourlyRateStr === 'string' ? parseFloat(hourlyRateStr) : hourlyRateStr;
+        const rateContext = resolvePayrollRate(params.employee, params.timeEntries);
+        const hourlyRate = rateContext.rate;
         const otRate = hourlyRate * 1.5;
 
         const prompt = `You are a payroll processing AI for CoAIleague. Calculate payroll for an employee:
@@ -691,7 +908,7 @@ Return ONLY valid JSON (no markdown):
           aggregateId: transactionId,
           aggregateType: 'payroll',
           schema: payrollDecisionSchema,
-          buildFallback: () => createFallbackPayrollDecision(params.employeeId),
+          buildFallback: () => buildDeterministicPayrollDecision(params.employee, params.employeeId, params.timeEntries),
           transactionId,
         });
 
@@ -721,44 +938,79 @@ Return ONLY valid JSON (no markdown):
       workspaceId: string;
       anchorDate: Date;
     }
-  ): Promise<{ payrolls: PayrollDecision[]; requiresApproval: PayrollDecision[] }> {
+  ): Promise<{ payrolls: PayrollDecision[]; requiresApproval: PayrollDecision[]; diagnostics: PayrollBatchDiagnostics }> {
     // Calculate anchor period (biweekly)
     const endDate = params.anchorDate;
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 14);
 
-    // Get all employees for workspace
     const employees = await storage.getEmployeesByWorkspace(params.workspaceId);
+    const eligibleEntries = await db
+      .select()
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.workspaceId, params.workspaceId),
+        eq(timeEntries.status, 'approved'),
+        isNotNull(timeEntries.clockOut),
+        isNull(timeEntries.payrollRunId),
+        isNull(timeEntries.payrolledAt),
+        gte(timeEntries.clockIn, startDate),
+        lte(timeEntries.clockIn, endDate)
+      ));
+
+    const entriesByEmployeeId = new Map<string, TimeEntry[]>();
+    for (const entry of eligibleEntries) {
+      const list = entriesByEmployeeId.get(entry.employeeId) || [];
+      list.push(entry);
+      entriesByEmployeeId.set(entry.employeeId, list);
+    }
+
+    const knownEmployeeIds = new Set(employees.map((employee) => employee.id));
+    const orphanedEmployeeIds = [...entriesByEmployeeId.keys()].filter((employeeId) => !knownEmployeeIds.has(employeeId));
     
     const payrolls: PayrollDecision[] = [];
     const requiresApproval: PayrollDecision[] = [];
 
     // Generate payroll for each employee
     for (const employee of employees) {
-      // Get time entries for this employee in the anchor period
-      const { getTimeEntriesByEmployee } = await import('./timeEntryService');
-      const timeEntries = await getTimeEntriesByEmployee(employee.id, startDate, endDate);
+      const timeEntries = entriesByEmployeeId.get(employee.id) || [];
 
       if (timeEntries.length === 0) {
         continue; // Skip employees with no hours
       }
 
-      const result = await this.generatePayroll(context, {
-        employeeId: employee.id,
-        startDate,
-        endDate,
-        timeEntries,
-        employee,
+      const decision = buildDeterministicPayrollDecision(employee, employee.id, timeEntries);
+      await auditLogger.logEvent(context, {
+        eventType: 'payroll_batch_generated',
+        aggregateId: employee.id,
+        aggregateType: 'payroll',
+        payload: {
+          employeeId: employee.id,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          timeEntryCount: timeEntries.length,
+          netPay: decision.netPay,
+          requiresApproval: decision.requiresApproval,
+          warnings: decision.warnings,
+          mode: 'deterministic_batch',
+        },
       });
+      payrolls.push(decision);
 
-      payrolls.push(result.decision);
-
-      if (result.decision.requiresApproval) {
-        requiresApproval.push(result.decision);
+      if (decision.requiresApproval) {
+        requiresApproval.push(decision);
       }
     }
 
-    return { payrolls, requiresApproval };
+    return {
+      payrolls,
+      requiresApproval,
+      diagnostics: {
+        eligibleTimeEntries: eligibleEntries.length,
+        processableEmployees: payrolls.length,
+        orphanedEmployeeIds,
+      },
+    };
   }
 
   // ============================================================================

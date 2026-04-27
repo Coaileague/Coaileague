@@ -27,6 +27,8 @@ import { platformEventBus } from './platformEventBus';
 import { assertNoPeriodOverlap } from './payroll/payrollLedger';
 import { calculatePayrollTaxes, type PayPeriod as TaxPayPeriod, type FilingStatus as TaxFilingStatus } from './billing/payrollTaxService';
 import { getTaxRules, computeProgressiveStateTax, TAX_REGISTRY_VERSION, TAX_REGISTRY_EFFECTIVE_YEAR } from './tax/taxRulesRegistry';
+import { claimPayrollTimeEntries } from './payroll/payrollTimeEntryClaimer';
+import { multiplyFinancialValues, addFinancialValues, toFinancialString } from './financialCalculator';
 const PRE_TAX_BENEFIT_TYPES = ['401k', 'health_insurance', 'dental_insurance', 'vision_insurance'];
 const POST_TAX_BENEFIT_TYPES = ['life_insurance', 'other'];
 
@@ -228,316 +230,6 @@ export class PayrollAutomationEngine {
    * Full progressive brackets for all 50 states + DC
    * Based on single filer annual income brackets
    */
-  private static readonly STATE_TAX_CONFIG: Record<string, { type: 'none' | 'flat' | 'progressive'; rate?: number; brackets?: Array<{ limit: number; rate: number }> }> = {
-    // ==========================================
-    // NO INCOME TAX STATES (9 states)
-    // ==========================================
-    'AK': { type: 'none' },
-    'FL': { type: 'none' },
-    'NV': { type: 'none' },
-    'NH': { type: 'none' }, // Interest/dividends only, not wages
-    'SD': { type: 'none' },
-    'TN': { type: 'none' },
-    'TX': { type: 'none' },
-    'WA': { type: 'none' },
-    'WY': { type: 'none' },
-    
-    // ==========================================
-    // FLAT RATE STATES (11 states)
-    // ==========================================
-    'AZ': { type: 'flat', rate: 0.025 }, // 2024: flat 2.5%
-    'CO': { type: 'flat', rate: 0.044 }, // 4.4%
-    'GA': { type: 'flat', rate: 0.0549 }, // 2024: 5.49%
-    'IL': { type: 'flat', rate: 0.0495 }, // 4.95%
-    'IN': { type: 'flat', rate: 0.0305 }, // 2024: 3.05%
-    'KY': { type: 'flat', rate: 0.04 }, // 2024: 4%
-    'MA': { type: 'flat', rate: 0.05 }, // 5%
-    'MI': { type: 'flat', rate: 0.0425 }, // 4.25%
-    'NC': { type: 'flat', rate: 0.0475 }, // 2024: 4.75%
-    'PA': { type: 'flat', rate: 0.0307 }, // 3.07%
-    'UT': { type: 'flat', rate: 0.0465 }, // 4.65%
-    
-    // ==========================================
-    // PROGRESSIVE BRACKET STATES (30 states + DC)
-    // All brackets are for SINGLE filers, annual income
-    // ==========================================
-    
-    // Alabama - 3 brackets
-    'AL': { type: 'progressive', brackets: [
-      { limit: 500, rate: 0.02 },
-      { limit: 3000, rate: 0.04 },
-      { limit: Infinity, rate: 0.05 }
-    ]},
-    
-    // Arkansas - 4 brackets (2024)
-    'AR': { type: 'progressive', brackets: [
-      { limit: 4400, rate: 0.02 },
-      { limit: 8800, rate: 0.04 },
-      { limit: Infinity, rate: 0.044 } // Reduced to 4.4% in 2024
-    ]},
-    
-    // California - 9 brackets
-    'CA': { type: 'progressive', brackets: [
-      { limit: 10412, rate: 0.01 },
-      { limit: 24684, rate: 0.02 },
-      { limit: 38959, rate: 0.04 },
-      { limit: 54081, rate: 0.06 },
-      { limit: 68350, rate: 0.08 },
-      { limit: 349137, rate: 0.093 },
-      { limit: 418961, rate: 0.103 },
-      { limit: 698271, rate: 0.113 },
-      { limit: Infinity, rate: 0.123 }
-    ]},
-    
-    // Connecticut - 7 brackets
-    'CT': { type: 'progressive', brackets: [
-      { limit: 10000, rate: 0.02 },
-      { limit: 50000, rate: 0.045 },
-      { limit: 100000, rate: 0.055 },
-      { limit: 200000, rate: 0.06 },
-      { limit: 250000, rate: 0.065 },
-      { limit: 500000, rate: 0.069 },
-      { limit: Infinity, rate: 0.0699 }
-    ]},
-    
-    // Delaware - 7 brackets
-    'DE': { type: 'progressive', brackets: [
-      { limit: 2000, rate: 0.0 },
-      { limit: 5000, rate: 0.022 },
-      { limit: 10000, rate: 0.039 },
-      { limit: 20000, rate: 0.048 },
-      { limit: 25000, rate: 0.052 },
-      { limit: 60000, rate: 0.0555 },
-      { limit: Infinity, rate: 0.066 }
-    ]},
-    
-    // District of Columbia - 6 brackets
-    'DC': { type: 'progressive', brackets: [
-      { limit: 10000, rate: 0.04 },
-      { limit: 40000, rate: 0.06 },
-      { limit: 60000, rate: 0.065 },
-      { limit: 250000, rate: 0.085 },
-      { limit: 500000, rate: 0.0925 },
-      { limit: Infinity, rate: 0.1075 }
-    ]},
-    
-    // Hawaii - 12 brackets
-    'HI': { type: 'progressive', brackets: [
-      { limit: 2400, rate: 0.014 },
-      { limit: 4800, rate: 0.032 },
-      { limit: 9600, rate: 0.055 },
-      { limit: 14400, rate: 0.064 },
-      { limit: 19200, rate: 0.068 },
-      { limit: 24000, rate: 0.072 },
-      { limit: 36000, rate: 0.076 },
-      { limit: 48000, rate: 0.079 },
-      { limit: 150000, rate: 0.0825 },
-      { limit: 175000, rate: 0.09 },
-      { limit: 200000, rate: 0.10 },
-      { limit: Infinity, rate: 0.11 }
-    ]},
-    
-    // Idaho - 2 brackets (2024 simplified)
-    'ID': { type: 'progressive', brackets: [
-      { limit: 4489, rate: 0.01 },
-      { limit: Infinity, rate: 0.058 }
-    ]},
-    
-    // Iowa - 4 brackets (2024)
-    'IA': { type: 'progressive', brackets: [
-      { limit: 6210, rate: 0.044 },
-      { limit: 31050, rate: 0.0482 },
-      { limit: 62100, rate: 0.057 },
-      { limit: Infinity, rate: 0.06 }
-    ]},
-    
-    // Kansas - 3 brackets
-    'KS': { type: 'progressive', brackets: [
-      { limit: 15000, rate: 0.031 },
-      { limit: 30000, rate: 0.0525 },
-      { limit: Infinity, rate: 0.057 }
-    ]},
-    
-    // Louisiana - 3 brackets
-    'LA': { type: 'progressive', brackets: [
-      { limit: 12500, rate: 0.0185 },
-      { limit: 50000, rate: 0.035 },
-      { limit: Infinity, rate: 0.0425 }
-    ]},
-    
-    // Maine - 3 brackets
-    'ME': { type: 'progressive', brackets: [
-      { limit: 24500, rate: 0.058 },
-      { limit: 58050, rate: 0.0675 },
-      { limit: Infinity, rate: 0.0715 }
-    ]},
-    
-    // Maryland - 8 brackets
-    'MD': { type: 'progressive', brackets: [
-      { limit: 1000, rate: 0.02 },
-      { limit: 2000, rate: 0.03 },
-      { limit: 3000, rate: 0.04 },
-      { limit: 100000, rate: 0.0475 },
-      { limit: 125000, rate: 0.05 },
-      { limit: 150000, rate: 0.0525 },
-      { limit: 250000, rate: 0.055 },
-      { limit: Infinity, rate: 0.0575 }
-    ]},
-    
-    // Minnesota - 4 brackets
-    'MN': { type: 'progressive', brackets: [
-      { limit: 30070, rate: 0.0535 },
-      { limit: 98760, rate: 0.068 },
-      { limit: 183340, rate: 0.0785 },
-      { limit: Infinity, rate: 0.0985 }
-    ]},
-    
-    // Mississippi - 2 brackets (2024)
-    'MS': { type: 'progressive', brackets: [
-      { limit: 10000, rate: 0.0 },
-      { limit: Infinity, rate: 0.047 } // Reduced in 2024
-    ]},
-    
-    // Missouri - 6 brackets
-    'MO': { type: 'progressive', brackets: [
-      { limit: 1207, rate: 0.02 },
-      { limit: 2414, rate: 0.025 },
-      { limit: 3621, rate: 0.03 },
-      { limit: 4828, rate: 0.035 },
-      { limit: 6035, rate: 0.04 },
-      { limit: Infinity, rate: 0.0495 } // 2024 rate
-    ]},
-    
-    // Montana - 2 brackets (2024 simplified)
-    'MT': { type: 'progressive', brackets: [
-      { limit: 20500, rate: 0.047 },
-      { limit: Infinity, rate: 0.059 }
-    ]},
-    
-    // Nebraska - 4 brackets
-    'NE': { type: 'progressive', brackets: [
-      { limit: 3700, rate: 0.0246 },
-      { limit: 22170, rate: 0.0351 },
-      { limit: 35730, rate: 0.0501 },
-      { limit: Infinity, rate: 0.0584 }
-    ]},
-    
-    // New Jersey - 7 brackets
-    'NJ': { type: 'progressive', brackets: [
-      { limit: 20000, rate: 0.014 },
-      { limit: 35000, rate: 0.0175 },
-      { limit: 40000, rate: 0.035 },
-      { limit: 75000, rate: 0.05525 },
-      { limit: 500000, rate: 0.0637 },
-      { limit: 1000000, rate: 0.0897 },
-      { limit: Infinity, rate: 0.1075 }
-    ]},
-    
-    // New Mexico - 5 brackets
-    'NM': { type: 'progressive', brackets: [
-      { limit: 5500, rate: 0.017 },
-      { limit: 11000, rate: 0.032 },
-      { limit: 16000, rate: 0.047 },
-      { limit: 210000, rate: 0.049 },
-      { limit: Infinity, rate: 0.059 }
-    ]},
-    
-    // New York - 8 brackets
-    'NY': { type: 'progressive', brackets: [
-      { limit: 8500, rate: 0.04 },
-      { limit: 11700, rate: 0.045 },
-      { limit: 13900, rate: 0.0525 },
-      { limit: 80650, rate: 0.055 },
-      { limit: 215400, rate: 0.06 },
-      { limit: 1077550, rate: 0.0685 },
-      { limit: 5000000, rate: 0.0965 },
-      { limit: Infinity, rate: 0.109 } // Top rate for $25M+
-    ]},
-    
-    // North Dakota - 3 brackets (2024)
-    'ND': { type: 'progressive', brackets: [
-      { limit: 44725, rate: 0.0195 },
-      { limit: 225975, rate: 0.0252 },
-      { limit: Infinity, rate: 0.0264 }
-    ]},
-    
-    // Ohio - 4 brackets (2024)
-    'OH': { type: 'progressive', brackets: [
-      { limit: 26050, rate: 0.0 },
-      { limit: 46100, rate: 0.0275 },
-      { limit: 92150, rate: 0.03 },
-      { limit: Infinity, rate: 0.035 }
-    ]},
-    
-    // Oklahoma - 6 brackets
-    'OK': { type: 'progressive', brackets: [
-      { limit: 1000, rate: 0.0025 },
-      { limit: 2500, rate: 0.0075 },
-      { limit: 3750, rate: 0.0175 },
-      { limit: 4900, rate: 0.0275 },
-      { limit: 7200, rate: 0.0375 },
-      { limit: Infinity, rate: 0.0475 }
-    ]},
-    
-    // Oregon - 4 brackets
-    'OR': { type: 'progressive', brackets: [
-      { limit: 4050, rate: 0.0475 },
-      { limit: 10200, rate: 0.0675 },
-      { limit: 125000, rate: 0.0875 },
-      { limit: Infinity, rate: 0.099 }
-    ]},
-    
-    // Rhode Island - 3 brackets
-    'RI': { type: 'progressive', brackets: [
-      { limit: 73450, rate: 0.0375 },
-      { limit: 166950, rate: 0.0475 },
-      { limit: Infinity, rate: 0.0599 }
-    ]},
-    
-    // South Carolina - 6 brackets
-    'SC': { type: 'progressive', brackets: [
-      { limit: 3200, rate: 0.0 },
-      { limit: 6410, rate: 0.03 },
-      { limit: 9620, rate: 0.04 },
-      { limit: 12820, rate: 0.05 },
-      { limit: 16040, rate: 0.06 },
-      { limit: Infinity, rate: 0.064 } // 2024 top rate
-    ]},
-    
-    // Vermont - 4 brackets
-    'VT': { type: 'progressive', brackets: [
-      { limit: 45400, rate: 0.0335 },
-      { limit: 110050, rate: 0.066 },
-      { limit: 229550, rate: 0.076 },
-      { limit: Infinity, rate: 0.0875 }
-    ]},
-    
-    // Virginia - 4 brackets
-    'VA': { type: 'progressive', brackets: [
-      { limit: 3000, rate: 0.02 },
-      { limit: 5000, rate: 0.03 },
-      { limit: 17000, rate: 0.05 },
-      { limit: Infinity, rate: 0.0575 }
-    ]},
-    
-    // West Virginia - 5 brackets
-    'WV': { type: 'progressive', brackets: [
-      { limit: 10000, rate: 0.0236 },
-      { limit: 25000, rate: 0.0315 },
-      { limit: 40000, rate: 0.0354 },
-      { limit: 60000, rate: 0.0472 },
-      { limit: Infinity, rate: 0.0512 }
-    ]},
-    
-    // Wisconsin - 4 brackets
-    'WI': { type: 'progressive', brackets: [
-      { limit: 14320, rate: 0.035 },
-      { limit: 28640, rate: 0.044 },
-      { limit: 315310, rate: 0.053 },
-      { limit: Infinity, rate: 0.0765 }
-    ]},
-  };
-  
   static calculateStateTax(
     grossPay: number, 
     state: string = 'CA',
@@ -549,7 +241,7 @@ export class PayrollAutomationEngine {
     
     if (!stateRule) {
       log.warn(`Unknown state ${state}, defaulting to CA rates (registry v${TAX_REGISTRY_VERSION})`);
-      return parseFloat((grossPay * 0.0575).toFixed(2));
+      return Number(multiplyFinancialValues(toFinancialString(grossPay), toFinancialString(0.0575)));
     }
     
     if (stateRule.type === 'none') return 0;
@@ -810,7 +502,7 @@ export class PayrollAutomationEngine {
     const threshold = thresholds[filingStatus] || 200000;
     
     // Regular Medicare tax on all wages
-    let medicareTax = grossPay * MEDICARE_RATE;
+    let medicareTax = Number(multiplyFinancialValues(toFinancialString(grossPay), toFinancialString(MEDICARE_RATE)));
     
     // Calculate Additional Medicare Tax on wages exceeding threshold
     const totalWagesWithCurrent = ytdWages + grossPay;
@@ -822,7 +514,7 @@ export class PayrollAutomationEngine {
       const taxableThisPeriod = amountOverThreshold - priorAmountOverThreshold;
       
       if (taxableThisPeriod > 0) {
-        const additionalTax = taxableThisPeriod * ADDITIONAL_MEDICARE_RATE;
+        const additionalTax = Number(multiplyFinancialValues(toFinancialString(taxableThisPeriod), toFinancialString(ADDITIONAL_MEDICARE_RATE)));
         medicareTax += additionalTax;
         log.info(`[AI Payroll™] Additional Medicare Tax: $${additionalTax.toFixed(2)} on $${taxableThisPeriod.toFixed(2)} exceeding $${threshold} threshold`);
       }
@@ -1184,7 +876,7 @@ export class PayrollAutomationEngine {
     // Calculate overtime premium using "half-time" method
     // This is the FLSA-approved method: pay straight time for all hours,
     // then add 0.5x the weighted average rate for each OT hour
-    const overtimePremium = overtimeHours * (weightedAverageRate * 0.5);
+    const overtimePremium = Number(multiplyFinancialValues(toFinancialString(overtimeHours), toFinancialString(Number(multiplyFinancialValues(toFinancialString(weightedAverageRate), toFinancialString(0.5))))));
     
     // Total pay = straight time pay + OT premium
     const totalPay = straightTimePay + overtimePremium;
@@ -1761,20 +1453,17 @@ export class PayrollAutomationEngine {
         });
       }
 
-      // Inline time entry marking within the transaction for full atomicity.
-      // Using tx (not db) so this rolls back with the run if anything fails.
+      // Bulk-claim source time entries atomically via canonical claimer.
+      // Uses tx so the claim rolls back with the run if anything else fails.
       if (allTimeEntryIds.length > 0) {
-        let markedCount = 0;
-        for (const entryId of allTimeEntryIds) {
-          const marked = await tx
-            .update(timeEntries)
-            .set({ payrolledAt: new Date(), payrollRunId: run.id, updatedAt: new Date() })
-            .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.payrolledAt)))
-            .returning({ id: timeEntries.id });
-          if (marked.length > 0) markedCount++;
-          else log.warn(`[AI Payroll™] Entry ${entryId} already payrolled — skipping (idempotency guard)`);
-        }
-        log.info(`[AI Payroll™] Marked ${markedCount}/${allTimeEntryIds.length} entries as payrolled (run ${run.id}) — within transaction`);
+        const claimed = await claimPayrollTimeEntries({
+          workspaceId,
+          timeEntryIds: allTimeEntryIds,
+          payrollRunId: run.id,
+          requireAll: true,
+          tx,
+        });
+        log.info(`[AI Payroll™] Claimed ${claimed.claimedCount}/${claimed.requestedCount} entries for run ${run.id} — within transaction`);
       }
 
       // FIX-3: Ledger write INSIDE the payroll transaction.
@@ -1917,19 +1606,16 @@ export class PayrollAutomationEngine {
         throw new Error(`Payroll run ${payrollRunId} not found`);
       }
 
-      // Inline time-entry marking within the same transaction
+      // Bulk-claim source time entries atomically via canonical claimer.
       if (timeEntryIds && timeEntryIds.length > 0) {
-        let markedCount = 0;
-        for (const entryId of timeEntryIds) {
-          const result = await tx
-            .update(timeEntries)
-            .set({ payrolledAt: now, payrollRunId, updatedAt: now })
-            .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.payrolledAt)))
-            .returning({ id: timeEntries.id });
-          if (result.length > 0) markedCount++;
-          else log.warn(`[AI Payroll™] Entry ${entryId} already payrolled - skipping`);
-        }
-        log.info(`[AI Payroll™] Marked ${markedCount}/${timeEntryIds.length} entries as payrolled in run ${payrollRunId}`);
+        const claimed = await claimPayrollTimeEntries({
+          workspaceId,
+          timeEntryIds,
+          payrollRunId,
+          requireAll: true,
+          tx,
+        });
+        log.info(`[AI Payroll™] Claimed ${claimed.claimedCount}/${claimed.requestedCount} entries for run ${payrollRunId}`);
       } else {
         log.warn(`[AI Payroll™] Approved payroll ${payrollRunId} without marking entries - timeEntryIds not provided`);
       }

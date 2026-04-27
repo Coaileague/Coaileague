@@ -13,37 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { 
-  ResponsiveTableWrapper, 
-  DataSummaryCard,
-  type DataField 
-} from "@/components/DataSummaryCard";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow,  } from "@/components/ui/table";
+import { ResponsiveTableWrapper, DataSummaryCard, type DataField } from "@/components/DataSummaryCard";
 import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { 
-  Loader2, DollarSign, CheckCircle, Clock, Play, Users, 
-  Sparkles, TrendingUp, FileText, Zap, Brain, ArrowRight,
-  Calendar, Banknote, Receipt, CircleDollarSign, Download, AlertCircle, Trash2
-} from "lucide-react";
-import { OrgPlaidBankCard } from "@/components/plaid";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,  } from "@/components/ui/alert-dialog";
+import { Loader2, DollarSign, CheckCircle, Clock, Play, Users, Sparkles, TrendingUp, FileText, Zap, Brain, ArrowRight, Calendar, Banknote, Receipt, CircleDollarSign, Download, AlertCircle, Trash2 } from "lucide-react";
+;
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub/CanvasHubRegistry";
 
 interface PayrollRun {
@@ -420,7 +395,6 @@ export default function PayrollDashboard() {
         </div>
 
         {/* ACH Bank Account Status */}
-        <OrgPlaidBankCard />
 
         {/* Payroll Runs Card */}
         <Card className="border-slate-200 dark:border-slate-700/50 shadow-sm">

@@ -13,6 +13,7 @@ import { startOfYear, endOfYear, startOfQuarter, endOfQuarter } from "date-fns";
 import { getTaxRules } from './tax/taxRulesRegistry';
 import { createLogger } from '../lib/logger';
 import { employeeTaxForms } from '@shared/schema';
+import { saveToVault } from './documents/businessFormsVaultService';
 const log = createLogger('taxFormGeneratorService');
 
 
@@ -290,7 +291,29 @@ export class TaxFormGeneratorService {
         isActive: true,
       }).returning();
 
-      return { success: true, pdfBuffer, taxFormId: taxForm.id };
+      // Stamp branded header/footer and save to document vault
+      const vaultResult = await saveToVault({
+        workspaceId,
+        workspaceName: (workspace as any)?.name || workspaceId,
+        documentTitle: `W-2 Wage and Tax Statement`,
+        category: 'tax',
+        formNumber: 'W-2',
+        period: String(taxYear),
+        relatedEntityType: 'employee',
+        relatedEntityId: employeeId,
+        rawBuffer: pdfBuffer,
+      });
+      if (!vaultResult.success) {
+        log.warn('[TaxFormGenerator] W-2 vault save failed (non-blocking):', vaultResult.error);
+      }
+
+      return {
+        success: true,
+        pdfBuffer: vaultResult.stampedBuffer || pdfBuffer,
+        taxFormId: taxForm.id,
+        vaultId: vaultResult.vault?.id,
+        documentNumber: vaultResult.vault?.documentNumber,
+      };
     } catch (error) {
       log.error('[TaxFormGenerator] W-2 generation failed:', error);
       return { success: false, error: String(error) };
@@ -348,7 +371,27 @@ export class TaxFormGeneratorService {
         isActive: true,
       }).returning();
 
-      return { success: true, pdfBuffer, taxFormId: taxForm.id };
+      // Stamp + save to vault
+      const vaultResult1099 = await saveToVault({
+        workspaceId,
+        workspaceName: (workspace as any)?.name || workspaceId,
+        documentTitle: '1099-NEC Nonemployee Compensation',
+        category: 'tax',
+        formNumber: '1099-NEC',
+        period: String(taxYear),
+        relatedEntityType: 'employee',
+        relatedEntityId: employeeId,
+        rawBuffer: pdfBuffer,
+      });
+      if (!vaultResult1099.success) log.warn('[TaxFormGenerator] 1099 vault save failed:', vaultResult1099.error);
+
+      return {
+        success: true,
+        pdfBuffer: vaultResult1099.stampedBuffer || pdfBuffer,
+        taxFormId: taxForm.id,
+        vaultId: vaultResult1099.vault?.id,
+        documentNumber: vaultResult1099.vault?.documentNumber,
+      };
     } catch (error) {
       log.error('[TaxFormGenerator] 1099-NEC generation failed:', error);
       return { success: false, error: String(error) };
@@ -555,7 +598,27 @@ export class TaxFormGeneratorService {
 
       const pdfBuffer = await this.generate940PDF(form940Data);
 
-      return { success: true, pdfBuffer, data: form940Data };
+      // Stamp + save to vault
+      const workspace940 = await db.query.workspaces?.findFirst?.({ where: (w: any, { eq: e }: any) => e(w.id, workspaceId) });
+      const vaultResult940 = await saveToVault({
+        workspaceId,
+        workspaceName: (workspace940 as any)?.name || workspaceId,
+        documentTitle: 'Form 940 Employer Annual FUTA Tax Return',
+        category: 'tax',
+        formNumber: '940',
+        relatedEntityType: 'workspace',
+        relatedEntityId: workspaceId,
+        rawBuffer: pdfBuffer,
+      });
+      if (!vaultResult940.success) log.warn('[TaxFormGenerator] 940 vault save failed:', vaultResult940.error);
+
+      return {
+        success: true,
+        pdfBuffer: vaultResult940.stampedBuffer || pdfBuffer,
+        data: form940Data,
+        vaultId: vaultResult940.vault?.id,
+        documentNumber: vaultResult940.vault?.documentNumber,
+      };
     } catch (error) {
       log.error('[TaxFormGenerator] 940 generation failed:', error);
       return { success: false, error: String(error) };
@@ -844,7 +907,29 @@ export class TaxFormGeneratorService {
         log.warn('[TaxFormGenerator] Could not store 941 record (enum may need migration):', storageErr);
       }
 
-      return { success: true, pdfBuffer, taxFormId, data: form941Data };
+      // Stamp + save to vault
+      const workspace941 = await db.query.workspaces?.findFirst?.({ where: (w: any, { eq: e }: any) => e(w.id, workspaceId) });
+      const vaultResult941 = await saveToVault({
+        workspaceId,
+        workspaceName: (workspace941 as any)?.name || workspaceId,
+        documentTitle: `Form 941 Employer Quarterly Federal Tax Return — Q${quarter} ${year}`,
+        category: 'tax',
+        formNumber: '941',
+        period: `Q${quarter} ${year}`,
+        relatedEntityType: 'workspace',
+        relatedEntityId: workspaceId,
+        rawBuffer: pdfBuffer,
+      });
+      if (!vaultResult941.success) log.warn('[TaxFormGenerator] 941 vault save failed:', vaultResult941.error);
+
+      return {
+        success: true,
+        pdfBuffer: vaultResult941.stampedBuffer || pdfBuffer,
+        taxFormId,
+        data: form941Data,
+        vaultId: vaultResult941.vault?.id,
+        documentNumber: vaultResult941.vault?.documentNumber,
+      };
     } catch (error) {
       log.error('[TaxFormGenerator] 941 generation failed:', error);
       return { success: false, error: String(error) };

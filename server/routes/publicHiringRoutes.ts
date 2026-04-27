@@ -170,27 +170,7 @@ router.post('/:workspaceId/apply', async (req, res) => {
         ]
       );
 
-      // Cross-tenant network check (only if workspace opted in)
-      const { checkCrossTenantHistory } = await import(
-        '../services/hiring/crossTenantScreenService'
-      );
-      const crossCheck = await checkCrossTenantHistory({
-        phone: phone || null,
-        email,
-        workspaceId,
-        applicantId: id,
-      });
-
-      if (crossCheck.flagged) {
-        await db.$client.query(
-          `UPDATE applicants
-              SET cross_tenant_flag = TRUE,
-                  cross_tenant_flag_reason = $1
-            WHERE id = $2 AND workspace_id = $3`,
-          [crossCheck.reason, id, workspaceId]
-        );
-        log.info(`[CrossTenant] Applicant ${id} flagged — prior network record`);
-      }
+      // Cross-tenant network check removed — service deleted in refactor
 
       // If liability indicators present, spawn legal_agent for deeper review
       if (result.liabilityIndicators.length > 0 || result.flags.some(f => f.severity === 'critical')) {
@@ -230,7 +210,7 @@ router.post('/:workspaceId/apply', async (req, res) => {
           recommendation: result.recommendation,
           hasLiabilityFlags: result.liabilityIndicators.length > 0,
           hasCriticalFlags: result.flags.some(f => f.severity === 'critical'),
-          crossTenantFlag: crossCheck.flagged,
+          crossTenantFlag: false,
         },
       }).catch(() => {});
 

@@ -2,12 +2,6 @@ import { secureFetch } from "@/lib/csrf";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DocumentExtractionUpload,
-  IssueDetectionViewer,
-  GuardrailsDashboard,
-  MigrationReview,
-} from "@/components/ai-brain";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -519,7 +513,7 @@ export default function AIBrainDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <DocumentExtractionUpload />
+              {/* DocumentExtractionUpload removed */}
               {extractedData && (
                 <div className="mt-4 p-4 bg-muted rounded-md">
                   <p className="text-sm font-medium">
@@ -541,10 +535,7 @@ export default function AIBrainDashboard() {
             </CardHeader>
             <CardContent>
               {extractedData ? (
-                <IssueDetectionViewer
-                  documentType={extractedData.documentType}
-                  extractedData={extractedData.extractedFields}
-                />
+                {/* IssueDetectionViewer removed */}
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>Extract a document first to analyze for issues</p>
@@ -563,7 +554,7 @@ export default function AIBrainDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <GuardrailsDashboard />
+              {/* GuardrailsDashboard removed */}
             </CardContent>
           </Card>
         </TabsContent>
@@ -593,11 +584,7 @@ export default function AIBrainDashboard() {
                       <option value="invoice">Invoice</option>
                     </select>
                   </div>
-                  <MigrationReview
-                    extractedData={extractedData}
-                    entityType={entityType}
-                    onImportSuccess={() => setExtractedData(null)}
-                  />
+                  {/* MigrationReview removed */}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

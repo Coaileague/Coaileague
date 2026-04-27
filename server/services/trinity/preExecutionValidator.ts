@@ -94,22 +94,47 @@ export async function validateBeforeExecution(
   try {
     // ─────────────────────────────────────────────────────────────────
     // CHECK 1 — Employment status (Section 1 #2 — was FAIL)
-    // Any action that carries an employeeId must verify the employee is active.
+    // Any action carrying an employee target ID must verify the employee is active.
+    // Normalize all common payload aliases to catch every path.
     // ─────────────────────────────────────────────────────────────────
-    const employeeId = payload?.employeeId ?? payload?.employee_id;
-    if (employeeId) {
+    const employeeTargetId =
+      payload?.employeeId ??
+      payload?.employee_id ??
+      payload?.officerId ??
+      payload?.targetEmployeeId ??
+      payload?.assignedEmployeeId;
+
+    // Handle both scalar and array employee targets
+    const employeeIds: string[] = [];
+    if (employeeTargetId) employeeIds.push(employeeTargetId);
+    if (Array.isArray(payload?.employeeIds)) employeeIds.push(...payload.employeeIds);
+
+    for (const empId of employeeIds) {
+      if (!empId) continue;
       const [emp] = await db
-        .select({ id: employees.id, isActive: employees.isActive, firstName: employees.firstName, lastName: employees.lastName })
+        .select({
+          id: employees.id,
+          isActive: employees.isActive,
+          terminationDate: employees.terminationDate,
+          status: (employees as any).status,   // 'active'|'inactive'|'terminated'|'suspended'
+          firstName: employees.firstName,
+          lastName: employees.lastName,
+        })
         .from(employees)
-        .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+        .where(and(eq(employees.id, empId), eq(employees.workspaceId, workspaceId)))
         .limit(1);
 
       if (!emp) {
-        return logAndReturn(fail(`Employee ${employeeId} not found in this workspace`, 'employment_status'));
+        return logAndReturn(fail(`Employee ${empId} not found in this workspace`, 'employment_status'));
       }
-      if (emp.isActive === false) {
-        const name = `${emp.firstName ?? ''} ${emp.lastName ?? ''}`.trim() || employeeId;
-        return logAndReturn(fail(`Cannot assign ${name} — employee is not active`, 'employment_status'));
+      const name = `${emp.firstName ?? ''} ${emp.lastName ?? ''}`.trim() || empId;
+      // Block if deactivated OR if terminationDate is in the past (terminatedAt equivalent)
+      const BLOCKED_STATUSES = ['terminated', 'inactive', 'deactivated', 'suspended'];
+      if (emp.isActive === false || (emp.status && BLOCKED_STATUSES.includes(emp.status))) {
+        return logAndReturn(fail(`Cannot act on ${name} — employee is ${emp.status || 'inactive'}/not active`, 'employment_status'));
+      }
+      if (emp.terminationDate && new Date(emp.terminationDate) <= new Date()) {
+        return logAndReturn(fail(`Cannot act on ${name} — employee has a termination date (${emp.terminationDate})`, 'employment_status'));
       }
     }
 
@@ -278,13 +303,19 @@ export async function validateBeforeExecution(
     await logValidationDecision(actionId, workspaceId, PASSED);
     return PASSED;
   } catch (err: any) {
-    log.warn('[PreExecutionValidator] Check failed (non-blocking):', err?.message);
-    const fallthrough = PASSED;
+    log.error('[PreExecutionValidator] Check threw unexpectedly:', err?.message);
+    // Fail CLOSED for high-risk action categories — cannot allow mutation on validator error
+    const HIGH_RISK_CATEGORIES = ['payroll', 'invoicing', 'billing', 'scheduling', 'admin', 'compliance', 'tax'];
+    const actionCategory = actionId.split('.')[0];
+    const isHighRisk = HIGH_RISK_CATEGORIES.includes(actionCategory);
+    const result: ValidationResult = isHighRisk
+      ? { approved: false, reason: 'Safety check unavailable — action blocked. Please retry.', checkName: 'error_fail_closed' }
+      : { ...PASSED, checkName: 'error_fallthrough_read_only' };
     try {
-      await logValidationDecision(actionId, workspaceId, { ...fallthrough, checkName: 'error_fallthrough' });
+      await logValidationDecision(actionId, workspaceId, result);
     } catch (auditErr: any) {
       log.warn('[PreExecutionValidator] Audit log write failed (non-fatal):', auditErr?.message);
     }
-    return fallthrough;
+    return result;
   }
 }

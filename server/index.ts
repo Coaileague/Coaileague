@@ -2,9 +2,11 @@
 // If the service account JSON is stored as GCS_KEY_JSON env var (Railway secret),
 // write it to a temp file and set GOOGLE_APPLICATION_CREDENTIALS before any
 // GCS client initializes.
+import { writeFileSync } from 'fs';
+import { join as pathJoin } from 'path';
 if (process.env.GCS_KEY_JSON && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  const _fs = require('fs');
-  const _path = require('path');
+  const _fs = { writeFileSync };
+  const _path = { join: pathJoin };
   const _keyPath = _path.join('/tmp', 'gcs-service-account.json');
   try {
     _fs.writeFileSync(_keyPath, process.env.GCS_KEY_JSON, { mode: 0o600 });
@@ -159,9 +161,6 @@ async function cleanupAndVerifyPort(port: number): Promise<boolean> {
 import { ensureWorkspaceAccess } from './middleware/workspaceScope';
 import { requireAuth } from './rbac';
 import { scheduleNonBlocking } from './lib/scheduleNonBlocking';
-import { GamificationEventTracker } from "./services/gamification/eventTracker";
-import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
-import { WhatsNewGamificationBridge } from "./services/gamification/whatsNewIntegration";
 import { initializeNotifications } from "./services/notificationInit";
 import { aiBrainMasterOrchestrator } from "./services/ai-brain/aiBrainMasterOrchestrator";
 import { platformEventBus } from "./services/platformEventBus";
@@ -831,13 +830,7 @@ async function initializeCriticalServices() {
     log.error('Founder exemption guarantee failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
   }
 
-  // STATE REGULATORY CONFIG SEED — Texas (idempotent, safe on dev)
-  try {
-    const { seedTexasRegulatoryConfig } = await import('./routes/stateRegulatoryRoutes');
-    await seedTexasRegulatoryConfig();
-  } catch (error) {
-    log.error('Texas regulatory config seed failed', { error: error instanceof Error ? { message: error.message } : String(error) });
-  }
+  // STATE REGULATORY CONFIG SEED — removed (stateRegulatoryRoutes deleted in refactor)
 
   // ── ALL DB-DEPENDENT SEEDING: skip entirely if DB unreachable ───────────────
   const dbAvailableForSeed = await (async () => {
@@ -989,9 +982,6 @@ async function initializeCriticalServices() {
 
   // Gamification Event System - lightweight event listeners
   try {
-    GamificationEventTracker.initializeEventListeners();
-    AiBrainNotifier.initializeListeners();
-    WhatsNewGamificationBridge.initializeListeners();
     
     // REMOVED: Platform change notification subscribers
     // These were causing DUPLICATE notifications because platformEventBus.publish() 
@@ -1460,6 +1450,8 @@ async function initializeBackgroundServices(): Promise<void> {
       const { helpaiOrchestrator } = await import('./services/helpai/platformActionHub');
       const counts = helpaiOrchestrator.getActionCountByCategory();
       log.info('Action categories', { counts });
+      // Registry invariant check — warns if over 300 actions or duplicate IDs
+      helpaiOrchestrator.assertRegistryInvariants();
     }),
     
     deferredTimedInit('Workflow Orchestration', 7000, async () => {

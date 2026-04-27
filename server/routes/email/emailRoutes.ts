@@ -638,7 +638,7 @@ const SUPPORT_EMAIL_ADDRESS = 'support@coaileague.com';
 // GET /api/email/support-inbox
 emailRouter.get('/support-inbox', async (req: any, res) => {
   try {
-    const userId: string = req.user.id;
+    const userId = req.user?.id ?? '';
     const platformRole = await getUserPlatformRole(userId);
     if (!SUPPORT_INBOX_ROLES.has(platformRole)) {
       return res.status(403).json({ error: 'Support inbox requires a platform support role' });
@@ -690,7 +690,7 @@ emailRouter.get('/support-inbox', async (req: any, res) => {
 // attributable even though the From: address is shared.
 emailRouter.post('/support-inbox/:emailId/reply', async (req: any, res) => {
   try {
-    const userId: string = req.user.id;
+    const userId = req.user?.id ?? '';
     const platformRole = await getUserPlatformRole(userId);
     if (!SUPPORT_INBOX_ROLES.has(platformRole)) {
       return res.status(403).json({ error: 'Support inbox requires a platform support role' });
@@ -719,7 +719,7 @@ emailRouter.post('/support-inbox/:emailId/reply', async (req: any, res) => {
     `, [userId]);
     const agentSig = sigRow.rows[0];
     const agentDisplayName = agentSig?.display_name
-      || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim()
+      || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim()
       || 'Support Team';
 
     // Build the outbound subject

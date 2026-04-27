@@ -2,9 +2,7 @@
  * SeasonalEffectsLayer - Unified seasonal visual effects orchestrator
  * 
  * Renders code-based SVG/CSS ornament graphics orchestrated by AI Brain:
- * - Winter background overlay for snow visibility on white pages
- * - Snowfall + snow piles via SnowfallEngine
- * - SVG ornament balls and stars in corners
+ * - Winter background overlay for snow visibility on white pages * - SVG ornament balls and stars in corners
  * - CSS light strings across top
  * - SVG Santa sleigh flyover with sparkle trail
  * - AI Brain awareness for spawning, density, and effect sync
@@ -14,7 +12,6 @@ import { memo, Suspense, lazy, useEffect, useState } from 'react';
 import { useSeasonalTheme, type SeasonId } from '@/context/SeasonalThemeContext';
 import { FullFestiveScene } from '@/lib/ornaments/sceneRegistry';
 
-const SnowfallEngine = lazy(() => import('./SnowfallEngine'));
 
 const STORAGE_KEY = 'coaileague_seasonal_state';
 
@@ -96,7 +93,6 @@ const SeasonalEffectsLayer = memo(function SeasonalEffectsLayer() {
       {/* Canvas-based snowfall engine for performance */}
       {isWinter && (
         <Suspense fallback={null}>
-          <SnowfallEngine />
         </Suspense>
       )}
       

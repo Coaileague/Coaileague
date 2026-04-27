@@ -1,7 +1,6 @@
 // Domain Workforce — Route Mounts
 // THE LAW: No new routes without Bryan's approval.
 // Canonical prefixes: /api/employees, /api/engagement, /api/training, /api/feedback, /api/availability,
-//   /api/benefits, /api/owner-employee, /api/gamification, /api/hris, /api (hr inline, termination, leader, deactivate),
 //   /api/role-labels, /api/hr/*, /api/onboarding-forms, /api/smart-onboarding, /api/ats,
 //   /api/officers (intelligence dashboard — Phase 11)
 import type { Express } from "express";
@@ -18,8 +17,6 @@ import officerScoreRouter from "../officerScoreRoutes";
 import officerIntelligenceRouter from "../officerIntelligenceRoutes";
 import employeeRouter from "../employeeRoutes";
 import engagementRouter from "../engagementRoutes";
-import gamificationEnhancedRoutes from "../gamificationRoutes";
-import trainingRouter from "../trainingRoutes";
 import officerCertificationRouter, { publicCertRouter } from "../officerCertificationRoutes";
 import feedbackRouter from "../feedbackRoutes";
 import availabilityRouter from "../availabilityRoutes";
@@ -36,7 +33,6 @@ import hiringSettingsRouter from "../hiringSettingsRoutes";
 import performanceNoteRouter from "../performanceNoteRoutes";
 import disciplinaryRecordRouter from "../disciplinaryRecordRoutes";
 import onboardingTaskRouter from "../onboardingTaskRoutes";
-import performanceRouter from "../performanceRoutes";
 import recognitionRouter from "../recognitionRoutes";
 import { clockinPinRouter } from "../clockinPinRoutes";
 import { identityPinRouter } from "../identityPinRoutes";
@@ -63,8 +59,6 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api", requireAuth, ensureWorkspaceAccess, officerIntelligenceRouter);
   app.use("/api/employees", requireAuth, ensureWorkspaceAccess, employeeRouter);
   app.use("/api/engagement", requireAuth, ensureWorkspaceAccess, engagementRouter);
-  app.use("/api/gamification/enhanced", requireAuth, ensureWorkspaceAccess, gamificationEnhancedRoutes);
-  app.use("/api/training", requireAuth, ensureWorkspaceAccess, trainingRouter);
   app.use("/api/training/certification", requireAuth, ensureWorkspaceAccess, officerCertificationRouter);
   // Public certificate verification — no auth, accessed via QR code
   app.use("/api/public/training/certification", publicCertRouter);
@@ -97,7 +91,6 @@ export function mountWorkforceRoutes(app: Express): void {
   // Disciplinary records — formal HR disciplinary workflow
   app.use("/api/disciplinary-records", requireAuth, ensureWorkspaceAccess, disciplinaryRecordRouter);
   // Performance management hub — disciplinary records (role-scoped), performance reviews, NDS notifications
-  app.use("/api/performance", requireAuth, ensureWorkspaceAccess, performanceRouter);
   // Onboarding task management — Phase 48 task tracking and blocking
   app.use("/api/onboarding-tasks", requireAuth, ensureWorkspaceAccess, onboardingTaskRouter);
   // Phase 35T: Officer Recognition, Awards & Culture Building

@@ -272,7 +272,6 @@ const TrainingModuleLearning = lazy(() => import("@/pages/training-certification
 const Insurance = lazy(() => import("@/pages/insurance"));
 const Budgeting = lazy(() => import("@/pages/budgeting"));
 const AIIntegrations = lazy(() => import("@/pages/ai-integrations"));
-const EmployeeRecognition = lazy(() => import("@/pages/employee-recognition"));
 const AlertConfiguration = lazy(() => import("@/pages/alert-configuration"));
 const AccountingIntegrations = lazy(() => import("@/pages/accounting-integrations"));
 const FinanceHub = lazy(() => import("@/pages/finance-hub"));
@@ -1634,7 +1633,6 @@ function AppContent() {
                 <Route path="/recognition"><ErrorBoundary><RecognitionPage /></ErrorBoundary></Route>
                 <Route path="/budgeting"><ErrorBoundary><Budgeting /></ErrorBoundary></Route>
                 <Route path="/ai-integrations"><ErrorBoundary><AIIntegrations /></ErrorBoundary></Route>
-                <Route path="/employee-recognition"><ErrorBoundary><EmployeeRecognition /></ErrorBoundary></Route>
                 <Route path="/alert-configuration"><ErrorBoundary><AlertConfiguration /></ErrorBoundary></Route>
                 <Route path="/accounting-integrations"><ErrorBoundary><AccountingIntegrations /></ErrorBoundary></Route>
                 <Route path="/finance-hub"><ErrorBoundary><FinanceHub /></ErrorBoundary></Route>
@@ -2231,7 +2229,6 @@ function AppContent() {
                 <Route path="/recognition"><ErrorBoundary><RecognitionPage /></ErrorBoundary></Route>
                 <Route path="/budgeting"><ErrorBoundary><Budgeting /></ErrorBoundary></Route>
                 <Route path="/ai-integrations"><ErrorBoundary><AIIntegrations /></ErrorBoundary></Route>
-                <Route path="/employee-recognition"><ErrorBoundary><EmployeeRecognition /></ErrorBoundary></Route>
                 <Route path="/alert-configuration"><ErrorBoundary><AlertConfiguration /></ErrorBoundary></Route>
                 <Route path="/accounting-integrations"><ErrorBoundary><AccountingIntegrations /></ErrorBoundary></Route>
                 <Route path="/finance-hub"><ErrorBoundary><FinanceHub /></ErrorBoundary></Route>

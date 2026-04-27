@@ -37,7 +37,7 @@ export function SchedulePreview() {
       <div className="border-b bg-gradient-to-r from-primary/10 via-primary/5 to-background px-4 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
-          <h3 className="font-bold text-sm">AI Scheduling™</h3>
+          <h3 className="font-bold text-sm">Trinity Schedule</h3>
           <Badge variant="outline" className="text-xs px-2">
             <Sparkles className="h-3 w-3 mr-1" />
             Drag & Drop Grid

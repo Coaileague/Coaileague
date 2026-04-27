@@ -7,7 +7,6 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, File, FileText, FileVideo, Music } from "lucide-react";
-import { ImageLightbox } from "./image-lightbox";
 
 interface MessageAttachmentProps {
   url: string;

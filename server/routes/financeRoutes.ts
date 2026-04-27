@@ -13,6 +13,23 @@ import { financialLedgerService } from '../services/financialLedgerService';
 
 const router = Router();
 
+// Zod validation schemas
+const DateRangeSchema = z.object({
+  start: z.string().optional(),
+  end: z.string().optional(),
+});
+const AsOfSchema = z.object({
+  asOf: z.string().optional(),
+});
+const YearQuarterSchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100).optional(),
+  quarter: z.coerce.number().int().min(1).max(4).optional(),
+});
+const ICalSubscribeSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  name: z.string().max(100).optional(),
+});
+
 function parsePeriodParams(query: any): { start: Date; end: Date } {
   const now = new Date();
   const start = query.start ? new Date(query.start as string) : new Date(now.getFullYear(), now.getMonth(), 1);
@@ -131,7 +148,9 @@ router.post('/ical/subscribe', async (req: any, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'Authentication required' });
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
-    const { employeeId, name } = req.body || {};
+    const parsed = ICalSubscribeSchema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
+    const { employeeId, name } = parsed.data;
     const result = await createICalSubscription(workspaceId, userId, employeeId, name);
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;

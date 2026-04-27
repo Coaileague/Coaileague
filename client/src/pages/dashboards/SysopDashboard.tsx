@@ -3,11 +3,6 @@ import { useLocation } from "wouter";
 import { Server, Database, Activity, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
-import {
-  TrinityBrainStatusPanel,
-  AICreditBalancePanel,
-  BrainActivityFeed,
-} from "@/components/ai-brain";
 
 const pageConfig: CanvasPageConfig = {
   id: "sysop-dashboard",
@@ -91,9 +86,9 @@ export default function SysopDashboard() {
 
         {/* Trinity Brain widgets */}
         <div className="space-y-4">
-          <TrinityBrainStatusPanel />
-          <AICreditBalancePanel />
-          <BrainActivityFeed />
+          {/* TrinityBrainStatusPanel removed */}
+          {/* AICreditBalancePanel removed */}
+          {/* BrainActivityFeed removed */}
         </div>
 
         {/* Infrastructure quick actions */}

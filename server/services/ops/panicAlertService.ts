@@ -189,13 +189,22 @@ class PanicAlertService {
   }
 
   async acknowledgeAlert(alertId: string, workspaceId: string, acknowledgedBy: string): Promise<PanicAlert> {
-    // Converted to Drizzle ORM
-    await db.update(panicAlerts).set({
+    // Conditional WHERE — only acknowledge if currently active (prevents double-ack race)
+    const [updated] = await db.update(panicAlerts).set({
       status: 'acknowledged',
       resolvedBy: acknowledgedBy,
-    }).where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId)));
-    const rows = await db.select().from(panicAlerts).where(eq(panicAlerts.id, alertId)).limit(1);
-    const alert = rows[0] as unknown as PanicAlert;
+    }).where(and(
+      eq(panicAlerts.id, alertId),
+      eq(panicAlerts.workspaceId, workspaceId),
+      eq(panicAlerts.status, 'active')
+    )).returning();
+    if (!updated) {
+      const [existing] = await db.select().from(panicAlerts)
+        .where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId))).limit(1);
+      if (!existing) throw Object.assign(new Error('Alert not found'), { code: 'NOT_FOUND' });
+      throw Object.assign(new Error(`Alert already ${(existing as any).status}`), { code: 'CONFLICT' });
+    }
+    const alert = updated as unknown as PanicAlert;
 
     await platformEventBus.publish({
       type: 'panic_alert_acknowledged',
@@ -211,14 +220,24 @@ class PanicAlertService {
   }
 
   async resolveAlert(alertId: string, workspaceId: string, resolvedBy: string): Promise<PanicAlert> {
-    // Converted to Drizzle ORM
-    await db.update(panicAlerts).set({
+    // Conditional WHERE — only resolve if active or acknowledged (prevents double-resolve)
+    const [updated] = await db.update(panicAlerts).set({
       status: 'resolved',
       resolvedAt: sql`now()`,
       resolvedBy: resolvedBy,
-    }).where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId)));
-    const rows = await db.select().from(panicAlerts).where(eq(panicAlerts.id, alertId)).limit(1);
-    const alert = rows[0] as unknown as PanicAlert;
+    }).where(and(
+      eq(panicAlerts.id, alertId),
+      eq(panicAlerts.workspaceId, workspaceId),
+      inArray(panicAlerts.status, ['active', 'acknowledged'])
+    )).returning();
+    if (!updated) {
+      const [existing] = await db.select().from(panicAlerts)
+        .where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId))).limit(1);
+      if (!existing) throw Object.assign(new Error('Alert not found'), { code: 'NOT_FOUND' });
+      if ((existing as any).status === 'resolved') return existing as unknown as PanicAlert; // idempotent
+      throw Object.assign(new Error(`Cannot resolve alert with status: ${(existing as any).status}`), { code: 'CONFLICT' });
+    }
+    const alert = updated as unknown as PanicAlert;
 
     await platformEventBus.publish({
       type: 'panic_alert_resolved',
@@ -237,7 +256,9 @@ class PanicAlertService {
     let query = `SELECT * FROM panic_alerts WHERE workspace_id=$1`;
     const params: any[] = [workspaceId];
     if (status) { query += ` AND status=$2`; params.push(status); }
-    query += ` ORDER BY triggered_at DESC LIMIT ${limit}`;
+    const clampedLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
+    query += ` ORDER BY triggered_at DESC LIMIT $${params.length + 1}`;
+    params.push(clampedLimit);
     const rows = await typedPool(query, params);
     // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;

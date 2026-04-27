@@ -8,6 +8,7 @@ import { createAutomatedPayrollRun } from '../payrollAutomation';
 import { runWeeklyBillingCycle } from '../quickbooksClientBillingSync';
 import { platformEventBus } from '../platformEventBus';
 import { createLogger } from '../../lib/logger';
+import { calculatePayrollEstimate } from '../payroll/payrollEstimateMath';
 const log = createLogger('trinityTimesheetPayrollCycleActions');
 
 function mkAction(actionId: string, fn: (params: any) => Promise<any>, category: string = 'automation'): ActionHandler {
@@ -194,43 +195,38 @@ export function registerTimesheetPayrollCycleActions() {
         gte(timeEntries.clockIn, startDate),
         lte(timeEntries.clockIn, endDate)
       ));
-    const totalHours = entries.reduce((acc, e) => acc + (e.totalMinutes || 0) / 60, 0);
+    const totalMinutes = entries.reduce((acc, e) => acc + (e.totalMinutes || 0), 0);
     const rate = hourlyRate || 18;
-    const regularHours = Math.min(totalHours, 40);
-    const otHours = Math.max(0, totalHours - 40);
-    const regularPay = regularHours * rate;
-    const otPay = otHours * rate * 1.5;
-    const grossPay = regularPay + otPay;
-    const ficaEmployer = grossPay * 0.0765;
-    const futa = Math.min(grossPay, 7000) * 0.006;
-    const totalCost = grossPay + ficaEmployer + futa;
+    const estimate = calculatePayrollEstimate({ totalMinutes, hourlyRate: rate });
     return {
       employeeId,
       periodStart: startDate,
       periodEnd: endDate,
-      totalHours: +totalHours.toFixed(2),
-      regularHours: +regularHours.toFixed(2),
-      otHours: +otHours.toFixed(2),
-      regularPay: +regularPay.toFixed(2),
-      otPay: +otPay.toFixed(2),
-      grossPay: +grossPay.toFixed(2),
-      ficaEmployerShare: +ficaEmployer.toFixed(2),
-      futaContribution: +futa.toFixed(2),
-      totalCostToOrg: +totalCost.toFixed(2),
+      totalHours: estimate.totalHours,
+      regularHours: estimate.regularHours,
+      otHours: estimate.overtimeHours,
+      regularPay: estimate.regularPay,
+      otPay: estimate.overtimePay,
+      grossPay: estimate.grossPay,
+      ficaEmployerShare: estimate.ficaEmployerShare,
+      futaContribution: estimate.futaContribution,
+      totalCostToOrg: estimate.totalCostToOrg,
     };
   }));
 
   helpaiOrchestrator.registerAction(mkPayrollAction('payroll.validate_math', async (params) => {
     const { workspaceId, payrollRunId } = params;
-    if (!payrollRunId) return { error: 'payrollRunId required' };
-    const run = await db.query.payrollRuns?.findFirst({
-      where: eq(payrollRuns.id, payrollRunId)
-    } as any).catch(() => null);
+    if (!payrollRunId || !workspaceId) return { error: 'payrollRunId and workspaceId required' };
+    const run = await db.select().from(payrollRuns)
+      .where(and(eq(payrollRuns.id, payrollRunId), eq(payrollRuns.workspaceId, workspaceId)))
+      .limit(1).catch(() => []).then(r => r[0] ?? null);
     if (!run) return { valid: false, error: 'Payroll run not found' };
     const entries = await db.select({
       grossPay: payrollEntries.grossPay,
       netPay: payrollEntries.netPay,
-    }).from(payrollEntries).where(eq(payrollEntries.payrollRunId, payrollRunId)).catch(() => []);
+    }).from(payrollEntries)
+      .where(and(eq(payrollEntries.payrollRunId, payrollRunId), eq(payrollEntries.workspaceId, workspaceId)))
+      .catch(() => []);
     const computedTotal = entries.reduce((acc, e) => acc + parseFloat(String(e.grossPay || 0)), 0);
     const storedTotal = parseFloat(String((run as any).totalGrossPay || 0));
     const variance = Math.abs(computedTotal - storedTotal);
@@ -257,14 +253,20 @@ export function registerTimesheetPayrollCycleActions() {
 
   helpaiOrchestrator.registerAction(mkPayrollAction('payroll.generate_paystub', async (params) => {
     const { workspaceId, payrollRunId, employeeId } = params;
-    if (!payrollRunId || !employeeId) return { error: 'payrollRunId and employeeId required' };
+    if (!payrollRunId || !employeeId || !workspaceId) return { error: 'payrollRunId, employeeId, and workspaceId required' };
     const entry = await db.select()
       .from(payrollEntries)
-      .where(and(eq(payrollEntries.payrollRunId, payrollRunId), eq(payrollEntries.employeeId, employeeId)))
+      .where(and(
+        eq(payrollEntries.payrollRunId, payrollRunId),
+        eq(payrollEntries.employeeId, employeeId),
+        eq(payrollEntries.workspaceId, workspaceId),
+      ))
       .limit(1)
       .catch(() => []);
     if (!entry.length) return { error: 'No payroll entry found for this employee in this run' };
-    const emp = await db.query.employees?.findFirst({ where: eq(employees.id, employeeId) } as any).catch(() => null);
+    const emp = await db.select().from(employees)
+      .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+      .limit(1).catch(() => []).then(r => r[0] ?? null);
     return {
       paystub: {
         employeeId,
@@ -283,7 +285,7 @@ export function registerTimesheetPayrollCycleActions() {
 
   helpaiOrchestrator.registerAction(mkPayrollAction('payroll.export_for_accountant', async (params) => {
     const { workspaceId, payrollRunId } = params;
-    if (!payrollRunId) return { error: 'payrollRunId required' };
+    if (!payrollRunId || !workspaceId) return { error: 'payrollRunId and workspaceId required' };
     const entries = await db.select({
       employeeId: payrollEntries.employeeId,
       grossPay: payrollEntries.grossPay,
@@ -291,7 +293,8 @@ export function registerTimesheetPayrollCycleActions() {
       regularHours: payrollEntries.regularHours,
       overtimeHours: payrollEntries.overtimeHours,
       deductions: (payrollEntries as any).deductions,
-    }).from(payrollEntries).where(eq(payrollEntries.payrollRunId, payrollRunId));
+    }).from(payrollEntries)
+      .where(and(eq(payrollEntries.payrollRunId, payrollRunId), eq(payrollEntries.workspaceId, workspaceId)));
     const csv = ['EmployeeId,GrossPay,NetPay,RegularHours,OvertimeHours,Deductions',
       ...entries.map(e => `${e.employeeId},${e.grossPay},${e.netPay},${e.regularHours},${e.overtimeHours},${e.deductions}`)
     ].join('\n');

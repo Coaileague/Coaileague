@@ -173,7 +173,14 @@ export async function shouldDeliver(params: {
 }): Promise<{ allow: boolean; reason?: string }> {
   const { userId, workspaceId, notificationType, channel } = params;
 
-  // Check channel enabled
+  // Critical safety alerts (panic, duress, incident, security) bypass quiet hours
+  // and channel opt-outs. SMS still honors STOP/consent via the sendSMSToUser path.
+  const SAFETY_CRITICAL = ['panic_alert', 'duress_alert', 'incident_alert', 'security_threat'];
+  if (SAFETY_CRITICAL.includes(notificationType)) {
+    return { allow: true, reason: 'critical_safety_bypass' };
+  }
+
+  // Check channel enabled for non-critical types
   const channelEnabled = await isChannelEnabled(userId, workspaceId, channel);
   if (!channelEnabled) {
     return { allow: false, reason: `channel_disabled:${channel}` };

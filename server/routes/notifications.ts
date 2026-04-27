@@ -2,6 +2,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth';
+import { requireManager } from '../rbac';
 import { db } from '../db';
 import { eq, and, isNull } from 'drizzle-orm';
 import { storage } from '../storage';
@@ -1642,11 +1643,14 @@ router.get('/api/notifications/log', requireAuth, async (req: AuthenticatedReque
 });
 
 // POST /api/notifications/ack/:id — mark WebSocket notification as delivered
-// @ts-expect-error — TS migration: fix in refactoring sprint
+// Ownership enforced: only the recipient in the correct workspace can ack their own delivery
 router.post('/api/notifications/ack/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+    if (!userId || !workspaceId) return res.status(401).json({ message: 'Auth context required' });
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
-    await NotificationDeliveryService.acknowledge(req.params.id);
+    await NotificationDeliveryService.acknowledge(req.params.id, userId, workspaceId);
     res.json({ success: true });
   } catch (error) {
     log.error('Error acknowledging notification:', error);
@@ -1654,17 +1658,23 @@ router.post('/api/notifications/ack/:id', requireAuth, async (req: Authenticated
   }
 });
 
-// POST /api/notifications/send (Phase 8 test/manual send endpoint)
-// @ts-expect-error — TS migration: fix in refactoring sprint
-router.post('/api/notifications/send', requireAuth, async (req: AuthenticatedRequest, res) => {
+// POST /api/notifications/send — restricted to manager+ for manual/test sends
+router.post('/api/notifications/send', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'No active workspace' });
 
-    const { type, recipientUserId, channel, subject, body, idempotencyKey } = req.body;
-    if (!type || !recipientUserId || !channel || !body) {
-      return res.status(400).json({ message: 'type, recipientUserId, channel, and body are required' });
-    }
+    const sendSchema = (await import('zod')).z.object({
+      recipientUserId: (await import('zod')).z.string().uuid(),
+      type: (await import('zod')).z.string().min(1),
+      channel: (await import('zod')).z.enum(['email', 'sms', 'websocket', 'in_app', 'push']),
+      body: (await import('zod')).z.string().min(1),
+      subject: (await import('zod')).z.string().optional(),
+      idempotencyKey: (await import('zod')).z.string().optional(),
+    });
+    const parsed = sendSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: 'Validation failed', details: parsed.error.flatten() });
+    const { type, recipientUserId, channel, subject, body, idempotencyKey } = parsed.data;
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({

@@ -951,6 +951,32 @@ export function broadcastToWorkspace(workspaceId: string, data: any) {
   }
 }
 
+export function broadcastToUser(userId: string, data: any): number {
+  if (!globalWSS || !userId) {
+    return 0;
+  }
+
+  const payload = JSON.stringify(data);
+  let sentCount = 0;
+
+  globalWSS.clients.forEach((client) => {
+    const ws = client as WebSocketClient;
+    const wsUserId = ws.serverAuth?.userId || ws.userId;
+    if (ws.readyState !== WebSocket.OPEN || wsUserId !== userId) {
+      return;
+    }
+
+    try {
+      ws.send(payload);
+      sentCount++;
+    } catch (sendErr: any) {
+      log.warn('broadcastToUser: WS send failed', { userId, error: sendErr?.message });
+    }
+  });
+
+  return sentCount;
+}
+
 /**
  * Broadcast platform update to all connected clients
  * Used by aiNotificationService to push real-time What's New updates

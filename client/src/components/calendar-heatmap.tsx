@@ -12,10 +12,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Clock, Users, Calendar, TrendingUp, AlertTriangle, 
-  Lightbulb, ChevronDown, Info, Target, Zap, Brain
-} from "lucide-react";
+import { Clock, Users, Calendar, TrendingUp, AlertTriangle, Lightbulb, ChevronDown, Info, Target, Zap, Brain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // @ts-expect-error — TS migration: fix in refactoring sprint
-import { ScrollArea, ScrollAreaViewport, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 

@@ -1,59 +1,35 @@
-let badgeCount = 0;
+/**
+ * App Badge API utilities
+ * Wraps the navigator.setAppBadge / navigator.clearAppBadge APIs
+ * for showing notification counts on the app icon (PWA / installed apps).
+ */
 
-export function isAppBadgeSupported(): boolean {
-  return 'setAppBadge' in navigator;
-}
-
-export async function setAppBadge(count: number): Promise<void> {
-  badgeCount = count;
-  if (!isAppBadgeSupported()) return;
+export function setAppBadge(count: number): void {
   try {
-    if (count > 0) {
-      await (navigator as any).setAppBadge(count);
-    } else {
-      await (navigator as any).clearAppBadge();
+    if ("setAppBadge" in navigator) {
+      (navigator as any).setAppBadge(count).catch(() => {});
     }
-  } catch (e) {
+  } catch {
+    // Badge API not supported or permission denied — silently ignore
   }
 }
 
-export async function clearAppBadge(): Promise<void> {
-  badgeCount = 0;
-  if (!isAppBadgeSupported()) return;
+export function clearAppBadge(): void {
   try {
-    await (navigator as any).clearAppBadge();
-  } catch (e) {
+    if ("clearAppBadge" in navigator) {
+      (navigator as any).clearAppBadge().catch(() => {});
+    }
+  } catch {
+    // Badge API not supported — silently ignore
   }
 }
 
+/**
+ * Clears the app badge when the window regains focus.
+ * Returns a cleanup function to remove the event listener.
+ */
 export function setupBadgeClearOnFocus(): () => void {
-  const focusHandler = () => {
-    clearAppBadge();
-  };
-  window.addEventListener('focus', focusHandler);
-
-  const visibilityHandler = () => {
-    if (document.visibilityState === 'visible') {
-      clearAppBadge();
-    }
-  };
-  document.addEventListener('visibilitychange', visibilityHandler);
-
-  const swMessageHandler = (event: MessageEvent) => {
-    if (event.data?.type === 'BADGE_UPDATE') {
-      if (event.data.action === 'increment') {
-        badgeCount++;
-        setAppBadge(badgeCount);
-      } else if (event.data.action === 'clear') {
-        clearAppBadge();
-      }
-    }
-  };
-  navigator.serviceWorker?.addEventListener('message', swMessageHandler);
-
-  return () => {
-    window.removeEventListener('focus', focusHandler);
-    document.removeEventListener('visibilitychange', visibilityHandler);
-    navigator.serviceWorker?.removeEventListener('message', swMessageHandler);
-  };
+  const handler = () => clearAppBadge();
+  window.addEventListener("focus", handler);
+  return () => window.removeEventListener("focus", handler);
 }

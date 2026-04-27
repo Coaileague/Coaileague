@@ -39,6 +39,7 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, lt, gt, isNull, isNotNull, sql, desc, asc, or, ne, inArray, notInArray } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
+import { multiplyFinancialValues, addFinancialValues, toFinancialString } from '../financialCalculator';
 const log = createLogger('trinityIntelligenceLayers');
 
 // ============================================================================
@@ -862,8 +863,8 @@ export function registerPayrollMathEngineActions() {
     const stateRate = STATE_INCOME_TAX_RATES[state.toUpperCase()] || 0;
     const stateWithholding = grossPay * stateRate;
 
-    const socialSecurity = Math.min(grossPay * 0.062, (SS_WAGE_BASE_2026 / 26) * 0.062);
-    const medicare = grossPay * 0.0145;
+    const socialSecurity = Math.min(Number(multiplyFinancialValues(toFinancialString(grossPay), toFinancialString(0.062))), Number(multiplyFinancialValues(toFinancialString(SS_WAGE_BASE_2026 / 26), toFinancialString(0.062))));
+    const medicare = Number(multiplyFinancialValues(toFinancialString(grossPay), toFinancialString(0.0145)));
 
     const totalTaxes = federalWithholding + stateWithholding + socialSecurity + medicare;
     const netPay = grossPay - totalTaxes;
@@ -1072,18 +1073,18 @@ export function registerPayrollMathEngineActions() {
       .filter(e => e.workerType !== '1099') // Employer taxes apply to W2 only
       .map(e => {
         const gross = Number(e.grossPay || 0);
-        const employerSS = gross * 0.062;
-        const employerMedicare = gross * 0.0145;
+        const employerSS = Number(multiplyFinancialValues(toFinancialString(gross), toFinancialString(0.062)));
+        const employerMedicare = Number(multiplyFinancialValues(toFinancialString(gross), toFinancialString(0.0145)));
         const futaWages = Math.min(gross, FUTA_WAGE_BASE);
-        const futa = futaWages * FUTA_RATE;
-        const suta = futaWages * SUTA_RATE;
+        const futa = Number(multiplyFinancialValues(toFinancialString(futaWages), toFinancialString(FUTA_RATE)));
+        const suta = Number(multiplyFinancialValues(toFinancialString(futaWages), toFinancialString(SUTA_RATE)));
 
         totalEmployerSS += employerSS;
         totalEmployerMedicare += employerMedicare;
         totalFUTA += futa;
         totalSUTA += suta;
 
-        return { employeeId: e.employeeId, grossPay: gross, employerSS: Math.round(employerSS * 100) / 100, employerMedicare: Math.round(employerMedicare * 100) / 100, futa: Math.round(futa * 100) / 100, suta: Math.round(suta * 100) / 100 };
+        return { employeeId: e.employeeId, grossPay: gross, employerSS, employerMedicare, futa, suta };
       });
 
     const totalEmployerCost = totalEmployerSS + totalEmployerMedicare + totalFUTA + totalSUTA;
@@ -1119,8 +1120,8 @@ export function registerPayrollMathEngineActions() {
     const annualTaxable = taxableGross * 26;
     const federalTax = Math.max(0, annualizedFederalTax(annualTaxable, filingStatus) / 26);
     const stateTax = taxableGross * (STATE_INCOME_TAX_RATES[state.toUpperCase()] || 0);
-    const ss = Math.min(taxableGross * 0.062, (SS_WAGE_BASE_2026 / 26) * 0.062);
-    const medicare = taxableGross * 0.0145;
+    const ss = Math.min(Number(multiplyFinancialValues(toFinancialString(taxableGross), toFinancialString(0.062))), Number(multiplyFinancialValues(toFinancialString(SS_WAGE_BASE_2026 / 26), toFinancialString(0.062))));
+    const medicare = Number(multiplyFinancialValues(toFinancialString(taxableGross), toFinancialString(0.0145)));
     const totalTax = federalTax + stateTax + ss + medicare;
 
     // Step 3: After-tax disposable income

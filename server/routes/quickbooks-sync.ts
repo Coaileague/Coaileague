@@ -5,6 +5,7 @@ import { db } from '../db';
 import { eq, and, isNull, desc, gte } from 'drizzle-orm';
 import { partnerConnections, partnerSyncLogs, invoices } from '@shared/schema';
 import { requireAuth } from '../auth';
+import { requireManager } from '../rbac';
 import { requireProfessional } from '../tierGuards';
 import { tokenManager } from '../services/billing/tokenManager';
 import { createLogger } from '../lib/logger';
@@ -68,7 +69,7 @@ const qboInvoiceSchema = z.object({
   weekEnding: z.string().refine((val) => !isNaN(Date.parse(val)), "weekEnding must be a valid date"),
   lineItems: z.array(z.object({
     description: z.string().min(1),
-    amount: z.number().positive(),
+    amount: z.union([z.number().positive(), z.string()]).transform(v => String(v)),
     hours: z.number().positive().optional(),
   })).min(1, "At least one line item is required"),
 });
@@ -230,7 +231,6 @@ router.get("/api/quickbooks/review-queue", requireAuth, requireProfessional, asy
 });
 
 // Resolve manual review item
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/quickbooks/review-queue/:itemId/resolve", requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { itemId } = req.params;
@@ -238,13 +238,17 @@ router.post("/api/quickbooks/review-queue/:itemId/resolve", requireAuth, require
     if (!resolution) {
       return res.status(400).json({ error: "resolution is required" });
     }
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Workspace context required" });
+
     const syncService = await getQuickbooksSyncService();
+    // Pass workspaceId so service can enforce ownership before resolving
     await syncService.resolveManualReview(
       itemId,
       resolution,
       selectedCoaileagueEntityId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      req.user.id
+      req.user?.id || 'unknown',
+      workspaceId  // G-P1-1 FIX: scope resolution by workspace
     );
     res.json({ success: true });
   } catch (error: unknown) {

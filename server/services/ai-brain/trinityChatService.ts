@@ -506,7 +506,7 @@ SPIRITUAL GUIDANCE: NONE (SECULAR)
   }[accountabilityLevel];
 
   return `
-You are Trinity in PERSONAL MODE, also known as BUDDY.
+You are Trinity — and this conversation is personal, about the human on the other side.
 You are ${userName}'s personal accountability partner and life coach.
 
 IDENTITY:
@@ -557,9 +557,6 @@ WHAT YOU TRACK:
 - Progress over time
 - Their stated values vs actions
 
-WHEN TO SUGGEST MODE SWITCHING:
-If conversation shifts to business metrics, suggest: "That's a business question - want me to switch to Business Mode so I can pull up the actual numbers?"
-
 YOUR ULTIMATE GOAL:
 Help ${userName} become someone who keeps their word, faces hard truths, grows through challenges, leads with character, and lives with purpose.
 
@@ -571,7 +568,7 @@ IMPORTANT:
 };
 
 /**
- * GURU MODE - Tech Expert & Platform Diagnostician
+ * Tech expertise depth — Trinity naturally has this, no mode needed
  * Trinity becomes a senior engineer helping with technical issues, platform diagnostics,
  * configuration guidance, and advanced troubleshooting.
  */
@@ -579,13 +576,12 @@ const buildGuruModePrompt = (workspaceContext: any, userName: string) => {
   const ctx = workspaceContext || {};
   
   return `
-You are Trinity in GURU MODE - the platform's senior technical expert and diagnostician.
-You're like having a brilliant senior engineer on call 24/7 who knows every system inside and out.
+You are Trinity — and right now this conversation calls for deep platform expertise.
+You know every system inside and out. Diagnose, explain, solve.
 
 IDENTITY:
 ${PERSONA_SYSTEM_INSTRUCTION}
 
-MODE: GURU (Tech Expert & Diagnostician)
 
 YOUR EXPERTISE:
 - Deep platform architecture knowledge
@@ -643,8 +639,7 @@ Remember: You're the friendly tech expert who makes complex systems understandab
 
 // DEPRECATED: Personal and Integrated modes have been consolidated into Business mode
 // These functions remain for backward compatibility but redirect to business mode
-const buildPersonalModePromptLegacy = buildBusinessModePrompt;
-const buildIntegratedModePromptLegacy = buildBusinessModePrompt;
+// Legacy mode aliases removed — Trinity is one unified individual (no mode switching)
 
 // ============================================================================
 // TRINITY CHAT SERVICE
@@ -2744,7 +2739,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     basePrompt += `\n\n${TRINITY_KNOWLEDGE_CORPUS}`;
 
     // === v2.1 MODULE F: DUAL-MODE DECISION GUIDE ===
-    // Explicit guidance on when to operate in business vs. guru mode and how
+    // Trinity is one individual — depth is context-driven, not mode-switched
     // to surface mode-transition suggestions. Injected in all sessions.
     basePrompt += `\n\n${TRINITY_DUAL_MODE_GUIDE}`;
 
@@ -3295,6 +3290,8 @@ If no significant insight, respond with:
   /**
    * Switch conversation mode
    */
+  /** @deprecated Trinity has no modes — ConversationMode is hardcoded to 'business' for DB back-compat.
+   * This method updates the DB column only; it has no effect on Trinity's behavior. */
   async switchMode(userId: string, workspaceId: string, newMode: ConversationMode): Promise<TrinityConversationSession> {
     // End current active sessions
     await db
@@ -3472,7 +3469,18 @@ If no significant insight, respond with:
   /**
    * Get session messages
    */
-  async getSessionMessages(sessionId: string): Promise<TrinityConversationTurn[]> {
+  async getSessionMessages(sessionId: string, userId: string, workspaceId: string): Promise<TrinityConversationTurn[]> {
+    // Verify session ownership before returning turns — prevents cross-user/cross-workspace IDOR
+    const [session] = await db
+      .select({ id: trinityConversationSessions.id })
+      .from(trinityConversationSessions)
+      .where(and(
+        eq(trinityConversationSessions.id, sessionId),
+        eq(trinityConversationSessions.userId, userId),
+        eq(trinityConversationSessions.workspaceId, workspaceId)
+      ))
+      .limit(1);
+    if (!session) return []; // Return empty rather than 404 to avoid session enumeration
     return db
       .select()
       .from(trinityConversationTurns)

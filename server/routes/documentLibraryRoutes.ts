@@ -230,13 +230,26 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
     try {
       const { id } = req.params;
 
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+      // Verify document belongs to this workspace first
+      const [doc] = await db.select({ id: orgDocuments.id })
+        .from(orgDocuments)
+        .where(and(eq(orgDocuments.id, id), eq(orgDocuments.workspaceId, workspaceId)))
+        .limit(1);
+      if (!doc) return res.status(404).json({ error: 'Document not found' });
+
       const signatures = await db.select({
         signature: orgDocumentSignatures,
         signer: { id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email }
       })
       .from(orgDocumentSignatures)
       .leftJoin(users, eq(orgDocumentSignatures.signerUserId, users.id))
-      .where(eq(orgDocumentSignatures.documentId, id))
+      .where(and(
+        eq(orgDocumentSignatures.documentId, id),
+        eq(orgDocumentSignatures.workspaceId, workspaceId)
+      ))
       .orderBy(desc(orgDocumentSignatures.signedAt));
 
       res.json({ success: true, data: signatures });
@@ -253,29 +266,47 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
       const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
       const { signatureData, signatureType, signerEmail, signerName } = req.body;
+      if (!signatureData) return res.status(400).json({ error: 'signatureData required' });
 
       const [signature] = await db.transaction(async (tx) => {
-        // Update first so we can verify the document belongs to this workspace.
-        const [doc] = await tx.update(orgDocuments)
-          .set({ signaturesCompleted: sql`${orgDocuments.signaturesCompleted} + 1`, updatedAt: new Date() })
-          .where(and(eq(orgDocuments.id, id), eq(orgDocuments.workspaceId, workspaceId)))
-          .returning({ id: orgDocuments.id });
+        // Verify a pending signature request exists for this signer + document + workspace
+        const [pendingReq] = await tx.select({ id: orgDocumentSignatures.id })
+          .from(orgDocumentSignatures)
+          .where(and(
+            eq(orgDocumentSignatures.documentId, id),
+            eq(orgDocumentSignatures.workspaceId, workspaceId!),
+            eq(orgDocumentSignatures.signerUserId, userId!),
+            sql`${orgDocumentSignatures.signatureData} IS NULL` // unsigned = pending
+          ))
+          .limit(1);
 
-        if (!doc) {
-          throw new Error('Document not found in this workspace');
+        if (!pendingReq) {
+          throw Object.assign(
+            new Error('No pending signature request for this user on this document'),
+            { code: 'NO_PENDING_REQUEST' }
+          );
         }
 
-        const [sig] = await tx.insert(orgDocumentSignatures).values({
-          workspaceId: workspaceId,
-          documentId: id,
-          signerUserId: userId,
-          signerEmail,
-          signerName,
-          signatureData,
-          signatureType: signatureType || 'drawn',
-          ipAddress: req.ip || req.socket.remoteAddress,
-          userAgent: req.headers['user-agent']
-        }).returning();
+        // Verify document belongs to workspace
+        const [doc] = await tx.update(orgDocuments)
+          .set({ signaturesCompleted: sql`${orgDocuments.signaturesCompleted} + 1`, updatedAt: new Date() })
+          .where(and(eq(orgDocuments.id, id), eq(orgDocuments.workspaceId, workspaceId!)))
+          .returning({ id: orgDocuments.id });
+
+        if (!doc) throw new Error('Document not found in this workspace');
+
+        const [sig] = await tx.update(orgDocumentSignatures)
+          .set({
+            signatureData,
+            signatureType: signatureType || 'drawn',
+            signerEmail,
+            signerName,
+            signedAt: new Date(),
+            ipAddress: req.ip || req.socket?.remoteAddress,
+            userAgent: req.headers['user-agent'],
+          })
+          .where(eq(orgDocumentSignatures.id, pendingReq.id))
+          .returning();
 
         return [sig];
       });
@@ -292,7 +323,16 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
       const workspaceId = req.workspaceId;
       const userId = (req.user)?.id;
       const { id } = req.params;
-      const { recipients, message } = req.body;
+      const bodyParsed = z.object({
+        recipients: z.array(z.object({
+          email: z.string().email(),
+          name: z.string().min(1),
+          order: z.number().int().min(1).optional(),
+        })).min(1, 'At least one recipient required'),
+        message: z.string().max(1000).optional(),
+      }).safeParse(req.body);
+      if (!bodyParsed.success) return res.status(400).json({ error: 'Validation failed', details: bodyParsed.error.flatten() });
+      const { recipients, message } = bodyParsed.data;
 
       if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
         return res.status(400).json({ error: "At least one recipient is required" });
@@ -306,7 +346,7 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
         documentId: id,
         // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
-        senderId: userId,
+        senderUserId: userId,
         senderName,
         recipients: recipients.map((r: any) => ({
           email: r.email,
@@ -354,7 +394,7 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
         documentId: id,
         // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
-        senderId: userId,
+        senderUserId: userId,
         senderName,
         recipients: [{ email: signerEmail, name: signerName, type: 'external' as const }],
       });

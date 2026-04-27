@@ -58,13 +58,12 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 // Delegated to canonical registry — see server/lib/publicPaths.ts
 const isBillingExempt = isBillingGuardExempt;
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
-interface AuthenticatedRequest extends Request {
-  workspaceId?: string;
-  currentWorkspaceId?: string;
-  user?: { workspaceId?: string };
+type AuthenticatedRequest = Request & {
+  workspaceId?: string | null;
+  currentWorkspaceId?: string | null;
+  user?: Request['user'] & { workspaceId?: string | null };
   isTrinityBot?: boolean;
-}
+};
 
 export function subscriptionReadOnlyGuard(
   req: AuthenticatedRequest,

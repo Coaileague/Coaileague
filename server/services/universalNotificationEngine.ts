@@ -492,6 +492,7 @@ export class UniversalNotificationEngine {
           type: payload.type,
           url: payload.actionUrl,
           severity: payload.severity,
+          workspaceId: payload.workspaceId,
           tag: payload.pushTag || `notif-${notification.id}`,
         });
       } else if (payload.targetRoles && payload.targetRoles.length > 0) {
@@ -576,6 +577,7 @@ export class UniversalNotificationEngine {
               type: payload.type,
               url: payload.actionUrl,
               severity: payload.severity,
+              workspaceId: payload.workspaceId,
               tag: `notif-${notification.id}`,
             });
           }
@@ -653,6 +655,7 @@ export class UniversalNotificationEngine {
               type: payload.type,
               url: payload.actionUrl,
               severity: payload.severity,
+              workspaceId: payload.workspaceId,
               tag: `notif-${notification.id}`,
             });
           }

@@ -15,7 +15,6 @@ import {
   CloudRain, Wrench, Pin, User
 } from 'lucide-react';
 import { useMarkBroadcastRead, useAcknowledgeBroadcast, useDismissBroadcast } from '@/hooks/useBroadcasts';
-import { BroadcastFeedbackForm } from './BroadcastFeedbackForm';
 import { cn } from '@/lib/utils';
 import type { Broadcast, BroadcastRecipient, BroadcastType, BroadcastPriority } from '@shared/types/broadcasts';
 
@@ -255,15 +254,7 @@ export function BroadcastCard({ broadcast, recipient, onDismiss }: BroadcastCard
       </Card>
 
       {/* Feedback Form Modal */}
-      {showFeedbackForm && (
-        <BroadcastFeedbackForm
-          open={showFeedbackForm}
-          onOpenChange={setShowFeedbackForm}
-          broadcastId={broadcast.id}
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          feedbackType={broadcast.actionConfig?.formType || 'general'}
-        />
-      )}
+      {/* BroadcastFeedbackForm removed */}
     </>
   );
 }

@@ -65,7 +65,6 @@ import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { PLATFORM } from '../config/platformConfig';
 const log = createLogger('MiscRoutes');
 
-
 const ALLOWED_AUDIO_MIME_TYPES = [
   "audio/mpeg", "audio/wav", "audio/ogg", "audio/webm", "audio/mp4", "audio/aac", "audio/x-m4a", "audio/m4a"
 ];
@@ -228,35 +227,6 @@ router.get("/api/feature-updates", requireAuth, async (req: AuthenticatedRequest
     res.json(result);
   } catch (error: unknown) {
     log.error("Error fetching feature updates:", error);
-    res.status(500).json({ message: sanitizeError(error) });
-  }
-});
-
-router.post("/api/feature-updates/:id/dismiss", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const userId = req.user?.id;
-    const { id } = req.params;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const { featureUpdateReceipts } = await import("@shared/schema");
-
-    await db
-      .insert(featureUpdateReceipts)
-      .values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        workspaceId: workspaceId,
-        userId,
-        featureUpdateId: id,
-        dismissedAt: new Date(),
-      })
-      .onConflictDoNothing();
-
-    res.json({ success: true });
-  } catch (error: unknown) {
-    log.error("Error dismissing feature update:", error);
     res.status(500).json({ message: sanitizeError(error) });
   }
 });
@@ -883,108 +853,6 @@ router.get("/api/business-categories", requireAuth, async (req: AuthenticatedReq
   }
 });
 
-router.post("/api/client-rates", requireAuth, async (req: any, res) => {
-  try {
-    const userId = req.user?.id || req.user?.claims?.sub;
-    const workspace = (await storage.getWorkspaceByOwnerId(userId)) || (await storage.getWorkspaceByMembership(userId));
-
-    if (!workspace) {
-      return res.status(404).json({ message: "Workspace not found" });
-    }
-
-    const validated = insertClientRateSchema.parse({
-      ...req.body,
-      workspaceId: workspace.id,
-    });
-
-    const [clientRate] = await db.insert(clientRates).values(validated).returning();
-    res.json(clientRate);
-  } catch (error: unknown) {
-    log.error("Error creating client rate:", error);
-    res.status(400).json({ message: sanitizeError(error) || "Failed to create client rate" });
-  }
-});
-
-router.get("/api/client-rates/:clientId", requireAuth, async (req: any, res) => {
-  try {
-    const userId = req.user?.id || req.user?.claims?.sub;
-    const workspace = (await storage.getWorkspaceByOwnerId(userId)) || (await storage.getWorkspaceByMembership(userId));
-
-    if (!workspace) {
-      return res.status(404).json({ message: "Workspace not found" });
-    }
-
-    const rates = await storage.getClientRates(workspace.id, req.params.clientId);
-    res.json(rates);
-  } catch (error: unknown) {
-    log.error("Error fetching client rates:", error);
-    res.status(500).json({ message: "Failed to fetch client rates" });
-  }
-});
-
-router.get("/api/expense-categories", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const categories = await storage.getExpenseCategoriesByWorkspace(workspaceId);
-    res.json(categories);
-  } catch (error: unknown) {
-    log.error("Error fetching expense categories:", error);
-    res.status(500).json({ message: "Failed to fetch expense categories" });
-  }
-});
-
-router.post("/api/expense-categories/seed", requireManager, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-
-    const defaultCategories = [
-      { name: "Mileage", description: "Vehicle mileage reimbursement (IRS standard rate)" },
-      { name: "Meals", description: "Business meals and entertainment" },
-      { name: "Travel", description: "Flights, hotels, and transportation" },
-      { name: "Office Supplies", description: "Office equipment and supplies" },
-      { name: "Training", description: "Professional development and training" },
-      { name: "Equipment", description: "Tools and equipment purchases" },
-      { name: "Uniforms", description: "Work uniforms and safety gear" },
-      { name: "Other", description: "Miscellaneous business expenses" },
-    ];
-
-    const created = [];
-    for (const category of defaultCategories) {
-      try {
-        const newCategory = await storage.createExpenseCategory({
-          workspaceId,
-          name: category.name,
-          description: category.description,
-          isActive: true,
-        });
-        created.push(newCategory);
-      } catch (error) {
-        log.warn('[MiscRoutes] Failed to seed expense category:', error);
-      }
-    }
-
-    res.json({ message: `Seeded ${created.length} default categories`, categories: created });
-  } catch (error: unknown) {
-    log.error("Error seeding expense categories:", error);
-    res.status(500).json({ message: sanitizeError(error) || "Failed to seed expense categories" });
-  }
-});
-
-router.post("/api/expense-categories", requireManager, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const validated = insertExpenseCategorySchema.parse({
-      ...req.body,
-      workspaceId,
-    });
-    const category = await storage.createExpenseCategory(validated);
-    res.json(category);
-  } catch (error: unknown) {
-    log.error("Error creating expense category:", error);
-    res.status(400).json({ message: sanitizeError(error) || "Failed to create expense category" });
-  }
-});
-
 router.get("/api/premium-features", async (req: any, res) => {
   try {
     const { PREMIUM_FEATURES, CREDIT_PACKAGES } = await import("@shared/config/premiumFeatures");
@@ -1197,74 +1065,6 @@ Escalate to human if: there are complaints, billing disputes, legal matters, urg
   } catch (error) {
     log.error("Error processing contact form:", error);
     res.status(500).json({ message: "Failed to submit contact form. Please try again." });
-  }
-});
-
-router.get("/api/kpi-alert-triggers", requireAuth, async (req: any, res) => {
-  try {
-    const userId = req.user?.id || req.user?.claims?.sub;
-    const user = await storage.getUser(userId);
-    if (!user?.currentWorkspaceId) {
-      return res.status(403).json({ message: "No workspace selected" });
-    }
-
-    const { alertId } = req.query;
-    const triggers = await storage.getKpiAlertTriggers(user.currentWorkspaceId, alertId as string | undefined);
-    res.json(triggers);
-  } catch (error) {
-    log.error("Error fetching KPI alert triggers:", error);
-    res.status(500).json({ message: "Failed to fetch KPI alert triggers" });
-  }
-});
-
-router.post("/api/kpi-alert-triggers/:id/acknowledge", requireAuth, async (req: any, res) => {
-  try {
-    const userId = req.user?.id || req.user?.claims?.sub;
-    const { id } = req.params;
-
-    const trigger = await storage.acknowledgeAlert(id, userId);
-    res.json(trigger);
-  } catch (error) {
-    log.error("Error acknowledging alert:", error);
-    res.status(500).json({ message: "Failed to acknowledge alert" });
-  }
-});
-
-router.get("/api/benchmark-metrics", requireAuth, async (req: any, res) => {
-  try {
-    const userId = req.user?.id || req.user?.claims?.sub;
-    const user = await storage.getUser(userId);
-    if (!user?.currentWorkspaceId) {
-      return res.status(403).json({ message: "No workspace selected" });
-    }
-
-    const { periodType } = req.query;
-    const metrics = await storage.getBenchmarkMetrics(user.currentWorkspaceId, periodType as string | undefined);
-    res.json(metrics);
-  } catch (error) {
-    log.error("Error fetching benchmark metrics:", error);
-    res.status(500).json({ message: "Failed to fetch benchmark metrics" });
-  }
-});
-
-router.post("/api/benchmark-metrics", requireAuth, async (req: any, res) => {
-  try {
-    const { requireOwner } = await import("../rbac");
-    const userId = req.user?.id || req.user?.claims?.sub;
-    const user = await storage.getUser(userId);
-    if (!user?.currentWorkspaceId) {
-      return res.status(403).json({ message: "No workspace selected" });
-    }
-
-    const metric = await storage.createBenchmarkMetric({
-      ...req.body,
-      workspaceId: user.currentWorkspaceId,
-    });
-
-    res.json(metric);
-  } catch (error) {
-    log.error("Error creating benchmark metric:", error);
-    res.status(500).json({ message: "Failed to create benchmark metric" });
   }
 });
 
@@ -1537,150 +1337,6 @@ router.get("/api/users/search", requireAuth, async (req: AuthenticatedRequest, r
   }
 });
 
-router.get("/api/monitoring/system-health", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const healthReport = await monitoringService.checkSystemHealth();
-
-    res.json({
-      success: true,
-      data: healthReport,
-    });
-  } catch (error: unknown) {
-    log.error("Error checking system health:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.get("/api/monitoring/component/:component/history", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { component } = req.params;
-    const { hoursBack } = req.query;
-
-    const history = monitoringService.getComponentHealthHistory(component, hoursBack ? parseInt(hoursBack as string) : 24);
-
-    res.json({
-      success: true,
-      data: history,
-      count: history.length,
-    });
-  } catch (error: unknown) {
-    log.error("Error fetching component history:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.get("/api/jobs/by-role/:role", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const { role } = req.params;
-
-    const job = await jobRetrievalService.getJobByRole(workspaceId, role);
-
-    if (!job) {
-      return res.status(404).json({ error: "Job role not found" });
-    }
-    res.json({ success: true, data: job });
-  } catch (error: unknown) {
-    log.error("Error fetching job info:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.get("/api/jobs/workspace", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-
-    const jobs = await jobRetrievalService.getWorkspaceJobs(workspaceId);
-
-    res.json({
-      success: true,
-      data: jobs,
-      count: jobs.length,
-    });
-  } catch (error: unknown) {
-    log.error("Error fetching workspace jobs:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.get("/api/jobs/:jobTitle/employees", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const { jobTitle } = req.params;
-
-    const emps = await jobRetrievalService.getEmployeesForJob(workspaceId, decodeURIComponent(jobTitle));
-
-    res.json({
-      success: true,
-      data: emps,
-      count: emps.length,
-    });
-  } catch (error: unknown) {
-    log.error("Error fetching employees for job:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.get("/api/helpos/settings", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-
-    const settings = helposSettingsService.getHelposSettings(workspaceId);
-    // Hydrate isEnabled from DB (persistent) so restarts don't reset the toggle
-    const [ws] = await db
-      .select({ enableHelpOSBot: workspaces.enableHelpOSBot })
-      .from(workspaces)
-      .where(eq(workspaces.id, workspaceId))
-      .limit(1);
-    const hydratedSettings = {
-      ...settings,
-      isEnabled: ws?.enableHelpOSBot ?? settings.isEnabled,
-    };
-    res.json({ success: true, data: hydratedSettings });
-  } catch (error: unknown) {
-    log.error("Error fetching HelpAI settings:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.post("/api/helpos/settings", requireManager, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const updates = req.body;
-
-    const settings = helposSettingsService.updateHelposSettings(workspaceId, updates);
-    res.json({ success: true, data: settings });
-  } catch (error: unknown) {
-    log.error("Error updating HelpAI settings:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.post("/api/helpos/toggle/:enabled", requireManager, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const { enabled } = req.params;
-    const isEnabled = enabled === "true";
-
-    const settings = helposSettingsService.toggleHelposBot(workspaceId, isEnabled);
-
-    // Persist toggle to DB so it survives server restarts
-    await db
-      .update(workspaces)
-      .set({ enableHelpOSBot: isEnabled })
-      .where(eq(workspaces.id, workspaceId));
-
-    res.json({
-      success: true,
-      data: settings,
-      message: `HelpAI bot ${isEnabled ? "enabled" : "disabled"}`,
-    });
-  } catch (error: unknown) {
-    log.error("Error toggling HelpAI bot:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
 router.get("/api/escalation/matrix", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
@@ -1693,81 +1349,6 @@ router.get("/api/escalation/matrix", requireAuth, readLimiter, async (req: Authe
     });
   } catch (error: unknown) {
     log.error("Error fetching escalation matrix:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.post("/api/escalation/check-sla", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { priority, ageMinutes } = req.body;
-    if (!priority || ageMinutes === undefined) {
-      return res.status(400).json({ error: "priority and ageMinutes required" });
-    }
-
-    const slaStatus = escalationMatrixService.checkSLABreach(priority, ageMinutes);
-    const action = escalationMatrixService.getEscalationAction(priority, ageMinutes);
-
-    res.json({
-      success: true,
-      data: {
-        slaStatus,
-        recommendedAction: action,
-      },
-    });
-  } catch (error: unknown) {
-    log.error("Error checking SLA:", error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
-router.post("/api/migrations/employee-match", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { employeeName, workspaceId: reqWorkspaceId } = req.body;
-    const workspaceId = reqWorkspaceId || req.workspaceId;
-    if (!workspaceId || !employeeName) return res.status(400).json({ error: "Workspace and employeeName required" });
-
-    const allEmployees = await db.select().from(employees).where(eq(employees.workspaceId, workspaceId));
-
-    const levenshteinDistance = (s1: string, s2: string) => {
-      const track = Array(s2.length + 1)
-        .fill(null)
-        .map(() => Array(s1.length + 1).fill(0));
-      for (let i = 0; i <= s1.length; i += 1) track[0][i] = i;
-      for (let j = 0; j <= s2.length; j += 1) track[j][0] = j;
-      for (let j = 1; j <= s2.length; j += 1) {
-        for (let i = 1; i <= s1.length; i += 1) {
-          const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
-          track[j][i] = Math.min(track[j][i - 1] + 1, track[j - 1][i] + 1, track[j - 1][i - 1] + indicator);
-        }
-      }
-      return track[s2.length][s1.length];
-    };
-
-    const scoredEmployees = allEmployees
-      .map((emp) => {
-        const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
-        const nameToMatch = employeeName.toLowerCase();
-        const distance = levenshteinDistance(nameToMatch, fullName);
-        const similarity = 1 - distance / Math.max(nameToMatch.length, fullName.length);
-        return { employee: emp, similarity, distance };
-      })
-      .sort((a, b) => b.similarity - a.similarity)
-      .filter((item) => item.similarity >= 0.75);
-
-    if (!scoredEmployees.length) {
-      return res.json({ success: true, data: [], message: "No matching employees found" });
-    }
-
-    res.json({
-      success: true,
-      data: scoredEmployees.slice(0, 3).map((item) => ({
-        ...item.employee,
-        matchScore: Math.round(item.similarity * 100),
-        matchReason: `${Math.round(item.similarity * 100)}% match on name`,
-      })),
-    });
-  } catch (error: unknown) {
-    log.error("Error matching employees:", error);
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
@@ -1820,56 +1401,6 @@ router.post("/api/migration/import-extracted", requireManager, async (req: Authe
   } catch (error: unknown) {
     log.error("Error importing extracted data:", error);
     res.status(500).json({ error: sanitizeError(error) || "Import failed" });
-  }
-});
-
-router.get("/api/suggested-changes", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { suggestedChangesService } = await import("../services/ai-brain/suggestedChangesService");
-    const { category, tag, search } = req.query;
-    let results;
-    if (search) {
-      results = suggestedChangesService.searchSuggestions(search as string, {
-        category: category as string,
-        tag: tag as string,
-      });
-    } else {
-      results = suggestedChangesService.listSuggestions({
-        category: category as string,
-        tag: tag as string,
-      });
-    }
-    res.json({ success: true, data: results, total: results.length });
-  } catch (error: unknown) {
-    log.error("Error fetching suggested changes:", error);
-    res.status(500).json({ success: false, error: sanitizeError(error) });
-  }
-});
-
-router.get("/api/suggested-changes/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { suggestedChangesService } = await import("../services/ai-brain/suggestedChangesService");
-    const suggestion = suggestedChangesService.getSuggestion(req.params.id);
-    if (!suggestion) {
-      return res.status(404).json({ success: false, error: "Suggested change not found" });
-    }
-    res.json({ success: true, data: suggestion });
-  } catch (error: unknown) {
-    log.error("Error fetching suggested change:", error);
-    res.status(500).json({ success: false, error: sanitizeError(error) });
-  }
-});
-
-router.post("/api/suggested-changes/:id/stage", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { suggestedChangesService } = await import("../services/ai-brain/suggestedChangesService");
-    const { includeRelated } = req.body;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    const result = await suggestedChangesService.stageSuggestedChange(req.params.id, req.user!, includeRelated);
-    res.json({ success: result.success, data: result });
-  } catch (error: unknown) {
-    log.error("Error staging suggested change:", error);
-    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -2026,177 +1557,6 @@ router.get("/api/my-team", requireAuth, async (req: AuthenticatedRequest, res) =
   }
 });
 
-router.get("/api/client-status/:tempCode", async (req, res) => {
-  try {
-    const { tempCode } = req.params;
-
-    if (!tempCode || tempCode.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid access code format",
-      });
-    }
-
-    const { clientProspectService } = await import("../services/clientProspectService");
-    const prospect = await clientProspectService.getByTempCode(tempCode);
-
-    if (!prospect) {
-      return res.status(404).json({
-        success: false,
-        message: "Access code not found or expired",
-      });
-    }
-
-    if (prospect.accessExpiresAt && new Date(prospect.accessExpiresAt) < new Date()) {
-      return res.status(403).json({
-        success: false,
-        message: "Access code has expired. Please contact the service provider.",
-      });
-    }
-
-    const [workspace] = await db
-      .select({ name: workspaces.name, orgCode: workspaces.orgCode })
-      .from(workspaces)
-      .where(eq(workspaces.id, prospect.workspaceId))
-      .limit(1);
-
-    let staffingRequests: any[] = [];
-    let contractDocuments: any[] = [];
-    try {
-      const { inboundEmails, stagedShifts } = await import("@shared/schema");
-
-      const emails = await db
-        .select({
-          id: inboundEmails.id,
-          subject: inboundEmails.subject,
-          status: inboundEmails.status,
-          isShiftRequest: inboundEmails.isShiftRequest,
-          classificationConfidence: inboundEmails.classificationConfidence,
-          processedAt: inboundEmails.processedAt,
-          createdAt: inboundEmails.createdAt,
-        })
-        .from(inboundEmails)
-        .where(
-          and(
-            eq(inboundEmails.workspaceId, prospect.workspaceId),
-            sql`LOWER(${inboundEmails.fromEmail}) = ${prospect.email.toLowerCase()}`
-          )
-        )
-        .orderBy(desc(inboundEmails.createdAt))
-        .limit(20);
-
-      contractDocuments = emails.filter((e: any) => e.status === "contract_pending_review");
-      const shiftEmails = emails.filter((e: any) => e.status !== "contract_pending_review");
-
-      for (const email of shiftEmails) {
-        const shifts = await db
-          .select({
-            id: stagedShifts.id,
-            location: stagedShifts.location,
-            shiftDate: stagedShifts.shiftDate,
-            startTime: stagedShifts.startTime,
-            endTime: stagedShifts.endTime,
-            payRate: stagedShifts.payRate,
-            clientName: stagedShifts.clientName,
-            status: stagedShifts.status,
-            assignedEmployeeId: stagedShifts.assignedEmployeeId,
-          })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          .where(and(eq(stagedShifts.workspaceId, prospect.workspaceId), eq(stagedShifts.sourceEmailId, email.id)));
-
-        const shiftsWithAssignment = [];
-        for (const shift of shifts) {
-          let assignedName = null;
-          if (shift.assignedEmployeeId) {
-            const { employees } = await import("@shared/schema");
-            const [emp] = await db
-              .select({
-                firstName: employees.firstName,
-                lastName: employees.lastName,
-              })
-              .from(employees)
-              .where(eq(employees.id, shift.assignedEmployeeId))
-              .limit(1);
-            if (emp) {
-              assignedName = `${emp.firstName} ${emp.lastName}`.trim();
-            }
-          }
-          shiftsWithAssignment.push({
-            ...shift,
-            assignedEmployeeName: assignedName,
-          });
-        }
-
-        staffingRequests.push({
-          email: {
-            id: email.id,
-            subject: email.subject,
-            status: email.status,
-            processedAt: email.processedAt,
-            createdAt: email.createdAt,
-          },
-          shifts: shiftsWithAssignment,
-        });
-      }
-    } catch (staffingErr: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      log.warn("[ClientStatus] Failed to fetch staffing data:", staffingErr.message);
-    }
-
-    res.json({
-      success: true,
-      prospect: {
-        tempCode: prospect.tempCode,
-        companyName: prospect.companyName,
-        contactName: prospect.contactName,
-        email: prospect.email,
-        accessStatus: prospect.accessStatus,
-        totalRequests: prospect.totalRequests,
-        totalShiftsFilled: prospect.totalShiftsFilled,
-        createdAt: prospect.createdAt,
-      },
-      workspace: {
-        name: workspace?.name || "Service Provider",
-        orgCode: workspace?.orgCode,
-      },
-      staffingRequests,
-      contractDocuments,
-      subscription: {
-        canSubscribe: prospect.accessStatus === "temp",
-        signupUrl: clientProspectService.getSignupUrl(tempCode),
-        benefits: [
-          "Full platform access with real-time dashboards",
-          "Direct communication with assigned guards",
-          "Automated shift scheduling and management",
-          "Contract and invoice management",
-          "Compliance and audit documentation",
-          "Priority staffing response times",
-          "Dedicated account manager",
-        ],
-      },
-      signupUrl: clientProspectService.getSignupUrl(tempCode),
-    });
-  } catch (error: unknown) {
-    log.error("[ClientStatus] Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Unable to retrieve status. Please try again later.",
-    });
-  }
-});
-
-router.post("/api/client-status/:tempCode/clicked", async (req, res) => {
-  try {
-    const { tempCode } = req.params;
-    const { clientProspectService } = await import("../services/clientProspectService");
-    await clientProspectService.markOnboardingLinkClicked(tempCode);
-    res.json({ success: true });
-  } catch (error: unknown) {
-    log.error("[ClientStatus] Click tracking error:", error);
-    res.status(500).json({ success: false });
-  }
-});
-
 router.post("/api/client-signup", async (req, res) => {
   try {
     const { tempCode, firstName, lastName, email, password, phone, companyName } = req.body;
@@ -2323,7 +1683,6 @@ router.get("/api/sites", requireAuth, async (req: AuthenticatedRequest, res) => 
     res.status(500).json({ error: "Failed to fetch sites" });
   }
 });
-
 
 router.get("/api/search/suggestions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
@@ -2464,55 +1823,6 @@ router.get("/api/timesheets/export/pdf", requireAuth, (req: AuthenticatedRequest
   res.redirect(`/api/timesheet-reports/export/pdf${queryString ? "?" + queryString : ""}`);
 });
 
-router.get("/api/quickbooks/onboarding-flow/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { workspaceId } = req.params;
-    const flows = await db
-      .select()
-      .from(quickbooksOnboardingFlows)
-      .where(eq(quickbooksOnboardingFlows.workspaceId, workspaceId))
-      .orderBy(desc(quickbooksOnboardingFlows.createdAt))
-      .limit(1);
-
-    const flow = flows[0] || null;
-    if (flow) {
-      res.json({
-        success: true,
-        flow: {
-          flowId: flow.id,
-          workspaceId: flow.workspaceId,
-          stage: flow.stage,
-          importedEmployeeCount: flow.importedEmployeeCount || 0,
-          automationSettings: flow.automationSettings || { autoInvoice: true, autoPayroll: true, autoSchedule: true },
-          errors: flow.errors || [],
-          warnings: flow.warnings || [],
-          startedAt: flow.startedAt,
-          completedAt: flow.completedAt,
-        },
-      });
-    } else {
-      res.json({ success: true, flow: null });
-    }
-  } catch (error: unknown) {
-    log.error("Error fetching QB onboarding flow:", error);
-    res.status(500).json({ success: false, message: sanitizeError(error) });
-  }
-});
-
-router.post("/api/quickbooks/flow/:flowId/retry", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { flowId } = req.params;
-    await db
-      .update(quickbooksOnboardingFlows)
-      .set({ stage: "oauth_initiated", errors: [], updatedAt: new Date() })
-      .where(eq(quickbooksOnboardingFlows.id, flowId));
-    res.json({ success: true, message: "Flow retry initiated" });
-  } catch (error: unknown) {
-    log.error("Error retrying QB flow:", error);
-    res.status(500).json({ success: false, message: sanitizeError(error) });
-  }
-});
-
 const scheduleSmartAIRequestSchema = z.object({
   openShiftIds: z.array(z.string()).min(1, "At least one shift ID is required"),
   availableEmployeeIds: z.array(z.string()).min(1, "At least one employee ID is required"),
@@ -2524,67 +1834,6 @@ const scheduleSmartAIRequestSchema = z.object({
       balanceWorkload: z.boolean().optional(),
     })
     .optional(),
-});
-
-router.post("/api/schedule-smart-ai", requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
-
-  if (!workspaceId) {
-    return res.status(400).json({ error: "No workspace selected" });
-  }
-
-  try {
-    if (!isScheduleSmartAvailable()) {
-      return res.status(503).json({ error: "AI scheduling unavailable - Gemini API not configured" });
-    }
-
-    const validationResult = scheduleSmartAIRequestSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({
-        error: "Invalid request body",
-        details: validationResult.error.errors,
-      });
-    }
-
-    const { openShiftIds, availableEmployeeIds, constraints } = validationResult.data;
-
-    const openShifts = await db
-      .select()
-      .from(shifts)
-      .where(and(eq(shifts.workspaceId, workspaceId), inArray(shifts.id, openShiftIds), isNull(shifts.employeeId)));
-
-    if (openShifts.length === 0) {
-      return res.status(404).json({ error: "No open shifts found" });
-    }
-
-    const availableEmployees = await db
-      .select()
-      .from(employees)
-      .where(and(eq(employees.workspaceId, workspaceId), inArray(employees.id, availableEmployeeIds)));
-
-    if (availableEmployees.length === 0) {
-      return res.status(404).json({ error: "No available employees found" });
-    }
-
-    const aiResponse = await scheduleSmartAI({
-      openShifts,
-      availableEmployees,
-      workspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      userId: user.id,
-      constraints,
-    });
-
-    res.json({
-      success: true,
-      data: aiResponse,
-    });
-  } catch (error: unknown) {
-    log.error("AI Scheduling AI error:", error);
-    res.status(500).json({ error: sanitizeError(error) || "AI scheduling failed" });
-  }
 });
 
 router.get("/api/shift-templates", requireAuth, async (req: any, res) => {
@@ -2621,27 +1870,6 @@ router.post("/api/shift-templates", requireAuth, async (req: any, res) => {
   } catch (error: unknown) {
     log.error("Error creating shift template:", error);
     res.status(400).json({ message: sanitizeError(error) || "Failed to create shift template" });
-  }
-});
-
-router.delete("/api/shift-templates/:id", requireAuth, async (req: any, res) => {
-  try {
-    const userId = req.user?.id || req.user?.claims?.sub;
-    const workspace = (await storage.getWorkspaceByOwnerId(userId)) || (await storage.getWorkspaceByMembership(userId));
-
-    if (!workspace) {
-      return res.status(404).json({ message: "Workspace not found" });
-    }
-
-    const deleted = await storage.deleteShiftTemplate(req.params.id, workspace.id);
-    if (!deleted) {
-      return res.status(404).json({ message: "Template not found" });
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    log.error("Error deleting shift template:", error);
-    res.status(500).json({ message: "Failed to delete shift template" });
   }
 });
 
@@ -2724,7 +1952,6 @@ router.get("/api/billing/subscription", requireAuth, async (req: AuthenticatedRe
 
 // In-memory safety check records (field-submitted safety inspections)
 const safetyCheckStore = new Map<string, any[]>(); // keyed by workspaceId
-
 
 // GET /api/safety-checks/recent — Recent safety check submissions for this workspace
 router.get("/api/safety-checks/recent", requireAuth, async (req: any, res) => {

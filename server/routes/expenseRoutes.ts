@@ -256,7 +256,7 @@ router.post('/:id/receipts', requireAuth, async (req: AuthenticatedRequest, res)
           workspaceId: workspaceId,
           expenseId: expense.id,
           // @ts-expect-error — TS migration: fix in refactoring sprint
-          uploadedBy: req.user.id,
+          uploadedBy: req.user?.id,
           timestamp: new Date().toISOString(),
           originalFileName: sanitizedName,
         },

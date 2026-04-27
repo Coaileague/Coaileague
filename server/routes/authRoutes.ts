@@ -464,7 +464,7 @@ router.post('/mfa/setup', async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    const userEmail = req.user.email || '';
+    const userEmail = req.user?.email || '';
 
     if (!userEmail) {
       return res.status(400).json({ message: "Email required for MFA setup" });

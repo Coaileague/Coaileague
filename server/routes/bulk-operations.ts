@@ -6,6 +6,7 @@
 
 import express, { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
+import { requireManager } from '../rbac';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import { employees, clients, shifts, invoices, timeEntries } from '@shared/schema';
@@ -14,7 +15,23 @@ import multer from 'multer';
 
 export const bulkOperationsRouter: Router = express.Router();
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Secure multer config: 5 MB cap, CSV/Excel only, memory storage
+const BULK_IMPORT_LIMITS = { fileSize: 5 * 1024 * 1024 }; // 5 MB
+const BULK_ALLOWED_MIME = [
+  'text/csv', 'text/plain', 'application/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: BULK_IMPORT_LIMITS,
+  fileFilter: (_req, file, cb) => {
+    if (!BULK_ALLOWED_MIME.includes(file.mimetype) && !file.originalname.match(/\.(csv|xlsx|xls)$/i)) {
+      return cb(new Error(`File type not allowed. Upload CSV or Excel files only.`));
+    }
+    cb(null, true);
+  },
+});
 
 // ============================================================================
 // CSV PARSING HELPER
@@ -47,7 +64,7 @@ function parseCSV(csvData: string): Array<Record<string, string>> {
  * POST /api/bulk/import/employees
  * Bulk import employees from CSV
  */
-bulkOperationsRouter.post('/import/employees', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
+bulkOperationsRouter.post('/import/employees', requireAuth, requireManager, upload.single('file'), async (req: Request, res: Response) => {
   try {
     const user = req.user;
     const workspaceId = user?.currentWorkspaceId;
@@ -107,7 +124,7 @@ bulkOperationsRouter.post('/import/employees', requireAuth, upload.single('file'
  * POST /api/bulk/import/clients
  * Bulk import clients from CSV
  */
-bulkOperationsRouter.post('/import/clients', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
+bulkOperationsRouter.post('/import/clients', requireAuth, requireManager, upload.single('file'), async (req: Request, res: Response) => {
   try {
     const user = req.user;
     const workspaceId = user?.currentWorkspaceId;
@@ -168,7 +185,7 @@ bulkOperationsRouter.post('/import/clients', requireAuth, upload.single('file'),
  * POST /api/bulk/import/shifts
  * Bulk import shifts from CSV
  */
-bulkOperationsRouter.post('/import/shifts', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
+bulkOperationsRouter.post('/import/shifts', requireAuth, requireManager, upload.single('file'), async (req: Request, res: Response) => {
   try {
     const user = req.user;
     const workspaceId = user?.currentWorkspaceId;

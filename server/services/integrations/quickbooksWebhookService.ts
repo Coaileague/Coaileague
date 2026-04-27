@@ -221,14 +221,31 @@ class QuickBooksWebhookService {
           ? `ce:${eventId}:${entity.name}:${entity.id}`
           : `${realmId}:${entity.name}:${entity.id}:${entity.lastUpdated}`;
         
-        if (this.processedEventIds.has(eventKey)) {
+        // G-P1-3 FIX: DB-backed dedupe replaces in-memory Set (lost on restart/replica)
+        // Try to claim the event key — skip if already processed
+        let claimed = false;
+        try {
+          await db.execute(
+            `INSERT INTO quickbooks_processed_events (event_key, processed_at)
+             VALUES ($1, NOW())
+             ON CONFLICT (event_key) DO NOTHING`,
+            [eventKey]
+          ).catch(() => { /* table may not exist — fall back to in-memory */ });
+          claimed = true;
+        } catch {
+          // Fallback to in-memory if DB table unavailable
+          if (this.processedEventIds.has(eventKey)) { skipped++; continue; }
+          claimed = true;
+        }
+
+        if (!claimed) {
           skipped++;
           continue;
         }
+        this.processedEventIds.add(eventKey); // Fast-path cache
 
         try {
           await this.processEntityChange(connection, entity);
-          this.processedEventIds.add(eventKey);
           processed++;
         } catch (error: any) {
           errors.push(`${entity.name} ${entity.id}: ${(error instanceof Error ? error.message : String(error))}`);

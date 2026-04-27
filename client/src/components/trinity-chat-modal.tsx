@@ -68,7 +68,6 @@ const TrinityIcon = ({ className }: { className?: string }) => <TrinityLogo size
 
 import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
 import { Suspense } from 'react';
-import { TrinityAgentPanel } from '@/components/trinity';
 import { TrinityActionHistoryPanel } from '@/components/trinity/TrinityActionHistoryPanel';
 import { useTrinityState } from '@/hooks/use-trinity-state';
 
@@ -1501,24 +1500,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
               </ScrollArea>
             )}
 
-            {/* Agent Panel (shown when active - stays visible after execution completes) */}
-            {agentModeActive && (agentState.isExecuting || agentState.thinkingSteps.length > 0 || agentState.progress !== null) && (
-              <div className="border-t px-4 py-2 shrink-0 max-h-64 overflow-y-auto">
-                <TrinityAgentPanel 
-                  isExecuting={agentState.isExecuting}
-                  thinkingSteps={agentState.thinkingSteps}
-                  progress={agentState.progress}
-                  businessImpact={agentState.businessImpact}
-                  costs={agentState.costs}
-                  reversibleActions={agentState.reversibleActions}
-                  confidence={agentState.confidence}
-                  lastError={agentState.lastError}
-                  onUndoAction={agentState.undoAction}
-                  showSidebar={false}
-                  onToggleSidebar={() => setAgentModeActive(false)}
-                />
-              </div>
-            )}
+            {/* TrinityAgentPanel removed — component deleted in refactor */}
 
             {/* Action Broadcast Panel — last 5 Trinity actions */}
             {messages.some(m => m.role === 'assistant') && (

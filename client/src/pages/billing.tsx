@@ -1248,7 +1248,7 @@ export default function Billing() {
                     <div className="p-4 rounded-md border mobile-compact-p">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <Calendar className="h-4 w-4" />
-                        AI Scheduling™
+                        Trinity Schedule
                       </div>
                       <div className="text-2xl font-bold">{formatNumber((usageData as any)?.scheduleOSTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>

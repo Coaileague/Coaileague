@@ -13,8 +13,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { UniversalSpinner } from "@/components/ui/universal-spinner";
 import { TrinityArrowMark } from "@/components/trinity-logo";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import {
   getStatusState,
   getBroadcastColor,
@@ -75,6 +75,7 @@ export function TrinityThoughtBar({
   className,
   sessionId,
 }: TrinityThoughtBarProps) {
+  const { workspaceId } = useWorkspaceAccess();
   const [modelStatus, setModelStatus] = useState<ModelStatus>({
     gpt: "online",
     claude: "online",
@@ -128,6 +129,54 @@ export function TrinityThoughtBar({
     ? THOUGHT_PHASE_LABELS[thoughtStream.currentPhase] ?? null
     : null;
   const thinkingLabel = livePhaseLabel ?? "Thinking";
+
+  const { data: activeOperations = [] } = useQuery<Array<{
+    orchestrationId: string;
+    domain: string;
+    actionName: string;
+    currentStep: string;
+    stepStatus: string;
+  }>>({
+    queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+      const res = await fetch(
+        `/api/orchestrated-schedule/active-operations?workspaceId=${encodeURIComponent(workspaceId)}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!workspaceId && !sessionId,
+    refetchInterval: sessionId ? false : 3000,
+    staleTime: 1000,
+    retry: false,
+  });
+
+  const activeSchedulingOperation = activeOperations.find((operation) => operation.domain === "scheduling");
+
+  const schedulingLabel = (() => {
+    if (!activeSchedulingOperation) return null;
+    const step = activeSchedulingOperation.currentStep?.toUpperCase();
+    switch (step) {
+      case "TRIGGER":
+        return "Waking Trinity scheduling systems...";
+      case "FETCH":
+        return "Scanning live shift coverage...";
+      case "VALIDATE":
+        return "Verifying staffing and compliance rules...";
+      case "PROCESS":
+        return "Matching officers to open shifts...";
+      case "MUTATE":
+        return "Preparing schedule changes for review...";
+      case "CONFIRM":
+        return "Cross-checking proposed assignments...";
+      case "NOTIFY":
+        return "Broadcasting schedule updates...";
+      default:
+        return "Running autonomous scheduling...";
+    }
+  })();
 
   // ─── Bootstrap ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -202,6 +251,13 @@ export function TrinityThoughtBar({
   }, [isProcessing, state]);
 
   const colors = getBroadcastColor("trinity", state);
+  const hasAutonomousScheduleActivity = !!activeSchedulingOperation;
+  const isTrinityActive = isProcessing || state === "active" || hasAutonomousScheduleActivity;
+  const displayPhrase = state === "offline"
+    ? "TRINITY OFFLINE"
+    : isProcessing
+    ? thinkingLabel
+    : schedulingLabel ?? phrase;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -218,6 +274,25 @@ export function TrinityThoughtBar({
       data-testid="trinity-thought-bar"
       data-state={state}
     >
+      <style>{`
+        @keyframes trinity-icon-breathe {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 8px currentColor, 0 0 0 0 transparent; }
+          50% { transform: scale(1.05); box-shadow: 0 0 14px currentColor, 0 0 0 6px transparent; }
+        }
+        @keyframes trinity-icon-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes trinity-icon-bounce {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-1.5px); }
+        }
+        @keyframes trinity-icon-halo {
+          0% { transform: scale(0.9); opacity: 0.28; }
+          70% { transform: scale(1.4); opacity: 0; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
+      `}</style>
       {/* Scan line — Trinity bar only, very subtle */}
       {state !== "offline" && state !== "fallback" && (
         <div
@@ -233,7 +308,7 @@ export function TrinityThoughtBar({
       )}
 
       {/* Shimmer sweep when active */}
-      {state === "active" && (
+      {isTrinityActive && (
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -253,7 +328,7 @@ export function TrinityThoughtBar({
         aria-expanded={mobileExpanded}
       >
         {/* Icon */}
-        <TrinityIcon color={colors.primary} active={isProcessing || state === "active"} />
+        <TrinityIcon color={colors.primary} active={isTrinityActive} critical={state === "critical"} />
 
         {/* Phrase */}
         <span
@@ -267,11 +342,11 @@ export function TrinityThoughtBar({
             transition: "opacity 0.3s",
           }}
         >
-          {state === "offline" ? "TRINITY OFFLINE" : (isProcessing ? thinkingLabel : phrase)}
+          {displayPhrase}
         </span>
 
         {/* Dots */}
-        <BouncingDots color={colors.primary} active={isProcessing || state === "active"} />
+        <BouncingDots color={colors.primary} active={isTrinityActive} />
       </button>
 
       {/* Mobile expanded panel */}
@@ -289,7 +364,7 @@ export function TrinityThoughtBar({
       <div className="hidden sm:flex items-center h-12 px-3 gap-3">
         {/* Left: Trinity identity */}
         <div className="flex items-center gap-1.5 flex-shrink-0 w-36">
-          <TrinityIcon color={colors.primary} active={isProcessing || state === "active"} />
+          <TrinityIcon color={colors.primary} active={isTrinityActive} critical={state === "critical"} />
           <span
             style={{
               fontSize: "11px",
@@ -331,7 +406,7 @@ export function TrinityThoughtBar({
               textOverflow: "ellipsis",
             }}
           >
-            {state === "offline" ? "TRINITY OFFLINE" : (isProcessing ? thinkingLabel : phrase)}
+            {displayPhrase}
           </div>
         </div>
 
@@ -362,7 +437,7 @@ export function TrinityThoughtBar({
           ) : completionFlash ? (
             <span style={{ color: "#22C55E", fontSize: "12px", fontWeight: 700 }}>&#10003;</span>
           ) : (
-            <BouncingDots color={colors.primary} active={isProcessing || state === "active"} />
+            <BouncingDots color={colors.primary} active={isTrinityActive} />
           )}
         </div>
       </div>
@@ -372,18 +447,27 @@ export function TrinityThoughtBar({
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function TrinityIcon({ color, active }: { color: string; active: boolean }) {
-  if (active) {
-    return (
-      <span className="inline-flex items-center justify-center w-[18px] h-[18px] flex-shrink-0" aria-hidden="true">
-        <UniversalSpinner size="sm" className="!gap-0 scale-[0.56] origin-center" />
-      </span>
-    );
-  }
-
+function TrinityIcon({
+  color,
+  active,
+  critical = false,
+}: {
+  color: string;
+  active: boolean;
+  critical?: boolean;
+}) {
+  const ringAnimation = critical
+    ? "coai-critical-pulse 1s infinite"
+    : active
+    ? "trinity-icon-breathe 2.1s ease-in-out infinite"
+    : "trinity-icon-breathe 4.8s ease-in-out infinite";
+  const markAnimation = active
+    ? "trinity-icon-spin 2.6s linear infinite, trinity-icon-bounce 1.6s ease-in-out infinite"
+    : undefined;
   return (
     <span
       style={{
+        position: "relative",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
@@ -396,10 +480,24 @@ function TrinityIcon({ color, active }: { color: string; active: boolean }) {
         fontWeight: 700,
         flexShrink: 0,
         boxShadow: `0 0 5px ${color}33`,
+        animation: ringAnimation,
       }}
       aria-hidden="true"
     >
-      <TrinityArrowMark size={11} />
+      {active && (
+        <span
+          style={{
+            position: "absolute",
+            inset: -4,
+            borderRadius: "50%",
+            border: `1px solid ${color}55`,
+            animation: "trinity-icon-halo 1.8s ease-out infinite",
+          }}
+        />
+      )}
+      <span style={{ display: "inline-flex", animation: markAnimation }}>
+        <TrinityArrowMark size={11} />
+      </span>
     </span>
   );
 }

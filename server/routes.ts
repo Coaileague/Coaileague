@@ -512,18 +512,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Phase 41 — Subscription read-only guard: blocks mutating API calls for suspended workspaces.
   // Billing/webhook routes are exempt so operators can recover payment.
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     if (isPublicPath(req.path)) return next();
-    return subscriptionReadOnlyGuard(req, res, next);
+    return subscriptionReadOnlyGuard(req as any, res, next);
   });
 
   // Cancelled workspace guard: full block (403) for all /api routes when workspace is cancelled.
   // Auth/health/billing are always exempt so operators can sign in and re-activate.
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     if (isPublicPath(req.path)) return next();
-    return cancelledWorkspaceGuard(req, res, next);
+    return cancelledWorkspaceGuard(req as any, res, next);
   });
 
   // Terminated employee guard: enforce 14-day read-only grace period after termination.

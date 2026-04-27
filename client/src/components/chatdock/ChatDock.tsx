@@ -4,20 +4,12 @@ import { useChatDock } from "@/contexts/ChatDockContext";
 import { useChatRoomSummaries, useChatUnreadTotal } from "@/hooks/useChatManager";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "wouter";
-import {
-  X, ArrowLeft, Send, Search, Users, MessageCircle, MessageSquare,
-  ChevronRight, Loader2, WifiOff, Plus, MoreVertical, Paperclip,
-  Image, Video, Mic, UserPlus, LogOut, EyeOff, VolumeX, Volume2,
-  Trash2, Ban, Shield, Crown, Info, Settings, Check, CheckCheck, FileText,
-  Reply, Pencil, Forward, Pin, SmilePlus, ExternalLink, XCircle,
-  ArrowDown, ThumbsUp, Heart, Laugh, Frown, Flame, Headphones, Calendar,
-  Phone, Mail, AlertCircle, MapPin, Download,
-} from "lucide-react";
+import { X, ArrowLeft, Send, Search, Users, MessageCircle, MessageSquare, ChevronRight, Loader2, WifiOff, Plus, MoreVertical, Paperclip, Image, Video, Mic, UserPlus, LogOut, EyeOff, VolumeX, Volume2, Trash2, Ban, Shield, Crown, Info, Settings, Check, CheckCheck, FileText, Reply, Pencil, Forward, Pin, SmilePlus, ExternalLink, XCircle, ArrowDown, ThumbsUp, Heart, Laugh, Frown, Flame, Headphones, Calendar, Phone, Mail, AlertCircle, MapPin, Download,  } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MobileResponsiveSheet } from "@/components/canvas-hub";
+;
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
@@ -203,95 +195,24 @@ function ConversationActions({
 
   const isDM = roomType === 'dm_user' || roomType === 'dm_bot' || roomType === 'dm_support' || roomType === 'direct' || roomType === 'dm';
 
+  if (!open) return null;
+
   return (
-    <MobileResponsiveSheet
-      open={open}
-      onOpenChange={(o) => { if (!o) onClose(); }}
-      title={roomName || "Conversation"}
-      titleIcon={
-        <div className={cn(
-          "w-7 h-7 rounded-full flex items-center justify-center shadow-sm shrink-0",
-          isDM
-            ? "bg-gradient-to-br from-blue-500 to-cyan-600"
-            : "bg-gradient-to-br from-violet-500 to-purple-600"
-        )}>
-          {isDM
-            ? <MessageSquare className="w-3.5 h-3.5 text-white" />
-            : <Users className="w-3.5 h-3.5 text-white" />
-          }
-        </div>
-      }
-      subtitle="Conversation options"
-      side="bottom"
-      headerGradient={true}
-      heightPreset="compact"
-      showDragIndicator={true}
-    >
-      <div className="flex flex-col gap-2 px-1 pb-2" data-testid={`menu-convo-${roomId}`}>
-        {!confirmLeave ? (
-          <>
-            <Button
-              variant="outline"
-              className="h-auto flex flex-row items-center justify-start p-3.5 gap-3 w-full"
-              onClick={() => muteConvo.mutate(true)}
-              data-testid={`button-mute-${roomId}`}
-            >
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <VolumeX className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <div className="font-medium text-sm">Mute notifications</div>
-                <div className="text-xs text-muted-foreground">Stop alerts from this conversation</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex flex-row items-center justify-start p-3.5 gap-3 w-full"
-              onClick={() => hideConvo.mutate()}
-              data-testid={`button-hide-${roomId}`}
-            >
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <EyeOff className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <div className="font-medium text-sm">Archive</div>
-                <div className="text-xs text-muted-foreground">Hide from list — you can rejoin anytime</div>
-              </div>
-            </Button>
-            <div className="border-t border-border my-1" />
-            <Button
-              variant="outline"
-              className="h-auto flex flex-row items-center justify-start p-3.5 gap-3 w-full border-destructive/30 bg-destructive/5 dark:bg-destructive/10"
-              onClick={() => setConfirmLeave(true)}
-              data-testid={`button-leave-${roomId}`}
-            >
-              <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                <LogOut className="h-5 w-5 text-destructive" />
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <div className="font-medium text-sm text-destructive">Leave conversation</div>
-                <div className="text-xs text-destructive/70">Permanently remove yourself</div>
-              </div>
-            </Button>
-          </>
-        ) : (
-          <div className="space-y-3 py-2">
-            <div className="text-center space-y-1">
-              <p className="font-semibold text-sm">Leave this conversation?</p>
-              <p className="text-xs text-muted-foreground">You will be removed from <strong>"{roomName}"</strong> and won't receive new messages.</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setConfirmLeave(false)} data-testid="button-cancel-leave">
-                Cancel
-              </Button>
-              <Button variant="destructive" className="flex-1" onClick={() => leaveConvo.mutate()} disabled={leaveConvo.isPending} data-testid="button-confirm-leave">
-                {leaveConvo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Leave"}
-              </Button>
-            </div>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-background rounded-t-xl w-full max-w-md p-4 space-y-2" onClick={e => e.stopPropagation()}>
+        <div className="text-sm font-medium text-center text-muted-foreground pb-1 border-b">{roomName}</div>
+        <button className="w-full text-left px-3 py-2 rounded hover:bg-muted text-sm"
+          onClick={() => { hideConvo.mutate(); }}>Archive conversation</button>
+        {!isDM && (
+          <button className="w-full text-left px-3 py-2 rounded hover:bg-muted text-sm text-destructive"
+            onClick={() => { if (confirmLeave) { leaveConvo.mutate(); } else { setConfirmLeave(true); } }}>
+            {confirmLeave ? 'Tap again to confirm leave' : 'Leave conversation'}
+          </button>
         )}
+        <button className="w-full text-left px-3 py-2 rounded hover:bg-muted text-sm"
+          onClick={onClose}>Cancel</button>
       </div>
-    </MobileResponsiveSheet>
+    </div>
   );
 }
 

@@ -1,5 +1,5 @@
 /**
- * AI Scheduling™ - INTELLIGENT AUTO-SCHEDULING ENGINE
+ * Trinity Schedule - INTELLIGENT AUTO-SCHEDULING ENGINE
  * 
  * Integrates with ALL CoAIleague™ systems for comprehensive scheduling:
  * - Officer Intelligence: Performance scores, attendance rates, composite scores
@@ -144,7 +144,7 @@ export class SchedulingAI {
   async generateSchedule(request: ScheduleRequest): Promise<ScheduleResult> {
     const startTime = Date.now();
     
-    log.info(`[AI Scheduling™] Generating intelligent schedule for week ${request.weekStartDate.toISOString()}`);
+    log.info(`[Trinity Schedule] Generating intelligent schedule for week ${request.weekStartDate.toISOString()}`);
     
     // 1. Get comprehensive employee intelligence from all systems
     const employeeIntelligence = await this.gatherEmployeeIntelligence(
@@ -152,7 +152,7 @@ export class SchedulingAI {
       request.weekStartDate
     );
     
-    log.info(`[AI Scheduling™] Analyzed ${employeeIntelligence.length} employees across all systems`);
+    log.info(`[Trinity Schedule] Analyzed ${employeeIntelligence.length} employees across all systems`);
     
     // 2. Get job site data for location-based assignment
     const jobSites = await this.getJobSiteData(request.clientIds || [], request.workspaceId);
@@ -173,7 +173,7 @@ export class SchedulingAI {
       );
 
     // 4. CONSTRAINT SOLVER: Generate optimal schedule using proper CSP solving
-    log.info(`[AI Scheduling™] Running constraint solver for optimal scheduling...`);
+    log.info(`[Trinity Schedule] Running constraint solver for optimal scheduling...`);
     const solverStartTime = Date.now();
     
     const solvedSchedule = await this.constraintSolver(
@@ -184,10 +184,10 @@ export class SchedulingAI {
     );
     
     const solverTimeMs = Date.now() - solverStartTime;
-    log.info(`[AI Scheduling™] Constraint solver completed in ${solverTimeMs}ms`);
+    log.info(`[Trinity Schedule] Constraint solver completed in ${solverTimeMs}ms`);
 
     // 5. GPT-4 VALIDATION: Verify solution quality and generate explanations
-    log.info(`[AI Scheduling™] Using GPT-4 to validate and explain schedule...`);
+    log.info(`[Trinity Schedule] Using GPT-4 to validate and explain schedule...`);
     const aiPrompt = this.buildValidationPrompt(
       employeeIntelligence,
       request.shiftRequirements,
@@ -205,7 +205,7 @@ export class SchedulingAI {
       messages: [
         {
           role: 'system',
-          content: `You are AI Scheduling™ AI Validator. Your job is to:
+          content: `You are Trinity Schedule AI Validator. Your job is to:
 1. Verify the schedule satisfies all hard constraints (availability, max hours, conflicts)
 2. Identify any risks or warnings (high-risk employees, long distances, tight scheduling)
 3. Provide business-friendly explanations and recommendations
@@ -236,7 +236,7 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
 
     // FAIL FAST: If GPT-4 validation fails, reject the schedule
     if (validationResult.valid === false) {
-      log.error(`[AI Scheduling™] GPT-4 validation failed. Rejecting schedule.`);
+      log.error(`[Trinity Schedule] GPT-4 validation failed. Rejecting schedule.`);
       throw new Error(`Schedule validation failed: ${validationResult.warnings?.join(', ') || 'Unknown validation errors'}`);
     }
 
@@ -266,7 +266,7 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
 
     const processingTimeMs = Date.now() - startTime;
 
-    log.info(`[AI Scheduling™] Generated ${generatedShifts.length} optimal shifts in ${processingTimeMs}ms`);
+    log.info(`[Trinity Schedule] Generated ${generatedShifts.length} optimal shifts in ${processingTimeMs}ms`);
 
     return {
       success: true,
@@ -831,7 +831,7 @@ Analyze the solution quality and provide:
     jobSites: any[]
   ): string {
     return `
-You are AI Scheduling™, the world's most advanced AI workforce scheduling system. Generate an optimal schedule using comprehensive employee intelligence data.
+You are Trinity Schedule, the world's most advanced AI workforce scheduling system. Generate an optimal schedule using comprehensive employee intelligence data.
 
 ═══════════════════════════════════════════════════════════════════════════════
 EMPLOYEE INTELLIGENCE (Integrated from Officer Intelligence, Smart Clock-In, Geo-Compliance)
@@ -951,7 +951,7 @@ RESPONSE FORMAT (JSON)
     processingTimeMs: number;
   }> {
     const startTime = Date.now();
-    log.info(`[AI Scheduling™] Filling open shifts for workspace ${workspaceId}`);
+    log.info(`[Trinity Schedule] Filling open shifts for workspace ${workspaceId}`);
 
     // 1. Find all open shifts (no employee assigned, status = published)
     const openShifts = await db
@@ -977,11 +977,11 @@ RESPONSE FORMAT (JSON)
       };
     }
 
-    log.info(`[AI Scheduling™] Found ${openShifts.length} open shifts to fill`);
+    log.info(`[Trinity Schedule] Found ${openShifts.length} open shifts to fill`);
 
     // 2. Gather employee intelligence
     const employeeIntel = await this.gatherEmployeeIntelligence(workspaceId, new Date());
-    log.info(`[AI Scheduling™] Analyzed ${employeeIntel.length} available employees`);
+    log.info(`[Trinity Schedule] Analyzed ${employeeIntel.length} available employees`);
 
     // 3. Get employee skills for matching — scoped to this workspace only
     const { employeeSkills } = await import('@shared/schema');
@@ -1218,12 +1218,12 @@ RESPONSE FORMAT (JSON)
         .returning();
 
       if (result.length === 0) {
-        log.warn(`[AI Scheduling™] Shift ${assignment.shiftId} was already assigned, skipping`);
+        log.warn(`[Trinity Schedule] Shift ${assignment.shiftId} was already assigned, skipping`);
       }
     }
 
     const processingTimeMs = Date.now() - startTime;
-    log.info(`[AI Scheduling™] Filled ${assignments.length}/${openShifts.length} shifts in ${processingTimeMs}ms`);
+    log.info(`[Trinity Schedule] Filled ${assignments.length}/${openShifts.length} shifts in ${processingTimeMs}ms`);
 
     // Step 7 (Phase 5): Margin check — non-blocking. Warn when employee pay rate
     // exceeds client billing rate so org owners are aware of loss-generating shifts.

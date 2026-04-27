@@ -15,7 +15,7 @@ import {
   workspaces,
   emailEvents
 } from '@shared/schema';
-import { eq, and, gte, lte, desc, sql, isNull } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, sql, isNull, inArray } from 'drizzle-orm';
 import { format, differenceInMinutes, differenceInDays } from 'date-fns';
 import PDFDocument from 'pdfkit';
 import { getUncachableResendClient, isResendConfigured } from './emailCore';
@@ -177,7 +177,34 @@ export async function generateInvoiceFromTimesheets(
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
 
+  // Collect source time entry IDs for atomic claim inside the transaction.
+  // One entry can generate multiple line items (regular + OT split), so deduplicate.
+  const timeEntryIds = [...new Set(lineItemsData.map(item => item.timeEntryId))];
+
   const { invoice, insertedLineItems } = await db.transaction(async (tx) => {
+    // ── STEP 1: Atomically claim the source time entries ─────────────────
+    // Update billedAt to NOW() only for entries that are still approved
+    // and unbilled. If even one entry was already claimed (race condition or
+    // duplicate invoice attempt), abort the entire transaction.
+    const claimed = await tx.update(timeEntries)
+      .set({ billedAt: new Date(), updatedAt: new Date() })
+      .where(and(
+        eq(timeEntries.workspaceId, workspaceId),
+        eq(timeEntries.clientId, clientId),
+        eq(timeEntries.status, 'approved'),
+        isNull(timeEntries.billedAt),
+        inArray(timeEntries.id, timeEntryIds),
+      ))
+      .returning({ id: timeEntries.id });
+
+    if (claimed.length !== timeEntryIds.length) {
+      throw new Error(
+        `Timesheet invoice aborted: ${timeEntryIds.length - claimed.length} of ${timeEntryIds.length} ` +
+        `entries were already billed or unavailable. No invoice was created.`
+      );
+    }
+
+    // ── STEP 2: Create the invoice header ────────────────────────────────
     const [inv] = await tx.insert(invoices)
       .values({
         workspaceId,
@@ -194,6 +221,7 @@ export async function generateInvoiceFromTimesheets(
       })
       .returning();
 
+    // ── STEP 3: Create the line items ─────────────────────────────────────
     const items = await tx.insert(invoiceLineItems)
       .values(
         lineItemsData.map(item => ({
@@ -207,6 +235,16 @@ export async function generateInvoiceFromTimesheets(
         }))
       )
       .returning();
+
+    // ── STEP 4: Link entries back to the invoice ──────────────────────────
+    // Sets invoiceId on each time entry so they appear as invoiced everywhere
+    // in the platform — not just via invoice_line_items join.
+    await tx.update(timeEntries)
+      .set({ invoiceId: inv.id, updatedAt: new Date() })
+      .where(and(
+        eq(timeEntries.workspaceId, workspaceId),
+        inArray(timeEntries.id, claimed.map(e => e.id)),
+      ));
 
     return { invoice: inv, insertedLineItems: items };
   });
@@ -265,11 +303,13 @@ export async function getUninvoicedTimeEntries(workspaceId: string, clientId?: s
     conditions.push(eq(timeEntries.clientId, clientId));
   }
 
-  const allLineItems = await db.select({ timeEntryId: invoiceLineItems.timeEntryId })
-    .from(invoiceLineItems);
-  const invoicedIds = new Set(allLineItems.map(li => li.timeEntryId).filter(Boolean));
+  // Use DB billing state fields directly — not a line-items join scan.
+  // billedAt IS NULL and invoiceId IS NULL are the authoritative source of truth
+  // for whether an entry has been claimed by an invoice.
+  conditions.push(isNull(timeEntries.billedAt));
+  conditions.push(isNull(timeEntries.invoiceId));
 
-  const approvedEntries = await db
+  const uninvoicedEntries = await db
     .select({
       id: timeEntries.id,
       clockIn: timeEntries.clockIn,
@@ -285,8 +325,6 @@ export async function getUninvoicedTimeEntries(workspaceId: string, clientId?: s
     .leftJoin(clients, eq(timeEntries.clientId, clients.id))
     .where(and(...conditions))
     .orderBy(desc(timeEntries.clockIn));
-
-  const uninvoicedEntries = approvedEntries.filter(e => !invoicedIds.has(e.id));
 
   const entries: Array<{
     id: string;
@@ -1099,7 +1137,34 @@ export async function generateInvoiceFromHours(input: GenerateFromHoursInput): P
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
 
+  // Collect source time entry IDs for atomic claim inside the transaction.
+  // One entry can generate multiple line items (regular + OT split), so deduplicate.
+  const timeEntryIds = [...new Set(lineItemsData.map(item => item.timeEntryId))];
+
   const { invoice, insertedLineItems } = await db.transaction(async (tx) => {
+    // ── STEP 1: Atomically claim the source time entries ─────────────────
+    // Update billedAt to NOW() only for entries that are still approved
+    // and unbilled. If even one entry was already claimed (race condition or
+    // duplicate invoice attempt), abort the entire transaction.
+    const claimed = await tx.update(timeEntries)
+      .set({ billedAt: new Date(), updatedAt: new Date() })
+      .where(and(
+        eq(timeEntries.workspaceId, workspaceId),
+        eq(timeEntries.clientId, clientId),
+        eq(timeEntries.status, 'approved'),
+        isNull(timeEntries.billedAt),
+        inArray(timeEntries.id, timeEntryIds),
+      ))
+      .returning({ id: timeEntries.id });
+
+    if (claimed.length !== timeEntryIds.length) {
+      throw new Error(
+        `Timesheet invoice aborted: ${timeEntryIds.length - claimed.length} of ${timeEntryIds.length} ` +
+        `entries were already billed or unavailable. No invoice was created.`
+      );
+    }
+
+    // ── STEP 2: Create the invoice header ────────────────────────────────
     const [inv] = await tx.insert(invoices)
       .values({
         workspaceId,
@@ -1116,6 +1181,7 @@ export async function generateInvoiceFromHours(input: GenerateFromHoursInput): P
       })
       .returning();
 
+    // ── STEP 3: Create the line items ─────────────────────────────────────
     const items = await tx.insert(invoiceLineItems)
       .values(
         lineItemsData.map(item => ({
@@ -1129,6 +1195,16 @@ export async function generateInvoiceFromHours(input: GenerateFromHoursInput): P
         }))
       )
       .returning();
+
+    // ── STEP 4: Link entries back to the invoice ──────────────────────────
+    // Sets invoiceId on each time entry so they appear as invoiced everywhere
+    // in the platform — not just via invoice_line_items join.
+    await tx.update(timeEntries)
+      .set({ invoiceId: inv.id, updatedAt: new Date() })
+      .where(and(
+        eq(timeEntries.workspaceId, workspaceId),
+        inArray(timeEntries.id, claimed.map(e => e.id)),
+      ));
 
     return { invoice: inv, insertedLineItems: items };
   });

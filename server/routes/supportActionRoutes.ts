@@ -7,7 +7,6 @@ import { tokenManager } from '../services/billing/tokenManager';
 import { z } from 'zod';
 import { createLogger } from '../lib/logger';
 import { executeSupportAction, listSupportActions, SupportActionType } from '../services/helpai/supportActionRegistry';
-import { isPlatformSupportStaffRole, canAccessHelpAIAdmin, canManageSupportControls, canIssueSupportAIServiceElevation, canExecuteSupportActions, HELPAI_ADMIN_PLATFORM_ROLES } from '../services/support/supportPolicyService';
 const log = createLogger('SupportActionRoutes');
 
 

@@ -18,6 +18,17 @@ import { DOMAIN_NAMES } from "../../shared/schema/domains/DOMAIN_CONTRACT";
 import { createLogger } from '../lib/logger';
 const log = createLogger('sourceOfTruthRegistry');
 
+export interface CanonicalFeatureSpine {
+  intent: string;
+  uiEntry: string | null;
+  route: string;
+  service: string | null;
+  mutationOwner: string | null;
+  persistenceTables: string[];
+  eventTypes: string[];
+  supportTrace: string[];
+  notes?: string;
+}
 
 export interface DomainEntry {
   domain: string;
@@ -29,6 +40,7 @@ export interface DomainEntry {
   legacyAliases: string[];
   trinityCan: string[];
   humanGateRequired: boolean;
+  canonicalSpine?: CanonicalFeatureSpine;
 }
 
 const registry: DomainEntry[] = [
@@ -69,6 +81,17 @@ const registry: DomainEntry[] = [
     legacyAliases: ['/api/scheduler', '/api/availability'],
     trinityCan: ['publish_shifts', 'find_coverage', 'detect_conflicts', 'suggest_swap'],
     humanGateRequired: true,
+    canonicalSpine: {
+      intent: 'Create, optimize, verify, and apply shift mutations without partial writes or cross-workspace drift.',
+      uiEntry: 'client/src/pages/universal-schedule.tsx',
+      route: 'server/routes/orchestratedScheduleRoutes.ts + server/routes/domains/scheduling.ts',
+      service: 'server/services/orchestration/trinitySchedulingOrchestrator.ts',
+      mutationOwner: 'trinitySchedulingOrchestrator.applyVerifiedMutations() via db.transaction()',
+      persistenceTables: ['shifts', 'automationExecutions'],
+      eventTypes: ['scheduling_session_complete', 'trinity_scheduling_progress'],
+      supportTrace: ['executionId', 'sessionId', 'workspaceId', 'verificationNotes', 'inserted', 'updated', 'deleted', 'skipped', 'errors'],
+      notes: 'All verified shift writes must be workspace-locked and atomic. Legacy scheduling notify actions are no-op; use canonical event subscribers.',
+    },
   },
 
   // ── Time Tracking ─────────────────────────────────────────────────────────
@@ -82,6 +105,17 @@ const registry: DomainEntry[] = [
     legacyAliases: ['/api/timesheets'],
     trinityCan: ['generate_from_clockdata', 'auto_approve_clean', 'flag_exceptions', 'get_period_summary'],
     humanGateRequired: true,
+    canonicalSpine: {
+      intent: 'Capture, approve, search, and expose billable/payable time entries as the source data for invoice and payroll runs.',
+      uiEntry: 'client/src/pages/time-tracking.tsx',
+      route: 'server/routes/domains/time.ts + server/routes/timeEntryRoutes.ts',
+      service: 'server/services/timeEntryService.ts',
+      mutationOwner: 'time entry route/service approval workflow',
+      persistenceTables: ['timeEntries'],
+      eventTypes: ['time_entry_created', 'time_entry_approved', 'time_entry_updated'],
+      supportTrace: ['timeEntryId', 'workspaceId', 'clientId', 'employeeId', 'invoiceId', 'payrollRunId', 'billedAt'],
+      notes: 'Invoice/payroll spines must claim/link time entries instead of inferring billing status from line-item existence alone.',
+    },
   },
 
   // ── Payroll ───────────────────────────────────────────────────────────────
@@ -95,12 +129,23 @@ const registry: DomainEntry[] = [
     legacyAliases: ['/api/expenses'],
     trinityCan: ['run_cycle', 'calculate_employee', 'validate_math', 'generate_paystub', 'push_to_qb'],
     humanGateRequired: true,
+    canonicalSpine: {
+      intent: 'Preview, verify, finalize, persist, and sync payroll from approved time entries through one auditable run path.',
+      uiEntry: 'client/src/pages/payroll-dashboard.tsx',
+      route: 'server/routes/domains/payroll.ts + server/routes/payrollRoutes.ts',
+      service: 'server/services/ai-brain/subagents/payrollSubagent.ts + server/services/billing/payrollTaxService.ts',
+      mutationOwner: 'payroll finalization transaction path',
+      persistenceTables: ['payrollRuns', 'payrollRunItems', 'timeEntries', 'payStubs'],
+      eventTypes: ['payroll_run_created', 'payroll_run_finalized', 'payroll_sync_requested'],
+      supportTrace: ['payrollRunId', 'workspaceId', 'employeeId', 'periodStart', 'periodEnd', 'grossPay', 'taxes', 'netPay', 'errors'],
+      notes: 'Financial writes require db.transaction(). Tax math must route through the canonical tax rule/payroll tax services, not ad-hoc percentages.',
+    },
   },
 
   // ── Billing / Tokens ──────────────────────────────────────────────────────
   {
     domain: 'billing',
-    description: 'Stripe subscriptions, invoices, and AI token metering',
+    description: 'Stripe subscriptions, invoices, client billing, and AI token metering',
     canonicalApiPrefix: '/api/billing',
     canonicalRouteFile: 'server/routes/domains/billing.ts',
     canonicalService: 'server/services/billing/tokenManager.ts',
@@ -108,6 +153,17 @@ const registry: DomainEntry[] = [
     legacyAliases: ['/api/stripe', '/api/credits'],
     trinityCan: ['aging_report', 'collection_priority', 'revenue_forecast'],
     humanGateRequired: true,
+    canonicalSpine: {
+      intent: 'Generate, review, send, reconcile, and search invoices through one claim-link-audit billing spine.',
+      uiEntry: 'client/src/pages/billing.tsx',
+      route: 'server/routes/invoiceRoutes.ts + server/routes/domains/billing.ts',
+      service: 'server/services/billingAutomation.ts + server/services/ai-brain/subagents/invoiceSubagent.ts',
+      mutationOwner: 'createInvoiceFromBillableSummary() / invoiceSubagent.generateInvoice() transaction path',
+      persistenceTables: ['invoices', 'invoiceLineItems', 'timeEntries', 'billingAuditLog', 'orgLedgerEntries'],
+      eventTypes: ['invoice_created', 'invoice_paid', 'billing_client_failed', 'billing_rate_missing'],
+      supportTrace: ['invoiceId', 'invoiceNumber', 'workspaceId', 'clientId', 'timeEntryIds', 'traceId', 'idempotencyKey', 'ledgerEntryId'],
+      notes: 'Timesheet invoice generation must claim/link time entries in the same transaction. Tax must use configured/internal services, never route-local hardcoded tables.',
+    },
   },
 
   // ── Clients ───────────────────────────────────────────────────────────────
@@ -353,6 +409,14 @@ export function getCanonicalEntry(domain: string): DomainEntry | undefined {
   return registry.find(e => e.domain === domain);
 }
 
+export function getCanonicalFeatureSpine(domain: string): CanonicalFeatureSpine | undefined {
+  return getCanonicalEntry(domain)?.canonicalSpine;
+}
+
+export function getDomainsWithCanonicalSpines(): DomainEntry[] {
+  return registry.filter(e => Boolean(e.canonicalSpine));
+}
+
 export function resolveCanonicalPrefix(requestedPrefix: string): DomainEntry | undefined {
   return registry.find(e =>
     e.canonicalApiPrefix === requestedPrefix ||
@@ -369,7 +433,8 @@ export function printRegistryAtStartup(): void {
   const lines = registry.map(e => {
     const aliases = e.legacyAliases.length > 0 ? ` (aliases: ${e.legacyAliases.join(', ')})` : '';
     const gate = e.humanGateRequired ? ' [HUMAN GATE]' : '';
-    return `  ${e.domain.padEnd(20)} → ${e.canonicalApiPrefix}${aliases}${gate}`;
+    const spine = e.canonicalSpine ? ' [SPINE]' : '';
+    return `  ${e.domain.padEnd(20)} → ${e.canonicalApiPrefix}${aliases}${gate}${spine}`;
   });
   log.info('[SourceOfTruthRegistry] Canonical domain registry loaded:\n' + lines.join('\n'));
 }

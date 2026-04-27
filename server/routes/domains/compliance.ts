@@ -10,7 +10,6 @@ import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { portalLimiter } from "../../middleware/rateLimiter";
 import { attachWorkspaceIdOptional } from "../../rbac";
 import { registerDocumentLibraryRoutes } from "../documentLibraryRoutes";
-import { complianceRoutes } from "../compliance";
 import credentialRouter from "../credentialRoutes";
 import documentRouter from "../documentRoutes";
 import documentTemplateRouter from "../documentTemplateRoutes";
@@ -19,7 +18,6 @@ import fileDownloadRoutes from "../fileDownload";
 import formBuilderRouter from "../formBuilderRoutes";
 import formRouter from "../formRoutes";
 import policyComplianceRouter from "../policyComplianceRoutes";
-import complianceEnforcementRouter from "../complianceRoutes";
 import complianceInlineRouter from "../complianceInlineRoutes";
 import governanceInlineRouter from "../governanceInlineRoutes";
 import uacpRouter from "../uacpRoutes";
@@ -35,7 +33,6 @@ import { complianceSprintRouter } from "../complianceSprintRoutes";
 import complianceScenarioRouter from "../complianceScenarioRoutes";
 import { regulatoryPortalRoutes } from "../compliance/regulatoryPortal";
 import trainingComplianceRouter from "../trainingComplianceRoutes";
-import stateRegulatoryRouter from "../stateRegulatoryRoutes";
 import licenseDashboardRouter from "../license-dashboard";
 import insuranceRouter from "../insuranceRoutes";
 import complianceEvidenceRouter from "../complianceEvidenceRoutes";
@@ -44,7 +41,6 @@ export function mountComplianceRoutes(app: Express): void {
   // Governance inline routes BEFORE security-compliance to ensure lock-vault is handled
   app.use("/api", requireAuth, ensureWorkspaceAccess, governanceInlineRouter);
   app.use("/api/compliance/evidence", requireAuth, ensureWorkspaceAccess, complianceEvidenceRouter);
-  app.use("/api/security-compliance", requireAuth, ensureWorkspaceAccess, complianceRoutes);
   app.use("/api/credentials", requireAuth, ensureWorkspaceAccess, credentialRouter);
   registerDocumentLibraryRoutes(app, requireAuth, ensureWorkspaceAccess);
   app.use(documentRouter);
@@ -55,9 +51,6 @@ export function mountComplianceRoutes(app: Express): void {
   app.use("/api", requireAuth, ensureWorkspaceAccess, formRouter);
   app.use("/api", requireAuth, ensureWorkspaceAccess, policyComplianceRouter);
   // Enforcement auditor public login/me routes MUST come before the auth-protected catch-all
-  app.use("/api/enforcement/auditor/login", complianceEnforcementRouter);
-  app.use("/api/enforcement/auditor/me", complianceEnforcementRouter);
-  app.use("/api/enforcement", requireAuth, complianceEnforcementRouter);
   app.use(complianceInlineRouter);
   app.use("/api/uacp", requireAuth, ensureWorkspaceAccess, uacpRouter);
   app.use("/api/security", requireAuth, ensureWorkspaceAccess, securityAuditRouter);
@@ -90,7 +83,6 @@ export function mountComplianceRoutes(app: Express): void {
   // Compliance Sprint — Phases F (handbook audit), G (contract protection), H (translation), M (verification)
   app.use("/api/compliance", complianceSprintRouter);
   // State regulatory config + post requirements — multi-state architecture
-  app.use("/api/regulatory", stateRegulatoryRouter);
   // License Dashboard — bulk status, DPS CSV export, revoke handler (Phase 17)
   app.use("/api/compliance/licenses", requireAuth, ensureWorkspaceAccess, licenseDashboardRouter);
   // Insurance — certificates, bonding, coverage management (Phase 35R)

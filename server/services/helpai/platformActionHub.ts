@@ -1399,6 +1399,32 @@ class PlatformActionHub {
         const now = new Date();
         const start = periodStart || new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14).toISOString().split('T')[0];
         const end = periodEnd || now.toISOString().split('T')[0];
+        // ── ZERO-APPROVED-HOURS HARD GATE ────────────────────────────────────────
+        // Must check BEFORE creating a payroll run — prevents phantom runs and
+        // matches the route-level gate added in Phase C. No run is created for
+        // periods with zero approved hours/entries.
+        // CATEGORY C — Raw SQL retained: SUM( | Tables: time_entries | Verified: 2026-03-23
+        const preCheckResult = await typedPool(
+          `SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (clock_out - clock_in))/3600), 0) as total_hours,
+                  COUNT(*) as entry_count
+           FROM time_entries WHERE workspace_id = $1 AND status = 'approved'
+           AND DATE(clock_in) BETWEEN $2 AND $3`,
+          [workspaceId, start, end]
+        );
+        const totalHours = parseFloat((preCheckResult as unknown as any[])[0]?.total_hours || '0');
+        const entryCount = parseInt((preCheckResult as unknown as any[])[0]?.entry_count || '0');
+
+        if (entryCount === 0 || totalHours === 0) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Payroll cannot be initiated: no approved time entries found for ${start} → ${end}. Ensure timesheets are submitted and approved before running payroll.`,
+            data: { code: 'ZERO_APPROVED_HOURS', periodStart: start, periodEnd: end, entryCount, totalHours },
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+
+        // Hours verified — now create the payroll run
         const [runInserted] = await db
           .insert(payrollRuns)
           .values({
@@ -1413,16 +1439,6 @@ class PlatformActionHub {
         if (!runId) {
           return { success: false, actionId: request.actionId, message: 'Failed to create payroll run record', executionTimeMs: Date.now() - startTime };
         }
-        // Aggregate approved time entries for the period
-        // CATEGORY C — Raw SQL retained: SUM( | Tables: time_entries | Verified: 2026-03-23
-        const timeResult = await typedPool(
-          `SELECT SUM(EXTRACT(EPOCH FROM (clock_out - clock_in))/3600) as total_hours, COUNT(*) as entry_count
-           FROM time_entries WHERE workspace_id = $1 AND status = 'approved'
-           AND DATE(clock_in) BETWEEN $2 AND $3`,
-          [workspaceId, start, end]
-        );
-        const totalHours = parseFloat((timeResult as unknown as any[])[0]?.total_hours || '0');
-        const entryCount = parseInt((timeResult as unknown as any[])[0]?.entry_count || '0');
         // Notify payroll team
         await universalNotificationEngine.sendNotification({
           type: 'payroll_initiated',
@@ -2184,6 +2200,29 @@ class PlatformActionHub {
   }
 
   /**
+   * Boot-time registry invariant — call after all action modules initialize.
+   * Throws if action count exceeds the 300-action architectural cap or if
+   * duplicate action IDs are detected (registerAction ignores duplicates silently).
+   */
+  assertRegistryInvariants(): void {
+    const actions = this.getRegisteredActions();
+    const MAX_ACTIONS = 300;
+    if (actions.length > MAX_ACTIONS) {
+      log.warn(
+        `[PlatformActionHub] ACTION REGISTRY EXCEEDS CAP: ${actions.length} actions registered (max ${MAX_ACTIONS}). ` +
+        `Consolidate/disable low-value action sets. This is a warning not a throw to avoid startup failure.`
+      );
+    }
+    const ids = actions.map(a => a.actionId);
+    const unique = new Set(ids);
+    if (unique.size !== ids.length) {
+      const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
+      log.error(`[PlatformActionHub] DUPLICATE ACTION IDs: ${[...new Set(dupes)].join(', ')}`);
+    }
+    log.info(`[PlatformActionHub] Registry invariants checked: ${actions.length} actions, ${unique.size} unique IDs`);
+  }
+
+  /**
    * Get action count by category
    */
   getActionCountByCategory(): Record<ActionCategory, number> {
@@ -2289,17 +2328,39 @@ class PlatformActionHub {
     if (request.workspaceId) {
       try {
         const preExecResult = await validateBeforeExecution(request.actionId, request.payload ?? {}, request.workspaceId);
-        if (!(preExecResult as any).valid) {
+        if (!preExecResult.approved) {
           return {
             success: false,
             actionId: request.actionId,
             message: preExecResult.reason ?? 'Pre-execution validation failed',
-            data: { preExecCode: (preExecResult as any).code },
+            data: { preExecCode: preExecResult.checkName },
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+        if (preExecResult.requiresConfirmation) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: preExecResult.confirmationPrompt ?? 'Human confirmation required before proceeding',
+            data: { requiresConfirmation: true, checkName: preExecResult.checkName },
             executionTimeMs: Date.now() - startTime,
           };
         }
       } catch (preExecErr) {
+        // Validator threw — fail CLOSED for mutating/high-risk categories
+        const HIGH_RISK = ['payroll','invoicing','billing','scheduling','admin','compliance','tax'];
+        const cat = (handler as any)?.category ?? '';
         log.error('[Platform Action Hub] Pre-execution validator threw:', preExecErr);
+        if (HIGH_RISK.includes(cat)) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Pre-execution safety check unavailable — action blocked for safety. Please retry.',
+            data: { failSafe: true, category: cat },
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+        // Read-only/health actions may degrade open — log and continue
       }
     }
 
@@ -2601,17 +2662,24 @@ class PlatformActionHub {
           trinityProposedAction: { actionId: request.actionId, payload: request.payload },
           context: dualAIContext,
         });
-        if (verificationResult && !verificationResult.approved && (verificationResult.criticalIssues?.length > 0)) {
+        if (!verificationResult || !verificationResult.approved) {
           return {
             success: false,
             actionId: request.actionId,
-            message: `Dual-AI verification rejected this action: ${verificationResult.criticalIssues?.join('; ') ?? verificationResult.rejectionReason ?? 'Critical issues detected'}`,
-            data: { dualAIVerification: { approved: false, issues: verificationResult.criticalIssues } },
+            message: `Dual-AI verification rejected this action: ${verificationResult?.criticalIssues?.join('; ') ?? verificationResult?.rejectionReason ?? 'Verification unavailable or rejected'}`,
+            data: { dualAIVerification: { approved: false, issues: verificationResult?.criticalIssues ?? [] } },
             executionTimeMs: Date.now() - startTime,
           };
         }
       } catch (dualAIErr) {
-        log.warn('[Platform Action Hub] Dual-AI verification unavailable (non-blocking):', dualAIErr);
+        log.error('[Platform Action Hub] Dual-AI verification threw — action BLOCKED (fail-closed):', dualAIErr);
+        return {
+          success: false,
+          actionId: request.actionId,
+          message: 'Dual-AI verification service unavailable — action blocked for safety. Please retry.',
+          data: { dualAIFailSafe: true },
+          executionTimeMs: Date.now() - startTime,
+        };
       }
     }
 

@@ -44,48 +44,6 @@ import { subscriptionTiers, orgSubscriptions, creditBalances, platformInvoices, 
 import { createLogger } from '../lib/logger';
 const log = createLogger('BillingApi');
 
-
-billingRouter.get('/tiers', async (_req, res: Response) => {
-  try {
-    // RC4 (Phase 2): All financial arithmetic via FinancialCalculator (Decimal.js).
-    // No floating point division here. Use FinancialCalculator utilities.
-    const tiers = await db.select({
-      id: subscriptionTiers.id,
-      tierName: subscriptionTiers.tierName,
-      displayName: subscriptionTiers.displayName,
-      basePriceCents: subscriptionTiers.basePriceCents,
-      includedEmployees: subscriptionTiers.includedEmployees,
-      perEmployeeOverageCents: subscriptionTiers.perEmployeeOverageCents,
-      baseCredits: subscriptionTiers.baseCredits,
-      perEmployeeCreditScaling: subscriptionTiers.perEmployeeCreditScaling,
-      perInvoiceFeeCents: subscriptionTiers.perInvoiceFeeCents,
-      perPayrollFeeCents: subscriptionTiers.perPayrollFeeCents,
-      perQbSyncFeeCents: subscriptionTiers.perQbSyncFeeCents,
-      carryoverPercentage: subscriptionTiers.carryoverPercentage,
-      coreFeatures: subscriptionTiers.coreFeatures,
-      includedPremiumFeatures: subscriptionTiers.includedPremiumFeatures,
-      usageLimits: subscriptionTiers.usageLimits,
-    }).from(subscriptionTiers);
-
-    const { multiplyFinancialValues, toFinancialString } = await import('../services/financialCalculator');
-
-    res.json({
-      tiers: tiers.map(t => ({
-        ...t,
-        basePriceDollars: parseFloat(multiplyFinancialValues(toFinancialString(String(t.basePriceCents || 0)), '0.01')),
-        perEmployeeOverageDollars: parseFloat(multiplyFinancialValues(toFinancialString(String(t.perEmployeeOverageCents || 0)), '0.01')),
-        perInvoiceFeeDollars: parseFloat(multiplyFinancialValues(toFinancialString(String(t.perInvoiceFeeCents || 0)), '0.01')),
-        perPayrollFeeDollars: parseFloat(multiplyFinancialValues(toFinancialString(String(t.perPayrollFeeCents || 0)), '0.01')),
-        perQbSyncFeeDollars: parseFloat(multiplyFinancialValues(toFinancialString(String(t.perQbSyncFeeCents || 0)), '0.01')),
-      })),
-      cachedAt: new Date().toISOString(),
-    });
-  } catch (error: unknown) {
-    log.error('[Billing API] Failed to fetch tiers:', sanitizeError(error));
-    res.status(500).json({ error: 'Failed to fetch subscription tiers' });
-  }
-});
-
 billingRouter.use((req, res, next) => {
   if (!isFeatureEnabled('enableBillingAPI')) {
     return res.status(503).json({ 
@@ -185,31 +143,6 @@ billingRouter.get('/subscription', async (req: AuthenticatedRequest, res: Respon
  * Shows subscription, overages, processing fees — so Statewide knows exactly what
  * they're being charged for.
  */
-billingRouter.get('/current-charges', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
-
-    const { billingReconciliation } = await import('../services/billing/billingReconciliation');
-    const breakdown = await billingReconciliation.getCurrentChargesBreakdown(workspaceId);
-
-    res.json({
-      ...breakdown,
-      totalDollars: (breakdown.totalCents / 100).toFixed(2),
-      subscription: {
-        ...breakdown.subscription,
-        amountDollars: (breakdown.subscription.amountCents / 100).toFixed(2),
-      },
-      employeeOverage: {
-        ...breakdown.employeeOverage,
-        totalDollars: (breakdown.employeeOverage.totalCents / 100).toFixed(2),
-      },
-    });
-  } catch (error: unknown) {
-    next(error);
-  }
-});
-
 /**
  * GET /api/billing/reconcile
  * Runs internal reconciliation check: platform invoices vs Stripe status.
@@ -291,24 +224,6 @@ billingRouter.get('/pricing', async (_req, res: Response, next: NextFunction) =>
     });
   } catch (error: unknown) {
     next(error);
-  }
-});
-
-billingRouter.get('/platform-invoices', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
-
-    const { desc } = await import('drizzle-orm');
-    const invoices = await db.select()
-      .from(platformInvoices)
-      .where(eq(platformInvoices.workspaceId, workspaceId))
-      .orderBy(desc(platformInvoices.createdAt));
-
-    res.json({ invoices });
-  } catch (error: unknown) {
-    log.error('[Billing API] Failed to fetch platform invoices:', sanitizeError(error));
-    res.status(500).json({ error: 'Failed to fetch platform invoices' });
   }
 });
 
@@ -406,51 +321,9 @@ billingRouter.get('/usage/summary', async (req: AuthenticatedRequest, res: Respo
 /**
  * Get usage metrics
  */
-billingRouter.get('/usage/metrics', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const { startDate, endDate } = z.object({
-      startDate: z.string().transform(s => new Date(s)),
-      endDate: z.string().transform(s => new Date(s)),
-    }).parse(req.query);
-
-    const metrics = await usageMeteringService.getUsageMetrics(workspaceId, startDate, endDate);
-
-    res.json(metrics);
-  } catch (error: unknown) {
-    log.error('Failed to get usage metrics:', error);
-    res.status(400).json({ error: sanitizeError(error) });
-  }
-});
-
 /**
  * Estimate cost for planned usage
  */
-billingRouter.post('/usage/estimate', async (req, res) => {
-  try {
-    const input = z.object({
-      featureKey: z.string(),
-      usageAmount: z.number().positive(),
-      usageType: z.string().optional(),
-    }).parse(req.body);
-
-    const cost = await usageMeteringService.estimateCost(
-      input.featureKey,
-      input.usageAmount,
-      input.usageType
-    );
-
-    res.json({ estimatedCost: cost });
-  } catch (error: unknown) {
-    log.error('Failed to estimate cost:', error);
-    res.status(400).json({ error: sanitizeError(error) });
-  }
-});
-
 // ============================================================================
 // CREDIT LEDGER ENDPOINTS
 // ============================================================================
@@ -539,77 +412,13 @@ billingRouter.get('/transactions', async (req: AuthenticatedRequest, res: Respon
  * CoAIleague does not sell credit packs. AI usage is metered as tokens and
  * overage is billed automatically on the monthly invoice.
  */
-billingRouter.post('/credits/purchase', async (_req: AuthenticatedRequest, res: Response) => {
-  res.status(410).json({
-    error: 'Credit purchase is retired. AI usage is billed as monthly token overage.',
-    migration: 'Use GET /api/usage/tokens for current monthly token usage.',
-  });
-});
-
 /**
  * Get auto-recharge configuration for workspace
  */
-billingRouter.get('/credits/auto-recharge', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const config = await (tokenManager as any).getAutoRechargeConfig(workspaceId);
-    res.json({ success: true, config });
-  } catch (error: unknown) {
-    log.error('Failed to get auto-recharge config:', error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
 /**
  * Configure auto-recharge
  * ROLE GUARD: Only workspace owners/admins and platform admins may configure auto-recharge.
  */
-billingRouter.post('/credits/auto-recharge', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // SECURITY: Only workspace owners/co-owners and platform admins may configure auto-recharge.
-    // The previous check incorrectly used user.platformRole, which is 'user' for workspace owners.
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const arPlatformAdminRoles = ['root_admin', 'deputy_admin', 'sysop'];
-    const arUserPlatformRole = (req.user)?.platformRole || '';
-    const arIsPlatformAdmin = arPlatformAdminRoles.includes(arUserPlatformRole);
-    if (!arIsPlatformAdmin) {
-      const { role: wsRole } = await resolveWorkspaceForUser(userId, workspaceId);
-      if (wsRole !== 'org_owner' && wsRole !== 'co_owner') {
-        return res.status(403).json({ error: 'Workspace owner role required to configure auto-recharge' });
-      }
-    }
-
-    const input = z.object({
-      enabled: z.boolean(),
-      threshold: z.number().positive().optional(),
-      amount: z.number().positive().optional(),
-      creditPackId: z.string().optional(),
-    }).parse(req.body);
-
-    const updated = await (tokenManager as any).configureAutoRecharge(
-      workspaceId,
-      input.enabled,
-      input.threshold,
-      input.amount,
-      input.creditPackId,
-    );
-
-    res.json({ success: true, wallet: updated });
-  } catch (error: unknown) {
-    log.error('Failed to configure auto-recharge:', error);
-    res.status(400).json({ error: sanitizeError(error) });
-  }
-});
-
 // ============================================================================
 // INVOICE ENDPOINTS
 // ============================================================================
@@ -636,27 +445,6 @@ billingRouter.get('/invoices', async (req: AuthenticatedRequest, res: Response, 
 /**
  * Get invoice details with line items
  */
-billingRouter.get('/invoices/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const invoiceId = req.params.id;
-    const result = await invoiceService.getInvoiceWithLineItems(invoiceId);
-
-    if (!result || result.invoice.workspaceId !== workspaceId) {
-      return res.status(404).json({ error: 'Invoice not found' });
-    }
-
-    res.json(result);
-  } catch (error: unknown) {
-    log.error('Failed to get invoice:', error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
 // ============================================================================
 // FEATURE TOGGLE ENDPOINTS
 // ============================================================================
@@ -664,23 +452,6 @@ billingRouter.get('/invoices/:id', async (req: AuthenticatedRequest, res: Respon
 /**
  * Check feature access
  */
-billingRouter.get('/features/:featureKey', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const featureKey = req.params.featureKey;
-    const access = await featureToggleService.hasFeatureAccess(workspaceId, featureKey);
-
-    res.json(access);
-  } catch (error: unknown) {
-    log.error('Failed to check feature access:', error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
-});
-
 /**
  * Get all enabled features
  */
@@ -703,28 +474,6 @@ billingRouter.get('/features', async (req: AuthenticatedRequest, res: Response, 
 /**
  * Toggle feature on/off
  */
-billingRouter.post('/features/:addonId/toggle', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;
-    const userId = req.user?.id;
-    if (!workspaceId || !userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const addonId = req.params.addonId;
-    const { enabled } = z.object({
-      enabled: z.boolean(),
-    }).parse(req.body);
-
-    const addon = await featureToggleService.toggleFeature(workspaceId, addonId, enabled, userId);
-
-    res.json({ success: true, addon });
-  } catch (error: unknown) {
-    log.error('Failed to toggle feature:', error);
-    res.status(400).json({ error: sanitizeError(error) });
-  }
-});
-
 // ============================================================================
 // ADD-ON MANAGEMENT ENDPOINTS
 // ============================================================================

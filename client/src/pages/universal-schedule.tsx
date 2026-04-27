@@ -1155,14 +1155,14 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       
       const filled = data?.shiftsUpdated || 0;
       const total = data?.totalOpen || 0;
+      const analyzedShiftCount = data?.totalShifts ?? data?.totalOpenShifts ?? total;
       const tokensUsed = data?.tokensUsed ?? data?.creditsDeducted ?? 0;
       if (data?.sessionId) {
         // Async mode — WebSocket will deliver the real result
-        const shiftCount = data?.totalShifts || 0;
-        if (shiftCount > 0) {
+        if (analyzedShiftCount > 0) {
           toast({
             title: 'Trinity is analyzing shifts...',
-            description: `Processing ${shiftCount} open shifts. Results will update automatically.`,
+            description: `Processing ${analyzedShiftCount} open shifts. Results will update automatically.`,
           });
         } else {
           toast({
@@ -1170,6 +1170,11 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
             description: 'Trinity scanned this workspace and found no open shifts needing assignment.',
           });
         }
+      } else if (data?.orchestrationId && analyzedShiftCount > 0) {
+        toast({
+          title: 'Trinity scheduling is in progress',
+          description: `Tracking ${analyzedShiftCount} open shifts. Updates will appear automatically.`,
+        });
       } else if (!data?.sessionId) {
         toast({
           title: 'Trinity AI Auto-Fill Complete',

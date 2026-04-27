@@ -15,6 +15,27 @@
 import { db } from 'server/db';
 import { payrollRuns, payrollEntries, employees } from '@shared/schema';
 import { and, eq, or, gte, lte, inArray, not } from 'drizzle-orm';
+import {
+  PAYROLL_TERMINAL_STATUSES,
+  PAYROLL_DRAFT_STATUSES,
+  type PayrollTerminalStatus,
+  type PayrollDraftStatus,
+  isTerminalPayrollStatus,
+  isDraftPayrollStatus,
+} from './payrollStatus';
+
+export {
+  PAYROLL_TERMINAL_STATUSES,
+  PAYROLL_DRAFT_STATUSES,
+  type PayrollTerminalStatus,
+  type PayrollDraftStatus,
+  isTerminalPayrollStatus,
+  isDraftPayrollStatus,
+};
+
+function terminalStatusFilter() {
+  return or(...PAYROLL_TERMINAL_STATUSES.map(status => eq(payrollRuns.status, status)));
+}
 
 export interface LedgerCheckResult {
   safe: boolean;
@@ -65,13 +86,8 @@ export async function checkPayrollPeriodOverlap(
         eq(payrollRuns.workspaceId, workspaceId),
         lte(payrollRuns.periodStart, proposedEnd),
         gte(payrollRuns.periodEnd, proposedStart),
-        // Only guard against terminal (approved/paid) runs — drafts can be superseded
-        or(
-          eq(payrollRuns.status, 'approved'),
-          eq(payrollRuns.status, 'processed'),
-          eq(payrollRuns.status, 'paid'),
-          eq(payrollRuns.status, 'completed'),
-        ),
+        // Only guard against terminal runs — drafts can be superseded.
+        terminalStatusFilter(),
         ...(excludeRunId ? [not(eq(payrollRuns.id, excludeRunId))] : []),
       )
     );
@@ -187,8 +203,8 @@ export async function getPayrollLedgerSummary(workspaceId: string): Promise<{
     .from(payrollRuns)
     .where(eq(payrollRuns.workspaceId, workspaceId));
 
-  const paidRuns = runs.filter(r => ['approved', 'processed', 'paid', 'completed'].includes(r.status ?? ''));
-  const draftRuns = runs.filter(r => ['draft', 'pending'].includes(r.status ?? ''));
+  const paidRuns = runs.filter(r => isTerminalPayrollStatus(r.status));
+  const draftRuns = runs.filter(r => isDraftPayrollStatus(r.status));
 
   const latestPaid = paidRuns.reduce((max: Date | null, r) => {
     if (!max || r.periodEnd > max) return r.periodEnd;

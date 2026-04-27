@@ -372,7 +372,10 @@ class UniversalStepLogger {
       if (trackerId) {
         const tracker = await getExecutionTracker();
         if (tracker) {
-          await tracker.failExecution(trackerId, 'Orchestration expired (timeout)', 'TIMEOUT');
+          await tracker.failExecution(trackerId, {
+            failureReason: 'Orchestration expired (timeout)',
+            failureCode: 'TIMEOUT',
+          });
         }
         this.executionTrackerIds.delete(orchestrationId);
       }
@@ -862,7 +865,10 @@ class UniversalStepLogger {
       try {
         const tracker = await getExecutionTracker();
         if (tracker) {
-          await tracker.failExecution(trackerId, error, errorCode);
+          await tracker.failExecution(trackerId, {
+            failureReason: error,
+            failureCode: errorCode,
+          });
         }
       } catch (e) {
         log.warn('[UniversalStepLogger] Failed to update execution tracker:', e);

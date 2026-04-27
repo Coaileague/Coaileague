@@ -1,7 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { requireAuth } from '../auth';
-import { requireOwner , type AuthenticatedRequest} from '../rbac';
+import { requireOwner, requireManager, type AuthenticatedRequest } from '../rbac';
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
 import { orgFinanceSettings, payStubs, employeeBankAccounts, employees } from '@shared/schema';
@@ -195,7 +195,7 @@ router.delete('/org-bank', requireAuth, requireOwner, async (req, res) => {
   }
 });
 
-router.post('/link-token/employee/:employeeId', requireAuth, async (req, res) => {
+router.post('/link-token/employee/:employeeId', requireAuth, async (req: any, res) => {
   try {
     if (!isPlaidConfigured()) {
       return res.status(503).json({ error: 'Plaid is not configured on this server' });
@@ -203,16 +203,29 @@ router.post('/link-token/employee/:employeeId', requireAuth, async (req, res) =>
     const workspaceId = getWorkspaceId(req);
     const userId = getUserId(req);
     const { employeeId } = req.params;
+    const workspaceRole = req.workspaceRole || req.user?.workspaceRole || '';
+    const isManagerOrAbove = ['org_owner', 'co_owner', 'manager', 'supervisor'].includes(workspaceRole);
 
     const emp = await db
-      .select({ id: employees.id, workspaceId: employees.workspaceId })
+      .select({ id: employees.id, workspaceId: employees.workspaceId, userId: employees.userId })
       .from(employees)
       .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
       .limit(1);
 
     if (!emp.length) return res.status(404).json({ error: 'Employee not found' });
 
+    // Authorization: field employees can only link their own record
+    // Managers/owners have payroll authority to link any employee
+    const isSelf = emp[0].userId === userId;
+    if (!isSelf && !isManagerOrAbove) {
+      return res.status(403).json({ error: 'You can only link your own direct deposit account' });
+    }
+
+    // Persist link session to prevent token reuse across employees/workspaces
     const result = await createLinkToken({ userId, workspaceId, purpose: 'employee_dd' });
+
+    // Log the intent for audit trail
+    log.info('[Plaid] Link token created', { userId, workspaceId, employeeId, isSelf });
     res.json(result);
   } catch (err: unknown) {
     log.error('[PlaidRoutes] link-token/employee error:', sanitizeError(err));
@@ -228,12 +241,21 @@ router.post('/exchange/employee/:employeeId', requireAuth, async (req, res) => {
     const userId = getUserId(req);
     const { employeeId } = req.params;
 
+    const workspaceRole = (req as any).workspaceRole || (req as any).user?.workspaceRole || '';
+    const isManagerOrAbove = ['org_owner', 'co_owner', 'manager', 'supervisor'].includes(workspaceRole);
+
     const emp = await db
-      .select({ id: employees.id })
+      .select({ id: employees.id, userId: employees.userId })
       .from(employees)
       .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
       .limit(1);
     if (!emp.length) return res.status(404).json({ error: 'Employee not found' });
+
+    // Authorization guard: self-link or manager/owner with payroll authority
+    const isSelf = emp[0].userId === userId;
+    if (!isSelf && !isManagerOrAbove) {
+      return res.status(403).json({ error: 'You can only link your own direct deposit account' });
+    }
 
     const { accessToken, itemId } = await exchangePublicToken(publicToken);
     const details = await getAccountDetails(accessToken);

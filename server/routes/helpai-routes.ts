@@ -146,35 +146,6 @@ helpaiRouter.get(
  * GET /api/helpai/registry/:apiName
  * Get a specific API by name
  */
-helpaiRouter.get(
-  '/registry/:apiName',
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiName } = req.params;
-
-      const api = await helpaiRegistryService.getAPIByName(apiName);
-      if (!api) {
-        return res.status(404).json({ error: 'API not found' });
-      }
-
-      res.json({
-        success: true,
-        api,
-      });
-    } catch (error: unknown) {
-      res.status(500).json({
-        error: 'Failed to retrieve API',
-        message: sanitizeError(error),
-      });
-    }
-  }
-);
-
-/**
- * POST /api/helpai/integrations/config
- * Enable/configure an integration for the workspace
- */
 helpaiRouter.post(
   '/integrations/config',
   requireAuth,
@@ -348,101 +319,6 @@ helpaiRouter.get(
  * GET /api/helpai/audit-log/export
  * Export audit logs as CSV
  */
-helpaiRouter.get(
-  '/audit-log/export',
-  requireAuth,
-  requireHelpAIAccess,
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
-      if (!workspaceId) {
-        return res.status(400).json({ error: 'Workspace required' });
-      }
-
-      const { action } = req.query;
-
-      const csv = await helpaiAuditService.exportAuditLogsAsCSV(
-        workspaceId,
-        {
-          action: action as string | undefined,
-        }
-      );
-
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader(
-        'Content-Disposition',
-        'attachment; filename=helpai-audit-log.csv'
-      );
-      res.send(csv);
-    } catch (error: unknown) {
-      log.error('[HelpAI] Audit export error:', error);
-      res.status(500).json({
-        error: 'Failed to export audit logs',
-        message: sanitizeError(error),
-      });
-    }
-  }
-);
-
-/**
- * GET /api/helpai/stats
- * Get HelpAI system statistics
- */
-helpaiRouter.get(
-  '/stats',
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const registryStats = await helpaiRegistryService.getRegistryStats();
-      const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
-      let auditStats = null;
-
-      if (workspaceId) {
-        auditStats = await helpaiAuditService.getAuditStats(workspaceId);
-      }
-
-      res.json({
-        success: true,
-        registry: registryStats,
-        audit: auditStats,
-      });
-    } catch (error: unknown) {
-      res.status(500).json({
-        error: 'Failed to retrieve statistics',
-        message: sanitizeError(error),
-      });
-    }
-  }
-);
-
-/**
- * POST /api/helpai/audit-log/verify/:logId
- * Verify audit log integrity (SHA-256 hash)
- */
-helpaiRouter.post(
-  '/audit-log/verify/:logId',
-  requireAuth,
-  requireHelpAIAccess,
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const { logId } = req.params;
-
-      const isValid = await helpaiAuditService.verifyActionIntegrity(logId);
-
-      res.json({
-        success: true,
-        logId,
-        isIntegrityValid: isValid,
-      });
-    } catch (error: unknown) {
-      res.status(500).json({
-        error: 'Failed to verify audit log integrity',
-        message: sanitizeError(error),
-      });
-    }
-  }
-);
-
 // ============================================================================
 // HELPAI ACTION ORCHESTRATOR ROUTES
 // Universal action handler that routes all actions through AI Brain
@@ -451,7 +327,6 @@ helpaiRouter.post(
 import { helpaiOrchestrator, type ActionRequest } from '../services/helpai/platformActionHub';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
-import { isPlatformSupportStaffRole, canAccessHelpAIAdmin, canManageSupportControls, canIssueSupportAIServiceElevation, canExecuteSupportActions, HELPAI_ADMIN_PLATFORM_ROLES } from '../services/support/supportPolicyService';
 const log = createLogger('HelpaiRoutes');
 
 // ── Phase 48: Prompt Injection Sanitization ──────────────────────────────────
@@ -813,40 +688,6 @@ helpaiRouter.post('/session/start', async (req: AuthenticatedRequest, res: Respo
 /**
  * POST /api/helpai/session/:id/message
  * Process a message in an active HelpAI session
- */
-helpaiRouter.post('/session/:id/message', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { message } = req.body;
-    const user = req.user;
-
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'message is required' });
-    }
-
-    // Phase 48: sanitize before AI context
-    const safeSessionMessage = sanitizeUserInputForAI(message);
-    // Phase 83: log any injection attempts to the security audit log (non-blocking)
-    // @ts-expect-error — TS migration: fix in refactoring sprint
-    logInjectionAttempt({ workspaceId: user?.currentWorkspaceId, userId: user?.id, ipAddress: req.ip, original: message, sanitized: safeSessionMessage });
-    const result = await helpAIOrchestrator.processMessage({
-      sessionId: id,
-      message: safeSessionMessage,
-      userId: user?.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      workspaceId: user?.currentWorkspaceId,
-    });
-
-    res.json({ success: true, ...result });
-  } catch (error: unknown) {
-    log.error('[HelpAI Orchestrator] Message error:', error);
-    res.status(500).json({ error: 'Failed to process message', message: sanitizeError(error) });
-  }
-});
-
-/**
- * POST /api/helpai/session/:id/close
- * Force close a session (agents/admins)
  */
 helpaiRouter.post('/session/:id/close', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {

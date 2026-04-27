@@ -1,6 +1,7 @@
+import { z } from "zod";
 import { Router } from "express";
 import { pool } from "../db";
-import { requireAuth } from "../rbac";
+import { requireAuth, requireManager } from "../rbac";
 import { platformActionHub } from "../services/helpai/platformActionHub";
 import { platformEventBus } from "../services/platformEventBus";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
@@ -97,7 +98,7 @@ platformActionHub.registerAction({
 // --- ROUTES ---
 
 // GET /api/compliance-evidence/pending (requireAuth, manager+)
-router.get("/pending", requireAuth, async (req: any, res) => {
+router.get("/pending", requireManager, async (req: any, res) => {
   try {
     const result = await pool.query(`
       SELECT ce.*, e.name as officer_name
@@ -144,6 +145,15 @@ router.get("/:officerId", requireAuth, async (req: any, res) => {
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch officer evidence" });
   }
+});
+
+// Zod schema for evidence submission
+const SubmitEvidenceSchema = z.object({
+  officerId: z.string().uuid(),
+  evidenceType: z.enum(['license', 'certification', 'training', 'drug_test', 'background_check', 'other']),
+  documentUrl: z.string().min(1), // vault key or storage URL — arbitrary external URLs rejected downstream
+  expiryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  notes: z.string().max(500).optional(),
 });
 
 // POST /api/compliance-evidence (requireAuth)
@@ -217,7 +227,7 @@ router.post("/", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/compliance-evidence/:id/verify (requireAuth, manager+)
-router.post("/:id/verify", requireAuth, async (req: any, res) => {
+router.post("/:id/verify", requireManager, async (req: any, res) => {
   try {
     const { id } = req.params;
     const client = await pool.connect();
@@ -257,7 +267,7 @@ router.post("/:id/verify", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/compliance-evidence/:id/reject (requireAuth, manager+)
-router.post("/:id/reject", requireAuth, async (req: any, res) => {
+router.post("/:id/reject", requireManager, async (req: any, res) => {
   try {
     const { id } = req.params;
     const { rejectionReason } = req.body;

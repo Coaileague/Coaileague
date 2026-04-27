@@ -632,6 +632,10 @@ class TrinityControlConsoleService {
       conditions.push(gte(trinityThoughtSignatures.createdAt, options.since));
     }
 
+    // Require workspaceId to prevent cross-tenant data return
+    if (!options?.workspaceId) {
+      throw new Error('workspaceId is required for getRecentThoughts — cross-tenant access blocked');
+    }
     return db.select()
       .from(trinityThoughtSignatures)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -661,6 +665,10 @@ class TrinityControlConsoleService {
       conditions.push(gte(trinityActionLogs.createdAt, options.since));
     }
 
+    // Require workspaceId to prevent cross-tenant data return
+    if (!options?.workspaceId) {
+      throw new Error('workspaceId is required for getRecentActions — cross-tenant access blocked');
+    }
     return db.select()
       .from(trinityActionLogs)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -668,14 +676,14 @@ class TrinityControlConsoleService {
       .limit(options?.limit || 100);
   }
 
-  async getSessionTimeline(sessionId: string): Promise<Array<{
+  async getSessionTimeline(sessionId: string, workspaceId: string): Promise<Array<{
     type: 'thought' | 'action';
     timestamp: Date;
     data: any;
   }>> {
     const [thoughts, actions] = await Promise.all([
-      this.getRecentThoughts({ sessionId, limit: 100 }),
-      this.getRecentActions({ sessionId, limit: 200 }),
+      this.getRecentThoughts({ sessionId, workspaceId, limit: 100 }),
+      this.getRecentActions({ sessionId, workspaceId, limit: 200 }),
     ]);
 
     const timeline = [

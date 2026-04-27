@@ -3,7 +3,6 @@
 // Canonical prefixes: /api/ai/*, /api/ai-brain/*, /api/helpai, /api/trinity/*,
 //   /api/automation/*, /api/execution-tracker, /api/subagents, /api/control-tower,
 //   /api/bug-remediation, /api/workflows, /api/workflow-configs, /api/quick-fixes,
-//   /api/gamification, /api/trinity-decisions, /api/trinity-training,
 //   /api/trinity/empire/*, /api/trinity/bluedot/*
 //
 // MOUNT ORDER RULE: specific path prefixes BEFORE general path prefixes so
@@ -17,7 +16,6 @@ import { registerWorkboardRoutes } from "../workboardRoutes";
 import { registerFaqRoutes } from "../faq-routes";
 import { aiBrainRouter } from "../ai-brain-routes";
 import { helpaiRouter } from "../helpai-routes";
-import { gamificationRouter } from "../gamification-api";
 import { aiBrainConsoleRouter } from "../ai-brain-console";
 import aiBrainControlRouter from "../aiBrainControlRoutes";
 import aiOrchestraRouter from "../aiOrchestraRoutes";
@@ -52,8 +50,6 @@ import trinityMiscRouter from "../trinityMiscRoutes";
 import trinityTrainingRouter from "../trinityTrainingRoutes";
 import { trinityThoughtStatusRouter } from "../trinityThoughtStatusRoutes";
 import vqaRouter from "../vqaRoutes";
-import workflowConfigRouter from "../workflowConfigRoutes";
-import workflowRouter from "../workflowRoutes";
 import automationGovernanceRouter from "../automationGovernanceRoutes";
 import trinityIntelligenceRouter from "../trinityIntelligenceRoutes";
 import empireRouter from "../empireRoutes"; // /api/trinity/empire/* + /api/trinity/bluedot/*
@@ -129,8 +125,6 @@ export function mountTrinityRoutes(app: Express): void {
   registerWorkboardRoutes(app, requireAuth);
   registerFaqRoutes(app);
 
-  // ── Gamification & AI Orchestra ───────────────────────────────────────────
-  app.use("/api/gamification", gamificationRouter);
   app.use("/api/ai/orchestra", aiOrchestraRouter);
 
   // ── AI Brain — specific sub-paths FIRST to avoid shadowing ───────────────
@@ -225,8 +219,6 @@ export function mountTrinityRoutes(app: Express): void {
   app.use("/api/code-editor", codeEditorRouter);
 
   // ── Workflows ─────────────────────────────────────────────────────────────
-  app.use("/api/workflow-configs", workflowConfigRouter);
-  app.use("/api/workflows", requireAuth, ensureWorkspaceAccess, workflowRouter);
 
   // ── Agent Spawning Activity (Phase 6) ─────────────────────────────────────
   app.use("/api/agent-activity", requireAuth, ensureWorkspaceAccess, agentActivityRouter);

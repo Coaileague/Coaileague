@@ -152,8 +152,3 @@ export async function seedRegulatoryRules(): Promise<void> {
 }
 
 // Allow direct execution
-if (require.main === module) {
-  seedRegulatoryRules()
-    .then(() => process.exit(0))
-    .catch(e => { console.error('Seed failed:', e); process.exit(1); });
-}

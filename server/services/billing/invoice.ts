@@ -28,6 +28,7 @@ import Decimal from 'decimal.js';
 import { emailService } from '../emailService';
 import { NotificationDeliveryService } from '../notificationDeliveryService';
 import { isBillingExcluded } from './billingConstants';
+import { saveToVault } from '../documents/businessFormsVaultService';
 import {
   calculateInvoiceLineItem,
   calculateInvoiceTotal,
@@ -1785,7 +1786,175 @@ export class InvoiceService {
     doc.text(`Statement generated on ${now.toLocaleDateString()} by ${workspace?.companyName || 'your service provider'}`, 50, y, { align: 'center' });
 
     doc.end();
-    return pdfReady;
+    const rawBuffer = await pdfReady;
+
+    // Stamp + save client statement to vault
+    const vaultResult = await saveToVault({
+      workspaceId,
+      workspaceName: workspace?.companyName || workspaceId,
+      documentTitle: `Client Statement — ${new Date(targetYear, targetMonth - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+      category: 'operations',
+      relatedEntityType: 'client',
+      relatedEntityId: clientId,
+      generatedBy: 'system',
+      rawBuffer,
+    });
+    if (!vaultResult.success) {
+      log.warn('[InvoiceService] Client statement vault save failed:', vaultResult.error);
+    }
+
+    return vaultResult.stampedBuffer || rawBuffer;
+  }
+
+  /**
+   * Generate a branded per-invoice PDF and save to the tenant vault.
+   * This is the canonical invoice document for client-facing delivery.
+   */
+  async generateInvoicePDF(invoiceId: string, workspaceId: string): Promise<{
+    success: boolean;
+    pdfBuffer?: Buffer;
+    vaultId?: string;
+    documentNumber?: string;
+    error?: string;
+  }> {
+    try {
+      const { default: PDFDocument } = await import('pdfkit');
+
+      const [invoice] = await db.select().from(invoices)
+        .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+        .limit(1);
+      if (!invoice) return { success: false, error: 'Invoice not found' };
+
+      const inv = invoice as any;
+
+      const [client] = await db.select().from(clients)
+        .where(and(eq(clients.id, inv.clientId), eq(clients.workspaceId, workspaceId)))
+        .limit(1);
+
+      const [ws] = await db.select().from((await import('@shared/schema')).workspaces)
+        .where(eq((await import('@shared/schema')).workspaces.id, workspaceId))
+        .limit(1);
+
+      const lineItems = await db.select().from((await import('@shared/schema')).invoiceLineItems)
+        .where(eq((await import('@shared/schema')).invoiceLineItems.invoiceId, invoiceId));
+
+      const c = client as any;
+      const w = ws as any;
+      const clientName = c?.companyName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || 'Client';
+      const workspaceName = w?.companyName || workspaceId;
+      const issueDate = inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+      const dueDate   = inv.dueDate   ? new Date(inv.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+      const total     = Number(inv.totalAmount || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+
+      const chunks: Buffer[] = [];
+      const doc = new PDFDocument({ size: 'LETTER', margins: { top: 80, bottom: 80, left: 72, right: 72 } });
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      const bufReady = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));
+
+      // Header block
+      doc.fontSize(22).font('Helvetica-Bold').fillColor('#111827').text('INVOICE', { align: 'right' });
+      doc.fontSize(10).font('Helvetica').fillColor('#6b7280')
+        .text(`Invoice #: ${inv.invoiceNumber || invoiceId.slice(-8)}`, { align: 'right' })
+        .text(`Issue Date: ${issueDate}`, { align: 'right' })
+        .text(`Due Date: ${dueDate}`, { align: 'right' });
+
+      doc.moveDown(1.5);
+
+      // Bill From / Bill To
+      const y = doc.y;
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151')
+        .text('FROM:', 72, y)
+        .moveDown(0.3)
+        .font('Helvetica').fillColor('#111827')
+        .text(workspaceName, 72)
+        .text(w?.address || '', 72);
+
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151')
+        .text('BILL TO:', 300, y)
+        .moveDown(0.3);
+      doc.font('Helvetica').fillColor('#111827')
+        .text(clientName, 300)
+        .text(c?.address || c?.billingAddress || '', 300);
+
+      doc.moveDown(2);
+
+      // Line items table header
+      doc.moveTo(72, doc.y).lineTo(540, doc.y).strokeColor('#111827').lineWidth(1).stroke();
+      doc.moveDown(0.3);
+      const colX = [72, 300, 380, 460];
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#111827');
+      ['Description', 'Qty', 'Rate', 'Amount'].forEach((h, i) => {
+        doc.text(h, colX[i], doc.y, { width: i === 0 ? 210 : 80, continued: i < 3 });
+      });
+      doc.moveDown(0.3);
+      doc.moveTo(72, doc.y).lineTo(540, doc.y).strokeColor('#d1d5db').lineWidth(0.5).stroke();
+      doc.moveDown(0.4);
+
+      // Line items
+      doc.fontSize(9).font('Helvetica').fillColor('#374151');
+      for (const item of lineItems as any[]) {
+        const lineY = doc.y;
+        const qty    = Number(item.quantity || 1);
+        const rate   = Number(item.unitPrice || item.rate || 0);
+        const amount = Number(item.amount || qty * rate);
+        doc.text(item.description || 'Service', colX[0], lineY, { width: 210 });
+        doc.text(String(qty), colX[1], lineY, { width: 80 });
+        doc.text(`$${rate.toFixed(2)}`, colX[2], lineY, { width: 80 });
+        doc.text(`$${amount.toFixed(2)}`, colX[3], lineY, { width: 80 });
+        doc.moveDown(0.6);
+      }
+
+      doc.moveDown(0.5);
+      doc.moveTo(72, doc.y).lineTo(540, doc.y).strokeColor('#111827').lineWidth(1).stroke();
+      doc.moveDown(0.5);
+
+      // Total
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#111827')
+        .text(`TOTAL DUE: ${total}`, { align: 'right' });
+
+      // Status badge
+      const status = (inv.status || 'draft').toUpperCase();
+      const statusColor = { PAID: '#059669', OVERDUE: '#dc2626', SENT: '#2563eb' }[status] || '#6b7280';
+      doc.moveDown(0.5)
+        .fontSize(10).fillColor(statusColor)
+        .text(`Status: ${status}`, { align: 'right' });
+
+      // Payment terms / notes
+      if (inv.notes) {
+        doc.moveDown(1).fontSize(8).fillColor('#6b7280').text(`Notes: ${inv.notes}`, { lineGap: 2 });
+      }
+      doc.moveDown(0.5).fontSize(8).fillColor('#9ca3af')
+        .text('Thank you for your business. Please remit payment by the due date shown above.', { align: 'center' });
+
+      doc.end();
+      const rawBuffer = await bufReady;
+
+      const vaultResult = await saveToVault({
+        workspaceId,
+        workspaceName,
+        documentTitle: `Invoice ${inv.invoiceNumber || invoiceId.slice(-8)}`,
+        category: 'operations',
+        period: issueDate,
+        relatedEntityType: 'invoice',
+        relatedEntityId: invoiceId,
+        generatedBy: 'trinity',
+        rawBuffer,
+      });
+
+      if (!vaultResult.success) {
+        log.warn('[InvoiceService] Invoice PDF vault save failed:', vaultResult.error);
+      }
+
+      return {
+        success: true,
+        pdfBuffer: vaultResult.stampedBuffer || rawBuffer,
+        vaultId: vaultResult.vault?.id,
+        documentNumber: vaultResult.vault?.documentNumber,
+      };
+    } catch (error: any) {
+      log.error('[InvoiceService] Invoice PDF generation failed:', error?.message);
+      return { success: false, error: error?.message };
+    }
   }
 }
 

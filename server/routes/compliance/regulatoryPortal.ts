@@ -1137,7 +1137,9 @@ async function notifyOrgOwnerOfAuditRequest(
 
 // ── PUBLIC: Step 6 — Portal report submission (public, keyed by requestId) ────
 
-router.post('/complete-report', async (req: Request, res: Response) => {
+router.post('/complete-report', requireAuditorPortalAuth, async (req: Request, res: Response) => {
+  // Auditor token authentication required — requestId alone is insufficient
+  // The auditor session includes workspaceId binding; verify it matches
   try {
     const { requestId, reportUrl, auditOutcome, findings, correctiveActions } = req.body;
 
@@ -1161,6 +1163,12 @@ router.post('/complete-report', async (req: Request, res: Response) => {
 
     if (request.status !== 'access_granted') {
       return res.status(403).json({ success: false, error: 'Access not granted for this request' });
+    }
+
+    // Verify auditor token workspace matches the request workspace
+    const tokenWorkspaceId = (req as any).auditorWorkspaceId;
+    if (tokenWorkspaceId && tokenWorkspaceId !== request.workspaceId) {
+      return res.status(403).json({ success: false, error: 'Workspace mismatch — token does not authorize this request' });
     }
 
     if (request.accessExpiresAt && new Date() > new Date(request.accessExpiresAt)) {

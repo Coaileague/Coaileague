@@ -5,9 +5,34 @@
  */
 
 import { db } from "../db";
+import {
+  addFinancialValues,
+  formatCurrency,
+  multiplyFinancialValues,
+  subtractFinancialValues,
+  toFinancialString,
+} from "./financialCalculator";
 import { createLogger } from '../lib/logger';
 const log = createLogger('taxCalculator');
 
+function moneyNumber(value: string | number): number {
+  return Number(formatCurrency(toFinancialString(value)));
+}
+
+function multiplyMoney(a: string | number, b: string | number): number {
+  return moneyNumber(multiplyFinancialValues(toFinancialString(a), toFinancialString(b)));
+}
+
+function addMoney(...values: Array<string | number>): number {
+  return moneyNumber(values.reduce(
+    (total, value) => addFinancialValues(toFinancialString(total), toFinancialString(value)),
+    toFinancialString(0),
+  ));
+}
+
+function subtractMoney(a: string | number, b: string | number): number {
+  return moneyNumber(subtractFinancialValues(toFinancialString(a), toFinancialString(b)));
+}
 
 // Cache tax rates for 24 hours to minimize API calls
 const taxRateCache = new Map<string, { rate: number; timestamp: number }>();
@@ -60,27 +85,29 @@ export async function calculateBonusTaxation(
 ): Promise<{ grossBonus: number; federalWithholding: number; stateWithholding: number; netBonus: number }> {
   try {
     // Federal withholding at flat 37% for bonuses (IRS standard)
-    const federalWithholding = bonusAmount * 0.37;
+    const federalWithholding = multiplyMoney(bonusAmount, 0.37);
     
     const stateTaxRate = getStateIncomeTaxRate(state);
-    const stateWithholding = bonusAmount * stateTaxRate;
+    const stateWithholding = multiplyMoney(bonusAmount, stateTaxRate);
     
-    const totalWithholding = federalWithholding + stateWithholding;
-    const netBonus = bonusAmount - totalWithholding;
+    const totalWithholding = addMoney(federalWithholding, stateWithholding);
+    const netBonus = subtractMoney(bonusAmount, totalWithholding);
 
     return {
-      grossBonus: bonusAmount,
+      grossBonus: moneyNumber(bonusAmount),
       federalWithholding,
       stateWithholding,
       netBonus
     };
   } catch (error) {
     log.error('[TaxCalculator] Error calculating bonus taxation:', error);
+    const federalWithholding = multiplyMoney(bonusAmount, 0.37);
+    const netBonus = multiplyMoney(bonusAmount, 0.63);
     return {
-      grossBonus: bonusAmount,
-      federalWithholding: bonusAmount * 0.37,
+      grossBonus: moneyNumber(bonusAmount),
+      federalWithholding,
       stateWithholding: 0,
-      netBonus: bonusAmount * 0.63
+      netBonus
     };
   }
 }
@@ -283,23 +310,27 @@ export function calculateTaxes(params: {
   
   for (const bracket of brackets) {
     if (params.ytdWages >= bracket.limit) {
-      federalTax += (bracket.limit - previousLimit) * bracket.rate;
+      federalTax = addMoney(federalTax, multiplyMoney(bracket.limit - previousLimit, bracket.rate));
       previousLimit = bracket.limit;
     } else {
-      federalTax += Math.max(0, params.ytdWages + params.grossWages - previousLimit) * bracket.rate;
+      federalTax = addMoney(
+        federalTax,
+        multiplyMoney(Math.max(0, params.ytdWages + params.grossWages - previousLimit), bracket.rate)
+      );
       break;
     }
   }
 
   // Social Security (6.2%) and Medicare (1.45%) - self-explanatory payroll taxes
-  const socialSecurity = params.grossWages * 0.062;
-  const medicare = params.grossWages * 0.0145;
+  const socialSecurity = multiplyMoney(params.grossWages, 0.062);
+  const medicare = multiplyMoney(params.grossWages, 0.0145);
+  const total = addMoney(federalTax, socialSecurity, medicare);
 
   return {
-    federalIncomeTax: Math.round(federalTax * 100) / 100,
-    socialSecurity: Math.round(socialSecurity * 100) / 100,
-    medicare: Math.round(medicare * 100) / 100,
-    total: Math.round((federalTax + socialSecurity + medicare) * 100) / 100
+    federalIncomeTax: federalTax,
+    socialSecurity,
+    medicare,
+    total
   };
 }
 

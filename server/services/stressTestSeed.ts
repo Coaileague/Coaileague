@@ -2,7 +2,7 @@
  * STRESS TEST SEED — 30 days of shifts for ACME + Anvil
  * Creates realistic data for Trinity to process:
  * - Past shifts: completed, ready for payroll/invoices
- * - Future shifts: open/assigned for coverage testing
+ * - Future shifts: published/scheduled for coverage testing
  */
 
 import { db } from '../db';
@@ -74,7 +74,7 @@ export async function runStressTestSeed() {
         const empId = ACME_EMPLOYEES[empIdx];
         const shiftId = `stress-acme-past-${daysAgo}-${clientIdx}-${tIdx}`;
         
-        // Alternate between assigned and open for realism
+        // Alternate between completed and published for realism
         const isOpen = (clientIdx === 0 && tIdx === 2) || (clientIdx === 2 && tIdx === 0);
         
         try {
@@ -87,7 +87,7 @@ export async function runStressTestSeed() {
             date: dayDate,
             startTime: sql`${daysOffset(daysAgo, tmpl.startH)}::timestamptz`,
             endTime: sql`${daysOffset(daysAgo, tmpl.endH < tmpl.startH ? tmpl.endH + 24 : tmpl.endH)}::timestamptz`,
-            status: isOpen ? 'open' : 'completed',
+            status: isOpen ? 'published' : 'completed',
             billRate: client.billRate,
             payRate: client.payRate,
             billableToClient: true,
@@ -135,7 +135,7 @@ export async function runStressTestSeed() {
             date: dayDate,
             startTime: sql`${futureTime(daysOut, tmpl.startH)}::timestamptz`,
             endTime: sql`${futureTime(daysOut, tmpl.endH < tmpl.startH ? tmpl.endH + 24 : tmpl.endH)}::timestamptz`,
-            status: isOpen ? 'open' : 'assigned',
+            status: isOpen ? 'published' : 'scheduled',
             billRate: client.billRate,
             payRate: client.payRate,
             billableToClient: true,

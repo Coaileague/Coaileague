@@ -20,6 +20,8 @@ import {
   formatCurrency,
 } from "./financialCalculator";
 import { createLogger } from '../lib/logger';
+import { saveToVault } from './documents/businessFormsVaultService';
+import { hoursBetween } from './scheduling/schedulingMath';
 const log = createLogger('paystubService');
 
 
@@ -230,14 +232,14 @@ export class PaystubService {
       doc.text('Regular Pay', 50, y);
       doc.text(data.regularHours.toFixed(2), 200, y);
       doc.text(`$${data.regularRate.toFixed(2)}`, 280, y);
-      doc.text(`$${(data.regularHours * data.regularRate).toFixed(2)}`, 380, y);
+      doc.text(`$${parseFloat(multiplyFinancialValues(toFinancialString(String(data.regularHours)), toFinancialString(String(data.regularRate)))).toFixed(2)}`, 380, y);
 
       if (data.overtimeHours > 0) {
         y += 20;
         doc.text('Overtime Pay (1.5x)', 50, y);
         doc.text(data.overtimeHours.toFixed(2), 200, y);
         doc.text(`$${data.overtimeRate.toFixed(2)}`, 280, y);
-        doc.text(`$${(data.overtimeHours * data.overtimeRate).toFixed(2)}`, 380, y);
+        doc.text(`$${parseFloat(multiplyFinancialValues(toFinancialString(String(data.overtimeHours)), toFinancialString(String(data.overtimeRate)))).toFixed(2)}`, 380, y);
       }
 
       y += 25;
@@ -256,7 +258,7 @@ export class PaystubService {
         y += 18;
       }
 
-      const totalDeductions = data.deductions.reduce((sum, d) => sum + d.amount, 0);
+      const totalDeductions = parseFloat(data.deductions.reduce((sum, d) => addFinancialValues(sum, toFinancialString(String(d.amount))), '0'));
       y += 10;
       doc.fontSize(11).text('Total Deductions:', 280, y, { continued: true });
       doc.text(`  -$${totalDeductions.toFixed(2)}`);
@@ -328,10 +330,36 @@ export class PaystubService {
         }
       }
 
+      // Resolve workspace name for branded header
+      const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
+
+      // Stamp branded header/footer and save to tenant vault
+      const periodLabel = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      const vaultResult = await saveToVault({
+        workspaceId,
+        workspaceName: (ws as any)?.name || workspaceId,
+        documentTitle: 'Employee Pay Stub',
+        category: 'payroll',
+        period: periodLabel,
+        relatedEntityType: 'employee',
+        relatedEntityId: employeeId,
+        generatedBy: 'trinity',
+        rawBuffer: pdfBuffer,
+      });
+      if (!vaultResult.success) {
+        log.error('[PaystubService] Vault save FAILED — pay stub not generated:', vaultResult.error);
+        return {
+          success: false,
+          error: `Pay stub generation succeeded but vault storage failed. No document was created. Error: ${vaultResult.error}`,
+        };
+      }
+
       return {
         success: true,
-        paystubId: `PS-${Date.now()}`,
-        pdfBuffer,
+        paystubId: vaultResult.vault?.documentNumber || `PS-${Date.now()}`,
+        pdfBuffer: vaultResult.stampedBuffer || pdfBuffer,
+        vaultId: vaultResult.vault?.id,
+        documentNumber: vaultResult.vault?.documentNumber,
         data,
       };
     } catch (error) {
@@ -364,7 +392,7 @@ export class PaystubService {
         ...d,
         formattedAmount: `-$${d.amount.toFixed(2)}`,
       })),
-      totalHours: data.regularHours + data.overtimeHours,
+      totalHours: parseFloat(addFinancialValues(toFinancialString(String(data.regularHours)), toFinancialString(String(data.overtimeHours)))),
     };
   }
 

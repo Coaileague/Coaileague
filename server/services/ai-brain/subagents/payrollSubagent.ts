@@ -18,7 +18,8 @@ import {
   employees,
   idempotencyKeys
 } from '@shared/schema';
-import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, desc, inArray, isNull } from 'drizzle-orm';
+import { multiplyFinancialValues, toFinancialString } from '../../financialCalculator';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { tokenManager, TOKEN_COSTS } from '../../billing/tokenManager';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
@@ -638,7 +639,7 @@ class PayrollSubagentService {
           totalEmployeeTax = taxes.totalDeductions;
         } catch (taxErr: any) {
           log.warn(`[PayrollSubagent] Tax calc error for employee ${emp.id}, using 22% estimate: ${taxErr.message}`);
-          totalEmployeeTax = gross * 0.22;
+          totalEmployeeTax = Number(multiplyFinancialValues(toFinancialString(gross), toFinancialString(0.22)));
         }
       }
 
@@ -800,20 +801,63 @@ class PayrollSubagentService {
     // Step 5: Create payroll run (if not validate only and approved by LLM Judge)
     if (!options.validateOnly) {
       const createSpan = this.tracer.startSpan(parentTrace, 'payroll.create_run');
-      
+
       try {
-        const [payrollRun] = await db.insert(payrollRuns).values({
-          workspaceId,
-          periodStart: payPeriodStart,
-          periodEnd: payPeriodEnd,
-          totalGrossPay: totalGross.toFixed(2),
-          totalTaxes: totalDeductions.toFixed(2),
-          totalNetPay: totalNet.toFixed(2),
-          status: 'pending',
-        }).returning();
+        // Collect source time entry IDs for atomic claim.
+        // timeData is the full rows from fetchTimeEntries — all have .id.
+        const sourceTimeEntryIds = [...new Set(timeData.map((t: any) => t.id as string))];
+
+        // ── Atomic transaction: claim entries → create run → link ────────────
+        // If any step fails the entire transaction rolls back.
+        // No payroll run header is left without its source entries claimed.
+        const payrollRun = await db.transaction(async (tx) => {
+          // 1. Atomically claim approved, unclaimed time entries
+          const claimed = await tx
+            .update(timeEntries)
+            .set({ payrolledAt: new Date(), updatedAt: new Date() })
+            .where(and(
+              eq(timeEntries.workspaceId, workspaceId),
+              inArray(timeEntries.id, sourceTimeEntryIds),
+              isNull(timeEntries.payrolledAt),
+            ))
+            .returning({ id: timeEntries.id });
+
+          if (claimed.length !== sourceTimeEntryIds.length) {
+            throw new Error(
+              `Payroll run aborted: ${sourceTimeEntryIds.length - claimed.length} of ` +
+              `${sourceTimeEntryIds.length} time entries were already payrolled or unavailable. ` +
+              `No payroll run was created.`
+            );
+          }
+
+          // 2. Create the payroll run header
+          const [run] = await tx.insert(payrollRuns).values({
+            workspaceId,
+            periodStart: payPeriodStart,
+            periodEnd: payPeriodEnd,
+            totalGrossPay: totalGross.toFixed(2),
+            totalTaxes: totalDeductions.toFixed(2),
+            totalNetPay: totalNet.toFixed(2),
+            status: 'pending',
+          }).returning();
+
+          // 3. Back-link claimed entries to this payroll run
+          if (claimed.length > 0) {
+            await tx
+              .update(timeEntries)
+              .set({ payrollRunId: run.id, updatedAt: new Date() })
+              .where(and(
+                eq(timeEntries.workspaceId, workspaceId),
+                inArray(timeEntries.id, claimed.map((e) => e.id)),
+              ));
+          }
+
+          return run;
+        });
 
         this.tracer.endSpan(createSpan, 'completed', { payrollRunId: payrollRun.id });
 
+        // Side-effects are fire-and-forget — outside the transaction intentionally
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'payroll_run_created', payrollRunId: payrollRun.id });
         platformEventBus.publish({
           type: 'payroll_run_created',
