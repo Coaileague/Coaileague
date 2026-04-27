@@ -23,7 +23,7 @@ const log = createLogger('NDS');
 
 import { db } from '../db';
 import { notificationDeliveries } from '@shared/schema';
-import { eq, and, lte, lt, gte } from 'drizzle-orm';
+import { eq, and, lte, lt, gte, inArray } from 'drizzle-orm';
 import crypto from 'crypto';
 // Phase 49: Notification preference enforcement
 import { shouldDeliver } from './notificationPreferenceService';
@@ -113,7 +113,9 @@ export type NotificationDeliveryType =
   | 'compliance_document_approved'
   | 'compliance_document_rejected'
   | 'bolo_match'
-  | 'hris_disconnected';
+  | 'hris_disconnected'
+  | 'panic_alert'     // Duress/emergency — always critical, bypasses quiet hours
+  | 'duress_alert';   // Alias for panic_alert
 
 export type NotificationDeliveryChannel = 'email' | 'sms' | 'websocket' | 'in_app' | 'push';
 
@@ -122,9 +124,16 @@ export const CRITICAL_NOTIFICATION_TYPES: NotificationDeliveryType[] = [
   'calloff_received',
   'payroll_approval_required',
   'trinity_alert',
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   'panic_alert',
+  'duress_alert',
+  'incident_alert',  // Treated as critical until callers migrated to panic_alert
+  'security_threat',
 ];
+
+// Critical safety alerts bypass quiet hours and channel opt-outs.
+// They still honor legal STOP/consent requirements for SMS.
+export const isCriticalAlert = (type: string): boolean =>
+  CRITICAL_NOTIFICATION_TYPES.includes(type as NotificationDeliveryType);
 
 // Action buttons rendered on web-push notifications. The service worker
 // (client/public/sw.js) handles "accept", "decline", "approve", "view", "sign",
@@ -319,9 +328,7 @@ export class NotificationDeliveryService {
         scheduledAt: payload.scheduledAt ?? new Date(),
         maxAttempts: payload.maxAttempts ?? 3,
       })
-      .onConflictDoUpdate({
-        target: notificationDeliveries.idempotencyKey,
-        set: { status: 'pending', updatedAt: new Date() },
+      .onConflictDoNothing({ // Never reset sent/sending rows — idempotent insert only
       })
       .returning();
 
@@ -351,10 +358,17 @@ export class NotificationDeliveryService {
       record.status === 'permanently_failed'
     ) return;
 
-    await db
+    // Atomic claim — only the worker that flips pending→sending delivers
+    const [claimed] = await db
       .update(notificationDeliveries)
       .set({ status: 'sending', updatedAt: new Date() })
-      .where(eq(notificationDeliveries.id, notificationId));
+      .where(and(
+        eq(notificationDeliveries.id, notificationId),
+        inArray(notificationDeliveries.status, ['pending', 'retrying'])
+      ))
+      .returning({ id: notificationDeliveries.id });
+
+    if (!claimed) return; // Another worker already claimed or row is terminal
 
     try {
       await this.deliverByChannel(record);
@@ -523,14 +537,28 @@ export class NotificationDeliveryService {
   private static async deliverSMS(
     record: typeof notificationDeliveries.$inferSelect
   ): Promise<void> {
-    const { sendSMS } = await import('./smsService');
+    const { sendSMSToUser, sendSMSToEmployee, sendSMS } = await import('./smsService');
     const payload = record.payload as Record<string, unknown>;
-    const to = String(payload.to ?? payload.phone ?? '');
-    if (!to) throw new Error('No recipient phone in notification payload');
-
     const body = String(payload.body ?? payload.message ?? record.subject ?? record.notificationType);
 
-    const result = await sendSMS({ to, body, workspaceId: record.workspaceId, type: record.notificationType });
+    // Route through consent/log path when we have structured recipient IDs
+    const recipientUserId = record.recipientUserId ?? String(payload.recipientUserId ?? '');
+    const employeeId = String(payload.employeeId ?? '');
+
+    let result: any;
+    if (recipientUserId && recipientUserId !== 'system') {
+      // Preferred: consent checked + attempt logged inside sendSMSToUser
+      result = await sendSMSToUser(recipientUserId, body, record.notificationType);
+    } else if (employeeId && record.workspaceId) {
+      // Fallback: consent checked + attempt logged inside sendSMSToEmployee
+      result = await sendSMSToEmployee(employeeId, body, record.notificationType, record.workspaceId);
+    } else {
+      // Last resort: direct send for system/emergency alerts — log manually
+      const to = String(payload.to ?? payload.phone ?? '');
+      if (!to) throw new Error('No recipient phone in notification payload and no userId/employeeId');
+      result = await sendSMS({ to, body, workspaceId: record.workspaceId, type: record.notificationType });
+    }
+
     if (result && typeof result === 'object' && 'error' in result && result.error) {
       throw new Error(String((result as any).error));
     }
@@ -676,7 +704,8 @@ export class NotificationDeliveryService {
   // ACK — called when client confirms WebSocket notification receipt
   // ============================================================================
 
-  static async acknowledge(notificationId: string): Promise<void> {
+  static async acknowledge(notificationId: string, recipientUserId: string, workspaceId: string): Promise<void> {
+    // Ownership check: only the recipient in the correct workspace can ack their own delivery
     await db
       .update(notificationDeliveries)
       .set({
@@ -687,6 +716,8 @@ export class NotificationDeliveryService {
       .where(
         and(
           eq(notificationDeliveries.id, notificationId),
+          eq(notificationDeliveries.recipientUserId, recipientUserId),
+          eq(notificationDeliveries.workspaceId, workspaceId),
           eq(notificationDeliveries.channel, 'websocket')
         )
       );

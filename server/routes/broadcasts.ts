@@ -358,6 +358,12 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ success: false, error: 'Broadcast not found' });
     }
 
+    // Workspace IDOR guard: verify broadcast belongs to requester's workspace
+    // (platform admins/system broadcasts with no workspaceId are accessible)
+    if (broadcast.workspaceId && userInfo.workspaceId && broadcast.workspaceId !== userInfo.workspaceId) {
+      return res.status(404).json({ success: false, error: 'Broadcast not found' });
+    }
+
     // Get recipient info for the current user
     let recipient = null;
     if (userInfo.userId) {
@@ -376,8 +382,13 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
  * GET /api/broadcasts/:id/stats
  */
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.get('/:id/stats', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req, res) => {
+router.get('/:id/stats', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: any, res) => {
   try {
+    const { workspaceId } = await getUserInfo(req);
+    const broadcast = await broadcastService.getBroadcastById(req.params.id);
+    if (!broadcast || (broadcast.workspaceId && workspaceId && broadcast.workspaceId !== workspaceId)) {
+      return res.status(404).json({ error: 'Broadcast not found' });
+    }
     const stats = await broadcastService.getBroadcastStats(req.params.id);
     res.json(stats);
   } catch (error: unknown) {
@@ -391,8 +402,13 @@ router.get('/:id/stats', requireAuth, requireRole(['org_owner', 'co_owner', 'man
  * PATCH /api/broadcasts/:id
  */
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.patch('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req, res) => {
+router.patch('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: any, res) => {
   try {
+    const { workspaceId } = await getUserInfo(req);
+    const existing = await broadcastService.getBroadcastById(req.params.id);
+    if (!existing || (existing.workspaceId && workspaceId && existing.workspaceId !== workspaceId)) {
+      return res.status(404).json({ error: 'Broadcast not found' });
+    }
     const broadcast = await broadcastService.updateBroadcast(req.params.id, req.body);
 
     platformEventBus.emit('broadcast.updated', {
@@ -412,8 +428,13 @@ router.patch('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager
  * DELETE /api/broadcasts/:id
  */
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.delete('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: any, res) => {
   try {
+    const { workspaceId } = await getUserInfo(req);
+    const existing = await broadcastService.getBroadcastById(req.params.id);
+    if (!existing || (existing.workspaceId && workspaceId && existing.workspaceId !== workspaceId)) {
+      return res.status(404).json({ error: 'Broadcast not found' });
+    }
     await broadcastService.deactivateBroadcast(req.params.id);
 
     platformEventBus.emit('broadcast.deleted', {
