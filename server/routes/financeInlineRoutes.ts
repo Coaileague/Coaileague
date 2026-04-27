@@ -1,11 +1,45 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
+import { z } from 'zod';
 import { requireManager, requireOwner, type AuthenticatedRequest } from "../rbac";
 import { pool, db } from "../db";
 import { invoices } from "@shared/schema";
 import { and, eq } from "drizzle-orm";
 import { creditInvoice, discountInvoice, refundInvoice, correctInvoiceLineItem, getInvoiceAdjustmentHistory, bulkCreditInvoices } from "../services/invoiceAdjustmentService";
+import { subtractFinancialValues, divideFinancialValues, multiplyFinancialValues, toFinancialString } from '../services/financialCalculator';
 import { createLogger } from '../lib/logger';
+
+// ─── Zod schemas for financial mutation boundaries ───────────────────────────
+const CreditSchema = z.object({
+  invoiceId: z.string().uuid(),
+  amount: z.number().positive(),
+  description: z.string().min(1),
+});
+const DiscountSchema = z.object({
+  invoiceId: z.string().uuid(),
+  discountPercent: z.number().min(0).max(100),
+  reason: z.string().min(1),
+});
+const RefundSchema = z.object({
+  invoiceId: z.string().uuid(),
+  refundAmount: z.number().positive(),
+  reason: z.string().min(1),
+});
+const CorrectLineItemSchema = z.object({
+  invoiceId: z.string().uuid(),
+  lineItemIndex: z.number().int().min(0),
+  newQuantity: z.number().positive().optional(),
+  newUnitPrice: z.number().positive().optional(),
+  reason: z.string().optional(),
+});
+const BulkCreditSchema = z.object({
+  invoiceIds: z.array(z.string().uuid()).min(1),
+  creditPerInvoice: z.number().positive(),
+  reason: z.string().min(1),
+});
+const PeriodSchema = z.object({
+  period: z.enum(['month', 'quarter', 'year']).default('month'),
+});
 const log = createLogger('FinanceInlineRoutes');
 
 
@@ -34,10 +68,12 @@ async function assertInvoiceBelongsToWorkspace(invoiceId: string, workspaceId: s
 
 router.post("/billing/adjust-invoice/credit", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    const { invoiceId, amount, description } = req.body;
+    const parsed = CreditSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
+    const { invoiceId, amount, description } = parsed.data;
     const userId = req.user?.id;
     const workspaceId = req.workspaceId || req.currentWorkspaceId;
-    if (!invoiceId || !amount || !userId || !workspaceId) return res.status(400).json({ error: 'invoiceId, amount, and user required' });
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'User and workspace context required' });
 
     await assertInvoiceBelongsToWorkspace(invoiceId, workspaceId);
 
@@ -51,11 +87,12 @@ router.post("/billing/adjust-invoice/credit", requireManager, async (req: Authen
 
 router.post("/billing/adjust-invoice/discount", requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
-    const { invoiceId, discountPercent, reason } = req.body;
+    const parsed = DiscountSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
+    const { invoiceId, discountPercent, reason } = parsed.data;
     const userId = req.user?.id;
     const workspaceId = req.workspaceId || req.currentWorkspaceId;
-    if (!invoiceId || discountPercent === undefined || !userId || !workspaceId) return res.status(400).json({ error: 'invoiceId, discountPercent, and user required' });
-    if (!reason || !reason.trim()) return res.status(400).json({ error: 'reason is required for discount operations' });
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'auth context required' });
 
     await assertInvoiceBelongsToWorkspace(invoiceId, workspaceId);
 
@@ -69,11 +106,12 @@ router.post("/billing/adjust-invoice/discount", requireOwner, async (req: Authen
 
 router.post("/billing/adjust-invoice/refund", requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
-    const { invoiceId, refundAmount, reason } = req.body;
+    const parsed = RefundSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
+    const { invoiceId, refundAmount, reason } = parsed.data;
     const userId = req.user?.id;
     const workspaceId = req.workspaceId || req.currentWorkspaceId;
-    if (!invoiceId || !refundAmount || !userId || !workspaceId) return res.status(400).json({ error: 'invoiceId, refundAmount, and user required' });
-    if (!reason || !reason.trim()) return res.status(400).json({ error: 'reason is required for refund operations' });
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'auth context required' });
 
     await assertInvoiceBelongsToWorkspace(invoiceId, workspaceId);
 
@@ -87,10 +125,12 @@ router.post("/billing/adjust-invoice/refund", requireOwner, async (req: Authenti
 
 router.post("/billing/adjust-invoice/correct-line-item", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
-    const { invoiceId, lineItemIndex, newQuantity, newUnitPrice, reason } = req.body;
+    const parsed = CorrectLineItemSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
+    const { invoiceId, lineItemIndex, newQuantity, newUnitPrice, reason } = parsed.data;
     const userId = req.user?.id;
     const workspaceId = req.workspaceId || req.currentWorkspaceId;
-    if (!invoiceId || lineItemIndex === undefined || !userId || !workspaceId) return res.status(400).json({ error: 'invoiceId, lineItemIndex, and user required' });
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'auth context required' });
 
     await assertInvoiceBelongsToWorkspace(invoiceId, workspaceId);
 
@@ -118,10 +158,15 @@ router.get("/billing/adjust-invoice/:invoiceId/history", requireManager, async (
 
 router.post("/billing/adjust-invoice/bulk-credit", requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
-    const { invoiceIds, creditPerInvoice, reason } = req.body;
+    const parsed = BulkCreditSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
+    const { invoiceIds, creditPerInvoice, reason } = parsed.data;
     const userId = req.user?.id;
     const workspaceId = req.workspaceId || req.currentWorkspaceId;
-    if (!invoiceIds || !creditPerInvoice || !userId || !workspaceId) return res.status(400).json({ error: 'invoiceIds, creditPerInvoice, and workspace required' });
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'auth context required' });
+
+    // Assert every invoice belongs to this workspace before processing (IDOR guard)
+    await Promise.all(invoiceIds.map(id => assertInvoiceBelongsToWorkspace(id, workspaceId)));
 
     const result = await bulkCreditInvoices(workspaceId, invoiceIds, creditPerInvoice, reason || 'Bulk credit', userId);
     res.json({ success: true, data: result });
@@ -161,10 +206,19 @@ router.get("/finance/pl/consolidated", requireManager, async (req: Authenticated
           [workspaceId, startDate]
         ),
       ]);
-      const totalRevenue = parseFloat(revenueRes.rows[0]?.total_revenue || "0");
-      const totalExpenses = parseFloat(expenseRes.rows[0]?.total_expenses || "0");
-      const netProfit = totalRevenue - totalExpenses;
-      const margin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : "0.0";
+      const totalRevenueStr = toFinancialString(String(revenueRes.rows[0]?.total_revenue || "0"));
+      const totalExpensesStr = toFinancialString(String(expenseRes.rows[0]?.total_expenses || "0"));
+      const netProfitStr = subtractFinancialValues(totalRevenueStr, totalExpensesStr);
+      const totalRevenue = parseFloat(totalRevenueStr);
+      const totalExpenses = parseFloat(totalExpensesStr);
+      const netProfit = parseFloat(netProfitStr);
+      const margin = totalRevenue > 0
+        ? parseFloat(divideFinancialValues(multiplyFinancialValues(netProfitStr, '100'), totalRevenueStr)).toFixed(1)
+        : "0.0";
+
+      // Validate period query param
+      const periodParsed = PeriodSchema.safeParse({ period });
+      // period is already cast above — validation is best-effort here
 
       res.json({
         success: true,

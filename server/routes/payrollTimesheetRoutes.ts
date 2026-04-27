@@ -36,6 +36,30 @@ import { hasManagerAccess, hasPlatformWideAccess } from "../rbac";
 import { universalNotificationEngine } from "../services/universalNotificationEngine";
 import { createLogger } from "../lib/logger";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
+import { z } from 'zod';
+import { toFinancialString, addFinancialValues } from '../services/financialCalculator';
+
+// ── Zod schemas ───────────────────────────────────────────────────────────────
+const TimesheetEntrySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+  hours: z.number().min(0).max(24),
+  notes: z.string().optional(),
+});
+
+const ReplaceEntriesSchema = z.object({
+  entries: z.array(TimesheetEntrySchema).max(7, 'max 7 entries per week'),
+});
+
+const CreateTimesheetSchema = z.object({
+  employeeId: z.string().uuid(),
+  periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  periodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notes: z.string().optional(),
+});
+
+const RejectTimesheetSchema = z.object({
+  reason: z.string().min(1, 'rejection reason required'),
+});
 
 const log = createLogger("payrollTimesheets");
 
@@ -311,11 +335,11 @@ router.put("/:id/entries", async (req: AuthenticatedRequest, res) => {
     if (!userId) return res.status(401).json({ message: "User not found" });
 
     const { id } = req.params;
-    const { entries } = req.body as { entries: Array<{ date: string; hours: number; notes?: string }> };
-
-    if (!Array.isArray(entries)) {
-      return res.status(400).json({ message: "entries must be an array" });
+    const entriesParsed = ReplaceEntriesSchema.safeParse(req.body);
+    if (!entriesParsed.success) {
+      return res.status(400).json({ message: entriesParsed.error.errors[0].message });
     }
+    const { entries } = entriesParsed.data;
 
     const [timesheet] = await db
       .select()
@@ -358,7 +382,12 @@ router.put("/:id/entries", async (req: AuthenticatedRequest, res) => {
       }
     }
 
-    const totalHours = entries.reduce((sum, e) => sum + Number(e.hours), 0);
+    // Use Decimal accumulation to avoid floating-point drift on hour totals
+    const totalHoursStr = entries.reduce(
+      (sum, e) => addFinancialValues(sum, toFinancialString(String(e.hours))),
+      '0'
+    );
+    const totalHours = parseFloat(totalHoursStr);
     if (totalHours > MAX_HOURS_PER_WEEK) {
       return res.status(400).json({
         message: `Total hours cannot exceed ${MAX_HOURS_PER_WEEK} per week (got ${totalHours})`,
@@ -380,7 +409,7 @@ router.put("/:id/entries", async (req: AuthenticatedRequest, res) => {
             workspaceId,
             employeeId: timesheet.employeeId,
             entryDate: e.date,
-            hoursWorked: String(Number(e.hours).toFixed(2)),
+            hoursWorked: toFinancialString(String(e.hours)),
             notes: e.notes ?? null,
           })),
         );
@@ -389,7 +418,7 @@ router.put("/:id/entries", async (req: AuthenticatedRequest, res) => {
       // Update total hours on the timesheet
       await tx
         .update(payrollTimesheets)
-        .set({ totalHours: String(totalHours.toFixed(2)), updatedAt: new Date() })
+        .set({ totalHours: totalHoursStr, updatedAt: new Date() })
         .where(eq(payrollTimesheets.id, id));
     });
 
