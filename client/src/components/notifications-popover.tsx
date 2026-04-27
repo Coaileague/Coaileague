@@ -2440,12 +2440,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
               const isBroadcast = notification.metadata?.broadcastId;
               
               if (isBroadcast) {
-                return (
-                    key={notification.id}
-                    notification={notification}
-                    onDismiss={() => handleDismiss(notification.id)}
-                  />
-                );
+                return null;
               }
               
               return enableSwipeDelete ? (

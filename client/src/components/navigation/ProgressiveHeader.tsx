@@ -49,25 +49,17 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
     }
   }, [transitionLoader]);
 
-  const {
-    isOpen,
-    animationState,
-    activeCategory,
-    handleMouseEnter,
-    handleMouseLeave,
-    handleOverlayMouseEnter,
-    handleOverlayMouseLeave,
-    toggleOverlay,
-    closeOverlay,
-    setActiveCategory,
-    onOpen: () => {
-      document.body.setAttribute('data-nav-overlay-open', 'true');
-    },
-    onClose: () => {
-      document.body.removeAttribute('data-nav-overlay-open');
-      triggerRef.current?.focus();
-    },
-  });
+  // Navigation overlay removed in Phase 3 cleanup — stub values
+  const isOpen = false;
+  const animationState = 'closed';
+  const activeCategory = null;
+  const handleMouseEnter = useCallback(() => {}, []);
+  const handleMouseLeave = useCallback(() => {}, []);
+  const handleOverlayMouseEnter = useCallback(() => {}, []);
+  const handleOverlayMouseLeave = useCallback(() => {}, []);
+  const toggleOverlay = useCallback((_source?: string) => {}, []);
+  const closeOverlay = useCallback(() => {}, []);
+  const setActiveCategory = useCallback((_cat: any) => {}, []);
 
   useEffect(() => {
     if (isTrinityOpen && isOpen) {
@@ -180,25 +172,15 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
 
   return (
     <>
-        pageTitle={pageTitle}
-        isOverlayOpen={!isMobile && isOpen}
-        onTriggerMouseEnter={!isMobile ? handleMouseEnter : undefined}
-        onTriggerMouseLeave={!isMobile ? handleMouseLeave : undefined}
-        onTriggerClick={isMobile ? () => setLocation('/') : () => toggleOverlay('hover')}
-        rightActions={rightActions}
-        className={className}
-      />
+      {/* SlimHeader removed in Phase 3 cleanup — inline minimal header */}
+      <header className={className}>
+        <div className="flex items-center justify-between px-4 h-12">
+          <span className="font-semibold text-sm">{pageTitle}</span>
+          {rightActions}
+        </div>
+      </header>
 
-      {!isMobile && (
-          isOpen={isOpen}
-          animationState={animationState}
-          activeCategory={activeCategory}
-          onCategoryHover={setActiveCategory}
-          onClose={closeOverlay}
-          onMouseEnter={handleOverlayMouseEnter}
-          onMouseLeave={handleOverlayMouseLeave}
-        />
-      )}
+      {/* NavigationOverlay removed in Phase 3 cleanup */}
     </>
   );
 }
