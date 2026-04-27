@@ -488,6 +488,67 @@ Recommended execution order:
 
 ---
 
+
+---
+
+## PHASE B — WHAT CLAUDE DID (Jack: please verify)
+
+**Branch:** `development` commit `7a2a188f1`
+
+### invoiceAdjustmentService.ts — 3 functions now atomic
+```
+creditInvoice:          update(invoices) + insert(adjustments) → db.transaction()
+discountInvoice:        update(invoices) + insert(adjustments) → db.transaction()
+correctInvoiceLineItem: update(lineItems) + update(invoices) + insert(adjustments)
+                        → db.transaction() [3-table atomic write]
+```
+refundInvoice: Stripe call is pre-transaction (external side effect cannot be rolled back).
+DB writes after Stripe succeed still separate — acceptable pattern for Stripe refunds.
+
+### financeInlineRoutes.ts — Zod on all 6 mutation routes
+CreditSchema, DiscountSchema, RefundSchema, CorrectLineItemSchema, BulkCreditSchema wired.
+P&L margin calc: replaced raw `(netProfit/totalRevenue)*100` → `divideFinancialValues(..., '100', ...)`.
+Bulk-credit IDOR: `assertInvoiceBelongsToWorkspace` now runs per-invoice before processing.
+
+### financialLedgerService.ts — raw arithmetic → FinancialCalculator
+regularLabor, overtimeLabor, totalCOGS, grossMarginPercent, netMarginPercent,
+laborRatio, percentOfRevenue, per-line labor costs — all upgraded.
+
+### paystubService.ts — PDF display arithmetic fixed
+regularHours * regularRate, overtimeHours * overtimeRate,
+deductions reduce, regularHours + overtimeHours — all upgraded to financialCalculator.
+
+### Jack — please verify:
+1. Does the transaction wrapping look correct for creditInvoice/discountInvoice/correctInvoiceLineItem?
+2. Is refundInvoice's Stripe-first / DB-second pattern acceptable as-is, or should the DB writes also be transacted?
+3. Any financial calculation patterns missed in the ledger service?
+
+---
+
+## PHASE C — NEXT (Jack audits first)
+
+**Jack's job:** Audit the scheduling and shift management flows.
+
+Files to inspect:
+```
+server/routes/schedulesRoutes.ts
+server/routes/shiftRoutes.ts
+server/routes/payrollTimesheetRoutes.ts  (timesheet approval chain)
+server/routes/orchestratedScheduleRoutes.ts
+server/routes/shiftChatroomRoutes.ts
+server/services/scheduleService.ts (if exists)
+```
+
+Look for:
+1. Shift creation → overlap detection: is the btree_gist exclusion constraint the
+   only guard, or is there also application-level validation?
+2. Shift assignment: is officer workspace membership verified before assignment?
+3. Call-off flow: what triggers coverage pipeline? Is it wired end-to-end?
+4. Timesheet approval chain: approve → hours lock → payroll run eligibility.
+   Are these state transitions atomic?
+5. GPS/proof-of-service check-in: does it validate workspace membership?
+6. Any raw arithmetic in shift hours/pay calculations?
+
 ## MANDATORY CHECKS FOR PHASE B FIXES
 
 Since Phase B touches financial behavior, run:
