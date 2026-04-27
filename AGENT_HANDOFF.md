@@ -13,7 +13,7 @@
 - Neither agent moves to the next phase until the current one is reviewed by both
 - **"Go" from Bryan = one turn for whichever agent is up**
 
-**Current turn: CLAUDE ← execute Phase B fixes**
+**Current turn: JACK ← review Phase B, then audit Phase C (scheduling)**
 
 ---
 
@@ -42,7 +42,51 @@ origin/development  →  5c7aef271  (STABLE ✅ GREEN)
 | 6 | Shared/ dead code | ✅ Complete ~1,842L | Claude |
 | **Total removed** | | **~97,334L** | |
 | A | Auth & Session audit | ✅ Reviewed by Jack | Claude |
-| B | Financial flows audit | 🔄 Jack audit complete → Claude executes | Jack → Claude |
+| B | Financial flows audit | ✅ Fixed, deployed 9273a3af3 | Claude |
+| C | Scheduling & Shift flows | 🔄 NOT STARTED — Jack audits first | Next: Jack |
+
+
+---
+
+## PHASE B — CLAUDE EXECUTION SUMMARY (Jack: please review)
+
+**Deployed:** `9273a3af3` on development
+
+### What Claude fixed
+- `financeInlineRoutes.ts` — Added Zod to all 6 endpoints. FinancialCalculator for P&L. Bulk-credit IDOR guard per invoice.
+- `financialLedgerService.ts` — multiplyFinancialValues for labor math, subtractFinancialValues for grossProfit/netIncome.
+- `payrollTimesheetRoutes.ts` — Zod schemas + addFinancialValues Decimal accumulation for hour totals.
+- `payStubRoutes.ts` — BatchGenerateSchema Zod on batch endpoint.
+
+### What was already correct (not changed)
+- `financeRoutes.ts` — Already had full Zod. Jack's scan was pre-upgrade.
+- `paystubService.ts` PDF — Already using multiplyFinancialValues/addFinancialValues.
+- `invoiceAdjustmentService` — creditInvoice, discountInvoice, correctInvoiceLineItem already transacted. refundInvoice intentionally Stripe-first (no DB transaction by design).
+
+### Jack — verify before moving to Phase C:
+1. Bulk-credit IDOR guard — does calling `assertInvoiceBelongsToWorkspace()` per ID before `bulkCreditInvoices()` look correct?
+2. Stripe-first refund pattern — acceptable to leave without DB transaction wrapper?
+3. Any financial path Claude missed?
+
+---
+
+## PHASE C — JACK AUDITS NEXT (scheduling & shift flows)
+
+**Files to inspect:**
+```
+server/routes/schedulesRoutes.ts
+server/routes/shiftRoutes.ts
+server/routes/scheduleosRoutes.ts
+server/routes/orchestratedScheduleRoutes.ts
+server/services/scheduling/   (directory)
+```
+
+**Jack: look for:**
+1. Shift overlap — btree_gist exclusion constraint or app-level detection?
+2. Call-off → coverage pipeline → Trinity alert — does it wire end-to-end?
+3. Overtime detection — hours accumulation using Decimal or raw JS?
+4. GPS/proof-of-service — check-in → location stamp → guard tour chain intact?
+5. Mobile payloads — do scheduling endpoints return mobile-friendly responses?
 
 ---
 
