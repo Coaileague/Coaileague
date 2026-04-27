@@ -90,6 +90,11 @@ const ALLOWED_COMMANDS: Record<string, () => Promise<string>> = {
 // ─── Route ───────────────────────────────────────────────────────────────────
 
 router.post('/dev-execute', requireAdminScriptToken, async (req: any, res: any) => {
+  // Extra safety: dev-execute should never run in production
+  if (process.env.NODE_ENV === 'production') {
+    log.error('[DevExecute] Attempted dev-execute in production — blocked');
+    return res.status(403).json({ error: 'dev-execute is not available in production environments' });
+  }
   const { command } = req.body ?? {};
 
   if (!command || typeof command !== 'string') {

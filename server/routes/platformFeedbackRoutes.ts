@@ -1,3 +1,4 @@
+import { requirePlatformStaff } from '../rbac';
 /**
  * Platform Feedback Routes
  *
@@ -165,7 +166,7 @@ const SurveyCreateSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-router.post('/surveys', async (req, res) => {
+router.post('/surveys', requirePlatformStaff, async (req, res) => {
   const parse = SurveyCreateSchema.safeParse(req.body);
   if (!parse.success) {
     return res.status(400).json({ error: 'Invalid survey data', details: parse.error.issues });
