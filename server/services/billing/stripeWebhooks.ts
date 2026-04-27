@@ -29,6 +29,20 @@ import { eq, and, sql, lt, not, inArray, isNull } from 'drizzle-orm';
 import { subscriptionManager, type SubscriptionTier } from './subscriptionManager';
 import { tokenManager } from './tokenManager';
 import { createLogger } from '../../lib/logger';
+import { toFinancialString, divideFinancialValues, multiplyFinancialValues, addFinancialValues } from '../financialCalculator';
+
+// ─── Stripe Cents Helpers ─────────────────────────────────────────────────────
+function centsToMoneyString(cents: number | null | undefined): string {
+  if (!cents) return '0.00';
+  return divideFinancialValues(toFinancialString(String(Math.round(cents))), '100');
+}
+function calculateStripeAchFee(amountStr: string): string {
+  const feeNum = parseFloat(multiplyFinancialValues(amountStr, '0.008'));
+  return toFinancialString(String(Math.min(feeNum, 5.00)));
+}
+function calculateStripeCardFee(amountStr: string): string {
+  return addFinancialValues(multiplyFinancialValues(amountStr, '0.029'), '0.30');
+}
 import { writeLedgerEntry } from '../orgLedgerService';
 import { createNotification } from '../notificationService';
 import { broadcastToWorkspace } from '../../websocket';
@@ -497,7 +511,7 @@ export class StripeWebhookService {
       return { success: true, handled: false, message: 'Could not resolve workspaceId from subscription' };
     }
 
-    const amountPaid = (invoice.amount_paid || 0) / 100;
+    const amountPaid = parseFloat(centsToMoneyString(invoice.amount_paid));
     log.info('Subscription invoice payment succeeded', { workspaceId, amountPaid, invoiceNumber: invoice.number });
 
     // 1. Ensure workspace is marked active (catches past_due recovery)
@@ -624,7 +638,7 @@ export class StripeWebhookService {
       };
       const retryMsg = RETRY_MESSAGES[attemptCount] || RETRY_MESSAGES[1];
       const urgencyMsg = urgency[attemptCount] || urgency[1];
-      const amountDue = (invoice.amount_due || 0) / 100;
+      const amountDue = parseFloat(centsToMoneyString(invoice.amount_due));
       const nextAttemptDate = invoice.next_payment_attempt
         ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString()
         : 'N/A';
@@ -771,7 +785,7 @@ export class StripeWebhookService {
         .limit(1);
 
       if (payment) {
-        const stripeAmountPaid = String((paymentIntent.amount_received ?? paymentIntent.amount) / 100);
+        const stripeAmountPaid = centsToMoneyString(paymentIntent.amount_received ?? paymentIntent.amount);
         // G16 FIX: Only update (and therefore only write the ledger entry below) if the
         // invoice is NOT already marked paid. Stripe retries webhooks for up to 72 h; if
         // the server restarts the in-memory dedup cache is lost, so the same event can
@@ -818,8 +832,8 @@ export class StripeWebhookService {
         const isAch = paymentMethodTypes.includes('us_bank_account');
         // ACH: 1.0% capped at $10; Card: 2.9% + $0.25
         const feeAmount = isAch
-          ? parseFloat(Math.min(amountPaid * 0.01, 10.00).toFixed(2))
-          : parseFloat((amountPaid * 0.029 + 0.25).toFixed(2));
+          ? parseFloat(calculateStripeAchFee(toFinancialString(String(amountPaid))))
+          : parseFloat(calculateStripeCardFee(toFinancialString(String(amountPaid))));
         if (feeAmount > 0) {
           await writeLedgerEntry({
             workspaceId,
@@ -1040,8 +1054,8 @@ export class StripeWebhookService {
       try {
         const isAch = charge.payment_method_details?.type === 'us_bank_account';
         const feeAmount = isAch
-          ? parseFloat(Math.min(amountPaid * 0.01, 10.00).toFixed(2))
-          : parseFloat((amountPaid * 0.029 + 0.25).toFixed(2));
+          ? parseFloat(calculateStripeAchFee(toFinancialString(String(amountPaid))))
+          : parseFloat(calculateStripeCardFee(toFinancialString(String(amountPaid))));
         if (feeAmount > 0) {
           await writeLedgerEntry({
             workspaceId,
@@ -1490,7 +1504,7 @@ export class StripeWebhookService {
    */
   private async handleInvoiceFinalized(event: Stripe.Event): Promise<WebhookResult> {
     const invoice = event.data.object as Stripe.Invoice;
-    const amountDue = (invoice.amount_due || 0) / 100;
+    const amountDue = parseFloat(centsToMoneyString(invoice.amount_due));
     log.info('Stripe invoice finalized — payment will be attempted', { stripeInvoiceId: invoice.id, amountDue, subscriptionId: (invoice as any).subscription });
     return { success: true, handled: true, message: `invoice.finalized acknowledged — $${amountDue.toFixed(2)} will be collected via Stripe` };
   }
@@ -1893,7 +1907,7 @@ export class StripeWebhookService {
   private async handleInvoiceUpcoming(event: Stripe.Event): Promise<WebhookResult> {
     const invoice = event.data.object as Stripe.Invoice;
     const subscriptionId = (invoice as any).subscription as string;
-    const amountDue = (invoice.amount_due || 0) / 100;
+    const amountDue = parseFloat(centsToMoneyString(invoice.amount_due));
     const dueDate = invoice.period_end
       ? new Date(invoice.period_end * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       : 'the end of your billing period';

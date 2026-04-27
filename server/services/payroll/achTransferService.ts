@@ -77,6 +77,13 @@ export async function initiatePayrollAchTransfer(params: {
     legalName = employeeId,
   } = params;
 
+  // G-P0-2: Decimal-safe amount validation and formatting
+  const amountStr = toFinancialString(String(amount));
+  const amountNum = parseFloat(amountStr);
+  if (amountNum <= 0) {
+    return { status: 'skipped', reason: 'invalid_amount_zero_or_negative' };
+  }
+
   if (!isPlaidConfigured()) {
     return { status: 'skipped', reason: 'plaid_not_configured' };
   }
@@ -134,12 +141,32 @@ export async function initiatePayrollAchTransfer(params: {
     return { status: 'payment_held', reason: `bank_unverified:${verification.status}` };
   }
 
+  // Idempotency check — return existing attempt if same key was already used
+  const existingAttempt = await db.select()
+    .from(plaidTransferAttempts)
+    .where(and(
+      eq(plaidTransferAttempts.workspaceId, workspaceId),
+      eq((plaidTransferAttempts as any).idempotencyKey, idempotencyKey)
+    ))
+    .limit(1)
+    .catch(() => []);
+
+  if (existingAttempt.length > 0) {
+    const existing = existingAttempt[0] as any;
+    log.info('[AchTransfer] Idempotent retry — returning existing attempt', { idempotencyKey, status: existing.status });
+    return {
+      status: existing.transferId ? 'initiated' : existing.status,
+      transferId: existing.transferId,
+      amount: existing.amount,
+    };
+  }
+
   const [pendingRecord] = await db.insert(plaidTransferAttempts).values({
     workspaceId,
     employeeId,
     payrollRunId: payrollRunId || null,
     payrollEntryId: payrollEntryId || null,
-    amount: amount.toFixed(2),
+    amount: amountStr,
     status: 'pending',
   } as any).returning().catch(() => [null as any]);
 
@@ -147,7 +174,7 @@ export async function initiatePayrollAchTransfer(params: {
     const transfer = await initiateTransfer({
       accessToken: empAccessToken,
       accountId: empBank.plaidAccountId,
-      amount: amount.toFixed(2),
+      amount: amountStr,
       description,
       legalName,
       type: 'credit',

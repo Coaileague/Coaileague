@@ -29,25 +29,26 @@ const router = Router();
  * re-delivery of the same webhook.
  */
 router.post('/', async (req, res) => {
-  res.status(200).json({ received: true }); // Respond immediately to prevent Plaid timeout
-
-  // GAP-35 FIX: Verify Plaid JWT webhook signature BEFORE processing.
-  // Plaid signs all webhooks with RSA-signed JWTs sent in the `Plaid-Verification` header.
-  // Without this guard, any external server can POST a forged "settled" event with a real
-  // transfer_id to fabricate ledger entries and trigger payroll disbursed notifications.
-  // Verification is async (after the 200 response) so it does not add latency to Plaid's retry logic.
+  // G-P1-4 FIX: Verify Plaid JWT signature BEFORE acknowledging.
+  // Previous pattern returned 200 first, meaning Plaid saw success even when
+  // verification failed — causing legitimate events to be silently dropped.
+  // Now: verify → 200 on success, 400 on failure (triggers Plaid retry).
+  // Processing errors after verification still return 200 to avoid retry storms.
   const plaidVerificationToken = req.headers['plaid-verification'] as string | undefined;
-  
-  // OMEGA DIRECTIVE: PLAID_WEBHOOK_SECRET must be verified on every inbound webhook.
+
   if (!process.env.PLAID_WEBHOOK_SECRET && process.env.NODE_ENV === 'production') {
-    log.error('[PlaidWebhook] CRITICAL: PLAID_WEBHOOK_SECRET not configured in production. Webhook verification skipped but this is a security violation.');
+    log.error('[PlaidWebhook] CRITICAL: PLAID_WEBHOOK_SECRET not configured in production — returning 500');
+    return res.status(500).json({ error: 'Webhook verification not configured' });
   }
 
   const isValidSignature = await verifyPlaidWebhookJwt(plaidVerificationToken);
   if (!isValidSignature) {
-    log.error('[PlaidWebhook] Signature verification failed — request rejected. Transfer will not be processed.');
-    return;
+    log.error('[PlaidWebhook] Signature verification failed — rejecting with 400 so Plaid retries');
+    return res.status(400).json({ error: 'Invalid webhook signature' });
   }
+
+  // Signature verified — acknowledge so Plaid stops retrying, then process
+  res.status(200).json({ received: true });
 
   const body = req.body || {};
     const { webhook_type, webhook_code, transfer_id, event_type } = body;

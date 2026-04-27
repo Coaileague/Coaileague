@@ -1664,10 +1664,17 @@ router.post('/api/notifications/send', requireManager, async (req: Authenticated
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'No active workspace' });
 
-    const { type, recipientUserId, channel, subject, body, idempotencyKey } = req.body;
-    if (!type || !recipientUserId || !channel || !body) {
-      return res.status(400).json({ message: 'type, recipientUserId, channel, and body are required' });
-    }
+    const sendSchema = (await import('zod')).z.object({
+      recipientUserId: (await import('zod')).z.string().uuid(),
+      type: (await import('zod')).z.string().min(1),
+      channel: (await import('zod')).z.enum(['email', 'sms', 'websocket', 'in_app', 'push']),
+      body: (await import('zod')).z.string().min(1),
+      subject: (await import('zod')).z.string().optional(),
+      idempotencyKey: (await import('zod')).z.string().optional(),
+    });
+    const parsed = sendSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: 'Validation failed', details: parsed.error.flatten() });
+    const { type, recipientUserId, channel, subject, body, idempotencyKey } = parsed.data;
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({
