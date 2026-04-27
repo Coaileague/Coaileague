@@ -195,7 +195,24 @@ function ConversationActions({
 
   const isDM = roomType === 'dm_user' || roomType === 'dm_bot' || roomType === 'dm_support' || roomType === 'direct' || roomType === 'dm';
 
+  if (!open) return null;
+
   return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-background rounded-t-xl w-full max-w-md p-4 space-y-2" onClick={e => e.stopPropagation()}>
+        <div className="text-sm font-medium text-center text-muted-foreground pb-1 border-b">{roomName}</div>
+        <button className="w-full text-left px-3 py-2 rounded hover:bg-muted text-sm"
+          onClick={() => { hideConvo.mutate(); }}>Archive conversation</button>
+        {!isDM && (
+          <button className="w-full text-left px-3 py-2 rounded hover:bg-muted text-sm text-destructive"
+            onClick={() => { if (confirmLeave) { leaveConvo.mutate(); } else { setConfirmLeave(true); } }}>
+            {confirmLeave ? 'Tap again to confirm leave' : 'Leave conversation'}
+          </button>
+        )}
+        <button className="w-full text-left px-3 py-2 rounded hover:bg-muted text-sm"
+          onClick={onClose}>Cancel</button>
+      </div>
+    </div>
   );
 }
 
