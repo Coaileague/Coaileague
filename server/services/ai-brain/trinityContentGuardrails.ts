@@ -35,7 +35,8 @@ export type ViolationType =
   | 'unethical'       // Manipulation, deception, harm
   | 'harassment'      // Threats, bullying
   | 'self_harm'       // Self-harm, suicide content
-  | 'spam';           // Repeated meaningless requests
+  | 'spam'            // Repeated meaningless requests
+  | 'legal_advice';   // Legal conclusions, liability predictions, duty-of-care assumptions
 
 export interface ContentAnalysis {
   isSafe: boolean;
@@ -351,6 +352,8 @@ class TrinityContentGuardrails {
         return 'medium';
       case 'spam':
         return 'low';
+      case 'legal_advice':
+        return 'low'; // Not abuse lockout — redirect to counsel, not a policy violation
       default:
         return 'medium';
     }

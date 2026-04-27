@@ -127,27 +127,22 @@ function generateDocumentNumber(category: FormCategory): string {
  * the header/footer prepended as a separate first/last page overlay.
  */
 async function stampBrandedFrame(opts: StampOptions, docNumber: string): Promise<Buffer> {
-  // Use pdf-lib to merge: branded cover page (frame) + actual content from rawBuffer
-  // This replaces the previous approach that dropped rawBuffer content entirely.
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    const doc = new PDFDocument({
-      size: 'LETTER',
-      margins: { top: 72, bottom: 72, left: 72, right: 72 },
-      bufferPages: true,
-      info: {
-        Title: opts.documentTitle,
-        Author: PLATFORM_NAME,
-        Subject: opts.formNumber ? `Form ${opts.formNumber}` : opts.category,
-        Creator: PLATFORM_NAME,
-        Producer: PLATFORM_NAME,
-        CreationDate: new Date(),
-      },
-    });
+  // Merge branded header/footer/metadata onto the original rawBuffer pages using pdf-lib.
+  // Original content is fully preserved — branding is overlaid, not replaced.
+  try {
+    const { PDFDocument: PdfLib, rgb, StandardFonts } = await import('pdf-lib');
 
-    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+    // Load original content PDF
+    const originalPdf = await PdfLib.load(opts.rawBuffer);
+    const totalPages = originalPdf.getPageCount();
+
+    // Create overlay/stamp doc
+    const stampPdf = await PdfLib.create();
+    const helvetica = await stampPdf.embedFont(StandardFonts.Helvetica);
+    const helveticaBold = await stampPdf.embedFont(StandardFonts.HelveticaBold);
+
+    // Embed original pages
+    const embeddedPages = await stampPdf.embedPdf(originalPdf);
 
     const generatedAt = new Date().toLocaleString('en-US', {
       timeZone: 'America/Chicago',
@@ -155,117 +150,68 @@ async function stampBrandedFrame(opts: StampOptions, docNumber: string): Promise
       hour: '2-digit', minute: '2-digit',
     });
 
-    const titleLine = opts.formNumber
-      ? `${opts.documentTitle} (${opts.formNumber})`
-      : opts.documentTitle;
+    for (let i = 0; i < totalPages; i++) {
+      const origPage = originalPdf.getPage(i);
+      const { width, height } = origPage.getSize();
+      const embeddedPage = embeddedPages[i];
 
-    const periodLine = opts.period ? `Period: ${opts.period}` : '';
+      const page = stampPdf.addPage([width, height]);
 
-    // ── Header ────────────────────────────────────────────────────────────────
-    const pageWidth = 612; // LETTER
-    const margin = 36;
+      // Draw original page content
+      page.drawPage(embeddedPage);
 
-    // Top border bar
-    doc
-      .rect(0, 0, pageWidth, 44)
-      .fill(`rgb(${PLATFORM_COLOR.r},${PLATFORM_COLOR.g},${PLATFORM_COLOR.b})`);
+      const headerH = 36;
+      const footerH = 20;
+      const brandColor = rgb(
+        PLATFORM_COLOR.r / 255, PLATFORM_COLOR.g / 255, PLATFORM_COLOR.b / 255
+      );
 
-    // Workspace name (white, left)
-    doc
-      .fillColor('white')
-      .fontSize(9)
-      .font('Helvetica-Bold')
-      .text(opts.workspaceName.toUpperCase(), margin, 14, { width: 180, align: 'left' });
+      // ── Header bar ───────────────────────────────────────────────────────
+      page.drawRectangle({ x: 0, y: height - headerH, width, height: headerH, color: brandColor });
 
-    // Document title (white, center)
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(9)
-      .text(titleLine, 180, 14, { width: 252, align: 'center' });
-
-    // Doc ID + timestamp (white, right)
-    doc
-      .font('Helvetica')
-      .fontSize(7)
-      .text(`${docNumber}`, margin + 352, 10, { width: 180, align: 'right' })
-      .text(generatedAt, margin + 352, 20, { width: 180, align: 'right' });
-
-    // Thin accent bar below header
-    doc
-      .rect(0, 44, pageWidth, 2)
-      .fill(`rgb(${ACCENT_COLOR.r},${ACCENT_COLOR.g},${ACCENT_COLOR.b})`);
-
-    // Move past header
-    doc.moveDown(3);
-    doc.fillColor('black');
-
-    // ── Category + doc number metadata line ──────────────────────────────────
-    doc
-      .fontSize(8)
-      .fillColor('#64748b')
-      .text(`${PLATFORM_NAME} · ${opts.category.toUpperCase()} DOCUMENT · ${docNumber}`, {
-        align: 'center',
+      // Workspace name (left)
+      page.drawText((opts.workspaceName || PLATFORM_NAME).substring(0, 30), {
+        x: 8, y: height - headerH + 12,
+        size: 9, font: helveticaBold, color: rgb(1, 1, 1),
       });
-    doc.moveDown(1);
 
-    // ── Footer (on every page via buffered pages) ──────────────────────────────
-    const range = doc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) {
-      doc.switchToPage(range.start + i);
+      // Document title (center)
+      const titleText = opts.documentTitle.substring(0, 40);
+      page.drawText(titleText, {
+        x: width / 2 - (titleText.length * 2.5), y: height - headerH + 12,
+        size: 9, font: helveticaBold, color: rgb(1, 1, 1),
+      });
 
-      const pageNum = i + 1;
-      const totalPages = range.count;
-      const pageBottom = 756; // LETTER height - margin
+      // Doc ID + page (right)
+      const rightText = `${docNumber} · p${i + 1}/${totalPages}`;
+      page.drawText(rightText, {
+        x: width - 120, y: height - headerH + 12,
+        size: 7, font: helvetica, color: rgb(1, 1, 1),
+      });
 
-      // Bottom border bar
-      doc
-        .rect(0, pageBottom - 8, pageWidth, 28)
-        .fill(`rgb(${PLATFORM_COLOR.r},${PLATFORM_COLOR.g},${PLATFORM_COLOR.b})`);
+      // ── Footer bar ───────────────────────────────────────────────────────
+      page.drawRectangle({ x: 0, y: 0, width, height: footerH, color: brandColor });
 
-      // Page number (left)
-      doc
-        .fillColor('white')
-        .font('Helvetica')
-        .fontSize(7)
-        .text(`Page ${pageNum} of ${totalPages}`, margin, pageBottom - 2, {
-          width: 100,
-          align: 'left',
-        });
+      page.drawText(`Generated by ${PLATFORM_NAME} · ${generatedAt} · ${PLATFORM_SUPPORT}`, {
+        x: 8, y: 6, size: 6, font: helvetica, color: rgb(1, 1, 1),
+      });
 
-      // Platform name (center)
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(7)
-        .text(PLATFORM_NAME, 180, pageBottom - 2, { width: 252, align: 'center' });
-
-      // Disclaimer (right)
-      doc
-        .font('Helvetica')
-        .fontSize(6)
-        .text(
-          `This document was generated by ${PLATFORM_NAME}. Contact ${PLATFORM_SUPPORT} for support.`,
-          margin + 300,
-          pageBottom - 2,
-          { width: 240, align: 'right' },
-        );
+      // Generated timestamp on right
+      page.drawText(`Page ${i + 1} of ${totalPages}`, {
+        x: width - 80, y: 6, size: 6, font: helvetica, color: rgb(1, 1, 1),
+      });
     }
 
-    doc.end();
-  });
+    const pdfBytes = await stampPdf.save();
+    return Buffer.from(pdfBytes);
+  } catch (stampErr: any) {
+    log.error('[VaultService] PDF stamp failed, returning original:', stampErr?.message);
+    // Return original rather than branded-but-empty shell
+    return opts.rawBuffer;
+  }
 }
 
-// ─── Vault Persistence ────────────────────────────────────────────────────────
 
-/**
- * Saves a stamped PDF buffer to the document_vault table.
- *
- * fileUrl convention: internal://vault/{workspaceId}/{docNumber}.pdf
- * Production deployments should replace this with an object storage URL
- * (S3/R2/Supabase Storage) once the storage backend is wired.
- *
- * The integrityHash (SHA-256) lets Trinity verify a document hasn't been
- * tampered with when it needs to reference or re-serve it.
- */
 async function persistToVault(
   stampedBuffer: Buffer,
   opts: StampOptions,

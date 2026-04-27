@@ -1450,6 +1450,8 @@ async function initializeBackgroundServices(): Promise<void> {
       const { helpaiOrchestrator } = await import('./services/helpai/platformActionHub');
       const counts = helpaiOrchestrator.getActionCountByCategory();
       log.info('Action categories', { counts });
+      // Registry invariant check — warns if over 300 actions or duplicate IDs
+      helpaiOrchestrator.assertRegistryInvariants();
     }),
     
     deferredTimedInit('Workflow Orchestration', 7000, async () => {

@@ -425,15 +425,48 @@ router.patch('/:id/status', requireAuth, async (req: any, res) => {
     const { id } = req.params;
     const { status } = z.object({ status: z.enum(['opened', 'completed', 'expired']) }).parse(req.body);
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
-        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    const userId = req.user?.id;
+    if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
-    const updateData: Record<string, any> = { status };
+    // Allowed state transitions (expected prior status → new status)
+    const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+      opened:    ['sent'],          // recipient opens the request
+      completed: ['sent', 'opened'], // recipient or manager completes
+      expired:   ['sent', 'opened'], // manager or system marks expired
+    };
+
+    // Auth: manager can update any transition; non-manager can only progress
+    // their own requests (opened/completed), not expire others
+    const isManager = ['manager', 'org_owner', 'co_owner', 'supervisor'].includes(req.workspaceRole || '');
+    if (!isManager && status === 'expired') {
+      return res.status(403).json({ error: 'Manager role required to expire document requests' });
+    }
+
+    // Conditional WHERE — only updates if in an expected prior status (race protection)
+    const allowedPrior = ALLOWED_TRANSITIONS[status];
+    const updateData: Record<string, any> = { status, updatedAt: new Date() };
     if (status === 'opened') updateData.openedAt = new Date();
     if (status === 'completed') updateData.completedAt = new Date();
 
-    await db.update(hrDocumentRequests)
+    const [updated] = await db.update(hrDocumentRequests)
       .set(updateData)
-      .where(and(eq(hrDocumentRequests.id, id), eq(hrDocumentRequests.workspaceId, workspaceId)));
+      .where(and(
+        eq(hrDocumentRequests.id, id),
+        eq(hrDocumentRequests.workspaceId, workspaceId),
+        inArray(hrDocumentRequests.status, allowedPrior)
+      ))
+      .returning({ id: hrDocumentRequests.id, documentType: hrDocumentRequests.documentType,
+                   employeeId: hrDocumentRequests.employeeId, employeeName: hrDocumentRequests.employeeName,
+                   recipientUserId: hrDocumentRequests.recipientUserId });
+
+    if (!updated) {
+      const [current] = await db.select({ status: hrDocumentRequests.status })
+        .from(hrDocumentRequests).where(eq(hrDocumentRequests.id, id)).limit(1);
+      return res.status(409).json({
+        error: `Cannot transition to '${status}' — request is currently '${current?.status || 'unknown'}'`,
+        code: 'INVALID_TRANSITION',
+      });
+    }
 
     // ── S10: I-9 COMPLETION → COMPLIANCE STATE ─────────────────────────────
     // When an I-9 document request is marked completed, update the employee
@@ -441,9 +474,7 @@ router.patch('/:id/status', requireAuth, async (req: any, res) => {
     // engine + onboarding dashboard reflect the state immediately.
     if (status === 'completed') {
       try {
-        const [request] = await db.select().from(hrDocumentRequests)
-          .where(and(eq(hrDocumentRequests.id, id), eq(hrDocumentRequests.workspaceId, workspaceId)))
-          .limit(1);
+        const request = updated; // Already have the row from the conditional update above
 
         if (request?.documentType === 'i9' && request.employeeId) {
           // Update the employees row. Column may be named differently across

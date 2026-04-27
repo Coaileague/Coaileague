@@ -21,6 +21,7 @@ import {
 } from "./financialCalculator";
 import { createLogger } from '../lib/logger';
 import { saveToVault } from './documents/businessFormsVaultService';
+import { hoursBetween } from './scheduling/schedulingMath';
 const log = createLogger('paystubService');
 
 
@@ -346,7 +347,11 @@ export class PaystubService {
         rawBuffer: pdfBuffer,
       });
       if (!vaultResult.success) {
-        log.warn('[PaystubService] Vault save failed (non-blocking):', vaultResult.error);
+        log.error('[PaystubService] Vault save FAILED — pay stub not generated:', vaultResult.error);
+        return {
+          success: false,
+          error: `Pay stub generation succeeded but vault storage failed. No document was created. Error: ${vaultResult.error}`,
+        };
       }
 
       return {

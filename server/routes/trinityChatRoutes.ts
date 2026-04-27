@@ -120,15 +120,20 @@ router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Reques
     // service defaults to 'officer' — co_owner then loses financial data,
     // payroll insight, and owner-level scheduling commands.
     const workspaceRole = authReq.workspaceRole || '';
+    // Trust tier determines what data Trinity surfaces.
+    // Support staff get owner-equivalent diagnostic access for platform support,
+    // but are flagged as support mode so Trinity can respect support privacy rules.
     const trustTier: 'owner' | 'manager' | 'supervisor' | 'officer' =
       ['org_owner', 'co_owner'].includes(workspaceRole) ||
-      ['root_admin', 'co_admin', 'deputy_admin', 'sysops'].includes(platformRole || '')
+      ['root_admin', 'co_admin', 'deputy_admin', 'sysops', 'sysop'].includes(platformRole || '')
         ? 'owner'
-        : ['org_manager', 'department_manager', 'manager'].includes(workspaceRole)
-          ? 'manager'
-          : ['supervisor', 'shift_leader'].includes(workspaceRole)
-            ? 'supervisor'
-            : 'officer';
+        : ['support_manager', 'support_agent', 'compliance_officer'].includes(platformRole || '')
+          ? 'owner' // Support staff: owner-level diagnostic context with isSupportMode flag
+          : ['org_manager', 'department_manager', 'manager'].includes(workspaceRole)
+            ? 'manager'
+            : ['supervisor', 'shift_leader'].includes(workspaceRole)
+              ? 'supervisor'
+              : 'officer';
 
     const response = await trinityChatService.chat({
       userId,

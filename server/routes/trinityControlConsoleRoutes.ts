@@ -103,8 +103,11 @@ router.get('/timeline', requirePlatformStaff, async (req: Request, res: Response
   try {
     const sessionId = (req.query.sessionId as string) || 'default';
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 500); // M06: clamp to 500
+    const authCtxT = req as any;
+    const workspaceId = authCtxT.workspaceId || authCtxT.user?.currentWorkspaceId || authCtxT.user?.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
 
-    const timeline = await trinityControlConsole.getSessionTimeline(sessionId);
+    const timeline = await trinityControlConsole.getSessionTimeline(sessionId, workspaceId);
 
     // Sanitize all data before sending to client
     res.json(sanitizeQueryResult(timeline.slice(0, limit)));
@@ -154,9 +157,12 @@ router.get('/thoughts', requirePlatformStaff, async (req: Request, res: Response
 router.get('/actions', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const sessionId = req.query.sessionId as string | undefined;
-    const workspaceId = req.query.workspaceId as string | undefined;
     const runId = req.query.runId as string | undefined;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 500); // M08: clamp to 500
+    // Derive workspaceId from auth context — do not trust raw query param
+    const authCtxA = req as any;
+    const workspaceId = authCtxA.workspaceId || authCtxA.user?.currentWorkspaceId || authCtxA.user?.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
 
     const actions = await trinityControlConsole.getRecentActions({
       sessionId,

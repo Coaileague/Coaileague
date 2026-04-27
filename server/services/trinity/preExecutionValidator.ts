@@ -116,6 +116,7 @@ export async function validateBeforeExecution(
           id: employees.id,
           isActive: employees.isActive,
           terminationDate: employees.terminationDate,
+          status: (employees as any).status,   // 'active'|'inactive'|'terminated'|'suspended'
           firstName: employees.firstName,
           lastName: employees.lastName,
         })
@@ -128,8 +129,9 @@ export async function validateBeforeExecution(
       }
       const name = `${emp.firstName ?? ''} ${emp.lastName ?? ''}`.trim() || empId;
       // Block if deactivated OR if terminationDate is in the past (terminatedAt equivalent)
-      if (emp.isActive === false) {
-        return logAndReturn(fail(`Cannot act on ${name} — employee is inactive or terminated`, 'employment_status'));
+      const BLOCKED_STATUSES = ['terminated', 'inactive', 'deactivated', 'suspended'];
+      if (emp.isActive === false || (emp.status && BLOCKED_STATUSES.includes(emp.status))) {
+        return logAndReturn(fail(`Cannot act on ${name} — employee is ${emp.status || 'inactive'}/not active`, 'employment_status'));
       }
       if (emp.terminationDate && new Date(emp.terminationDate) <= new Date()) {
         return logAndReturn(fail(`Cannot act on ${name} — employee has a termination date (${emp.terminationDate})`, 'employment_status'));
