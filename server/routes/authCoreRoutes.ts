@@ -6,24 +6,7 @@ import { db, pool, isDbCircuitOpen } from "../db";
 import { users, platformRoles, employees, workspaces, expenseCategories } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 // Phase 53: 2FA / Device Trust / Session Limit
-import {
-  isDeviceTrusted,
-  trustDevice,
-  revokeAllDeviceTrust,
-  issuePendingMfaToken,
-  validatePendingMfaToken,
-  registerSession,
-  removeSession,
-  getActiveSessions,
-  isMfaMandatory,
-  adminResetUserMfa,
-} from '../services/auth/twoFactorSessionService';
 import { verifyMfaToken } from '../services/auth/mfa';
-import {
-  SUPPORT_PLATFORM_ROLES,
-  generateAndSendSupportOtp,
-  verifySupportOtp,
-} from '../services/auth/supportSmsOtpService';
 import { requireAuth } from '../auth';
 import { isProduction } from '../lib/isProduction';
 
@@ -241,7 +224,6 @@ router.post("/api/auth/register", async (req, res) => {
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 const log = createLogger('AuthCoreRoutes');
-
 
 router.post("/api/auth/verify-email", async (req, res) => {
   try {

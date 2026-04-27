@@ -21,12 +21,6 @@ import {
   getImportHistory,
   getSyncEvents,
 } from '../services/calendarService';
-import { 
-  isGoogleCalendarConfigured,
-  getGoogleOAuthUrl,
-  exchangeCodeForTokens,
-  getUserCalendarInfo,
-} from '../services/oauth/googleCalendar';
 import { isFeatureEnabled, PLATFORM } from '@shared/platformConfig';
 import '../types';
 import { db } from '../db';
@@ -39,7 +33,6 @@ import { localVirusScan } from '../middleware/virusScan';
 import { typedQuery } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 const log = createLogger('CalendarRoutes');
-
 
 export const calendarRouter = Router();
 
@@ -516,7 +509,6 @@ calendarRouter.get('/status', requireAuth, async (req: AuthenticatedRequest, res
     res.json({
       enabled: isFeatureEnabled('enableCalendarExport'),
       importEnabled: isFeatureEnabled('enableCalendarImport'),
-      googleCalendarEnabled: isFeatureEnabled('enableGoogleCalendar'),
       subscriptionCount,
       features: {
         tokenBasedSubscriptions: true,
