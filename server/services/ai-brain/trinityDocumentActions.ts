@@ -25,12 +25,6 @@ import { diagnoseBusinessArtifactCoverage } from '../documents/businessArtifactD
 import { invoiceService } from '../billing/invoice';
 import { generateTimesheetSupportPackage } from '../documents/timesheetSupportPackageGenerator';
 import { scoreRfpComplexity, buildRfpExtractionPrompt, type RfpScoringInputs } from '../billing/rfpComplexityScorer';
-import {
-  generateProofOfEmployment,
-  generateDirectDepositConfirmation,
-  generatePayrollRunSummary,
-  generateW3Transmittal,
-} from '../documents/businessDocumentGenerators';
 const log = createLogger('trinityDocumentActions');
 const I9_COMPLIANCE_WINDOW_DAYS = 90;
 const I9_DEADLINE_DAYS = 3;
@@ -755,7 +749,6 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
     },
   });
 
-
   orchestrator.registerAction({
     actionId: 'document.business_artifact_diagnostics',
     description: 'Read-only diagnostic: returns coverage summary and gaps for all business artifact types. Support/admin use only.',
@@ -764,7 +757,6 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
       return { actionId: request.actionId, success: true, ...result };
     },
   });
-
 
   orchestrator.registerAction({
     actionId: 'document.generate_invoice_pdf',
@@ -778,7 +770,6 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
       return { actionId: request.actionId, ...result };
     },
   });
-
 
   orchestrator.registerAction({
     actionId: 'document.timesheet_support_package',
@@ -799,7 +790,6 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
       return { actionId: request.actionId, ...result };
     },
   });
-
 
   // ── RFP Complexity Analysis & Pricing ─────────────────────────────────────
   // Step 1: tenant calls analyze_rfp → Trinity extracts inputs + returns price

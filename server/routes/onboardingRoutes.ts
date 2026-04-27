@@ -157,7 +157,6 @@ const systemEventSchema = z.object({
 
 import { onboardingOrchestrator, type OnboardingSource } from '../services/ai-brain/subagents/onboardingOrchestrator';
 import { dataMigrationAgent } from '../services/ai-brain/subagents/dataMigrationAgent';
-import { gamificationActivationAgent } from '../services/ai-brain/subagents/gamificationActivationAgent';
 import { createLogger } from '../lib/logger';
 const log = createLogger('OnboardingRoutes');
 
@@ -206,34 +205,6 @@ const importDataSchema = z.object({
     schedules: z.array(z.any()).optional(),
   }),
   skipDuplicates: z.boolean().optional(),
-});
-
-onboardingRouter.post('/ai/gamification/activate', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
-  try {
-    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const result = await gamificationActivationAgent.activateForOrg({
-      workspaceId: req.workspaceId,
-      userId,
-      options: {
-        includeStarterBadges: true,
-        initializeAllEmployees: true,
-        unlockBasicAutomation: true,
-      },
-    });
-
-    res.json({
-      success: result.success,
-      data: result,
-    });
-  } catch (error: unknown) {
-    log.error('[Onboarding] Gamification activation error:', error);
-    res.status(500).json({ error: sanitizeError(error) });
-  }
 });
 
 onboardingRouter.get('/setup-guide', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {

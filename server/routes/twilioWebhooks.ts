@@ -16,12 +16,6 @@ import twilio from 'twilio';
 import { db } from '../db';
 import { employees, notifications, workspaces, smsConsent, interviewCandidates, candidateInterviewSessions } from '@shared/schema';
 import { eq, ilike, and } from 'drizzle-orm';
-import {
-  buildQuestionTwiml,
-  buildClosingTwiml,
-  scoreSpeechResponse,
-  getVoiceSessionState,
-} from '../services/recruitment/voiceInterviewService';
 import { generateComprehensiveScorecard } from '../services/recruitment/scorecardService';
 import { sendSMS } from '../services/smsService'; // infra
 import { platformEventBus } from '../services/platformEventBus';
@@ -58,7 +52,6 @@ function validateTwilioSignature(req: Request, res: Response, next: NextFunction
   }
   next();
 }
-
 
 const router = Router();
 

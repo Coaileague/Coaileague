@@ -10,8 +10,6 @@ import { requireAuth } from '../auth';
 import { requireManager, requireOwner } from '../rbac';
 import { requireProfessional } from '../tierGuards';
 import { softDelete } from '../lib/softDelete';
-import { emitGamificationEvent } from '../services/gamification/eventTracker';
-import { isFeatureEnabled as isGamificationEnabled } from '@shared/platformConfig';
 
 const recurringPatternSchema = z.object({
   employeeId: z.string().optional().nullable(),

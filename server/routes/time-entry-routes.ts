@@ -4,8 +4,6 @@
 import { Router } from 'express';
 // @ts-expect-error — TS migration: fix in refactoring sprint
 import { db } from "../db";
-import { gamificationService } from "../services/gamification/gamificationService";
-import { emitGamificationEvent } from "../services/gamification/eventTracker";
 import { aiBrainService } from "../services/ai-brain/aiBrainService";
 import { isFeatureEnabled } from '@shared/platformConfig';
 import { gpsGeofenceService } from "../services/gpsGeofenceService";
@@ -48,7 +46,6 @@ import { loneWorkerSafetyService } from '../services/automation/loneWorkerSafety
 import { shiftHandoffService } from '../services/fieldOperations/shiftHandoffService';
 import { presenceMonitorService } from '../services/fieldOperations/presenceMonitorService';
 const log = createLogger('TimeEntryRoutes');
-
 
 export const timeEntryRouter = Router();
 
@@ -760,41 +757,6 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
           });
         }
       });
-    }
-
-    // Gamification: Update streak and award points on clock-in
-    if (isFeatureEnabled('enableGamification')) {
-      try {
-        const { streak, isNewRecord } = await gamificationService.updateStreak(
-          workspaceId,
-          employee.id
-        );
-        await gamificationService.awardPoints({
-          workspaceId: workspaceId,
-          employeeId: employee.id,
-          points: 5,
-          transactionType: 'clock_in',
-          referenceId: newEntry.id,
-          referenceType: 'time_entry',
-          description: 'Daily clock-in bonus',
-        });
-        await gamificationService.checkStreakAchievements(
-          workspaceId,
-          employee.id,
-          streak
-        );
-        
-        // Emit event for centralized tracking
-        const clockInHour = new Date().getHours();
-        emitGamificationEvent('clock_in', {
-          workspaceId: workspaceId,
-          employeeId: employee.id,
-          clockId: newEntry.id,
-          isEarly: clockInHour < 7,
-        });
-      } catch (gamError) {
-        log.error('Gamification update failed (non-blocking):', gamError);
-      }
     }
 
     // AI Brain: Emit clock-in telemetry for anomaly detection

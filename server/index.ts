@@ -161,9 +161,6 @@ async function cleanupAndVerifyPort(port: number): Promise<boolean> {
 import { ensureWorkspaceAccess } from './middleware/workspaceScope';
 import { requireAuth } from './rbac';
 import { scheduleNonBlocking } from './lib/scheduleNonBlocking';
-import { GamificationEventTracker } from "./services/gamification/eventTracker";
-import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
-import { WhatsNewGamificationBridge } from "./services/gamification/whatsNewIntegration";
 import { initializeNotifications } from "./services/notificationInit";
 import { aiBrainMasterOrchestrator } from "./services/ai-brain/aiBrainMasterOrchestrator";
 import { platformEventBus } from "./services/platformEventBus";
@@ -985,9 +982,6 @@ async function initializeCriticalServices() {
 
   // Gamification Event System - lightweight event listeners
   try {
-    GamificationEventTracker.initializeEventListeners();
-    AiBrainNotifier.initializeListeners();
-    WhatsNewGamificationBridge.initializeListeners();
     
     // REMOVED: Platform change notification subscribers
     // These were causing DUPLICATE notifications because platformEventBus.publish() 

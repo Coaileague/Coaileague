@@ -26,15 +26,7 @@ export const API_ENDPOINTS = {
     register: "/api/auth/register",
     me: "/api/auth/me",
     current: "/api/auth/me",
-    passwordResetRequest: "/api/auth/forgot-password",
-    passwordResetConfirm: "/api/auth/reset-password",
-    changePassword: "/api/auth/change-password",
-    setupMfa: "/api/auth/mfa/setup",
-    enableMfa: "/api/auth/mfa/enable",
-    disableMfa: "/api/auth/mfa/disable",
-    mfaStatus: "/api/auth/mfa/status",
-    verifyMfa: "/api/auth/mfa/verify",
-    regenerateBackupCodes: "/api/auth/mfa/regenerate-backup-codes",
+    changePassword: "/api/auth/change-password"
   },
 
   workspace: {
@@ -47,9 +39,8 @@ export const API_ENDPOINTS = {
     status: "/api/workspace/status",
     customMessages: "/api/workspace/custom-messages",
     upgrade: "/api/workspace/upgrade",
-    seedFormTemplates: "/api/workspace/seed-form-templates",
     theme: "/api/workspace/theme",
-    access: "/api/workspace/access",
+    access: "/api/workspace/access"
   },
 
   employees: {
@@ -59,7 +50,7 @@ export const API_ENDPOINTS = {
     update: "/api/employees/:id",
     delete: "/api/employees/:id",
     me: "/api/employees/me",
-    bulk: "/api/employees/bulk",
+    bulk: "/api/employees/bulk"
   },
 
   shifts: {
@@ -71,8 +62,7 @@ export const API_ENDPOINTS = {
     publish: "/api/shifts/:id/publish",
     approve: "/api/shifts/:shiftId/approve",
     bulkApprove: "/api/shifts/bulk-approve",
-    pendingActions: "/api/shifts/actions/pending",
-    approveAction: "/api/shifts/actions/:id/approve",
+    pendingActions: "/api/shifts/actions/pending"
   },
 
   timeEntries: {
@@ -88,10 +78,8 @@ export const API_ENDPOINTS = {
     reject: "/api/time-entries/:id/reject",
     bulkApprove: "/api/time-entries/bulk-approve",
     calculateHours: "/api/time-entries/calculate-hours",
-    exportCsv: "/api/time-entries/export/csv",
     startBreak: "/api/time-entries/:id/start-break",
-    endBreak: "/api/time-entries/:id/end-break",
-    approveEdit: "/api/time-entries/timesheet-edits/:id/review",
+    endBreak: "/api/time-entries/:id/end-break"
   },
 
   invoices: {
@@ -100,21 +88,20 @@ export const API_ENDPOINTS = {
     get: "/api/invoices/:id",
     update: "/api/invoices/:id",
     delete: "/api/invoices/:id",
-    send: "/api/invoices/:id/send",
+    send: "/api/invoices/:id/send"
   },
 
   billing: {
     subscribe: "/api/billing/subscribe",
-    updateCard: "/api/billing/update-card",
     invoices: "/api/billing/invoices",
-    usage: "/api/billing/usage/summary",
+    usage: "/api/billing/usage/summary"
   },
 
   payroll: {
     list: "/api/payroll",
     process: "/api/payroll/process",
     calculate: "/api/payroll/calculate",
-    export: "/api/payroll/export",
+    export: "/api/payroll/export"
   },
 
   reports: {
@@ -123,15 +110,13 @@ export const API_ENDPOINTS = {
     get: "/api/reports/:id",
     update: "/api/reports/:id",
     delete: "/api/reports/:id",
-    submit: "/api/reports/:id/submit",
+    submit: "/api/reports/:id/submit"
   },
 
   support: {
     createTicket: "/api/support/create-ticket",
     escalate: "/api/support/escalate",
-    helposChat: "/api/support/helpos-chat",
-    helposcoPilot: "/api/support/helpos-copilot",
-    faq: "/api/support/faq",
+    faq: "/api/support/faq"
   },
 
   chat: {
@@ -139,29 +124,24 @@ export const API_ENDPOINTS = {
     messages: "/api/chat/conversations/:id/messages",
     gemini: "/api/chat/gemini",
     geminiStatus: "/api/chat/gemini/status",
-    createConversation: "/api/chat/conversations",
-    closeConversation: "/api/chat/conversations/:id/close",
-    grantVoice: "/api/chat/conversations/:id/grant-voice",
     typing: "/api/chat/conversations/:id/typing",
-    mainRoom: "/api/chat/main-room",
-    mainRoomMessages: "/api/chat/main-room/messages",
     macros: "/api/chat/macros",
     unreadCount: "/api/chat/unread-count",
-    markAsRead: "/api/chat/mark-as-read",
+    markAsRead: "/api/chat/mark-as-read"
   },
 
   notifications: {
     list: "/api/notifications",
     markRead: "/api/notifications/:id/read",
     markAllRead: "/api/notifications/mark-all-read",
-    delete: "/api/notifications/:id",
+    delete: "/api/notifications/:id"
   },
 
   ai: {
     brain: "/api/ai-brain",
     schedule: "/api/ai-brain/schedule",
     predict: "/api/ai-brain/predict",
-    sentiment: "/api/ai-brain/sentiment",
+    sentiment: "/api/ai-brain/sentiment"
   },
 
   trinity: {
@@ -170,10 +150,8 @@ export const API_ENDPOINTS = {
     status: "/api/trinity/status",
     insights: "/api/trinity/insights",
     session: "/api/trinity/session",
-    selfEdit: "/api/trinity/self-edit",
     maintenance: "/api/trinity/maintenance",
-    memoryHealth: "/api/trinity/memory-health",
-    scheduling: "/api/trinity/scheduling",
+    scheduling: "/api/trinity/scheduling"
   },
 
   mascot: {
@@ -183,7 +161,7 @@ export const API_ENDPOINTS = {
     tasks: "/api/mascot/tasks",
     completeTask: "/api/mascot/complete-task",
     holiday: "/api/mascot/holiday",
-    seasonal: "/api/mascot/seasonal/state",
+    seasonal: "/api/mascot/seasonal/state"
   },
 
   admin: {
@@ -196,35 +174,30 @@ export const API_ENDPOINTS = {
     lockAccount: "/api/admin/users/:id/lock",
     unlockAccount: "/api/admin/users/:id/unlock",
     suspendAccount: "/api/admin/users/:id/suspend",
-    unsuspendAccount: "/api/admin/users/:id/unsuspend",
-    freezeAccount: "/api/admin/users/:id/freeze",
-    unfreezeAccount: "/api/admin/users/:id/unfreeze",
+    unsuspendAccount: "/api/admin/users/:id/unsuspend"
   },
 
   platform: {
     staff: "/api/platform/staff",
-    grantRole: "/api/platform/staff/grant-role",
     revokeRole: "/api/platform/staff/:userId/revoke-role",
-    suspendStaff: "/api/platform/staff/:userId/suspend",
-    unsuspendStaff: "/api/platform/staff/:userId/unsuspend",
-    changeRole: "/api/platform/staff/:userId/change-role",
+    changeRole: "/api/platform/staff/:userId/change-role"
   },
 
   analytics: {
-    getStats: "/api/analytics/stats",
+    getStats: "/api/analytics/stats"
   },
 
   user: {
     me: "/api/auth/me",
     workspace: "/api/me/workspace-role",
     platform: "/api/me/platform-role",
-    features: "/api/me/workspace-features",
+    features: "/api/me/workspace-features"
   },
 
   tokens: {
     balance: "/api/usage/tokens",
     breakdown: "/api/usage/token-breakdown",
-    log: "/api/usage/token-log",
+    log: "/api/usage/token-log"
   },
 
   benefits: {
@@ -232,7 +205,7 @@ export const API_ENDPOINTS = {
     create: "/api/benefits",
     get: "/api/benefits/:id",
     update: "/api/benefits/:id",
-    delete: "/api/benefits/:id",
+    delete: "/api/benefits/:id"
   },
 
   disputes: {
@@ -242,14 +215,13 @@ export const API_ENDPOINTS = {
     myDisputes: "/api/disputes/my-disputes",
     pending: "/api/disputes/pending",
     pendingReview: "/api/disputes/pending-review",
-    assignedToMe: "/api/disputes/assigned-to-me",
     resolve: "/api/disputes/:id/resolve",
     approve: "/api/disputes/:disputeId/approve",
     reject: "/api/disputes/:disputeId/reject",
     assign: "/api/disputes/:id/assign",
     review: "/api/disputes/:id/review",
     aiAnalysis: "/api/disputes/:id/ai-analysis",
-    analyzeSentiment: "/api/disputes/analyze-sentiment",
+    analyzeSentiment: "/api/disputes/analyze-sentiment"
   },
 
   grievances: {
@@ -257,7 +229,7 @@ export const API_ENDPOINTS = {
     file: "/api/disputes",
     get: "/api/disputes/:id",
     disputeable: "/api/disputes/pending",
-    resolve: "/api/disputes/:id/resolve",
+    resolve: "/api/disputes/:id/resolve"
   },
 
   pto: {
@@ -265,21 +237,21 @@ export const API_ENDPOINTS = {
     create: "/api/pto",
     get: "/api/pto/:id",
     approve: "/api/pto/:id/approve",
-    deny: "/api/pto/:id/deny",
+    deny: "/api/pto/:id/deny"
   },
 
   timeOffRequests: {
     list: "/api/time-off-requests",
     create: "/api/time-off-requests",
     pending: "/api/time-off-requests/pending",
-    updateStatus: "/api/time-off-requests/:id/status",
+    updateStatus: "/api/time-off-requests/:id/status"
   },
 
   timesheetEditRequests: {
     list: "/api/timesheet-edit-requests",
     create: "/api/timesheet-edit-requests",
     pending: "/api/timesheet-edit-requests/pending",
-    review: "/api/timesheet-edit-requests/:id/review",
+    review: "/api/timesheet-edit-requests/:id/review"
   },
 
   reviews: {
@@ -287,7 +259,7 @@ export const API_ENDPOINTS = {
     create: "/api/reviews",
     get: "/api/reviews/:id",
     update: "/api/reviews/:id",
-    submit: "/api/reviews/:id/submit",
+    submit: "/api/reviews/:id/submit"
   },
 
   sales: {
@@ -296,21 +268,21 @@ export const API_ENDPOINTS = {
     getLead: "/api/sales/leads/:id",
     updateLead: "/api/sales/leads/:id",
     templates: "/api/sales/templates",
-    sendEmail: "/api/sales/send-email",
+    sendEmail: "/api/sales/send-email"
   },
 
   contracts: {
     list: "/api/contracts",
     create: "/api/contracts",
     get: "/api/contracts/:id",
-    portal: "/api/contracts/portal",
+    portal: "/api/contracts/portal"
   },
 
   documents: {
     list: "/api/documents",
     create: "/api/documents",
     get: "/api/documents/:id",
-    extract: "/api/documents/extract",
+    extract: "/api/documents/extract"
   },
 
   training: {
@@ -319,14 +291,14 @@ export const API_ENDPOINTS = {
   staffing: {
     settings: "/api/trinity-staffing/settings",
     workflows: "/api/trinity-staffing/workflows",
-    escalationTiers: "/api/trinity-staffing/escalation-tiers",
+    escalationTiers: "/api/trinity-staffing/escalation-tiers"
   },
 
   helpai: {
     registry: "/api/helpai/registry",
     auditLog: "/api/helpai/audit-log",
-    integrations: "/api/helpai/integrations/config",
-  },
+    integrations: "/api/helpai/integrations/config"
+  }
 };
 
 /**

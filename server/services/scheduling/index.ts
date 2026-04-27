@@ -20,4 +20,3 @@ export {
   registerSchedulingWithOrchestration,
   checkSchedulingGovernance,
   getSchedulingOrchestrationStatus
-} from './trinityOrchestrationBridge';

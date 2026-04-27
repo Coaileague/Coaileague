@@ -108,21 +108,6 @@ async function executeMascotAction<T>(
     };
   }
 }
-import { 
-  generateSeasonalProfile, 
-  getCurrentSeasonId, 
-  shouldForceDarkMode,
-  runSeasonalHealthCheck,
-  executeSeasonalCommand,
-  getSupportOverrides,
-  generateAIHealthReport,
-  registerSeasonalManager,
-  unregisterSeasonalManager,
-  getActiveManagers,
-  getModifiedOrnamentDirective,
-  type SeasonalCommand,
-  type OrnamentDirective
-} from '../services/ai-brain/skills/seasonalOrchestrator';
 import { getSeasonalSubagent } from '../services/ai-brain/seasonalSubagent';
 
 const router = Router();
@@ -1643,7 +1628,6 @@ import { storage } from '../storage';
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 const log = createLogger('MascotRoutes');
-
 
 /**
  * GET /api/mascot/holiday/directives
