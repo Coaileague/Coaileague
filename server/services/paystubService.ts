@@ -231,14 +231,14 @@ export class PaystubService {
       doc.text('Regular Pay', 50, y);
       doc.text(data.regularHours.toFixed(2), 200, y);
       doc.text(`$${data.regularRate.toFixed(2)}`, 280, y);
-      doc.text(`$${(data.regularHours * data.regularRate).toFixed(2)}`, 380, y);
+      doc.text(`$${parseFloat(multiplyFinancialValues(toFinancialString(String(data.regularHours)), toFinancialString(String(data.regularRate)))).toFixed(2)}`, 380, y);
 
       if (data.overtimeHours > 0) {
         y += 20;
         doc.text('Overtime Pay (1.5x)', 50, y);
         doc.text(data.overtimeHours.toFixed(2), 200, y);
         doc.text(`$${data.overtimeRate.toFixed(2)}`, 280, y);
-        doc.text(`$${(data.overtimeHours * data.overtimeRate).toFixed(2)}`, 380, y);
+        doc.text(`$${parseFloat(multiplyFinancialValues(toFinancialString(String(data.overtimeHours)), toFinancialString(String(data.overtimeRate)))).toFixed(2)}`, 380, y);
       }
 
       y += 25;
@@ -257,7 +257,7 @@ export class PaystubService {
         y += 18;
       }
 
-      const totalDeductions = data.deductions.reduce((sum, d) => sum + d.amount, 0);
+      const totalDeductions = parseFloat(data.deductions.reduce((sum, d) => addFinancialValues(sum, toFinancialString(String(d.amount))), '0'));
       y += 10;
       doc.fontSize(11).text('Total Deductions:', 280, y, { continued: true });
       doc.text(`  -$${totalDeductions.toFixed(2)}`);
@@ -387,7 +387,7 @@ export class PaystubService {
         ...d,
         formattedAmount: `-$${d.amount.toFixed(2)}`,
       })),
-      totalHours: data.regularHours + data.overtimeHours,
+      totalHours: parseFloat(addFinancialValues(toFinancialString(String(data.regularHours)), toFinancialString(String(data.overtimeHours)))),
     };
   }
 

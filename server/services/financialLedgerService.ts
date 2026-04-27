@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { eq, and, gte, lte, desc, sql, sum, count, inArray } from 'drizzle-orm';
 // RC4 (Phase 2): Decimal.js for AR aging outstanding subtraction — prevents float drift in reports.
-import { subtractFinancialValues, toFinancialString } from './financialCalculator';
+import { subtractFinancialValues, toFinancialString, addFinancialValues, multiplyFinancialValues, divideFinancialValues } from './financialCalculator';
 import {
   invoices,
   invoiceLineItems,
@@ -291,9 +291,11 @@ export class FinancialLedgerService {
     const overtimeHrs = parseFloat(payrollData[0]?.overtimeHours || '0');
     const avgRate = parseFloat(payrollData[0]?.hourlyRate || '0');
 
-    const regularLabor = regularHrs * avgRate;
-    const overtimeLabor = overtimeHrs * avgRate * 1.5;
-    const totalCOGS = totalGross || (regularLabor + overtimeLabor);
+    const regularLaborStr = multiplyFinancialValues(toFinancialString(String(regularHrs)), toFinancialString(String(avgRate)));
+    const overtimeLaborStr = multiplyFinancialValues(toFinancialString(String(overtimeHrs)), multiplyFinancialValues(toFinancialString(String(avgRate)), '1.5'));
+    const regularLabor = parseFloat(regularLaborStr);
+    const overtimeLabor = parseFloat(overtimeLaborStr);
+    const totalCOGS = totalGross || parseFloat(addFinancialValues(regularLaborStr, overtimeLaborStr));
 
     const [expenseResult] = await db.select({
       total: sql<string>`COALESCE(SUM(CAST(${expenses.amount} AS numeric)), 0)`,
@@ -308,8 +310,10 @@ export class FinancialLedgerService {
       );
 
     const totalExpenses = parseFloat(expenseResult?.total || '0');
-    const grossProfit = totalRevenue - totalCOGS;
-    const netIncome = grossProfit - totalExpenses;
+    const grossProfitStr = subtractFinancialValues(toFinancialString(String(totalRevenue)), toFinancialString(String(totalCOGS)));
+    const netIncomeStr = subtractFinancialValues(grossProfitStr, toFinancialString(String(totalExpenses)));
+    const grossProfit = parseFloat(grossProfitStr);
+    const netIncome = parseFloat(netIncomeStr);
 
     return {
       periodStart,
@@ -325,13 +329,13 @@ export class FinancialLedgerService {
         totalCOGS,
       },
       grossProfit,
-      grossMarginPercent: totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0,
+      grossMarginPercent: totalRevenue > 0 ? parseFloat(divideFinancialValues(multiplyFinancialValues(grossProfitStr, '100'), toFinancialString(String(totalRevenue)))) : 0,
       operatingExpenses: {
         categories: { general: totalExpenses },
         totalOperatingExpenses: totalExpenses,
       },
       netIncome,
-      netMarginPercent: totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0,
+      netMarginPercent: totalRevenue > 0 ? parseFloat(divideFinancialValues(multiplyFinancialValues(netIncomeStr, '100'), toFinancialString(String(totalRevenue)))) : 0,
     };
   }
 
@@ -483,8 +487,8 @@ export class FinancialLedgerService {
     return {
       totalRevenue,
       totalLaborCost,
-      ratio: totalRevenue > 0 ? totalLaborCost / totalRevenue : 0,
-      percentOfRevenue: totalRevenue > 0 ? (totalLaborCost / totalRevenue) * 100 : 0,
+      ratio: totalRevenue > 0 ? parseFloat(divideFinancialValues(toFinancialString(String(totalLaborCost)), toFinancialString(String(totalRevenue)))) : 0,
+      percentOfRevenue: totalRevenue > 0 ? parseFloat(divideFinancialValues(multiplyFinancialValues(toFinancialString(String(totalLaborCost)), '100'), toFinancialString(String(totalRevenue)))) : 0,
     };
   }
 
@@ -524,7 +528,7 @@ export class FinancialLedgerService {
 
     const laborMap = new Map(clientLabor.map(l => [
       l.clientId,
-      parseFloat(l.totalHours || '0') * parseFloat(l.avgRate || '0')
+      parseFloat(multiplyFinancialValues(toFinancialString(l.totalHours || '0'), toFinancialString(l.avgRate || '0')))
     ]));
 
     const results: ClientProfitMargin[] = [];
@@ -544,7 +548,7 @@ export class FinancialLedgerService {
         revenue,
         laborCost,
         profit,
-        marginPercent: revenue > 0 ? (profit / revenue) * 100 : 0,
+        marginPercent: revenue > 0 ? parseFloat(divideFinancialValues(multiplyFinancialValues(toFinancialString(String(profit)), '100'), toFinancialString(String(revenue)))) : 0,
       });
     }
 
