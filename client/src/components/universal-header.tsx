@@ -376,13 +376,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                   data-testid="button-mobile-menu"
                 >
                   <Menu className="h-5 w-5" />
-                </Button>}
-                  subtitle="Navigate the platform"
-                  side="right"
-                  className="px-3 py-3 pb-6"
-                >
-                  <nav className="flex flex-col gap-3 min-w-0">
-                  </nav>
+                </Button>
               </div>
             </>
           ) : (
@@ -523,11 +517,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     <Menu className="h-5 w-5" />
                   </Button>
                 )}
-                  }
-                  subtitle="Core workforce tools"
-                  side="right"
-                  className="px-3 py-3 pb-6"
-                >
                   <div className="flex flex-col gap-2">
                     {mobileWorkspaceFamilies.length > 0 ? (
                       <div className="space-y-2 min-w-0">
