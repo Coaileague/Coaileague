@@ -33,8 +33,15 @@ const requireTrinityAccess = (req: Request, res: Response, next: NextFunction) =
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const allowedOrgRoles = ['org_owner', 'co_owner', 'manager'];
-  const allowedPlatformRoles = ['root_admin', 'co_admin', 'sysops', 'deputy_admin'];
+  // Canonical platform + org roles that may access Trinity
+  // Trinity is for owners, managers, support agents, and compliance officers — NOT field workers
+  const allowedOrgRoles = ['org_owner', 'co_owner', 'manager', 'supervisor'];
+  const allowedPlatformRoles = [
+    'root_admin', 'deputy_admin', 'sysop',          // canonical names
+    'support_manager', 'support_agent',              // support staff — can use Trinity
+    'compliance_officer',                            // audit/compliance access
+    'co_admin', 'sysops',                           // legacy aliases (backward compat)
+  ];
   
   // Check workspaceRole from attachWorkspaceId middleware (req.workspaceRole)
   // This is properly resolved from workspace ownership or employee record
@@ -105,7 +112,7 @@ router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Reques
 
     // v2.0: Detect support mode from platform role
     const platformRole = authReq.platformRole || authReq.user?.platformRole || null;
-    const SUPPORT_PLATFORM_ROLES = ['root_admin', 'co_admin', 'sysops', 'deputy_admin'];
+    const SUPPORT_PLATFORM_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer', 'co_admin', 'sysops'];
     const isSupportMode = platformRole !== null && SUPPORT_PLATFORM_ROLES.includes(platformRole);
 
     // Map workspaceRole/platformRole to Trinity's trustTier so the thalamus
@@ -170,7 +177,10 @@ router.get('/history', attachWorkspaceId, requireTrinityAccess, async (req: Requ
 router.get('/session/:sessionId/messages', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const messages = await trinityChatService.getSessionMessages(sessionId);
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).workspaceId;
+    if (!userId || !workspaceId) return res.status(401).json({ error: 'Auth context required' });
+    const messages = await trinityChatService.getSessionMessages(sessionId, userId, workspaceId);
     return res.json({ messages });
   } catch (error: unknown) {
     log.error('[TrinityChat] Session messages error:', error);

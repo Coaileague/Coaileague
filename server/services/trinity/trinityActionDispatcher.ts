@@ -86,7 +86,7 @@ const ACTION_INTENT_PATTERNS: Array<{
   // Payroll — highest risk, never auto-execute
   {
     pattern: /\b(run|process|start|execute)\s+payroll\b/i,
-    actionId: 'payroll.run',
+    actionId: 'payroll.run_payroll',
     risk: 'high',
     category: 'payroll',
     extract: () => ({}),

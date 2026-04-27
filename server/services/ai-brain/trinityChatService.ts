@@ -639,8 +639,7 @@ Remember: You're the friendly tech expert who makes complex systems understandab
 
 // DEPRECATED: Personal and Integrated modes have been consolidated into Business mode
 // These functions remain for backward compatibility but redirect to business mode
-const buildPersonalModePromptLegacy = buildBusinessModePrompt;
-const buildIntegratedModePromptLegacy = buildBusinessModePrompt;
+// Legacy mode aliases removed — Trinity is one unified individual (no mode switching)
 
 // ============================================================================
 // TRINITY CHAT SERVICE
@@ -2740,7 +2739,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     basePrompt += `\n\n${TRINITY_KNOWLEDGE_CORPUS}`;
 
     // === v2.1 MODULE F: DUAL-MODE DECISION GUIDE ===
-    // Explicit guidance on when to operate in business vs. guru mode and how
+    // Trinity is one individual — depth is context-driven, not mode-switched
     // to surface mode-transition suggestions. Injected in all sessions.
     basePrompt += `\n\n${TRINITY_DUAL_MODE_GUIDE}`;
 
@@ -3291,6 +3290,8 @@ If no significant insight, respond with:
   /**
    * Switch conversation mode
    */
+  /** @deprecated Trinity has no modes — ConversationMode is hardcoded to 'business' for DB back-compat.
+   * This method updates the DB column only; it has no effect on Trinity's behavior. */
   async switchMode(userId: string, workspaceId: string, newMode: ConversationMode): Promise<TrinityConversationSession> {
     // End current active sessions
     await db
@@ -3468,7 +3469,18 @@ If no significant insight, respond with:
   /**
    * Get session messages
    */
-  async getSessionMessages(sessionId: string): Promise<TrinityConversationTurn[]> {
+  async getSessionMessages(sessionId: string, userId: string, workspaceId: string): Promise<TrinityConversationTurn[]> {
+    // Verify session ownership before returning turns — prevents cross-user/cross-workspace IDOR
+    const [session] = await db
+      .select({ id: trinityConversationSessions.id })
+      .from(trinityConversationSessions)
+      .where(and(
+        eq(trinityConversationSessions.id, sessionId),
+        eq(trinityConversationSessions.userId, userId),
+        eq(trinityConversationSessions.workspaceId, workspaceId)
+      ))
+      .limit(1);
+    if (!session) return []; // Return empty rather than 404 to avoid session enumeration
     return db
       .select()
       .from(trinityConversationTurns)

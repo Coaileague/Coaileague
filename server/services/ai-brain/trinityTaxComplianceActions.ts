@@ -20,15 +20,17 @@ function mkTaxAction(actionId: string, fn: (params: any) => Promise<any>): Actio
     name: actionId,
     category: 'compliance' as any,
     description: `Trinity tax compliance: ${actionId}`,
+    // Tax actions: read/audit = owner + support; any table-update action must
+    // be root_admin only (enforced by the 'root_admin_only' flag below).
+    // isAuthorized() in platformActionHub checks .requiredRoles.length — must be set.
+    requiredRoles: ['org_owner', 'co_owner', 'root_admin', 'deputy_admin', 'support_manager'],
     inputSchema: { type: 'object' as const, properties: {} },
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const data = await fn(req.params || {});
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+        // Use req.payload (ActionRequest contract) not req.params
+        const data = await fn(req.payload || {});
         return { success: true, data };
       } catch (err: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: false, error: err?.message || 'Unknown error' };
       }
     }
