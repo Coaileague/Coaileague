@@ -1,119 +1,122 @@
 # COAILEAGUE REFACTOR — MASTER HANDOFF
-# ONE FILE. Updated every turn. All agents read this first.
-# Branch: refactor/service-layer | Updated: 2026-04-26
-
-## BRANCH STATE
-- development:          ce59a6c22  STABLE ✅ Railway deploying now
-- refactor/service-layer: 2cd724e73  active work branch
-
-## WHAT WAS JUST FIXED
-Railway build was failing: tailwindcss/postcss/autoprefixer were in devDeps.
-Railway runs npm ci (no devDeps) → Vite can't find tailwindcss → build fails.
-Fix: promoted all three to dependencies + added postcss.config.js.
-Tested locally with real DB before pushing. ✅
+# ONE FILE ONLY. Update in place. Never create new handoff files.
+# Last updated: 2026-04-26 by Claude
 
 ---
 
-## CRASH RULES (mandatory before every commit)
+## ACTIVE BRANCH
+```
+refactor/service-layer  →  tip: 8751d8e7e
+```
+Both agents work here. Never push directly to development without a passing boot test.
 
-### 1 — Boot test with real DB (catches runtime crashes esbuild misses)
+## DEVELOPMENT (Railway)
+```
+origin/development  →  ce59a6c22  (STABLE ✅)
+```
+NOTE: origin/development has diverged from our branch with independent Copilot fixes.
+Do NOT merge origin/development into refactor/service-layer — it will restore deleted files.
+Only merge refactor/service-layer → development (one direction).
+
+---
+
+## HOW TURNS WORK
+
+**Jack's turn:** Audit a domain. Write findings into this file under JACK'S FINDINGS below.
+Commit: `git add AGENT_HANDOFF.md && git commit -m "audit: <domain>"` → push to refactor/service-layer.
+
+**Claude's turn:** Read JACK'S FINDINGS. Execute deletions locally. Run boot test. Commit. Push. Merge to development. Update this file. Jack goes next.
+
+No separate handoff files. One file, updated in place every turn.
+
+---
+
+## BOOT TEST (mandatory before every push)
 ```bash
 export DATABASE_URL="postgresql://postgres:MmUbhSxdkRGFLhBGGXGaWQeBceaqNmlj@metro.proxy.rlwy.net:40051/railway"
 export SESSION_SECRET="coaileague-dev-test-session-secret-32chars"
-node dist/index.js > /tmp/boot.txt 2>&1 &
-sleep 18
+node build.mjs
+node dist/index.js > /tmp/boot.txt 2>&1 & sleep 18
 curl -s http://localhost:5000/api/workspace/health   # must → {"message":"Unauthorized"}
 grep -cE "ReferenceError|is not defined|CRITICAL.*Failed" /tmp/boot.txt | grep -v GEMINI  # must → 0
 kill %1
 ```
 
-### 2 — ESM require() scan
+## CLIENT FILE DELETION (Crash Rule 4)
+Always scan by FILE PATH, not component/hook name:
 ```bash
-grep -rn "require(" server/ --include="*.ts" | grep -v "node_modules|.d.ts|//|build.mjs"
-# must → 0 lines
-```
+# Hooks:
+grep -rn "hooks/FILENAME" client/src --include="*.ts" --include="*.tsx" | grep -v "FILENAME\."
 
-### 3 — Router prefix scan (catches truncated variable names)
-```python
-import re, os
-for root, dirs, files in os.walk('server/routes'):
-  dirs[:] = [d for d in dirs if 'node_modules' not in d]
-  for f in files:
-    if not f.endswith('.ts'): continue
-    c = open(os.path.join(root, f)).read()
-    declared = set(re.findall(r'const (\w+Router)\s*=', c))
-    declared |= set(re.findall(r'export const (\w+Router)', c))
-    declared.add('router')
-    used = set(re.findall(r'^([a-z]\w+Router)\.(get|post|put|patch|delete)', c, re.MULTILINE))
-    diff = {v for v,_ in used} - declared
-    if diff: print(f'BROKEN: {f}: {diff}')
-# must → no output
-```
+# Components:
+grep -rn "components/SUBDIR/FILENAME" client/src --include="*.ts" --include="*.tsx" | grep -v "FILENAME\."
 
-### 4 — Client file deletion: check by FILE PATH not export name
-```bash
-base="component-or-hook-name"
-grep -rn "components/SUBDIR/${base}\|hooks/${base}" client/src --include="*.ts" --include="*.tsx" \
-  | grep -v "${base}\."
-# 0 results = safe. Also cross-check App.tsx lazy imports.
-```
-
-### 5 — Server build
-```bash
-node build.mjs  # must → Server build complete
+# 0 results = dead. Also check App.tsx for lazy(() => import(...)) patterns.
 ```
 
 ---
 
 ## REFACTOR TOTALS
-- Phase 1 (routes):   ~24,335L removed  ✅ merged
-- Phase 2 (services): ~22,931L removed  ✅ merged
-- Phase 3 (client):   ~43,663L removed  ✅ merged
-- Grand total:        ~90,929L removed
+| Phase | Domain | Lines Removed | Status |
+|---|---|---|---|
+| 1 | Route layer | ~24,335L | ✅ merged |
+| 2 | Service layer | ~22,931L | ✅ merged |
+| 3 | Client (hooks/components/lib) | ~43,663L | ✅ merged |
+| **Total** | | **~90,929L** | |
 
 ---
 
-## NEXT DOMAIN: WHAT REMAINS
+## WHAT'S DONE IN PHASE 3
+- ✅ Hooks: 24 dead files deleted
+- ✅ Top-level components: 112 dead files deleted
+- ✅ Component subdirectories: 85 dead files deleted
+- ✅ Barrel stubs: 2 dead index files deleted
+- ✅ lib/: 8 dead files deleted
+- ✅ Railway build fix: tailwindcss/postcss/autoprefixer promoted to dependencies
 
-Phase 3 client cleanup is substantially complete. Remaining targets:
+---
 
-### A — client/src/store/ (state management)
+## NEXT TARGETS (Jack audits, Claude executes)
+
+### Priority 1 — client/src/store/
 ```bash
 for f in client/src/store/*.ts client/src/store/*.tsx; do
-  base=$(basename "$f" | sed 's/\.tsx\?$//');
+  [ -f "$f" ] || continue
+  base=$(basename "$f" | sed 's/\.tsx\?$//')
   count=$(grep -rn "store/${base}" client/src --include="*.ts" --include="*.tsx" | grep -v "${base}\." | wc -l)
   echo "${count} callers | ${base}"
 done
 ```
 
-### B — client/src/types/ (type definitions)
-Check each file — types imported elsewhere are alive, unused types can be deleted.
+### Priority 2 — client/src/types/
+```bash
+for f in client/src/types/*.ts client/src/types/*.tsx; do
+  [ -f "$f" ] || continue
+  base=$(basename "$f" | sed 's/\.tsx\?$//')
+  count=$(grep -rn "types/${base}" client/src --include="*.ts" --include="*.tsx" | grep -v "${base}\." | wc -l)
+  echo "${count} callers | ${base}"
+done
+```
 
-### C — remaining component subdirs not yet scanned
-Any subdirs added by Copilot/other work since our pass. Run:
+### Priority 3 — Any component subdirs added by Copilot since our pass
+Scan every subdir, 0-caller files by path:
 ```bash
 for d in client/src/components/*/; do
   base=$(basename "$d")
-  dead=$(for f in "$d"*.tsx "$d"*.ts; do
+  for f in "$d"*.tsx "$d"*.ts; do
     [ -f "$f" ] || continue
     b=$(basename "$f" | sed 's/\.tsx\?$//')
-    grep -rn "components/${base}/${b}" client/src --include="*.ts" --include="*.tsx" | grep -v "${b}\." > /dev/null || echo "$b"
-  done)
-  [ -n "$dead" ] && echo "=== ${base} === $dead"
+    c=$(grep -rn "components/${base}/${b}" client/src --include="*.ts" --include="*.tsx" | grep -v "${b}\." | wc -l)
+    [ "$c" -eq 0 ] && echo "DEAD $f"
+  done
 done
 ```
 
 ---
 
-## PROCESS RULES
-1. All work on refactor/service-layer branch
-2. Test with real DB before EVERY push
-3. Only ONE handoff file: AGENT_HANDOFF.md (this file)
-4. Jack audits → Claude executes → boot test → commit → push → merge development
-5. Do NOT merge development into service-layer (histories have diverged)
+## JACK'S FINDINGS
+*(Jack writes audit results here — file paths, line counts, dead/alive verdict)*
+*(Claude reads this section and executes)*
 
----
+**Status: Waiting for Jack's audit of client/src/store/ and client/src/types/**
 
-## FOR JACK
-Next audit targets: client/src/store/, client/src/types/
-Same file-path methodology. No guessing from component names.
