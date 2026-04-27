@@ -1,12 +1,12 @@
 # COAILEAGUE REFACTOR — MASTER HANDOFF
 # ONE FILE ONLY. Update in place. Never create new handoff files.
-# Last updated: 2026-04-27 by Claude — POST-RECOVERY UPDATE
+# Last updated: 2026-04-27 by Jack/GPT — STORE/TYPES CONNECTOR AUDIT
 
 ---
 
 ## ACTIVE BRANCH
 ```
-refactor/service-layer  →  tip: f8b1b22de
+refactor/service-layer  →  tip before Jack audit: 40c35c263
 ```
 Both agents work here. Never push directly to development without a passing boot test.
 
@@ -178,11 +178,105 @@ Run: before EVERY client commit that involves deletions.
 
 ## NEXT TARGETS
 
-Jack's next audit pass: `client/src/store/` and `client/src/types/`
+Current Jack audit pass: `client/src/store/` and `client/src/types/`
 
 Same methodology — but now with the upgraded scanner and all 6 patterns in mind.
-Jack: do NOT delete anything without running `python3 scripts/verify-client-deletions.py` first.
-If unsure about wiring — flag it for Claude to verify before deletion.
+Jack cannot safely delete through connector-only evidence. Claude must verify locally with `python3 scripts/verify-client-deletions.py` before any deletion.
+
+---
+
+## JACK FINDINGS — client/src/store and client/src/types connector audit
+
+### Scope
+
+```text
+client/src/store/
+client/src/types/
+```
+
+### Branch checked first
+
+```text
+refactor/service-layer
+```
+
+Latest tip observed before audit:
+
+```text
+40c35c2634eb3c4566f9c6842e6b4a460fa37837
+```
+
+### Connector searches performed
+
+```text
+"client/src/store/" OR "store/" "client/src"        → 0 results
+"zustand" OR "createStore" OR "useStore"            → 0 results
+"client/src/types/" OR "types/" "client/src"        → 0 results
+"@/types/" OR "../types/" OR "./types/"             → 0 results
+"client/src/data" / "client/src/config" broad check  → 0 useful results
+```
+
+### Connector-only verdict
+
+```text
+No live caller evidence surfaced for client/src/store/ or client/src/types/.
+They may already be absent, empty, or unused.
+```
+
+### Important limitation
+
+```text
+This is not deletion authority. GitHub connector search cannot prove local directory contents or run the verification scanner.
+```
+
+### Claude local verification commands
+
+```bash
+# 1) Confirm whether directories exist and inventory files
+for dir in client/src/store client/src/types; do
+  echo "===== $dir ====="
+  find "$dir" -maxdepth 1 -type f \( -name "*.ts" -o -name "*.tsx" \) -print 2>/dev/null | sort
+  echo
+done
+
+# 2) For any files found, scan by FILE PATH, not export name
+for dir in client/src/store client/src/types; do
+  find "$dir" -maxdepth 1 -type f \( -name "*.ts" -o -name "*.tsx" \) -print 2>/dev/null | sort | while read -r file; do
+    rel="${file#client/src/}"
+    noext="${rel%.*}"
+    echo "--- $file"
+    grep -rn "$noext" client/src --include="*.ts" --include="*.tsx" | grep -v "^${file}:" || true
+  done
+done
+
+# 3) Mandatory scanner before deletion commit
+python3 scripts/verify-client-deletions.py
+```
+
+### Execution recommendation
+
+```text
+If find returns no files: mark store/types clean, no-op.
+If files exist and path scan has 0 non-self callers: git rm those files, run scanner, run Vite/build.
+If files exist with callers: keep them.
+```
+
+Validation after any deletion:
+
+```bash
+python3 scripts/verify-client-deletions.py
+npx vite build 2>&1 | grep -E "ENOENT|error during|built in"
+node build.mjs
+```
+
+### Claude goes next
+
+```text
+Execute local store/types inventory.
+Delete only confirmed 0-caller files, if any.
+Run verify-client-deletions.py and build checks.
+Update AGENT_HANDOFF.md with results and next target.
+```
 
 ---
 
@@ -192,4 +286,3 @@ If unsure about wiring — flag it for Claude to verify before deletion.
 - Update it at the end of every turn
 - Never create separate handoff files
 - One file, updated in place
-
