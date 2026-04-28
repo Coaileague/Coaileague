@@ -1317,23 +1317,70 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
     if (RecordingUrl && RecordingSid) {
       await updateCallSession(CallSid, { recordingUrl: RecordingUrl, recordingSid: RecordingSid });
 
-      // Trigger Twilio transcription asynchronously for completed recordings
-      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-        const transcriptionBaseUrl = getBaseUrl(req);
-        scheduleNonBlocking('voice.transcription-request', async () => {
-          const twilio = (await import('twilio')).default;
-          const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-          const baseUrl = transcriptionBaseUrl;
-          // Use a typed create call; statusCallbackUrl is a valid Twilio param
-          // transcriptions.create accepts optional params beyond the TS typings
-          await ((twilioClient.recordings(RecordingSid) as any).transcriptions.create as (
-            opts: { statusCallbackUrl?: string }
-          ) => Promise<unknown>)({
-            statusCallbackUrl: `${baseUrl}/api/voice/transcription-done`,
-          });
-          log.info(`[VoiceRoutes] Transcription requested for recording ${RecordingSid}`);
-        });
-      }
+      // Transcription: prefer OpenAI Whisper (higher accuracy) with Twilio fallback
+      const transcriptionBaseUrl = getBaseUrl(req);
+      scheduleNonBlocking('voice.transcription-request', async () => {
+        const baseUrl = transcriptionBaseUrl;
+        let transcribed = false;
+
+        // Try OpenAI Whisper first (better accuracy, uses confirmed OPENAI_API_KEY)
+        if (process.env.OPENAI_API_KEY && RecordingUrl) {
+          try {
+            const fetch = (await import('node-fetch')).default as any;
+            const FormData = (await import('form-data')).default;
+            // Download the recording from Twilio
+            const audioResp = await fetch(RecordingUrl + '.mp3', {
+              headers: {
+                Authorization: 'Basic ' + Buffer.from(
+                  `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+                ).toString('base64'),
+              },
+            });
+            if (audioResp.ok) {
+              const audioBuffer = await audioResp.buffer();
+              const form = new FormData();
+              form.append('file', audioBuffer, { filename: `${RecordingSid}.mp3`, contentType: 'audio/mpeg' });
+              form.append('model', 'whisper-1');
+              form.append('language', 'en');
+              const whisperResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, ...form.getHeaders() },
+                body: form,
+              });
+              if (whisperResp.ok) {
+                const whisperData = await whisperResp.json() as { text?: string };
+                const transcript = whisperData.text?.trim() || '';
+                if (transcript) {
+                  log.info(`[VoiceRoutes] Whisper transcription complete for ${RecordingSid}: "${transcript.slice(0, 80)}"`);
+                  // Store directly — no need for callback round-trip
+                  const { classifyAndPersist } = await import('../services/trinityVoice/voiceEventClassifier');
+                  await updateCallSession(CallSid, { transcript });
+                  await classifyAndPersist({ callSid: CallSid, transcript });
+                  transcribed = true;
+                }
+              }
+            }
+          } catch (wErr: any) {
+            log.warn('[VoiceRoutes] Whisper transcription failed, falling back to Twilio:', wErr?.message?.slice(0, 100));
+          }
+        }
+
+        // Fallback: Twilio native transcription
+        if (!transcribed && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+          try {
+            const twilio = (await import('twilio')).default;
+            const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+            await ((twilioClient.recordings(RecordingSid) as any).transcriptions.create as (
+              opts: { statusCallbackUrl?: string }
+            ) => Promise<unknown>)({
+              statusCallbackUrl: `${baseUrl}/api/voice/transcription-done`,
+            });
+            log.info(`[VoiceRoutes] Twilio transcription fallback requested for ${RecordingSid}`);
+          } catch (tErr: any) {
+            log.warn('[VoiceRoutes] Twilio transcription fallback failed:', tErr?.message?.slice(0, 100));
+          }
+        }
+      });
     }
 
     log.info(`[VoiceRoutes] Recording done for ext=${ext} callSid=${CallSid} duration=${RecordingDuration}s`);
