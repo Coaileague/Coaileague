@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { db } from '../db';
@@ -199,7 +200,15 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     if (!hasManagerAccess(req)) return res.status(403).json({ error: 'Manager access required' });
 
     const { id } = req.params;
-    const { status, assignedTo, internalNotes, resolvedAt } = req.body;
+    const updateSchema = z.object({
+      status: z.enum(['submitted','in_progress','resolved','closed','cancelled']).optional(),
+      assignedTo: z.string().optional(),
+      internalNotes: z.string().max(5000).optional(),
+      resolvedAt: z.string().optional(),
+    });
+    const updateParsed = updateSchema.safeParse(req.body);
+    if (!updateParsed.success) return res.status(400).json({ error: 'Validation failed', details: updateParsed.error.flatten() });
+    const { status, assignedTo, internalNotes, resolvedAt } = updateParsed.data;
 
     const [updated] = await db
       .update(clientServiceRequests)

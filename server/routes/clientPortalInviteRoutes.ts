@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { Router } from 'express';
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
@@ -57,11 +58,15 @@ router.get('/portal/setup/:token', async (req, res) => {
 router.post('/portal/setup/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    const { password, firstName, lastName, workspaceId: bodyWorkspaceId } = req.body;
-
-    if (!password || !firstName || !lastName) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
+    const inviteAcceptSchema = z.object({
+      password: z.string().min(8).max(128),
+      firstName: z.string().min(1).max(100),
+      lastName: z.string().min(1).max(100),
+      workspaceId: z.string().optional(),
+    });
+    const invParsed = inviteAcceptSchema.safeParse(req.body);
+    if (!invParsed.success) return res.status(400).json({ message: 'Validation failed', details: invParsed.error.flatten() });
+    const { password, firstName, lastName, workspaceId: bodyWorkspaceId } = invParsed.data;
 
     const [invite] = await db.select().from(clientPortalInviteTokens)
       .where(eq(clientPortalInviteTokens.token, token))
