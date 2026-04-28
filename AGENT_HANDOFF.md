@@ -1,6 +1,6 @@
 # COAILEAGUE - MASTER HANDOFF
 # ONE FILE. Update in place. Never create new handoff files.
-# Last updated: 2026-04-28 - Codex (extended domain route mount condensation ready for Claude)
+# Last updated: 2026-04-28 - Codex (extended route cleanup + Copilot architecture TODOs logged)
 
 ---
 
@@ -37,7 +37,7 @@ Next merge target:
 
 ```
 origin/development           -> 656e9750  (latest Claude demo-account startup fix)
-origin/refactor/service-layer -> Codex extended domain route mount patch pushed
+origin/refactor/service-layer -> Codex extended route cleanup + Copilot architecture TODOs
 local Codex lane             -> synced with origin/refactor/service-layer before patching
 ```
 
@@ -194,6 +194,59 @@ First batches:
 - Review duplicate route mounts in `server/routes/domains/*` one domain at a time.
 - Verify document/tax/paystub routes produce branded PDFs and persist to tenant vault.
 - Verify payroll/ACH/Plaid/paystub path for FinancialCalculator, idempotency, workspace ownership, and vault persistence before notification/transfer.
+
+### P1 - Pre-Polish Architecture Leftovers From Copilot
+These are larger refactors and should be handled before the broad polish sprint
+unless Bryan explicitly defers them. They are the remaining architecture-grade
+items after route mount condensation, registry consolidation, and audit phases.
+
+ARCH-01 - Automation tracking truth-source consolidation:
+- Current issue: `automationEventsService`, `workflowLedger`, and
+  `automationExecutionTracker` are disconnected tracking systems.
+- Risk: operators can see different execution states depending on which surface
+  reads which tracker; retry/audit semantics stay hard to reason about.
+- Fix direction: choose one canonical execution ledger, define adapters for
+  legacy readers, and migrate callers domain by domain. Codex should map all
+  writers/readers first; Claude implements the canonical service/migration after
+  the map is reviewed. Copilot can scaffold tests around known event sequences.
+
+WIRE-01 - Real automation retry execution:
+- Current issue: `automationEventsService` retry is cosmetic; it records retry
+  intent/status but does not reliably re-execute the failed work.
+- Risk: UI can imply recovery while the underlying automation never ran again.
+- Fix direction: retry must enqueue or call the canonical executor with
+  idempotency keys, max-attempt policy, error capture, and durable status
+  transitions. No "retry" label without real re-execution.
+
+WIRE-04 - Approval gate durability:
+- Current issue: approval gate lookup is in memory only and has no DB fallback
+  after restart.
+- Risk: Railway restart can orphan pending approval flows or cause Trinity to
+  lose the reason/state for a blocked action.
+- Fix direction: persist pending approvals with workspaceId, actor, action,
+  payload hash, status, created/expires timestamps, and resume metadata. On
+  startup, hydrate or reconcile pending approvals from DB.
+
+STUB-01 - Workflow progress must be real:
+- Current issue: `workflowStatusService.ts` still returns hardcoded progress.
+- Risk: dashboards and Trinity status summaries can show fake confidence.
+- Fix direction: derive progress from canonical workflow steps/ledger rows, or
+  mark unknown explicitly. Hardcoded progress is not acceptable pre-live.
+
+STUB-03 - Admin hourly rate persistence:
+- Current issue: admin hourly rate is not persisted to DB.
+- Risk: billing/cost/admin views can drift from configured reality after restart
+  or redeploy.
+- Fix direction: schema-backed setting with workspace/platform scope, audit log,
+  validation, and migration/defaults. Requires schema work, so do not patch with
+  another in-memory fallback.
+
+Completion rule:
+- The codebase-wide refactor/condense phase is not fully closed until these
+  five items are either fixed and boot-validated or explicitly moved to a
+  documented post-live hardening bucket by Bryan. After these are resolved,
+  the remaining work becomes polish, UX uniformity, portal upgrades, and feature
+  enhancement rather than structural cleanup.
 
 ### Codex Patch - Domain Route Mount Condensation, Safe Slice
 This turn condensed repeated domain mount guard stacks without changing any route
