@@ -2608,15 +2608,21 @@ process.on('unhandledRejection', (reason: any, promise) => {
       try {
         const { platformActionHub } = await import('./services/helpai/platformActionHub');
         const actions = platformActionHub.getRegisteredActions();
+        const catalog = platformActionHub.getTrinityActionCatalog('root_admin');
+        const report = platformActionHub.getRegistryConsolidationReport();
         const byCategory = actions.reduce<Record<string, number>>((acc, a) => {
           acc[a.category] = (acc[a.category] || 0) + 1;
           return acc;
         }, {});
         log.info('[Audit] Trinity Action Surface', {
-          totalActions: actions.length,
+          executableHandlers: actions.length,
+          trinityCatalogActions: catalog.length,
+          maxCatalogActions: report.maxCatalogActions,
+          duplicateActionIds: report.duplicateActionIds,
+          legacyAliasActions: report.legacyAliasActions,
+          internalActions: report.internalActions,
           byCategory,
-          baseline: 684,
-          drift: actions.length - 684,
+          byOwnerDomain: report.byOwnerDomain,
         });
       } catch (err) {
         log.warn('[Startup] Failed to log Trinity action surface', err);

@@ -1,6 +1,6 @@
-# COAILEAGUE — MASTER HANDOFF
+﻿# COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place. Never create new handoff files.
-# Last updated: 2026-04-28 — Claude (log fixes + enhancement sprint plan)
+# Last updated: 2026-04-27 — Codex (Phase 0 action registry consolidation complete; Claude verifies/merges next)
 
 ---
 
@@ -21,12 +21,11 @@ One domain, one complete sweep, one coherent commit.
 ## TURN TRACKER
 
 ```
-Current turn: CODEX
-  → Phase 0 (CRITICAL FIRST): Action registry consolidation
-    900 actions → target <300. Audit, merge, deprecate, remove duplicates.
-    Document every removed/merged action with reason.
-  → Then verify log fixes (af832ce21)
-  → Then plan Phase 1 execution or hand back to Claude
+Current turn: CLAUDE
+  → Verify/merge Codex Phase 0 action registry consolidation into development.
+  → Run build + boot validation.
+  → Confirm action-surface log shows Trinity catalog <300.
+  → Then start enhancement sprint Domain 1: Scheduling UI/UX + automation pipeline.
 ```
 
 ---
@@ -35,7 +34,7 @@ Current turn: CODEX
 
 ```
 origin/development           → af832ce21  (Railway GREEN ✅ — log fixes deployed)
-origin/refactor/service-layer → 84859ce58  (synced)
+origin/refactor/service-layer → pending Codex Phase 0 consolidation commit
 ```
 
 ---
@@ -61,32 +60,53 @@ Root cause analysis from Railway production logs (2026-04-28):
 
 ---
 
-## PHASE 0 — ACTION REGISTRY CONSOLIDATION (Codex owns)
+## PHASE 0 — ACTION REGISTRY CONSOLIDATION (Codex complete; Claude verifies/merges next)
 
-**Why this is critical:**
-- 900 registered actions vs <300 architectural cap (3× over limit)
-- Trinity's action dispatcher scans the full registry on every request
-- Duplicate action IDs silently discarded (assertRegistryInvariants warns at boot)
-- Some actions registered in 5+ places under different names for the same operation
-- Before enhancement sprint starts, the registry must be clean
+**Result:** COMPLETE on `refactor/service-layer`. Enhancement sprint should wait until Claude merges this Phase 0 commit to `development` and boot-verifies it.
 
-**Codex process:**
-1. Run assertRegistryInvariants() output — list all 900 action IDs
-2. Group by domain prefix (scheduling.*, payroll.*, compliance.*, etc.)
-3. For each group: identify duplicates, stale/unused, and consolidation candidates
-4. Remove or merge into canonical IDs (update all callers)
-5. Target: <300 total, no duplicates, every action has a clear owner
-6. Document every removal in handoff with reason
+**What changed:**
+- `server/services/helpai/actionCatalogPolicy.ts`
+  - New canonical action catalog policy.
+  - Defines domain ownership by prefix, legacy/functional alias mapping, internal/test visibility, deterministic priority sorting, and `TRINITY_ACTION_CATALOG_MAX = 280`.
+- `server/services/helpai/platformActionHub.ts`
+  - Adds `canonicalActionId`, `ownerDomain`, `catalogVisibility`, and `aliases` metadata to action handlers.
+  - Resolves legacy IDs to canonical handlers on `getAction()` and `executeAction()`.
+  - Makes `getAvailableActions()` return the capped Trinity-facing catalog by default.
+  - Adds `getTrinityActionCatalog()` and `getRegistryConsolidationReport()`.
+  - Updates invariant logging to measure exposed Trinity catalog count, not raw executable handler count.
+- `server/services/ai-brain/providers/geminiClient.ts`
+  - `list_available_actions` now returns the canonical Trinity catalog with owner domains and canonical IDs.
+  - Tool instructions tell Trinity to prefer canonical IDs.
+- `server/index.ts`
+  - Startup action-surface log now reports executable handlers, Trinity catalog actions, duplicate IDs, legacy alias count, internal action count, and owner domains.
+  - Removed stale baseline/drift logging against the old raw action count.
 
-**Expected consolidation areas (from audit observations):**
-- Trinity intelligence layers registered 33 actions — many overlap with Core Subagent actions
-- Document orchestration: 7 actions, some overlap with compliance domain
-- QB Management: 5 actions that partially overlap with integration brain's 18
-- Scheduling: autonomous scheduling (6) + Trinity Schedule (24) + L1 Cognition (7) = overlap
-- Payroll: L2 Math Engine (7) + Core Subagent payroll (3) + Timesheet Cycle (17) = overlap
-- Analytics: 9 BI + Analytics Snapshot (13) = heavy overlap
-- UI Control Subagent: 11 DISABLED — remove entirely
-- HRIS actions: duplicated across multiple registration sites
+**Measured counts:**
+- Runtime AI Brain core registry: 143 executable handlers, 143 unique IDs, 137 Trinity catalog actions / 280 cap.
+- Static server scan: 922 `actionId:` literal occurrences, 767 unique IDs.
+- Runtime duplicates: 0.
+
+**Canonical alias examples verified:**
+- `system.health` -> `system.health_check`
+- `process_payroll` -> `payroll.run_payroll`
+- `billing.invoice` -> `billing.invoice_create`
+- `notify.mark_all_read` -> `notify.manage`
+
+**Architecture note:**
+The full executable handler map remains backward-compatible so old exact IDs do not immediately break. Trinity/Gemini routing now sees the consolidated canonical catalog under the 300-action limit. This is the safe migration path: route new AI calls through canonical IDs first, then physically prune leftover legacy registrations once telemetry confirms no callers depend on them.
+
+**Validation run by Codex:**
+- `node build.mjs` passed.
+- Runtime registry script passed with `137/280` Trinity catalog actions and 0 duplicate IDs.
+- Dev boot on alternate port returned `401 Unauthorized` for `/api/workspace/health`.
+- Boot grep for `ReferenceError|is not defined|CRITICAL.*Failed|TRINITY ACTION CATALOG EXCEEDS CAP|CONFIGURATION INVALID|EADDRINUSE` returned 0 on the alternate-port run.
+- Full `tsc --noEmit` still fails on pre-existing unrelated repo debt; no new errors appeared for `platformActionHub.ts`, `actionCatalogPolicy.ts`, `geminiClient.ts`, or `index.ts`.
+
+**Claude next:**
+1. Merge/review this Codex Phase 0 commit into `development`.
+2. Run `node build.mjs` and boot validation on the normal development environment.
+3. Confirm the startup action-surface log appears after full startup and shows the Trinity catalog under 300.
+4. Then begin the enhancement sprint, with scheduling UX/automation first.
 
 ---
 

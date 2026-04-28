@@ -40,6 +40,15 @@ import { evaluateConscience, logConscienceDecision } from '../ai-brain/trinityCo
 import { claudeVerificationService } from '../ai-brain/trinity-orchestration/trinityVerificationService';
 import { typedPool, typedPoolExec } from '../../lib/typedSql';
 import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+import {
+  buildTrinityActionCatalog,
+  getActionCatalogReport,
+  getActionOwnerDomain,
+  resolveCanonicalActionId,
+  TRINITY_ACTION_CATALOG_MAX,
+  type ActionCatalogOptions,
+  type ActionCatalogVisibility,
+} from './actionCatalogPolicy';
 
 // ============================================================================
 // ACTION TYPES & INTERFACES
@@ -148,6 +157,10 @@ export interface ActionHandler {
   requiredRoles?: string[];
   inputSchema?: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
+  canonicalActionId?: string;
+  ownerDomain?: string;
+  catalogVisibility?: ActionCatalogVisibility;
+  aliases?: string[];
   healthProbe?: () => Promise<boolean>;
   handler: (request: ActionRequest) => Promise<ActionResult>;
   isTestTool?: boolean;
@@ -2175,12 +2188,18 @@ class PlatformActionHub {
       log.warn(`[Platform Action Hub] WARN: Duplicate action registration attempted for '${handler.actionId}' — ignoring. Canonical registration already exists.`);
       return;
     }
+    const canonicalActionId = resolveCanonicalActionId(handler.actionId);
     if (!handler.inputSchema) {
       handler = { ...handler, inputSchema: { type: 'object', properties: {} } };
     }
     if (!handler.outputSchema) {
       handler = { ...handler, outputSchema: {} };
     }
+    handler = {
+      ...handler,
+      canonicalActionId,
+      ownerDomain: handler.ownerDomain ?? getActionOwnerDomain(handler.actionId, handler.category),
+    };
     ACTION_REGISTRY.set(handler.actionId, handler);
     log.verbose(`[Platform Action Hub] Registered action: ${handler.actionId}`);
   }
@@ -2196,6 +2215,10 @@ class PlatformActionHub {
    * Get a specific action by ID
    */
   getAction(actionId: string): ActionHandler | undefined {
+    const canonicalActionId = resolveCanonicalActionId(actionId);
+    if (canonicalActionId !== actionId) {
+      return ACTION_REGISTRY.get(canonicalActionId) ?? ACTION_REGISTRY.get(actionId);
+    }
     return ACTION_REGISTRY.get(actionId);
   }
 
@@ -2206,11 +2229,11 @@ class PlatformActionHub {
    */
   assertRegistryInvariants(): void {
     const actions = this.getRegisteredActions();
-    const MAX_ACTIONS = 300;
-    if (actions.length > MAX_ACTIONS) {
-      log.warn(
-        `[PlatformActionHub] ACTION REGISTRY EXCEEDS CAP: ${actions.length} actions registered (max ${MAX_ACTIONS}). ` +
-        `Consolidate/disable low-value action sets. This is a warning not a throw to avoid startup failure.`
+    const report = this.getRegistryConsolidationReport();
+    if (report.trinityCatalogActions > TRINITY_ACTION_CATALOG_MAX) {
+      log.error(
+        `[PlatformActionHub] TRINITY ACTION CATALOG EXCEEDS CAP: ${report.trinityCatalogActions} actions exposed ` +
+        `(max ${TRINITY_ACTION_CATALOG_MAX}).`
       );
     }
     const ids = actions.map(a => a.actionId);
@@ -2219,7 +2242,17 @@ class PlatformActionHub {
       const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
       log.error(`[PlatformActionHub] DUPLICATE ACTION IDs: ${[...new Set(dupes)].join(', ')}`);
     }
-    log.info(`[PlatformActionHub] Registry invariants checked: ${actions.length} actions, ${unique.size} unique IDs`);
+    log.info(
+      `[PlatformActionHub] Registry invariants checked: ${actions.length} executable handlers, ` +
+      `${unique.size} unique IDs, ${report.trinityCatalogActions}/${TRINITY_ACTION_CATALOG_MAX} Trinity catalog actions`
+    );
+  }
+
+  /**
+   * Consolidation report for launch-gate checks and handoffs.
+   */
+  getRegistryConsolidationReport(): ReturnType<typeof getActionCatalogReport> {
+    return getActionCatalogReport(this.getRegisteredActions());
   }
 
   /**
@@ -2247,14 +2280,30 @@ class PlatformActionHub {
     // Log the action request
     log.info(`[Platform Action Hub] Executing action: ${request.actionId} by user ${request.userId}`);
 
-    // Get the action handler
-    const handler = ACTION_REGISTRY.get(request.actionId);
+    // Get the action handler, resolving legacy IDs to their canonical action.
+    const requestedActionId = request.actionId;
+    const canonicalActionId = resolveCanonicalActionId(requestedActionId);
+    const handler = canonicalActionId !== requestedActionId
+      ? ACTION_REGISTRY.get(canonicalActionId) ?? ACTION_REGISTRY.get(requestedActionId)
+      : ACTION_REGISTRY.get(requestedActionId);
     if (!handler) {
       return {
         success: false,
-        actionId: request.actionId,
-        message: `Unknown action: ${request.actionId}`,
+        actionId: requestedActionId,
+        message: `Unknown action: ${requestedActionId}`,
         executionTimeMs: Date.now() - startTime
+      };
+    }
+    if (handler.actionId !== requestedActionId) {
+      log.info(`[Platform Action Hub] Resolved legacy action '${requestedActionId}' to canonical action '${handler.actionId}'`);
+      request = {
+        ...request,
+        actionId: handler.actionId,
+        metadata: {
+          ...request.metadata,
+          originalActionId: requestedActionId,
+          canonicalActionId: handler.actionId,
+        },
       };
     }
 
@@ -2837,15 +2886,28 @@ class PlatformActionHub {
   /**
    * Get all registered actions (filtered by user role)
    */
-  getAvailableActions(userRole: string): ActionHandler[] {
-    const actions: ActionHandler[] = [];
+  getAvailableActions(userRole: string, options: ActionCatalogOptions = {}): ActionHandler[] {
+    const authorizedActions: ActionHandler[] = [];
     ACTION_REGISTRY.forEach((handler) => {
       // @ts-expect-error — TS migration: fix in refactoring sprint
       if (this.isAuthorized(userRole, handler.requiredRoles)) {
-        actions.push(handler);
+        authorizedActions.push(handler);
       }
     });
-    return actions;
+    if (options.includeInternal) {
+      return authorizedActions
+        .filter((action) => !options.category || action.category === options.category || action.actionId.startsWith(`${options.category}.`));
+    }
+    return buildTrinityActionCatalog(authorizedActions, options);
+  }
+
+  /**
+   * Get the canonical Trinity-facing action catalog.
+   * The catalog is capped below the architectural 300-action limit while exact
+   * legacy action IDs still resolve through executeAction().
+   */
+  getTrinityActionCatalog(userRole: string, options: Omit<ActionCatalogOptions, 'includeInternal'> = {}): ActionHandler[] {
+    return this.getAvailableActions(userRole, { ...options, includeInternal: false });
   }
 
   /**

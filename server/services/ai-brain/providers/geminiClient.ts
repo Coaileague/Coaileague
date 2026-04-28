@@ -579,7 +579,7 @@ const AI_BRAIN_TOOLS: FunctionDeclaration[] = [
   },
   {
     name: "list_available_actions",
-    description: "List all platform actions currently registered in the Action Hub that you can execute. Call this before execute_platform_action when you are unsure of the exact actionId. Returns actionId, description, category, and required parameters for every registered action.",
+    description: "List the canonical Trinity action catalog currently available to your role. Call this before execute_platform_action when you are unsure of the exact actionId. Returns canonical actionId, description, category, owner domain, and required parameters. Legacy IDs may still execute by exact ID, but Trinity should prefer canonical IDs from this catalog.",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -590,7 +590,7 @@ const AI_BRAIN_TOOLS: FunctionDeclaration[] = [
   },
   {
     name: "execute_platform_action",
-    description: "Execute a registered platform action through the Action Hub. Use for operations like creating shifts, running payroll, syncing QuickBooks, dispatching units, or any action registered in the Platform Action Hub. Call list_available_actions first if you are unsure of the exact actionId.",
+    description: "Execute a canonical platform action through the Action Hub. Use for operations like creating shifts, running payroll, syncing QuickBooks, dispatching units, or any action in the Trinity catalog. Call list_available_actions first if you are unsure of the exact actionId.",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -2069,13 +2069,15 @@ async function executeListAvailableActions(
   try {
     const { platformActionHub } = await import('../../helpai/platformActionHub');
     const userRole = (context as any).userRole || 'system';
-    const allActions = platformActionHub.getAvailableActions(userRole);
+    const allActions = platformActionHub.getTrinityActionCatalog(userRole, { category: args.category });
     const filtered = args.category
       ? allActions.filter((a) => a.category === args.category || a.actionId.startsWith(args.category + '.'))
       : allActions;
     const summary = filtered.map((a) => ({
       actionId: a.actionId,
+      canonicalActionId: a.canonicalActionId ?? a.actionId,
       category: a.category,
+      ownerDomain: a.ownerDomain,
       name: a.name,
       description: a.description,
       requiredRoles: a.requiredRoles,
@@ -2084,8 +2086,9 @@ async function executeListAvailableActions(
       success: true,
       data: {
         totalActions: summary.length,
+        catalogType: 'canonical_trinity_catalog',
         actions: summary,
-        usage: 'Pass the actionId to execute_platform_action to invoke an action.',
+        usage: 'Pass a canonical actionId to execute_platform_action to invoke an action.',
       },
     };
   } catch (error: any) {
