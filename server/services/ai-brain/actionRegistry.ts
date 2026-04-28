@@ -367,7 +367,7 @@ class AIBrainActionRegistry {
       name: 'Create Shift',
       category: 'scheduling',
       description: 'Create a new shift for an employee',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         try {
@@ -417,7 +417,7 @@ class AIBrainActionRegistry {
       name: 'Get Shifts',
       category: 'scheduling',
       description: 'Get shifts for a date range',
-      requiredRoles: ['employee', 'manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'employee', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const shiftList = await db.query.shifts.findMany({
@@ -437,7 +437,7 @@ class AIBrainActionRegistry {
       name: 'Create Open Shift & Auto-Fill',
       category: 'scheduling',
       description: 'Create an open shift and have Trinity automatically find the best employee match with live progress streaming',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { schedulingSubagent } = await import('./subagents/schedulingSubagent');
@@ -652,7 +652,7 @@ class AIBrainActionRegistry {
       name: 'Update Shift',
       category: 'scheduling',
       description: 'Update an existing shift — change time, assigned employee, or status. Requires shift ID.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { shiftId, startTime, endTime, employeeId, status, notes } = request.payload || {};
@@ -688,7 +688,7 @@ class AIBrainActionRegistry {
       name: 'Delete Shift',
       category: 'scheduling',
       description: 'Delete a shift. Cannot delete shifts with clock-in records — cancel instead.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { shiftId, reason } = request.payload || {};
@@ -726,7 +726,7 @@ class AIBrainActionRegistry {
       name: 'Cancel Shift',
       category: 'scheduling',
       description: 'Cancel a shift without deleting it. Status becomes cancelled; assigned employee is notified.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { shiftId, reason } = request.payload || {};
@@ -753,7 +753,7 @@ class AIBrainActionRegistry {
       name: 'Publish Shift',
       category: 'scheduling',
       description: 'Publish a draft shift, making it visible to employees.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { shiftId } = request.payload || {};
@@ -783,7 +783,7 @@ class AIBrainActionRegistry {
       name: 'Bulk Publish Shifts',
       category: 'scheduling',
       description: 'Publish multiple draft shifts at once. Accepts shiftIds array, or publishes all drafts when omitted.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { shiftIds, weekOf } = request.payload || {};
@@ -825,7 +825,7 @@ class AIBrainActionRegistry {
       name: 'Reassign Shift',
       category: 'scheduling',
       description: 'Reassign a shift from one employee to another. Broadcasts update so both employees see the change.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { shiftId, newEmployeeId, reason } = request.payload || {};
@@ -1309,7 +1309,7 @@ class AIBrainActionRegistry {
       name: 'Scan Open Shifts',
       category: 'scheduling',
       description: 'Trinity self-aware schedule scan — returns all unfilled or open shifts in the next 14 days, grouped by urgency. Trinity calls this proactively when talking to owners or managers.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const now = new Date();
@@ -1360,7 +1360,7 @@ class AIBrainActionRegistry {
       name: 'Detect Client Demand Changes',
       category: 'scheduling',
       description: 'Analyze shift patterns over the last 60 days to detect clients whose scheduling demand is trending up or down. Trinity uses this to proactively recommend creating new shifts or renegotiating contracts.',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const now = new Date();
@@ -1737,7 +1737,7 @@ class AIBrainActionRegistry {
       name: 'Fill Open Shift',
       category: 'scheduling',
       description: 'Assign an employee to an unassigned shift',
-      requiredRoles: ['manager', 'owner', 'root_admin'],
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { shiftId, employeeId } = request.payload || {};
@@ -3208,7 +3208,7 @@ class AIBrainActionRegistry {
       name: 'Calculate Shift Profit',
       category: 'strategic',
       description: 'Calculate profit metrics for a specific employee-shift assignment',
-      requiredRoles: ['owner', 'root_admin', 'manager'],
+      requiredRoles: ['system', 'owner', 'root_admin', 'manager'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { strategicOptimizationService } = await import('./strategicOptimizationService');
@@ -4302,7 +4302,7 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
     name: 'Execute Autonomous Scheduling',
     category: 'scheduling',
     description: 'Run Trinity intelligent autonomous scheduling with day-by-day processing, demand prioritization, and historical pattern learning. Processes current day first, then tomorrow, then rest of week.',
-    requiredRoles: ['manager', 'owner', 'root_admin'],
+    requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const start = Date.now();
       try {
@@ -4343,7 +4343,7 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
     name: 'Get Autonomous Scheduling Status',
     category: 'scheduling',
     description: 'Get the current status of Trinity autonomous scheduling daemon and session progress',
-    requiredRoles: ['manager', 'owner', 'root_admin'],
+    requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const start = Date.now();
       try {
@@ -4361,7 +4361,7 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
     name: 'Enable Background Scheduling Daemon',
     category: 'scheduling',
     description: 'Enable Trinity continuous background scheduling daemon that automatically fills open shifts',
-    requiredRoles: ['owner', 'root_admin'],
+    requiredRoles: ['system', 'owner', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const start = Date.now();
       try {
@@ -4393,7 +4393,7 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
     name: 'Disable Background Scheduling Daemon',
     category: 'scheduling',
     description: 'Disable Trinity continuous background scheduling daemon',
-    requiredRoles: ['owner', 'root_admin'],
+    requiredRoles: ['system', 'owner', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const start = Date.now();
       try {
@@ -4425,7 +4425,7 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
     name: 'Import Historical Scheduling Patterns',
     category: 'scheduling',
     description: 'Import historical scheduling data from CSV to train Trinity on past assignment patterns and employee preferences',
-    requiredRoles: ['owner', 'root_admin'],
+    requiredRoles: ['system', 'owner', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const start = Date.now();
       try {
@@ -4461,7 +4461,7 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
     name: 'Create Recurring Schedule Template',
     category: 'scheduling',
     description: 'Create a weekly recurring schedule template that I\'ll automatically apply each week',
-    requiredRoles: ['manager', 'owner', 'root_admin'],
+    requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const start = Date.now();
       try {
