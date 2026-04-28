@@ -13,7 +13,17 @@
  * - QUERY: Information requests (who, names, list, whois)
  */
 import { createLogger } from '../lib/logger';
+import { isPlatformStaffRole, isWorkspaceLeadershipRole } from '../../shared/config/rbac';
 const log = createLogger('ircEventRegistry');
+
+/**
+ * RBAC guard for IRC moderation actions.
+ * Platform staff or workspace leadership can kick/ban/mute.
+ * Returns true if the actor is authorized.
+ */
+export function canPerformModerationAction(actorRole: string, platformRole?: string): boolean {
+  return isPlatformStaffRole(platformRole) || isWorkspaceLeadershipRole(actorRole);
+}
 
 export const IRC_EVENTS = {
   // === CONNECTION EVENTS ===

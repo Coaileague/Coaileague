@@ -34,6 +34,7 @@ import crypto from 'crypto';
 import { typedPool, typedQuery } from '../../lib/typedSql';
 
 import { createLogger } from '../../lib/logger';
+import { recordDeliberation } from './trinityEpisodicMemoryService';
 const log = createLogger('trinityACCService');
 
 // ============================================================================
@@ -237,6 +238,25 @@ class TrinityACCService {
         const officerId = action.entitiesInvolved[0];
         if (officerId) {
           const conflict = await this.checkArmedLicenseValidity(officerId, action);
+
+          // HIGH-STAKES: record deliberation for armed post assignments
+          try {
+            await recordDeliberation({
+              workspaceId: action.workspaceId || 'unknown',
+              actionType: 'armed_post_assignment',
+              actionDescription: `Assigning officer ${officerId} to armed post`,
+              whatIKnow: `Action type: ${action.actionType}. Officer: ${officerId}. Armed license conflict: ${conflict ? 'YES — ' + conflict.description : 'none detected'}.`,
+              myOptions: conflict
+                ? 'Block assignment (license expired/missing) OR override with supervisor approval'
+                : 'Approve assignment (license valid) OR flag for manual review',
+              myDecision: conflict
+                ? `BLOCKED: ${conflict.description}`
+                : 'APPROVED: Officer license valid for armed post assignment',
+              confidenceScore: conflict ? 0.98 : 0.85,
+              actionId: action.actionId,
+            });
+          } catch { /* deliberation logging is non-fatal */ }
+
           if (conflict) return conflict;
         }
       }

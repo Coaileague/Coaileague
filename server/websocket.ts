@@ -758,18 +758,26 @@ import { isSupportStaffRole, SUPPORT_STAFF_ROLES } from './services/chat/chatPol
 async function canPerformModerationAction(
   actorUserId: string,
   action: 'kick' | 'silence' | 'give_voice' | 'ban',
+  workspaceRole?: string,
 ): Promise<{ allowed: boolean; reason?: string }> {
   try {
     const { storage } = await import('./storage');
+    const { isPlatformStaffRole, isWorkspaceLeadershipRole } = await import('../shared/config/rbac');
     const platformRole = await storage.getUserPlatformRole(actorUserId).catch(() => null);
-    if (isSupportStaffRole(platformRole)) return { allowed: true };
-    // Workspace-level managers can kick/silence within their own rooms
-    if (action === 'give_voice') {
-      const { hasManagerAccess } = await import('./rbac');
-      // give_voice is less restricted — room owner/manager can do it
-      return { allowed: true };
+
+    // Platform staff (root_admin, deputy_admin, support_manager) can always moderate
+    if (isPlatformStaffRole(platformRole)) return { allowed: true };
+
+    // Workspace leadership (owner, manager, supervisor) can moderate within their workspace
+    if (workspaceRole && isWorkspaceLeadershipRole(workspaceRole)) {
+      // give_voice and kick are allowed for workspace leaders
+      if (action === 'kick' || action === 'silence' || action === 'give_voice') {
+        return { allowed: true };
+      }
+      // ban is platform-staff-only (too destructive for workspace-level)
     }
-    return { allowed: false, reason: 'Platform staff access required for ' + action };
+
+    return { allowed: false, reason: `${action} requires platform staff or workspace leadership role` };
   } catch {
     return { allowed: false, reason: 'Permission check failed' };
   }

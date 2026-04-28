@@ -5,6 +5,7 @@
  * This enables the orchestrator to execute any platform action through a unified interface.
  */
 
+import { recordDeliberation } from './trinityEpisodicMemoryService';
 import { 
   helpaiOrchestrator, 
   type ActionHandler, 
@@ -1786,6 +1787,18 @@ class AIBrainActionRegistry {
         const { timeEntryId } = request.payload || {};
         if (!timeEntryId) return createResult(request.actionId, false, 'timeEntryId required', null, start);
         if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        // HIGH-STAKES: deliberation log for payroll approval
+        recordDeliberation({
+          workspaceId: request.workspaceId || 'unknown',
+          actionType: 'payroll_timesheet_approval',
+          actionDescription: `Approving timesheet ${timeEntryId} for payroll`,
+          whatIKnow: `Time entry ID: ${timeEntryId}. Requested by: ${request.userId} (${request.userRole}).`,
+          myOptions: 'Approve entry (includes in next payroll run) OR reject (requires correction)',
+          myDecision: 'APPROVED: Marking time entry as approved, setting approvedBy and approvedAt',
+          confidenceScore: 0.9,
+          actionId: request.actionId,
+        }).catch(() => null); // fire-and-forget, non-fatal
 
         const [updated] = await db.update(timeEntries)
           .set({

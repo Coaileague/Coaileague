@@ -2161,7 +2161,9 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
             )}
           </div>
         ) : (
-          wsMessages.map((msg, idx) => {
+          // Performance: render only the latest 200 messages in large rooms
+          // Scroll-to-top will load earlier history (future: intersection observer)
+          (wsMessages.length > 200 ? wsMessages.slice(-200) : wsMessages).map((msg, idx) => {
             const msgContent = msg.message || "";
             const isOwn = msg.senderId === user?.id;
             const isSystem = msg.isSystemMessage || msg.senderType === "system";
