@@ -1996,7 +1996,7 @@ export const PLATFORM_TIERS = {
     annualPriceCents: 959040,
     annualMonthlyEquivalentCents: 79920,
     annualDiscountPercent: 20,
-    seatsIncluded: 100,
+    seatsIncluded: 30,  // Feature page: Professional = 30 seats
     managersIncluded: 5,
     seatOverageCents: 2500,
     trinityTokenBudgetK: 100000,
@@ -2032,7 +2032,7 @@ export const PLATFORM_TIERS = {
     annualPriceCents: 2879040,
     annualMonthlyEquivalentCents: 239920,
     annualDiscountPercent: 20,
-    seatsIncluded: 300,
+    seatsIncluded: 75,  // Feature page: Business = 75 seats
     managersIncluded: 15,
     seatOverageCents: 2500,
     trinityTokenBudgetK: 250000,
@@ -2065,7 +2065,7 @@ export const PLATFORM_TIERS = {
     annualPriceCents: 7679040,
     annualMonthlyEquivalentCents: 639920,
     annualDiscountPercent: 20,
-    seatsIncluded: 1000,
+    seatsIncluded: 200, // Feature page: Enterprise = 200 seats
     managersIncluded: 100,
     seatOverageCents: 2500,
     trinityTokenBudgetK: 800000,
