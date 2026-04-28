@@ -15,6 +15,7 @@
  */
 
 import { db } from '../../db';
+import { broadcastToWorkspace } from '../../websocket';
 import { pool } from '../../db';
 import { shifts, timeEntries, employees, notifications, workspaces } from '@shared/schema';
 import { eq, and, gte, lte, isNull, or, ne, sql } from 'drizzle-orm';

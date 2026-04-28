@@ -1,12 +1,17 @@
 // Feature Flags for Graceful Degradation
 // Prevents app crashes when optional services are unavailable
 
+import { isProduction } from './lib/isProduction';
+
 export const FEATURES = {
   // Payment Processing
   STRIPE_PAYMENTS: !!process.env.STRIPE_SECRET_KEY,
   
   // Email Services
   EMAIL_NOTIFICATIONS: !!process.env.RESEND_API_KEY,
+  // Dev simulation: log emails instead of sending them.
+  // Automatically true in non-production unless RESEND_API_KEY is set and EMAIL_FORCE_REAL=true
+  emailSimulationMode: !isProduction() && process.env.EMAIL_FORCE_REAL !== 'true',
   
   // SMS Services (Optional)
   SMS_NOTIFICATIONS: !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_AUTH_TOKEN,

@@ -73,6 +73,8 @@ import {
 } from '../shared/helpaiMemoryService';
 import { businessInsightsService } from '../businessInsights/businessInsightsService';
 import { trinityOrgIntelligenceService } from './trinityOrgIntelligenceService';
+import { buildTrinityMemoryContext, appendWorkingMemory, storeEpisodicMemory } from './trinityEpisodicMemoryService';
+import { analyzeSubtext } from './trinitySubtextDetector';
 import { hasManagerAccess, hasSupervisorAccess, WORKSPACE_ROLE_HIERARCHY } from '../../rbac';
 import { employeeBehaviorScoring } from '../employeeBehaviorScoring';
 import { typedExec, typedPool, typedPoolExec, typedQuery } from '../../lib/typedSql';
@@ -1075,6 +1077,18 @@ class TrinityChatService {
       } catch {
         // non-fatal — SOP context is nice-to-have
       }
+    }
+
+    // === EPISODIC + WORKING MEMORY INJECTION ===
+    // Trinity reads her notebook before every interaction
+    if (userId && workspaceId) {
+      try {
+        const memCtx = await buildTrinityMemoryContext({
+          workspaceId, entityType: isManagerLevel ? 'manager' : 'officer',
+          entityId: userId, includeWorkingMemory: true,
+        });
+        if (memCtx) systemPrompt += `\n\n${memCtx}`;
+      } catch { /* non-fatal */ }
     }
 
     // === SELF-MODEL INJECTION (Cognitive Brain — Self-Awareness Layer) ===

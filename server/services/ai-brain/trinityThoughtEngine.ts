@@ -222,6 +222,26 @@ class TrinityThoughtEngine {
   /**
    * Deliberation phase - consider options and form hypotheses
    */
+  /**
+   * Emotional modulation — when limbic system detects high-intensity signal,
+   * this reshapes what Trinity considers during deliberation.
+   * HIGH urgency → compress reasoning, act faster
+   * HIGH frustration → surface escalation as default option
+   * Compassionate → add human check-in as alternative
+   */
+  applyEmotionalModulation(
+    emotionalType: string,
+    intensity: number,
+    _context: Record<string, unknown>
+  ): { urgencyBoost: number; escalateFirst: boolean; compassionateMode: boolean } {
+    const hi = intensity > 0.7;
+    return {
+      urgencyBoost: emotionalType === 'urgent' && hi ? 0.15 : 0,
+      escalateFirst: (emotionalType === 'frustrated' || emotionalType === 'escalated') && hi,
+      compassionateMode: (emotionalType === 'concerned' || emotionalType === 'compassionate') && intensity > 0.5,
+    };
+  }
+
   async deliberate(
     hypothesis: string,
     alternatives: string[],
