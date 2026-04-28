@@ -1584,7 +1584,25 @@ function AIContextRail({
 }) {
   const { toast } = useToast();
   const [replySuggestions, setReplySuggestions] = useState<string[]>([]);
-  
+  const [draftReply, setDraftReply] = useState<string | null>(null);
+
+  // Entity context: look up the sender as a client or employee
+  const senderEmail = email?.fromAddress ?? '';
+  const { data: entityData } = useQuery({
+    queryKey: ['/api/email/entity-context', senderEmail],
+    queryFn: async () => {
+      if (!senderEmail) return null;
+      const res = await secureFetch(`/api/email/entity-context?email=${encodeURIComponent(senderEmail)}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!senderEmail && !!email,
+    staleTime: 2 * 60 * 1000,
+    retry: false,
+  });
+
   const { data: analysisData, isLoading: analysisLoading, refetch: refetchAnalysis } = useQuery({
     queryKey: ['/api/external-emails/analyze', email?.id],
     queryFn: async () => {
@@ -1850,12 +1868,94 @@ function AIContextRail({
               >
                 <RefreshCw className="w-4 h-4" /> Refresh Analysis
               </Button>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
-                <Users className="w-4 h-4" /> Find in CRM
-              </Button>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
-                <Building2 className="w-4 h-4" /> Link to Contract
-              </Button>
+              {/* Entity context panel — live data from CRM */}
+              {entityData?.entity && (
+                <div className="rounded-lg bg-muted/40 border p-3 space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-7 h-7">
+                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                        {(entityData.entity.name ?? '?').split(' ').map((n: string) => n[0]).join('').slice(0,2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs truncate">{entityData.entity.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{entityData.entity.type === 'client' ? 'Client' : 'Employee'}</p>
+                    </div>
+                  </div>
+                  {entityData.stats && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {entityData.entity.type === 'client' && (<>
+                        <div className="bg-background rounded p-1.5 text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Open shifts</p>
+                          <p className="font-semibold text-sm">{entityData.stats.openShifts ?? 0}</p>
+                        </div>
+                        <div className="bg-background rounded p-1.5 text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Officers</p>
+                          <p className="font-semibold text-sm">{entityData.stats.officerCount ?? 0}</p>
+                        </div>
+                        <div className="bg-background rounded p-1.5 text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Rate</p>
+                          <p className="font-semibold text-sm">{entityData.stats.contractRate ? `$${entityData.stats.contractRate}/hr` : '—'}</p>
+                        </div>
+                        <div className="bg-background rounded p-1.5 text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">MTD invoiced</p>
+                          <p className="font-semibold text-sm">{entityData.stats.mtdInvoiced ? `$${entityData.stats.mtdInvoiced.toLocaleString()}` : '—'}</p>
+                        </div>
+                      </>)}
+                      {entityData.entity.type === 'employee' && (<>
+                        <div className="bg-background rounded p-1.5 text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Next shift</p>
+                          <p className="font-semibold text-sm truncate">{entityData.stats.nextShift ?? '—'}</p>
+                        </div>
+                        <div className="bg-background rounded p-1.5 text-center">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Timesheet</p>
+                          <p className="font-semibold text-sm capitalize">{entityData.stats.timesheetStatus ?? '—'}</p>
+                        </div>
+                        <div className="bg-background rounded p-1.5 text-center col-span-2">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Certifications</p>
+                          <p className="font-semibold text-sm">{entityData.stats.certCount ?? 0} on file</p>
+                        </div>
+                      </>)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Trinity workflow actions — context-aware based on email */}
+              {entityData?.suggestedActions && entityData.suggestedActions.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Trinity suggested actions</p>
+                  {entityData.suggestedActions.map((action: {label: string; description: string; icon: string}, i: number) => (
+                    <Button
+                      key={i}
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start gap-2 h-auto py-2 text-left"
+                      data-testid={`button-trinity-action-${i}`}
+                    >
+                      <div className="w-5 h-5 rounded shrink-0 bg-primary/10 flex items-center justify-center">
+                        <Sparkles className="w-3 h-3 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium leading-tight">{action.label}</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">{action.description}</p>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              )}
+
+              {/* Fallback stubs when no entity data */}
+              {!entityData?.entity && (
+                <>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                    <Users className="w-4 h-4" /> Find in CRM
+                  </Button>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                    <Building2 className="w-4 h-4" /> Link to Contract
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
           
