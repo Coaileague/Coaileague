@@ -392,3 +392,45 @@ auditorRouter.post('/audits/:id/extend', requireAuditor, async (req: any, res: R
     res.status(500).json({ ok: false, error: 'Extend failed' });
   }
 });
+
+
+
+// ── Auditor Easy-Access Invite Endpoints ──────────────────────────────────────
+
+router.post('/invite-link', requireManager, async (req: any, res) => {
+  try {
+    const { email, name, agencyName, auditType, expiresInDays = 30 } = req.body;
+    const workspaceId = req.user?.currentWorkspaceId;
+    if (!workspaceId || !email) return res.status(400).json({ error: 'email required' });
+    const crypto = await import('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
+    const { pool } = await import('../db');
+    await pool.query(
+      'INSERT INTO auditor_accounts (email, full_name, agency_name, audit_type, workspace_id, invite_token, invite_expires_at, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (email) DO UPDATE SET invite_token=EXCLUDED.invite_token,invite_expires_at=EXCLUDED.invite_expires_at,status=EXCLUDED.status',
+      [email, name||email, agencyName||'Regulatory Agency', auditType||'general', workspaceId, token, expiresAt, 'invited']
+    );
+    const domain = process.env.RAILWAY_PUBLIC_DOMAIN || 'app.coaileague.com';
+    const inviteUrl = 'https://' + domain + '/auditor/claim/' + token;
+    try {
+      const { sendEmail } = await import('../services/email/resendService');
+      await sendEmail({ to: email, subject: 'Audit Access — CoAIleague',
+        html: '<h2>Auditor Access</h2><p><a href="' + inviteUrl + '">Click to claim your auditor access</a></p><p>Expires in ' + String(expiresInDays) + ' days.</p>' });
+    } catch(emailErr) { log.warn('[AuditorInvite] Email failed:', emailErr); }
+    res.json({ success: true, inviteUrl, token: token.slice(0,8)+'...', expiresAt });
+  } catch(err: any) { log.error('[AuditorInvite]', err); res.status(500).json({ error: 'Failed' }); }
+});
+
+router.get('/claim/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { pool } = await import('../db');
+    const r = await pool.query('SELECT email, invite_expires_at FROM auditor_accounts WHERE invite_token=$1 LIMIT 1', [token]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'Invalid invite' });
+    if (new Date(r.rows[0].invite_expires_at) < new Date()) return res.status(410).json({ error: 'Expired' });
+    const domain = process.env.RAILWAY_PUBLIC_DOMAIN || 'app.coaileague.com';
+    return res.redirect('https://' + domain + '/auditor/register?token=' + token + '&email=' + encodeURIComponent(r.rows[0].email));
+  } catch(err: any) { log.error('[AuditorClaim]', err); res.status(500).json({ error: 'Failed' }); }
+});
+
+

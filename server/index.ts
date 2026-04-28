@@ -2487,6 +2487,34 @@ self.addEventListener('activate', async () => {
           await missingTablePool.query('CREATE INDEX IF NOT EXISTS idx_ai_call_log_ws ON ai_call_log (workspace_id)');
           await missingTablePool.query('CREATE INDEX IF NOT EXISTS idx_univ_audit_ws ON universal_audit_log (workspace_id, created_at)');
           log.info('[Startup] Auto-created missing tables: ai_call_log, universal_audit_log');
+        // Auto-create core auth tables that may be missing
+        try {
+          const { pool: authPool } = await import('./db');
+          await authPool.query(`CREATE TABLE IF NOT EXISTS auth_tokens (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            user_id VARCHAR NOT NULL,
+            token_hash VARCHAR NOT NULL,
+            token_type VARCHAR DEFAULT 'session',
+            expires_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            revoked_at TIMESTAMPTZ
+          )`);
+          await authPool.query(`CREATE TABLE IF NOT EXISTS auth_sessions (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            user_id VARCHAR NOT NULL,
+            session_id VARCHAR,
+            ip_address VARCHAR,
+            user_agent TEXT,
+            expires_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            revoked_at TIMESTAMPTZ
+          )`);
+          await authPool.query('CREATE INDEX IF NOT EXISTS idx_auth_tokens_user ON auth_tokens (user_id)');
+          await authPool.query('CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id)');
+          log.info('[Startup] Auth tables verified: auth_tokens, auth_sessions');
+        } catch (authTableErr: any) {
+          log.warn('[Startup] Auth table create (non-fatal):', authTableErr?.message?.slice(0, 80));
+        }
         } catch (tableErr: any) {
           log.warn('[Startup] Missing table auto-create (non-fatal):', tableErr?.message?.slice(0, 80));
         }

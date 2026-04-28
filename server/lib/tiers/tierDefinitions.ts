@@ -161,6 +161,19 @@ export const TIER_FEATURE_GATES: Record<string, TierName> = {
   'outbound_webhooks':          'business',
   'slack_teams_integration':    'business',
 
+  // ── Elite AI Features (per-use pricing, min tier = professional) ──────────
+  // From feature page: RFP $149-499, Contract $89-189, Audit $129-199,
+  // Incident $29-39, PerformanceReview $9-19, DocAnalysis $5-9, etc.
+  'contract_analysis':              'professional',
+  'compliance_audit_report':        'professional',
+  'regulatory_filing_packet':       'professional',
+  'incident_investigation_report':  'professional',
+  'employment_verification_letter': 'professional',
+  'officer_performance_review':     'professional',
+  'document_deep_analysis':         'starter',    // low cost, available from starter
+  'client_profitability_analysis':  'professional',
+  'strategic_scheduling':           'enterprise',  // unlimited - enterprise included
+
   // ── Enterprise+ ─────────────────────────────────────────────────────────
   'custom_compliance_rules':    'enterprise',
   'advanced_bi_dashboard':      'enterprise',

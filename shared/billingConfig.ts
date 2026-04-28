@@ -114,7 +114,7 @@ export const BILLING = {
       description: "Replaces scheduler + admin + compliance + equipment manager for growing companies (up to 100 employees)",
       monthlyPrice: 99900, // $999/month in cents
       yearlyPrice: 959040, // $9,590.40/year ($799.20/mo - 20% savings)
-      maxEmployees: 100,
+      maxEmployees: 30,
       maxManagers: 5,
       monthlyTokens: 20000, // 20,000 AI tokens/month; hard cap at 35,000; overages billed monthly
       adminReplacementValue: 184200, // Saves ~$15,351/mo = $184,212/year in labor replacement
@@ -174,7 +174,7 @@ export const BILLING = {
       description: "Full back-office replacement for mid-market security companies (up to 300 employees)",
       monthlyPrice: 299900, // $2,999/month in cents
       yearlyPrice: 2879040, // $28,790.40/year ($2,399.20/mo - 20% savings)
-      maxEmployees: 300,
+      maxEmployees: 75,
       maxManagers: 15,
       monthlyTokens: 60000, // 60,000 AI tokens/month; hard cap at 120,000; overages billed monthly
       adminReplacementValue: 360000, // Saves ~$30,000/mo in labor
@@ -206,7 +206,7 @@ export const BILLING = {
       description: "Replaces entire back-office team for large security companies (up to 1,000 employees)",
       monthlyPrice: 799900, // $7,999/month in cents
       yearlyPrice: 7679040, // $76,790.40/year ($6,399.20/mo - 20% savings)
-      maxEmployees: 1000, // Enterprise base cap — designed for Securitas/Allied/GuardWorld scale
+      maxEmployees: 200, // Enterprise base cap — designed for Securitas/Allied/GuardWorld scale
       maxManagers: 100,
       monthlyTokens: 200000, // 200,000 AI tokens/month; hard cap 400,000; overages at $0.08/1,000 tokens
       adminReplacementValue: 500000, // Saves ~$50,250/mo = $603,000/year in labor replacement
