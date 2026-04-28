@@ -27,6 +27,7 @@ export type TrinityServiceDomain =
   | 'staffing_scheduling'
   | 'communications'
   | 'compliance_hr'
+  | 'compliance_audit'
   | 'support_escalation'
   | 'infrastructure_ops'
   | 'document_portal'
