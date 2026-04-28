@@ -13,6 +13,7 @@
     "test:integration": "vitest run --project integration",
     "test:watch": "vitest",
     "test:readiness": "vitest run tests/unit/readiness-*.test.ts",
+    "audit:consolidation": "node scripts/audit/holistic-consolidation-audit.mjs",
     "db:push": "drizzle-kit push",
     "db:bootstrap-statewide": "npx tsx scripts/prod/bootstrap-statewide-workspace.ts"
   },
