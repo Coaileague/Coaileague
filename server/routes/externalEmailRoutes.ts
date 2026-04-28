@@ -6,6 +6,7 @@ import { eq, and, desc, sql, like, or } from 'drizzle-orm';
 import '../types';
 import { createLogger } from '../lib/logger';
 import { EMAIL } from '../config/platformConfig';
+import { z } from 'zod';
 const log = createLogger('ExternalEmailRoutes');
 
 

@@ -6,6 +6,7 @@ import { requireAuth } from "../rbac";
 import { platformActionHub } from '../services/helpai/platformActionHub';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('DeveloperPortalRoutes');
 
 

@@ -7,6 +7,7 @@ import { requireManager, type AuthenticatedRequest } from "../rbac";
 import { generateProposalPdf } from "../services/proposalPdfService";
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
+import { z } from 'zod';
 const log = createLogger('ProposalRoutes');
 
 const router = Router();

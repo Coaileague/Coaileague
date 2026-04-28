@@ -10,6 +10,7 @@ import { broadcastToWorkspace } from "../websocket";
 import { typedPool } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 import { clampLimit, clampOffset } from '../utils/pagination';
+import { z } from 'zod';
 const log = createLogger('CadRoutes');
 
 export const cadRouter = Router();

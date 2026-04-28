@@ -10,6 +10,7 @@ import { requireAuth } from '../auth';
 import { hasManagerAccess, type AuthenticatedRequest } from '../rbac';
 import { platformEventBus } from '../services/platformEventBus';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('performanceNoteRoutes');
 
 const router = Router();

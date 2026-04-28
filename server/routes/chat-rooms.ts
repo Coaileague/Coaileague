@@ -27,6 +27,7 @@ import { requireAuth } from '../auth';
 import { softDelete } from '../lib/softDelete';
 import { createLogger } from '../lib/logger';
 import { isSupportStaffRole, isProtectedDirectMessageRole, isReservedRoomName, isReservedRoomNameExempt, MANAGER_ROLES, SUPPORT_STAFF_ROLES, getRoomLifecycleAccessPolicy } from '../services/chat/chatPolicyService';
+import { z } from 'zod';
 const log = createLogger('ChatRooms');
 
 

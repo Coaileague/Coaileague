@@ -275,6 +275,26 @@ class FaultTolerantStore extends session.Store {
   }
 }
 
+export async function ensureSessionsTable(): Promise<void> {
+  try {
+    const { pool } = await import('./db');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        sid VARCHAR NOT NULL COLLATE "default",
+        sess JSON NOT NULL,
+        expire TIMESTAMP(6) NOT NULL,
+        CONSTRAINT "sessions_pkey" PRIMARY KEY (sid)
+      ) WITH (OIDS=FALSE)
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON sessions (expire)
+    `);
+  } catch (err: any) {
+    // Non-fatal — connect-pg-simple will also attempt this on first write
+    console.warn('[Auth] Sessions table ensure (non-fatal):', err?.message?.slice(0, 100));
+  }
+}
+
 export function getSession() {
   const sessionTtl = AUTH.sessionTtlMs; // 1 week
   const PgStore = connectPg(session);
@@ -1034,6 +1054,10 @@ export async function resetPassword(
 // ============================================================================
 
 export function setupAuth(app: Express) {
+  // Ensure sessions table exists before session middleware — fixes black screen on Railway
+  ensureSessionsTable().catch((e: any) =>
+    console.warn('[Auth] Session table bootstrap:', e?.message?.slice(0, 100))
+  );
   app.set("trust proxy", 1);
   app.use(getSession());
 }

@@ -23,6 +23,7 @@ import { universalAudit } from '../services/universalAuditService';
 import crypto from 'crypto';
 import zlib from 'zlib';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('PrivacyRoutes');
 
 

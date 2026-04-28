@@ -19,6 +19,7 @@ import { requireAuth } from '../auth';
 import { type AuthenticatedRequest } from '../rbac';
 import { quickbooksOAuthService } from '../services/oauth/quickbooks';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('IntegrationRoutes');
 
 

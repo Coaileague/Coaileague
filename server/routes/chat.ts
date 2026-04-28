@@ -27,6 +27,7 @@ import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 import { PLATFORM } from '../config/platformConfig';
 import { InsertChatConversation } from '@shared/schema';
 import { summonHelpAIForConversation } from '../services/botSummonService';
+import { z } from 'zod';
 const log = createLogger('Chat');
 
 

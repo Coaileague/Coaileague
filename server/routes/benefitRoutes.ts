@@ -3,6 +3,7 @@ import { Router } from "express";
 import { requireAuth, type AuthenticatedRequest } from "../rbac";
 import { storage } from "../storage";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('BenefitRoutes');
 
 const router = Router();

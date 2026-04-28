@@ -25,6 +25,7 @@ import { getStateConfigStatic } from '../../services/compliance/stateRegulatoryK
 import OpenAI from 'openai';
 import { aiMeteringService } from '../../services/billing/aiMeteringService';
 import { createLogger } from '../../lib/logger';
+import { z } from 'zod';
 const log = createLogger('SraTrinityRoutes');
 
 

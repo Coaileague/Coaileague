@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { employees, clients, shifts, invoices, timeEntries } from '@shared/schema';
 import { exportEmployees, exportPayroll } from '../services/exportService';
 import multer from 'multer';
+import { z } from 'zod';
 
 export const bulkOperationsRouter: Router = express.Router();
 

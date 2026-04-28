@@ -27,6 +27,7 @@ import { auditLogs } from '@shared/schema';
 import { broadcastToAllClients } from '../websocket';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+import { z } from 'zod';
 const log = createLogger('AiBrainConsole');
 
 

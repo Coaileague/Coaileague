@@ -12,6 +12,7 @@
 import { Router, type Response } from 'express';
 import { createLogger } from '../lib/logger';
 import { requireAuth, type AuthenticatedRequest } from '../rbac';
+import { z } from 'zod';
 
 const log = createLogger('SecurityAdminRoutes');
 export const securityAdminRouter = Router();

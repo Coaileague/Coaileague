@@ -12,6 +12,7 @@ import { hasManagerAccess, type AuthenticatedRequest } from '../rbac';
 import { platformEventBus } from '../services/platformEventBus';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('disciplinaryRecordRoutes');
 
 const router = Router();

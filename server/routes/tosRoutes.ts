@@ -7,6 +7,7 @@ import { pool, db } from "../db";
 import { tosAgreements } from '@shared/schema';
 import { typedPool, typedPoolExec } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('TosRoutes');
 
 

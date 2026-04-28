@@ -18,6 +18,7 @@ import { db } from '../db';
 import { eq, and, inArray, or, isNull, desc, asc, sql, count } from 'drizzle-orm';
 import { agentTasks, agentRegistry, agentTaskLogs } from '@shared/schema/domains/trinity/extended';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('AgentActivityRoutes');
 
 

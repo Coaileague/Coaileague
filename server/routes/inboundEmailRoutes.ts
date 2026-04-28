@@ -34,6 +34,7 @@ import {
   lookupWorkspaceByOrgCode,
 } from '../utils/orgCodeValidator';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+import { z } from 'zod';
 
 // ─── Email Tables Bootstrap ──────────────────────────────────────────────────
 // These tables were specified but never wired into the bootstrap pipeline.

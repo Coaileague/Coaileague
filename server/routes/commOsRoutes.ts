@@ -6,6 +6,7 @@ import { supportRooms, auditLogs } from "@shared/schema";
 import { requireAuth } from "../auth";
 import type { AuthenticatedRequest } from "../rbac";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('CommOsRoutes');
 
 

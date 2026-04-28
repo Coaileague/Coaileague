@@ -10,6 +10,7 @@ import { documentExtractionService } from "../services/documentExtraction";
 import { bridgeFileCabinetToEmployeeDocument } from "../services/compliance/documentPipelineBridge";
 import { softDelete } from "../lib/softDelete";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('DocumentRoutes');
 
 

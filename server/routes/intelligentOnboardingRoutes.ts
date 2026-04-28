@@ -31,6 +31,7 @@ import crypto from 'crypto';
 import { format } from 'date-fns';
 import { employeeDocumentOnboardingService } from '../services/employeeDocumentOnboardingService';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('IntelligentOnboardingRoutes');
 
 

@@ -1914,6 +1914,48 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
       sendMessage(text, userName, "support");
     }
     chatManager.updateRoomLastMessage(roomId, text, userName);
+
+    // @Trinity / @HelpAI mention triggers AI response
+    if (text.includes('@Trinity') || text.includes('@trinity')) {
+      fetch('/api/ai-brain/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          message: text.replace(/@Trinity/gi, '').trim(),
+          context: { source: 'chatdock', roomId, mode: 'operational' },
+        }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.response) {
+            // Trinity reacts ✅ to confirm she processed the message
+            fetch(`/api/chat/manage/messages/${roomId}/trinity-react`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ emoji: '✅', source: 'trinity_auto' }),
+            }).catch(() => null);
+            sendMessage(`🟣 **Trinity:** ${data.response}`, 'Trinity', 'bot');
+          }
+        })
+        .catch(() => null);
+    }
+    if (text.includes('@HelpAI') || text.includes('@helpai')) {
+      fetch('/api/helpai/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: text.replace(/@HelpAI/gi, '').trim(), roomId }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.response) {
+            sendMessage(`⭐ **HelpAI:** ${data.response}`, 'HelpAI', 'bot');
+          }
+        })
+        .catch(() => null);
+    }
     inputRef.current?.focus();
   }, [input, isConnected, sendMessage, sendRawMessage, userName, replyingTo, editingMessage, editMutation]);
 

@@ -18,6 +18,7 @@ import { db } from '../db';
 import { workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('TrinityStaffingRoutes');
 
 

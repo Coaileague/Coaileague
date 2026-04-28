@@ -9,6 +9,7 @@ import { documentSigningService } from '../services/documentSigningService';
 import { tokenManager } from '../services/billing/tokenManager';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('DocumentLibraryRoutes');
 
 

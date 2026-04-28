@@ -2457,6 +2457,21 @@ function ComposeCanvas({
   const [isUploading, setIsUploading] = useState(false);
   const [signatureApplied, setSignatureApplied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  // @mention state — type @ in body to trigger picker
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionAnchor, setMentionAnchor] = useState(-1);
+
+  const QUICK_MENTIONS = [
+    { id: '@Trinity', label: 'Trinity (AI)', icon: '🟣' },
+    { id: '@manager', label: 'Manager', icon: '👔' },
+    { id: '@client', label: 'Client', icon: '🏢' },
+    { id: '@team', label: 'All team', icon: '👥' },
+  ];
+
+  // Emoji quick-insert for email compose
+  const EMAIL_EMOJIS = ['✅', '⚠️', '📋', '📞', '🔔', '👍', '❌', '📌', '💼', '⏰'];
 
   // Fetch user's platform email addresses to surface signatures and
   // populate the From field with real data.
@@ -2786,13 +2801,72 @@ function ComposeCanvas({
             </div>
           )}
           
-          <Textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Write your message here..."
-            className={cn("resize-none font-mono text-sm leading-relaxed", isMobile ? "min-h-[200px]" : "min-h-[280px]")}
-            data-testid="input-compose-body"
-          />
+          {/* Emoji quick-insert bar */}
+          <div className="flex items-center gap-1 px-1 py-0.5 flex-wrap" data-testid="email-emoji-bar">
+            {EMAIL_EMOJIS.map(emoji => (
+              <button
+                key={emoji}
+                type="button"
+                className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-sm transition-colors"
+                onClick={() => setBody(prev => prev + emoji)}
+                title={`Insert ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+            <span className="text-[10px] text-muted-foreground ml-1">Quick insert</span>
+          </div>
+
+          {/* @mention picker for email */}
+          {mentionQuery !== null && (
+            <div className="absolute z-50 bg-card border border-border rounded-lg shadow-lg overflow-hidden" style={{ bottom: '140px', left: '24px', right: '24px' }}>
+              {QUICK_MENTIONS.filter(m => m.label.toLowerCase().includes(mentionQuery.toLowerCase())).map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted text-sm transition-colors"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const before = body.slice(0, mentionAnchor);
+                    const after = body.slice(mentionAnchor + mentionQuery.length + 1);
+                    setBody(`${before}${m.id} ${after}`);
+                    setMentionQuery(null);
+                    setMentionAnchor(-1);
+                    bodyRef.current?.focus();
+                  }}
+                >
+                  <span>{m.icon}</span>
+                  <span>{m.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="relative">
+            <Textarea
+              ref={bodyRef}
+              value={body}
+              onChange={(e) => {
+                setBody(e.target.value);
+                // Detect @mention trigger
+                const cursor = e.target.selectionStart;
+                const textUpToCursor = e.target.value.slice(0, cursor);
+                const lastAt = textUpToCursor.lastIndexOf('@');
+                if (lastAt >= 0) {
+                  const query = textUpToCursor.slice(lastAt + 1);
+                  if (/^[a-zA-Z]*$/.test(query) && (cursor - lastAt) <= 15) {
+                    setMentionQuery(query);
+                    setMentionAnchor(lastAt);
+                    return;
+                  }
+                }
+                setMentionQuery(null);
+              }}
+              placeholder="Write your message... (@ to mention, pick emoji above)"
+              className={cn("resize-none font-mono text-sm leading-relaxed", isMobile ? "min-h-[200px]" : "min-h-[280px]")}
+              data-testid="input-compose-body"
+            />
+          </div>
           
           {isMobile && (
             <div className="flex items-center gap-2 p-2.5 rounded-lg bg-gradient-to-r from-primary/10 via-cyan-500/5 to-primary/10 border border-primary/20" data-testid="mobile-ai-compose-toolbar">

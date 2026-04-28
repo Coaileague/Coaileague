@@ -13,6 +13,7 @@ import { sql, eq, and, gte, desc } from "drizzle-orm";
 import { requireAuth, requireManager, type AuthenticatedRequest } from "../rbac";
 import { getMeteredOpenAICompletion } from '../services/billing/universalAIBillingInterceptor';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('InsightsRoutes');
 
 

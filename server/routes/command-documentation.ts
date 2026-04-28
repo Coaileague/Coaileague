@@ -18,6 +18,7 @@ import { systemAuditLogs } from '@shared/schema';
 import { platformMaintenanceService } from '../services/platformMaintenanceService';
 import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('CommandDocumentation');
 
 

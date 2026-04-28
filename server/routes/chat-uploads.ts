@@ -21,6 +21,7 @@ import { getStorageCategoryForMime } from '../objectStorage';
 import { checkCategoryQuota, recordStorageUsage } from '../services/storage/storageQuotaService';
 import { typedPool, typedPoolExec } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('ChatUploads');
 
 

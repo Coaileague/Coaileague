@@ -5,6 +5,7 @@ import { requireAuth } from '../auth';
 import { db } from '../db';
 import { platformRoles } from '@shared/schema';
 import { eq, isNull, and } from 'drizzle-orm';
+import { z } from 'zod';
 
 const router = Router();
 

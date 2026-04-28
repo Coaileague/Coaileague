@@ -5,6 +5,7 @@ import { employees, shiftAcknowledgments } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireManager, type AuthenticatedRequest } from "../rbac";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('ComplianceInlineRoutes');
 
 

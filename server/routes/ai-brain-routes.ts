@@ -25,6 +25,7 @@ import {
 } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('AiBrainRoutes');
 
 // Type for authenticated request

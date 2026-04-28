@@ -10,6 +10,7 @@ import { requireAuth, requireManager, type AuthenticatedRequest } from "../rbac"
 import { createNotification } from "../services/notificationService";
 import { NotificationDeliveryService } from "../services/notificationDeliveryService";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 
 const log = createLogger('ShiftTradingRoutes');
 

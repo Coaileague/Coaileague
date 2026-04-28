@@ -13,6 +13,7 @@ import { db } from '../db';
 import { workspaces, users, employees, clients, systemAuditLogs } from '@shared/schema';
 import { type AuthenticatedRequest } from '../rbac';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('EndUserControlRoutes');
 
 

@@ -7,6 +7,7 @@ import { orgInvitations, proposals } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { trinityOutreachService } from '../services/trinityOutreachService';
 import { requireManager } from '../rbac';
+import { z } from 'zod';
 import '../types';
 
 export function registerSalesRoutes(app: Express, requireAuth: any, attachWorkspaceId?: any) {

@@ -15,6 +15,7 @@ import {
 import { platformEventBus } from '../services/platformEventBus';
 import { broadcastToWorkspace } from '../websocket';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('PlaidRoutes');
 
 

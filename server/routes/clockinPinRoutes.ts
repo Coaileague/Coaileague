@@ -20,6 +20,7 @@ import { requireWorkspaceRole } from '../rbac';
 import { createLogger } from '../lib/logger';
 import { verifyClockInPin } from '../services/trinityVoice/clockInPinService';
 import { pinVerifyLimiter } from '../middleware/rateLimiter';
+import { z } from 'zod';
 const log = createLogger('ClockinPinRoutes');
 
 

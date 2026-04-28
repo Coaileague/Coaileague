@@ -16,6 +16,7 @@ import { db } from '../db';
 import { automatedShiftOffers, stagedShifts, employees, workspaces, inboundEmails, clientProspects, workspaceMembers } from '@shared/schema';
 import { eq, desc, sql, and } from 'drizzle-orm';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('EnterpriseOnboardingRoutes');
 
 

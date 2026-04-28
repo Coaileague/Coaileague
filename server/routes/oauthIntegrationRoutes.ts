@@ -22,6 +22,7 @@ const router = Router();
 import { INTEGRATIONS } from '@shared/platformConfig';
 import { typedQuery } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('OauthIntegrationRoutes');
 
 

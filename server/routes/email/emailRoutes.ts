@@ -791,4 +791,5 @@ emailRouter.post('/support-inbox/:emailId/reply', async (req: any, res) => {
 // Resolves sender email → client or employee entity + operational stats + Trinity actions
 // Powers the AIContextRail entity panel in EmailHubCanvas.tsx
 import emailEntityContextDefaultRouter from '../emailEntityContextRoute';
+import { z } from 'zod';
 emailRouter.use(emailEntityContextDefaultRouter);

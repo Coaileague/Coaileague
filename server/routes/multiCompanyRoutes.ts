@@ -3,6 +3,7 @@ import { pool } from "../db";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { requireAuth } from "../rbac";
 import { requirePlan } from '../tierGuards';
+import { z } from 'zod';
 import { platformActionHub } from "../services/helpai/platformActionHub";
 import { platformEventBus } from "../services/platformEventBus";
 import { createLogger } from "../lib/logger";

@@ -9,6 +9,7 @@ import { requireOwner, requireManager, requireHRManager, type AuthenticatedReque
 import { employeeDocumentOnboardingService } from "../services/employeeDocumentOnboardingService";
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
+import { z } from 'zod';
 const log = createLogger('HireosRoutes');
 
 

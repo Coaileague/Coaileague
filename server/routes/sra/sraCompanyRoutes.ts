@@ -23,6 +23,7 @@ import { sraFindings, sraFindingMessages, sraAuditLog } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth } from '../../auth';
 import { createLogger } from '../../lib/logger';
+import { z } from 'zod';
 const log = createLogger('SraCompanyRoutes');
 
 

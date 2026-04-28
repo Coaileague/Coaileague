@@ -25,6 +25,7 @@ import { integrationConnections, notifications } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('IntegrationManagementRoutes');
 
 

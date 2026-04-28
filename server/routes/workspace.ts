@@ -22,6 +22,7 @@ import { platformEventBus } from '../services/platformEventBus';
 import { sendWorkspaceWelcomeEmail } from '../services/emailCore';
 import { sendWelcomeOrgNotification } from '../services/notificationService';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('Workspace');
 
 

@@ -26,6 +26,7 @@ import { generateCertificatePdf } from '../services/training/certificateGenerato
 import { platformEventBus } from '../services/platformEventBus';
 import { storage } from '../storage';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('OfficerCertificationRoutes');
 
 

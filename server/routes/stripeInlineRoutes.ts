@@ -13,6 +13,7 @@ import { multiplyFinancialValues, toFinancialString } from '../services/financia
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
 import { getStripe, isStripeConfigured } from '../services/billing/stripeClient';
+import { z } from 'zod';
 const log = createLogger('StripeInlineRoutes');
 
 

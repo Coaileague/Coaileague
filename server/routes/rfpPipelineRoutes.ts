@@ -5,6 +5,7 @@ import { eq, and, desc, count, sql, ilike, inArray } from "drizzle-orm";
 import { requireAuth, requireManager, type AuthenticatedRequest } from "../rbac";
 import { requirePlan } from '../tierGuards';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('RfpPipelineRoutes');
 
 

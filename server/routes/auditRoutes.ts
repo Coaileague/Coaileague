@@ -7,6 +7,7 @@ import { db } from "../db";
 import { oversightEvents } from "@shared/schema";
 import { sql, eq, and, desc } from "drizzle-orm";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('AuditRoutes');
 
 

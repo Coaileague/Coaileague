@@ -3,6 +3,7 @@ import { pool } from '../db';
 import { platformActionHub } from '../services/helpai/platformActionHub';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('InsuranceRoutes');
 
 const router = express.Router();

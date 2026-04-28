@@ -21,6 +21,7 @@ import { broadcastUserScopedNotification } from "../services/chat/broadcaster";
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
 import { validateWebhookUrl } from '../services/webhookDeliveryService';
+import { z } from 'zod';
 const log = createLogger('ChatManagement');
 
 

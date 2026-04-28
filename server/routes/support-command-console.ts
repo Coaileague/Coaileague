@@ -1402,6 +1402,7 @@ import { platformMaintenanceService, HELPAI_MAINTENANCE_COMMANDS } from '../serv
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 import { PLATFORM } from '../config/platformConfig';
+import { z } from 'zod';
 const log = createLogger('SupportCommandConsole');
 
 

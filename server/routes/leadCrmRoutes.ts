@@ -7,6 +7,7 @@ import '../types';
 import { platformEventBus } from '../services/platformEventBus';
 import { requireManager } from '../rbac';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('LeadCrmRoutes');
 
 

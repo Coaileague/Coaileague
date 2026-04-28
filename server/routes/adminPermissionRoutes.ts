@@ -25,6 +25,7 @@ import { upsertPermission, deletePermission } from './permissionMatrixRoutes';
 import { universalAudit } from '../services/universalAuditService';
 import type { AuthenticatedRequest } from '../rbac';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('AdminPermissionRoutes');
 
 

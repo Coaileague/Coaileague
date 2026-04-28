@@ -17,6 +17,7 @@ import { AuthenticatedRequest, requirePlatformStaff } from '../rbac';
 import { storage } from '../storage';
 import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('SupportChat');
 
 

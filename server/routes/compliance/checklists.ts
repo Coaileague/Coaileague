@@ -11,6 +11,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../../auth";
 import { typedPool } from '../../lib/typedSql';
 import { createLogger } from '../../lib/logger';
+import { z } from 'zod';
 const log = createLogger('Checklists');
 
 

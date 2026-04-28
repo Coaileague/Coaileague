@@ -1627,6 +1627,7 @@ router.get('/seasonal/ornaments', requireTrinityAccess, (req, res) => {
 import { storage } from '../storage';
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('MascotRoutes');
 
 /**

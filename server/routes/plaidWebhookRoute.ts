@@ -8,6 +8,7 @@ import { platformEventBus } from '../services/platformEventBus';
 import { broadcastToWorkspace } from '../websocket';
 import { createLogger } from '../lib/logger';
 import { tryClaimWebhookEvent } from '../services/infrastructure/webhookIdempotency';
+import { z } from 'zod';
 const log = createLogger('PlaidWebhookRoutes');
 
 

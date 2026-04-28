@@ -103,6 +103,7 @@ const stripe = new Proxy({} as Stripe, {
 import { rateLimitMiddleware } from "../services/infrastructure/rateLimiting";
 import { idempotencyMiddleware } from "../middleware/idempotency";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('InvoiceRoutes');
 
 // F2 FIX: UUID format guard — rejects malformed params before they reach the DB.

@@ -16,6 +16,7 @@ import {
 import { typedExec, typedQuery } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
+import { z } from 'zod';
 const log = createLogger('OnboardingInlineRoutes');
 
 const router = Router();

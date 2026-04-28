@@ -1219,6 +1219,7 @@ router.post('/complete-report', requireAuditorPortalAuth, async (req: Request, r
 import { runTaxComplianceAudit, getTaxRules, getSUTAInfo, TAX_REGISTRY_VERSION, TAX_REGISTRY_EFFECTIVE_YEAR, TAX_REGISTRY_LAST_VERIFIED } from '../../services/tax/taxRulesRegistry';
 import { typedCount, typedQuery } from '../../lib/typedSql';
 import { createLogger } from '../../lib/logger';
+import { z } from 'zod';
 const log = createLogger('RegulatoryPortal');
 
 

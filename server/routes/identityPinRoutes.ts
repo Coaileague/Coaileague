@@ -24,6 +24,7 @@ import type { Request, Response } from 'express';
 import { requireAuth, requireWorkspaceRole, type AuthenticatedRequest } from '../rbac';
 import { pinVerifyLimiter } from '../middleware/rateLimiter';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 import {
   setEntityPin,
   clearEntityPin,

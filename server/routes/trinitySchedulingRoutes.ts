@@ -8,6 +8,7 @@ import { aiTokenGateway } from "../services/billing/aiTokenGateway";
 import { trinitySchedulerWithSLA } from "../services/trinity/trinitySchedulerWithSLA";
 import { getClientConstraints } from '../services/scheduling/clientConstraintsService';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('TrinitySchedulingRoutes');
 
 

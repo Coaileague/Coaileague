@@ -67,6 +67,7 @@ import { users, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { hashPassword } from '../auth';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 
 const log = createLogger('InternalReset');
 

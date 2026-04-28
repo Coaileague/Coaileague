@@ -12,6 +12,7 @@ import { requireManager, type AuthenticatedRequest } from "../rbac";
 import { randomUUID, createHash } from "crypto";
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
+import { z } from 'zod';
 const log = createLogger('ComplianceReportsRoutes');
 
 

@@ -24,6 +24,7 @@ import { guardAgainstProduction } from "../services/workspaceGuard";
 import { typedCount } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 import { trainingAttempts } from '@shared/schema';
+import { z } from 'zod';
 const log = createLogger('TrinityTrainingRoutes');
 
 

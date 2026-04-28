@@ -22,6 +22,7 @@ import { seedAnchor } from '../services/utils/scheduling';
 import { typedQuery } from '../lib/typedSql';
 import { sumFinancialValues, applyTax, toFinancialString } from '../services/financialCalculator';
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('WorkspaceInlineRoutes');
 
 // ---- Logo upload setup ----

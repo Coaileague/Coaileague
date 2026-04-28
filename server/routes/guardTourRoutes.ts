@@ -13,6 +13,7 @@ import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { tokenManager } from "../services/billing/tokenManager";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('GuardTourRoutes');
 
 
