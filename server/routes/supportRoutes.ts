@@ -864,7 +864,7 @@ router.post('/tickets/:id/close', requirePlatformStaff, async (req, res) => {
           </p>
         </div>
       `;
-      await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
+      await NotificationDeliveryService.send({ idempotencyKey: `notif:ticket:${id}:close_summary`,
             type: 'support_ticket_confirmation', workspaceId: ticket.workspaceId || 'system', recipientUserId: guestEmail, channel: 'email', body: { to: guestEmail, subject: `Support Ticket Closed: ${ticket.ticketNumber}`, html: emailHtml } });
     } catch (emailError) {
       log.error('Failed to send support summary email:', emailError);
