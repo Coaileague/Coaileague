@@ -636,6 +636,246 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
       }
     },
   });
+  // ── Elite AI Actions — Per-Use Pricing ($89-199 range) ──────────────────
+
+  helpaiOrchestrator.registerAction(mkAction({
+    actionId: 'document.contract_analysis',
+    description: 'Line-by-line liability flagging, missing-protection callouts, and auto-redlines against PSB requirements. Cites exact statute violations.',
+    requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
+    async execute(request: any) {
+      const { workspaceId, documentId, documentText, contractType } = request.parameters || {};
+      if (!workspaceId || (!documentId && !documentText)) {
+        return { success: false, message: 'workspaceId and (documentId or documentText) required' };
+      }
+      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+      const prompt = `You are a security industry contract specialist. Analyze this security services contract and provide:
+1. LIABILITY FLAGS: Specific clauses creating liability exposure (cite clause numbers)
+2. MISSING PROTECTIONS: Standard PSB/security industry protections that are absent
+3. STATUTE VIOLATIONS: Any provisions violating TX Occ. Code §1702 or other applicable law (cite exact statutes)
+4. REDLINE RECOMMENDATIONS: Specific language changes with before/after text
+5. RISK SCORE: 1-10 (10 = highest risk)
+
+Contract type: ${contractType || 'security services agreement'}
+${documentText ? 'CONTRACT TEXT:\n' + documentText.slice(0, 8000) : 'Document ID: ' + documentId}
+
+Return structured JSON with fields: liabilityFlags[], missingProtections[], statuteViolations[], redlines[], riskScore, executiveSummary`;
+
+      const analysis = await claudeVerificationService.verify({
+        workspaceId,
+        context: prompt,
+        taskType: 'contract_analysis',
+      });
+
+      return {
+        success: true,
+        actionId: request.actionId,
+        contractAnalysis: analysis?.result || analysis,
+        priceCents: 14900, // $149 base (within $89-189 range)
+        featureKey: 'contract_analysis',
+      };
+    },
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction({
+    actionId: 'document.compliance_audit_report',
+    description: 'Full audit-readiness report with compliance score, findings categorized by severity, and auditor-ready exhibit index.',
+    requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
+    async execute(request: any) {
+      const { workspaceId, auditType, periodStart, periodEnd, includeExhibits } = request.parameters || {};
+      if (!workspaceId) {
+        return { success: false, message: 'workspaceId required' };
+      }
+
+      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+      const { db } = await import('../../db');
+      const { pool } = await import('../../db');
+
+      // Gather compliance data
+      const [employees, certData] = await Promise.all([
+        pool.query(
+          `SELECT e.first_name, e.last_name, e.license_number, e.license_type, 
+                  e.license_expiry, e.is_armed, e.guard_card_status
+           FROM employees e WHERE e.workspace_id = $1 AND e.is_active = true LIMIT 50`,
+          [workspaceId]
+        ).catch(() => ({ rows: [] })),
+        pool.query(
+          `SELECT COUNT(*) as total, 
+                  SUM(CASE WHEN license_expiry < NOW() THEN 1 ELSE 0 END) as expired,
+                  SUM(CASE WHEN license_expiry < NOW() + INTERVAL '30 days' THEN 1 ELSE 0 END) as expiring_soon
+           FROM employees WHERE workspace_id = $1 AND is_active = true`,
+          [workspaceId]
+        ).catch(() => ({ rows: [{ total: 0, expired: 0, expiring_soon: 0 }] })),
+      ]);
+
+      const stats = certData.rows[0] || {};
+      const prompt = `You are a Texas DPS compliance auditor specialist. Generate a formal compliance audit report.
+
+WORKFORCE DATA:
+- Total active officers: ${stats.total || 0}
+- Expired licenses: ${stats.expired || 0}
+- Licenses expiring within 30 days: ${stats.expiring_soon || 0}
+- Officers: ${JSON.stringify(employees.rows.slice(0, 10))}
+
+Audit period: ${periodStart || 'Last 90 days'} to ${periodEnd || 'Today'}
+Audit type: ${auditType || 'Texas DPS Chapter 1702'}
+
+Generate a formal compliance audit report with:
+1. COMPLIANCE SCORE (0-100)
+2. EXECUTIVE SUMMARY
+3. CRITICAL FINDINGS (violations requiring immediate action)
+4. MAJOR FINDINGS (issues to resolve within 30 days)
+5. MINOR FINDINGS (improvements recommended)
+6. EXHIBIT INDEX (documents auditor should review)
+7. STATUTORY CITATIONS (exact Texas Occ. Code sections)
+8. REMEDIATION TIMELINE
+
+Return structured JSON.`;
+
+      const report = await claudeVerificationService.verify({
+        workspaceId, context: prompt, taskType: 'compliance_audit'
+      });
+
+      return {
+        success: true,
+        actionId: request.actionId,
+        auditReport: report?.result || report,
+        workspaceId,
+        generatedAt: new Date().toISOString(),
+        priceCents: 16900, // $169 (within $129-199 range)
+        featureKey: 'compliance_audit_report',
+      };
+    },
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction({
+    actionId: 'document.incident_investigation_report',
+    description: 'Court-ready incident investigation narrative with timeline, root cause analysis, and officer conduct assessment for insurance and litigation.',
+    requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager', 'supervisor'],
+    async execute(request: any) {
+      const { workspaceId, incidentId, incidentData } = request.parameters || {};
+      if (!workspaceId || (!incidentId && !incidentData)) {
+        return { success: false, message: 'workspaceId and (incidentId or incidentData) required' };
+      }
+
+      const { pool } = await import('../../db');
+      let incident = incidentData;
+
+      if (incidentId && !incident) {
+        const result = await pool.query(
+          `SELECT * FROM security_incidents WHERE id = $1 AND workspace_id = $2`,
+          [incidentId, workspaceId]
+        ).catch(() => ({ rows: [] }));
+        incident = result.rows[0];
+      }
+
+      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+      const prompt = `You are a security incident investigation specialist and expert witness preparer.
+      
+Generate a court-ready incident investigation report for this security incident:
+${JSON.stringify(incident || incidentData || {}, null, 2)}
+
+The report must include:
+1. INCIDENT SUMMARY (who, what, where, when — factual, no opinions)
+2. DETAILED TIMELINE (minute-by-minute if possible)
+3. OFFICER CONDUCT ASSESSMENT (professional standards compliance)
+4. ROOT CAUSE ANALYSIS (contributing factors)
+5. USE OF FORCE ANALYSIS (if applicable, cite agency policy)
+6. WITNESS ACCOUNTS (summarize available witness statements)
+7. EVIDENCE INVENTORY (what was documented, GPS data, video, reports)
+8. LEGAL EXPOSURE ASSESSMENT (liability considerations)
+9. RECOMMENDATIONS (policy, training, or procedural improvements)
+10. CERTIFICATION STATEMENT (suitable for court submission)
+
+Write in formal investigative report style. Use passive voice for officer actions. Cite specific policies and statutes where applicable. This report may be used in legal proceedings.`;
+
+      const report = await claudeVerificationService.verify({
+        workspaceId, context: prompt, taskType: 'incident_investigation'
+      });
+
+      return {
+        success: true,
+        actionId: request.actionId,
+        investigationReport: report?.result || report,
+        incidentId,
+        generatedAt: new Date().toISOString(),
+        priceCents: 3900, // $39 (within $29-39 range)
+        featureKey: 'incident_investigation_report',
+      };
+    },
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction({
+    actionId: 'document.officer_performance_review',
+    description: 'Structured performance review narrative from 12 months of shift, attendance, incident, and compliance data.',
+    requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
+    async execute(request: any) {
+      const { workspaceId, employeeId, reviewPeriodMonths = 12 } = request.parameters || {};
+      if (!workspaceId || !employeeId) {
+        return { success: false, message: 'workspaceId and employeeId required' };
+      }
+
+      const { pool } = await import('../../db');
+
+      // Gather comprehensive officer data
+      const [empData, attendanceData, incidentData, scoreData] = await Promise.all([
+        pool.query(`SELECT e.*, u.email FROM employees e LEFT JOIN users u ON e.user_id = u.id WHERE e.id = $1 AND e.workspace_id = $2`, [employeeId, workspaceId]).catch(() => ({ rows: [] })),
+        pool.query(`SELECT COUNT(*) as total_shifts, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed, SUM(CASE WHEN status = 'calloff' THEN 1 ELSE 0 END) as calloffs, SUM(CASE WHEN status = 'no_show' THEN 1 ELSE 0 END) as no_shows FROM shifts WHERE assigned_employee_id = $1 AND workspace_id = $2 AND date >= NOW() - INTERVAL '${reviewPeriodMonths} months'`, [employeeId, workspaceId]).catch(() => ({ rows: [{}] })),
+        pool.query(`SELECT COUNT(*) as total_incidents, type FROM security_incidents WHERE reporting_officer_id = $1 AND workspace_id = $2 AND created_at >= NOW() - INTERVAL '${reviewPeriodMonths} months' GROUP BY type`, [employeeId, workspaceId]).catch(() => ({ rows: [] })),
+        pool.query(`SELECT overall_score, reliability_score, report_quality_score FROM employee_performance_scores WHERE employee_id = $1 AND workspace_id = $2 ORDER BY created_at DESC LIMIT 1`, [employeeId, workspaceId]).catch(() => ({ rows: [{}] })),
+      ]);
+
+      const officer = empData.rows[0] || {};
+      const attendance = attendanceData.rows[0] || {};
+      const score = scoreData.rows[0] || {};
+
+      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+      const prompt = `You are an HR performance review specialist for security operations.
+
+Generate a formal officer performance review for:
+Name: ${officer.first_name || 'Officer'} ${officer.last_name || ''}
+Position: ${officer.position || 'Security Officer'}
+Review Period: Last ${reviewPeriodMonths} months
+
+PERFORMANCE DATA:
+- Total shifts scheduled: ${attendance.total_shifts || 0}
+- Shifts completed: ${attendance.completed || 0}
+- Call-offs: ${attendance.calloffs || 0}  
+- No-shows: ${attendance.no_shows || 0}
+- Reliability rate: ${attendance.total_shifts ? Math.round((attendance.completed/attendance.total_shifts)*100) : 0}%
+- Overall score: ${score.overall_score || 'N/A'}/100
+- Reliability score: ${score.reliability_score || 'N/A'}
+- Report quality: ${score.report_quality_score || 'N/A'}
+- Incidents filed: ${incidentData.rows.length}
+
+Generate a formal HR performance review with:
+1. PERFORMANCE SUMMARY (2-3 sentences for the period)
+2. STRENGTHS (specific, evidence-based observations)
+3. AREAS FOR IMPROVEMENT (constructive, actionable feedback)
+4. ATTENDANCE & RELIABILITY ANALYSIS
+5. PROFESSIONAL DEVELOPMENT RECOMMENDATIONS
+6. RATING (Exceeds/Meets/Below Expectations for each category)
+7. OVERALL RATING
+8. COMPENSATION RECOMMENDATION (merit increase basis)
+
+Write in professional HR review style. Be specific and evidence-based. Avoid vague platitudes.`;
+
+      const review = await claudeVerificationService.verify({
+        workspaceId, context: prompt, taskType: 'performance_review'
+      });
+
+      return {
+        success: true,
+        actionId: request.actionId,
+        performanceReview: review?.result || review,
+        employeeId,
+        reviewPeriodMonths,
+        generatedAt: new Date().toISOString(),
+        priceCents: 1500, // $15 (within $9-19 range)
+        featureKey: 'officer_performance_review',
+      };
+    },
+  }));
+
 }
 
 export async function scanOverdueI9s(workspaceId: string): Promise<void> {
