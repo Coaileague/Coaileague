@@ -1,5 +1,6 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
+import { z } from 'zod';
 import { db } from "../db";
 import { employees } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -57,7 +58,17 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-    const { slots } = req.body;
+    const slotsSchema = z.object({
+      slots: z.array(z.object({
+        dayOfWeek: z.number().int().min(0).max(6),
+        startTime: z.string().min(1),
+        endTime: z.string().min(1),
+        isAvailable: z.boolean().optional(),
+      })).optional().default([]),
+    });
+    const parsed = slotsSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    const { slots } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
     const employee = await db
@@ -90,7 +101,16 @@ router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { id } = req.params;
-    const updates = req.body;
+    const updateSlotSchema = z.object({
+      dayOfWeek: z.number().int().min(0).max(6).optional(),
+      startTime: z.string().min(1).optional(),
+      endTime: z.string().min(1).optional(),
+      isAvailable: z.boolean().optional(),
+      notes: z.string().optional(),
+    }).strict();
+    const parsed = updateSlotSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    const updates = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
     const updated = await availabilityService.updateAvailabilitySlot(workspaceId, id, updates);
@@ -153,7 +173,16 @@ router.post('/exception', requireAuth, async (req: AuthenticatedRequest, res) =>
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-    const { startDate, endDate, requestType, reason, notes } = req.body;
+    const exceptionSchema = z.object({
+      startDate: z.string().min(1, 'startDate is required'),
+      endDate: z.string().min(1, 'endDate is required'),
+      requestType: z.enum(['time_off', 'unavailable', 'partial', 'preferred']).optional(),
+      reason: z.string().optional(),
+      notes: z.string().optional(),
+    });
+    const parsed = exceptionSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    const { startDate, endDate, requestType, reason, notes } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
     const employee = await db
@@ -191,7 +220,15 @@ router.post('/exception', requireAuth, async (req: AuthenticatedRequest, res) =>
 router.post('/check-conflict', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
-    const { employeeId, shiftDate, startTime, endTime } = req.body;
+    const conflictSchema = z.object({
+      employeeId: z.string().min(1, 'employeeId is required'),
+      shiftDate: z.string().min(1, 'shiftDate is required'),
+      startTime: z.string().min(1, 'startTime is required'),
+      endTime: z.string().min(1, 'endTime is required'),
+    });
+    const parsed = conflictSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    const { employeeId, shiftDate, startTime, endTime } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
     const conflict = await availabilityService.checkConflict(
@@ -231,7 +268,15 @@ router.get('/understaffing', requireManager, async (req: AuthenticatedRequest, r
 router.post('/suggest-schedule', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
-    const { startDate, endDate, shiftsPerDay, shiftDurationHours } = req.body;
+    const suggestSchema = z.object({
+      startDate: z.string().min(1, 'startDate is required'),
+      endDate: z.string().min(1, 'endDate is required'),
+      shiftsPerDay: z.number().int().min(1).max(24).optional(),
+      shiftDurationHours: z.number().min(0.5).max(24).optional(),
+    });
+    const parsed = suggestSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    const { startDate, endDate, shiftsPerDay, shiftDurationHours } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
     const suggestion = await availabilityService.suggestOptimalSchedule(workspaceId, {
