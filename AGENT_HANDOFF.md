@@ -37,8 +37,8 @@ Next merge target:
 
 ```
 origin/development           -> bd340828  (email entity context panel + Trinity suggested actions)
-origin/refactor/service-layer -> pending Codex RBAC/IRC low-risk consolidation patch
-local Codex lane             -> synced with latest development before push
+origin/refactor/service-layer -> 9fff33a6  (Codex RBAC/IRC low-risk consolidation patch)
+local Codex lane             -> clean; no additional Codex changes pending
 ```
 
 Boot test before any push to development:
