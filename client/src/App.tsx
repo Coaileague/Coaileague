@@ -332,6 +332,11 @@ const AuditorLogin = lazy(() => import("@/pages/auditor-login"));
 const CoAuditorClaim = lazy(() => import("@/pages/co-auditor-claim"));
 const CoAuditorLogin = lazy(() => import("@/pages/co-auditor-login"));
 const CoAuditorDashboard = lazy(() => import("@/pages/co-auditor-dashboard"));
+// AI Regulatory Audit Suite (Phases 2–6)
+const ApplicantVisualCompliance   = lazy(() => import("@/pages/applicant-visual-compliance"));
+const AuditVerificationPortal     = lazy(() => import("@/pages/auditor-verification-portal"));
+const AuditChatdock               = lazy(() => import("@/pages/audit-chatdock"));
+const CitationResolve             = lazy(() => import("@/pages/citation-resolve"));
 const AdminSecurity = lazy(() => import("@/pages/admin-security"));
 // Phase 33 — SRA (State Regulatory Auditor) Partner Portal
 const SRALogin = lazy(() => import("@/pages/sra/SRALogin"));
@@ -1319,6 +1324,11 @@ function AppContent() {
               <Route path="/co-auditor/login" component={CoAuditorLogin} />
               <Route path="/co-auditor/claim" component={CoAuditorClaim} />
               <Route path="/co-auditor/dashboard" component={CoAuditorDashboard} />
+              {/* AI Regulatory Audit Suite — Phases 2–6 */}
+              <Route path="/visual-compliance" component={ApplicantVisualCompliance} />
+              <Route path="/audit-verify/:auditId" component={AuditVerificationPortal} />
+              <Route path="/audit-chatdock/:auditId" component={AuditChatdock} />
+              <Route path="/citation-resolve/:citationId" component={CitationResolve} />
               <Route path="/admin/security" component={AdminSecurity} />
               {/* Phase 33 — SRA Partner Portal (government blue, outside main auth) */}
               <Route path="/regulatory-audit/login" component={SRALogin} />

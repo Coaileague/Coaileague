@@ -4674,6 +4674,31 @@ export function startAutonomousScheduler() {
     });
   });
 
+  // ── Audit Cure Period Heartbeat — AI Regulatory Audit Suite Phase 6 ──────────
+  // Runs daily at 6:30 AM (after the Trinity Compliance Expiry Monitor at 6:00).
+  // Scans all active audit_condition_timers, sends 3-strike reminders, and
+  // auto-converts expired timers to FAIL with the default fine.
+  registerJobInfo(
+    'Audit Cure Period Heartbeat',
+    '30 6 * * *',
+    'Daily: scan PASS_WITH_CONDITIONS audit timers, send 7d/72h/24h reminders, auto-FAIL on expiry',
+    true,
+  );
+  cron.schedule('30 6 * * *', () => {
+    trackJobExecution('Audit Cure Period Heartbeat', async () => {
+      const { runCureHeartbeat } = await import('./auditor/curePeriodTrackerService');
+      const result = await runCureHeartbeat();
+      return {
+        processed:     result.processed,
+        reminders7d:   result.reminders7d,
+        reminders72h:  result.reminders72h,
+        reminders24h:  result.reminders24h,
+        autoFailed:    result.autoFailed,
+      };
+    });
+  });
+  log.info('Audit Cure Period Heartbeat registered', { schedule: '30 6 * * *' });
+
   isSchedulerRunning = true;
 
   log.info('Autonomous scheduler running successfully');

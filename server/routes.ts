@@ -850,6 +850,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { auditorRouter } = await import('./routes/auditorRoutes');
   app.use('/api/auditor', auditorRouter);
 
+  // AI Regulatory Audit Suite — Phases 2–6 (visual compliance, verification gate,
+  // audit packet HITL, finalization, cure-period tracker).
+  // Dual auth: some routes accept tenant sessions, some require auditor sessions.
+  const { auditSuiteRouter } = await import('./routes/auditSuiteRoutes');
+  app.use('/api/audit-suite', auditSuiteRouter);
+
   // Phase 18D — Workspace security admin (break-glass overrides + auditor allow-list).
   const { securityAdminRouter } = await import('./routes/securityAdminRoutes');
   app.use('/api/security-admin', securityAdminRouter);

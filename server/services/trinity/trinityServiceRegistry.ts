@@ -27,6 +27,7 @@ export type TrinityServiceDomain =
   | 'staffing_scheduling'
   | 'communications'
   | 'compliance_hr'
+  | 'compliance_audit'
   | 'support_escalation'
   | 'infrastructure_ops'
   | 'document_portal'
@@ -802,6 +803,64 @@ export const TRINITY_SERVICE_REGISTRY: TrinityServiceEntry[] = [
     platformPhases: ['phase_7_client_portal','phase_8_pl','phase_10_invoicing'],
     integrationStatus: 'partial',
     exports: ['PREMIUM_FEATURES.trinity_client_profitability_analysis'],
+  },
+
+  // ── AI Regulatory Audit Suite (Phases 2–6) ────────────────────────────────
+  // TRINITY.md §S: Trinity is one brain. These are domain modules of that brain.
+  {
+    id: 'visualComplianceService',
+    name: 'Visual Compliance Analyzer',
+    path: 'server/services/auditor/visualComplianceService.ts',
+    domain: 'compliance_audit',
+    description: 'Analyzes uploaded evidence photos (uniforms, vehicles, premises) against Texas DPS rulesets via Trinity vision. Extracts EXIF GPS/timestamp, runs OCR on license plates, and writes pass/flag results to visual_compliance_artifacts.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_1_core_db'],
+    integrationStatus: 'verified',
+    exports: ['uploadVisualArtifact','listArtifactsForWorkspace','getArtifactSummary'],
+  },
+  {
+    id: 'auditVerificationGateService',
+    name: 'Auditor Verification Gate',
+    path: 'server/services/auditor/auditVerificationGateService.ts',
+    domain: 'compliance_audit',
+    description: 'Zero-trust gate: verifies auditor state authorization paperwork before unlocking the tenant Document Safe. Writes immutable audit_safe_access_log rows and fires omnichannel alerts to the tenant owner via NDS.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_1_core_db'],
+    integrationStatus: 'verified',
+    exports: ['submitAuditorPaperwork','isAuditSafeUnlocked','getAccessLog'],
+  },
+  {
+    id: 'generateAuditPacketPDF',
+    name: 'Audit Packet PDF Generator',
+    path: 'server/services/auditor/generateAuditPacketPDF.ts',
+    domain: 'compliance_audit',
+    description: 'Compiles tenant compliance data (office info, guard cards, schedules, visual artifacts) into a draft PDF audit packet. Stores draft in GCS. Applies natural-language owner modifications. Releases to auditor only after HITL owner approval.',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_1_core_db'],
+    integrationStatus: 'verified',
+    exports: ['generateAuditPacketPDF','approveAndSendDraft','rejectDraft','getDraftsForAudit'],
+  },
+  {
+    id: 'auditCitationService',
+    name: 'Audit Citation & Finalization Engine',
+    path: 'server/services/auditor/auditCitationService.ts',
+    domain: 'compliance_audit',
+    description: 'Records audit verdicts (PASS/PASS_WITH_CONDITIONS/FAIL) to the tenant historical ledger. For FAIL: creates audit_citations with fine amount and violation PDF, fires urgent omnichannel alerts. Handles proof-of-payment verification (Trinity checks money order amount).',
+    authorityLevel: 'write_monitored',
+    platformPhases: ['phase_1_core_db'],
+    integrationStatus: 'verified',
+    exports: ['recordVerdict','submitPaymentProof','getCitationForAudit','getAuditHistoricalLedger'],
+  },
+  {
+    id: 'curePeriodTrackerService',
+    name: 'Cure Period Tracker',
+    path: 'server/services/auditor/curePeriodTrackerService.ts',
+    domain: 'compliance_audit',
+    description: 'Manages PASS_WITH_CONDITIONS cure-period timers. Daily cron heartbeat sends 3-strike NDS reminders (7d/72h/24h). Auto-converts expired timers to FAIL with default fine. Trinity verifies uploaded corrections and upgrades verdict to PASS.',
+    authorityLevel: 'write_auto',
+    platformPhases: ['phase_1_core_db'],
+    integrationStatus: 'verified',
+    exports: ['startCurePeriod','getCureStatus','verifyCureCorrections','runCureHeartbeat'],
   },
 ];
 
