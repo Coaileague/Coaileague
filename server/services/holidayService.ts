@@ -17,6 +17,8 @@ import { pool } from '../db';
 import { createLogger } from '../lib/logger';
 const log = createLogger('holidayService');
 
+let decemberHolidayCron: ReturnType<typeof setInterval> | null = null;
+
 
 // ─── IANA Timezone Validation ─────────────────────────────────────────────────
 
@@ -332,6 +334,8 @@ export async function isHolidayForWorkspace(
  * Called from cronInit on application startup.
  */
 export function registerDecemberHolidayCron(): void {
+  if (decemberHolidayCron) return;
+
   const checkAndRun = () => {
     const now = new Date();
     // Run on December 1st between 02:00 and 03:00 UTC
@@ -345,8 +349,15 @@ export function registerDecemberHolidayCron(): void {
   };
 
   // Check every hour
-  setInterval(checkAndRun, 3600000);
+  decemberHolidayCron = setInterval(checkAndRun, 3600000);
+  decemberHolidayCron.unref();
   log.info('[HolidayService] December 1st holiday cron registered');
+}
+
+export function stopDecemberHolidayCron(): void {
+  if (!decemberHolidayCron) return;
+  clearInterval(decemberHolidayCron);
+  decemberHolidayCron = null;
 }
 
 /**

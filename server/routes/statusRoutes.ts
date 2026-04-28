@@ -44,6 +44,8 @@ interface ServiceHealth {
 let healthCache: ServiceHealth[] = [];
 let lastHealthCheckAt = 0;
 const HEALTH_CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
+let statusHealthLoop: ReturnType<typeof setInterval> | null = null;
+let backupVerificationCron: ReturnType<typeof setInterval> | null = null;
 
 async function runHealthChecks(): Promise<ServiceHealth[]> {
   const now = Date.now();
@@ -165,9 +167,10 @@ async function runHealthChecks(): Promise<ServiceHealth[]> {
 }
 
 // Start background health check loop
-setInterval(() => {
+statusHealthLoop = setInterval(() => {
   runHealthChecks().catch(err => log.error('[StatusPage] Health check failed:', err.message));
 }, HEALTH_CHECK_INTERVAL_MS);
+statusHealthLoop.unref();
 
 // ─── GET /status ──────────────────────────────────────────────────────────────
 statusRouter.get('/', async (req, res) => {
@@ -349,6 +352,8 @@ platformFlagRouter.delete('/:key', requireAuth, async (req: any, res) => {
 
 // Weekly backup verification cron (Phase 51 Check 8)
 export function registerBackupVerificationCron(): void {
+  if (backupVerificationCron) return;
+
   const checkAndRun = async () => {
     const now = new Date();
     // Run every Sunday at 03:00 UTC
@@ -380,6 +385,19 @@ export function registerBackupVerificationCron(): void {
   };
 
   // Check every 5 minutes
-  setInterval(checkAndRun, 5 * 60 * 1000);
+  backupVerificationCron = setInterval(checkAndRun, 5 * 60 * 1000);
+  backupVerificationCron.unref();
   log.info('[BackupVerification] Weekly backup verification cron registered (Sundays 03:00 UTC)');
+}
+
+export function stopBackupVerificationCron(): void {
+  if (!backupVerificationCron) return;
+  clearInterval(backupVerificationCron);
+  backupVerificationCron = null;
+}
+
+export function stopStatusHealthLoop(): void {
+  if (!statusHealthLoop) return;
+  clearInterval(statusHealthLoop);
+  statusHealthLoop = null;
 }
