@@ -201,7 +201,7 @@ setInterval(() => {
   } catch {
     // Keep last values on error
   }
-}, 5000);
+}, 5000).unref();
 
 /**
  * Get platform uptime in seconds

@@ -214,10 +214,16 @@ export async function getConnectomeStats(): Promise<{
 // AUTO-FLUSH TIMER
 // ============================================================================
 
-setInterval(() => {
+// .unref() prevents this module-level interval from blocking process shutdown
+const hebbianFlushInterval = setInterval(() => {
   flushPendingActivations().catch((err: any) =>
     log.warn('[Hebbian] Flush error (non-fatal):', (err instanceof Error ? err.message : String(err)))
   );
 }, FLUSH_INTERVAL_MS);
+hebbianFlushInterval.unref();
+
+export function stopHebbianFlush(): void {
+  clearInterval(hebbianFlushInterval);
+}
 
 log.info('[Hebbian] Hebbian Learning Service initialized — flush every 15 s, decay daily');

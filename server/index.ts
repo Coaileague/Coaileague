@@ -2400,6 +2400,7 @@ process.on('unhandledRejection', (reason: any, promise) => {
       const { lostFoundService } = await import('./services/ops/lostFoundService');
       panicAlertService.initialize();
       loneWorkerService.initialize();
+      registerDaemon('LoneWorkerService', () => loneWorkerService.stop?.());
       boloService.initialize();
       visitorLogService.initialize();
       assetTrackingService.initialize();
@@ -2432,6 +2433,7 @@ process.on('unhandledRejection', (reason: any, promise) => {
     try {
       const { helpAIProactiveMonitor } = await import('./services/helpai/helpAIProactiveMonitor');
       helpAIProactiveMonitor.start();
+      registerDaemon('HelpAIProactiveMonitor', () => helpAIProactiveMonitor.stop?.());
       log.info('HelpAI Proactive Monitor initialized — 5-minute per-workspace loop active');
     } catch (error) {
       log.error('Failed to initialize HelpAI Proactive Monitor', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });

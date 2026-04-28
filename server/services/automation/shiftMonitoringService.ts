@@ -159,12 +159,15 @@ class ShiftMonitoringService {
         const windowStart = new Date(now.getTime() - 2 * 60 * 60 * 1000);
         const windowEnd = new Date(now.getTime() + 30 * 60 * 1000);
 
+        // I-P0-1 FIX: Join workspaces table and filter to active workspaces only.
+        // Prevents the monitoring daemon from processing shifts for suspended/cancelled tenants.
         const activeShifts = await db.select({
           shift: shifts,
           employee: employees,
         })
           .from(shifts)
           .innerJoin(employees, eq(shifts.employeeId, employees.id))
+          .innerJoin(workspaces, eq(shifts.workspaceId, workspaces.id))
           .where(
             and(
               eq(shifts.date, today),
@@ -174,7 +177,8 @@ class ShiftMonitoringService {
                 eq(shifts.status, 'scheduled'),
                 eq(shifts.status, 'confirmed'),
                 eq(shifts.status, 'pending')
-              )
+              ),
+              eq(workspaces.isActive, true)  // Only process shifts for active workspaces
             )
           );
 

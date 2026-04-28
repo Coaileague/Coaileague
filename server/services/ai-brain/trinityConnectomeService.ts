@@ -361,13 +361,14 @@ export function getAllBrainRegions(): BrainRegionDescriptor[] {
 // ACTIVATION DECAY (gradual cooldown when regions stop firing)
 // ============================================================================
 
-setInterval(() => {
+const _connectomeDecayTimer = setInterval(() => {
   for (const [region, descriptor] of BRAIN_REGION_MAP.entries()) {
     if (descriptor.activationLevel > 0) {
       descriptor.activationLevel = Math.max(0, descriptor.activationLevel - 0.02);
       BRAIN_REGION_MAP.set(region, descriptor);
     }
   }
-}, 10_000); // cool down 0.02/10s when idle
+}, 10_000)
+_connectomeDecayTimer.unref(); // cool down 0.02/10s when idle
 
 log.info('[Connectome] Trinity Connectome Service initialized — brain region registry active');
