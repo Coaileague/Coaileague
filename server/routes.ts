@@ -444,11 +444,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   // WEBSOCKET SETUP
   // ============================================================================
+  console.log('[ROUTE-INIT] step: websocket-setup');
   const { broadcastShiftUpdate, broadcastNotification, broadcastPlatformUpdate } = setupWebSocket(server);
   notificationStateManager.setBroadcastFunction((ws, uid, type, data, count) =>
     broadcastNotification(ws, uid, type as any, data, count)
   );
 
+  console.log('[ROUTE-INIT] step: platform-event-bus');
   const { platformEventBus } = await import("./services/platformEventBus");
   platformEventBus.setWebSocketHandler((event) => {
     broadcastPlatformUpdate({
@@ -468,9 +470,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   // CORE MIDDLEWARE SETUP
   // ============================================================================
+  console.log('[ROUTE-INIT] step: cookie-parser');
   const cookieParser = (await import("cookie-parser")).default;
   app.use(cookieParser());
 
+  console.log('[ROUTE-INIT] step: setup-auth');
   setupAuth(app);
 
   // Bootstrap — MUST be before CSRF (uses key-based auth not CSRF tokens)
@@ -847,10 +851,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // catch-alls because /intake, /claim, /login are intentionally public; the
   // remaining endpoints are guarded by the per-route requireAuditor middleware
   // that checks req.session.auditorId.
+  console.log('[ROUTE-INIT] step: auditor-routes');
   const { auditorRouter } = await import('./routes/auditorRoutes');
   app.use('/api/auditor', auditorRouter);
 
   // Phase 18D — Workspace security admin (break-glass overrides + auditor allow-list).
+  console.log('[ROUTE-INIT] step: security-admin-routes');
   const { securityAdminRouter } = await import('./routes/securityAdminRoutes');
   app.use('/api/security-admin', securityAdminRouter);
 
@@ -922,21 +928,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DOMAIN ROUTE MOUNTS (order matters — support's /api/platform before audit's)
   // All route logic lives in server/routes/domains/*.ts
   // ============================================================================
+  console.log('[ROUTE-INIT] step: mount-auth');
   mountAuthRoutes(app);       // /api/auth/*, /api/tos/*, /api/dev
   // Emergency one-time operator password reset (disabled unless INTERNAL_RESET_TOKEN env var is set)
   app.use('/api/auth', internalResetRouter);
+  console.log('[ROUTE-INIT] step: mount-support');
   mountSupportRoutes(app);    // /api/platform, /api/support/*, /api/help
+  console.log('[ROUTE-INIT] step: mount-billing');
   mountBillingRoutes(app);    // /api/billing, /api/invoices, /api/stripe
+  console.log('[ROUTE-INIT] step: mount-clients');
   mountClientRoutes(app);     // /api/clients, /api/contracts, /api/contract-renewals
+  console.log('[ROUTE-INIT] step: mount-comms');
   mountCommsRoutes(app);      // /api/comms, /api/broadcasts, /api/chat
+  console.log('[ROUTE-INIT] step: mount-compliance');
   mountComplianceRoutes(app); // /api/compliance, /api/credentials, /api/sps, /api/training-compliance
+  console.log('[ROUTE-INIT] step: mount-ops');
   mountOpsRoutes(app);        // /api/incidents, /api/rms, /api/cad, /api/bots, /api/subcontractors
+  console.log('[ROUTE-INIT] step: mount-orgs');
   mountOrgsRoutes(app);       // /api/workspace, /api/onboarding, /api/integrations, /api/import
+  console.log('[ROUTE-INIT] step: mount-payroll');
   mountPayrollRoutes(app);    // /api/payroll, /api/time-entries, /api/expenses
+  console.log('[ROUTE-INIT] step: mount-sales');
   mountSalesRoutes(app);      // /api/proposals, /api/pipeline-deals, /api/bid-analytics
+  console.log('[ROUTE-INIT] step: mount-scheduling');
   mountSchedulingRoutes(app); // /api/shifts, /api/schedules, /api/staffing
+  console.log('[ROUTE-INIT] step: mount-time');
   mountTimeRoutes(app);       // /api/time, /api/timesheet
+  console.log('[ROUTE-INIT] step: mount-trinity');
   mountTrinityRoutes(app);    // /api/trinity/*, /api/ai/*
+  console.log('[ROUTE-INIT] step: mount-workforce');
   mountWorkforceRoutes(app);  // /api/employees, /api/ats, /api/smart-onboarding, /api/hr
 
   // ============================================================================
@@ -1005,6 +1025,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  console.log('[ROUTE-INIT] step: mount-audit');
   mountAuditRoutes(app); // miscRouter catch-all must be LAST
 
   // ── Global Express Error Handler ──────────────────────────────────────────
@@ -1027,6 +1048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ── Trinity Source-of-Truth Validation ────────────────────────────────────
+  console.log('[ROUTE-INIT] step: source-of-truth-registry');
   const { printRegistryAtStartup, validateAgainstContract } = await import("./services/sourceOfTruthRegistry");
   printRegistryAtStartup();
   validateAgainstContract();

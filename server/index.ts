@@ -2151,6 +2151,10 @@ self.addEventListener('activate', async () => {
     app.use('/api', notFoundHandler);
     app.use(globalErrorHandler);
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : '';
+    console.error('[FATAL] CRITICAL: Failed to register routes —', errMsg);
+    if (errStack) console.error(errStack);
     log.error('CRITICAL: Failed to register routes', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
     process.exit(1);
   }
