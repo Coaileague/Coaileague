@@ -4,6 +4,7 @@
 import { Router } from 'express';
 // @ts-expect-error — TS migration: fix in refactoring sprint
 import { db } from "../db";
+import { formatZodIssues } from '../middleware/validateRequest';
 import { aiBrainService } from "../services/ai-brain/aiBrainService";
 import { isFeatureEnabled } from '@shared/platformConfig';
 import { gpsGeofenceService } from "../services/gpsGeofenceService";
@@ -1352,7 +1353,7 @@ timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('m
       reason: z.string().min(1, 'reason required'),
     });
     const geofenceParsed = geofenceOverrideSchema.safeParse(req.body);
-    if (!geofenceParsed.success) return res.status(400).json({ error: 'Invalid request body', details: geofenceParsed.error.issues });
+    if (!geofenceParsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(geofenceParsed.error) });
     const { approved, reason } = geofenceParsed.data;
 
     await db.update(timeEntries).set({
@@ -1791,7 +1792,7 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
       clientId: z.string().optional().nullable(),
     });
     const editParsed = timeEntryEditSchema.safeParse(req.body);
-    if (!editParsed.success) return res.status(400).json({ error: 'Invalid request body', details: editParsed.error.issues });
+    if (!editParsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(editParsed.error) });
     const { clockIn, clockOut, totalHours, notes, reason, hourlyRate, clientId } = editParsed.data;
 
     const [entry] = await db.select().from(timeEntries)
@@ -2572,7 +2573,7 @@ timeEntryRouter.post('/acknowledge-post-orders', requireAuth, mutationLimiter, a
 
     const postOrdersSchema = z.object({ clientId: z.string().min(1, 'clientId is required') });
     const postOrdersParsed = postOrdersSchema.safeParse(req.body);
-    if (!postOrdersParsed.success) return res.status(400).json({ error: 'Invalid request body', details: postOrdersParsed.error.issues });
+    if (!postOrdersParsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(postOrdersParsed.error) });
     const { clientId } = postOrdersParsed.data;
 
     // Verify client exists in this workspace and has post orders

@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { Router } from "express";
 import { z } from 'zod';
 import { db } from "../db";
@@ -67,7 +68,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
       })).optional().default([]),
     });
     const parsed = slotsSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { slots } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
@@ -109,7 +110,7 @@ router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       notes: z.string().optional(),
     }).strict();
     const parsed = updateSlotSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const updates = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
@@ -181,7 +182,7 @@ router.post('/exception', requireAuth, async (req: AuthenticatedRequest, res) =>
       notes: z.string().optional(),
     });
     const parsed = exceptionSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { startDate, endDate, requestType, reason, notes } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
@@ -227,7 +228,7 @@ router.post('/check-conflict', requireAuth, async (req: AuthenticatedRequest, re
       endTime: z.string().min(1, 'endTime is required'),
     });
     const parsed = conflictSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { employeeId, shiftDate, startTime, endTime } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 
@@ -275,7 +276,7 @@ router.post('/suggest-schedule', requireManager, async (req: AuthenticatedReques
       shiftDurationHours: z.number().min(0.5).max(24).optional(),
     });
     const parsed = suggestSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { startDate, endDate, shiftsPerDay, shiftDurationHours } = parsed.data;
     const { availabilityService } = await import("../services/availabilityService");
 

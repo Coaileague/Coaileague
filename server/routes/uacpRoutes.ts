@@ -11,6 +11,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { db } from '../db';
 import { 
   agentIdentities, 
@@ -269,7 +270,7 @@ router.patch('/agents/:agentId', requireAdminAccess, async (req, res) => {
     });
     const agentParsed = updateAgentSchema.safeParse(req.body);
     if (!agentParsed.success) {
-      return res.status(400).json({ error: 'Invalid request body', details: agentParsed.error.issues });
+      return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(agentParsed.error) });
     }
 
     const result = await agentIdentityService.updateAgentAccess(agentId, agentParsed.data, (user as any).id);
@@ -573,7 +574,7 @@ router.patch('/policies/:id', requireAdminAccess, async (req, res) => {
     });
     const policyParsed = updatePolicySchema.safeParse(req.body);
     if (!policyParsed.success) {
-      return res.status(400).json({ error: 'Invalid request body', details: policyParsed.error.issues });
+      return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(policyParsed.error) });
     }
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (user as any).workspaceId || user.currentWorkspaceId;

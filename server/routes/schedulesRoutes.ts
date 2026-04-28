@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { z } from 'zod';
 import { Router } from "express";
 import { db } from "../db";
@@ -104,7 +105,7 @@ router.post('/publish', requireManager, async (req: any, res) => {
       title: z.string().optional(),
     });
     const parsed = publishSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { weekStartDate, weekEndDate, shiftIds, title } = parsed.data;
     const { publishedSchedules } = await import("@shared/schema");
 
@@ -306,7 +307,7 @@ router.post('/unpublish', requireManager, async (req: any, res) => {
       weekEnd: z.string().min(1, 'weekEnd is required'),
     });
     const parsed = unpublishSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { weekStart, weekEnd } = parsed.data;
 
     const startDate = new Date(weekStart);
@@ -360,7 +361,7 @@ router.post('/apply-insight', requireManager, async (req: any, res) => {
       actionData: z.record(z.unknown()).optional(),
     });
     const parsed = applyInsightSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { insightId, actionData } = parsed.data;
 
     if (insightId.startsWith('open-shifts') || insightId.includes('autofill') || insightId.includes('staffing') || insightId === 'unassigned-warning') {

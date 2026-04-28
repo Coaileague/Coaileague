@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { validatePayRate, canAssignRole, requiresOwnerToAssign, OWNER_ASSIGN_MIN_LEVEL, businessRuleResponse } from '../lib/businessRules';
 import { WORKSPACE_ROLE_HIERARCHY } from '../lib/rbac/roleDefinitions';
 import { Router } from "express";
@@ -153,7 +154,7 @@ router.post('/bulk-notify', async (req: AuthenticatedRequest, res) => {
     }).safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(400).json({ error: "Validation failed", details: validation.error.issues });
+      return res.status(400).json({ error: "Validation failed", details: formatZodIssues(validation.error) });
     }
 
     const { employeeIds, title, message } = validation.data;
@@ -228,7 +229,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     });
 
     if (!validationResult.success) {
-      return res.status(400).json({ error: "Validation failed", details: validationResult.error.issues });
+      return res.status(400).json({ error: "Validation failed", details: formatZodIssues(validationResult.error) });
     }
 
     const validatedData = trimStrings(validationResult.data);
@@ -501,7 +502,7 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
 
     const validationResult = insertEmployeeSchema.partial().safeParse(updateData);
     if (!validationResult.success) {
-      return res.status(400).json({ error: "Validation failed", details: validationResult.error.issues });
+      return res.status(400).json({ error: "Validation failed", details: formatZodIssues(validationResult.error) });
     }
     const validated = validationResult.data;
 

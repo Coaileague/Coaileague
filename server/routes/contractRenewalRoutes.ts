@@ -2,6 +2,7 @@
  * MODULE 3 — Client Contract Renewal & Proposal Pipeline
  */
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { Router } from "express";
 import { randomUUID } from 'crypto';
 import { db } from "../db";
@@ -84,7 +85,7 @@ router.patch("/contracts/:id/renewal", requireAuth, async (req: AuthenticatedReq
       renewal_notice_days: z.number().int().optional(),
     });
     const renewalParsed = renewalUpdateSchema.safeParse(req.body);
-    if (!renewalParsed.success) return res.status(400).json({ error: 'Invalid request body', details: renewalParsed.error.issues });
+    if (!renewalParsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(renewalParsed.error) });
     const { renewal_status, renewal_proposed_at, auto_renew, annual_value, renewal_notice_days } = renewalParsed.data;
     const updates: string[] = [];
     const vals: any[] = [];
@@ -118,7 +119,7 @@ router.post("/contracts/:id/tasks", requireAuth, async (req: AuthenticatedReques
       trinity_action_taken: z.string().optional(),
     });
     const taskParsed = renewalTaskSchema.safeParse(req.body);
-    if (!taskParsed.success) return res.status(400).json({ error: 'Invalid request body', details: taskParsed.error.issues });
+    if (!taskParsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(taskParsed.error) });
     const { task_type, due_date, trinity_action_taken } = taskParsed.data;
     const id = `crt-${randomUUID()}`;
     await db.$client.query(
@@ -244,7 +245,7 @@ router.patch("/contracts/:id", requireAuth, async (req: AuthenticatedRequest, re
       annual_value: z.number().optional(),
     });
     const aliasParsed = contractAliasSchema.safeParse(req.body);
-    if (!aliasParsed.success) return res.status(400).json({ error: 'Invalid request body', details: aliasParsed.error.issues });
+    if (!aliasParsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(aliasParsed.error) });
     const { renewal_status, auto_renew, annual_value } = aliasParsed.data;
     const updates: string[] = [];
     const vals: any[] = [];

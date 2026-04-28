@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { z } from 'zod';
 import { Router } from "express";
 import { requireManager, type AuthenticatedRequest } from "../rbac";
@@ -148,7 +149,7 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       });
       const templateParsed = updateTemplateSchema.safeParse(req.body);
       if (!templateParsed.success) {
-        return res.status(400).json({ error: 'Invalid request body', details: templateParsed.error.issues });
+        return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(templateParsed.error) });
       }
 
       const [updated] = await db

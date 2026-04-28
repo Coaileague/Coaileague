@@ -2,6 +2,7 @@
  * MODULE 7 — Client Satisfaction Scoring
  */
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { Router } from "express";
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
@@ -100,7 +101,7 @@ router.post("/records", requireAuth, async (req: AuthenticatedRequest, res) => {
       follow_up_required: z.boolean().optional(),
     });
     const parsed = recordSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const {
       client_id, check_in_type, check_in_date, conducted_by,
       satisfaction_score, nps_score, feedback_text, issues_raised,
@@ -163,7 +164,7 @@ router.post("/concerns", requireAuth, async (req: AuthenticatedRequest, res) => 
       linked_incident_id: z.string().optional().nullable(),
     });
     const parsed = concernSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { client_id, concern_type, severity, description, assigned_to, linked_incident_id } = parsed.data;
     const id = `cc-${randomUUID()}`;
     await db.$client.query(
@@ -211,7 +212,7 @@ router.patch("/concerns/:id/resolve", requireAuth, async (req: AuthenticatedRequ
       resolution_notes: z.string().optional(),
     });
     const parsed = resolveSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     const { resolution_notes } = parsed.data;
     await db.$client.query(
       `UPDATE client_concerns SET status = 'resolved', resolution_notes = $1, resolved_at = NOW(), resolved_by = $2

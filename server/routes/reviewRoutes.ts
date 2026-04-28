@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { Router } from "express";
 import { z } from 'zod';
 import { storage } from "../storage";
@@ -241,7 +242,7 @@ router.patch("/api/report-submissions/:id", requireAuth, async (req: any, res) =
       title: z.string().optional(),
     });
     const parsed = updateSubmissionSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid request body', details: formatZodIssues(parsed.error) });
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const submission = await storage.updateReportSubmission(id, parsed.data);
     res.json(submission);
