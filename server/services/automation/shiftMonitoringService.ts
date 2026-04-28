@@ -16,7 +16,7 @@
 
 import { db } from '../../db';
 import { pool } from '../../db';
-import { shifts, timeEntries, employees, notifications } from '@shared/schema';
+import { shifts, timeEntries, employees, notifications, workspaces } from '@shared/schema';
 import { eq, and, gte, lte, isNull, or, ne, sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { coaileagueScoringService } from './coaileagueScoringService';
@@ -159,8 +159,7 @@ class ShiftMonitoringService {
         const windowStart = new Date(now.getTime() - 2 * 60 * 60 * 1000);
         const windowEnd = new Date(now.getTime() + 30 * 60 * 1000);
 
-        // I-P0-1 FIX: Join workspaces table and filter to active workspaces only.
-        // Prevents the monitoring daemon from processing shifts for suspended/cancelled tenants.
+        // Only process shifts for workspaces that are still operational.
         const activeShifts = await db.select({
           shift: shifts,
           employee: employees,
@@ -173,12 +172,22 @@ class ShiftMonitoringService {
               eq(shifts.date, today),
               gte(shifts.startTime, windowStart),
               lte(shifts.startTime, windowEnd),
+              eq(workspaces.isDeactivated, false),
+              eq(workspaces.isSuspended, false),
+              eq(workspaces.isFrozen, false),
+              eq(workspaces.isLocked, false),
+              or(
+                isNull(workspaces.subscriptionStatus),
+                and(
+                  ne(workspaces.subscriptionStatus, 'suspended'),
+                  ne(workspaces.subscriptionStatus, 'cancelled')
+                )
+              ),
               or(
                 eq(shifts.status, 'scheduled'),
                 eq(shifts.status, 'confirmed'),
                 eq(shifts.status, 'pending')
-              ),
-              eq(workspaces.isActive, true)  // Only process shifts for active workspaces
+              )
             )
           );
 

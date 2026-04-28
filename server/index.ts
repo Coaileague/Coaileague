@@ -22,6 +22,7 @@ import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
 import { registerRoutes } from "./routes";
+import { stopBackupVerificationCron, stopStatusHealthLoop } from "./routes/statusRoutes";
 import { setupVite, serveStatic, log as viteLog } from "./vite";
 import { createLogger } from './lib/logger';
 import { pool } from "./db"; // Assuming 'pool' is your PostgreSQL client connection pool
@@ -30,6 +31,7 @@ import { CACHING } from './config/platformConfig';
 import { DOMAINS } from '@shared/platformConfig';
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
 import { ensureRequiredTables } from "./services/dbMigrationService";
+import { stopDecemberHolidayCron } from "./services/holidayService";
 import { runLegacyBootstraps } from "./services/legacyBootstrapRegistry";
 import { ensureCriticalConstraints } from "./services/criticalConstraintsBootstrap";
 import { ensureWorkspaceIndexes } from "./services/workspaceIndexBootstrap";
@@ -1724,6 +1726,9 @@ process.on('unhandledRejection', (reason: any, promise) => {
   try {
     log.info('Phase 0: Registering routes');
     server = await registerRoutes(app);
+    registerDaemon('DecemberHolidayCron', stopDecemberHolidayCron);
+    registerDaemon('BackupVerificationCron', stopBackupVerificationCron);
+    registerDaemon('StatusHealthLoop', stopStatusHealthLoop);
 
     // ── Semantic alias routes ────────────────────────────────────────────────
     // These provide canonical paths expected by the audit / frontend without
@@ -2400,7 +2405,6 @@ process.on('unhandledRejection', (reason: any, promise) => {
       const { lostFoundService } = await import('./services/ops/lostFoundService');
       panicAlertService.initialize();
       loneWorkerService.initialize();
-      registerDaemon('LoneWorkerService', () => loneWorkerService.stop?.());
       boloService.initialize();
       visitorLogService.initialize();
       assetTrackingService.initialize();
