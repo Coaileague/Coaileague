@@ -671,7 +671,7 @@ billingRouter.post('/create-checkout-session', async (req: AuthenticatedRequest,
     // retried server-side; the user clicks the button once. We use a timestamp-scoped key so
     // same-minute duplicate clicks from the UI are deduplicated, but we still get a fresh
     // session per real checkout attempt (not the same 24h-stale session on reload).
-    const session = await stripe.checkout.sessions.create(sessionConfig, { idempotencyKey: `checkout-${workspaceId}-${Date.now()}` });
+    const session = await stripe.checkout.sessions.create(sessionConfig, { idempotencyKey: `checkout-${workspaceId}-${Math.floor(Date.now() / 60000)}` });
 
     res.json({ sessionId: session.id });
   } catch (error: unknown) {
@@ -703,7 +703,7 @@ billingRouter.post('/create-payment-intent', async (req: AuthenticatedRequest, r
       },
     // GAP-58 FIX: User-initiated PaymentIntent — timestamp scoped to deduplicate same-second
     // double-clicks without locking the user into the same 24h stale PI on every request.
-    }, { idempotencyKey: `pi-purchase-${workspaceId}-${Date.now()}` });
+    }, { idempotencyKey: `pi-purchase-${workspaceId}-${Math.floor(Date.now() / 60000)}` });
 
     res.json({ 
       clientSecret: intent.client_secret,
