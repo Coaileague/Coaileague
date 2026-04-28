@@ -8,6 +8,7 @@ import {
   plaidTransferAttempts,
 } from '@shared/schema';
 import { createLogger } from '../../lib/logger';
+import { toFinancialString } from '../financialCalculator';
 import { initiateTransfer, isPlaidConfigured, plaidDecrypt, verifyBankAccount } from '../partners/plaidService';
 
 const log = createLogger('achTransferService');
@@ -18,6 +19,7 @@ export interface AchTransferResult {
   status: AchTransferOutcome;
   transferId?: string;
   reason?: string;
+  amount?: string;
 }
 
 export async function verifyEmployeeBankAccount(params: {
@@ -142,14 +144,59 @@ export async function initiatePayrollAchTransfer(params: {
   }
 
   // Idempotency check — return existing attempt if same key was already used
-  const existingAttempt = await db.select()
-    .from(plaidTransferAttempts)
-    .where(and(
-      eq(plaidTransferAttempts.workspaceId, workspaceId),
-      eq((plaidTransferAttempts as any).idempotencyKey, idempotencyKey)
-    ))
-    .limit(1)
-    .catch(() => []);
+  const existingTransfer = payStubId
+    ? await db.select({
+        transferId: payStubs.plaidTransferId,
+        status: payStubs.plaidTransferStatus,
+        amount: payStubs.netPay,
+      })
+        .from(payStubs)
+        .where(and(
+          eq(payStubs.id, payStubId),
+          eq(payStubs.workspaceId, workspaceId),
+        ))
+        .limit(1)
+        .then(rows => rows[0])
+        .catch(() => null)
+    : payrollEntryId
+      ? await db.select({
+          transferId: payrollEntries.plaidTransferId,
+          status: payrollEntries.plaidTransferStatus,
+          amount: payrollEntries.netPay,
+        })
+          .from(payrollEntries)
+          .where(and(
+            eq(payrollEntries.id, payrollEntryId),
+            eq(payrollEntries.workspaceId, workspaceId),
+          ))
+          .limit(1)
+          .then(rows => rows[0])
+          .catch(() => null)
+      : null;
+
+  if (existingTransfer?.transferId) {
+    log.info('[AchTransfer] Idempotent retry - returning existing transfer', {
+      idempotencyKey,
+      transferId: existingTransfer.transferId,
+      status: existingTransfer.status,
+    });
+    return {
+      status: 'initiated',
+      transferId: existingTransfer.transferId,
+      amount: toFinancialString(existingTransfer.amount || amountStr),
+    };
+  }
+
+  const existingAttempt = payrollEntryId
+    ? await db.select()
+        .from(plaidTransferAttempts)
+        .where(and(
+          eq(plaidTransferAttempts.workspaceId, workspaceId),
+          eq(plaidTransferAttempts.payrollEntryId, payrollEntryId),
+        ))
+        .limit(1)
+        .catch(() => [])
+    : [];
 
   if (existingAttempt.length > 0) {
     const existing = existingAttempt[0] as any;
@@ -157,7 +204,7 @@ export async function initiatePayrollAchTransfer(params: {
     return {
       status: existing.transferId ? 'initiated' : existing.status,
       transferId: existing.transferId,
-      amount: existing.amount,
+      amount: toFinancialString(existing.amount || amountStr),
     };
   }
 

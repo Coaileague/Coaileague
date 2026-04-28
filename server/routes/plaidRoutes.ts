@@ -1,7 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { requireAuth } from '../auth';
-import { requireOwner, requireManager, type AuthenticatedRequest } from '../rbac';
+import { hasManagerAccess, hasPlatformWideAccess, requireOwner } from '../rbac';
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
 import { orgFinanceSettings, payStubs, employeeBankAccounts, employees } from '@shared/schema';
@@ -25,6 +25,13 @@ function getWorkspaceId(req: any): string {
 }
 function getUserId(req: any): string {
   return req.user?.id || '';
+}
+
+function canManageEmployeeBanking(req: any, employeeUserId?: string | null): boolean {
+  const userId = getUserId(req);
+  if (employeeUserId && employeeUserId === userId) return true;
+  if (hasPlatformWideAccess(req.platformRole || req.user?.platformRole)) return true;
+  return hasManagerAccess(req.workspaceRole || req.user?.workspaceRole);
 }
 
 router.get('/status', requireAuth, requireOwner, async (req, res) => {
@@ -203,9 +210,6 @@ router.post('/link-token/employee/:employeeId', requireAuth, async (req: any, re
     const workspaceId = getWorkspaceId(req);
     const userId = getUserId(req);
     const { employeeId } = req.params;
-    const workspaceRole = req.workspaceRole || req.user?.workspaceRole || '';
-    const isManagerOrAbove = ['org_owner', 'co_owner', 'manager', 'supervisor'].includes(workspaceRole);
-
     const emp = await db
       .select({ id: employees.id, workspaceId: employees.workspaceId, userId: employees.userId })
       .from(employees)
@@ -217,7 +221,7 @@ router.post('/link-token/employee/:employeeId', requireAuth, async (req: any, re
     // Authorization: field employees can only link their own record
     // Managers/owners have payroll authority to link any employee
     const isSelf = emp[0].userId === userId;
-    if (!isSelf && !isManagerOrAbove) {
+    if (!canManageEmployeeBanking(req, emp[0].userId)) {
       return res.status(403).json({ error: 'You can only link your own direct deposit account' });
     }
 
@@ -241,9 +245,6 @@ router.post('/exchange/employee/:employeeId', requireAuth, async (req, res) => {
     const userId = getUserId(req);
     const { employeeId } = req.params;
 
-    const workspaceRole = (req as any).workspaceRole || (req as any).user?.workspaceRole || '';
-    const isManagerOrAbove = ['org_owner', 'co_owner', 'manager', 'supervisor'].includes(workspaceRole);
-
     const emp = await db
       .select({ id: employees.id, userId: employees.userId })
       .from(employees)
@@ -252,8 +253,7 @@ router.post('/exchange/employee/:employeeId', requireAuth, async (req, res) => {
     if (!emp.length) return res.status(404).json({ error: 'Employee not found' });
 
     // Authorization guard: self-link or manager/owner with payroll authority
-    const isSelf = emp[0].userId === userId;
-    if (!isSelf && !isManagerOrAbove) {
+    if (!canManageEmployeeBanking(req, emp[0].userId)) {
       return res.status(403).json({ error: 'You can only link your own direct deposit account' });
     }
 
@@ -347,7 +347,18 @@ router.post('/exchange/employee/:employeeId', requireAuth, async (req, res) => {
 router.get('/employee/:employeeId/bank-status', requireAuth, async (req, res) => {
   try {
     const workspaceId = getWorkspaceId(req);
+    const userId = getUserId(req);
     const { employeeId } = req.params;
+
+    const [emp] = await db
+      .select({ id: employees.id, userId: employees.userId })
+      .from(employees)
+      .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+      .limit(1);
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    if (!userId || !canManageEmployeeBanking(req, emp.userId)) {
+      return res.status(403).json({ error: 'You can only view your own direct deposit status' });
+    }
 
     const accounts = await db
       .select({
@@ -384,6 +395,7 @@ router.get('/employee/:employeeId/bank-status', requireAuth, async (req, res) =>
 router.get('/transfers/:payStubId', requireAuth, async (req, res) => {
   try {
     const workspaceId = getWorkspaceId(req);
+    const userId = getUserId(req);
     const { payStubId } = req.params;
 
     const [stub] = await db
@@ -400,6 +412,16 @@ router.get('/transfers/:payStubId', requireAuth, async (req, res) => {
       .limit(1);
 
     if (!stub) return res.status(404).json({ error: 'Pay stub not found' });
+
+    const [emp] = await db
+      .select({ id: employees.id, userId: employees.userId })
+      .from(employees)
+      .where(and(eq(employees.id, stub.employeeId), eq(employees.workspaceId, workspaceId)))
+      .limit(1);
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    if (!userId || !canManageEmployeeBanking(req, emp.userId)) {
+      return res.status(403).json({ error: 'You can only view your own transfer status' });
+    }
 
     res.json(stub);
   } catch (err: unknown) {

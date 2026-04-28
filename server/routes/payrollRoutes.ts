@@ -678,10 +678,13 @@ router.get('/my-payroll-info', async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const allEmployees = await db.select().from(employees).where(eq(employees.userId, userId));
-    if (!allEmployees.length) return res.status(404).json({ message: 'Employee record not found' });
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
 
-    const employee = allEmployees[0];
+    const employee = await db.query.employees.findFirst({
+      where: and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)),
+    });
+    if (!employee) return res.status(404).json({ message: 'Employee record not found' });
     const info = await db.query.employeePayrollInfo.findFirst({
       where: and(
         eq(employeePayrollInfo.employeeId, employee.id),
@@ -766,7 +769,12 @@ router.patch('/my-payroll-info', async (req: AuthenticatedRequest, res) => {
 
         const [existingBankAcct] = await tx.select({ id: employeeBankAccounts.id })
           .from(employeeBankAccounts)
-          .where(and(eq(employeeBankAccounts.employeeId, employee.id), eq(employeeBankAccounts.isPrimary, true), eq(employeeBankAccounts.isActive, true)))
+          .where(and(
+            eq(employeeBankAccounts.workspaceId, employee.workspaceId),
+            eq(employeeBankAccounts.employeeId, employee.id),
+            eq(employeeBankAccounts.isPrimary, true),
+            eq(employeeBankAccounts.isActive, true),
+          ))
           .limit(1);
 
         if (existingBankAcct) {
@@ -1349,6 +1357,8 @@ router.post('/tax-forms/941', async (req: AuthenticatedRequest, res) => {
     }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for 941 generation', { error: err?.message }));
 
     if (result.pdfBuffer) {
+      if (result.vaultId) res.setHeader('X-Document-Vault-Id', result.vaultId);
+      if (result.documentNumber) res.setHeader('X-Document-Number', result.documentNumber);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="form-941-Q${quarterNum}-${yearNum}.pdf"`);
       return res.send(result.pdfBuffer);
@@ -1409,6 +1419,8 @@ router.post('/tax-forms/940', async (req: AuthenticatedRequest, res) => {
     }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for 940 generation', { error: err?.message }));
 
     if (result.pdfBuffer) {
+      if (result.vaultId) res.setHeader('X-Document-Vault-Id', result.vaultId);
+      if (result.documentNumber) res.setHeader('X-Document-Number', result.documentNumber);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="form-940-${year}.pdf"`);
       return res.send(result.pdfBuffer);
@@ -1599,6 +1611,8 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function requireManagerOrOwn(req: AuthenticatedRequest, employeeOwnerId: string | null): boolean {
+  if (hasPlatformWideAccess(req.platformRole)) return true;
+  if (hasManagerAccess(req.workspaceRole)) return true;
   const role = req.user?.role;
   if (role === 'owner' || role === 'manager' || role === 'admin') return true;
   return req.user?.id === employeeOwnerId;
@@ -1637,6 +1651,15 @@ router.patch('/employees/:employeeId/bank-accounts/:accountId', async (req: Auth
       .where(and(eq(employeeBankAccounts.id, accountId), eq(employeeBankAccounts.workspaceId, workspaceId), eq(employeeBankAccounts.employeeId, employeeId)))
       .limit(1);
     if (!current) return res.status(404).json({ error: 'Bank account not found' });
+
+    const [employee] = await db.select({ userId: employees.userId })
+      .from(employees)
+      .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+      .limit(1);
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+    if (!requireManagerOrOwn(req, employee.userId)) {
+      return res.status(403).json({ error: 'You can only update your own direct deposit account' });
+    }
 
     const parsed = employeeBankAccountUpdateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid bank account update data', details: parsed.error.flatten() });

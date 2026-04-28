@@ -15,6 +15,7 @@ import { db } from '../db';
 import { systemAuditLogs } from '@shared/schema';
 import { broadcastToAllClients } from '../websocket';
 import { aiActivityService } from './aiActivityService';
+import { automationExecutionTracker } from './orchestration/automationExecutionTracker';
 import { createLogger } from '../lib/logger';
 const log = createLogger('automationEventsService');
 
@@ -129,6 +130,11 @@ class AutomationEventsService {
       message: `Running ${this.getJobLabel(type)}...` 
     });
 
+    automationExecutionTracker.trackAutomationJobStarted(
+      event,
+      this.getJobLabel(type),
+      this.jobRetryLimits[type],
+    );
     this.broadcastEvent('automation_job_started', event);
     log.info(`[Automation] Started: ${type} (${id})`);
 
@@ -161,6 +167,7 @@ class AutomationEventsService {
       message: result?.message || `${this.getJobLabel(event.type)} completed` 
     });
 
+    automationExecutionTracker.trackAutomationJobCompleted(event);
     this.broadcastEvent('automation_job_completed', event);
     this.logToDatabase(event);
     log.info(`[Automation] Completed: ${event.type} (${jobId}) in ${event.duration}ms`);
@@ -184,6 +191,7 @@ class AutomationEventsService {
       message: `${this.getJobLabel(event.type)} failed` 
     });
 
+    automationExecutionTracker.trackAutomationJobFailed(event, error);
     this.broadcastEvent('automation_job_failed', event);
     this.logToDatabase(event);
     log.error(`[Automation] Failed: ${event.type} (${jobId}): ${error}`);
@@ -203,6 +211,7 @@ class AutomationEventsService {
 
     aiActivityService.idle('Automation', { workspaceId: event.workspaceId });
 
+    automationExecutionTracker.trackAutomationJobSkipped(event, reason);
     this.broadcastEvent('automation_job_skipped', event);
     log.info(`[Automation] Skipped: ${event.type} (${jobId}): ${reason}`);
   }

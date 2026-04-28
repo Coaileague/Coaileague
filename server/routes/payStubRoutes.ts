@@ -7,7 +7,7 @@
 
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
-import { attachWorkspaceId, requireEmployee, requireManager, type AuthenticatedRequest } from '../rbac';
+import { attachWorkspaceId, hasManagerAccess, requireEmployee, requireManager, type AuthenticatedRequest } from '../rbac';
 import { paystubService } from '../services/paystubService';
 import { db } from '../db';
 import { employees, payStubs } from '@shared/schema';
@@ -149,7 +149,7 @@ router.get('/api/paystubs/:employeeId/:startDate/:endDate', requireAuth, attachW
     }
 
     const isSelf = requestingEmployee.id === employeeId;
-    const isManager = ['org_owner', 'org_admin', 'department_manager'].includes(requestingEmployee.workspaceRole || '');
+    const isManager = hasManagerAccess(requestingEmployee.workspaceRole || '');
 
     if (!isSelf && !isManager) {
       return res.status(403).json({ message: 'Not authorized' });
@@ -203,7 +203,7 @@ router.get('/api/paystubs/:employeeId/:startDate/:endDate/pdf', requireAuth, att
     }
 
     const isSelf = requestingEmployee.id === employeeId;
-    const isManager = ['org_owner', 'org_admin', 'department_manager'].includes(requestingEmployee.workspaceRole || '');
+    const isManager = hasManagerAccess(requestingEmployee.workspaceRole || '');
 
     if (!isSelf && !isManager) {
       return res.status(403).json({ message: 'Not authorized' });
@@ -242,6 +242,7 @@ router.post('/api/paystubs/batch', requireAuth, attachWorkspaceId, requireManage
       return res.status(400).json({ error: batchParsed.error.errors[0].message });
     }
     const { startDate, endDate, employeeIds, sendNotifications } = batchParsed.data;
+    const requestedEmployeeIds = employeeIds ?? [];
 
     if (!workspaceId) {
       return res.status(400).json({ message: 'Workspace context required' });
@@ -255,12 +256,12 @@ router.post('/api/paystubs/batch', requireAuth, attachWorkspaceId, requireManage
     const end = new Date(endDate);
     const results: { employeeId: string; success: boolean; error?: string }[] = [];
 
-    const targetEmployees = employeeIds?.length > 0
+    const targetEmployees = requestedEmployeeIds.length > 0
       ? await db.query.employees.findMany({
           where: and(
             eq(employees.workspaceId, workspaceId),
           ),
-        }).then(emps => emps.filter(e => employeeIds.includes(e.id)))
+        }).then(emps => emps.filter(e => requestedEmployeeIds.includes(e.id)))
       : await db.query.employees.findMany({
           where: eq(employees.workspaceId, workspaceId),
         });

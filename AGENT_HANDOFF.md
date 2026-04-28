@@ -1,6 +1,6 @@
 # COAILEAGUE - MASTER HANDOFF
 # ONE FILE. Update in place. Never create new handoff files.
-# Last updated: 2026-04-28 - Codex (refactor closeout implementation ready for Claude)
+# Last updated: 2026-04-28 - Codex (parallel structural refactor sweep ready for Claude)
 
 ---
 
@@ -21,10 +21,10 @@ One domain, one complete sweep, one coherent commit.
 ## TURN TRACKER
 
 ```
-Current state: PARALLEL LANES
-  Claude - Email entity context panel + Trinity suggested actions landed on development.
-  Codex  - Extended domain route mount condensation complete on refactor/service-layer.
-  Copilot - Queued for narrow Zod/test batches only after the current lane is stable.
+Current state: CODEX REVIEW PACKAGE READY
+  Claude - review/merge Codex refactor package into development, then build + boot.
+  Codex  - parallel structural refactor sweep complete on refactor/service-layer.
+  Copilot - next narrow Zod/test batches only after Claude's merge is stable.
 
 Next merge target:
   Codex pushes refactor/service-layer only.
@@ -37,8 +37,8 @@ Next merge target:
 
 ```
 origin/development           -> 832bf99a  (latest Copilot automation audit merge)
-origin/refactor/service-layer -> Codex refactor closeout implementation
-local Codex lane             -> synced with origin/refactor/service-layer before patching
+origin/refactor/service-layer -> Codex parallel structural refactor sweep pending push
+local Codex lane             -> build green, filtered touched-file typecheck clean
 ```
 
 Boot test before any push to development:
@@ -81,17 +81,23 @@ moves fully into polish/enhancement work.
   - `450b9451` first route mount helper pass.
   - `3968be97` audit/compliance/time/Trinity follow-up pass.
 - Copilot automation audit merged to development at `832bf99a`.
-- Current Codex patch closes remaining duplicate mount decisions.
-- Current Codex patch removes hardcoded workflow progress.
-- Current Codex patch makes automation retry honest: no fake retry success without a registered executor.
-- Current Codex patch hydrates pending approval gates from DB before approval lookup.
-- Current Codex patch persists workspace admin hourly rate in `workspaces.automation_policy_blob`.
+- Previous Codex patch closes remaining duplicate mount decisions.
+- Previous Codex patch removes hardcoded workflow progress.
+- Previous Codex patch makes automation retry honest: no fake retry success without a registered executor.
+- Previous Codex patch hydrates pending approval gates from DB before approval lookup.
+- Previous Codex patch persists workspace admin hourly rate in `workspaces.automation_policy_blob`.
+- Current Codex patch bridges `automationEventsService` and `workflowLedger` into `automationExecutionTracker`.
+- Current Codex patch adds ChatDock typed event, durable DB message store, and Redis-compatible pub/sub foundation modules.
+- Current Codex patch centralizes WebSocket moderation permission checks behind one RBAC helper.
+- Current Codex patch hardens Plaid/payroll/paystub ownership, idempotency, and vault metadata paths.
+- Current Codex patch adds Zod API boundaries to the current Copilot-owned admin/agent route batch.
 
 ### Must Fix Or Explicitly Defer Before Full Polish
-1. ARCH-01 - Automation tracking truth source.
-   - Owner lane: Codex maps readers/writers; Claude implements canonical ledger/migration; Copilot scaffolds event-sequence tests.
-   - Issue: `automationEventsService`, `workflowLedger`, and `automationExecutionTracker` are disconnected.
-   - Exit: one canonical execution ledger with adapters or migrated callers.
+1. ARCH-01 - Automation tracking truth source. BRIDGED BY CODEX
+   - Current patch: `automationEventsService` job lifecycle now creates/starts/completes/fails canonical `automation_executions` records through `automationExecutionTracker`.
+   - Current patch: `workflowLedger` still owns orchestration run/step/artifact details, but now mirrors create/start/complete/final-fail/cancel into `automationExecutionTracker` using the orchestration run id as the tracker action id.
+   - Remaining after merge: deeper schema migration is optional/post-live only if the team wants to retire `orchestration_runs`; do not remove it before tests pin step/artifact behavior.
+   - Exit for live: canonical dashboard/status truth reads from `automation_executions`; domain ledgers may keep detail records.
 
 2. WIRE-01 - Real automation retry execution. PARTIALLY CLOSED BY CODEX
    - Current patch: `automationEventsService.requestRetry()` no longer creates a fake retry job unless a real retry executor is registered for that job type. It exposes `registerRetryHandler()` and runs the handler asynchronously, completing/failing the retry event based on actual handler result.
@@ -110,30 +116,35 @@ moves fully into polish/enhancement work.
    - Current patch: `automationMetrics.setWorkspaceAdminHourlyRate()` validates with existing business rules and persists the rate in `workspaces.automation_policy_blob`; reads now use the persisted value with safe fallback to the default.
    - Review focus: confirm this existing JSONB settings column is acceptable instead of a new schema column.
 
-6. P0 - ChatDock durable foundation.
-   - Owner lane: Claude later, before ChatDock features.
-   - Issue: direct WebSocket/in-memory broadcast patterns remain.
-   - Exit: durable message store, per-room sequence numbers, Redis pub/sub, typed WS events, and FCM push foundation before receipts/reactions/polls/media/voice.
+6. P0 - ChatDock durable foundation. FOUNDATION ADDED BY CODEX
+   - Current patch: added `server/services/chat/chatDockEventProtocol.ts` for typed current WS event names.
+   - Current patch: added `server/services/chat/chatDockMessageStore.ts` with DB-injected Drizzle durable store over existing chat tables.
+   - Current patch: added `server/services/chat/chatDockPubSub.ts` with local adapter and Redis-compatible publisher/subscriber adapter without adding a new package dependency.
+   - Remaining after merge: wire these modules into `server/websocket.ts`, choose/provision Redis client, add FCM push fallback, and add per-room sequence/resume before ChatDock feature expansion.
 
-7. P0 - RBAC/IRC final consolidation.
-   - Owner lane: Codex review/refactor after ChatDock foundation tests.
-   - Issue: `server/websocket.ts` and `server/services/ircEventRegistry.ts` still contain mode/IRC permission-sensitive concepts.
-   - Exit: RBAC owns permissions, room type owns behavior, IRC/mode names are internal routing metadata only.
+7. P0 - RBAC/IRC final consolidation. CORE MODERATION DRIFT CLOSED BY CODEX
+   - Current patch: `kick_user`, slash `/kick`, `silence_user`, `give_voice`, and `ban_user` now route through `canPerformModerationAction()` instead of separate inline role checks.
+   - Current patch: `ircEventRegistry.ts` is clarified as event metadata only; authorization belongs to RBAC.
+   - Remaining after merge: large `server/websocket.ts` still contains behavior-level room mode branches. Do not delete these before ChatDock tests; reduce them gradually as typed room-type adapters replace direct branches.
 
-8. P1 - Zod API boundary sweep.
-   - Owner lane: Copilot batches, Claude verifies.
-   - Issue: remaining route mutation handlers read `req.body` without obvious local Zod `safeParse` boundary.
-   - Exit: each mutation has local Zod validation or a clearly documented already-validated service boundary.
+8. P1 - Zod API boundary sweep. CURRENT BATCH CLOSED BY COPILOT/CODEX
+   - Current patch adds local Zod `safeParse(req.body)` guards to:
+     `server/routes/admin/aiCosts.ts`, `server/routes/adminDevExecuteRoute.ts`,
+     `server/routes/adminPermissionRoutes.ts`, and `server/routes/agentActivityRoutes.ts`.
+   - Remaining after merge: broad route backlog still exists. Continue in Copilot batches, one domain at a time.
 
-9. P1 - PDF/vault workflow sweep.
-   - Owner lane: Codex audit, Claude fixes.
-   - Issue: tax, payroll, compliance, client report, and document routes must prove real branded PDF generation plus tenant vault persistence.
-   - Exit: every generated document persists to tenant vault before response/email; no raw data substitutes for required PDFs.
+9. P1 - PDF/vault workflow sweep. PAYROLL/TAX SLICE VERIFIED BY CODEX
+   - Current patch confirms `taxFormGeneratorService` already vaults W-2, 1099, 940, and 941 PDFs.
+   - Current patch exposes `vaultId` and `documentNumber` in tax generator return types and adds response headers for 940/941 downloads.
+   - Current patch fixes `PaystubResult` typing to include vault metadata already returned by the service.
+   - Remaining after merge: continue with compliance/client report routes in the next document-domain batch.
 
-10. P1 - Payroll/ACH/Plaid/paystub sweep.
-    - Owner lane: Codex audit, Claude fixes.
-    - Issue: full workflow still needs final FinancialCalculator/idempotency/workspace/paystub-vault verification.
-    - Exit: money mutations use FinancialCalculator, ACH/Plaid handlers are idempotent, employee ownership is enforced, and paystubs are vaulted before transfer/notification.
+10. P1 - Payroll/ACH/Plaid/paystub sweep. CURRENT CRITICAL SLICE CLOSED BY CODEX
+    - Current patch replaces partial hardcoded manager checks with canonical RBAC helpers.
+    - Current patch scopes payroll info and bank account reads/writes by workspace.
+    - Current patch adds self-or-manager ownership checks for Plaid bank status and transfer status.
+    - Current patch reworks ACH idempotency away from a non-existent `idempotencyKey` column and toward existing paystub/payroll-entry transfer state.
+    - Remaining after merge: Claude should smoke the full schedule -> payroll -> paystub -> ACH chain on development.
 
 11. P1 - Remaining duplicate mount decisions. CLOSED BY CODEX
     - Current patch: added generic `mountRoutes()` helper and routed intentional ordered multi-router mounts through it.
@@ -151,13 +162,12 @@ moves fully into polish/enhancement work.
     - Exit: do not split cosmetically before live; only split after behavior tests pin the domain boundary.
 
 ### Remaining Structural Work After This Codex Patch
-- ARCH-01 canonical automation execution truth source remains open.
-- WIRE-01 retry now has an honest executor hook, but concrete job retry handlers still need to be registered as part of ARCH-01.
-- P0 ChatDock durable foundation remains open before ChatDock feature expansion.
-- P0 RBAC/IRC final consolidation remains open in `server/websocket.ts` and `ircEventRegistry.ts`, best handled after ChatDock durability tests.
-- P1 Zod API boundary sweep remains for Copilot/Claude batches.
-- P1 PDF/vault workflow sweep remains for Codex audit and Claude fixes.
-- P1 Payroll/ACH/Plaid/paystub sweep remains for Codex audit and Claude fixes.
+- WIRE-01 retry now has an honest executor hook, but concrete job retry handlers still need to be registered for each supported job type.
+- ChatDock foundation exists, but Redis/DB/typed-event modules still need live WebSocket wiring and FCM fallback before feature expansion.
+- `server/websocket.ts` remains large; permission drift is reduced, but room-type/mode behavior should be extracted only after ChatDock tests pin behavior.
+- Broad Zod backlog remains; continue in Copilot batches by domain and have Claude verify each batch.
+- Compliance/client-report PDF/vault sweep remains after the payroll/tax slice.
+- Claude must merge to `development` and run boot validation before this is considered deploy-ready.
 
 Items 12-13 can continue into polish/enhancement if the live-critical structural
 items above are closed or explicitly deferred by Bryan.
@@ -419,6 +429,73 @@ Claude review focus:
 - Confirm retry API behavior is now honest: no registered executor means no
   retry is queued.
 - Run boot validation after merge to `development`.
+
+### Codex Patch - Parallel Structural Refactor Sweep
+This turn used parallel worker lanes, then Codex integrated and reviewed the
+result as one coherent refactor package.
+
+Files changed:
+- `server/services/orchestration/automationExecutionTracker.ts`
+  - Added automation job lifecycle facade and action-id lookup helpers.
+  - Allows automation jobs and workflow runs to mirror lifecycle into canonical
+    `automation_executions`.
+- `server/services/automationEventsService.ts`
+  - Job start/complete/fail/skip now records terminal state through
+    `automationExecutionTracker` while preserving existing broadcasts/cache.
+- `server/services/ai-brain/workflowLedger.ts`
+  - Creates a canonical execution record for each orchestration run.
+  - Mirrors start, complete, final fail, and cancel state into
+    `automationExecutionTracker`.
+  - Keeps orchestration run/step/artifact tables for detail records.
+- `server/services/chat/chatDockEventProtocol.ts`
+  - Typed ChatDock client/server event protocol matching current WS names.
+- `server/services/chat/chatDockMessageStore.ts`
+  - DB-injected durable message store over existing chat tables.
+- `server/services/chat/chatDockPubSub.ts`
+  - Local pub/sub adapter plus Redis-compatible injected adapter.
+- `server/services/chat/index.ts`
+  - Barrel exports for ChatDock foundation modules.
+- `server/websocket.ts`
+  - Centralized kick/silence/give_voice/ban moderation checks behind
+    `canPerformModerationAction()`.
+  - Slash `/kick` now uses the same RBAC helper.
+- `server/services/ircEventRegistry.ts`
+  - Clarified registry as event metadata only; authorization belongs to RBAC.
+- `server/routes/admin/aiCosts.ts`
+- `server/routes/adminDevExecuteRoute.ts`
+- `server/routes/adminPermissionRoutes.ts`
+- `server/routes/agentActivityRoutes.ts`
+  - Added local Zod safeParse boundaries before mutation work.
+- `server/routes/payStubRoutes.ts`
+- `server/routes/payrollRoutes.ts`
+- `server/routes/plaidRoutes.ts`
+- `server/services/payroll/achTransferService.ts`
+- `server/services/paystubService.ts`
+- `server/services/taxFormGeneratorService.ts`
+  - Hardened payroll/Plaid/paystub ownership and workspace scoping.
+  - Repaired ACH idempotency to use existing transfer state.
+  - Kept paystub and tax PDFs vault-backed; exposed vault metadata on 940/941
+    responses.
+
+Validation:
+- `node build.mjs` passes through bundled Node runtime.
+- `git diff --check` clean.
+- Filtered touched-file `tsc --noEmit` check shows no diagnostics in touched
+  files; full repo `tsc` still exits 2 due pre-existing broad backlog outside
+  this patch.
+- `npm run audit:consolidation`/audit script still reports broad static P0/P1
+  categories because it intentionally flags remaining direct WebSocket patterns
+  and broad route backlog. Current patch reduces live-critical drift but does not
+  rewrite the full WebSocket server before tests.
+
+Claude review focus:
+- Merge to `development`, run build + boot validation.
+- Smoke automation event start/complete and a workflowLedger run so both appear
+  in execution tracker views.
+- Smoke Plaid employee bank status/transfer status as self and manager.
+- Smoke Form 940/941 download and confirm vault headers are present.
+- Do not start ChatDock feature polish until foundation modules are wired into
+  WebSocket and Redis/FCM decisions are confirmed.
 
 ### P2 - Large File Decomposition Inventory
 Largest surviving files:

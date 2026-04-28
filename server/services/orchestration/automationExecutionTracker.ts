@@ -75,6 +75,28 @@ export interface CreateExecutionParams {
   inputPayload?: Record<string, any>;
   externalSystem?: string;
   requiresVerification?: boolean;
+  retryCount?: number;
+  maxRetries?: number;
+}
+
+export interface TrackedAutomationJobEvent {
+  id: string;
+  type: string;
+  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+  workspaceId?: string;
+  startedAt: Date;
+  completedAt?: Date;
+  duration?: number;
+  result?: {
+    processed?: number;
+    skipped?: number;
+    failed?: number;
+    message?: string;
+    details?: Record<string, any>;
+  };
+  error?: string;
+  retryCount: number;
+  canRetry: boolean;
 }
 
 export interface UpdateExecutionParams {
@@ -105,6 +127,7 @@ function isValidUUID(value: string | null | undefined): boolean {
 
 class AutomationExecutionTrackerService {
   private aiEnabled = true;
+  private jobExecutionPromises: Map<string, Promise<string | null>> = new Map();
 
   async createExecution(params: CreateExecutionParams): Promise<string> {
     const executionId = crypto.randomUUID();
@@ -122,6 +145,8 @@ class AutomationExecutionTrackerService {
         inputPayload: params.inputPayload,
         externalSystem: params.externalSystem,
         requiresVerification: params.requiresVerification ?? false,
+        retryCount: params.retryCount,
+        maxRetries: params.maxRetries,
         status: 'queued',
         queuedAt: new Date(),
       });
@@ -431,12 +456,190 @@ class AutomationExecutionTrackerService {
     log.info(`[AutomationExecutionTracker] Synced execution ${executionId} to external system:`, externalReference);
   }
 
+  async getExecutionByActionId(actionId: string) {
+    const [execution] = await db.select()
+      .from(automationExecutions)
+      .where(eq(automationExecutions.actionId, actionId))
+      .orderBy(desc(automationExecutions.createdAt))
+      .limit(1);
+    return execution;
+  }
+
+  async startExecutionByActionId(actionId: string): Promise<void> {
+    const execution = await this.getExecutionByActionId(actionId);
+    if (!execution) {
+      log.warn(`[AutomationExecutionTracker] No execution found for actionId ${actionId}; start skipped`);
+      return;
+    }
+    await this.startExecution(execution.id);
+  }
+
+  async completeExecutionByActionId(actionId: string, params: UpdateExecutionParams): Promise<void> {
+    const execution = await this.getExecutionByActionId(actionId);
+    if (!execution) {
+      log.warn(`[AutomationExecutionTracker] No execution found for actionId ${actionId}; completion skipped`);
+      return;
+    }
+    await this.completeExecution(execution.id, params);
+  }
+
+  async failExecutionByActionId(actionId: string, params: {
+    failureReason: string;
+    failureCode?: string;
+    itemsProcessed?: number;
+    itemsFailed?: number;
+  }): Promise<void> {
+    const execution = await this.getExecutionByActionId(actionId);
+    if (!execution) {
+      log.warn(`[AutomationExecutionTracker] No execution found for actionId ${actionId}; failure skipped`);
+      return;
+    }
+    await this.failExecution(execution.id, params);
+  }
+
+  trackAutomationJobStarted(
+    event: TrackedAutomationJobEvent,
+    actionName: string,
+    maxRetries: number,
+  ): void {
+    const executionPromise = this.createExecution({
+      workspaceId: event.workspaceId || 'system',
+      actionType: event.type,
+      actionName,
+      actionId: event.id,
+      triggeredBy: 'system',
+      triggerSource: 'scheduled',
+      retryCount: event.retryCount,
+      maxRetries,
+      inputPayload: {
+        jobId: event.id,
+        jobType: event.type,
+        retryCount: event.retryCount,
+        canRetry: event.canRetry,
+      },
+    })
+      .then(async (executionId) => {
+        await this.startExecution(executionId);
+        return executionId;
+      })
+      .catch((error) => {
+        log.warn('[AutomationExecutionTracker] Automation job start tracking failed:', error);
+        return null;
+      });
+
+    this.jobExecutionPromises.set(event.id, executionPromise);
+  }
+
+  trackAutomationJobCompleted(event: TrackedAutomationJobEvent): void {
+    void this.resolveJobExecution(event.id)
+      .then(async (executionId) => {
+        if (!executionId) return;
+
+        await this.completeExecution(executionId, {
+          outputPayload: this.toJobOutputPayload(event),
+          workBreakdown: this.toJobWorkBreakdown(event),
+          processingTimeMs: event.duration,
+          itemsProcessed: event.result?.processed,
+          itemsFailed: event.result?.failed,
+        });
+      })
+      .catch((error) => {
+        log.warn('[AutomationExecutionTracker] Automation job completion tracking failed:', error);
+      })
+      .finally(() => {
+        this.jobExecutionPromises.delete(event.id);
+      });
+  }
+
+  trackAutomationJobSkipped(event: TrackedAutomationJobEvent, reason: string): void {
+    void this.resolveJobExecution(event.id)
+      .then(async (executionId) => {
+        if (!executionId) return;
+
+        // ExecutionStatus has no skipped terminal state; preserve that outcome in payload.
+        await this.completeExecution(executionId, {
+          outputPayload: {
+            ...this.toJobOutputPayload(event),
+            skipped: true,
+            skipReason: reason,
+          },
+          workBreakdown: this.toJobWorkBreakdown(event),
+          processingTimeMs: event.duration,
+          itemsProcessed: event.result?.processed ?? 0,
+          itemsFailed: event.result?.failed ?? 0,
+        });
+      })
+      .catch((error) => {
+        log.warn('[AutomationExecutionTracker] Automation job skip tracking failed:', error);
+      })
+      .finally(() => {
+        this.jobExecutionPromises.delete(event.id);
+      });
+  }
+
+  trackAutomationJobFailed(event: TrackedAutomationJobEvent, error: string): void {
+    void this.resolveJobExecution(event.id)
+      .then(async (executionId) => {
+        if (!executionId) return;
+
+        await this.failExecution(executionId, {
+          failureReason: error,
+          failureCode: `automation_job_${event.type}_failed`,
+          itemsProcessed: event.result?.processed,
+          itemsFailed: event.result?.failed ?? 1,
+        });
+      })
+      .catch((trackError) => {
+        log.warn('[AutomationExecutionTracker] Automation job failure tracking failed:', trackError);
+      })
+      .finally(() => {
+        this.jobExecutionPromises.delete(event.id);
+      });
+  }
+
   async getExecution(executionId: string) {
     const [execution] = await db.select()
       .from(automationExecutions)
       .where(eq(automationExecutions.id, executionId))
       .limit(1);
     return execution;
+  }
+
+  private async resolveJobExecution(jobId: string): Promise<string | null> {
+    const executionPromise = this.jobExecutionPromises.get(jobId);
+    if (!executionPromise) {
+      log.warn(`[AutomationExecutionTracker] No execution mapping found for automation job ${jobId}`);
+      return null;
+    }
+
+    return executionPromise;
+  }
+
+  private toJobOutputPayload(event: TrackedAutomationJobEvent): Record<string, any> {
+    return {
+      jobId: event.id,
+      jobType: event.type,
+      jobStatus: event.status,
+      retryCount: event.retryCount,
+      canRetry: event.canRetry,
+      result: event.result,
+      error: event.error,
+    };
+  }
+
+  private toJobWorkBreakdown(event: TrackedAutomationJobEvent): WorkBreakdown {
+    const processed = event.result?.processed ?? 0;
+    const skipped = event.result?.skipped ?? 0;
+    const failed = event.result?.failed ?? (event.status === 'failed' ? 1 : 0);
+
+    return {
+      totalCount: processed + skipped + failed,
+      items: [
+        { label: 'Processed', value: processed, category: 'automation_job' },
+        { label: 'Skipped', value: skipped, category: 'automation_job' },
+        { label: 'Failed', value: failed, category: 'automation_job' },
+      ],
+    };
   }
 
   async getWorkspaceExecutions(workspaceId: string, options?: {

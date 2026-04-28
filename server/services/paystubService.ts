@@ -13,6 +13,7 @@ import {
   calculateGrossPay,
   calculateOvertimePay,
   calculateNetPay,
+  addFinancialValues,
   sumFinancialValues,
   subtractFinancialValues,
   multiplyFinancialValues,
@@ -52,6 +53,8 @@ interface PaystubResult {
   success: boolean;
   paystubId?: string;
   pdfBuffer?: Buffer;
+  vaultId?: string;
+  documentNumber?: string;
   data?: PaystubData;
   error?: string;
 }

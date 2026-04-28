@@ -749,27 +749,24 @@ export function broadcastToAllClients(message: any) {
 import { sessionSyncService } from './services/ai-brain/sessionSyncService';
 import { platformEventBus } from './services/platformEventBus';
 import { typedQuery } from './lib/typedSql';
-import { isSupportStaffRole, SUPPORT_STAFF_ROLES } from './services/chat/chatPolicyService';
-
-
 // ── Moderation permission helper (Codex: eliminate per-case drift) ─────────
 // Replaces repeated hasPlatformWideAccess() inline checks in kick/silence/
 // give_voice/ban_user switch cases. One place to change moderation policy.
 async function canPerformModerationAction(
   actorUserId: string,
   action: 'kick' | 'silence' | 'give_voice' | 'ban',
-): Promise<{ allowed: boolean; reason?: string }> {
+): Promise<{ allowed: boolean; reason?: string; actorRole?: string | null }> {
   try {
     const { storage } = await import('./storage');
     const platformRole = await storage.getUserPlatformRole(actorUserId).catch(() => null);
-    if (isSupportStaffRole(platformRole)) return { allowed: true };
-    // Workspace-level managers can kick/silence within their own rooms
-    if (action === 'give_voice') {
-      const { hasManagerAccess } = await import('./rbac');
-      // give_voice is less restricted — room owner/manager can do it
-      return { allowed: true };
+    if (hasPlatformWideAccess(platformRole ?? undefined)) {
+      return { allowed: true, actorRole: platformRole };
     }
-    return { allowed: false, reason: 'Platform staff access required for ' + action };
+    return {
+      allowed: false,
+      reason: 'Platform staff access required for ' + action,
+      actorRole: platformRole,
+    };
   } catch {
     return { allowed: false, reason: 'Permission check failed' };
   }
@@ -1830,7 +1827,7 @@ export function setupWebSocket(server: Server) {
                 userType = 'org_user';
               }
               
-              // Set role info for authenticated users (based on room mode)
+              // Set display metadata for authenticated users in support rooms.
               if (supportsBots) {
                 // This is a support/platform chatroom with bots
                 if (isStaff) {
@@ -3492,6 +3489,14 @@ export function setupWebSocket(server: Server) {
                 case 'kick': {
                   // Staff kicks a user from chat (with hierarchy protection)
                   const { checkStaffActionAuthorization } = await import('./services/staffHierarchy');
+                  const kickCommandPermission = await canPerformModerationAction(ws.userId, 'kick');
+                  if (!kickCommandPermission.allowed) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: kickCommandPermission.reason || 'You cannot kick this user.',
+                    }));
+                    break;
+                  }
                   
                   const targetUsername = parsedCommand.args[0];
                   const reason = parsedCommand.args.slice(1).join(' ') || 'No reason provided';
@@ -3539,9 +3544,9 @@ export function setupWebSocket(server: Server) {
                   
                   // Find target user role (use userId, not username)
                   const targetRole = await storage.getUserPlatformRole(targetUserId);
-                  const actorRole = await storage.getUserPlatformRole(ws.userId);
+                  const actorRole = kickCommandPermission.actorRole ?? undefined;
                   
-                  // ROOT ADMIN PROTECTION: Nobody can kick root_admin
+                  // Protected platform account cannot be removed.
                   if (targetRole === 'root_admin') {
                     ws.send(JSON.stringify({
                       type: 'error',
@@ -6338,11 +6343,11 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               return;
             }
 
-            // SECURITY: Only platform staff (root_admin, deputy admins, support managers) can kick users
-            const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
-            const canKick = hasPlatformWideAccess(kickerRole);
+            // SECURITY: centralized RBAC policy for moderation actions
+            const kickPermission = await canPerformModerationAction(ws.userId, 'kick');
+            const kickerRole = kickPermission.actorRole ?? undefined;
             
-            if (!canKick) {
+            if (!kickPermission.allowed) {
               // IRC-style command acknowledgment for permission denied
               ws.send(JSON.stringify({
                 type: 'command_ack',
@@ -6350,7 +6355,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                 action: 'kick_user',
                 success: false,
                 error: 'PERMISSION_DENIED',
-                message: 'You do not have permission to kick users',
+                message: kickPermission.reason || 'You do not have permission to kick users',
               }));
               return;
             }
@@ -6675,11 +6680,11 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               return;
             }
 
-            // SECURITY: Only platform staff can silence users
-            const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
-            const canSilence = hasPlatformWideAccess(silencerRole);
+            // SECURITY: centralized RBAC policy for moderation actions
+            const silencePermission = await canPerformModerationAction(ws.userId, 'silence');
+            const silencerRole = silencePermission.actorRole ?? undefined;
             
-            if (!canSilence) {
+            if (!silencePermission.allowed) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
@@ -6687,7 +6692,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   commandId: payload.commandId,
                   action: 'silence_user',
                   success: false,
-                  message: 'Permission denied - Staff role required',
+                  message: silencePermission.reason || 'Permission denied - Staff role required',
                   errorType: 'PERMISSION_DENIED',
                 }));
               }
@@ -6720,7 +6725,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   ipAddress: ws.ipAddress || null,
                   userAgent: ws.userAgent || null,
                   success: false,
-                  errorMessage: 'Permission denied - Staff role required',
+                  errorMessage: silencePermission.reason || 'Permission denied - Staff role required',
                 });
               } catch (auditErr) {
                 log.error('AuditOS failed to log silence attempt', { error: auditErr });
@@ -6888,11 +6893,11 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               return;
             }
 
-            // SECURITY: Only platform staff can give voice
-            const voiceStaffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
-            const canGiveVoice = hasPlatformWideAccess(voiceStaffRole);
+            // SECURITY: centralized RBAC policy for moderation actions
+            const voicePermission = await canPerformModerationAction(ws.userId, 'give_voice');
+            const voiceStaffRole = voicePermission.actorRole ?? undefined;
             
-            if (!canGiveVoice) {
+            if (!voicePermission.allowed) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
@@ -6900,7 +6905,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   commandId: payload.commandId,
                   action: 'give_voice',
                   success: false,
-                  message: 'Permission denied - Staff role required',
+                  message: voicePermission.reason || 'Permission denied - Staff role required',
                   errorType: 'PERMISSION_DENIED',
                 }));
               }
@@ -6931,7 +6936,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   ipAddress: ws.ipAddress || null,
                   userAgent: ws.userAgent || null,
                   success: false,
-                  errorMessage: 'Permission denied - Staff role required',
+                  errorMessage: voicePermission.reason || 'Permission denied - Staff role required',
                 });
               } catch (auditErr) {
                 log.error('AuditOS failed to log give_voice attempt', { error: auditErr });
@@ -7372,14 +7377,14 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               return;
             }
 
-            // Check if user has staff permissions using centralized hasPlatformWideAccess
+            // Check if user has staff permissions using centralized moderation policy
             const staffInfo = await storage.getUserDisplayInfo(ws.userId);
-            const isBanStaff = hasPlatformWideAccess(staffInfo?.platformRole ?? undefined);
+            const banPermission = await canPerformModerationAction(ws.userId, 'ban');
             
-            if (!isBanStaff) {
+            if (!banPermission.allowed) {
               ws.send(JSON.stringify({
                 type: 'error',
-                message: '⛔ Permission denied - Staff role required for banning users',
+                message: `⛔ ${banPermission.reason || 'Permission denied - Staff role required for banning users'}`,
               }));
               return;
             }
@@ -7389,7 +7394,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             const targetUserName = targetUser ? `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email || 'Unknown' : 'Unknown';
             
             // Get staff display name (first-name-only for end-user-facing messages, full for audit)
-            const staffRole = staffInfo?.platformRole || 'unknown';
+            const staffRole = banPermission.actorRole || staffInfo?.platformRole || 'unknown';
             const staffDisplayNameFull = staffInfo ? formatUserDisplayName({
               firstName: staffInfo.firstName,
               lastName: staffInfo.lastName,

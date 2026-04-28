@@ -9,7 +9,7 @@
  * - ROOM: Room lifecycle (create, join, part, destroy, topic, mode)
  * - MESSAGE: All message types (privmsg, notice, action, system)
  * - PRESENCE: User state (online, away, typing, idle)
- * - MODERATION: Admin actions (kick, ban, mute, promote)
+ * - MODERATION: room moderation event names only; authorization belongs to RBAC
  * - QUERY: Information requests (who, names, list, whois)
  */
 import { createLogger } from '../lib/logger';
@@ -21,7 +21,7 @@ export const IRC_EVENTS = {
   DISCONNECT: 'irc:disconnect',     // Client disconnected
   PING: 'irc:ping',                 // Keepalive ping
   PONG: 'irc:pong',                 // Keepalive response
-  AUTH: 'irc:auth',                 // Authentication complete
+  AUTH: 'irc:auth',                 // Session handshake complete
   AUTH_FAIL: 'irc:auth_fail',       // Authentication failed
   RECONNECT: 'irc:reconnect',       // Client reconnecting
   
@@ -32,7 +32,7 @@ export const IRC_EVENTS = {
   CREATE: 'irc:create',             // Room created
   DESTROY: 'irc:destroy',           // Room destroyed/closed
   TOPIC: 'irc:topic',               // Room topic changed
-  MODE: 'irc:mode',                 // Room mode changed (permissions, settings)
+  MODE: 'irc:mode',                 // Room setting changed
   INVITE: 'irc:invite',             // User invited to room
   KICK: 'irc:kick',                 // User kicked from room
   
@@ -57,7 +57,7 @@ export const IRC_EVENTS = {
   // === MODERATION EVENTS ===
   BAN: 'irc:ban',                   // User banned from room
   UNBAN: 'irc:unban',               // User unbanned
-  MUTE: 'irc:mute',                 // User muted (can't send messages)
+  MUTE: 'irc:mute',                 // User muted
   UNMUTE: 'irc:unmute',             // User unmuted
   PROMOTE: 'irc:promote',           // User promoted (given permissions)
   DEMOTE: 'irc:demote',             // User demoted (permissions removed)

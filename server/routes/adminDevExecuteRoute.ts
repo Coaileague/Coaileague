@@ -20,12 +20,17 @@
 
 import { Router } from 'express';
 import { timingSafeEqual } from 'crypto';
+import { z } from 'zod';
 import { createLogger } from '../lib/logger';
 import { sanitizeError } from '../middleware/errorHandler';
 
 const log = createLogger('AdminDevExecute');
 
 const router = Router();
+
+const devExecuteSchema = z.object({
+  command: z.string().min(1),
+});
 
 // ─── Token middleware ─────────────────────────────────────────────────────────
 
@@ -95,11 +100,16 @@ router.post('/dev-execute', requireAdminScriptToken, async (req: any, res: any) 
     log.error('[DevExecute] Attempted dev-execute in production — blocked');
     return res.status(403).json({ error: 'dev-execute is not available in production environments' });
   }
-  const { command } = req.body ?? {};
+  const parsed = devExecuteSchema.safeParse(req.body);
 
-  if (!command || typeof command !== 'string') {
-    return res.status(400).json({ error: 'Request body must include a "command" string.' });
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'Request body must include a "command" string.',
+      details: parsed.error.flatten(),
+    });
   }
+
+  const { command } = parsed.data;
 
   const handler = ALLOWED_COMMANDS[command.trim()];
   if (!handler) {

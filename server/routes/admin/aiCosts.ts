@@ -1,5 +1,6 @@
 import { sanitizeError } from '../../middleware/errorHandler';
 import { Router } from "express";
+import { z } from "zod";
 import { aiCostMonitor } from "../../services/ai-brain/costMonitor";
 import { requireAuth } from "../../auth";
 import { requireSupportAgent } from "../../rbac";
@@ -8,6 +9,14 @@ const log = createLogger('AiCosts');
 
 
 const router = Router();
+
+const preflightSchema = z.object({
+  operationType: z.string().min(1),
+  estimatedTokens: z.number().positive(),
+  creditsToCharge: z.number().positive(),
+  ai: z.enum(['gemini', 'geminiPro', 'claude', 'claudeOpus']),
+  workspaceId: z.string().min(1),
+});
 
 // All AI cost monitoring endpoints require platform staff access
 router.use(requireAuth);
@@ -115,14 +124,17 @@ router.get("/alerts", async (req, res) => {
 
 router.post("/preflight", async (req, res) => {
   try {
-    const { operationType, estimatedTokens, creditsToCharge, ai, workspaceId } = req.body;
+    const parsed = preflightSchema.safeParse(req.body);
 
-    if (!operationType || !estimatedTokens || !creditsToCharge || !ai || !workspaceId) {
+    if (!parsed.success) {
       return res.status(400).json({
         success: false,
         error: "Missing required fields: operationType, estimatedTokens, creditsToCharge, ai, workspaceId",
+        details: parsed.error.flatten(),
       });
     }
+
+    const { operationType, estimatedTokens, creditsToCharge, ai, workspaceId } = parsed.data;
 
     const result = await aiCostMonitor.checkProfitability(
       operationType,

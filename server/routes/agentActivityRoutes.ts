@@ -12,6 +12,7 @@
  */
 
 import { Router } from 'express';
+import { z } from 'zod';
 // @ts-expect-error — TS migration: fix in refactoring sprint
 import { requireAuth, type AuthenticatedRequest } from '../auth';
 import { db } from '../db';
@@ -22,6 +23,14 @@ const log = createLogger('AgentActivityRoutes');
 
 
 const router = Router();
+
+const thresholdUpdateSchema = z.object({
+  minScore: z.number().min(0).max(100),
+});
+
+const registryToggleSchema = z.object({
+  isActive: z.boolean(),
+});
 
 const MANAGEMENT_ROLES = new Set(['org_owner', 'co_owner', 'manager']);
 const FULL_ACCESS_ROLES = new Set(['org_owner', 'co_owner']);
@@ -406,11 +415,16 @@ router.patch('/registry/:agentKey/threshold', requireAuth, async (req: Authentic
     }
     const wid = req.workspaceId!;
     const { agentKey } = req.params;
-    const { minScore } = req.body;
+    const parsed = thresholdUpdateSchema.safeParse(req.body);
 
-    if (typeof minScore !== 'number' || minScore < 0 || minScore > 100) {
-      return res.status(400).json({ error: 'minScore must be a number between 0 and 100' });
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'minScore must be a number between 0 and 100',
+        details: parsed.error.flatten(),
+      });
     }
+
+    const { minScore } = parsed.data;
 
     const existing = await db
       .select({ id: agentRegistry.id })
@@ -461,11 +475,16 @@ router.patch('/registry/:agentKey/toggle', requireAuth, async (req: Authenticate
     }
     const wid = req.workspaceId!;
     const { agentKey } = req.params;
-    const { isActive } = req.body;
+    const parsed = registryToggleSchema.safeParse(req.body);
 
-    if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ error: 'isActive must be boolean' });
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'isActive must be boolean',
+        details: parsed.error.flatten(),
+      });
     }
+
+    const { isActive } = parsed.data;
 
     const existing = await db
       .select({ id: agentRegistry.id })

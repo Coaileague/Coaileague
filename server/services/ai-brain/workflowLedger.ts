@@ -24,6 +24,7 @@ import {
 import { eq, and, desc, gte, lte, inArray, sql, isNull } from 'drizzle-orm';
 import { aiBrainEvents } from './internalEventEmitter';
 import { createLogger } from '../../lib/logger';
+import { automationExecutionTracker } from '../orchestration/automationExecutionTracker';
 const log = createLogger('workflowLedger');
 
 export type RunStatus = 'queued' | 'running' | 'awaiting_approval' | 'completed' | 'failed' | 'cancelled' | 'rolled_back';
@@ -85,6 +86,25 @@ class WorkflowLedgerService {
       workspaceId: context.workspaceId,
     });
 
+    await this.syncExecutionTracker('create', run.id, () => automationExecutionTracker.createExecution({
+      workspaceId: context.workspaceId || 'system',
+      actionType: category,
+      actionName: actionId,
+      actionId: run.id,
+      triggeredBy: context.userId || 'system',
+      triggerSource: this.toExecutionTriggerSource(context.source),
+      retryCount: 0,
+      maxRetries: options?.maxRetries || 3,
+      inputPayload: {
+        orchestrationRunId: run.id,
+        workflowActionId: actionId,
+        category,
+        source: context.source,
+        params,
+      },
+      requiresVerification: options?.requiresApproval || false,
+    }));
+
     log.info(`[WorkflowLedger] Created run ${run.id} for ${actionId}`);
     return run;
   }
@@ -101,6 +121,7 @@ class WorkflowLedgerService {
 
     if (run) {
       aiBrainEvents.emit('workflow_started', { runId, actionId: run.actionId });
+      void this.syncExecutionTracker('start', runId, () => automationExecutionTracker.startExecutionByActionId(runId));
     }
 
     return run;
@@ -137,6 +158,16 @@ class WorkflowLedgerService {
         slaMet,
         result 
       });
+      void this.syncExecutionTracker('complete', runId, () => automationExecutionTracker.completeExecutionByActionId(runId, {
+        outputPayload: {
+          orchestrationRunId: runId,
+          result,
+          slaMet,
+        },
+        processingTimeMs: durationMs,
+        itemsProcessed: 1,
+        itemsFailed: 0,
+      }));
     }
 
     log.info(`[WorkflowLedger] Completed run ${runId} in ${durationMs}ms (SLA: ${slaMet ? 'met' : 'missed'})`);
@@ -180,6 +211,14 @@ class WorkflowLedgerService {
         error: errorMessage,
         retryCount: newRetryCount
       });
+      if (!canRetry) {
+        void this.syncExecutionTracker('fail', runId, () => automationExecutionTracker.failExecutionByActionId(runId, {
+          failureReason: errorMessage,
+          failureCode: 'workflow_failed',
+          itemsProcessed: 0,
+          itemsFailed: 1,
+        }));
+      }
     }
 
     log.info(`[WorkflowLedger] ${canRetry ? 'Retrying' : 'Failed'} run ${runId}: ${errorMessage}`);
@@ -199,9 +238,33 @@ class WorkflowLedgerService {
 
     if (run) {
       aiBrainEvents.emit('workflow_cancelled', { runId, actionId: run.actionId, reason });
+      void this.syncExecutionTracker('cancel', runId, () => automationExecutionTracker.failExecutionByActionId(runId, {
+        failureReason: reason || 'Cancelled by user',
+        failureCode: 'workflow_cancelled',
+        itemsProcessed: 0,
+        itemsFailed: 1,
+      }));
     }
 
     return run;
+  }
+
+  private async syncExecutionTracker(
+    action: string,
+    runId: string,
+    operation: () => Promise<unknown>,
+  ): Promise<void> {
+    try {
+      await operation();
+    } catch (error) {
+      log.warn(`[WorkflowLedger] Automation execution tracker sync failed for ${action} on run ${runId}:`, error);
+    }
+  }
+
+  private toExecutionTriggerSource(source: WorkflowContext['source']): 'scheduled' | 'api' | 'ai_brain' {
+    if (source === 'api') return 'api';
+    if (source === 'automation' || source === 'scheduler') return 'scheduled';
+    return 'ai_brain';
   }
 
   async approveRun(runId: string, approvedBy: string): Promise<OrchestrationRun | undefined> {

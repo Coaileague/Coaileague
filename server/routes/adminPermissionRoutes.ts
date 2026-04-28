@@ -14,6 +14,7 @@
  */
 
 import { Router } from 'express';
+import { z } from 'zod';
 import { db } from '../db';
 import { workspacePermissions, workspaces, employees } from '@shared/schema';
 import { and, eq, ilike, or, sql } from 'drizzle-orm';
@@ -29,6 +30,19 @@ const log = createLogger('AdminPermissionRoutes');
 
 
 const router = Router();
+
+const matrixUpdateSchema = z.object({
+  role: z.string().min(1),
+  featureKey: z.string().min(1),
+  enabled: z.boolean(),
+});
+
+const matrixResetSchema = matrixUpdateSchema.omit({ enabled: true });
+
+const userRoleUpdateSchema = z.object({
+  workspaceRole: z.string().min(1),
+  reason: z.string().optional(),
+});
 
 // ── GET /api/admin/permissions/meta ─────────────────────────────────────────
 router.get('/meta', async (_req, res) => {
@@ -91,15 +105,16 @@ router.get('/workspaces/:wsId/matrix', requirePlatformStaff, async (req, res) =>
 router.patch('/workspaces/:wsId/matrix', requireSupportManager, async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const { wsId } = req.params;
-  const { role, featureKey, enabled } = req.body as {
-    role?: string;
-    featureKey?: string;
-    enabled?: boolean;
-  };
+  const parsed = matrixUpdateSchema.safeParse(req.body);
 
-  if (!role || !featureKey || typeof enabled !== 'boolean') {
-    return res.status(400).json({ error: 'role, featureKey, and enabled (boolean) are required' });
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'role, featureKey, and enabled (boolean) are required',
+      details: parsed.error.flatten(),
+    });
   }
+
+  const { role, featureKey, enabled } = parsed.data;
 
   const knownFeature = FEATURE_REGISTRY.find((f) => f.key === featureKey);
   if (!knownFeature) return res.status(400).json({ error: `Unknown featureKey: ${featureKey}` });
@@ -141,9 +156,16 @@ router.patch('/workspaces/:wsId/matrix', requireSupportManager, async (req, res)
 // Reset a role+feature to registry default for any workspace.
 router.delete('/workspaces/:wsId/matrix', requireSupportManager, async (req, res) => {
   const { wsId } = req.params;
-  const { role, featureKey } = req.body as { role?: string; featureKey?: string };
+  const parsed = matrixResetSchema.safeParse(req.body);
 
-  if (!role || !featureKey) return res.status(400).json({ error: 'role and featureKey are required' });
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'role and featureKey are required',
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { role, featureKey } = parsed.data;
 
   try {
     const authReq2 = req as AuthenticatedRequest;
@@ -219,9 +241,16 @@ router.get('/workspaces/:wsId/users', requirePlatformStaff, async (req, res) => 
 router.patch('/workspaces/:wsId/users/:userId/role', requireSupportManager, async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const { wsId, userId } = req.params;
-  const { workspaceRole, reason } = req.body as { workspaceRole?: string; reason?: string };
+  const parsed = userRoleUpdateSchema.safeParse(req.body);
 
-  if (!workspaceRole) return res.status(400).json({ error: 'workspaceRole is required' });
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'workspaceRole is required',
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { workspaceRole, reason } = parsed.data;
 
   if (!MATRIX_ROLES.includes(workspaceRole as any)) {
     return res.status(400).json({
