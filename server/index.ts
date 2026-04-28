@@ -846,6 +846,10 @@ async function initializeCriticalServices() {
 
   if (!dbAvailableForSeed) {
     log.warn('Phase 1 seeding skipped — DB unreachable (will seed on next restart when DB is ready)');
+  } else if (isProductionEnv()) {
+    // PRODUCTION: skip all dev seeding — it adds 30-120s to startup time
+    // and the data already exists from previous boots
+    log.info('[Startup] Production environment — skipping all dev seed operations');
   } else {
 
   // Seed development data (only runs in non-production, idempotent)
@@ -2201,13 +2205,18 @@ process.on('unhandledRejection', (reason: any, promise) => {
       }
     }
 
-    // PHASE 1: Critical services (run first, before any seeding tasks)
-    log.info('Phase 1: Critical services');
-    try {
-      await initializeCriticalServices();
-    } catch (err: any) {
-      log.error(`[CriticalServices] Failed (non-fatal): ${err.message}`);
-    }
+    // PHASE 1: Critical services — run in background so health check answers immediately
+    // The DB bootstraps (constraints, indexes, identity) are idempotent and non-blocking.
+    // If they fail, routes degrade gracefully via circuit-breaker — no 500 on first request.
+    log.info('Phase 1: Critical services (background)');
+    setImmediate(async () => {
+      try {
+        await initializeCriticalServices();
+        log.info('Phase 1: Critical services complete');
+      } catch (err: any) {
+        log.error(`[CriticalServices] Failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
+      }
+    });
 
     // Non-critical seeding tasks — fire-and-forget (do NOT block Phase 2+)
     void (async () => {
