@@ -2,7 +2,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db } from "../db";
 import { summonHelpAIForConversation } from '../services/botSummonService';
-import { broadcastToWorkspace } from "../websocket";
+import { broadcastToWorkspace } from "../services/chat/broadcaster";
 import { roomPresence } from "../services/ircEventRegistry";
 import { 
   chatConversations, 

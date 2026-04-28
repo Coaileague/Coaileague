@@ -17,7 +17,7 @@ import { AuthenticatedRequest } from "../rbac";
 import { requireAuth } from "../auth";
 import rateLimit from "express-rate-limit";
 import { supportRooms, organizationChatRooms } from "@shared/schema";
-import { broadcastUserScopedNotification } from "../websocket";
+import { broadcastUserScopedNotification } from "../services/chat/broadcaster";
 import { createLogger } from '../lib/logger';
 import { PLATFORM } from '../config/platformConfig';
 import { validateWebhookUrl } from '../services/webhookDeliveryService';

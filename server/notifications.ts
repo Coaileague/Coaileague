@@ -8,7 +8,7 @@
  *   - `* as notificationHelpers`     (route files, for typed helper wrappers)
  *
  * All helpers delegate to `createNotification` from notificationService which
- * handles DB persistence and real-time WebSocket broadcasting automatically.
+ * handles DB persistence and real-time broadcasting (WebSocket + Redis pub/sub) automatically.
  * The `ctx` parameter (legacy `{ storage, broadcastNotification }`) is accepted
  * but not used — it was a TS-migration shim that is now superseded.
  */
