@@ -2305,6 +2305,9 @@ process.on('unhandledRejection', (reason: any, promise) => {
       try {
         log.info('Deferred: Running data corrections');
         await runDataCorrections();
+        // Reset demo account locks in non-production (dev/staging Railway environments)
+        const { resetDemoAccountLocks } = await import('./services/productionSeed');
+        await resetDemoAccountLocks();
       } catch (error) {
         log.error('Data corrections failed (non-fatal)', { error: error instanceof Error ? error.message : String(error) });
       }

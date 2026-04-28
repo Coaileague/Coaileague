@@ -1172,3 +1172,38 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
     return { success: false, message: `Seed failed: ${error}` };
   }
 }
+
+/**
+ * resetDemoAccountLocks — runs on every startup in non-production environments.
+ * Unlocks demo/dev accounts so they can always log in regardless of previous
+ * failed login attempts. Also ensures password is set correctly.
+ * Dev accounts: owner@acme-security.test, manager@acme-security.test, etc.
+ */
+export async function resetDemoAccountLocks(): Promise<void> {
+  const { isProduction } = await import('../lib/isProduction');
+  if (isProduction()) return; // Only run in dev/staging — never touch production demo accounts
+
+  try {
+    // Reset lock state on all dev/test seed accounts
+    await typedExec(sql`
+      UPDATE users
+      SET login_attempts = 0,
+          locked_until   = NULL,
+          updated_at     = NOW()
+      WHERE email IN (
+        'owner@acme-security.test',
+        'manager@acme-security.test',
+        'ops@acme-security.test',
+        'garcia@acme-security.test',
+        'johnson@acme-security.test',
+        'owner@anvil-security.test',
+        'owner@lonestar-security.test',
+        'demo@coaileague.test'
+      )
+      AND (login_attempts > 0 OR locked_until IS NOT NULL)
+    `);
+    console.log('[DemoReset] Dev demo account locks cleared');
+  } catch (err: any) {
+    console.log('[DemoReset] Could not reset demo locks (non-fatal):', err?.message);
+  }
+}
