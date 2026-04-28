@@ -42,6 +42,7 @@ import deletionProtectionRouter from "../deletionProtectionRoutes";
 import adminPermissionRouter from "../adminPermissionRoutes";
 import alertConfigRouter from "../alertConfigRoutes";
 import adminDevExecuteRouter from "../adminDevExecuteRoute";
+import { mountWorkspaceRoutes } from "./routeMounting";
 
 export function mountAuditRoutes(app: Express): void {
   registerHealthRoutes(app, requireAuth);
@@ -49,7 +50,9 @@ export function mountAuditRoutes(app: Express): void {
   registerPrivacyRoutes(app, requireAuth);
   scheduleRetentionSweep();
 
-  app.use("/api/alerts/config", requireAuth, ensureWorkspaceAccess, alertConfigRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/alerts/config", alertConfigRouter],
+  ]);
   app.use("/api-docs", apiDocsRouter);
 
   // Inline audit trail handlers (universalAudit service)
@@ -176,7 +179,9 @@ export function mountAuditRoutes(app: Express): void {
     }
   });
 
-  app.use("/api/dashboard", requireAuth, ensureWorkspaceAccess, dashboardRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/dashboard", dashboardRoutes],
+  ]);
   app.use("/api/infrastructure", requireAuth, infrastructureRoutes);
   app.use("/api/sandbox", sandboxRoutes);
   app.use("/api/admin/ai-costs", requirePlatformStaff, adminAiCostsRouter);
@@ -189,13 +194,19 @@ export function mountAuditRoutes(app: Express): void {
   // (requireAuth only) are reachable by all users without the requirePlatformStaff guard.
   app.use("/api/platform", publicPlatformRouter);
   app.use("/api/platform", platformRouter);
-  app.use("/api", requireAuth, ensureWorkspaceAccess, auditRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api", auditRouter],
+  ]);
   // MOUNT ORDER: specific sub-paths MUST come before the general /analytics catch-all
-  app.use("/api/analytics/owner", requireAuth, ensureWorkspaceAccess, ownerAnalyticsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/analytics/owner", ownerAnalyticsRouter],
+  ]);
   // Phase 34 — BI Analytics routes (precomputed aggregates, 4-tab dashboard data)
   app.use("/api/analytics/bi", ensureWorkspaceAccess, biAnalyticsRouter);
-  app.use("/api/analytics", requireAuth, ensureWorkspaceAccess, analyticsInlineRouter);
-  app.use("/api/deletion-protection", requireAuth, ensureWorkspaceAccess, deletionProtectionRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/analytics", analyticsInlineRouter],
+    ["/api/deletion-protection", deletionProtectionRouter],
+  ]);
   // Phase 33 — State Regulatory Auditor portal (uses its own requireSRAAuth, not the main requireAuth)
   app.use("/api/sra", sraRouter);
 
@@ -206,7 +217,9 @@ export function mountAuditRoutes(app: Express): void {
   app.use("/api/metrics", metricsRouter);
   app.use("/api/commands", commandDocRouter);
   app.use("/api/kpi-alerts", kpiAlertRouter);
-  app.use("/api/insights", requireAuth, ensureWorkspaceAccess, insightsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/insights", insightsRouter],
+  ]);
   // Predict & patterns routes have full /api/predict/*, /api/patterns/* paths inside insightsRouter
   app.use((req: any, res: any, next: any) => {
     if (req.path.startsWith("/api/predict") || req.path.startsWith("/api/patterns")) {

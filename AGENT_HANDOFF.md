@@ -1,6 +1,6 @@
 # COAILEAGUE - MASTER HANDOFF
 # ONE FILE. Update in place. Never create new handoff files.
-# Last updated: 2026-04-28 - Codex (domain route mount condensation ready for Claude)
+# Last updated: 2026-04-28 - Codex (extended domain route mount condensation ready for Claude)
 
 ---
 
@@ -23,7 +23,7 @@ One domain, one complete sweep, one coherent commit.
 ```
 Current state: PARALLEL LANES
   Claude - Email entity context panel + Trinity suggested actions landed on development.
-  Codex  - Domain route mount condensation complete on refactor/service-layer.
+  Codex  - Extended domain route mount condensation complete on refactor/service-layer.
   Copilot - Queued for narrow Zod/test batches only after the current lane is stable.
 
 Next merge target:
@@ -36,9 +36,9 @@ Next merge target:
 ## CURRENT COMMITS
 
 ```
-origin/development           -> 8d31d18f  (Codex RBAC/chat centralization merged)
-origin/refactor/service-layer -> pending Codex domain route mount condensation patch
-local Codex lane             -> synced with development before patching
+origin/development           -> 656e9750  (latest Claude demo-account startup fix)
+origin/refactor/service-layer -> Codex extended domain route mount patch pushed
+local Codex lane             -> synced with origin/refactor/service-layer before patching
 ```
 
 Boot test before any push to development:
@@ -221,6 +221,47 @@ Validation:
 
 Claude review focus:
 - Confirm mount order is unchanged in each touched domain file.
+- Run boot validation after merge to `development`.
+
+### Codex Patch - Domain Route Mount Follow-Up, Safe Slice
+This turn continued the same mount-only cleanup across the remaining high-signal
+domain files. No route prefixes, handler bodies, middleware semantics, or public
+APIs were rewritten.
+
+Files changed:
+- `server/routes/domains/audit.ts`
+  - Centralized remaining plain `requireAuth + ensureWorkspaceAccess` `app.use`
+    mounts for alerts config, dashboard, audit, analytics, deletion protection,
+    and insights.
+  - Left intentional exceptions alone: export-limited reports route, platform
+    staff routes, unauthenticated/public platform routes, and inline audit
+    handlers.
+- `server/routes/domains/compliance.ts`
+  - Centralized compliance/document/SPS/insurance workspace route mounts.
+  - Removed the literal duplicate `/api/sps/onboarding` mount while preserving
+    `/api/sps/onboarding` and `/api/sps/forms` order.
+  - Preserved public SPS and regulatory portal mounts unchanged.
+- `server/routes/domains/time.ts`
+  - Centralized workspace-scoped time entry, breaks, timesheet report, and
+    mileage mounts.
+  - Preserved the primary `timeEntryRouter` defense-in-depth auth mount and
+    the internally guarded `timeOffRouter`.
+- `server/routes/domains/trinity.ts`
+  - Centralized Trinity workspace-scoped AI brain, staffing, chat/session,
+    audit, automation, execution, control tower, quick fixes, VQA, and
+    agent-activity mounts.
+  - Left platform-staff, Trinity-access, bot/platform-role, public webhook,
+    and unauthenticated inline mounts unchanged.
+
+Validation:
+- `node build.mjs` passes.
+- `npm run audit:consolidation` passes through the bundled Node runtime.
+- Consolidation scanner P1 count dropped from 55 to 48.
+- `git diff --check` clean.
+
+Claude review focus:
+- Confirm mount order stayed identical in `audit.ts`, `compliance.ts`,
+  `time.ts`, and `trinity.ts`.
 - Run boot validation after merge to `development`.
 
 ### P2 - Large File Decomposition Inventory

@@ -9,6 +9,7 @@ import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { portalLimiter } from "../../middleware/rateLimiter";
 import { attachWorkspaceIdOptional } from "../../rbac";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import { registerDocumentLibraryRoutes } from "../documentLibraryRoutes";
 import credentialRouter from "../credentialRoutes";
 import documentRouter from "../documentRoutes";
@@ -39,37 +40,52 @@ import complianceEvidenceRouter from "../complianceEvidenceRoutes";
 
 export function mountComplianceRoutes(app: Express): void {
   // Governance inline routes BEFORE security-compliance to ensure lock-vault is handled
-  app.use("/api", requireAuth, ensureWorkspaceAccess, governanceInlineRouter);
-  app.use("/api/compliance/evidence", requireAuth, ensureWorkspaceAccess, complianceEvidenceRouter);
-  app.use("/api/credentials", requireAuth, ensureWorkspaceAccess, credentialRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api", governanceInlineRouter],
+    ["/api/compliance/evidence", complianceEvidenceRouter],
+    ["/api/credentials", credentialRouter],
+  ]);
   registerDocumentLibraryRoutes(app, requireAuth, ensureWorkspaceAccess);
   app.use(documentRouter);
-  app.use("/api/document-templates", requireAuth, ensureWorkspaceAccess, documentTemplateRouter);
-  app.use("/api/document-vault", requireAuth, ensureWorkspaceAccess, documentVaultRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/document-templates", documentTemplateRouter],
+    ["/api/document-vault", documentVaultRouter],
+  ]);
   app.use("/api/files", requireAuth, attachWorkspaceIdOptional, fileDownloadRoutes);
-  app.use("/api/form-builder", requireAuth, ensureWorkspaceAccess, formBuilderRouter);
-  app.use("/api", requireAuth, ensureWorkspaceAccess, formRouter);
-  app.use("/api", requireAuth, ensureWorkspaceAccess, policyComplianceRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/form-builder", formBuilderRouter],
+    ["/api", formRouter],
+    ["/api", policyComplianceRouter],
+  ]);
   // Enforcement auditor public login/me routes MUST come before the auth-protected catch-all
   app.use(complianceInlineRouter);
-  app.use("/api/uacp", requireAuth, ensureWorkspaceAccess, uacpRouter);
-  app.use("/api/security", requireAuth, ensureWorkspaceAccess, securityAuditRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/uacp", uacpRouter],
+    ["/api/security", securityAuditRouter],
+  ]);
   // SPS 10-Step Onboarding — must come before /api/sps catch-all mounts
   // /upload is handled inside the router without workspace middleware (multer + GCS)
-  app.use("/api/sps/onboarding", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
-  app.use("/api/sps/forms", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
-  app.use("/api/sps/onboarding", requireAuth, ensureWorkspaceAccess, spsOnboardingRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/sps/onboarding", spsOnboardingRoutes],
+    ["/api/sps/forms", spsOnboardingRoutes],
+  ]);
   // SPS Document Management System
   // Document view/download routes MUST come before spsDocumentRouter (/:id catch-all)
-  app.use("/api/sps/documents", requireAuth, ensureWorkspaceAccess, documentViewRouter);
-  app.use("/api/sps/documents", requireAuth, ensureWorkspaceAccess, spsDocumentRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/sps/documents", documentViewRouter],
+    ["/api/sps/documents", spsDocumentRouter],
+  ]);
   // SPS Document Safe tab routes (/api/sps/staff-packets, /api/sps/company-docs, /api/sps/reports)
-  app.use("/api/sps", requireAuth, ensureWorkspaceAccess, spsDocumentSafeRouter);
-  app.use("/api/sps/negotiations", requireAuth, ensureWorkspaceAccess, spsNegotiationRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/sps", spsDocumentSafeRouter],
+    ["/api/sps/negotiations", spsNegotiationRouter],
+  ]);
   // SPS public routes — no auth, token-controlled (portalLimiter: 60 req/min per IP)
   app.use("/api/public/sps", portalLimiter, spsPublicRouter);
   // Compliance report generation (canonical: /api/compliance-reports)
-  app.use("/api/compliance-reports", requireAuth, ensureWorkspaceAccess, complianceReportsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/compliance-reports", complianceReportsRouter],
+  ]);
   // Regulatory credential enrollment — 30-day deadline for all org members
   app.use("/api/compliance/enrollment", regulatoryEnrollmentRouter);
   // Regulatory Auditor Portal — public + token-auth handled internally by the router
@@ -77,14 +93,22 @@ export function mountComplianceRoutes(app: Express): void {
   // G24-05 fix: portalLimiter (60/min per token) on portal endpoints.
   app.use("/api/compliance/regulatory-portal", portalLimiter, regulatoryPortalRoutes);
   // Training compliance module
-  app.use("/api/training-compliance", requireAuth, ensureWorkspaceAccess, trainingComplianceRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/training-compliance", trainingComplianceRouter],
+  ]);
   // Compliance scenario planning
-  app.use("/api/compliance", requireAuth, ensureWorkspaceAccess, complianceScenarioRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/compliance", complianceScenarioRouter],
+  ]);
   // Compliance Sprint — Phases F (handbook audit), G (contract protection), H (translation), M (verification)
   app.use("/api/compliance", complianceSprintRouter);
   // State regulatory config + post requirements — multi-state architecture
   // License Dashboard — bulk status, DPS CSV export, revoke handler (Phase 17)
-  app.use("/api/compliance/licenses", requireAuth, ensureWorkspaceAccess, licenseDashboardRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/compliance/licenses", licenseDashboardRouter],
+  ]);
   // Insurance — certificates, bonding, coverage management (Phase 35R)
-  app.use("/api/insurance", requireAuth, ensureWorkspaceAccess, insuranceRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/insurance", insuranceRouter],
+  ]);
 }

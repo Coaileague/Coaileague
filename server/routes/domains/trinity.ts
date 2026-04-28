@@ -62,6 +62,7 @@ import agentActivityRouter from "../agentActivityRoutes";
 import trinityLimbicRouter from "../trinityLimbicRoutes";
 import trinityTransparencyRouter from "../trinityTransparencyRoutes";
 import trinityAgentDashboardRouter from "../trinityAgentDashboardRoutes";
+import { mountWorkspaceRoutes } from "./routeMounting";
 
 const domainHealthRouter = Router();
 domainHealthRouter.get("/domain-health", requireAuth, requireTrinityAccess, (_req, res) => {
@@ -133,7 +134,9 @@ export function mountTrinityRoutes(app: Express): void {
   app.use("/api/ai-brain/console", requirePlatformStaff, aiBrainConsoleRouter);
   app.use("/api/ai-brain/control", requireAuth, aiBrainControlRouter);
   app.use("/api/ai-brain", aiBrainRouter);
-  app.use("/api/ai-brain", requireAuth, ensureWorkspaceAccess, aiBrainInlineRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/ai-brain", aiBrainInlineRouter],
+  ]);
 
   // ── HelpAI ────────────────────────────────────────────────────────────────
   app.use("/api/helpai", helpaiRouter);
@@ -155,28 +158,37 @@ export function mountTrinityRoutes(app: Express): void {
 
   // Phase 55: Trinity Staffing — Professional tier only
   app.use("/api/trinity/staffing/webhook", trinityStaffingPublicRouter);
-  app.use("/api/trinity/staffing", requireAuth, ensureWorkspaceAccess, trinityStaffingRouter);
-
-  app.use("/api/trinity/intake", requireAuth, ensureWorkspaceAccess, trinityIntakeRouter);
-  app.use("/api/trinity/chat", requireAuth, ensureWorkspaceAccess, trinityChatRouter);
-  app.use("/api/trinity/self-edit", requireAuth, ensureWorkspaceAccess, trinitySelfEditRouter);
-  app.use("/api/trinity/session", requireAuth, ensureWorkspaceAccess, trinitySessionRouter);
-  app.use("/api/trinity/swarm", requireAuth, ensureWorkspaceAccess, trinitySwarmRouter);
-  app.use("/api/trinity/crisis", requireAuth, ensureWorkspaceAccess, trinityCrisisRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/trinity/staffing", trinityStaffingRouter],
+    ["/api/trinity/intake", trinityIntakeRouter],
+    ["/api/trinity/chat", trinityChatRouter],
+    ["/api/trinity/self-edit", trinitySelfEditRouter],
+    ["/api/trinity/session", trinitySessionRouter],
+    ["/api/trinity/swarm", trinitySwarmRouter],
+    ["/api/trinity/crisis", trinityCrisisRouter],
+  ]);
   // ── ACC + Thalamic Brain Dashboard ───────────────────────────────────────────
   app.use("/api/trinity", brainDashboardRouter);
 
   // ── Trinity Audit Trail ──────────────────────────────────────────────────
-  app.use("/api/trinity", requireAuth, ensureWorkspaceAccess, trinityAuditRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/trinity", trinityAuditRouter],
+  ]);
 
   // ── Trinity SLA Escalation (Phase 10-5) ─────────────────────────────────
-  app.use("/api/trinity/escalation", requireAuth, ensureWorkspaceAccess, trinityEscalationRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/trinity/escalation", trinityEscalationRouter],
+  ]);
 
   // ── Trinity Limbic System (Phase 16) — Emotional Intelligence ────────────
-  app.use("/api/trinity/limbic", requireAuth, ensureWorkspaceAccess, trinityLimbicRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/trinity/limbic", trinityLimbicRouter],
+  ]);
 
   // ── Phase 16: Tenant Owner Transparency Dashboard ────────────────────────
-  app.use("/api/trinity/transparency", requireAuth, ensureWorkspaceAccess, trinityTransparencyRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/trinity/transparency", trinityTransparencyRouter],
+  ]);
 
   // ── Phase 16: Support Agent Command Dashboard ────────────────────────────
   // Trinity agent queue and reasoning surfaces — platform-staff only.
@@ -188,7 +200,9 @@ export function mountTrinityRoutes(app: Express): void {
   app.use("/api/trinity", empireRouter);
   app.use("/api/trinity", trinityAlertsRouter);
   app.use("/api/trinity", requireAuth, requireTrinityAccess, trinityInsightsRouter);
-  app.use("/api/trinity", requireAuth, ensureWorkspaceAccess, trinityThoughtStatusRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/trinity", trinityThoughtStatusRouter],
+  ]);
   // requireAuth fires first: populates req.user, checks account lock, emits auth telemetry.
   // requirePlatformStaff then does the DB-level platform-role gate.
   // Both guards must be present — requirePlatformStaff alone skips the account-lock check.
@@ -199,21 +213,27 @@ export function mountTrinityRoutes(app: Express): void {
 
   // ── Automation — inline (no auth) before auth-required ───────────────────
   app.use("/api/automation", automationInlineRouter);
-  app.use("/api/automation", requireAuth, ensureWorkspaceAccess, automationRouter);
-  app.use("/api/automation-events", requireAuth, ensureWorkspaceAccess, automationEventsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/automation", automationRouter],
+    ["/api/automation-events", automationEventsRouter],
+  ]);
   app.use("/api/automation-governance", automationGovernanceRouter);
 
   // ── Execution, Decisions, Subagents ──────────────────────────────────────
-  app.use("/api/execution-tracker", requireAuth, ensureWorkspaceAccess, executionTrackerRouter);
-  app.use("/api/subagents", requireAuth, ensureWorkspaceAccess, subagentRouter);
-  app.use("/api/trinity-decisions", requireAuth, ensureWorkspaceAccess, trinityDecisionRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/execution-tracker", executionTrackerRouter],
+    ["/api/subagents", subagentRouter],
+    ["/api/trinity-decisions", trinityDecisionRoutes],
+  ]);
   app.use("/api/trinity-training", trinityTrainingRouter);
 
   // ── Operations & Tooling ──────────────────────────────────────────────────
   app.use("/api/bug-remediation", bugRemediationRouter);
-  app.use("/api/control-tower", requireAuth, ensureWorkspaceAccess, controlTowerRouter);
-  app.use("/api/quick-fixes", requireAuth, ensureWorkspaceAccess, quickFixRouter);
-  app.use("/api/vqa", requireAuth, ensureWorkspaceAccess, vqaRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/control-tower", controlTowerRouter],
+    ["/api/quick-fixes", quickFixRouter],
+    ["/api/vqa", vqaRouter],
+  ]);
   app.use("/api/ai-orchestrator", aiOrchestratorRoutes);
   app.use("/api/ai", aiRouter);
   app.use("/api/code-editor", codeEditorRouter);
@@ -221,5 +241,7 @@ export function mountTrinityRoutes(app: Express): void {
   // ── Workflows ─────────────────────────────────────────────────────────────
 
   // ── Agent Spawning Activity (Phase 6) ─────────────────────────────────────
-  app.use("/api/agent-activity", requireAuth, ensureWorkspaceAccess, agentActivityRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/agent-activity", agentActivityRouter],
+  ]);
 }
