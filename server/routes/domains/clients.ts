@@ -7,6 +7,7 @@
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import clientRouter from "../clientRoutes";
 import contractPipelineRouter, { publicPortalRouter as contractPortalRouter } from "../contractPipelineRoutes";
 import siteBriefingRouter from "../siteBriefingRoutes";
@@ -20,22 +21,34 @@ import surveyRouter from "../surveyRoutes";
 
 export function mountClientRoutes(app: Express): void {
   app.use("/api/contracts/portal", contractPortalRouter);
-  app.use("/api/contracts", requireAuth, ensureWorkspaceAccess, contractPipelineRouter);
-  app.use("/api/surveys", requireAuth, ensureWorkspaceAccess, surveyRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/contracts", contractPipelineRouter],
+    ["/api/surveys", surveyRouter],
+  ]);
   // clientRouter applies requireAuth + requireManagerOrPlatformStaff on every route internally.
   // requireAuth added at mount level as defense-in-depth; ensureWorkspaceAccess intentionally
   // omitted — individual routes resolve workspace via requireManagerOrPlatformStaff internally.
   app.use("/api/clients", requireAuth, clientRouter);
-  app.use("/api/site-briefings", requireAuth, ensureWorkspaceAccess, siteBriefingRouter);
-  app.use("/api", requireAuth, ensureWorkspaceAccess, contentInlineRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/site-briefings", siteBriefingRouter],
+    ["/api", contentInlineRouter],
+  ]);
   // Contract renewals — pipeline for expiring client contracts
-  app.use("/api/contract-renewals", requireAuth, ensureWorkspaceAccess, contractRenewalRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/contract-renewals", contractRenewalRouter],
+  ]);
   // Client satisfaction — CSAT and NPS survey management
-  app.use("/api/client-satisfaction", requireAuth, ensureWorkspaceAccess, clientSatisfactionRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/client-satisfaction", clientSatisfactionRouter],
+  ]);
   // Client service requests — clients submit requests for extra coverage, site walks, etc.
-  app.use("/api/service-requests", requireAuth, ensureWorkspaceAccess, clientServiceRequestRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/service-requests", clientServiceRequestRouter],
+  ]);
   // Phase 35G: Client Communication Hub
-  app.use("/api/client-comms", requireAuth, ensureWorkspaceAccess, clientCommsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/client-comms", clientCommsRouter],
+  ]);
 
   // Client Portal Invite — Manager+ only, NDS tracked
   app.use("/api/clients", clientPortalInviteRouter);

@@ -5,6 +5,7 @@
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import { incidentsRouter } from "../mobileWorkerRoutes";
 import { incidentPipelineRouter } from "../incidentPipelineRoutes";
 import { rmsRouter } from "../rmsRoutes";
@@ -32,7 +33,9 @@ import onboardingPipelineRouter from "../onboardingPipelineRoutes";
 
 export function mountOpsRoutes(app: Express): void {
   // MEGA Phase: Onboarding Pipeline — Trinity-orchestrated 7-step worker activation
-  app.use("/api/onboarding-pipeline", requireAuth, ensureWorkspaceAccess, onboardingPipelineRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/onboarding-pipeline", onboardingPipelineRouter],
+  ]);
   // maintenanceRoutes defines its own /api/maintenance/* paths with requireAuth + requirePlatformAdmin
   // on every handler. Mounted without a path prefix to define its own canonical paths internally.
   app.use(maintenanceRoutes);
@@ -40,34 +43,48 @@ export function mountOpsRoutes(app: Express): void {
   // incidentsRouter applies requireAuth on every route internally.
   // requireAuth added at mount level as defense-in-depth.
   app.use("/api/incidents", requireAuth, incidentsRouter);
-  app.use("/api/incident-reports", requireAuth, ensureWorkspaceAccess, incidentPipelineRouter);
-  app.use("/api/rms", requireAuth, ensureWorkspaceAccess, rmsRouter);
-  app.use("/api/cad", requireAuth, ensureWorkspaceAccess, cadRouter);
-  app.use("/api/situation", requireAuth, ensureWorkspaceAccess, situationRouter);
-  app.use("/api/safety", requireAuth, ensureWorkspaceAccess, safetyRouter);
-  app.use("/api/equipment", requireAuth, ensureWorkspaceAccess, equipmentRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/incident-reports", incidentPipelineRouter],
+    ["/api/rms", rmsRouter],
+    ["/api/cad", cadRouter],
+    ["/api/situation", situationRouter],
+    ["/api/safety", safetyRouter],
+    ["/api/equipment", equipmentRouter],
+  ]);
   // Armory — Readiness Section 2 (inspections, qualifications, ammo)
-  app.use("/api/armory", requireAuth, ensureWorkspaceAccess, armoryRouter);
-  app.use("/api/vehicles", requireAuth, ensureWorkspaceAccess, vehicleRouter);
-  app.use("/api/guard-tours", requireAuth, ensureWorkspaceAccess, guardTourRouter);
-  app.use("/api/migration", requireAuth, ensureWorkspaceAccess, migrationRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/armory", armoryRouter],
+    ["/api/vehicles", vehicleRouter],
+    ["/api/guard-tours", guardTourRouter],
+    ["/api/migration", migrationRouter],
+  ]);
   // Expansion Sprint modules
-  app.use("/api/post-order-versions", requireAuth, ensureWorkspaceAccess, postOrderVersionRouter);
-  app.use("/api/incident-patterns", requireAuth, ensureWorkspaceAccess, incidentPatternRouter);
-  app.use("/api/subcontractors", requireAuth, ensureWorkspaceAccess, subcontractorRouter);
-  app.use("/api/bots", requireAuth, ensureWorkspaceAccess, shiftBotSimulationRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/post-order-versions", postOrderVersionRouter],
+    ["/api/incident-patterns", incidentPatternRouter],
+    ["/api/subcontractors", subcontractorRouter],
+    ["/api/bots", shiftBotSimulationRouter],
+  ]);
   // Document form builder (field ops documents: post orders, incident forms, DAR templates)
-  app.use("/api/document-forms", requireAuth, ensureWorkspaceAccess, documentFormRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/document-forms", documentFormRoutes],
+  ]);
   // Phase 35D — Work Orders
-  app.use("/api/work-orders", requireAuth, ensureWorkspaceAccess, workOrderRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/work-orders", workOrderRouter],
+  ]);
   registerWorkOrderActions();
 
   // Phase 35I — Visitor & Guest Management
-  app.use("/api/visitor-management", requireAuth, ensureWorkspaceAccess, visitorManagementRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/visitor-management", visitorManagementRouter],
+  ]);
   ensureVisitorTables().catch(err => log.error('[VisitorMgmt] Startup table ensure failed:', err?.message));
   registerVisitorActions();
   startOverstayMonitor();
 
   // Phase 35M — Site Survey Workflow and Facility Assessment
-  app.use("/api/site-survey", requireAuth, ensureWorkspaceAccess, siteSurveyRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/site-survey", siteSurveyRoutes],
+  ]);
 }

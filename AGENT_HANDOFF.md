@@ -1,6 +1,6 @@
 # COAILEAGUE - MASTER HANDOFF
 # ONE FILE. Update in place. Never create new handoff files.
-# Last updated: 2026-04-28 - Codex (RBAC/IRC low-risk consolidation patch ready for Claude)
+# Last updated: 2026-04-28 - Codex (domain route mount condensation ready for Claude)
 
 ---
 
@@ -23,7 +23,7 @@ One domain, one complete sweep, one coherent commit.
 ```
 Current state: PARALLEL LANES
   Claude - Email entity context panel + Trinity suggested actions landed on development.
-  Codex  - RBAC/IRC low-risk consolidation patch complete on refactor/service-layer.
+  Codex  - Domain route mount condensation complete on refactor/service-layer.
   Copilot - Queued for narrow Zod/test batches only after the current lane is stable.
 
 Next merge target:
@@ -36,9 +36,9 @@ Next merge target:
 ## CURRENT COMMITS
 
 ```
-origin/development           -> bd340828  (email entity context panel + Trinity suggested actions)
-origin/refactor/service-layer -> 9fff33a6  (Codex RBAC/IRC low-risk consolidation patch)
-local Codex lane             -> clean; no additional Codex changes pending
+origin/development           -> 8d31d18f  (Codex RBAC/chat centralization merged)
+origin/refactor/service-layer -> pending Codex domain route mount condensation patch
+local Codex lane             -> synced with development before patching
 ```
 
 Boot test before any push to development:
@@ -194,6 +194,34 @@ First batches:
 - Review duplicate route mounts in `server/routes/domains/*` one domain at a time.
 - Verify document/tax/paystub routes produce branded PDFs and persist to tenant vault.
 - Verify payroll/ACH/Plaid/paystub path for FinancialCalculator, idempotency, workspace ownership, and vault persistence before notification/transfer.
+
+### Codex Patch - Domain Route Mount Condensation, Safe Slice
+This turn condensed repeated domain mount guard stacks without changing any route
+prefix, router order, or handler implementation.
+
+Files changed:
+- `server/routes/domains/routeMounting.ts`
+  - New `mountWorkspaceRoutes()` helper for the repeated
+    `requireAuth + ensureWorkspaceAccess + router` mount pattern.
+- `server/routes/domains/billing.ts`
+- `server/routes/domains/clients.ts`
+- `server/routes/domains/comms.ts`
+- `server/routes/domains/ops.ts`
+- `server/routes/domains/orgs.ts`
+- `server/routes/domains/payroll.ts`
+- `server/routes/domains/sales.ts`
+- `server/routes/domains/scheduling.ts`
+- `server/routes/domains/workforce.ts`
+
+Validation:
+- `node build.mjs` passes.
+- `npm run audit:consolidation` passes.
+- Consolidation scanner P1 count dropped from 63 to 55.
+- `git diff --check` clean.
+
+Claude review focus:
+- Confirm mount order is unchanged in each touched domain file.
+- Run boot validation after merge to `development`.
 
 ### P2 - Large File Decomposition Inventory
 Largest surviving files:

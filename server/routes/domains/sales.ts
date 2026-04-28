@@ -5,6 +5,7 @@
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import { registerLeadCrmRoutes } from "../leadCrmRoutes";
 import { registerSalesRoutes } from "../salesRoutes";
 import salesPipelineRouter, { registerSalesPipelineActions } from "../salesPipelineRoutes";
@@ -19,17 +20,25 @@ import bidAnalyticsRouter from "../bidAnalyticsRoutes";
 export function mountSalesRoutes(app: Express): void {
   app.use("/api/public/leads", publicLeadsRouter);
   app.use("/api/testimonials", testimonialsRouter);
-  app.use("/api/proposals", requireAuth, ensureWorkspaceAccess, proposalRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/proposals", proposalRouter],
+  ]);
   app.post("/api/ethics/report", (req: any, res: any, next: any) => rfpEthicsRouter(req, res, next));
   app.get("/api/ethics/followup/:token", (req: any, res: any, next: any) => rfpEthicsRouter(req, res, next));
-  app.use("/api", requireAuth, ensureWorkspaceAccess, rfpEthicsRouter);
-  app.use("/api/pipeline-deals", requireAuth, ensureWorkspaceAccess, rfpPipelineRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api", rfpEthicsRouter],
+    ["/api/pipeline-deals", rfpPipelineRouter],
+  ]);
   // Phase 35B — Sales Pipeline / CRM (must mount BEFORE generic /api/sales)
-  app.use("/api/sales/pipeline", requireAuth, ensureWorkspaceAccess, salesPipelineRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/sales/pipeline", salesPipelineRouter],
+  ]);
   registerSalesPipelineActions();
   app.use("/api/sales", salesInlineRouter);
   registerLeadCrmRoutes(app, requireAuth, ensureWorkspaceAccess);
   registerSalesRoutes(app, requireAuth, ensureWorkspaceAccess);
   // Bid analytics — win/loss analysis, pricing intelligence
-  app.use("/api/bid-analytics", requireAuth, ensureWorkspaceAccess, bidAnalyticsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/bid-analytics", bidAnalyticsRouter],
+  ]);
 }

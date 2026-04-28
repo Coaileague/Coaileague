@@ -10,6 +10,7 @@ import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { attachWorkspaceIdOptional } from "../../rbac";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import { registerExternalEmailRoutes } from "../externalEmailRoutes";
 import dockChatRouter from "../dockChatRoutes";
 import broadcastRouter from "../broadcasts";
@@ -41,24 +42,36 @@ export function mountCommsRoutes(app: Express): void {
   // and applies requireAuth on every individual route handler.
   app.use(notificationsRouter);
 
-  app.use("/api/broadcasts", requireAuth, ensureWorkspaceAccess, broadcastRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/broadcasts", broadcastRouter],
+  ]);
   // /api/announcements is a canonical alias for /api/broadcasts (same router, same auth).
-  app.use("/api/announcements", requireAuth, ensureWorkspaceAccess, broadcastRouter);
-  app.use("/api/bridges", requireAuth, ensureWorkspaceAccess, messageBridgeRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/announcements", broadcastRouter],
+    ["/api/bridges", messageBridgeRouter],
+  ]);
   app.use("/api/mascot", mascotRouter);
-  app.use("/api/emails", requireAuth, ensureWorkspaceAccess, emailRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/emails", emailRouter],
+  ]);
   // emailUnsubscribeRouter handles /api/email/unsubscribe — intentionally public (no auth).
   app.use("/api/email", emailUnsubscribeRouter);
-  app.use("/api/internal-email", requireAuth, ensureWorkspaceAccess, internalEmailRouter);
-  app.use("/api/sms", requireAuth, ensureWorkspaceAccess, smsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/internal-email", internalEmailRouter],
+    ["/api/sms", smsRouter],
+  ]);
   // MOUNT ORDER: specific sub-paths of /api/chat MUST come before general /api/chat catch-alls.
-  app.use("/api/chat/upload", requireAuth, ensureWorkspaceAccess, chatUploadsRouter);
-  app.use("/api/email-attachments", requireAuth, ensureWorkspaceAccess, emailAttachmentsRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/chat/upload", chatUploadsRouter],
+    ["/api/email-attachments", emailAttachmentsRouter],
+  ]);
   app.use("/api/chat/rooms", requireAuth, attachWorkspaceIdOptional, chatRoomsRouter);
   app.use("/api/chat/manage", requireAuth, attachWorkspaceIdOptional, chatManagementRouter);
   // chatroomCommandRouter defines its own full /api/chat/* paths internally with per-route auth.
   app.use(chatroomCommandRouter);
-  app.use("/api", requireAuth, ensureWorkspaceAccess, commInlineRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api", commInlineRouter],
+  ]);
   // chatInlineRouter applies router.use(requireAuth) at the top — mount-level guard added as defense-in-depth.
   app.use("/api/chat", requireAuth, chatInlineRouter);
   // commOsRouter applies requireAuth on every route — mount-level guard added as defense-in-depth.
@@ -68,5 +81,7 @@ export function mountCommsRoutes(app: Express): void {
   app.use("/api/seasonal", seasonalRouter);
   registerExternalEmailRoutes(app, requireAuth, ensureWorkspaceAccess);
   // Phase 35C — DockChat bot commands + room management
-  app.use("/api/chat/dock", requireAuth, ensureWorkspaceAccess, dockChatRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/chat/dock", dockChatRouter],
+  ]);
 }

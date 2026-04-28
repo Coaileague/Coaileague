@@ -6,6 +6,7 @@ import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { requireManager } from "../../rbac";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import { financialLimiter, exportLimiter } from "../../middleware/rateLimiter";
 import { billingRouter } from "../billing-api";
 import upsellRouter from "../upsellRoutes";
@@ -160,19 +161,23 @@ export function mountBillingRoutes(app: Express): void {
   app.use("/api/usage", usageRouter);
   app.use("/api/credits", usageRouter);
 
-  app.use("/api", requireAuth, ensureWorkspaceAccess, financeInlineRouter);
-  app.use("/api/timesheet-invoices", requireAuth, ensureWorkspaceAccess, timesheetInvoiceRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api", financeInlineRouter],
+    ["/api/timesheet-invoices", timesheetInvoiceRouter],
+  ]);
   app.use("/api/trinity/revenue", requireAuth, trinityRevenueRouter);
-  app.use("/api/disputes", requireAuth, ensureWorkspaceAccess, disputeRouter);
-  app.use("/api", requireAuth, ensureWorkspaceAccess, financeSettingsRouter);
-  app.use("/api/invoices", requireAuth, ensureWorkspaceAccess, invoiceRouter);
-  app.use("/api/billing-settings", requireAuth, ensureWorkspaceAccess, billingSettingsRouter);
-  app.use("/api/qb-reports", requireAuth, ensureWorkspaceAccess, qbReportsRouter);
-  app.use("/api/budgets", requireAuth, ensureWorkspaceAccess, budgetRouter);
-  app.use("/api/quickbooks/phase3", requireAuth, ensureWorkspaceAccess, quickbooksPhase3Router);
-  app.use("/api/finance", requireAuth, ensureWorkspaceAccess, financialIntelligenceRouter);
-  app.use("/api/finance", requireAuth, ensureWorkspaceAccess, financeNewRouter);
-  app.use("/api/finance", requireAuth, ensureWorkspaceAccess, revenueRecognitionRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/disputes", disputeRouter],
+    ["/api", financeSettingsRouter],
+    ["/api/invoices", invoiceRouter],
+    ["/api/billing-settings", billingSettingsRouter],
+    ["/api/qb-reports", qbReportsRouter],
+    ["/api/budgets", budgetRouter],
+    ["/api/quickbooks/phase3", quickbooksPhase3Router],
+    ["/api/finance", financialIntelligenceRouter],
+    ["/api/finance", financeNewRouter],
+    ["/api/finance", revenueRecognitionRouter],
+  ]);
   app.use(icalPublicRouter);
 
   // ── Phase 16A: Trinity Token Metering ────────────────────────────────────

@@ -9,6 +9,7 @@ import { sanitizeError } from '../../middleware/errorHandler';
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import { registerAutonomousSchedulingRoutes } from "../autonomousSchedulingRoutes";
 import approvalRoutes from "../approvalRoutes";
 import orchestratedScheduleRouter from "../orchestratedScheduleRoutes";
@@ -79,18 +80,24 @@ export function mountSchedulingRoutes(app: Express): void {
     }
   });
 
-  app.use("/api/approvals", requireAuth, ensureWorkspaceAccess, approvalRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/approvals", approvalRoutes],
+  ]);
   registerAutonomousSchedulingRoutes(app);
-  app.use("/api/orchestrated-schedule", requireAuth, ensureWorkspaceAccess, orchestratedScheduleRouter);
-  app.use("/api/coverage", requireAuth, ensureWorkspaceAccess, coverageRouter);
-  app.use("/api/calendar", requireAuth, ensureWorkspaceAccess, calendarRouter);
-  app.use("/api/scheduling", requireAuth, ensureWorkspaceAccess, advancedSchedulingRouter);
-  app.use("/api/ai/scheduling", requireAuth, ensureWorkspaceAccess, aiSchedulingRoutes);
-  app.use("/api/shifts", requireAuth, ensureWorkspaceAccess, shiftInlineRouter);
-  app.use("/api/scheduleos", requireAuth, ensureWorkspaceAccess, scheduleosRouter);
-  app.use("/api/trinity-staffing", requireAuth, ensureWorkspaceAccess, trinityStaffingRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/orchestrated-schedule", orchestratedScheduleRouter],
+    ["/api/coverage", coverageRouter],
+    ["/api/calendar", calendarRouter],
+    ["/api/scheduling", advancedSchedulingRouter],
+    ["/api/ai/scheduling", aiSchedulingRoutes],
+    ["/api/shifts", shiftInlineRouter],
+    ["/api/scheduleos", scheduleosRouter],
+    ["/api/trinity-staffing", trinityStaffingRouter],
+  ]);
   app.use("/api/public/trinity-staffing", trinityStaffingPublicRouter);
-  app.use("/api/trinity/scheduling", requireAuth, ensureWorkspaceAccess, trinitySchedulingRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/trinity/scheduling", trinitySchedulingRouter],
+  ]);
   app.get("/api/shift-handoff/pending", requireAuth, ensureWorkspaceAccess, async (req: any, res: any) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
@@ -106,13 +113,17 @@ export function mountSchedulingRoutes(app: Express): void {
       return res.status(500).json({ message: "Failed to fetch pending handoff" });
     }
   });
-  app.use("/api/shift-chatrooms", requireAuth, ensureWorkspaceAccess, shiftChatroomRouter);
-  app.use("/api/post-orders", requireAuth, ensureWorkspaceAccess, postOrderRouter);
-  app.use("/api/scheduling", requireAuth, ensureWorkspaceAccess, schedulingInlineRouter);
-  app.use("/api/schedules", requireAuth, ensureWorkspaceAccess, schedulesRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/shift-chatrooms", shiftChatroomRouter],
+    ["/api/post-orders", postOrderRouter],
+    ["/api/scheduling", schedulingInlineRouter],
+    ["/api/schedules", schedulesRouter],
+  ]);
   // Staffing broadcast — public accept link (no auth) + authenticated management routes (per-route auth)
   app.use("/api/staffing", staffingBroadcastRouter);
   // Phase 35F — Shift Trading Marketplace + Officer Availability
-  app.use("/api/shift-trading", requireAuth, ensureWorkspaceAccess, shiftTradingRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/shift-trading", shiftTradingRouter],
+  ]);
   registerShiftTradingActions();
 }

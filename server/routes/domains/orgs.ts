@@ -6,6 +6,7 @@ import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { requirePlatformStaff } from "../../rbac";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import integrationRouterOAuth from "../oauthIntegrationRoutes";
 import configRegistryRouter from "../configRegistryRoutes";
 import featureFlagsRoutes from "../featureFlagsRoutes";
@@ -33,7 +34,9 @@ import permissionMatrixRouter from "../permissionMatrixRoutes";
 import developerPortalRoutes from "../developerPortalRoutes";
 
 export function mountOrgsRoutes(app: Express): void {
-  app.use("/api/developers", requireAuth, ensureWorkspaceAccess, developerPortalRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/developers", developerPortalRoutes],
+  ]);
   app.use(featureFlagsRoutes);
   app.use(configRegistryRouter);
 
@@ -41,28 +44,44 @@ export function mountOrgsRoutes(app: Express): void {
 
   app.use("/api/integrations", integrationRouterOAuth);
   app.use("/api/enterprise", enterpriseOnboardingRoutes);
-  app.use("/api/enterprise-features", requireAuth, ensureWorkspaceAccess, enterpriseRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/enterprise-features", enterpriseRouter],
+  ]);
   // Public onboarding inline routes FIRST — candidate invite/application flows (no auth required)
   app.use("/api/onboarding", onboardingInlineRouter);
   // Auth-required onboarding routes after (workspace owner pipeline, checklists, AI import)
-  app.use("/api/onboarding", requireAuth, ensureWorkspaceAccess, onboardingRouter);
-  app.use("/api/onboarding-assistant", requireAuth, ensureWorkspaceAccess, onboardingAssistantRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/onboarding", onboardingRouter],
+    ["/api/onboarding-assistant", onboardingAssistantRouter],
+  ]);
   app.use("/api/support/assisted-onboarding", assistedOnboardingRouter);
   app.use("/api/accept-handoff", acceptHandoffRouter);
-  app.use("/api/employee-onboarding", requireAuth, ensureWorkspaceAccess, employeeOnboardingRoutes);
-  app.use("/api/employee-packets", requireAuth, ensureWorkspaceAccess, employeePacketRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/employee-onboarding", employeeOnboardingRoutes],
+    ["/api/employee-packets", employeePacketRouter],
+  ]);
   // Workspace routes: requireAuth only (no ensureWorkspaceAccess) — POST /api/workspace creates the workspace
   // for users who do not have one yet; individual route handlers enforce workspace scope internally
-  app.use("/api/workspace/integrations", requireAuth, ensureWorkspaceAccess, integrationRoutes);
+  mountWorkspaceRoutes(app, [
+    ["/api/workspace/integrations", integrationRoutes],
+  ]);
   app.use("/api/workspace", requireAuth, workspaceSettingsRouter);
-  app.use("/api/integrations", requireAuth, ensureWorkspaceAccess, integrationsInlineRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/integrations", integrationsInlineRouter],
+  ]);
   app.use("/api/workspace", requireAuth, workspaceInlineRouter);
   app.use("/api/admin/partners", requirePlatformStaff, partnerRoutes);
-  app.use("/api/import", requireAuth, ensureWorkspaceAccess, importRouter);
-  app.use("/api/hireos", requireAuth, ensureWorkspaceAccess, hireosRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/import", importRouter],
+    ["/api/hireos", hireosRouter],
+  ]);
   app.use("/api/promotional-banners", promotionalBannerRouter);
-  app.use("/api/whats-new", requireAuth, ensureWorkspaceAccess, whatsNewRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/whats-new", whatsNewRouter],
+  ]);
   app.use("/api/experience", experienceRoutes);
   app.use("/api/device", deviceLoaderRouter);
-  app.use("/api/workspace/permissions", requireAuth, ensureWorkspaceAccess, permissionMatrixRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/workspace/permissions", permissionMatrixRouter],
+  ]);
 }

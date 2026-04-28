@@ -3,7 +3,7 @@
 // Canonical prefixes: /api/payroll, /api/expenses, /api (pay stubs via per-route auth)
 import type { Express, Request, Response } from "express";
 import { requireAuth } from "../../auth";
-import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
+import { mountWorkspaceRoutes } from "./routeMounting";
 import payrollRouter from "../payrollRoutes";
 import expenseRouter from "../expenseRoutes";
 import payStubRouter from "../payStubRoutes";
@@ -19,9 +19,11 @@ export function mountPayrollRoutes(app: Express): void {
   // Plaid webhook MUST be registered BEFORE auth middleware — Plaid calls it without user auth.
   app.use("/api/plaid/webhook", plaidWebhookHandler);
 
-  app.use("/api/payroll", requireAuth, ensureWorkspaceAccess, payrollRouter);
-  app.use("/api/timesheets", requireAuth, ensureWorkspaceAccess, payrollTimesheetRouter);
-  app.use("/api/expenses", requireAuth, ensureWorkspaceAccess, expenseRouter);
-  app.use("/api", requireAuth, ensureWorkspaceAccess, payStubRouter);
-  app.use("/api/plaid", requireAuth, ensureWorkspaceAccess, plaidRouter);
+  mountWorkspaceRoutes(app, [
+    ["/api/payroll", payrollRouter],
+    ["/api/timesheets", payrollTimesheetRouter],
+    ["/api/expenses", expenseRouter],
+    ["/api", payStubRouter],
+    ["/api/plaid", plaidRouter],
+  ]);
 }
