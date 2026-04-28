@@ -31,6 +31,7 @@ import { employeePacketRouter } from "../employeePacketRoutes";
 import permissionMatrixRouter from "../permissionMatrixRoutes";
 
 import developerPortalRoutes from "../developerPortalRoutes";
+import integrationsStatusRouter from '../integrations-status';
 
 export function mountOrgsRoutes(app: Express): void {
   app.use("/api/developers", requireAuth, ensureWorkspaceAccess, developerPortalRoutes);
@@ -65,4 +66,5 @@ export function mountOrgsRoutes(app: Express): void {
   app.use("/api/experience", experienceRoutes);
   app.use("/api/device", deviceLoaderRouter);
   app.use("/api/workspace/permissions", requireAuth, ensureWorkspaceAccess, permissionMatrixRouter);
+  app.use('/api/integrations', requireAuth, integrationsStatusRouter);
 }

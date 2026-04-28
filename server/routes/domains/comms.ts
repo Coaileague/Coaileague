@@ -32,6 +32,7 @@ import notificationsRouter from "../notifications";
 import seasonalRouter from "../seasonalRoutes";
 import chatPollRouter from '../chatPollRoutes';
 import chatSearchRouter from '../chatSearchRoutes';
+import emailEntityContextRouter from '../emailEntityContextRoute';
 // NOTE: voiceRouter + /api/voice/* and /api/sms/{inbound,status} aliases are
 // mounted in server/routes.ts BEFORE domain mounts. They cannot live here
 // because mountBillingRoutes/etc. register `app.use("/api", requireAuth, ...)`
@@ -75,4 +76,5 @@ export function mountCommsRoutes(app: Express): void {
   registerExternalEmailRoutes(app, requireAuth, ensureWorkspaceAccess);
   // Phase 35C — DockChat bot commands + room management
   app.use("/api/chat/dock", requireAuth, ensureWorkspaceAccess, dockChatRouter);
+  app.use('/', requireAuth, emailEntityContextRouter);
 }

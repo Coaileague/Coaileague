@@ -36,6 +36,7 @@ import trainingComplianceRouter from "../trainingComplianceRoutes";
 import licenseDashboardRouter from "../license-dashboard";
 import insuranceRouter from "../insuranceRoutes";
 import complianceEvidenceRouter from "../complianceEvidenceRoutes";
+import { spsFormsRouter } from '../spsFormsRoutes';
 
 export function mountComplianceRoutes(app: Express): void {
   // Governance inline routes BEFORE security-compliance to ensure lock-vault is handled
@@ -87,4 +88,5 @@ export function mountComplianceRoutes(app: Express): void {
   app.use("/api/compliance/licenses", requireAuth, ensureWorkspaceAccess, licenseDashboardRouter);
   // Insurance — certificates, bonding, coverage management (Phase 35R)
   app.use("/api/insurance", requireAuth, ensureWorkspaceAccess, insuranceRouter);
+  app.use('/api/sps/forms', requireAuth, spsFormsRouter);
 }

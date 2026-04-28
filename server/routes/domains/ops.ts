@@ -29,6 +29,7 @@ import { createLogger } from '../../lib/logger';
 const log = createLogger('Ops');
 
 import onboardingPipelineRouter from "../onboardingPipelineRoutes";
+import bulkOperationsRouter from '../bulk-operations';
 
 export function mountOpsRoutes(app: Express): void {
   // MEGA Phase: Onboarding Pipeline — Trinity-orchestrated 7-step worker activation
@@ -70,4 +71,5 @@ export function mountOpsRoutes(app: Express): void {
 
   // Phase 35M — Site Survey Workflow and Facility Assessment
   app.use("/api/site-survey", requireAuth, ensureWorkspaceAccess, siteSurveyRoutes);
+  app.use('/api/bulk-operations', requireAuth, bulkOperationsRouter);
 }

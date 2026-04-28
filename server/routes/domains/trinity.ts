@@ -62,6 +62,8 @@ import agentActivityRouter from "../agentActivityRoutes";
 import trinityLimbicRouter from "../trinityLimbicRoutes";
 import trinityTransparencyRouter from "../trinityTransparencyRoutes";
 import trinityAgentDashboardRouter from "../trinityAgentDashboardRoutes";
+import aiBrainCapabilitiesRouter from '../ai-brain-capabilities';
+import { registerAiBrainMemoryRoutes } from '../aiBrainMemoryRoutes';
 
 const domainHealthRouter = Router();
 domainHealthRouter.get("/domain-health", requireAuth, requireTrinityAccess, (_req, res) => {
@@ -222,4 +224,6 @@ export function mountTrinityRoutes(app: Express): void {
 
   // ── Agent Spawning Activity (Phase 6) ─────────────────────────────────────
   app.use("/api/agent-activity", requireAuth, ensureWorkspaceAccess, agentActivityRouter);
+  app.use('/api/ai-brain', requireAuth, aiBrainCapabilitiesRouter);
+  registerAiBrainMemoryRoutes(app);
 }
