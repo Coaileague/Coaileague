@@ -1796,6 +1796,46 @@ self.addEventListener('activate', async () => {
   });
 
   // PHASE 0: Register routes (required before anything else)
+  // ── EARLY STATIC FILE SERVING (CRITICAL — must run BEFORE registerRoutes) ──
+  // This ensures GET / and all client-side routes return HTML before any API
+  // middleware can intercept them. API routes (/api/*) are still handled by
+  // registerRoutes() below — express.static skips them automatically.
+  const path = await import('path');
+  const fs = await import('fs');
+  const distPath = path.default.resolve(process.cwd(), 'dist/public');
+  if (fs.default.existsSync(distPath)) {
+    const expressStaticMod = await import('express');
+    const expressStatic = expressStaticMod.default.static;
+    // Serve sw.js with no-cache so browser always gets latest version
+    app.get('/sw.js', (_req: any, res: any) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Content-Type', 'application/javascript');
+      res.sendFile(path.default.resolve(distPath, 'sw.js'));
+    });
+    // Serve static assets (JS, CSS, images) — skips /api/* routes automatically
+    app.use(expressStatic(distPath, { index: false }));
+    // SPA catch-all: serve index.html for all non-API navigation requests
+    app.get('*', (req: any, res: any, next: any) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) {
+        return next();
+      }
+      // Only intercept navigation requests (browser GET for pages)
+      const accept = req.headers.accept || '';
+      if (accept.includes('text/html') || accept === '*/*' || !req.path.includes('.')) {
+        return res.sendFile(path.default.resolve(distPath, 'index.html'));
+      }
+      next();
+    });
+    log.info('[Startup] Early static serving registered — SPA routes handled before API middleware');
+  } else {
+    // dist/public not built yet — serve placeholder for all non-API routes
+    app.get('*', (req: any, res: any, next: any) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) return next();
+      res.status(200).send('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CoAIleague</title></head><body style="margin:0;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui"><div style="text-align:center"><h1 style="color:#7c3aed">CoAIleague</h1><p>Deploying... <button onclick="location.reload()" style="background:#7c3aed;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer">Reload</button></p></div><script>setTimeout(()=>location.reload(),15000)</script></body></html>');
+    });
+    log.warn('[Startup] dist/public not found — static serving in fallback mode');
+  }
+
   try {
     log.info('Phase 0: Registering routes');
     server = await registerRoutes(app);
