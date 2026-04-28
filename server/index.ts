@@ -1769,6 +1769,32 @@ process.on('unhandledRejection', (reason: any, promise) => {
   // Architecture lint — non-blocking, just warns about violations
   runArchitectureLint();
 
+  // EMERGENCY: Add SW-killer and static-bypass BEFORE any auth middleware
+  // These routes must be accessible without authentication — they're needed
+  // to break the service worker cache loop that causes the black screen.
+  
+  // /clear-sw → forces browser to unregister all service workers
+  app.get('/clear-sw', (_req: any, res: any) => {
+    res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.send(`
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', async () => {
+  const keys = await caches.keys();
+  await Promise.all(keys.map(k => caches.delete(k)));
+  await self.registration.unregister();
+  const clients = await self.clients.matchAll({ type: 'window' });
+  clients.forEach(c => c.navigate(c.url));
+});
+`);
+  });
+
+  // /sw-health → returns JSON so browser can check if server is alive
+  app.get('/sw-health', (_req: any, res: any) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ok: true, ts: Date.now() });
+  });
+
   // PHASE 0: Register routes (required before anything else)
   try {
     log.info('Phase 0: Registering routes');

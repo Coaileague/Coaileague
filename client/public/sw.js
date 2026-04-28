@@ -190,7 +190,36 @@ async function handleStaleWhileRevalidate(request) {
   return cached || fetchPromise;
 }
 
-self.addEventListener('fetch', (event) => {
+self.
+// ─── STARTUP HEALTH CHECK ─────────────────────────────────────────────────────
+// On every SW activation, ping /sw-health. If it returns 200, purge any
+// cached 401/403 responses that may have gotten stuck in the cache.
+// This breaks the "cached unauthorized response" loop.
+self.addEventListener('activate', function swHealthCheck(event) {
+  event.waitUntil(
+    fetch('/sw-health', { cache: 'no-store' })
+      .then(async (resp) => {
+        if (resp.ok) {
+          // Server is alive — purge any stale auth-error responses from ALL caches
+          const cacheNames = await caches.keys();
+          for (const cacheName of cacheNames) {
+            const cache = await caches.open(cacheName);
+            const requests = await cache.keys();
+            for (const req of requests) {
+              const cached = await cache.match(req);
+              if (cached && (cached.status === 401 || cached.status === 403 || cached.status === 0)) {
+                await cache.delete(req);
+                console.log('[SW] Purged bad cached response:', req.url, cached.status);
+              }
+            }
+          }
+        }
+      })
+      .catch(() => null) // Health check is best-effort
+  );
+});
+
+addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   if (event.request.method !== 'GET') {

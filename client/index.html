@@ -238,6 +238,30 @@
       }
     }
     </script>
+    <script>
+    // SW emergency reset: if the SW is serving stale 401 responses,
+    // unregister it immediately so the fresh content can load.
+    (function() {
+      if ('serviceWorker' in navigator) {
+        // Check if current page is a JSON response (black screen scenario)
+        // by looking at document.contentType
+        try {
+          fetch('/sw-health', { cache: 'no-store' })
+            .then(function(r) {
+              if (!r.ok) return;
+              // Server is alive — reset any bad SW
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(reg) {
+                  // Force SW to update immediately
+                  reg.update();
+                });
+              });
+            })
+            .catch(function() {});
+        } catch(e) {}
+      }
+    })();
+  </script>
   </head>
   <body>
     <script>
