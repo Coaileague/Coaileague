@@ -314,7 +314,10 @@ const router = Router();
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const { reason } = req.body;
+      const rejectBodySchema = z.object({ reason: z.string().optional() });
+      const rejectParsed = rejectBodySchema.safeParse(req.body);
+      if (!rejectParsed.success) return res.status(400).json({ error: 'Invalid request body', details: rejectParsed.error.issues });
+      const { reason } = rejectParsed.data;
       
       const timeEntry = await storage.getTimeEntry(req.params.id, workspaceId);
       if (!timeEntry) {
@@ -431,11 +434,10 @@ const router = Router();
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      const { timeEntryIds } = req.body;
-
-      if (!Array.isArray(timeEntryIds) || timeEntryIds.length === 0) {
-        return res.status(400).json({ message: "timeEntryIds must be a non-empty array" });
-      }
+      const bulkApproveSchema = z.object({ timeEntryIds: z.array(z.string()).min(1, 'timeEntryIds must be a non-empty array') });
+      const bulkParsed = bulkApproveSchema.safeParse(req.body);
+      if (!bulkParsed.success) return res.status(400).json({ error: 'Invalid request body', details: bulkParsed.error.issues });
+      const { timeEntryIds } = bulkParsed.data;
 
       // Prevent self-approval: get all employee IDs for the time entries
       const entries = await db
@@ -610,8 +612,14 @@ const router = Router();
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee) return res.status(403).json({ message: "No employee record" });
 
-      const { latitude, longitude, accuracy } = req.body;
-      if (!latitude || !longitude) return res.status(400).json({ message: "GPS coordinates required" });
+      const gpsSchema = z.object({
+        latitude: z.number({ required_error: 'latitude required' }),
+        longitude: z.number({ required_error: 'longitude required' }),
+        accuracy: z.number().optional(),
+      });
+      const gpsParsed = gpsSchema.safeParse(req.body);
+      if (!gpsParsed.success) return res.status(400).json({ error: 'Invalid request body', details: gpsParsed.error.issues });
+      const { latitude, longitude, accuracy } = gpsParsed.data;
 
       const [activeEntry] = await db.select({ id: timeEntriesTable.id, shiftId: timeEntriesTable.shiftId })
         .from(timeEntriesTable)
@@ -675,15 +683,18 @@ const router = Router();
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee) return res.status(403).json({ message: "No employee record" });
 
-      const { shiftId, siteId, siteName, reasonCode, reasonDetail } = req.body;
-      const validReasonCodes = ["vehicle_breakdown","signal_loss","reassigned_site","emergency_response","other"];
-      
-      if (!reasonCode || !validReasonCodes.includes(reasonCode)) {
-        return res.status(400).json({ message: "Valid reasonCode required" });
-      }
-      if (!reasonDetail) {
-        return res.status(400).json({ message: "reasonDetail required" });
-      }
+      const manualOverrideSchema = z.object({
+        shiftId: z.string().optional().nullable(),
+        siteId: z.union([z.string(), z.number()]).optional().nullable(),
+        siteName: z.string().optional().nullable(),
+        reasonCode: z.enum(["vehicle_breakdown","signal_loss","reassigned_site","emergency_response","other"], {
+          errorMap: () => ({ message: "Valid reasonCode required" }),
+        }),
+        reasonDetail: z.string().min(1, 'reasonDetail required'),
+      });
+      const overrideParsed = manualOverrideSchema.safeParse(req.body);
+      if (!overrideParsed.success) return res.status(400).json({ error: 'Invalid request body', details: overrideParsed.error.issues });
+      const { shiftId, siteId, siteName, reasonCode, reasonDetail } = overrideParsed.data;
 
       const id = (await import('crypto')).randomUUID();
       const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
@@ -835,7 +846,10 @@ const router = Router();
         return res.status(400).json({ message: `Cannot start break — time entry status is '${timeEntry.status}', must be 'active'` });
       }
 
-      const { breakType } = req.body;
+      const breakSchema = z.object({ breakType: z.string().optional() });
+      const breakParsed = breakSchema.safeParse(req.body);
+      if (!breakParsed.success) return res.status(400).json({ error: 'Invalid request body', details: breakParsed.error.issues });
+      const { breakType } = breakParsed.data;
       const updated = await storage.updateTimeEntry(req.params.id, workspace.id, {
         status: 'on_break',
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -909,8 +923,14 @@ const router = Router();
 
 router.post("/calculate-hours", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const { employeeId, startDate, endDate } = req.body;
-    if (!employeeId || !startDate || !endDate) return res.status(400).json({ error: 'employeeId, startDate, endDate required' });
+    const calcHoursSchema = z.object({
+      employeeId: z.string().min(1, 'employeeId required'),
+      startDate: z.string().min(1, 'startDate required'),
+      endDate: z.string().min(1, 'endDate required'),
+    });
+    const calcParsed = calcHoursSchema.safeParse(req.body);
+    if (!calcParsed.success) return res.status(400).json({ error: 'Invalid request body', details: calcParsed.error.issues });
+    const { employeeId, startDate, endDate } = calcParsed.data;
 
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const hours = await calculatePayrollHours(employeeId, new Date(startDate), new Date(endDate));

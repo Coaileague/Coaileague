@@ -231,7 +231,10 @@ router.post('/:id/accept', async (req: AuthenticatedRequest, res: Response) => {
 
 router.post('/:id/decline', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { reason } = req.body;
+    const declineSchema = z.object({ reason: z.string().optional() });
+    const declineParsed = declineSchema.safeParse(req.body);
+    if (!declineParsed.success) return res.status(400).json({ error: 'Invalid request body', details: declineParsed.error.issues });
+    const { reason } = declineParsed.data;
     const contract = await contractPipelineService.declineProposal(
       req.params.id,
       reason || 'No reason provided',
@@ -487,7 +490,10 @@ publicPortalRouter.post('/:token/decline', async (req: Request, res: Response) =
       return res.status(401).json({ error: result.error });
     }
 
-    const { reason } = req.body;
+    const portalDeclineSchema = z.object({ reason: z.string().optional() });
+    const portalDeclineParsed = portalDeclineSchema.safeParse(req.body);
+    if (!portalDeclineParsed.success) return res.status(400).json({ error: 'Invalid request body', details: portalDeclineParsed.error.issues });
+    const { reason } = portalDeclineParsed.data;
     const contract = await contractPipelineService.declineProposal(
       result.contract!.id,
       reason || 'No reason provided',
@@ -513,10 +519,10 @@ publicPortalRouter.post('/:token/request-changes', async (req: Request, res: Res
       return res.status(401).json({ error: result.error });
     }
 
-    const { changesRequested } = req.body;
-    if (!changesRequested) {
-      return res.status(400).json({ error: 'changesRequested is required' });
-    }
+    const requestChangesSchema = z.object({ changesRequested: z.string().min(1, 'changesRequested is required') });
+    const changesParsed = requestChangesSchema.safeParse(req.body);
+    if (!changesParsed.success) return res.status(400).json({ error: 'Invalid request body', details: changesParsed.error.issues });
+    const { changesRequested } = changesParsed.data;
 
     const contract = await contractPipelineService.requestChanges(
       result.contract!.id,

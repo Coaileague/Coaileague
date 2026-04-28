@@ -52,6 +52,7 @@ import { panicAlerts, employees } from '@shared/schema';
 import { eq, sql, and, inArray } from 'drizzle-orm';
 import { NotificationDeliveryService } from '../notificationDeliveryService';
 import { MANAGER_ROLES, OWNER_ROLES } from '@shared/lib/rbac/roleDefinitions';
+import { isDeliverableEmployee } from '../../lib/isDeliverableEmployee';
 
 /**
  * Canonical liability notice returned with every panic API response and
@@ -278,14 +279,20 @@ class PanicAlertService {
         phone: employees.phone,
         firstName: employees.firstName,
         lastName: employees.lastName,
+        isActive: employees.isActive,
+        status: (employees as any).status,
       })
       .from(employees)
       .where(
         and(
           eq(employees.workspaceId, workspaceId),
           inArray(employees.workspaceRole, chainRoles),
+          eq(employees.isActive, true),
         ),
       );
+
+    // Exclude terminated/deactivated/suspended supervisors from the panic chain
+    const activeChain = chain.filter(isDeliverableEmployee);
 
     const locationLine = alert.latitude != null && alert.longitude != null
       ? `GPS ${Number(alert.latitude).toFixed(4)},${Number(alert.longitude).toFixed(4)}`
@@ -301,7 +308,7 @@ class PanicAlertService {
       `and does NOT guarantee officer safety. Human response is required.`;
 
     let reachableCount = 0;
-    for (const recipient of chain) {
+    for (const recipient of activeChain) {
       if (!recipient.phone || !recipient.userId) continue;
       try {
         await NotificationDeliveryService.send({
@@ -322,7 +329,7 @@ class PanicAlertService {
     }
 
     log.info(
-      `Panic alert ${alert.alertNumber} — SMS blast: ${reachableCount}/${chain.length} supervisory-chain recipients with a phone on file.`,
+      `Panic alert ${alert.alertNumber} — SMS blast: ${reachableCount}/${activeChain.length} supervisory-chain recipients with a phone on file.`,
     );
   }
 

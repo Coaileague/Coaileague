@@ -1,4 +1,5 @@
 import { requirePlatformStaff } from '../rbac';
+import { requireAuth } from '../auth';
 /**
  * Platform Feedback Routes
  *
@@ -24,6 +25,8 @@ const router = Router();
 const log = createLogger('PlatformFeedback');
 
 const PLATFORM_WS = PLATFORM_WORKSPACE_ID;
+
+router.use(requireAuth);
 
 // ── Default survey seeded on first-run ────────────────────────────────────
 const DEFAULT_SURVEY_QUESTIONS = [
@@ -131,7 +134,7 @@ router.get('/active', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────
 // GET /api/platform-feedback/surveys — admin: list all platform surveys
 // ─────────────────────────────────────────────────────────────────────────
-router.get('/surveys', async (req, res) => {
+router.get('/surveys', requirePlatformStaff, async (req, res) => {
   try {
     const surveys = await db
       .select()
@@ -213,7 +216,7 @@ router.post('/surveys', requirePlatformStaff, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────
 // PUT /api/platform-feedback/surveys/:id — admin: update survey questions
 // ─────────────────────────────────────────────────────────────────────────
-router.put('/surveys/:id', async (req, res) => {
+router.put('/surveys/:id', requirePlatformStaff, async (req, res) => {
   const { id } = req.params;
   const parse = SurveyCreateSchema.partial().safeParse(req.body);
   if (!parse.success) {
@@ -247,7 +250,6 @@ const ResponseSchema = z.object({
     questionId: z.string(),
     answer: z.union([z.string(), z.number(), z.array(z.string())]),
   })),
-  workspaceId: z.string().optional(),
 });
 
 router.post('/respond', async (req, res) => {
@@ -256,9 +258,9 @@ router.post('/respond', async (req, res) => {
     return res.status(400).json({ error: 'Invalid response data', details: parse.error.issues });
   }
 
-  const { surveyId, answers, workspaceId } = parse.data;
+  const { surveyId, answers } = parse.data;
   const userId = req.user?.id;
-  const responderWorkspace = workspaceId || req.workspaceId || PLATFORM_WS;
+  const responderWorkspace = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || PLATFORM_WS;
 
   try {
     // Verify the survey exists
@@ -303,7 +305,7 @@ router.post('/respond', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────
 // GET /api/platform-feedback/analytics — admin: aggregate response data
 // ─────────────────────────────────────────────────────────────────────────
-router.get('/analytics', async (req, res) => {
+router.get('/analytics', requirePlatformStaff, async (req, res) => {
   try {
     const surveyId = req.query.surveyId as string | undefined;
 

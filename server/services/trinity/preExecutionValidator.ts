@@ -15,6 +15,7 @@ import { db } from '../../db';
 import { employees, invoices, clients, payrollRuns, aiBrainActionLogs } from '@shared/schema';
 import { and, eq, gte, lte, sql, desc } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
+import { isDeliverableEmployee } from '../../lib/isDeliverableEmployee';
 const log = createLogger('preExecutionValidator');
 
 
@@ -129,8 +130,7 @@ export async function validateBeforeExecution(
       }
       const name = `${emp.firstName ?? ''} ${emp.lastName ?? ''}`.trim() || empId;
       // Block if deactivated OR if terminationDate is in the past (terminatedAt equivalent)
-      const BLOCKED_STATUSES = ['terminated', 'inactive', 'deactivated', 'suspended'];
-      if (emp.isActive === false || (emp.status && BLOCKED_STATUSES.includes(emp.status))) {
+      if (!isDeliverableEmployee(emp)) {
         return logAndReturn(fail(`Cannot act on ${name} — employee is ${emp.status || 'inactive'}/not active`, 'employment_status'));
       }
       if (emp.terminationDate && new Date(emp.terminationDate) <= new Date()) {

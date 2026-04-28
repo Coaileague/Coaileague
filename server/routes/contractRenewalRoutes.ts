@@ -9,6 +9,7 @@ import { requireAuth } from "../auth";
 import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
 import { platformEventBus } from "../services/platformEventBus";
 import { createLogger } from '../lib/logger';
+import { z } from 'zod';
 const log = createLogger('ContractRenewalRoutes');
 
 
@@ -75,7 +76,16 @@ router.patch("/contracts/:id/renewal", requireAuth, async (req: AuthenticatedReq
     if (!hasManagerAccess(req.workspaceRole || '')) {
       return res.status(403).json({ error: "Manager access required" });
     }
-    const { renewal_status, renewal_proposed_at, auto_renew, annual_value, renewal_notice_days } = req.body;
+    const renewalUpdateSchema = z.object({
+      renewal_status: z.string().optional(),
+      renewal_proposed_at: z.string().optional(),
+      auto_renew: z.boolean().optional(),
+      annual_value: z.number().optional(),
+      renewal_notice_days: z.number().int().optional(),
+    });
+    const renewalParsed = renewalUpdateSchema.safeParse(req.body);
+    if (!renewalParsed.success) return res.status(400).json({ error: 'Invalid request body', details: renewalParsed.error.issues });
+    const { renewal_status, renewal_proposed_at, auto_renew, annual_value, renewal_notice_days } = renewalParsed.data;
     const updates: string[] = [];
     const vals: any[] = [];
     let i = 1;
@@ -102,8 +112,14 @@ router.patch("/contracts/:id/renewal", requireAuth, async (req: AuthenticatedReq
 router.post("/contracts/:id/tasks", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const wid = req.workspaceId!;
-    const { task_type, due_date, trinity_action_taken } = req.body;
-    if (!task_type || !due_date) return res.status(400).json({ error: "task_type and due_date required" });
+    const renewalTaskSchema = z.object({
+      task_type: z.string().min(1, 'task_type required'),
+      due_date: z.string().min(1, 'due_date required'),
+      trinity_action_taken: z.string().optional(),
+    });
+    const taskParsed = renewalTaskSchema.safeParse(req.body);
+    if (!taskParsed.success) return res.status(400).json({ error: 'Invalid request body', details: taskParsed.error.issues });
+    const { task_type, due_date, trinity_action_taken } = taskParsed.data;
     const id = `crt-${randomUUID()}`;
     await db.$client.query(
       `INSERT INTO contract_renewal_tasks (id, workspace_id, contract_id, task_type, due_date, status, trinity_action_taken)
@@ -222,7 +238,14 @@ router.get("/dashboard", requireAuth, async (req: AuthenticatedRequest, res) => 
 router.patch("/contracts/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const wid = req.workspaceId!;
-    const { renewal_status, auto_renew, annual_value } = req.body;
+    const contractAliasSchema = z.object({
+      renewal_status: z.string().optional(),
+      auto_renew: z.boolean().optional(),
+      annual_value: z.number().optional(),
+    });
+    const aliasParsed = contractAliasSchema.safeParse(req.body);
+    if (!aliasParsed.success) return res.status(400).json({ error: 'Invalid request body', details: aliasParsed.error.issues });
+    const { renewal_status, auto_renew, annual_value } = aliasParsed.data;
     const updates: string[] = [];
     const vals: any[] = [];
     let i = 1;

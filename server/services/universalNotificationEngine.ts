@@ -18,6 +18,7 @@ import aiBrainConfig from "@shared/config/aiBrainGuardrails";
 import { broadcastToWorkspace, broadcastNotificationToUser, broadcastPlatformUpdateGlobal } from '../websocket';
 import { enrichNotificationWithAI } from './aiNotificationService';
 import { eventBus } from './trinity/eventBus';
+import { isDeliverableEmployee } from '../lib/isDeliverableEmployee';
 import { featureRegistryService } from './featureRegistryService';
 import { sanitizeForEndUser } from '@shared/utils/humanFriendlyCopy';
 import { createLogger } from '../lib/logger';
@@ -521,12 +522,12 @@ export class UniversalNotificationEngine {
             eq(employees.workspaceId, payload.workspaceId),
             eq(employees.isActive, true)
           ),
-          columns: { userId: true, workspaceRole: true, firstName: true },
+          columns: { userId: true, workspaceRole: true, firstName: true, isActive: true, status: true },
         });
 
-        const filteredEmployees = workspaceEmployees.filter(
-          emp => payload.targetRoles!.includes(emp.workspaceRole as string)
-        );
+        const filteredEmployees = workspaceEmployees
+          .filter(isDeliverableEmployee)
+          .filter(emp => payload.targetRoles!.includes(emp.workspaceRole as string));
 
         for (const emp of filteredEmployees) {
           if (emp.userId) {
@@ -604,10 +605,10 @@ export class UniversalNotificationEngine {
             eq(employees.workspaceId, payload.workspaceId),
             eq(employees.isActive, true)
           ),
-          columns: { userId: true, firstName: true },
+          columns: { userId: true, firstName: true, isActive: true, status: true },
         });
 
-        for (const emp of workspaceEmployees) {
+        for (const emp of workspaceEmployees.filter(isDeliverableEmployee)) {
           if (emp.userId) {
             const hasNameGreeting = emp.firstName && broadcastBaseMessage.toLowerCase().includes(emp.firstName.toLowerCase());
             const personalMessage = emp.firstName && !hasNameGreeting
@@ -724,13 +725,13 @@ export class UniversalNotificationEngine {
       // Get all active admins across all workspaces
       const allEmployees = await db.query.employees.findMany({
         where: eq(employees.isActive, true),
-        columns: { userId: true, workspaceId: true, workspaceRole: true },
+        columns: { userId: true, workspaceId: true, workspaceRole: true, isActive: true, status: true },
       });
       
-      // Filter by target roles
-      const admins = allEmployees.filter(
-        emp => targetRoles.includes(emp.workspaceRole as string)
-      );
+      // Filter by target roles, excluding blocked lifecycle statuses
+      const admins = allEmployees
+        .filter(isDeliverableEmployee)
+        .filter(emp => targetRoles.includes(emp.workspaceRole as string));
 
       let recipientCount = 0;
       const workspacesNotified = new Set<string>();

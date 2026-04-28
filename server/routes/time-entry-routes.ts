@@ -45,6 +45,7 @@ import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { loneWorkerSafetyService } from '../services/automation/loneWorkerSafetyService';
 import { shiftHandoffService } from '../services/fieldOperations/shiftHandoffService';
 import { presenceMonitorService } from '../services/fieldOperations/presenceMonitorService';
+import { z } from 'zod';
 const log = createLogger('TimeEntryRoutes');
 
 export const timeEntryRouter = Router();
@@ -1346,9 +1347,13 @@ timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('m
     const user = req.user!;
     const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace selected' });
-    const { approved, reason } = req.body;
-    if (typeof approved !== 'boolean') return res.status(400).json({ error: 'approved (boolean) required' });
-    if (!reason) return res.status(400).json({ error: 'reason required' });
+    const geofenceOverrideSchema = z.object({
+      approved: z.boolean({ required_error: 'approved (boolean) required' }),
+      reason: z.string().min(1, 'reason required'),
+    });
+    const geofenceParsed = geofenceOverrideSchema.safeParse(req.body);
+    if (!geofenceParsed.success) return res.status(400).json({ error: 'Invalid request body', details: geofenceParsed.error.issues });
+    const { approved, reason } = geofenceParsed.data;
 
     await db.update(timeEntries).set({
       geofenceOverrideStatus: approved ? 'approved' : 'denied',
@@ -1776,11 +1781,18 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
     }
 
     const { id } = req.params;
-    const { clockIn, clockOut, totalHours, notes, reason, hourlyRate, clientId } = req.body;
-
-    if (!reason) {
-      return res.status(400).json({ error: 'Edit reason is required for audit trail' });
-    }
+    const timeEntryEditSchema = z.object({
+      clockIn: z.string().optional().nullable(),
+      clockOut: z.string().optional().nullable(),
+      totalHours: z.number().optional().nullable(),
+      notes: z.string().optional().nullable(),
+      reason: z.string().min(1, 'Edit reason is required for audit trail'),
+      hourlyRate: z.number().optional().nullable(),
+      clientId: z.string().optional().nullable(),
+    });
+    const editParsed = timeEntryEditSchema.safeParse(req.body);
+    if (!editParsed.success) return res.status(400).json({ error: 'Invalid request body', details: editParsed.error.issues });
+    const { clockIn, clockOut, totalHours, notes, reason, hourlyRate, clientId } = editParsed.data;
 
     const [entry] = await db.select().from(timeEntries)
       .where(and(
@@ -2558,10 +2570,10 @@ timeEntryRouter.post('/acknowledge-post-orders', requireAuth, mutationLimiter, a
       return res.status(400).json({ error: 'No workspace selected' });
     }
 
-    const { clientId } = req.body;
-    if (!clientId || typeof clientId !== 'string') {
-      return res.status(400).json({ error: 'clientId is required' });
-    }
+    const postOrdersSchema = z.object({ clientId: z.string().min(1, 'clientId is required') });
+    const postOrdersParsed = postOrdersSchema.safeParse(req.body);
+    if (!postOrdersParsed.success) return res.status(400).json({ error: 'Invalid request body', details: postOrdersParsed.error.issues });
+    const { clientId } = postOrdersParsed.data;
 
     // Verify client exists in this workspace and has post orders
     const [clientRecord] = await db
