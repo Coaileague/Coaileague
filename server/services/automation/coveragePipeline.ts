@@ -432,7 +432,7 @@ class CoveragePipelineService {
           await universalNotificationEngine.sendNotification({
             workspaceId: request.workspaceId,
             userId: candidate.userId,
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif:coverage_offer:${offer.id}:${candidate.userId}`,
           type: 'coverage_offer',
             title: `${urgencyPrefix}Can you cover a shift on ${shiftDateStr}?`,
             message: isEmergency
@@ -454,10 +454,8 @@ class CoveragePipelineService {
               source: 'coverage_pipeline',
               actionable: true,
               actions: [
-                { idempotencyKey: `notif-${Date.now()}`,
-          type: 'accept', label: 'Accept Shift', endpoint: `/api/coverage/accept/${offer.id}` },
-                { idempotencyKey: `notif-${Date.now()}`,
-          type: 'decline', label: 'Decline', endpoint: `/api/coverage/decline/${offer.id}` },
+                { type: 'accept', label: 'Accept Shift', endpoint: `/api/coverage/accept/${offer.id}` },
+                { type: 'decline', label: 'Decline', endpoint: `/api/coverage/decline/${offer.id}` },
               ],
             },
           });
@@ -579,7 +577,7 @@ class CoveragePipelineService {
               await universalNotificationEngine.sendNotification({
                 workspaceId: request.workspaceId,
                 userId: emp.userId,
-                idempotencyKey: `notif-${Date.now()}`,
+                idempotencyKey: `notif:coverage_offer:${offer.id}:tier_advance:${emp.userId}`,
           type: 'coverage_offer',
                 title: `${tierLabel} — shift on ${shiftDateStr}`,
                 message: `Can you cover a shift at ${shiftTimeStr}? We still need someone. First to accept gets it!`,
@@ -596,10 +594,8 @@ class CoveragePipelineService {
                   source: 'coverage_pipeline_tier_advance',
                   actionable: true,
                   actions: [
-                    { idempotencyKey: `notif-${Date.now()}`,
-          type: 'accept', label: 'Accept Shift', endpoint: `/api/coverage/accept/${offer.id}` },
-                    { idempotencyKey: `notif-${Date.now()}`,
-          type: 'decline', label: 'Decline', endpoint: `/api/coverage/decline/${offer.id}` },
+                    { type: 'accept', label: 'Accept Shift', endpoint: `/api/coverage/accept/${offer.id}` },
+                    { type: 'decline', label: 'Decline', endpoint: `/api/coverage/decline/${offer.id}` },
                   ],
                 },
               });
@@ -878,7 +874,7 @@ class CoveragePipelineService {
         await universalNotificationEngine.sendNotification({
           workspaceId: request.workspaceId,
           userId: owner.userId,
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif:coverage_escalation:${request.id}:${owner.userId}`,
           type: 'issue_detected',
           title: 'Shift Coverage Needed - Manual Action Required',
           message: `I couldn't find coverage for the ${shiftDateStr} at ${shiftTimeStr} shift. ${reason}. Please assign manually.`,
