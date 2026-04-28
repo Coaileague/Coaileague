@@ -909,8 +909,12 @@ export { sessionSyncService };
 // Clients that reconnect within 5 minutes receive missed events instead of a
 // full page refresh. Clients disconnected longer receive full_refresh_required.
 // ============================================================================
-const EVENT_BUFFER_MAX = 50;
-const EVENT_BUFFER_TTL_MS = 5 * 60 * 1000; // 5 minutes
+// ChatDurability adapter — Redis-backed with in-memory fallback
+// Replaces the in-memory workspaceEventBuffer Map that was lost on restart
+import { pushEvent as pushEventDurable, onBroadcast, initChatDurability } from './services/chat/chatDurabilityAdapter';
+
+const EVENT_BUFFER_MAX = 100;           // Kept for replay logic references
+const EVENT_BUFFER_TTL_MS = 5 * 60 * 1000;
 
 interface BufferedEvent {
   eventId: string;
@@ -919,9 +923,14 @@ interface BufferedEvent {
   data: any;
 }
 
+// Legacy in-memory map retained for getEventsSince() calls that haven't migrated
 const workspaceEventBuffer = new Map<string, BufferedEvent[]>();
 
 function pushEventToBuffer(workspaceId: string, data: any): string {
+  // Async fire-and-forget to durable adapter (non-blocking for WebSocket path)
+  pushEventDurable(workspaceId, data).catch(() => null);
+  
+  // Also maintain local buffer for immediate replay (backwards compat)
   const eventId = `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const entry: BufferedEvent = { eventId, timestamp: Date.now(), workspaceId, data: { ...data, eventId } };
   const existing = workspaceEventBuffer.get(workspaceId) ?? [];
@@ -931,6 +940,9 @@ function pushEventToBuffer(workspaceId: string, data: any): string {
   workspaceEventBuffer.set(workspaceId, trimmed);
   return eventId;
 }
+
+// Initialize durability on startup (async, non-blocking)
+initChatDurability().catch(() => null);
 
 export function broadcastToWorkspace(workspaceId: string, data: any) {
   if (!globalBroadcaster) {

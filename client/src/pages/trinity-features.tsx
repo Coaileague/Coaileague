@@ -300,7 +300,7 @@ function FeatureSection({ eyebrow, headline, body, items, visual, reverse, gold,
   );
 }
 
-// ─── Dashboard mock visual ────────────────────────────────────────────────────
+// ─── Illustrative demo components (features page — intentionally static) ──────
 
 function DashboardMock() {
   return (

@@ -171,6 +171,7 @@ import { startNotificationCleanupScheduler } from "./services/notificationCleanu
 import { initTokenCleanupScheduler } from "./services/tokenCleanupService";
 import { initializeOrchestrationServices, setOrchestrationWebSocketBroadcaster } from "./services/ai-brain/orchestrationBridge";
 import { broadcastToWorkspace } from "./websocket";
+import { initChatDurability } from "./services/chat/chatDurabilityAdapter";
 import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader";
 import "./services/scheduleLiveNotifier";
 import { tracingMiddleware } from "./services/infrastructure/distributedTracing";
