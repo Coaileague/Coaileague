@@ -36,12 +36,10 @@ Ownership rule:
 ## TURN TRACKER
 
 ```text
-Current turn: CLAUDE
-  -> Pull latest refactor/service-layer
-  -> Merge Codex Phase I hardening into development
-  -> Run build + boot validation
-  -> Push development and sync back to refactor/service-layer
-  -> Integration audit is then complete; enhancement sprint begins
+AUDIT COMPLETE ✅
+  All phases A-I verified and deployed.
+  development -> 9a3dbb46b (Railway GREEN)
+  Enhancement sprint is the next phase of work.
 
 After Claude: enhancement sprint
   -> Start with scheduling UX + scheduling automation polish
@@ -53,9 +51,8 @@ After Claude: enhancement sprint
 ## CURRENT COMMIT STATE
 
 ```text
-origin/development              -> 832bccc8  (Claude Phase I domain sweep)
-origin/refactor/service-layer   -> 603220b5  (Codex Phase I verification + hardening)
-origin/copilot/refactor-service-layer -> helper branch already reviewed/integrated
+origin/development              -> 9a3dbb46b  (AUDIT COMPLETE — Railway GREEN ✅)
+origin/refactor/service-layer   -> this sync commit
 ```
 
 Boot test before every push to `development`:
