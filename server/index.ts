@@ -2155,7 +2155,7 @@ self.addEventListener('activate', async () => {
     const errStack = error instanceof Error ? error.stack : '';
     console.error('[FATAL] CRITICAL: Failed to register routes —', errMsg);
     if (errStack) console.error(errStack);
-    log.error('CRITICAL: Failed to register routes', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error(`CRITICAL: Failed to register routes — ${errMsg}`, { stack: typeof errStack === 'string' ? errStack.slice(0, 500) : '' });
     process.exit(1);
   }
 
