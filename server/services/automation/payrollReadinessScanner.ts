@@ -72,7 +72,7 @@ export async function scanPayrollReadiness(workspaceId: string): Promise<Payroll
         .limit(1);
       orgBankConnected = !!(orgFinance?.plaidItemId);
     }
-  } catch { orgBankConnected = false; }
+  } catch (e) { log.warn('[PayrollReadiness] bank connection check failed:', e); orgBankConnected = false; }
 
   // 1. Pull all active employees for this workspace
   const activeEmployees = await db
@@ -280,7 +280,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
             : `Payroll Notice: ${report.warningCount} Employee(s) Missing Direct Deposit`,
           message,
           priority: report.criticalCount > 0 ? 'high' : 'normal',
-          idempotencyKey: `payroll_readiness_alert-${Date.now()}-${ws.ownerId}`
+          idempotencyKey: `payroll_readiness_alert-${ws.id}-${new Date().toISOString().slice(0, 10)}`
         });
       }
     } catch (notifErr: any) {

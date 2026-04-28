@@ -355,10 +355,27 @@ class ApprovalGateEnforcementService {
 
     const policy = this.policies.get(category);
     if (!policy) {
+      log.warn(`[ApprovalGate] No policy defined for category '${category}' — blocking action for manual review (workspaceId=${workspaceId}, actionId=${actionId})`);
+      const gateId = this.generateGateId();
+      const gate: ApprovalGate = {
+        id: gateId,
+        workspaceId,
+        category,
+        actionId,
+        actionName,
+        requestedBy,
+        requestedAt: new Date(),
+        status: 'pending',
+        expiresAt: new Date(Date.now() + 24 * 3600000),
+        riskScore,
+        riskFactors,
+        payload,
+      };
+      this.gates.set(gateId, gate);
       return {
-        gateId: '',
-        status: 'auto_approved',
-        message: 'No approval policy defined for this category',
+        gateId,
+        status: 'pending',
+        message: `No approval policy defined for category '${category}' — manual review required`,
       };
     }
 

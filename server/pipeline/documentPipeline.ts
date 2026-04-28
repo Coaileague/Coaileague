@@ -273,7 +273,7 @@ class DocumentPipelineService {
         workspaceId: doc.workspaceId || doc.orgId,
         metadata: { documentId: doc.id, documentType: doc.type, documentTitle: doc.title },
         visibility: 'all',
-      }).catch(() => {});
+      }).catch((e: unknown) => log.warn('[DocumentPipeline] event publish failed:', e));
     }
 
     doc.updatedAt = new Date();
@@ -316,7 +316,7 @@ class DocumentPipelineService {
       workspaceId: doc.workspaceId || doc.orgId,
       metadata: { documentId: doc.id, documentType: doc.type, documentTitle: doc.title, requestedAt: new Date().toISOString() },
       visibility: 'all',
-    }).catch(() => {});
+    }).catch((e: unknown) => log.warn('[DocumentPipeline] event publish failed:', e));
   }
 
   private async routeToDestination(doc: PipelineDocument, dest: RoutingDestination): Promise<void> {

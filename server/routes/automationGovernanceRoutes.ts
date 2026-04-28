@@ -6,6 +6,8 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../auth";
 import type { AuthenticatedRequest } from "../rbac";
 import { logActionAudit } from "../services/ai-brain/actionAuditLogger";
+import { createLogger } from '../lib/logger';
+const log = createLogger('automationGovernanceRoutes');
 
 const router = Router();
 
@@ -62,7 +64,7 @@ router.patch("/policy/:workspaceId", requireAuth, async (req: AuthenticatedReque
       message: 'Automation governance policy updated',
       payload: sanitizedBody,
       changesAfter: sanitizedBody,
-    }).catch(() => {});
+    }).catch((e: unknown) => log.warn('[GovernanceAudit] audit log write failed:', e));
 
     res.json({ success: true, policy });
   } catch (error: unknown) {
@@ -93,7 +95,7 @@ router.post("/consent", requireAuth, async (req: AuthenticatedRequest, res) => {
       success: true,
       message: `User consent granted: ${consentType}`,
       payload: { consentType, waiverVersion },
-    }).catch(() => {});
+    }).catch((e: unknown) => log.warn('[GovernanceAudit] audit log write failed:', e));
 
     res.json({ success: true, consent });
   } catch (error: unknown) {
@@ -146,7 +148,7 @@ router.post("/org-consent", requireAuth, async (req: AuthenticatedRequest, res) 
       message: 'Org-level automation consent granted',
       payload: { waiverVersion: waiverVersion || '1.0' },
       changesAfter: { orgOwnerConsent: true, waiverAccepted: true },
-    }).catch(() => {});
+    }).catch((e: unknown) => log.warn('[GovernanceAudit] audit log write failed:', e));
 
     res.json({ success: true, policy });
   } catch (error: unknown) {
@@ -225,7 +227,7 @@ router.post("/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedReq
       payload: { notes: notes?.substring(0, 500) },
       changesBefore: { approvalState: entry.approvalState },
       changesAfter: { approvalState: 'approved' },
-    }).catch(() => {});
+    }).catch((e: unknown) => log.warn('[GovernanceAudit] audit log write failed:', e));
 
     res.json({ success });
   } catch (error: unknown) {
@@ -263,7 +265,7 @@ router.post("/reject/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequ
       payload: { reason: reason.substring(0, 500) },
       changesBefore: { approvalState: entry.approvalState },
       changesAfter: { approvalState: 'rejected', executionStatus: 'cancelled' },
-    }).catch(() => {});
+    }).catch((e: unknown) => log.warn('[GovernanceAudit] audit log write failed:', e));
 
     res.json({ success });
   } catch (error: unknown) {

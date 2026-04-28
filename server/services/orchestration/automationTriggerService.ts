@@ -114,28 +114,38 @@ class AutomationTriggerService {
 
   private subscribeToEvents() {
     platformEventBus.subscribe('quickbooks_connected', { name: 'AutomationTrigger-QBConnected', handler: async (event) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      await this.handleIntegrationConnected(event.workspaceId, 'quickbooks');
+      try {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        await this.handleIntegrationConnected(event.workspaceId, 'quickbooks');
+      } catch (e: any) { log.warn('[AutomationTrigger] quickbooks_connected handler error:', e?.message); }
     }});
 
     platformEventBus.subscribe('quickbooks_flow_complete', { name: 'AutomationTrigger-QBFlowComplete', handler: async (event) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      await this.handleDataSyncComplete(event.workspaceId, event.payload);
+      try {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        await this.handleDataSyncComplete(event.workspaceId, event.payload);
+      } catch (e: any) { log.warn('[AutomationTrigger] quickbooks_flow_complete handler error:', e?.message); }
     }});
 
     platformEventBus.subscribe('employees_imported', { name: 'AutomationTrigger-EmployeesImported', handler: async (event) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      await this.handleEmployeeImportComplete(event.workspaceId, event.payload);
+      try {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        await this.handleEmployeeImportComplete(event.workspaceId, event.payload);
+      } catch (e: any) { log.warn('[AutomationTrigger] employees_imported handler error:', e?.message); }
     }});
 
     platformEventBus.subscribe('schedule_published', { name: 'AutomationTrigger-SchedulePublished', handler: async (event) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      await this.handleSchedulePublished(event.workspaceId, event.payload);
+      try {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        await this.handleSchedulePublished(event.workspaceId, event.payload);
+      } catch (e: any) { log.warn('[AutomationTrigger] schedule_published handler error:', e?.message); }
     }});
 
     platformEventBus.subscribe('time_entries_approved', { name: 'AutomationTrigger-TimeEntriesApproved', handler: async (event) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      await this.handleTimeEntriesApproved(event.workspaceId, event.payload);
+      try {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        await this.handleTimeEntriesApproved(event.workspaceId, event.payload);
+      } catch (e: any) { log.warn('[AutomationTrigger] time_entries_approved handler error:', e?.message); }
     }});
 
     // ── Financial lifecycle automation triggers ──────────────────────────────
@@ -199,7 +209,7 @@ class AutomationTriggerService {
             message:  `Your paycheck has been released. Gross: $${gross.toFixed(2)} | Net (after taxes & deductions): $${net.toFixed(2)}. Check your bank account or pay stub for details.`,
             priority: 'normal',
             actionUrl: '/payroll',
-            idempotencyKey: `payroll_disbursed-${String(Date.now())}-${'system'}`,
+            idempotencyKey: `payroll_disbursed-${payrollRunId}-${userId}`,
         }).catch(() => null);
           notified++;
         }
@@ -263,7 +273,7 @@ class AutomationTriggerService {
             title: `${employeeName} completed onboarding`,
             message: 'They are now eligible to be scheduled. Trinity will include them in auto-scheduling.',
             actionUrl: `/employees/${employeeId}`,
-            idempotencyKey: `system-${String(Date.now())}-${mgr.userId}`,
+            idempotencyKey: `employee-onboarding-complete-${employeeId}-${mgr.userId}`,
         }).catch(() => null);
         }
 

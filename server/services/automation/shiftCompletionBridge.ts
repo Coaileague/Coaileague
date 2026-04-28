@@ -16,7 +16,7 @@
  * guard never clocked in at all.
  */
 
-import { db } from 'server/db';
+import { db } from '../../db';
 import {
   shifts,
   timeEntries,

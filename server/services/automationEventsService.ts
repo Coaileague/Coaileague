@@ -139,11 +139,9 @@ class AutomationEventsService {
     }
   ): void {
     const event = this.recentEvents.get(jobId);
-    if (!event) return;
-
+    if (!event) { log.warn(`[Automation] completeJob called for unknown jobId=${jobId} — may have been lost on server restart`); return; }
     event.status = 'success';
     event.completedAt = new Date();
-    event.duration = event.completedAt.getTime() - event.startedAt.getTime();
     event.result = result;
 
     aiActivityService.complete('Automation', { 
@@ -161,11 +159,9 @@ class AutomationEventsService {
    */
   failJob(jobId: string, error: string): void {
     const event = this.recentEvents.get(jobId);
-    if (!event) return;
-
+    if (!event) { log.warn(`[Automation] failJob called for unknown jobId=${jobId} — may have been lost on server restart`); return; }
     event.status = 'failed';
     event.completedAt = new Date();
-    event.duration = event.completedAt.getTime() - event.startedAt.getTime();
     event.error = error;
     event.canRetry = event.retryCount < this.jobRetryLimits[event.type];
 
@@ -184,11 +180,9 @@ class AutomationEventsService {
    */
   skipJob(jobId: string, reason: string): void {
     const event = this.recentEvents.get(jobId);
-    if (!event) return;
-
+    if (!event) { log.warn(`[Automation] skipJob called for unknown jobId=${jobId} — may have been lost on server restart`); return; }
     event.status = 'skipped';
     event.completedAt = new Date();
-    event.duration = event.completedAt.getTime() - event.startedAt.getTime();
     event.result = { message: reason };
 
     aiActivityService.idle('Automation', { workspaceId: event.workspaceId });

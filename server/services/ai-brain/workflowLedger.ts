@@ -90,20 +90,25 @@ class WorkflowLedgerService {
   }
 
   async startRun(runId: string): Promise<OrchestrationRun | undefined> {
-    const [run] = await db.update(orchestrationRuns)
-      .set({ 
-        status: 'running', 
-        startedAt: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(orchestrationRuns.id, runId))
-      .returning();
+    try {
+      const [run] = await db.update(orchestrationRuns)
+        .set({ 
+          status: 'running', 
+          startedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(orchestrationRuns.id, runId))
+        .returning();
 
-    if (run) {
-      aiBrainEvents.emit('workflow_started', { runId, actionId: run.actionId });
+      if (run) {
+        aiBrainEvents.emit('workflow_started', { runId, actionId: run.actionId });
+      }
+
+      return run;
+    } catch (e) {
+      log.error(`[WorkflowLedger] startRun failed for runId=${runId}:`, e);
+      throw e;
     }
-
-    return run;
   }
 
   async completeRun(runId: string, result?: Record<string, any>): Promise<OrchestrationRun | undefined> {
@@ -187,21 +192,26 @@ class WorkflowLedgerService {
   }
 
   async cancelRun(runId: string, reason?: string): Promise<OrchestrationRun | undefined> {
-    const [run] = await db.update(orchestrationRuns)
-      .set({
-        status: 'cancelled',
-        completedAt: new Date(),
-        errorMessage: reason || 'Cancelled by user',
-        updatedAt: new Date()
-      })
-      .where(eq(orchestrationRuns.id, runId))
-      .returning();
+    try {
+      const [run] = await db.update(orchestrationRuns)
+        .set({
+          status: 'cancelled',
+          completedAt: new Date(),
+          errorMessage: reason || 'Cancelled by user',
+          updatedAt: new Date()
+        })
+        .where(eq(orchestrationRuns.id, runId))
+        .returning();
 
-    if (run) {
-      aiBrainEvents.emit('workflow_cancelled', { runId, actionId: run.actionId, reason });
+      if (run) {
+        aiBrainEvents.emit('workflow_cancelled', { runId, actionId: run.actionId, reason });
+      }
+
+      return run;
+    } catch (e) {
+      log.error(`[WorkflowLedger] cancelRun failed for runId=${runId}:`, e);
+      throw e;
     }
-
-    return run;
   }
 
   async approveRun(runId: string, approvedBy: string): Promise<OrchestrationRun | undefined> {
@@ -227,7 +237,6 @@ class WorkflowLedgerService {
 
   async addStep(runId: string, step: Omit<InsertOrchestrationRunStep, 'runId'>): Promise<OrchestrationRunStep> {
     const [newStep] = await db.insert(orchestrationRunSteps).values({
-      workspaceId: 'system',
       ...step,
       runId
     }).returning();

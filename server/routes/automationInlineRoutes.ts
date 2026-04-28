@@ -1,10 +1,8 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { validateAdminHourlyRate, businessRuleResponse } from '../lib/businessRules';
 import { Router } from "express";
-import { storage } from "../storage";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
-import { workspaces } from "@shared/schema";
 import { requireAuth } from "../auth";
 import { readLimiter } from "../middleware/rateLimiter";
 import { requireManager, requirePlatformStaff, attachWorkspaceId, type AuthenticatedRequest } from "../rbac";
@@ -18,8 +16,6 @@ router.get("/triggers", requireAuth, attachWorkspaceId, async (req: Authenticate
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace required' });
-
-    const workspace = await storage.getWorkspace(workspaceId);
 
     res.json({
       success: true,

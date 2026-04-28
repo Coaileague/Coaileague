@@ -178,7 +178,7 @@ export async function getAutomationMetrics(workspaceId: string | null): Promise<
     allTimeMetrics[2].hoursSaved;
   
   // Calculate cost avoidance using workspace-specific or default hourly rate
-  const adminHourlyRate = await getWorkspaceAdminHourlyRate(workspaceId) || DEFAULT_ADMIN_HOURLY_RATE;
+  const adminHourlyRate = getWorkspaceAdminHourlyRate(workspaceId) || DEFAULT_ADMIN_HOURLY_RATE;
   const costAvoidanceMonthly = hoursSavedThisMonth * adminHourlyRate;
   const costAvoidanceTotal = hoursSavedAllTime * adminHourlyRate;
   
@@ -269,7 +269,7 @@ async function getSchedulingMetrics(
     WHERE sp.workspace_id = ${workspaceId}
       AND sp.created_at >= ${startDate}
       AND sp.created_at <= ${endDate}
-  `).catch(() => null);
+  `).catch((e: unknown) => { log.warn('[AutomationMetrics] schedule telemetry query failed, using fallback:', e); return null; });
   
   // @ts-expect-error — TS migration: fix in refactoring sprint
   const avgGenerationHours = Number(telemetryResult?.rows?.[0]?.avg_generation_hours) || 0.5;

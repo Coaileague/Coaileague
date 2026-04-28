@@ -274,14 +274,18 @@ class WorkflowApprovalService {
       const durationMs = existing.createdAt 
         ? Date.now() - new Date(existing.createdAt).getTime() 
         : 0;
-      void trinityOrchestration.workflow.stepCompleted(
-        `workflow-approval-${existing.workspaceId || 'global'}`,
-        `approval-${approvalId}`,
-        'approval_review_granted',
-        1,
-        approvalId,
-        durationMs
-      );
+      try {
+        trinityOrchestration.workflow.stepCompleted(
+          `workflow-approval-${existing.workspaceId || 'global'}`,
+          `approval-${approvalId}`,
+          'approval_review_granted',
+          1,
+          approvalId,
+          durationMs
+        );
+      } catch (trinityErr: unknown) {
+        log.warn('[WorkflowApproval] stepCompleted signal failed:', trinityErr);
+      }
 
       return { success: true, message: 'Approval granted. I\'ll proceed with the fix now.' };
     } catch (error) {
@@ -335,13 +339,17 @@ class WorkflowApprovalService {
 
       await this.emitApprovalEvent('approval_rejected', { ...existing, rejectedBy, reason });
 
-      void trinityOrchestration.workflow.stepFailed(
-        `workflow-approval-${existing.workspaceId || 'global'}`,
-        `approval-${approvalId}`,
-        'approval_review_rejected',
-        reason,
-        approvalId
-      );
+      try {
+        trinityOrchestration.workflow.stepFailed(
+          `workflow-approval-${existing.workspaceId || 'global'}`,
+          `approval-${approvalId}`,
+          'approval_review_rejected',
+          reason,
+          approvalId
+        );
+      } catch (trinityErr: unknown) {
+        log.warn('[WorkflowApproval] stepFailed signal failed:', trinityErr);
+      }
 
       return { success: true, message: 'Request rejected. Finding will remain open for manual review.' };
     } catch (error) {

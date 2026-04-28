@@ -266,7 +266,7 @@ export async function notifyWorkspaceFailure(
       FROM users u
       JOIN employees e ON e.user_id = u.id
       WHERE e.workspace_id = $1
-        AND e.role = 'org_owner'
+        AND e.workspace_role = 'org_owner'
       LIMIT 1
     `,
       [workspaceId]
