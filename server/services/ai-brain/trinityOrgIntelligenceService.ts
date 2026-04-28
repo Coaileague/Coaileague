@@ -1985,4 +1985,4 @@ export interface CrossOrgAlert {
 
 export const trinityOrgIntelligenceService = new TrinityOrgIntelligenceService();
 
-setInterval(() => trinityOrgIntelligenceService.cleanup(), 15 * 60 * 1000);
+setInterval(() => trinityOrgIntelligenceService.cleanup(), 15 * 60 * 1000).unref();

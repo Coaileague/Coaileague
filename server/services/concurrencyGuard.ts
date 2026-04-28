@@ -131,4 +131,4 @@ setInterval(() => {
   for (const [key, val] of idempotencyCache.entries()) {
     if (now > val.expiresAt) idempotencyCache.delete(key);
   }
-}, 60_000);
+}, 60_000).unref(); // .unref() prevents this cache-prune timer from blocking process exit
