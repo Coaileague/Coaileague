@@ -1168,6 +1168,39 @@ function MobileAIInsights({
     retry: false,
   });
   
+  // Execute a Trinity workflow action (fill shifts, generate PDF, etc.)
+  const executeTrinityAction = async (action: {label: string; description: string; icon: string}) => {
+    if (!email) return;
+    // Build a natural-language command for Trinity to execute
+    const entityName = entityData?.entity?.name ?? senderEmail;
+    const prompt = `Email context: ${email.subject || 'No subject'} from ${entityName}. Action requested: ${action.label}. ${action.description}`;
+    try {
+      const res = await secureFetch('/api/ai-brain/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          message: prompt,
+          context: { 
+            source: 'email_entity_panel',
+            senderEmail,
+            entityId: entityData?.entity?.id,
+            entityType: entityData?.entity?.type,
+            emailId: email.id,
+            actionIcon: action.icon,
+          },
+        }),
+      });
+      if (res.ok) {
+        toast({ title: `Trinity: ${action.label}`, description: 'Processing your request…' });
+      } else {
+        toast({ title: 'Trinity unavailable', description: 'Try again in a moment', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Could not reach Trinity', variant: 'destructive' });
+    }
+  };
+
   const generateReplyMutation = useMutation({
     mutationFn: async () => {
       const res = await secureFetch('/api/external-emails/reply-suggestions', {
@@ -1626,6 +1659,39 @@ function AIContextRail({
     retry: false,
   });
   
+  // Execute a Trinity workflow action (fill shifts, generate PDF, etc.)
+  const executeTrinityAction = async (action: {label: string; description: string; icon: string}) => {
+    if (!email) return;
+    // Build a natural-language command for Trinity to execute
+    const entityName = entityData?.entity?.name ?? senderEmail;
+    const prompt = `Email context: ${email.subject || 'No subject'} from ${entityName}. Action requested: ${action.label}. ${action.description}`;
+    try {
+      const res = await secureFetch('/api/ai-brain/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          message: prompt,
+          context: { 
+            source: 'email_entity_panel',
+            senderEmail,
+            entityId: entityData?.entity?.id,
+            entityType: entityData?.entity?.type,
+            emailId: email.id,
+            actionIcon: action.icon,
+          },
+        }),
+      });
+      if (res.ok) {
+        toast({ title: `Trinity: ${action.label}`, description: 'Processing your request…' });
+      } else {
+        toast({ title: 'Trinity unavailable', description: 'Try again in a moment', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Could not reach Trinity', variant: 'destructive' });
+    }
+  };
+
   const generateReplyMutation = useMutation({
     mutationFn: async () => {
       if (!email) return null;
@@ -1932,6 +1998,7 @@ function AIContextRail({
                       size="sm"
                       className="w-full justify-start gap-2 h-auto py-2 text-left"
                       data-testid={`button-trinity-action-${i}`}
+                    onClick={() => executeTrinityAction(action)}
                     >
                       <div className="w-5 h-5 rounded shrink-0 bg-primary/10 flex items-center justify-center">
                         <Sparkles className="w-3 h-3 text-primary" />
@@ -1948,11 +2015,17 @@ function AIContextRail({
               {/* Fallback stubs when no entity data */}
               {!entityData?.entity && (
                 <>
-                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
-                    <Users className="w-4 h-4" /> Find in CRM
+                  <Button 
+                    variant="ghost" size="sm" className="w-full justify-start gap-2"
+                    onClick={() => executeTrinityAction({ label: 'Create client record', description: `Add ${senderEmail} as a new client`, icon: 'client' })}
+                  >
+                    <Users className="w-4 h-4" /> Add as new client
                   </Button>
-                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
-                    <Building2 className="w-4 h-4" /> Link to Contract
+                  <Button 
+                    variant="ghost" size="sm" className="w-full justify-start gap-2"
+                    onClick={() => executeTrinityAction({ label: 'Start employee onboarding', description: `Begin onboarding for ${senderEmail}`, icon: 'employee' })}
+                  >
+                    <Building2 className="w-4 h-4" /> Start onboarding
                   </Button>
                 </>
               )}
