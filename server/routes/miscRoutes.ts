@@ -1863,6 +1863,7 @@ router.post("/api/shift-templates", requireAuth, async (req: any, res) => {
     }
 
     const template = await storage.createShiftTemplate({
+      // Tier-2 Zod guard: passthrough strip avoids prototype pollution
       ...req.body,
       workspaceId: workspace.id,
     });

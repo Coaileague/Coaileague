@@ -253,7 +253,7 @@ export default function MobileMorePage() {
         <SectionHeader label="Account" />
         <MenuItem icon={Settings} label="Settings" href="/settings" />
         <MenuItem icon={HelpCircle} label="HelpDesk" href="/helpdesk" />
-        <MenuItem icon={LogOut} label="Log Out" href="#" onClick={performLogout} variant="destructive" />
+        <MenuItem icon={LogOut} label="Log Out" href="/logout" onClick={performLogout} variant="destructive" />
       </div>
     </div>
   );

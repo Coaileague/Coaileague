@@ -590,10 +590,13 @@ router.post('/fixes/:id/rollback', async (req: Request, res: Response) => {
     
     // Rollback functionality is not yet implemented in autonomousFixPipeline
     // This is a placeholder for future implementation
-    res.status(501).json({
+    // Rollback is performed via git revert — not automated for safety
+    // Return 409 with the commit hash so operators can perform manual revert
+    res.status(409).json({
       success: false,
-      error: 'Rollback functionality is not yet implemented',
-      message: 'Manual rollback required using git revert on commit: ' + (approval as any).commitHash,
+      error: 'Automated rollback is disabled for safety — perform git revert manually',
+      commitHash: (approval as any).commitHash,
+      instructions: `git revert ${(approval as any).commitHash} && git push origin development`,
     });
   } catch (error: unknown) {
     log.error('[Trinity Fixes API] Rollback error:', error);

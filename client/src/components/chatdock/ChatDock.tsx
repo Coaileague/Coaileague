@@ -669,7 +669,7 @@ function applyEmoticonShortcuts(text: string): string {
   let result = text;
   for (const [shortcut, emoji] of Object.entries(EMOTICON_MAP)) {
     const escapedShortcut = shortcut.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    result = result.replace(new RegExp('(^|\\s)' + escapedShortcut + '(\\s|$)', 'g'), \`$1\${emoji}$2\`);
+    result = result.replace(new RegExp('(^|\\s)' + escapedShortcut + '(\\s|$)', 'g'), `$1${emoji}$2`);
   }
   return result;
 }

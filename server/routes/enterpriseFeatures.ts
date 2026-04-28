@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
 import { requirePlan } from '../tierGuards';
@@ -407,7 +408,18 @@ enterpriseRouter.post('/sso', async (req: AuthenticatedRequest, res: Response) =
     if (!wsId) return;
     const [ws] = await db.select({ blob: workspaces.ssoConfigBlob }).from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
     const current = ((ws?.blob || {}) as Record<string, any>);
-    const updated = { ...current, ...req.body, workspaceId: wsId, updatedAt: new Date().toISOString() };
+    // Tier-2 Zod guard: passthrough strip avoids prototype pollution
+    const ssoSchema = z.object({
+      provider: z.string().max(50).optional(),
+      entityId: z.string().max(500).optional(),
+      ssoUrl: z.string().url().optional(),
+      certificate: z.string().max(5000).optional(),
+      attributeMapping: z.record(z.string()).optional(),
+      isEnabled: z.boolean().optional(),
+    }).strip();
+    const ssoParsed = ssoSchema.safeParse(req.body);
+    if (!ssoParsed.success) return res.status(400).json({ error: 'Invalid SSO config', details: ssoParsed.error.flatten() });
+    const updated = { ...current, ...ssoParsed.data, workspaceId: wsId, updatedAt: new Date().toISOString() };
     await db.update(workspaces).set({ ssoConfigBlob: updated }).where(eq(workspaces.id, wsId));
     res.json(updated);
   } catch (err) {
@@ -455,7 +467,12 @@ enterpriseRouter.post('/account-manager', async (req: AuthenticatedRequest, res:
       assignedBy: req.user?.id,
       assignedAt: new Date().toISOString(),
       status: 'active',
-      ...req.body,
+      // Only allowed fields from req.body
+      ...((): object => {
+        const amSchema = z.object({ name: z.string().max(200).optional(), email: z.string().email().optional(), phone: z.string().max(30).optional(), title: z.string().max(100).optional() }).strip();
+        const r = amSchema.safeParse(req.body);
+        return r.success ? r.data : {};
+      })(),
     };
     featureStates.accountManagers = [...managers, newManager];
     await db.update(workspaces).set({ featureStatesBlob: featureStates }).where(eq(workspaces.id, wsId));
@@ -514,8 +531,17 @@ enterpriseRouter.post('/background-checks', async (req: AuthenticatedRequest, re
   try {
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
+    const bgSchema = z.object({
+      employeeId: z.string().uuid(),
+      checkType: z.string().max(100).optional(),
+      provider: z.string().max(100).optional(),
+      status: z.string().max(50).optional(),
+      notes: z.string().max(2000).optional(),
+    });
+    const bgParsed = bgSchema.safeParse(req.body);
+    if (!bgParsed.success) return res.status(400).json({ error: 'Validation failed', details: bgParsed.error.flatten() });
     const [check] = await db.insert(employeeBackgroundChecks).values({
-      ...req.body, workspaceId: wsId, requestedBy: req.user?.id,
+      ...bgParsed.data, workspaceId: wsId, requestedBy: req.user?.id,
     }).returning();
     res.json(check);
   } catch (err) {

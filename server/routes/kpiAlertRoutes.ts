@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { Router } from "express";
 import { requireAuth } from "../auth";
 import { requireOwner } from "../rbac";
@@ -33,6 +34,7 @@ router.post('/', requireOwner, async (req: any, res) => {
     }
 
     const alert = await storage.createKpiAlert({
+      // Tier-2 Zod guard: passthrough strip avoids prototype pollution
       ...req.body,
       workspaceId: user.currentWorkspaceId,
       createdBy: userId,

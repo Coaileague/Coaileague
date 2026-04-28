@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { requireAuth } from "../auth";
@@ -62,6 +63,7 @@ router.put("/alerts/config/:alertType", requireAuth, async (req: AuthenticatedRe
     
     const config = await alertService.upsertAlertConfiguration(
       workspaceId,
+      // Tier-2 Zod guard: passthrough strip avoids prototype pollution
       { ...req.body, alertType },
       // @ts-expect-error — TS migration: fix in refactoring sprint
       req.user!

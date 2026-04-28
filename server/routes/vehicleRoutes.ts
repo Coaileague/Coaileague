@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db } from "../db";
@@ -43,6 +44,7 @@ router.post("/", async (req, res) => {
     const workspaceId = authReq.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Missing workspace" });
 
+    // Tier-2 Zod guard: passthrough strip avoids prototype pollution
     const validated = insertVehicleSchema.parse({ ...req.body, workspaceId });
     const [item] = await db.insert(vehicles).values(validated).returning();
 

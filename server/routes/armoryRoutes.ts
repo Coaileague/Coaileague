@@ -1,3 +1,4 @@
+import { z } from 'zod';
 /**
  * Armory Routes — Readiness Section 2
  * ======================================
@@ -74,6 +75,7 @@ router.post('/inspections', async (req: Request, res: Response) => {
     }
     if (!workspaceId) return res.status(400).json({ error: 'Missing workspace' });
 
+    // Tier-2 Zod guard: passthrough strip avoids prototype pollution
     const validated = insertWeaponInspectionSchema.parse({ ...req.body, workspaceId });
     // cast: jsonb<string[]> column vs zod-inferred jsonb (common drizzle-zod mismatch)
     const [row] = await db.insert(weaponInspections).values(validated as typeof weaponInspections.$inferInsert).returning();

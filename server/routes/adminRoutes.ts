@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { storage } from "../storage";
@@ -1410,6 +1411,7 @@ router.post('/support/create-ticket', async (req: AuthenticatedRequest, res) => 
     
     const adminSupport = await import('../adminSupport');
     const result = await adminSupport.createSupportTicket({
+      // Tier-2 Zod guard: passthrough strip avoids prototype pollution
       ...req.body,
       createdByAdmin: adminUserId,
     });

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db, pool } from "../db";
@@ -97,6 +98,7 @@ async function createEquipmentItem(req: import("express").Request, res: import("
     }
     const workspaceId = authReq.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Missing workspace" });
+    // Tier-2 Zod guard: passthrough strip avoids prototype pollution
     const validated = insertEquipmentItemSchema.parse({ ...req.body, workspaceId });
     const [item] = await db.insert(equipmentItems).values(validated).returning();
     res.status(201).json(item);

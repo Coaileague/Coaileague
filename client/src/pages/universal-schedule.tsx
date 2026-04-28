@@ -2610,6 +2610,8 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                                 style={{ 
                                   position: 'absolute' as const,
                                   backgroundColor: statusColor.bg,
+                                  color: statusColor.text,
+                                  borderColor: isPendingShift ? undefined : statusColor.border,
                                   left: `${leftPercent}%`,
                                   width: `${Math.max(widthPercent, 4.5)}%`,
                                   minWidth: '65px',
@@ -2620,7 +2622,6 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                                 className={`rounded-lg px-2 py-1 cursor-pointer flex flex-col justify-center overflow-hidden border transition-all duration-200 hover:shadow-md hover:z-30 hover:-translate-y-px active:scale-[0.98] ${
                                   isPendingShift ? 'border-dashed border-amber-400' : ''
                                 } ${isProcessing ? 'trinity-shift-processing' : ''} ${justAssigned ? 'trinity-shift-assigned' : ''}`}
-                                style={{ color: statusColor.text, borderColor: isPendingShift ? undefined : statusColor.border }}
                               >
                                 <div
                                   onClick={(e) => {
@@ -2631,7 +2632,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                                   className="h-full flex flex-col justify-center relative"
                                 >
                                   <div className="flex items-center gap-1">
-                                    <div className="font-semibold truncate text-[11px] leading-snug" style={{ color: statusColor.text }}>
+                                    <div className="font-semibold truncate text-[11px] leading-snug">
                                       {formatTime(startTime)} - {formatTime(endTime)}
                                     </div>
                                     {shift.aiGenerated && (

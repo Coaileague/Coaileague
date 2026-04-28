@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { sanitizeError } from '../middleware/errorHandler';
 import { PLATFORM } from '../config/platformConfig';
 import { Router } from "express";
@@ -271,6 +272,7 @@ router.post("/clients/:clientId", requireManager, async (req: AuthenticatedReque
 
     if (clientExists.length === 0) return res.status(404).json({ message: "Client not found in this workspace" });
 
+    // Tier-2 Zod guard: passthrough strip avoids prototype pollution
     const body = { ...req.body, workspaceId, clientId };
     const parsed = insertClientBillingSettingsSchema.parse(body);
 

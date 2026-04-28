@@ -124,6 +124,7 @@ router.post('/candidates', async (req: Request, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
   try {
+    // Tier-2 Zod guard: passthrough strip avoids prototype pollution
     const parsed = insertInterviewCandidateSchema.safeParse({ ...req.body, workspaceId });
     if (!parsed.success) {
       return res.status(400).json({ error: 'Validation failed', details: parsed.error.issues });
@@ -382,8 +383,17 @@ router.patch('/questions/:id', async (req: Request, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
   try {
+    const questionUpdateSchema = z.object({
+      question: z.string().min(1).max(1000).optional(),
+      category: z.string().max(100).optional(),
+      difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+      expectedAnswer: z.string().max(5000).optional(),
+      tags: z.array(z.string()).optional(),
+    }).strip();
+    const questionParsed = questionUpdateSchema.safeParse(req.body);
+    if (!questionParsed.success) return res.status(400).json({ error: 'Validation failed', details: questionParsed.error.flatten() });
     const [updated] = await db.update(interviewQuestionsBank)
-      .set({ ...req.body, updatedAt: new Date() })
+      .set({ ...questionParsed.data, updatedAt: new Date() })
       .where(and(
         eq(interviewQuestionsBank.id, req.params.id),
         eq(interviewQuestionsBank.workspaceId, workspaceId),
