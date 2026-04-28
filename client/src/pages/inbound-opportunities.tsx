@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Inbox, Clock, CheckCircle, AlertTriangle, XCircle,
+import {Eye, Inbox, Clock, CheckCircle, AlertTriangle, XCircle,
   Play, Settings, Layers, Eye, Ban, RefreshCw, Mail
 } from "lucide-react";
 

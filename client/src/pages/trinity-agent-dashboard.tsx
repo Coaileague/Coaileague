@@ -43,8 +43,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Shield,
+import {Eye, Shield,
   AlertTriangle,
   Activity,
   CheckCircle,

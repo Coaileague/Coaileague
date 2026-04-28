@@ -33,8 +33,7 @@ import {
   type ConversationMode 
 } from '@/config/trinity';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
-import {
-  X,
+import {Eye, X,
   Send,
   Loader2,
   GripHorizontal,

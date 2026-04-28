@@ -5,8 +5,7 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Shield, Users, ArrowRight, Calendar, DollarSign,
+import {Eye, Shield, Users, ArrowRight, Calendar, DollarSign,
   FileText, BarChart3, MapPin, Briefcase, Building2, Eye, BookOpen,
   Lightbulb, Heart, Network, ListChecks, Layers, Mic, Clock, Calculator,
   CheckCircle2, AlarmClock, Wallet, Leaf, MessageCircle, Lock,

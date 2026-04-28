@@ -31,8 +31,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Mail, Send, Inbox, Star, Archive, Trash2, Search, Plus, RefreshCw,
+import {Eye, Mail, Send, Inbox, Star, Archive, Trash2, Search, Plus, RefreshCw,
   Reply, Forward, MoreVertical, Clock, CheckCircle, AlertCircle, Eye,
   Sparkles, Wand2, ArrowLeft, ChevronRight, Calendar, Users, Building2,
   FileText, Paperclip, X, Download, Brain, Zap, TrendingUp, MessageSquare,

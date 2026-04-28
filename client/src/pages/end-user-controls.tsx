@@ -24,8 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Users, Building2, Shield, Search, UserCheck, UserX, 
+import {Eye, Users, Building2, Shield, Search, UserCheck, UserX, 
   Brain, Zap, RefreshCw, AlertTriangle, CheckCircle, 
   Ban, Play, Settings, Eye, Clock, Activity,
   Briefcase, Calendar, Receipt, MapPin, DollarSign, Mail, UserCog

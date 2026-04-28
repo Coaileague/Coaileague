@@ -9,8 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
-import { 
-  Bug, CheckCircle, XCircle, Clock, Loader2, AlertTriangle,
+import {Eye, Bug, CheckCircle, XCircle, Clock, Loader2, AlertTriangle,
   FileCode, Eye, ThumbsUp, ThumbsDown, Wrench,
   BarChart3, TrendingUp
 } from "lucide-react";

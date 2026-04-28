@@ -16,8 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  CheckCircle2, Clock, AlertCircle, ChevronRight, FileText, Users,
+import {Eye, CheckCircle2, Clock, AlertCircle, ChevronRight, FileText, Users,
   Building2, Shield, Upload, PenLine, Search, Eye, Download,
   RefreshCw, Loader2, CheckCheck, Circle, Lock, ArrowLeft,
   ClipboardList, FileCheck, Zap,

@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import {
-  FileText, Plus, Clock, CheckCircle, XCircle, Copy, ExternalLink,
+import {Eye, FileText, Plus, Clock, CheckCircle, XCircle, Copy, ExternalLink,
   Shield, User, AlertTriangle, Send, Trash2, Eye
 } from "lucide-react";
 import { format } from "date-fns";

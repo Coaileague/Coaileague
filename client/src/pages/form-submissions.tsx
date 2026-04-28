@@ -16,8 +16,7 @@ import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { format } from "date-fns";
-import {
-  FileText, ClipboardList, Send, CheckCircle, XCircle, Clock,
+import {Eye, FileText, ClipboardList, Send, CheckCircle, XCircle, Clock,
   Eye, Search, Download, Forward, Mail, Plus, RefreshCw,
   PenLine, Layers, Inbox, UserCheck, FileCheck
 } from "lucide-react";

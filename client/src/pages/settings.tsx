@@ -35,8 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Building2,
+import {Eye, Building2,
   CreditCard,
   Bell,
   Shield,

@@ -15,8 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  MapPin, Plus, Route, CheckCircle, Pause, Archive, Clock, Navigation,
+import {Eye, MapPin, Plus, Route, CheckCircle, Pause, Archive, Clock, Navigation,
   Pencil, QrCode, ScanLine, Trash2, ArrowLeft, Eye, ListChecks,
   BarChart3, AlertTriangle, CircleDot, FileText, ChevronRight,
 } from "lucide-react";

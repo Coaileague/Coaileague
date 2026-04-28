@@ -13,8 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { useState } from 'react';
-import {
-  Shield,
+import {Eye, Shield,
   AlertTriangle,
   CheckCircle,
   XCircle,

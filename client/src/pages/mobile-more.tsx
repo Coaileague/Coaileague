@@ -9,8 +9,7 @@ import { Redirect } from "wouter";
 import { performLogout } from "@/lib/logoutHandler";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
-import {
-  Clock, Users, Building2, Shield,
+import {Eye, Clock, Users, Building2, Shield,
   FolderOpen, Activity, Eye, MessageSquare, Megaphone, FileText,
   ArrowRightLeft, CalendarOff, ClipboardList, AlertTriangle,
   Settings, HelpCircle, LogOut, Briefcase, ChevronRight, X,

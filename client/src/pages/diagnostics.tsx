@@ -15,8 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { SearchPanelSkeleton, PageHeaderSkeleton, TableSkeleton } from "@/components/loading-indicators/skeletons";
-import {
-  Search, User, Activity, Clock, MapPin, Shield, AlertTriangle,
+import {Eye, Search, User, Activity, Clock, MapPin, Shield, AlertTriangle,
   Database, FileText, Key, Settings, RefreshCw, Terminal,
   Eye, EyeOff, Copy, CheckCircle2, XCircle, AlertCircle,
   Users, Calendar, CreditCard, Mail, Phone, Building, Zap

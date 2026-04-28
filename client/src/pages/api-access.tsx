@@ -11,8 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
-import {
-  Key, Plus, Copy, Trash2, Eye, EyeOff, Activity, Code, Shield,
+import {Eye, Key, Plus, Copy, Trash2, Eye, EyeOff, Activity, Code, Shield,
   AlertTriangle, Clock, ArrowLeft,
 } from "lucide-react";
 

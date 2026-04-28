@@ -14,8 +14,7 @@ import { UniversalModal, UniversalModalDescription, UniversalModalHeader, Univer
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
-import { 
-  FileText, 
+import {Eye, FileText, 
   Download, 
   Printer, 
   Send, 

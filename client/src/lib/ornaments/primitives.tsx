@@ -574,7 +574,7 @@ export const LightString = memo(function LightString({
     <svg
       width={width}
       height={droop + 40}
-      viewBox={`0 0 ${width} ${droop + 40}`}
+      viewBox={`0 0 ${typeof width === "number" ? width : parseInt(String(width)) || 100} ${droop + 40}`}
       className={className}
       style={{ overflow: 'visible' }}
     >

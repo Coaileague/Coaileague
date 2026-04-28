@@ -42,8 +42,7 @@ import {
   DocumentLegalText,
   type DocumentStatus,
 } from "@/components/documents/UniversalDocumentFrame";
-import {
-  FileText,
+import {Eye, FileText,
   Eye,
   Send,
   Download,

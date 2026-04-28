@@ -2,8 +2,7 @@ import { useState } from "react";
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import {
-  AlertTriangle,
+import {Eye, AlertTriangle,
   ChevronLeft,
   Clock,
   CheckCircle2,

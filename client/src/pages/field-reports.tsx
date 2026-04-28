@@ -13,8 +13,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { format } from "date-fns";
-import {
-  AlertTriangle,
+import {Eye, AlertTriangle,
   Shield,
   FileText,
   Clock,

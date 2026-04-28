@@ -18,8 +18,7 @@ import { UniversalModal, UniversalModalDescription, UniversalModalHeader, Univer
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  DollarSign, Calendar, Clock, CheckCircle2, AlertCircle, FileText, TrendingUp,
+import {Eye, DollarSign, Calendar, Clock, CheckCircle2, AlertCircle, FileText, TrendingUp,
   CreditCard, Download, ClipboardCheck, AlertTriangle, Shield, Eye, Loader2,
   FileSignature, ScrollText, MessageSquare, Building2, RefreshCw, ExternalLink,
   ShieldCheck, FilePlus, SendHorizonal, ChevronRight, CheckCheck, XCircle, Users2,

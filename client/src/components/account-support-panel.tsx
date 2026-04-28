@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  User, Mail, Phone, MapPin, Calendar, Shield, Key, 
+import {Eye, Eye, User, Mail, Phone, MapPin, Calendar, Shield, Key, 
   RefreshCw, Unlock, Lock, CheckCircle, XCircle,
   Eye, EyeOff, Edit, Save, AlertTriangle, Clock
 } from "lucide-react";

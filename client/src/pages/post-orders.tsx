@@ -16,8 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ESignature } from "@/components/ESignature";
-import {
-  ClipboardList, Plus, AlertTriangle, ArrowUp, Minus,
+import {Eye, ClipboardList, Plus, AlertTriangle, ArrowUp, Minus,
   CheckSquare, PenLine, Camera, Star, Pencil,
   Eye, CheckCircle2, Clock, FileSignature, Users
 } from "lucide-react";

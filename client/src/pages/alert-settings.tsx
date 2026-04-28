@@ -22,8 +22,7 @@ import {
 import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Bell,
+import {Eye, Bell,
   Clock,
   DollarSign,
   AlertTriangle,

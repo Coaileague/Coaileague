@@ -12,8 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import {
-  CheckCircle2, XCircle, ArrowRight, Calculator, ChevronDown, ChevronUp,
+import {Eye, CheckCircle2, XCircle, ArrowRight, Calculator, ChevronDown, ChevronUp,
   Users, Shield, DollarSign, Brain, Zap, Star, Phone, Mail, Eye, BookOpen,
   Lightbulb, Heart, Network, ListChecks, Layers,
 } from "lucide-react";

@@ -22,8 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { 
-  Clock, Play, Square, Calendar, Users, Edit2, Check, X, Bell, History,
+import {Eye, Clock, Play, Square, Calendar, Users, Edit2, Check, X, Bell, History,
   MapPin, Camera, LogOut, LogIn, Download, Filter, ChevronDown, ChevronLeft, ChevronRight,
   AlertCircle, CheckCircle, XCircle, Eye, Shield, Coffee, PlayCircle, Menu, Home, ArrowLeft,
   LayoutGrid, List, CheckSquare, AlertTriangle, Loader2, BarChart2, FileText, DollarSign,

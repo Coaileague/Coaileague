@@ -6781,3 +6781,30 @@ select:focus-visible,
   margin-right: 6px;
   animation: status-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* ── Responsive text scaling for desktop/large screens ─────────────── */
+/* text-sm is 14px (fine for mobile), but on 1440p+ it should scale up */
+@media (min-width: 1280px) {
+  /* Scale base text up for readability on large desktop monitors */
+  :root {
+    font-size: 15px;     /* slight upscale from 16px base */
+  }
+  
+  /* Tables, data grids, labels: step up one size on desktop */
+  .text-xs { font-size: 0.8rem !important; }       /* 12px → ~12px (keep compact) */
+  
+  /* Body text: ensure minimum readability on large screens */
+  p, .text-sm {
+    font-size: 0.9375rem; /* 15px on large screens */
+  }
+}
+
+@media (min-width: 1920px) {
+  /* Ultra-wide / 4K monitors: bump further */
+  :root {
+    font-size: 16px;
+  }
+  .text-sm { font-size: 1rem !important; }         /* 14px → 16px */
+  .text-xs { font-size: 0.875rem !important; }     /* 12px → 14px */
+  .text-base { font-size: 1.125rem !important; }   /* 16px → 18px */
+}

@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
-import {
-  Users, MessageSquare, Ticket, Clock, AlertCircle, 
+import {Eye, Users, MessageSquare, Ticket, Clock, AlertCircle, 
   CheckCircle, UserX, Volume2, VolumeX, Star,
   ArrowRight, Eye, UserCog, Sparkles
 } from "lucide-react";

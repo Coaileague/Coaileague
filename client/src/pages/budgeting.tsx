@@ -15,8 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useModules } from "@/config/moduleConfig";
-import {
-  DollarSign, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
+import {Eye, DollarSign, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
   Plus, Calendar, Users, Target, BarChart3, PieChart, LineChart,
   FileText, Download, Upload, Settings, Edit, Trash2, Eye,
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, Building2

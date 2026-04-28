@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
-import {
-  FileText,
+import {Eye, FileText,
   Plus,
   Search,
   Trash2,

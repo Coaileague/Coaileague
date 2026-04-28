@@ -19,8 +19,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  Plus, Trash2, FileText, Loader2, GripVertical, ChevronLeft, Save,
+import {Eye, Plus, Trash2, FileText, Loader2, GripVertical, ChevronLeft, Save,
   Type, AlignLeft, Hash, Calendar, List, CircleDot, CheckSquare,
   Upload, PenLine, Heading, Minus, Settings, Copy, Eye, BarChart2,
   FileCheck, AlertCircle, ChevronRight, ClipboardList, CheckCircle, XCircle,

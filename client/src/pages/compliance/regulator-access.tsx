@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
-  Shield, 
+import {Eye, Shield, 
   Key, 
   UserCheck, 
   Clock, 

@@ -2467,6 +2467,29 @@ self.addEventListener('activate', async () => {
       try {
         log.info('Deferred: Running data corrections');
         await runDataCorrections();
+        // Auto-create missing tables that may not exist yet
+        try {
+          const { pool: missingTablePool } = await import('./db');
+          await missingTablePool.query(`CREATE TABLE IF NOT EXISTS ai_call_log (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            workspace_id VARCHAR, feature VARCHAR, model VARCHAR,
+            tokens_used INTEGER DEFAULT 0, cost_credits INTEGER DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          )`);
+          await missingTablePool.query(`CREATE TABLE IF NOT EXISTS universal_audit_log (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            workspace_id VARCHAR, actor_type VARCHAR DEFAULT 'system',
+            actor_id VARCHAR, action VARCHAR NOT NULL,
+            entity_type VARCHAR, entity_id VARCHAR,
+            change_type VARCHAR DEFAULT 'action',
+            metadata JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW()
+          )`);
+          await missingTablePool.query('CREATE INDEX IF NOT EXISTS idx_ai_call_log_ws ON ai_call_log (workspace_id)');
+          await missingTablePool.query('CREATE INDEX IF NOT EXISTS idx_univ_audit_ws ON universal_audit_log (workspace_id, created_at)');
+          log.info('[Startup] Auto-created missing tables: ai_call_log, universal_audit_log');
+        } catch (tableErr: any) {
+          log.warn('[Startup] Missing table auto-create (non-fatal):', tableErr?.message?.slice(0, 80));
+        }
         // Reset demo account locks in non-production (dev/staging Railway environments)
         const { resetDemoAccountLocks } = await import('./services/productionSeed');
         await resetDemoAccountLocks();

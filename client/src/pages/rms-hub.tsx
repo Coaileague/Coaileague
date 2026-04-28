@@ -13,8 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Activity, AlertOctagon, AlertTriangle, Archive, ArrowRightLeft, BarChart2, Camera, Check, CheckCircle,
+import {Eye, Activity, AlertOctagon, AlertTriangle, Archive, ArrowRightLeft, BarChart2, Camera, Check, CheckCircle,
   ChevronsUpDown, ChevronRight, Clock, Download, Eye, FileText, List, MapPin, Plus, RefreshCw, Search, Send,
   ShieldAlert, Sparkles, TrendingUp, Upload, Users, X as XIcon,
 } from "lucide-react";

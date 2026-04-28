@@ -35,8 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
- Send, Users, MessageSquare, Shield, Crown, UserCog, Wrench,
+import {Eye, Send, Users, MessageSquare, Shield, Crown, UserCog, Wrench,
  Settings, Power, HelpCircle, Zap, Clock, AlertCircle, CheckCircle,
  ChevronLeft, ChevronRight, Info, Coffee, Star, Building2, Bot, Sparkles, Menu, X,
  UserCheck, FileText, Camera, PenTool, ArrowRight, Ban, AlertTriangle,
