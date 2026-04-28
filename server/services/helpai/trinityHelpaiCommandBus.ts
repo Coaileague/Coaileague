@@ -12,6 +12,7 @@
 import { db } from '../../db';
 import { trinityHelpaiCommandBus as commandBusTable } from '@shared/schema';
 import { eq, and, desc, asc, lt, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityHelpaiCommandBus');
@@ -232,7 +233,7 @@ class TrinityHelpAICommandBus {
             if (payload?.workspace_id) {
               await universalNotificationEngine.sendNotification({
                 workspaceId: payload.workspace_id,
-                idempotencyKey: `notif-${Date.now()}`,
+                idempotencyKey: `notif:helpai_command_bus:${item.id}:trinity_offline`,
           type: 'emergency',
                 title: 'HelpAI: Critical Item Pending — Trinity Offline',
                 message: `Critical command bus item requires immediate attention: ${(payload as unknown as EscalationPayload).issue_summary || payload.description || 'Review queued items'}`,
@@ -275,7 +276,7 @@ class TrinityHelpAICommandBus {
     if (workspaceId) {
       await universalNotificationEngine.sendNotification({
         workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:helpai_command_bus:${item.id}:critical`,
           type: 'emergency',
         title: 'CRITICAL: HelpAI Command Bus Alert',
         message: (payload as EscalationPayload).issue_summary ||
@@ -295,7 +296,7 @@ class TrinityHelpAICommandBus {
       direction: 'helpai_to_trinity',
       messageType: 'escalation',
       priority: escalation.priority,
-      payload: { idempotencyKey: `notif-${Date.now()}`,
+      payload: { idempotencyKey: randomUUID(),
           type: 'escalation', ...escalation },
     });
   }

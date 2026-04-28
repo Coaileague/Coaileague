@@ -421,7 +421,7 @@ class HelpAIProactiveMonitor {
 
       await universalNotificationEngine.sendNotification({
         workspaceId: alert.workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:helpai_proactive:${alert.workspaceId}:${alert.alertType}`,
           type: 'helpai_proactive',
         title: `HelpAI Alert: ${alert.alertType.replace(/_/g, ' ')}`,
         message: alert.description,
@@ -431,7 +431,7 @@ class HelpAIProactiveMonitor {
 
       if (alert.priority === 'critical' || alert.priority === 'high') {
         await trinityHelpaiCommandBus.sendAlert({
-          alert_idempotencyKey: `notif-${Date.now()}`,
+          alert_idempotencyKey: `notif:helpai_proactive:${alert.workspaceId}:${alert.alertType}`,
           alert_type: 'proactive_signal',
           description: alert.description,
           severity: alert.priority === 'critical' ? 'immediate' : 'watch',

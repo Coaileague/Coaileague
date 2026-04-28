@@ -277,7 +277,7 @@ class ExceptionQueueProcessor {
       await universalNotificationEngine.sendNotification({
         workspaceId: exception.workspaceId,
         userId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:billing_exception:${exception.id}:${userId}`,
           type: 'issue_detected',
         title: `Billing Exception Escalated - ${exception.priority.toUpperCase()} Priority`,
         message: `A billing exception requires your review: ${exception.title}. This exception could not be auto-resolved and needs human attention.`,

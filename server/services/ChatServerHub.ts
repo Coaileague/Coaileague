@@ -1361,7 +1361,7 @@ class ChatServerHubClass {
         await universalNotificationEngine.sendNotification({
           workspaceId: event.metadata.workspaceId,
           userId: event.metadata.targetUserId,
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif:chat_event:${event.metadata.messageId ?? event.metadata.conversationId}:${event.type}`,
           type: engineType,
           title: event.title,
           message: event.description,

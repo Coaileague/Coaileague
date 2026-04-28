@@ -223,7 +223,7 @@ export async function updateEmployeeRate(employeeId: string, hourlyRate: number,
         await universalNotificationEngine.sendNotification({
           workspaceId: employee.workspaceId!,
           userId: employee.userId!,
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif:pay_rate_change:${employeeId}:updated`,
           type: 'pay_rate_change',
           title: 'Your Pay Rate Has Been Updated',
           message: `Your hourly pay rate has been ${direction} to $${hourlyRate.toFixed(2)}/hr. This will apply to your next pay period.`,

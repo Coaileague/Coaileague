@@ -349,7 +349,7 @@ export async function triggerEmergencyProtocol(ctx: EmergencyContext): Promise<{
     if (ctx.workspaceId) {
       await universalNotificationEngine.sendNotification({
         workspaceId: ctx.workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:emergency:${ctx.conversationId}:safety_flag`,
           type: 'emergency',
         title: 'CRITICAL: HelpAI Safety Flag',
         message: `Emergency protocol triggered in conversation ${ctx.conversationId}. Immediate attention required.`,

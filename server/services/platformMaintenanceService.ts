@@ -343,7 +343,7 @@ class PlatformMaintenanceService {
     try {
       await universalNotificationEngine.sendNotification({
         workspaceId: '*', // Platform-wide
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:support_audit:${event.action}:${event.performedBy}`,
           type: 'system',
         title: 'Support Audit',
         message,
