@@ -201,6 +201,9 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
         try {
           await NotificationDeliveryService.send({
             idempotencyKey: `notif:shift_trade:${tradeId}:request:${targetUser.rows[0].user_id}`,
+            type: 'shift_trade_request',
+            workspaceId: wid,
+            recipientUserId: targetUser.rows[0].user_id,
             channel: 'in_app',
             subject: 'Shift Trade Request',
             body: {
@@ -235,6 +238,9 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
         try {
           await NotificationDeliveryService.send({
             idempotencyKey: `notif:shift_trade:${tradeId}:open:${m.id}`,
+            type: 'shift_trade_request',
+            workspaceId: wid,
+            recipientUserId: m.id,
             channel: 'in_app',
             subject: 'Open Shift Trade',
             body: {

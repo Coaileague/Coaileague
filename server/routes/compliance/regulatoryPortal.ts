@@ -886,6 +886,8 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
         message: `Your regulatory audit has been completed. Outcome: ${auditOutcome ?? 'See report'}. Trinity has generated a corrective action plan for you.`,
         metadata: { reportUrl, auditOutcome, requestId },
         idempotencyKey: `audit_report_uploaded:${requestId}:${owner.id}`
+      }).catch ((err: unknown) => {
+        log.warn('[RegulatoryPortal] In-app audit report notification failed (non-fatal):', (err as any)?.message);
       });
     }
 
@@ -1198,6 +1200,8 @@ router.post('/complete-report', requireAuditorPortalAuth, async (req: Request, r
         message: `A regulatory audit has been completed. Outcome: ${auditOutcome}. ${correctiveActions ? 'Corrective actions have been noted.' : ''} Review the report in your Audit Readiness dashboard.`,
         metadata: { requestId, reportUrl, auditOutcome },
         idempotencyKey: `audit_report_uploaded:${requestId}:${owner.id}`
+      }).catch ((err: unknown) => {
+        log.warn('[RegulatoryPortal] In-app audit submitted notification failed (non-fatal):', (err as any)?.message);
       });
     }
 
