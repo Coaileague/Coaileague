@@ -964,6 +964,18 @@ async function initializeCriticalServices() {
     log.error('Guard card enrichment failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
   }
 
+  // Monthly open shifts — Trinity automation testing
+  // Seeds current month with open/understaffed shifts so Trinity's fill-shift
+  // scanner, coverage gap detector, and HelpAI triggers all fire correctly.
+  // Proves in development that the entire automation chain works before production.
+  try {
+    const { seedMonthlyShifts } = await import("./services/developmentSeedShifts");
+    const shiftResult = await seedMonthlyShifts();
+    log.info('Monthly shift seed', { result: shiftResult.message });
+  } catch (error) {
+    log.error('Monthly shift seed failed (non-fatal)', { error: error instanceof Error ? error.message : String(error) });
+  }
+
   // Contracts and incidents — both orgs
   try {
     const { runContractsAndIncidentsSeed } = await import("./services/developmentSeedContractsAndIncidents");
