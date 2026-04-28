@@ -220,6 +220,11 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
       NotificationDeliveryService.send({
         idempotencyKey: `notif:visitor:${log.id}:banned_checkin`,
         type: 'alert_notification',
+        workspaceId,
+        recipientUserId: workspaceId,
+        channel: 'in_app',
+        body: {
+          title: 'BANNED VISITOR DETECTED',
           message: `${visitorName} is on the trespass registry. Notify supervisor immediately.`,
           severity: 'critical',
         },
@@ -315,6 +320,12 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
         NotificationDeliveryService.send({
           idempotencyKey: `notif:visitor:${o.id}:overstay`,
           type: 'alert_notification',
+          workspaceId,
+          recipientUserId: workspaceId,
+          channel: 'in_app',
+          body: {
+            title: 'Visitor Overstay Alert',
+            message: `${o.visitor_name} at ${o.site_name} has been on-site for ${Math.floor(o.elapsedMinutes / 60)}h ${o.elapsedMinutes % 60}m.`,
             severity: 'warning',
           },
         }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
@@ -322,6 +333,9 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
         platformEventBus.publish({
           idempotencyKey: `notif:visitor:${o.id}:overstay_event`,
             type: 'visitor_overstay',
+          workspaceId,
+          title: `Visitor Overstay — ${o.visitor_name}`,
+          description: `${o.visitor_name} is still on-site at ${o.site_name} after ${Math.floor(o.elapsedMinutes / 60)}h`,
           metadata: { logId: o.id, visitorName: o.visitor_name, siteName: o.site_name, elapsedMinutes: o.elapsedMinutes },
         }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
@@ -583,6 +597,9 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
         platformEventBus.publish({
           idempotencyKey: `notif:visitor:${o.id}:overstay_event`,
             type: 'visitor_overstay',
+          workspaceId,
+          title: `Visitor Overstay — ${o.visitor_name}`,
+          description: `${o.visitor_name} is still on-site at ${o.site_name} after ${hours}h ${mins}m`,
           metadata: { logId: o.id, visitorName: o.visitor_name, siteName: o.site_name, elapsedMinutes: elapsed },
         }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
