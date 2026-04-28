@@ -162,7 +162,7 @@ createRoot(document.getElementById("root")!).render(
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
+      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then((registration) => {
         if (import.meta.env.DEV) {
           console.log('[SW] Registered, scope:', registration.scope);

@@ -76,6 +76,12 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Serve sw.js with Cache-Control: no-store so browsers always fetch fresh
+  app.get('/sw.js', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.resolve(distPath, 'sw.js'));
+  });
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist

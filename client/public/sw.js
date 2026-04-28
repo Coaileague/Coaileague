@@ -22,8 +22,8 @@
  */
 
 const CACHE_VERSION = 11;
-const CACHE_NAME = 'coaileague-v4.6';
-const STATIC_CACHE = 'coaileague-static-v4.6';
+const CACHE_NAME = 'coaileague-v4.7';
+const STATIC_CACHE = 'coaileague-static-v4.7';
 const API_CACHE = 'coaileague-api-v' + CACHE_VERSION;
 const offlineFallbackPage = '/offline.html';
 
@@ -95,7 +95,7 @@ function openDB() {
 }
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v4.3.0');
+  console.log('[SW] Installing service worker v4.7.0');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Caching app shell');
