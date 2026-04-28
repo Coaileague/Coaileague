@@ -1,199 +1,105 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-04-28 — Claude (Phase 1A audit complete, gap analysis done)
+# Last updated: 2026-04-28 — Claude (architect plan, parallel lanes launched)
 
 ---
 
 ## TURN TRACKER
 
 ```
-Current state: PARALLEL LANES
-  Claude — Phase 1A audit complete, ready for email entity panel polish
-  Codex  — Running holistic consolidation audit in refactor/service-layer
-  
-Next: Codex commits clean, Claude merges, then email entity panel polish begins
+PARALLEL LANES — ALL ACTIVE NOW:
+
+  LANE A — CLAUDE
+    Branch: enhancement/lane-a-claude
+    Working on: A1 (Scheduling), A2 (Email), A3 (Zod Tier 1)
+
+  LANE B — CODEX
+    Branch: enhancement/lane-b-codex
+    Working on: B1 (ChatDock durable), B2 (RBAC/IRC), B3 (large files), B4 (middleware)
+
+  LANE C — COPILOT
+    Branch: enhancement/lane-c-copilot
+    Working on: C1 (ChatDock features), C2 (Zod sweep), C3 (document PDFs)
+
+ARCHITECT: CLAUDE
+  → Pulls all agent branches when submitted
+  → Reviews diff, verifies correctness, runs build + boot test
+  → Merges clean to development
+  → Pushes to Railway
 ```
 
 ---
 
-## CURRENT COMMITS
+## CURRENT BASE
 
 ```
-origin/development           → c13121aee  (Railway GREEN ✅)
-origin/refactor/service-layer → 4b2aea548  (Codex parallel lane)
+origin/development → 8e02aaf97  (Railway STABLE GREEN ✅)
 ```
 
-Boot test before any push to development:
+---
+
+## FULL PLAN
+
+See: ENHANCEMENT_SPRINT_PLAN.md (same directory)
+Contains: domain map, success criteria, merge protocol, agent assignments
+
+---
+
+## AGENT SUBMISSION FORMAT
+
+When done with a domain, submit using this format:
+
+```
+AGENT: {Claude/Codex/Copilot}
+BRANCH: enhancement/lane-{x}-{agent}
+COMMIT: {sha}
+DOMAIN: {what was worked on}
+FILES CHANGED: {list — own domain only}
+WHAT WAS DONE: {3-5 line summary}
+CONFLICTS WITH: none / {list if any}
+BOOT TEST: passed / failed
+READY TO MERGE: yes
+```
+
+---
+
+## DOMAIN OWNERSHIP (prevents conflicts)
+
+**CLAUDE owns:** universal-schedule.tsx, EmailHubCanvas.tsx, inbox.tsx,
+  schedulesRoutes, availabilityRoutes, engagementRoutes, uacpRoutes,
+  reviewRoutes, mileageRoutes, hrInlineRoutes, permissionMatrixRoutes
+
+**CODEX owns:** websocket.ts, storage.ts, ircEventRegistry.ts,
+  chat-management.ts, chatParityService.ts, chatServer.ts,
+  chat/broadcaster.ts (new), chat/shiftRoomManager.ts (new)
+
+**COPILOT owns:** ChatDock.tsx and chatdock/ directory,
+  chatInlineRoutes, commInlineRoutes, salesInlineRoutes, formBuilderRoutes,
+  services/documents/ (PDF), all remaining un-Zodded routes
+
+---
+
+## ARCHITECT MERGE PROTOCOL (Claude executes)
+
 ```bash
-export DATABASE_URL="postgresql://postgres:MmUbhSxdkRGFLhBGGXGaWQeBceaqNmlj@metro.proxy.rlwy.net:40051/railway"
-export SESSION_SECRET="coaileague-dev-test-session-secret-32chars"
-node build.mjs && node dist/index.js > /tmp/boot.txt 2>&1 &
-sleep 18 && curl -s http://localhost:5000/api/workspace/health  # → {"message":"Unauthorized"}
-grep -cE "ReferenceError|is not defined|CRITICAL.*Failed" /tmp/boot.txt  # → 0
-kill %1
+git fetch origin {agent-branch}:refs/remotes/agent/{lane}
+git diff development..agent/{lane} --name-only  # check ownership
+git checkout development
+git checkout agent/{lane} -- {owned-files-only}
+node build.mjs 2>&1 | grep "✅ Server|ERROR"
+# boot test
+git add {files} && git commit -m "merge: {agent} {domain}"
+git push origin development
 ```
-
----
-
-## PLATFORM STATUS — VERIFIED CLEAN
-
-**62/62 features from features page verified present in codebase.**
-**No feature was removed during audit phases A-I or Phase 0 registry consolidation.**
-
-Registry: 143 handlers, 137 Trinity-visible, 0 duplicates, well under 300 cap.
-Log fixes: 0 thought recording errors, 0 billing canary false positives.
-All audit hardening (A-I): deployed and stable.
-
----
-
-## PHASE 1A — AUDIT RESULTS
-
-### Scheduling pipeline: GRADE A ✅
-26/27 checks pass. The 1 "fail" was a false positive — state machine uses
-`eq(status, "submitted")` conditional WHERE (correct, not `inArray`).
-
-Backend scheduling verified:
-- schedulingMath.ts in use (hoursBetween, addHours, OT, haversine GPS) ✅
-- Timesheet state transitions atomic with conditional WHERE + 409 on race ✅
-- Shift monitoring filters to active workspaces only ✅
-- Coverage pipeline workspace-scoped and stoppable ✅
-- Orchestrated schedule endpoints workspace-scoped (Phase D fix) ✅
-- Trinity action catalog has: fill_open_shifts, generate_schedule, scheduling.* ✅
-
-### Schedule UI: FEATURE-COMPLETE, polish gaps remain
-universal-schedule.tsx (3126L) has: drag-drop, week view, shift creation,
-OT warning, Trinity auto-fill, bulk publish, templates ✅
-schedule-mobile-first.tsx (1377L) exists ✅
-
-Schedule gaps for Phase 1A enhancement:
-- Trinity ↔ Schedule data pipeline end-to-end verification
-- Shift room auto-creation on schedule publish (ChatDock integration)
-- Schedule → Payroll → Invoice smoke test
-- Color-coded shift status indicators in grid
-- Fast add-shift: client+site+time+officer in <5 taps
-- Client transparency mode per shift
-
-### Email UI: INFRASTRUCTURE SOLID, entity panel is the key gap
-EmailHubCanvas.tsx (3796L) already has:
-- Operational channel folders: calloffs, incidents, support, billing, docs ✅
-- Trinity AI panel + automation toggle ✅
-- Compose, thread view, sub-address routing ✅
-
-Email gaps (priority order for polish sprint):
-1. Entity context panel — MISSING
-   When email is opened from Maegan@Statewide: show her client stats,
-   open shifts, contract rate, invoiced MTD. The mockup I built shows the vision.
-2. Channel tab bar at top — MISSING (operational tabs like Gmail but for ops)
-3. Trinity suggested actions per email — MISSING
-   (update shift, generate PDF amendment, send confirmation, update invoice)
-4. Pre-drafted Trinity reply — MISSING (ready to edit+send in one tap)
-5. Action-needed / Urgent / PDF tags on inbox rows — MISSING
-6. Smart views: Needs Action, Client Mail — MISSING
-
-### ChatDock: FOUNDATION SOLID, delivery layer is the key gap
-ChatDock.tsx exists with: WebSocket, HelpAI, shift rooms, mobile version ✅
-Full gap list in memory (Redis pub/sub, durable store, FCM, receipts, etc.)
-
----
-
-## CODEX PARALLEL LANE — MERGE PROTOCOL
-
-When Codex commits his holistic consolidation/audit work:
-
-1. Codex pushes to refactor/service-layer (NOT development)
-2. Claude reviews the diff: `git diff development codex2/sl --name-only`
-3. If no conflicts with active email polish work:
-   `git checkout development && git checkout codex2/sl -- <files>`
-4. Claude builds + boot tests before committing
-5. Single merge commit: "merge: Codex holistic consolidation + Claude email polish"
-
-Files Codex should NOT touch (Claude is working on these):
-- client/src/components/email/EmailHubCanvas.tsx
-- client/src/pages/inbox.tsx
-- client/src/components/email/ directory
-
-Files Claude should NOT touch (Codex is auditing these):
-- server/routes/domains/ (IRC/RBAC consolidation)
-- server/websocket.ts (ChatDock architecture)
-- Any server/routes/compliance/ or portal files
-
----
-
-## ACTIVE WORK — EMAIL ENTITY PANEL (Claude's next task)
-
-The mockup is built. Now wire it into EmailHubCanvas.tsx.
-
-When an email is opened, the right panel shows:
-- If sender is a client: open shifts, contract rate, invoiced MTD, officer count
-- If sender is an employee: upcoming shifts, timesheet status, certifications
-- Trinity suggested actions (context-aware, based on email content)
-- Pre-drafted reply from Trinity
-
-API endpoints to call:
-- GET /api/clients?email={senderEmail} → client context
-- GET /api/employees?email={senderEmail} → employee context
-- GET /api/shifts?clientId={id}&status=open → open shifts
-- POST /api/ai-brain/chat (Trinity draft reply suggestion)
-
-Implementation approach:
-- Add a `senderEntity` state to EmailHubCanvas (client | employee | unknown)
-- When email is selected, fetch entity by sender email
-- Render entity panel in the existing trinity-panel slot
-- Keep existing Trinity AI toggle panel as a tab within the same space
-
----
-
-## ENHANCEMENT SPRINT DOMAINS (full plan)
-
-### Priority sequence after email entity panel:
-
-**EMAIL** (current)
-  [x] Entity context panel
-  [ ] Channel tab bar  
-  [ ] Trinity suggested actions
-  [ ] Pre-drafted replies
-  [ ] Tags on inbox rows
-  [ ] Smart views
-
-**SCHEDULE Phase 1A**
-  [ ] Trinity ↔ schedule pipeline E2E verification
-  [ ] Shift room auto-creation on publish
-  [ ] Color-coded shift status indicators
-  [ ] Fast add-shift modal
-
-**CHATDOCK** (after schedule)
-  [ ] Redis pub/sub foundation
-  [ ] Durable message store
-  [ ] FCM + 4-tier delivery
-  [ ] Read receipts, replies, reactions
-  [ ] Content moderation + legal hold
-
-**PORTALS** (parallel to above)
-  [ ] Workspace dashboard Grade A
-  [ ] Client portal read-only surface
-  [ ] Auditor portal PDF reports
-
-**HOLISTIC UX**
-  [ ] All action buttons verified
-  [ ] Forms mobile-optimized
-  [ ] UI toast polish
-  [ ] Seasonal theming restored
-
-**TRINITY BRAIN**
-  [ ] Triad genuine reasoning
-  [ ] Proactive operating behavior
 
 ---
 
 ## STANDARD: NO BANDAIDS
 
 ```
-No raw money math — FinancialCalculator.
-No raw scheduling hour math — schedulingMath.ts.
-No workspace IDOR.
-No state transitions without expected-status guard.
-Trinity = one individual, no mode switching.
-HelpAI = only bot field workers see.
+No raw money math. No raw scheduling hour math. No workspace IDOR.
+No state transitions without expected-status guard. No stubs/placeholders.
+Every button wired. Every endpoint real DB data.
+Trinity = one individual. HelpAI = only bot field workers see.
 One domain, one complete sweep, one coherent commit.
-No duplicate UI services — edit what exists, don't create parallel versions.
 ```
