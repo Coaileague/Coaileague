@@ -12,6 +12,7 @@
  */
 
 import { sanitizeError } from '../middleware/errorHandler';
+import { formatZodIssues } from '../middleware/validateRequest';
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { requireAuth } from '../auth';
 import { requireManagerOrPlatformStaff, type AuthenticatedRequest } from '../rbac';
@@ -160,7 +161,7 @@ function notifyClient(workspaceId: string, clientRecordId: string, subject: stri
       const { email, userId } = await resolveClientContactInfo(clientRecordId, workspaceId);
       if (!email) return;
       await NotificationDeliveryService.send({
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:client_comms:${clientRecordId}:notify`,
             type: 'client_portal_invite',
         workspaceId,
         recipientUserId: userId || email,
@@ -229,7 +230,7 @@ router.post('/threads', requireManagerOrPlatformStaff, async (req: Authenticated
 
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: 'Validation failed', details: parsed.error.issues });
+      return res.status(400).json({ error: 'Validation failed', details: formatZodIssues(parsed.error) });
     }
     const { clientId, subject, channel, assignedToUserId, initialMessage } = parsed.data;
 
@@ -393,7 +394,7 @@ router.post('/threads/:id/messages', requireAuth, async (req: AuthenticatedReque
 
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: 'Validation failed', details: parsed.error.issues });
+      return res.status(400).json({ error: 'Validation failed', details: formatZodIssues(parsed.error) });
     }
     const { body, attachments } = parsed.data;
 

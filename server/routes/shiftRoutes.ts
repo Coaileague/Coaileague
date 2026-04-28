@@ -4,7 +4,6 @@ import { Router } from "express";
 import { requireAuth } from "../auth";
 import { requireManager, requireManagerOrPlatformStaff, requireEmployee, attachWorkspaceId, type AuthenticatedRequest } from "../rbac";
 import { storage } from "../storage";
-import { hoursBetween, addHours, roundHours, isOverHours } from '../services/scheduling/schedulingMath';
 import { db } from "../db";
 import {
   chatConversations,
@@ -13,7 +12,6 @@ import {
   contractorPool,
   employees,
   insertShiftSchema,
-  shiftChatrooms,
   shiftCoverageRequests,
   shiftOffers,
   shiftOrders,
@@ -41,6 +39,7 @@ import { checkSchedulingEligibility, checkRequiredCertifications } from "../serv
 import { shiftRoomBotOrchestrator } from "../services/bots/shiftRoomBotOrchestrator";
 import { createLogger } from '../lib/logger';
 const log = createLogger('ShiftRoutes');
+
 
 const router = Router();
 
@@ -221,12 +220,6 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         else if (now > end) status = 'completed';
         return {
           id: s.id,
-          // Phase 26E — Surface acknowledgment state so the worker dashboard
-          // can render accept/deny controls for shifts awaiting confirmation.
-          requiresAcknowledgment: !!s.requiresAcknowledgment,
-          acknowledgedAt: s.acknowledgedAt || null,
-          deniedAt: s.deniedAt || null,
-          rawStatus: s.status || null,
           siteName: s.title || 'Shift',
           siteAddress: '',
           startTime: s.startTime,
@@ -242,7 +235,66 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
     }
   });
 
-router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+  router.get('/upcoming', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
+
+      const employee = await storage.getEmployeeByUserId(userId!, workspaceId);
+      if (!employee) return res.json([]);
+
+      const now = new Date();
+      const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const futureEnd = new Date(tomorrowStart);
+      futureEnd.setDate(futureEnd.getDate() + 3);
+
+      const upcoming = await storage.getShiftsByEmployeeAndDateRange(
+        workspaceId, employee.id, tomorrowStart, futureEnd
+      );
+
+      const mapped = upcoming.map((s: any) => ({
+        id: s.id,
+        date: s.date || new Date(s.startTime).toISOString().split('T')[0],
+        siteName: s.title || 'Shift',
+        startTime: s.startTime,
+        endTime: s.endTime,
+      }));
+
+      res.json(mapped);
+    } catch (error: unknown) {
+      log.error("[ShiftRoute] Failed to fetch upcoming shifts:", error);
+      res.status(500).json({ error: "Failed to fetch upcoming shifts" });
+    }
+  });
+
+  router.get('/pending', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = (req as any).workspaceId?.id || req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+      const shifts = await getPendingShifts(workspaceId);
+      res.json({ success: true, data: shifts });
+    } catch (error: unknown) {
+      log.error('[ShiftRoute] Error fetching pending shifts:', error);
+      res.status(500).json({ error: (error instanceof Error ? sanitizeError(error) : null) || String(error) });
+    }
+  });
+
+  router.get('/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = (req as any).workspaceId?.id || req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+      const stats = await getApprovalStats(workspaceId);
+      res.json({ success: true, data: stats });
+    } catch (error: unknown) {
+      log.error('[ShiftRoute] Error fetching shift stats:', error);
+      res.status(500).json({ error: (error instanceof Error ? sanitizeError(error) : null) || String(error) });
+    }
+  });
+
+  router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const shiftId = req.params.id;
       const workspaceId = req.workspaceId;
@@ -432,21 +484,6 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
               ineligibleEmployees.push(`${empName}: ${certCheck.blockReason || 'Missing required certifications for this post'}`);
             }
           }
-          // ── S8: ARMED-SHIFT EMPLOYEE FLAG CHECK ──────────────────────────
-          // Armed posts must be assigned to employees flagged `is_armed=true`
-          // with a manager-verified armed license. The Layer 3 certification
-          // check above validates credentials; this adds a direct check on
-          // the employee's armed-worker flag so an officer with the "armed"
-          // cert but isArmed=false (e.g. opted out) cannot be scheduled.
-          if (validated.isArmed === true) {
-            if (!(emp as any).isArmed) {
-              const empName = `${emp.firstName} ${emp.lastName}`;
-              ineligibleEmployees.push(`${empName}: Not flagged as an armed officer. Armed shifts require employees.is_armed = true.`);
-            } else if (!(emp as any).armedLicenseVerified) {
-              const empName = `${emp.firstName} ${emp.lastName}`;
-              ineligibleEmployees.push(`${empName}: Armed license is not yet manager-verified.`);
-            }
-          }
         }
         if (ineligibleEmployees.length > 0) {
           return res.status(422).json({
@@ -537,8 +574,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
 
       if (newShiftStart) {
         const newShiftEnd = new Date(validated.endTime);
-        const newShiftHoursStr = hoursBetween(newShiftStart, newShiftEnd);
-        const newShiftHours = parseFloat(newShiftHoursStr);
+        const newShiftHours = (newShiftEnd.getTime() - newShiftStart.getTime()) / (1000 * 60 * 60);
         const weekStart = new Date(newShiftStart);
         weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
         weekStart.setUTCHours(0, 0, 0, 0);
@@ -547,20 +583,21 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
 
         for (const empId of assignedEmpIds2) {
           const weekShifts = await storage.getShiftsByEmployeeAndDateRange(workspaceId, empId, weekStart, weekEnd);
-          const currentHoursStr = weekShifts
+          const currentHours = weekShifts
             .filter((s: any) => !['cancelled', 'draft'].includes(s.status))
-            .reduce((sum: string, s: any) => {
-              return addHours(sum, hoursBetween(s.startTime, s.endTime));
-            }, '0');
-          const projectedStr = addHours(currentHoursStr, newShiftHoursStr);
-          if (isOverHours(projectedStr, String(OT_THRESHOLD_HOURS))) {
+            .reduce((sum: number, s: any) => {
+              const sh = (new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / (1000 * 60 * 60);
+              return sum + sh;
+            }, 0);
+          const projected = currentHours + newShiftHours;
+          if (projected > OT_THRESHOLD_HOURS) {
             const emp = await storage.getEmployee(empId, workspaceId);
             overtimeWarnings.push({
               employeeId: empId,
               name: emp ? `${emp.firstName} ${emp.lastName}` : empId,
-              currentHours: roundHours(currentHoursStr, 1),
-              shiftHours: roundHours(newShiftHoursStr, 1),
-              projectedHours: roundHours(projectedStr, 1),
+              currentHours: Math.round(currentHours * 10) / 10,
+              shiftHours: Math.round(newShiftHours * 10) / 10,
+              projectedHours: Math.round(projected * 10) / 10,
             });
           }
         }
@@ -660,21 +697,6 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
         log.warn('[Shifts] Failed to log webhook error to audit log', { error: webhookErr.message });
       }
 
-      // Pre-provision a pending shift chatroom so manager↔officer messaging
-      // works the moment the shift hits the schedule — before clock-in.
-      // Awaited try/catch (non-fatal): per TRINITY.md §B no fire-and-forget.
-      try {
-        const { shiftChatroomWorkflowService } = await import('../services/shiftChatroomWorkflowService');
-        await shiftChatroomWorkflowService.provisionChatroom({
-          shiftId: shift.id,
-          workspaceId,
-          siteId: shift.siteId ?? undefined,
-          assignedEmployeeId: shift.employeeId ?? undefined,
-        });
-      } catch (provisionErr: any) {
-        log.warn('[ShiftChatroom] provisionChatroom failed (non-blocking):', provisionErr?.message);
-      }
-
       // Notify assigned employees about new shift
       try {
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -694,13 +716,11 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
                 relatedEntityType: 'shift',
                 relatedEntityId: shift.id,
                 createdBy: userId,
-                idempotencyKey: `shift_assigned-${shift.id}-${empId}`
               });
               try {
                 const { NotificationDeliveryService } = await import("../services/notificationDeliveryService");
                 await NotificationDeliveryService.send({
-                  idempotencyKey: `notif-${Date.now()}`,
-            type: "shift_assignment",
+                  type: "shift_assignment",
                   workspaceId,
                   recipientUserId: empId,
                   channel: "push",
@@ -708,8 +728,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
                   body: {
                     title: "New Shift Assigned",
                     body: `You've been assigned to ${shift.title || 'a shift'} on ${new Date(shift.startTime).toLocaleDateString()}`,
-                    idempotencyKey: `notif-${Date.now()}`,
-            type: "shift_reminder",
+                    type: "shift_reminder",
                     url: "/schedule",
                     shiftId: shift.id,
                   }
@@ -837,9 +856,6 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       // 📡 REAL-TIME: Broadcast shift creation ONLY after successful DB operation
       broadcastShiftUpdate(workspaceId, 'shift_created', shift);
 
-      // Note: chatroom is pre-provisioned at the top of this handler (see
-      // provisionChatroom call above) — no duplicate provision needed here.
-
       // 🧠 TRINITY: Publish to platformEventBus so Trinity and all service monitors see this shift
       platformEventBus.publish({
         type: 'shift_created',
@@ -913,7 +929,6 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
         try {
           const { NotificationDeliveryService } = await import("../services/notificationDeliveryService");
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
             type: "shift_assignment",
             workspaceId,
             recipientUserId: shift.employeeId,
@@ -922,8 +937,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
             body: {
               title: "New Shift Assigned",
               body: `You've been assigned to ${shift.title || 'a shift'} on ${shiftDate}`,
-              idempotencyKey: `notif-${Date.now()}`,
-            type: "shift_reminder",
+              type: "shift_reminder",
               url: "/schedule",
               shiftId: shift.id,
             }
@@ -1482,16 +1496,1391 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
   });
 
-// ── Phase 26H — one-click supervisor mark-calloff ─────────────────────────
-  // Wraps fireCallOffSequence so the supervisor deep-link from
-  // missedClockInWorkflow's escalation notification (Phase 26G) does not
-  // require the caller to assemble the full calloff payload. The shift +
-  // officer + supervisor context is resolved internally and tenant-scoped
-  // (§G). Manager role or higher.
-// POST /api/shifts/:shiftId/proof-of-service
-  // Officer-side proof-of-service photo capture. Stores the photo as a
-  // chatroom photo message (audit-protected, flows into the DAR photo manifest).
-  // Broadcasts so the client portal and managers see it in real time.
+  router.post('/:id/ai-fill', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const shiftId = req.params.id;
+
+      // Get the open shift
+      const shift = await storage.getShift(shiftId, workspaceId);
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      // Verify it's an open shift
+      if (shift.employeeId) {
+        return res.status(400).json({ message: "Shift is already assigned or not an open shift" });
+      }
+
+      // STEP 1: Score employees using weighted algorithm
+      const { scoreEmployeesForShift, getTopCandidates, formatCandidatesForAI } = await import('../services/automation/employeeScoring');
+      
+      
+      const scoredCandidates = await scoreEmployeesForShift(workspaceId, {
+        shiftId,
+        requiredSkills: (shift as any).requiredSkills || [],
+        requiredCertifications: shift.requiredCertifications || [],
+        maxDistance: 50,
+        maxPayRate: shift.payRate ? parseFloat(shift.payRate) : undefined,
+      });
+
+      if (scoredCandidates.length === 0) {
+        return res.status(400).json({ 
+          message: "No qualified employees available for this shift",
+          details: "All employees filtered out due to availability, credentials, or distance constraints"
+        });
+      }
+
+      
+      // STEP 2: Get top 5 candidates for Gemini review
+      const topCandidates = getTopCandidates(scoredCandidates, 5);
+
+      // STEP 3: Use Smart AI to find best employee from top candidates
+      const { scheduleSmartAI } = await import('../services/scheduleSmartAI');
+      
+      const vettedEmployees = topCandidates.map(c => c.fullEmployee);
+
+      const result = await scheduleSmartAI({
+        openShifts: [shift],
+        availableEmployees: vettedEmployees,
+        workspaceId,
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        userId: req.user.id,
+        constraints: {
+          hardConstraints: {
+            respectAvailability: true,
+            preventDoubleBooking: true,
+            enforceRestPeriods: true,
+            respectTimeOffRequests: true,
+          },
+          softConstraints: {
+            preferExperience: true,
+            balanceWorkload: true,
+            respectPreferences: true,
+          },
+          predictiveMetrics: {
+            enableReliabilityScoring: true,
+            penalizeLateHistory: true,
+            considerAbsenteeismRisk: true,
+          }
+        },
+        // Pass scoring context to Gemini
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        scoringContext: formatCandidatesForAI(topCandidates)
+      });
+
+      // Check if AI found a suitable assignment
+      if (result.assignments.length === 0) {
+        return res.status(400).json({ 
+          message: "Smart AI could not find a suitable employee for this shift",
+          unassignedShifts: result.unassignedShifts,
+          summary: result.summary
+        });
+      }
+
+      const assignment = result.assignments[0];
+
+      // RACE CONDITION FIX: Atomically verify shift is still unassigned before updating
+      const updatedShift = await db.transaction(async (tx) => {
+        const [currentShift] = await tx
+          .select({ id: shifts.id, employeeId: shifts.employeeId })
+          .from(shifts)
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .for('update')
+          .limit(1);
+
+        if (!currentShift) {
+          throw Object.assign(new Error("Shift not found"), { statusCode: 404 });
+        }
+        if (currentShift.employeeId) {
+          throw Object.assign(new Error("Shift was already claimed by another request"), {
+            statusCode: 409,
+            code: 'SHIFT_ALREADY_CLAIMED',
+          });
+        }
+
+        const [updated] = await tx
+          .update(shifts)
+          .set({
+            employeeId: assignment.employeeId,
+            status: 'draft',
+            aiGenerated: true,
+            aiConfidenceScore: assignment.confidence.toString(),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .returning();
+        return updated;
+      });
+
+      try {
+        const { trinityDecisionLogger } = await import('../services/trinityDecisionLogger');
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        const chosenEmp = (employees as any).find(e => e.id === assignment.employeeId);
+        const alternatives = result.assignments.length > 1
+          ? result.assignments.slice(1).map((a: any) => {
+              // @ts-expect-error — TS migration: fix in refactoring sprint
+              const altEmp = (employees as any).find(e => e.id === a.employeeId);
+              return {
+                employeeId: a.employeeId,
+                employeeName: altEmp ? `${altEmp.firstName} ${altEmp.lastName}` : a.employeeId,
+                rejectionReason: `Lower confidence score (${a.confidence})`,
+                score: a.confidence,
+              };
+            })
+          : [];
+        await trinityDecisionLogger.logSchedulingDecision({
+          workspaceId,
+          shiftId,
+          chosenEmployeeId: assignment.employeeId,
+          chosenEmployeeName: chosenEmp ? `${chosenEmp.firstName} ${chosenEmp.lastName}` : assignment.employeeId,
+          reasoning: (assignment as any).reason || result.summary || `Selected with ${assignment.confidence}% confidence based on availability, proximity, overtime risk, and reliability score`,
+          alternatives,
+          contextSnapshot: {
+            totalCandidatesEvaluated: topCandidates.length,
+            assignmentConfidence: assignment.confidence,
+          },
+          confidenceScore: (assignment.confidence / 100).toFixed(2),
+        });
+      } catch (logErr: unknown) {
+        log.error('[Shift Auto-Assign] Decision logging failed (non-blocking):', (logErr instanceof Error ? logErr.message : String(logErr)));
+      }
+
+      // 📡 REAL-TIME: Broadcast shift update
+      broadcastShiftUpdate(workspaceId, 'shift_updated', updatedShift!);
+
+      // 📡 REAL-TIME: Fire specific shift_assigned event so employee schedule views update instantly
+      if (updatedShift && assignment.employeeId) {
+        broadcastToWorkspace(workspaceId, {
+          type: 'shift_assigned',
+          shiftId: updatedShift.id,
+          employeeId: assignment.employeeId,
+          workspaceId,
+          startTime: updatedShift.startTime,
+          endTime: updatedShift.endTime,
+          title: updatedShift.title,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // 🔔 NOTIFICATION: Notify assigned employee
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      const employee = (employees as any).find(e => e.id === assignment.employeeId);
+      if (employee?.email && updatedShift) {
+        const startTime = new Date(updatedShift.startTime).toLocaleString('en-US', {
+          dateStyle: 'full',
+          timeStyle: 'short'
+        });
+        const endTime = new Date(updatedShift.endTime).toLocaleString('en-US', {
+          timeStyle: 'short'
+        });
+
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        sendShiftAssignmentEmail(employee.email, {
+          employeeName: `${employee.firstName} ${employee.lastName}`,
+          shiftTitle: updatedShift.title || 'Shift',
+          startTime,
+          endTime,
+        }).catch(err => log.error('Failed to send AI assignment email:', err));
+
+        const shiftDate = new Date(updatedShift.startTime).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        await notificationHelpers.createShiftAssignedNotification(
+          { storage, broadcastNotification },
+          {
+            workspaceId,
+            userId: employee.id,
+            shiftId: updatedShift.id,
+            shiftTitle: updatedShift.title || 'Shift',
+            shiftDate,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            assignedBy: req.user.id,
+          }
+        ).catch(err => log.error('Failed to create AI assignment notification:', err));
+      }
+
+      res.json({
+        success: true,
+        shift: updatedShift,
+        assignment: {
+          employeeId: assignment.employeeId,
+          employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown',
+          confidence: assignment.confidence,
+          reasoning: assignment.reasoning,
+        },
+        aiConfidence: result.overallConfidence,
+        message: "Smart AI successfully assigned employee to shift"
+      });
+    } catch (error: unknown) {
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      if (error.code === 'SHIFT_ALREADY_CLAIMED') {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        return res.status(409).json({ message: sanitizeError(error), code: error.code });
+      }
+      log.error("Error in AI Fill:", error);
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      res.status(error.statusCode || 500).json({ message: sanitizeError(error) || "Failed to auto-assign shift" });
+    }
+  });
+
+  router.post('/:shiftId/pickup', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { shiftId } = req.params;
+      const userId = req.user?.id;
+      const workspaceId = req.workspaceId;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: 'No workspace selected' });
+      }
+
+      const [shift] = await db.select().from(shifts).where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
+      if (!shift) {
+        return res.status(404).json({ message: 'Shift not found' });
+      }
+
+      if (shift.employeeId) {
+        return res.status(409).json({ message: 'This shift is already assigned to an employee' });
+      }
+
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee) {
+        return res.status(404).json({ message: 'Employee record not found for current user' });
+      }
+
+      if (employee.workspaceId !== workspaceId) {
+        return res.status(403).json({ message: 'Employee does not belong to this workspace' });
+      }
+
+      const eligibility = await employeeDocumentOnboardingService.checkWorkEligibility(employee.id);
+      if (!eligibility.eligible) {
+        return res.status(422).json({
+          message: 'You cannot pick up shifts — your compliance documents are incomplete',
+          reasons: eligibility.reasons,
+          code: 'COMPLIANCE_BLOCK',
+        });
+      }
+
+      const updatedShift = await db.transaction(async (tx) => {
+        const [currentShift] = await tx
+          .select({ id: shifts.id, employeeId: shifts.employeeId })
+          .from(shifts)
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .for('update')
+          .limit(1);
+
+        if (!currentShift) {
+          throw Object.assign(new Error("Shift not found"), { statusCode: 404 });
+        }
+        if (currentShift.employeeId) {
+          throw Object.assign(new Error("Shift was already picked up by another employee"), {
+            statusCode: 409,
+            code: 'SHIFT_ALREADY_CLAIMED',
+          });
+        }
+
+        const [updated] = await tx
+          .update(shifts)
+          .set({ employeeId: employee.id, updatedAt: new Date() })
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          .returning();
+        return updated;
+      });
+
+      res.json(updatedShift);
+    } catch (error: unknown) {
+      log.error('[Shift Marketplace] Pickup error:', error);
+      res.status(500).json({ message: sanitizeError(error) || 'Failed to pick up shift' });
+    }
+  });
+
+  router.post('/:id/fill-request', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const shiftId = req.params.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      // Get the open shift
+      const shift = await storage.getShift(shiftId, workspaceId);
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      // Verify it's an open shift
+      if (shift.employeeId) {
+        return res.status(400).json({ message: "Shift is already assigned or not an open shift" });
+      }
+
+
+      // Validate request body
+      const fillRequestBodySchema = z.object({
+        reason: z.string().optional(),
+        preferredSkills: z.array(z.string()).optional(),
+        maxPayRate: z.string().optional(),
+        maxDistance: z.number().optional(),
+      });
+      const fillRequestParsed = fillRequestBodySchema.safeParse(req.body);
+      if (!fillRequestParsed.success) {
+        return res.status(400).json({ error: 'Invalid request', details: fillRequestParsed.error.flatten() });
+      }
+
+      // Create shift request record
+      const shiftRequest = await db.insert(shiftRequests).values({
+        workspaceId,
+        shiftId,
+        requestReason: fillRequestParsed.data.reason || "No qualified internal employees available",
+        requiredSkills: (shift as any).requiredSkills || [],
+        preferredSkills: fillRequestParsed.data.preferredSkills || [],
+        maxPayRate: shift.payRate || fillRequestParsed.data.maxPayRate || "0",
+        maxDistance: fillRequestParsed.data.maxDistance || 50,
+        status: "searching",
+        createdBy: userId,
+      }).returning();
+
+      // Search contractor pool
+      const contractors = await db
+        .select()
+        .from(contractorPool)
+        .where(
+          and(
+            eq(contractorPool.isActive, true),
+            gte(contractorPool.maxDistanceWilling, fillRequestParsed.data.maxDistance || 50)
+          )
+        );
+
+      if (contractors.length === 0) {
+        await db.update(shiftRequests)
+          .set({ status: "no_matches", completedAt: new Date() })
+          .where(and(eq(shiftRequests.id, shiftRequest[0].id), eq(shiftRequests.workspaceId, workspaceId)));
+
+        return res.status(404).json({
+          message: "No contractors found matching criteria",
+          shiftRequestId: shiftRequest[0].id
+        });
+      }
+
+
+      // Score contractors (simplified scoring for now)
+      const scoredContractors = contractors.map(contractor => {
+        let score = 0.5; // Base score
+
+        // Distance bonus
+        const maxDist = fillRequestParsed.data.maxDistance || 50;
+        if (contractor.maxDistanceWilling && contractor.maxDistanceWilling >= maxDist) {
+          score += 0.2;
+        }
+
+        // Pay rate bonus (lower rate is better for margin)
+        const maxPay = parseFloat(shift.payRate || fillRequestParsed.data.maxPayRate || "100");
+        const contractorRate = parseFloat(contractor.minHourlyRate);
+        if (contractorRate <= maxPay) {
+          score += 0.15;
+        }
+
+        // Last minute availability
+        if (contractor.availableForLastMinute) {
+          score += 0.15;
+        }
+
+        return {
+          contractor,
+          score: Math.min(score, 1.0),
+          matchReasons: [
+            contractor.availableForLastMinute && "Available for last-minute shifts",
+            contractorRate <= maxPay && `Rate within budget ($${contractorRate}/hr)`,
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            contractor.maxDistanceWilling >= maxDist && `Willing to travel (${contractor.maxDistanceWilling} miles)`,
+          ].filter(Boolean) as string[]
+        };
+      });
+
+      // Sort by score
+      scoredContractors.sort((a, b) => b.score - a.score);
+
+      // Send offers to top 3 contractors
+      const topContractors = scoredContractors.slice(0, 3);
+      const offers = [];
+
+      // Generate response tokens for contractors
+      const { generateResponseToken } = await import('../utils/contractorTokens');
+
+      for (const { contractor, score, matchReasons } of topContractors) {
+        const offeredRate = parseFloat(contractor.minHourlyRate) * 1.1; // 10% markup
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // SECURITY FIX: Generate opaque UUID token FIRST (no offerId exposure!)
+        const responseToken = generateResponseToken();
+
+        // Create offer with token included (single atomic operation - cleaner than UPDATE after INSERT)
+        const offer = await db.insert(shiftOffers).values({
+          workspaceId: workspaceId,
+          shiftRequestId: shiftRequest[0].id,
+          shiftId,
+          contractorId: contractor.id,
+          offeredPayRate: offeredRate.toString(),
+          matchScore: score.toString(),
+          matchReasons: matchReasons,
+          status: "pending",
+          expiresAt,
+          responseToken, // Token already generated (opaque UUID - no offerId exposure)
+        }).returning();
+
+        offers.push({
+          offerId: offer[0].id,
+          contractorName: `${contractor.firstName} ${contractor.lastName}`,
+          offeredRate,
+          matchScore: (score * 100).toFixed(1) + '%',
+          matchReasons,
+        });
+
+      }
+
+      // Update shift request with offer count
+      await db.update(shiftRequests)
+        .set({
+          status: "offers_sent",
+          offersCount: offers.length
+        })
+        .where(and(eq(shiftRequests.id, shiftRequest[0].id), eq(shiftRequests.workspaceId, workspaceId)));
+
+      res.json({
+        success: true,
+        shiftRequestId: shiftRequest[0].id,
+        offersCount: offers.length,
+        offers,
+        message: `Sent ${offers.length} offers to qualified contractors`
+      });
+    } catch (error: unknown) {
+      log.error("Error creating fill request:", error);
+      res.status(500).json({ message: sanitizeError(error) || "Failed to create fill request" });
+    }
+  });
+
+  router.post('/:id/acknowledge', requireEmployee, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const employeeId = req.employeeId;
+
+      const shift = await storage.getShift(req.params.id, workspaceId);
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      // OWNERSHIP CHECK: Employee can only acknowledge their own shifts
+      if (shift.employeeId !== employeeId) {
+        return res.status(403).json({ message: "You can only acknowledge shifts assigned to you" });
+      }
+
+      // Update shift with acknowledgment
+      const updated = await storage.updateShift(req.params.id, workspaceId, {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        acknowledgedAt: new Date().toISOString(),
+        status: 'scheduled',
+      });
+
+      // 📡 REAL-TIME: Broadcast so all managers/dashboards update instantly
+      broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
+      broadcastToWorkspace(workspaceId, {
+        type: 'shift_acknowledged',
+        shiftId: req.params.id,
+        employeeId,
+        workspaceId,
+        timestamp: new Date().toISOString(),
+      });
+
+      // 🧠 TRINITY: Trinity needs to see acknowledgments to track coverage confidence
+      platformEventBus.publish({
+        type: 'shift_updated',
+        category: 'workforce',
+        title: 'Shift Acknowledged',
+        description: `Officer confirmed shift assignment`,
+        workspaceId,
+        metadata: { shiftId: req.params.id, employeeId, action: 'acknowledged' },
+        visibility: 'manager',
+      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+
+      res.json({
+        success: true,
+        shift: updated,
+        message: "Shift acknowledged successfully"
+      });
+    } catch (error: unknown) {
+      log.error("Error acknowledging shift:", error);
+      res.status(500).json({ message: "Failed to acknowledge shift" });
+    }
+  });
+
+  router.post('/:id/deny', requireEmployee, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const employeeId = req.employeeId;
+
+      const { denialReason } = req.body;
+      const shift = await storage.getShift(req.params.id, workspaceId);
+      
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      // OWNERSHIP CHECK: Employee can only deny their own shifts
+      if (shift.employeeId !== employeeId) {
+        return res.status(403).json({ message: "You can only deny shifts assigned to you" });
+      }
+
+      // Mark shift as denied
+      const deniedShift = await storage.updateShift(req.params.id, workspaceId, {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        deniedAt: new Date().toISOString(),
+        denialReason: denialReason || 'Employee declined assignment',
+        status: 'cancelled',
+      });
+
+      // 📡 REAL-TIME: Broadcast immediately so manager dashboards show the denial
+      broadcastShiftUpdate(workspaceId, 'shift_updated', deniedShift);
+      broadcastToWorkspace(workspaceId, {
+        type: 'shift_denied',
+        shiftId: req.params.id,
+        employeeId,
+        denialReason: denialReason || 'Employee declined assignment',
+        workspaceId,
+        timestamp: new Date().toISOString(),
+      });
+
+      // 🧠 TRINITY: Publish so Trinity coverage pipeline reacts immediately
+      platformEventBus.publish({
+        type: 'shift_cancelled',
+        category: 'workforce',
+        title: 'Shift Denied by Officer',
+        description: `Officer declined shift assignment — coverage needed`,
+        workspaceId,
+        metadata: {
+          shiftId: req.params.id,
+          employeeId,
+          denialReason: denialReason || 'Employee declined assignment',
+          startTime: shift.startTime,
+          clientId: shift.clientId,
+        },
+        visibility: 'manager',
+      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+
+      // IDEMPOTENCY CHECK: Prevent duplicate replacements on retry
+      const existingReplacement = await db
+        .select()
+        .from(shifts)
+        .where(
+          and(
+            eq(shifts.replacementForShiftId, shift.id),
+            eq(shifts.workspaceId, workspaceId),
+            ne(shifts.status, 'cancelled')
+          )
+        )
+        .limit(1);
+
+      if (existingReplacement.length > 0) {
+        return res.json({
+          success: true,
+          deniedShift: shift,
+          replacementShift: existingReplacement[0],
+          message: "Shift already denied with existing replacement",
+          duplicate: true,
+        });
+      }
+
+      // AUTO-REPLACEMENT: Find backup employee
+      const { scheduleOSAI } = await import('../ai/scheduleos');
+      
+
+      try {
+        // Generate replacement shift for same time slot
+        const replacementResult = await scheduleOSAI.generateSchedule({
+          workspaceId,
+          weekStartDate: new Date(shift.startTime),
+          clientIds: shift.clientId ? [shift.clientId] : [],
+          shiftRequirements: [{
+            title: shift.title || 'Replacement Shift',
+            clientId: shift.clientId || '',
+            startTime: new Date(shift.startTime),
+            endTime: new Date(shift.endTime),
+            requiredEmployees: 1,
+          }],
+        });
+
+        // Create replacement shift if AI found suitable employee
+        if (replacementResult.generatedShifts.length > 0) {
+          const replacement = replacementResult.generatedShifts[0];
+          
+          // Don't assign to same employee who denied
+          if (replacement.employeeId !== shift.employeeId) {
+            const newShift = await storage.createShift({
+              workspaceId,
+              employeeId: replacement.employeeId,
+              clientId: replacement.clientId || null,
+              title: replacement.title || null,
+              description: `Auto-replacement for denied shift ${shift.id}`,
+              // @ts-expect-error — TS migration: fix in refactoring sprint
+              startTime: replacement.startTime.toISOString(),
+              // @ts-expect-error — TS migration: fix in refactoring sprint
+              endTime: replacement.endTime.toISOString(),
+              aiGenerated: true,
+              requiresAcknowledgment: true,
+              replacementForShiftId: shift.id,
+              autoReplacementAttempts: 1,
+              aiConfidenceScore: replacement.aiConfidenceScore.toString(),
+              riskScore: replacement.riskScore.toString(),
+              riskFactors: replacement.riskFactors,
+              status: 'scheduled',
+            });
+
+            // BILLOS™ SYNC: Update invoice for replacement shift
+            let billingUpdate = null;
+            if (shift.clientId) {
+              try {
+                // Search for invoice line item by metadata.shiftId for reliability
+                const allInvoices = await storage.getInvoicesByClient(shift.clientId, workspaceId);
+                let deniedShiftLineItem: any = null;
+                let targetInvoice: any = null;
+
+                for (const invoice of allInvoices) {
+                  if (invoice.status === 'draft') {
+                    const lineItems = await storage.getInvoiceLineItems(invoice.id);
+                    deniedShiftLineItem = lineItems.find((item: any) => {
+                      // Primary search: metadata.shiftId (most reliable)
+                      if (item.metadata && typeof item.metadata === 'object') {
+                        return item.metadata.shiftId === shift.id;
+                      }
+                      // Fallback: description contains shift ID
+                      return item.description?.includes(shift.id);
+                    });
+
+                    if (deniedShiftLineItem) {
+                      targetInvoice = invoice;
+                      break;
+                    }
+                  }
+                }
+
+                if (deniedShiftLineItem && targetInvoice) {
+                  // Remove denied shift line item
+                  // @ts-expect-error — TS migration: fix in refactoring sprint
+                  await storage.deleteInvoiceLineItem(deniedShiftLineItem.id);
+
+                  // Add replacement shift line item
+                  const hours = replacement.billableHours;
+                  const rate = hours > 0 ? replacement.estimatedCost / hours : 0;
+                  const amount = hours * rate;
+
+                  const newLineItem = await storage.createInvoiceLineItem({
+                    invoiceId: targetInvoice.id,
+                    description: `${replacement.title} - ${replacement.employeeName} (${new Date(replacement.startTime).toLocaleDateString()}) [Replacement]`,
+                    quantity: hours.toString(),
+                    unitPrice: rate.toFixed(2),
+                    amount: amount.toFixed(2),
+                    // @ts-expect-error — TS migration: fix in refactoring sprint
+                    metadata: {
+                      shiftId: newShift.id,
+                      aiGenerated: true,
+                      scheduleOSGenerated: true,
+                      replacementFor: shift.id,
+                      billableHours: hours,
+                    },
+                  });
+
+                  // Recalculate invoice totals
+                  const updatedLineItems = await storage.getInvoiceLineItems(targetInvoice.id);
+                  const newSubtotal = updatedLineItems.reduce((sum: number, item: any) => sum + parseFloat(item.amount || '0'), 0);
+                  const taxRate = parseFloat(targetInvoice.taxRate || '0');
+                  const newTaxAmount = newSubtotal * (taxRate / 100);
+                  const newTotal = newSubtotal + newTaxAmount;
+
+                  await storage.updateInvoice(targetInvoice.id, workspaceId, {
+                    subtotal: newSubtotal.toFixed(2),
+                    taxAmount: newTaxAmount.toFixed(2),
+                    total: newTotal.toFixed(2),
+                  });
+
+                  billingUpdate = {
+                    invoiceId: targetInvoice.id,
+                    invoiceNumber: targetInvoice.invoiceNumber,
+                    removedLineItem: deniedShiftLineItem.id,
+                    addedLineItem: newLineItem.id,
+                    message: `Updated invoice ${targetInvoice.invoiceNumber} - replaced denied shift with ${replacement.employeeName}`,
+                  };
+
+                } else {
+                  // Invoice line not found - shift may not be invoiced yet, will be picked up in next invoice generation
+                  billingUpdate = {
+                    message: 'Shift not yet invoiced - replacement will be included in next invoice generation',
+                    deferred: true,
+                  };
+                }
+              } catch (billingError: unknown) {
+                log.error('[Billing Platform] Failed to update invoice for replacement:', billingError);
+                // Non-fatal: replacement shift created successfully, billing can be corrected manually if needed
+                billingUpdate = {
+                  error: (billingError instanceof Error ? billingError.message : String(billingError)),
+                  message: 'Billing sync failed - replacement shift created but invoice may need manual correction',
+                };
+              }
+            }
+
+            return res.json({
+              success: true,
+              deniedShift: shift,
+              replacementShift: newShift,
+              replacementEmployee: replacement.employeeName,
+              message: `Shift denied. Auto-replacement assigned to ${replacement.employeeName}`,
+              warnings: replacementResult.warnings,
+              billingUpdate,
+            });
+          }
+        }
+
+        // No suitable replacement found
+        return res.json({
+          success: true,
+          deniedShift: shift,
+          replacementShift: null,
+          message: "Shift denied. No suitable replacement employee found. Manual scheduling required.",
+          warnings: ["No employees available for this time slot. Consider hiring or adjusting shift requirements."],
+        });
+
+      } catch (replacementError: unknown) {
+        log.error("[AI Scheduling™] Auto-replacement failed:", replacementError);
+        
+        return res.json({
+          success: true,
+          deniedShift: shift,
+          replacementShift: null,
+          message: "Shift denied. Auto-replacement failed. Manual scheduling required.",
+          error: (replacementError instanceof Error ? replacementError.message : String(replacementError)),
+        });
+      }
+
+    } catch (error: unknown) {
+      log.error("Error denying shift:", error);
+      res.status(500).json({ message: sanitizeError(error) || "Failed to deny shift" });
+    }
+  });
+
+  router.post('/bulk', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user?.id || 'unknown';
+
+      // Bulk shift creation is a Business-tier feature
+      const { getWorkspaceTier, hasTierAccess } = await import('../tierGuards');
+      const wsTier = await getWorkspaceTier(workspaceId);
+      if (!hasTierAccess(wsTier, 'business')) {
+        return res.status(402).json({ error: 'Bulk shift creation requires the Business plan or higher', currentTier: wsTier, minimumTier: 'business', requiresTierUpgrade: true });
+      }
+
+      const lockResult = acquireBulkShiftLock(workspaceId, userId);
+      if (!lockResult.acquired) {
+        return res.status(409).json({ error: "A bulk shift creation is already in progress for this workspace", lockedBy: lockResult.holder });
+      }
+
+      try {
+        const { employeeId, clientId, title, description, startDate, endDate, startTime, endTime, recurrence, days } = req.body;
+        
+        const createdShifts = [];
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        while (start <= end) {
+          let shouldCreate = false;
+          if (recurrence === 'daily') {
+            shouldCreate = true;
+          } else if (recurrence === 'weekly' && days?.includes(start.getDay())) {
+            shouldCreate = true;
+          }
+          
+          if (shouldCreate) {
+            const shiftStart = new Date(start);
+            const [hours, minutes] = startTime.split(':');
+            shiftStart.setHours(parseInt(hours), parseInt(minutes), 0);
+            
+            const shiftEnd = new Date(start);
+            const [endHours, endMinutes] = endTime.split(':');
+            shiftEnd.setHours(parseInt(endHours), parseInt(endMinutes), 0);
+            
+            const shift = await storage.createShift({
+              workspaceId,
+              employeeId,
+              clientId: clientId || null,
+              title: title || null,
+              description: description || null,
+              // @ts-expect-error — TS migration: fix in refactoring sprint
+              startTime: shiftStart.toISOString(),
+              // @ts-expect-error — TS migration: fix in refactoring sprint
+              endTime: shiftEnd.toISOString(),
+              status: 'scheduled',
+            });
+            
+            createdShifts.push(shift);
+          }
+          
+          start.setDate(start.getDate() + 1);
+        }
+        
+        res.json({ shifts: createdShifts, count: createdShifts.length });
+      } finally {
+        releaseBulkShiftLock(workspaceId);
+      }
+    } catch (error: unknown) {
+      log.error("Error creating bulk shifts:", error);
+      res.status(400).json({ message: sanitizeError(error) || "Failed to create bulk shifts" });
+    }
+  });
+
+  router.get('/:shiftId/acknowledgments', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+
+      const { shiftAcknowledgments } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      // Verify shift belongs to workspace
+      const shift = await db.query.shifts.findFirst({
+        where: and(
+          eq(shifts.id, req.params.shiftId),
+          eq(shifts.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+
+      const acks = await db.query.shiftAcknowledgments.findMany({
+        where: and(
+          eq(shiftAcknowledgments.workspaceId, workspaceId),
+          eq(shiftAcknowledgments.shiftId, req.params.shiftId)
+        ),
+      });
+
+      const empIds = acks.map((a: any) => a.employeeId).filter(Boolean);
+      const [empRows, shiftRow] = await Promise.all([
+        empIds.length > 0
+          ? db.query.employees.findMany({
+              where: (e, { inArray }) => inArray(e.id, empIds),
+            })
+          : Promise.resolve([]),
+        db.query.shifts.findFirst({
+          where: eq(shifts.id, req.params.shiftId),
+        }),
+      ]);
+      const empMap = new Map((empRows as any[]).map(e => [e.id, e]));
+      const acknowledgments = acks.map((a: any) => ({
+        ...a,
+        shift: shiftRow || null,
+        employee: empMap.get(a.employeeId) || null,
+      }));
+
+      res.json(acknowledgments);
+    } catch (error: unknown) {
+      log.error("Error fetching shift acknowledgments:", error);
+      res.status(500).json({ message: "Failed to fetch acknowledgments" });
+    }
+  });
+
+  router.post('/:shiftId/acknowledgments', requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { eq, and } = await import("drizzle-orm");
+
+      // Verify shift belongs to workspace
+      const shift = await db.query.shifts.findFirst({
+        where: and(
+          eq(shifts.id, req.params.shiftId),
+          eq(shifts.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found in this workspace" });
+      }
+
+      // Get the current employee (who is creating the acknowledgment)
+      const currentEmployee = await db.query.employees.findFirst({
+        where: eq(employees.userId, userId),
+      });
+
+      if (!currentEmployee) {
+        return res.status(404).json({ message: "Employee record not found" });
+      }
+
+      // Validate request body
+      const ackBodySchema = z.object({
+        employeeId: z.string().optional(),
+      });
+      const ackBodyParsed = ackBodySchema.safeParse(req.body);
+      if (!ackBodyParsed.success) {
+        return res.status(400).json({ error: 'Invalid request', details: ackBodyParsed.error.flatten() });
+      }
+
+      // Verify target employee belongs to workspace
+      if (ackBodyParsed.data.employeeId) {
+        const targetEmployee = await db.query.employees.findFirst({
+          where: and(
+            eq(employees.id, ackBodyParsed.data.employeeId),
+            eq(employees.workspaceId, workspaceId)
+          ),
+        });
+
+        if (!targetEmployee) {
+          return res.status(404).json({ message: "Target employee not found in this workspace" });
+        }
+      }
+
+      const { insertShiftAcknowledgmentSchema, shiftAcknowledgments } = await import("@shared/schema");
+      
+      const validatedData = insertShiftAcknowledgmentSchema.parse({
+        ...req.body,
+        workspaceId,
+        shiftId: req.params.shiftId,
+        createdBy: currentEmployee.id,
+      });
+
+      const [acknowledgment] = await db.insert(shiftAcknowledgments)
+        .values(validatedData)
+        .returning();
+
+      res.json(acknowledgment);
+    } catch (error: unknown) {
+      log.error("Error creating shift acknowledgment:", error);
+      res.status(400).json({ message: sanitizeError(error) || "Failed to create acknowledgment" });
+    }
+  });
+
+  router.get('/approvals/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.json({ count: 0 });
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(shifts)
+        .where(and(eq(shifts.workspaceId, workspaceId), eq(shifts.status, 'draft')));
+      res.json({ count: Number(result[0]?.count) || 0 });
+    } catch (error) {
+      log.error('Shifts pending count error:', error);
+      res.status(500).json({ count: 0, error: true });
+    }
+  });
+
+  router.get('/:id/audit', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const shiftId = req.params.id;
+      
+      // Get shift data
+      const shift = await storage.getShift(shiftId, workspaceId);
+      if (!shift) {
+        return res.status(404).json({ message: "Shift not found" });
+      }
+      
+      // Get shift creator info
+      let creatorInfo = null;
+      if (shift.createdAt) {
+        // Note: shifts don't have createdBy field, using workspace owner as fallback
+        const workspace = await storage.getWorkspace(workspaceId);
+        if (workspace) {
+          const owner = await storage.getUser(workspace.ownerId);
+          if (owner) {
+            creatorInfo = {
+              name: (owner as any).displayName || owner.email,
+              email: owner.email,
+              role: 'owner'
+            };
+          }
+        }
+      }
+      
+      let employeeInfo = null;
+      if (shift.employeeId) {
+        const employee = await storage.getEmployeeById(shift.employeeId, shift.workspaceId);
+        if (employee) {
+          employeeInfo = {
+            id: employee.id,
+            name: `${employee.firstName} ${employee.lastName}`,
+            email: employee.email,
+            phone: employee.phone
+          };
+        }
+      }
+      
+      // Get all time entries for this shift
+      const allTimeEntries = await storage.getTimeEntriesByWorkspace(workspaceId);
+      const shiftTimeEntries = allTimeEntries.filter(te => te.shiftId === shiftId);
+      
+      // Aggregate time entry data (clock in/out, GPS, total time)
+      const timeTrackingData = shiftTimeEntries.map(te => ({
+        id: te.id,
+        clockIn: te.clockIn,
+        clockOut: te.clockOut,
+        totalHours: te.totalHours,
+        totalAmount: te.totalAmount,
+        status: te.status,
+        notes: te.notes,
+        gps: {
+          clockIn: {
+            latitude: te.clockInLatitude,
+            longitude: te.clockInLongitude,
+            accuracy: te.clockInAccuracy,
+            ipAddress: te.clockInIpAddress
+          },
+          clockOut: {
+            latitude: te.clockOutLatitude,
+            longitude: te.clockOutLongitude,
+            accuracy: te.clockOutAccuracy,
+            ipAddress: te.clockOutIpAddress
+          },
+          jobSite: {
+            latitude: te.jobSiteLatitude,
+            longitude: te.jobSiteLongitude,
+            address: te.jobSiteAddress
+          }
+        },
+        createdAt: te.createdAt,
+        updatedAt: te.updatedAt
+      }));
+      
+      // Get timesheet edit discrepancies for this shift's time entries
+      const timeEntryIds = shiftTimeEntries.map(te => te.id);
+      const allDiscrepancies = await storage.getTimeEntryDiscrepancies(workspaceId, {});
+      const shiftDiscrepancies = allDiscrepancies.filter(d => 
+        timeEntryIds.includes(d.timeEntryId)
+      );
+      
+      // Calculate summary stats
+      const totalHours = shiftTimeEntries.reduce((sum, te) => {
+        return sum + (parseFloat(te.totalHours as string || "0"));
+      }, 0);
+      
+      const totalAmount = shiftTimeEntries.reduce((sum, te) => {
+        return sum + (parseFloat(te.totalAmount as string || "0"));
+      }, 0);
+      
+      // Aggregate audit data
+      const auditData = {
+        shift: {
+          id: shift.id,
+          title: shift.title,
+          description: shift.description,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          status: shift.status,
+          aiGenerated: shift.aiGenerated,
+          requiresAcknowledgment: shift.requiresAcknowledgment,
+          acknowledgedAt: shift.acknowledgedAt,
+          deniedAt: shift.deniedAt,
+          denialReason: shift.denialReason,
+          billableToClient: shift.billableToClient,
+          hourlyRateOverride: shift.hourlyRateOverride,
+          createdAt: shift.createdAt,
+          updatedAt: shift.updatedAt
+        },
+        creator: creatorInfo,
+        employee: employeeInfo,
+        timeTracking: timeTrackingData,
+        discrepancies: shiftDiscrepancies,
+        summary: {
+          totalTimeEntries: shiftTimeEntries.length,
+          totalHours: totalHours.toFixed(2),
+          totalAmount: totalAmount.toFixed(2),
+          totalDiscrepancies: shiftDiscrepancies.length,
+          hasGpsAnomalies: shiftDiscrepancies.some(d => d.discrepancyType === 'gps_anomaly'),
+          hasIpAnomalies: shiftDiscrepancies.some(d => d.discrepancyType === 'ip_anomaly')
+        }
+      };
+      
+      res.json(auditData);
+    } catch (error: unknown) {
+      log.error("Error fetching shift audit data:", error);
+      res.status(500).json({ message: sanitizeError(error) || "Failed to fetch shift audit data" });
+    }
+  });
+
+  router.post('/:shiftId/start', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      
+      // Get workspace from user's employee record
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Validate shift access and authorization
+      const accessCheck = await validateShiftAccess(req.params.shiftId, employee.id, employee.workspaceId, storage);
+      if (!accessCheck.authorized) {
+        return res.status(403).json({ message: accessCheck.reason });
+      }
+
+      // ── GPS GEO-FENCE ENFORCEMENT AT SHIFT START ──────────────────────────
+      // Directive L3.D: Shift start events require GPS coordinates.
+      // Distance > 200m from site geofence = Out-of-Bounds event in audit log +
+      // manager NDS alert. Non-blocking — shift still starts.
+      const { latitude: startGpsLat, longitude: startGpsLng } = req.body || {};
+      if (startGpsLat != null && startGpsLng != null) {
+        (async () => {
+          try {
+            const [shiftRow] = await db.select({
+              siteId: shifts.siteId,
+              title: shifts.title,
+            }).from(shifts).where(
+              and(eq(shifts.id, req.params.shiftId), eq(shifts.workspaceId, employee.workspaceId))
+            ).limit(1);
+
+            if (shiftRow?.siteId) {
+              const [site] = await db.select({
+                geofenceLat: sites.geofenceLat,
+                geofenceLng: sites.geofenceLng,
+                geofenceRadiusMeters: sites.geofenceRadiusMeters,
+                name: sites.name,
+              }).from(sites).where(
+                and(eq(sites.id, shiftRow.siteId), eq(sites.workspaceId, employee.workspaceId))
+              ).limit(1);
+
+              const geofenceLat = site?.geofenceLat;
+              const geofenceLng = site?.geofenceLng;
+              const geofenceRadius = site?.geofenceRadiusMeters ?? 200;
+
+              if (geofenceLat && geofenceLng) {
+                const distanceM = haversineMeters(
+                  parseFloat(String(startGpsLat)), parseFloat(String(startGpsLng)),
+                  parseFloat(String(geofenceLat)), parseFloat(String(geofenceLng))
+                );
+
+                if (distanceM > geofenceRadius) {
+                  log.warn(`[ShiftGPS] Shift ${req.params.shiftId} started ${distanceM.toFixed(0)}m outside site geofence (threshold: ${geofenceRadius}m)`);
+
+                  // Write audit log entry (non-blocking)
+                  storage.createAuditLog({
+                    workspaceId: employee.workspaceId,
+                    userId: userId!,
+                    action: 'scheduling_gps_out_of_bounds',
+                    actionDescription: `Shift START GPS ${distanceM.toFixed(0)}m from site geofence (threshold: ${geofenceRadius}m) at ${site?.name || shiftRow.siteId}`,
+                    entityType: 'shift',
+                    entityId: req.params.shiftId,
+                    metadata: {
+                      startGpsLat,
+                      startGpsLng,
+                      siteGeofenceLat: geofenceLat,
+                      siteGeofenceLng: geofenceLng,
+                      distanceMeters: Math.round(distanceM),
+                      thresholdMeters: geofenceRadius,
+                      siteName: site?.name,
+                      complianceTag: 'scheduling_gps_audit',
+                      event: 'shift_start',
+                    },
+                  }).catch(err => log.warn('[ShiftGPS] Failed to write out-of-bounds audit log:', err));
+
+                  // NDS alert to workspace managers (non-blocking)
+                  (async () => {
+                    try {
+                      const { NotificationDeliveryService } = await import("../services/notificationDeliveryService");
+                      const mgrs = await db.select({ userId: employees.userId }).from(employees)
+                        .where(and(
+                          eq(employees.workspaceId, employee.workspaceId),
+                          inArray(employees.workspaceRole, ['org_owner', 'co_owner', 'org_manager', 'manager', 'department_manager', 'supervisor']),
+                          eq(employees.status, 'active'),
+                        )).limit(10);
+
+                      for (const mgr of mgrs) {
+                        if (!mgr.userId) continue;
+                        await NotificationDeliveryService.send({
+                          // @ts-expect-error — TS migration: fix in refactoring sprint
+                          type: 'geo_fence_violation',
+                          workspaceId: employee.workspaceId,
+                          recipientUserId: mgr.userId,
+                          channel: 'push',
+                          subject: 'GPS Out-of-Bounds Alert',
+                          body: {
+                            title: 'GPS Out-of-Bounds Alert',
+                            body: `Officer clocked in ${distanceM.toFixed(0)}m outside site geofence for shift at ${site?.name || 'assigned site'}`,
+                            type: 'geo_alert',
+                            url: '/schedule',
+                            shiftId: req.params.shiftId,
+                            employeeId: employee.id,
+                            distanceMeters: Math.round(distanceM),
+                          },
+                        }).catch(() => {});
+                      }
+                    } catch (ndsErr) {
+                      log.warn('[ShiftGPS] NDS manager alert failed (non-blocking):', ndsErr);
+                    }
+                  })();
+                }
+              }
+            }
+          } catch (gpsErr) {
+            log.warn('[ShiftGPS] Shift-start GPS geo-fence check failed (non-blocking):', gpsErr);
+          }
+        })();
+      }
+
+      const result = await shiftChatroomWorkflowService.startShift({
+        workspaceId: employee.workspaceId,
+        shiftId: req.params.shiftId,
+        userId,
+        employeeId: employee.id,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: result.error,
+          steps: result.steps 
+        });
+      }
+
+      res.json({
+        success: true,
+        chatroomId: result.chatroomId,
+        steps: result.steps,
+      });
+    } catch (error: unknown) {
+      log.error("Error starting shift:", error);
+      res.status(500).json({ message: sanitizeError(error) || "Failed to start shift" });
+    }
+  });
+
+  router.post('/:shiftId/end', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      
+      // Get workspace from employee record
+      const employee = await storage.getEmployeeByUserId(userId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Validate shift access and authorization
+      const accessCheck = await validateShiftAccess(req.params.shiftId, employee.id, employee.workspaceId, storage);
+      if (!accessCheck.authorized) {
+        return res.status(403).json({ message: accessCheck.reason });
+      }
+
+      const { closureReason = 'shift_completed' } = req.body;
+      
+      const result = await shiftChatroomWorkflowService.endShift({
+        workspaceId: employee.workspaceId,
+        shiftId: req.params.shiftId,
+        userId,
+        employeeId: employee.id,
+      }, closureReason);
+
+      if (!result.success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: result.error,
+          steps: result.steps 
+        });
+      }
+
+      res.json({
+        success: true,
+        darId: result.darId,
+        steps: result.steps,
+      });
+    } catch (error: unknown) {
+      log.error("Error ending shift:", error);
+      res.status(500).json({ message: sanitizeError(error) || "Failed to end shift" });
+    }
+  });
+
+  router.get('/:shiftId/site-info', requireAuth, async (req: any, res) => {
+    try {
+      const siteInfo = await shiftChatroomWorkflowService.getSiteInfo(req.params.shiftId);
+      res.json(siteInfo);
+    } catch (error: unknown) {
+      log.error("Error fetching site info:", error);
+      res.status(500).json({ message: sanitizeError(error) || "Failed to fetch site info" });
+    }
+  });
+
+  router.post('/:shiftId/respond', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { shiftId } = req.params;
+      const { action, reason } = req.body; // action: 'accept' or 'deny'
+      const employeeId = req.user?.id;
+      const { shiftActions } = await import("@shared/schema");
+
+      if (!['accept', 'deny'].includes(action)) {
+        return res.status(400).json({ message: 'Invalid action. Must be accept or deny.' });
+      }
+
+      const [shiftAction] = await db
+        .insert(shiftActions)
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        .values({
+          workspaceId,
+          shiftId,
+          employeeId: employeeId!,
+          actionType: action,
+          status: 'completed',
+          reason,
+          processedAt: new Date(),
+        })
+        .returning();
+
+      res.json(shiftAction);
+    } catch (error: unknown) {
+      log.error('Error responding to shift:', error);
+      res.status(500).json({ message: sanitizeError(error) || 'Failed to respond to shift' });
+    }
+  });
+
+  router.post('/:shiftId/switch', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { shiftId } = req.params;
+      const { targetEmployeeId, reason } = req.body;
+      const employeeId = req.user?.id;
+      const { shiftActions } = await import("@shared/schema");
+
+      const [switchRequest] = await db
+        .insert(shiftActions)
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        .values({
+          workspaceId,
+          shiftId,
+          employeeId: employeeId!,
+          targetEmployeeId,
+          actionType: 'switch',
+          status: 'pending',
+          reason,
+        })
+        .returning();
+
+      res.json(switchRequest);
+    } catch (error: unknown) {
+      log.error('Error requesting shift switch:', error);
+      res.status(500).json({ message: sanitizeError(error) || 'Failed to request shift switch' });
+    }
+  });
+
 router.patch("/:shiftId/approve", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { shiftId } = req.params;
@@ -1505,6 +2894,23 @@ router.patch("/:shiftId/approve", requireAuth, async (req: AuthenticatedRequest,
     res.json({ success: true, data: shift });
   } catch (error: unknown) {
     log.error('Error approving shift:', error);
+    res.status(400).json({ error: sanitizeError(error) });
+  }
+});
+
+router.patch("/:shiftId/reject", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { shiftId } = req.params;
+    const { reason, autoReplace } = req.body;
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId;
+    if (!userId) return res.status(400).json({ error: 'User required' });
+    if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+
+    const shift = await rejectShift(shiftId, userId, reason || 'No reason provided', workspaceId, autoReplace);
+    res.json({ success: true, data: shift });
+  } catch (error: unknown) {
+    log.error('Error rejecting shift:', error);
     res.status(400).json({ error: sanitizeError(error) });
   }
 });
@@ -1536,107 +2942,234 @@ router.post("/bulk-approve", requireAuth, async (req: AuthenticatedRequest, res)
   }
 });
 
+
+router.post("/:shiftId/send-reminder", requireManager, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { shiftId } = req.params;
+
+    const result = await shiftRemindersService.sendShiftReminder(shiftId, workspaceId);
+
+    if (!result) {
+      return res.status(404).json({ error: 'Shift not found' });
+    }
+
+    res.json({ 
+      success: result.status === 'sent', 
+      data: result,
+    });
+  } catch (error: unknown) {
+    log.error('Error sending shift reminder:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+router.post("/send-reminders/bulk", requireManager, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { startDate, endDate } = req.body;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate required' });
+    }
+
+    const results = await shiftRemindersService.sendBulkShiftReminders(
+      workspaceId,
+      new Date(startDate),
+      new Date(endDate)
+    );
+
+    const successCount = results.filter(r => r.status === 'sent').length;
+
+    res.json({ 
+      success: true,
+      data: {
+        totalReminders: results.length,
+        successful: successCount,
+        failed: results.length - successCount,
+        details: results,
+      }
+    });
+  } catch (error: unknown) {
+    log.error('Error sending bulk shift reminders:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+router.post("/send-reminders/upcoming", requireManager, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+
+    const results = await shiftRemindersService.sendUpcomingShiftReminders(workspaceId);
+
+    const successCount = results.filter(r => r.status === 'sent').length;
+
+    res.json({ 
+      success: true,
+      data: {
+        totalReminders: results.length,
+        successful: successCount,
+        failed: results.length - successCount,
+        message: `Sent ${successCount} reminders for upcoming shifts`,
+      }
+    });
+  } catch (error: unknown) {
+    log.error('Error sending upcoming shift reminders:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
 // ============================================================================
 // SHIFT OFFER ENDPOINTS — officer accepts/declines via UNS or email reply
 // offerId is the notif.relatedEntityId set when coverage_offer UNS is fired
 // ============================================================================
 
-/**
- * GET /api/shifts/offers/my/pending — Readiness Section 15
- * Lists the authenticated worker's open (not accepted, not declined, not
- * expired) shift offers. The worker-dashboard banner calls this to surface
- * day-one shift offers instead of relying on SMS.
- */
-router.get("/offers/my/pending", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.get("/offers/:offerId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ error: 'No workspace' });
-
+    const { offerId } = req.params;
+    const workspaceId = req.workspaceId!;
+    const { db } = await import('../db');
     const { notifications } = await import('@shared/schema');
-    const { and, eq, desc } = await import('drizzle-orm');
+    const { eq, and } = await import('drizzle-orm');
 
-    const rows = await db
+    const [notif] = await db
       .select()
       .from(notifications)
       .where(
         and(
           eq(notifications.workspaceId, workspaceId),
-          eq(notifications.userId, userId),
-          eq(notifications.type, 'coverage_offer'),
+          eq(notifications.relatedEntityId, offerId),
         ),
       )
-      .orderBy(desc(notifications.createdAt))
-      .limit(25);
+      .limit(1);
 
-    const now = Date.now();
-    const offers = rows
-      .map((n) => {
-        const meta = (n as any).metadata || {};
-        const expiresAt = meta.expiresAt ? new Date(meta.expiresAt).getTime() : null;
-        const expired = expiresAt !== null && expiresAt < now;
-        const accepted = !!meta.accepted;
-        const declined = !!meta.declined;
-        return {
-          offerId: n.relatedEntityId,
-          workflowId: meta.workflowId || '',
-          location: meta.location || 'See details',
-          date: meta.date || null,
-          startTime: meta.startTime || null,
-          endTime: meta.endTime || null,
-          positionType: meta.positionType || 'Security Officer',
-          officerPayRate: meta.officerPayRate ? parseFloat(meta.officerPayRate) : undefined,
-          expiresAt: meta.expiresAt || null,
-          status: accepted ? 'accepted' : declined ? 'declined' : expired ? 'expired' : 'pending',
-        };
-      })
-      .filter((o) => o.status === 'pending' && o.offerId);
+    if (!notif) {
+      return res.status(404).json({ error: 'Offer not found or has expired' });
+    }
 
-    res.json({ offers, count: offers.length });
+    const meta = (notif as any).metadata || {};
+    const isAccepted = !!meta.accepted;
+    const isDeclined = !!meta.declined;
+
+    return res.json({
+      offerId,
+      workflowId: meta.workflowId || '',
+      location:   meta.location    || 'See details',
+      address:    meta.address,
+      date:       meta.date        || 'TBD',
+      startTime:  meta.startTime   || 'TBD',
+      endTime:    meta.endTime     || 'TBD',
+      positionType:      meta.positionType      || 'Security Officer',
+      officerPayRate:    meta.officerPayRate    ? parseFloat(meta.officerPayRate) : undefined,
+      specialRequirements: meta.specialRequirements || [],
+      status:      isAccepted ? 'accepted' : isDeclined ? 'declined' : 'pending',
+      workspaceName: meta.workspaceName || 'Your Organization',
+    });
   } catch (error: unknown) {
-    log.error('[ShiftOffer] list-my-pending error:', error);
-    res.status(500).json({ error: 'Failed to list pending offers' });
+    log.error('[ShiftOffer] GET error:', error);
+    return res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-router.get('/upcoming', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user?.id;
-      const workspaceId = req.workspaceId;
-      if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
+router.post("/offers/:offerId/accept", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { offerId } = req.params;
+    const workspaceId = req.workspaceId!;
+    const userId = req.user?.id;
+    const { db } = await import('../db');
+    const { notifications } = await import('@shared/schema');
+    const { eq, and } = await import('drizzle-orm');
 
-      const employee = await storage.getEmployeeByUserId(userId!, workspaceId);
-      if (!employee) return res.json([]);
+    const [notif] = await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.workspaceId, workspaceId),
+          eq(notifications.relatedEntityId, offerId),
+        ),
+      )
+      .limit(1);
 
-      const now = new Date();
-      const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      const futureEnd = new Date(tomorrowStart);
-      futureEnd.setDate(futureEnd.getDate() + 3);
-
-      const upcoming = await storage.getShiftsByEmployeeAndDateRange(
-        workspaceId, employee.id, tomorrowStart, futureEnd
-      );
-
-      const mapped = upcoming.map((s: any) => ({
-        id: s.id,
-        date: s.date || new Date(s.startTime).toISOString().split('T')[0],
-        siteName: s.title || 'Shift',
-        startTime: s.startTime,
-        endTime: s.endTime,
-        // Phase 26E — acknowledgment state for worker-side accept/deny UI.
-        requiresAcknowledgment: !!s.requiresAcknowledgment,
-        acknowledgedAt: s.acknowledgedAt || null,
-        deniedAt: s.deniedAt || null,
-        rawStatus: s.status || null,
-      }));
-
-      res.json(mapped);
-    } catch (error: unknown) {
-      log.error("[ShiftRoute] Failed to fetch upcoming shifts:", error);
-      res.status(500).json({ error: "Failed to fetch upcoming shifts" });
+    if (!notif) {
+      return res.status(404).json({ error: 'Offer not found' });
     }
-  })
+
+    if (notif.userId !== userId) {
+      return res.status(403).json({ error: 'This offer was not sent to you' });
+    }
+
+    const currentMeta = (notif as any).metadata || {};
+    if (currentMeta.accepted) {
+      return res.json({ success: true, message: 'Already accepted' });
+    }
+    if (currentMeta.declined) {
+      return res.status(400).json({ error: 'This offer has already been declined' });
+    }
+
+    await db
+      .update(notifications)
+      .set({
+        isRead: true,
+        readAt: new Date(),
+        metadata: { ...currentMeta, accepted: true, acceptedAt: new Date().toISOString(), acceptedByUserId: userId },
+      })
+      .where(and(eq(notifications.id, notif.id), eq(notifications.workspaceId, workspaceId)));
+
+    log.info(`[ShiftOffer] Officer ${userId} accepted offer ${offerId} in workspace ${workspaceId}`);
+    return res.json({ success: true, message: 'Shift offer accepted. You will receive confirmation details shortly.' });
+  } catch (error: unknown) {
+    log.error('[ShiftOffer] Accept error:', error);
+    return res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+router.post("/offers/:offerId/decline", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { offerId } = req.params;
+    const workspaceId = req.workspaceId!;
+    const userId = req.user?.id;
+    const { db } = await import('../db');
+    const { notifications } = await import('@shared/schema');
+    const { eq, and } = await import('drizzle-orm');
+
+    const [notif] = await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.workspaceId, workspaceId),
+          eq(notifications.relatedEntityId, offerId),
+          eq(notifications.userId, userId!),
+        ),
+      )
+      .limit(1);
+
+    if (!notif) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    const currentMeta = (notif as any).metadata || {};
+    if (currentMeta.declined) {
+      return res.json({ success: true, message: 'Already declined' });
+    }
+
+    await db
+      .update(notifications)
+      .set({
+        isRead: true,
+        readAt: new Date(),
+        metadata: { ...currentMeta, declined: true, declinedAt: new Date().toISOString(), declinedByUserId: userId },
+      })
+      .where(and(eq(notifications.id, notif.id), eq(notifications.workspaceId, workspaceId)));
+
+    log.info(`[ShiftOffer] Officer ${userId} declined offer ${offerId}`);
+    return res.json({ success: true, message: 'Offer declined.' });
+  } catch (error: unknown) {
+    log.error('[ShiftOffer] Decline error:', error);
+    return res.status(500).json({ error: sanitizeError(error) });
+  }
+});
 
 export default router;
 

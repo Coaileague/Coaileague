@@ -506,7 +506,7 @@ class ComplianceEnforcementService {
         log.info(`[ComplianceEnforcement] Day-13 warning for ${win.entityType} ${win.entityId}`);
         try {
           await universalNotificationEngine.sendNotification({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif:compliance_warning:${win.id}:day_13`,
           type: 'compliance_warning',
             title: 'FINAL WARNING: Compliance Deadline Tomorrow',
             message: `${win.entityType === 'officer' ? 'Officer' : 'Organization'} (${win.entityId}) has 1 day remaining to submit required compliance documents before account freeze. This is the final warning.`,
@@ -531,7 +531,7 @@ class ComplianceEnforcementService {
         log.info(`[ComplianceEnforcement] Day-11 warning for ${win.entityType} ${win.entityId}`);
         try {
           await universalNotificationEngine.sendNotification({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif:compliance_warning:${win.id}:day_11`,
           type: 'compliance_warning',
             title: 'Compliance Warning: 3 Days Remaining',
             message: `${win.entityType === 'officer' ? 'Officer' : 'Organization'} (${win.entityId}) has 3 days to submit required compliance documents. Failure to comply will result in account freeze.`,
@@ -652,7 +652,7 @@ class ComplianceEnforcementService {
           universalNotificationEngine.sendNotification({
             workspaceId: wsId,
             recipientRole: 'manager',
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif:compliance_doc_expired:${win.id}:expired`,
           type: 'compliance_document_expired',
             priority: 'high',
             title: 'Compliance Document Expired',
@@ -661,7 +661,7 @@ class ComplianceEnforcementService {
           }).catch((e: unknown) => log.error('[ComplianceEnforcement] expiry notify failed:', e));
 
           platformEventBus.publish({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif:compliance_doc_expired:${win.id}:event`,
           type: 'compliance_document_expired',
             workspaceId: wsId,
             metadata: { windowId: win.id, entityType: win.entityType, entityId: win.entityId, expiredDocTypes: expiredTypes, isStillCompliant },

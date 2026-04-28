@@ -1037,14 +1037,23 @@ class TrinityChatService {
     }
 
     // C1 FIX: Inject live personal context for officers/employees.
-    // Without this block, Trinity tells officers it can show their schedule/pay but
-    // has no actual data — leading to hallucinations or unhelpful refusals.
     if (!isManagerLevel && workspaceRole) {
       try {
         const personalCtx = await this.getOfficerPersonalContext(userId, workspaceId);
         if (personalCtx) systemPrompt += `\n\n${personalCtx}`;
       } catch (err: any) {
         log.warn('[TrinityChatService] Officer personal context fetch failed (non-fatal):', err?.message);
+      }
+
+      // === SUBTEXT DETECTION — cross-reference stated vs behavioral ===
+      // Trinity checks if "I'm fine" actually means "I'm fine" given recent patterns
+      if (userId && workspaceId && message) {
+        try {
+          const subtext = await analyzeSubtext(message, userId, workspaceId);
+          if (subtext.delta !== 'aligned' && subtext.recommendedAdjustment) {
+            systemPrompt += `\n\nSUBTEXT INSIGHT: ${subtext.insight} ${subtext.recommendedAdjustment}`;
+          }
+        } catch { /* subtext is always non-fatal */ }
       }
     }
 
@@ -1736,6 +1745,43 @@ Do NOT skip steps — decompose fully before concluding.`;
       actionId: aiResponse.toolCalls?.[0]?.name ?? undefined,
       toolUsed: aiResponse.toolCalls?.[0]?.name ?? undefined,
     }).catch((err) => log.warn('[TrinityChatService] Fire-and-forget failed:', err));
+
+    // === EPISODIC MEMORY STORE (non-blocking post-response) ===
+    // Trinity writes to her notebook after every substantive exchange
+    if (userId && workspaceId && message && aiResponse.text) {
+      setImmediate(async () => {
+        try {
+          const isSubstantive = message.length > 30 || aiResponse.text.length > 50;
+          if (isSubstantive) {
+            const topics: string[] = [];
+            if (/schedule|shift|coverage/i.test(message)) topics.push('scheduling');
+            if (/pay|payroll|wage|overtime/i.test(message)) topics.push('payroll');
+            if (/certif|license|expir/i.test(message)) topics.push('compliance');
+            if (/incident|report/i.test(message)) topics.push('incidents');
+            if (/calloff|sick|absent/i.test(message)) topics.push('calloffs');
+
+            await storeEpisodicMemory({
+              workspaceId,
+              entityType: isManagerLevel ? 'manager' : 'officer',
+              entityId: userId,
+              summary: `User: "${message.slice(0, 120)}" → Trinity: "${aiResponse.text.slice(0, 120)}"`,
+              topicsDiscussed: topics,
+              importanceScore: topics.length > 0 ? 0.7 : 0.4,
+              conversationId: session.id,
+            });
+
+            await appendWorkingMemory({
+              workspaceId,
+              eventType: 'chat_response',
+              eventSummary: `Responded to ${isManagerLevel ? 'manager' : 'officer'} on: "${message.slice(0, 80)}"`,
+              entityType: isManagerLevel ? 'manager' : 'officer',
+              entityId: userId,
+              emotionalContext: emotionalSignal?.type,
+            });
+          }
+        } catch { /* always non-fatal */ }
+      });
+    }
 
     trinityThoughtEngine.reflect(
       'action',

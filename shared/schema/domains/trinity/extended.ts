@@ -475,3 +475,139 @@ export const insertTrinityEmotionalMemorySchema = createInsertSchema(trinityEmot
 export type InsertTrinityEmotionalMemory = z.infer<typeof insertTrinityEmotionalMemorySchema>;
 export type TrinityEmotionalMemory = typeof trinityEmotionalMemory.$inferSelect;
 
+
+// ── Trinity Episodic Memory — Persistent conversation recall ─────────────────
+// Every conversation gets compressed and stored here. Trinity retrieves
+// top-K relevant memories by semantic similarity before each new interaction.
+// Old memories are compressed further, never deleted.
+export const trinityEpisodicMemory = pgTable("trinity_episodic_memory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  // Who this memory is about
+  entityType: varchar("entity_type").notNull(), // 'officer' | 'client' | 'workspace'
+  entityId: varchar("entity_id").notNull(),
+
+  // The compressed memory
+  summary: text("summary").notNull(),           // 200-token max compression of conversation
+  keyFacts: text("key_facts"),                  // JSON array of discrete facts extracted
+  emotionalTone: varchar("emotional_tone"),     // dominant emotion in the episode
+  topicsDiscussed: text("topics_discussed"),    // JSON array of topic tags
+  actionsTaken: text("actions_taken"),          // JSON array of what Trinity did/said
+
+  // Relevance scoring
+  importanceScore: decimal("importance_score", { precision: 4, scale: 3 }).default('0.5'),
+  compressionLevel: integer("compression_level").default(0), // 0=full, 1=compressed, 2=archived
+
+  // Temporal context
+  episodeDate: timestamp("episode_date").notNull(),
+  conversationId: varchar("conversation_id"),   // optional link to original chat
+
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertTrinityEpisodicMemorySchema = createInsertSchema(trinityEpisodicMemory).omit({ id: true });
+export type InsertTrinityEpisodicMemory = z.infer<typeof insertTrinityEpisodicMemorySchema>;
+export type TrinityEpisodicMemory = typeof trinityEpisodicMemory.$inferSelect;
+
+// ── Trinity Working Memory — Today's operational scratchpad ──────────────────
+// Rolling daily log per workspace. Every Trinity action appends an entry.
+// Every new request reads today's entries first for operational context.
+// TTL: 24h, then compressed to episodic memory.
+export const trinityWorkingMemory = pgTable("trinity_working_memory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  // The event that happened
+  eventType: varchar("event_type").notNull(), // 'shift_filled' | 'calloff_processed' | 'email_triaged' | 'alert_sent' | 'chat_response'
+  eventSummary: text("event_summary").notNull(),
+
+  // Who was involved
+  entityType: varchar("entity_type"),  // 'officer' | 'client' | 'site'
+  entityId: varchar("entity_id"),
+  entityName: varchar("entity_name"),
+
+  // Context at time of event
+  emotionalContext: varchar("emotional_context"), // emotional state detected during this event
+  outcomeStatus: varchar("outcome_status").default('pending'), // 'pending' | 'resolved' | 'escalated'
+  metadata: text("metadata"),          // JSON for any extra context
+
+  // When it happened (used for TTL cleanup)
+  happenedAt: timestamp("happened_at").notNull().default(sql`now()`),
+  expiresAt: timestamp("expires_at").notNull(),  // happenedAt + 24h
+});
+
+export const insertTrinityWorkingMemorySchema = createInsertSchema(trinityWorkingMemory).omit({ id: true });
+export type InsertTrinityWorkingMemory = z.infer<typeof insertTrinityWorkingMemorySchema>;
+export type TrinityWorkingMemory = typeof trinityWorkingMemory.$inferSelect;
+
+// ── Trinity Deliberation Log — High-stakes decision audit trail ───────────────
+// For armed posts, payroll, incident escalation — Trinity shows her reasoning.
+// Stored so managers can review and trust is built through transparency.
+export const trinityDeliberationLog = pgTable("trinity_deliberation_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  // The decision being made
+  actionId: varchar("action_id"),       // link to workflow/orchestration action
+  actionType: varchar("action_type").notNull(),
+  actionDescription: text("action_description").notNull(),
+
+  // The 3-step deliberation
+  whatIKnow: text("what_i_know").notNull(),     // Step 1: context assembled
+  myOptions: text("my_options").notNull(),      // Step 2: options + risks
+  myDecision: text("my_decision").notNull(),    // Step 3: chosen path + reasoning
+  confidenceScore: decimal("confidence_score", { precision: 4, scale: 3 }),
+
+  // Was the decision validated by a human?
+  humanReviewed: boolean("human_reviewed").default(false),
+  humanApproved: boolean("human_approved"),
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertTrinityDeliberationLogSchema = createInsertSchema(trinityDeliberationLog).omit({ id: true });
+export type InsertTrinityDeliberationLog = z.infer<typeof insertTrinityDeliberationLogSchema>;
+export type TrinityDeliberationLog = typeof trinityDeliberationLog.$inferSelect;
+
+// ── HelpAI Officer Profiles — Per-officer interaction memory ─────────────────
+// HelpAI builds a profile of each officer: communication style, patterns,
+// struggles, preferences. Injected into context on room open.
+export const helpaiOfficerProfiles = pgTable("helpai_officer_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  officerId: varchar("officer_id").notNull(),
+
+  // Communication preferences (learned)
+  preferredStyle: varchar("preferred_style").default('balanced'), // 'brief' | 'detailed' | 'friendly' | 'professional'
+  preferredLanguage: varchar("preferred_language").default('en'),
+  responseLength: varchar("response_length").default('medium'),   // 'short' | 'medium' | 'long'
+
+  // Patterns observed
+  commonRequests: text("common_requests"),    // JSON array of frequent request types
+  commonStruggles: text("common_struggles"),  // JSON array e.g. ['clock-out reminder', 'schedule confusion']
+  strengths: text("strengths"),               // JSON array e.g. ['always on time', 'detailed reports']
+
+  // Emotional baseline
+  typicalMood: varchar("typical_mood").default('neutral'),
+  stressSignals: text("stress_signals"),      // JSON: patterns that indicate stress for this officer
+  distressHistory: integer("distress_history").default(0), // count of distress events
+
+  // Interaction stats
+  totalInteractions: integer("total_interactions").default(0),
+  lastInteractionAt: timestamp("last_interaction_at"),
+  lastEmotionalState: varchar("last_emotional_state").default('neutral'),
+
+  // Free-form notes (Trinity/HelpAI generated)
+  observationNotes: text("observation_notes"), // 150-token max summary
+
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertHelpaiOfficerProfileSchema = createInsertSchema(helpaiOfficerProfiles).omit({ id: true });
+export type InsertHelpaiOfficerProfile = z.infer<typeof insertHelpaiOfficerProfileSchema>;
+export type HelpaiOfficerProfile = typeof helpaiOfficerProfiles.$inferSelect;

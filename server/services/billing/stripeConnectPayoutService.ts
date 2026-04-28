@@ -24,7 +24,7 @@ import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
 import { getStripe, isStripeConfigured } from './stripeClient';
 
 const log = createLogger('stripeConnectPayoutService');
-// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
     return (getStripe() as any)[prop];
@@ -322,7 +322,6 @@ class StripeConnectPayoutService {
               title: 'Payroll Tracking Error',
               message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the internal tracking record failed to update. Please verify disbursement in your payroll records. Error: ${(err instanceof Error ? err.message : String(err))}`,
               priority: 'high',
-              idempotencyKey: `payroll_tracking_error-${Date.now()}-${ws.ownerId}`
             });
           }
         } catch (notifyErr: any) {
@@ -360,7 +359,6 @@ class StripeConnectPayoutService {
               title: 'Payroll Payout Log Error',
               message: `Stripe payout ${transfer.id} succeeded for entry ${payrollEntryId}, but the payout audit log failed to record. Manual reconciliation may be needed. Error: ${(err instanceof Error ? err.message : String(err))}`,
               priority: 'high',
-              idempotencyKey: `payroll_tracking_error-${Date.now()}-${ws.ownerId}`
             });
           }
         } catch (notifyErr: any) {

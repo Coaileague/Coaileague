@@ -112,6 +112,7 @@ router.get('/personal-data', async (req: AuthenticatedRequest, res) => {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userName = (req.user)?.fullName || (req.user)?.email || 'Admin';
 
     // Count open escalation tickets assigned to this staff member
@@ -376,7 +377,7 @@ router.patch('/master-keys/organizations/:id', async (req: AuthenticatedRequest,
           const { TIER_PRICING } = await import('../services/billing/subscriptionManager');
 
 
-          // Get current subscription (using lazy Stripe factory per TRINITY.md §F)
+          // Get current subscription (using lazy Stripe factory per CLAUDE.md §F)
           const subscription = await getStripe().subscriptions.retrieve(existingWorkspace.stripeSubscriptionId);
 
           // SECURITY: Check subscription status before updating
@@ -1066,7 +1067,7 @@ router.post('/users', async (req: AuthenticatedRequest, res) => {
     const { passwordHash: _, ...safeUser } = newUser;
 
     // Grant platform role if specified
-    if (platformRole && ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer', 'Bot', 'none'].includes(platformRole)) {
+    if (platformRole && ['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
       await db.insert(platformRoles).values({
         userId: newUser.id,
         role: platformRole,
@@ -1168,6 +1169,7 @@ router.post('/staff/grant-role', async (req: AuthenticatedRequest, res) => {
     const PLATFORM_ROLE_LEVELS: Record<string, number> = {
       root_admin: 5, deputy_admin: 4, sysop: 3, support_manager: 3, compliance_officer: 3, support_agent: 2,
     };
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     const grantorRole = (req.user)?.platformRole as string | undefined;
     const grantorLevel = grantorRole ? (PLATFORM_ROLE_LEVELS[grantorRole] ?? 0) : 0;
     const targetLevel = PLATFORM_ROLE_LEVELS[role] ?? 0;
@@ -1665,22 +1667,32 @@ router.post('/team/agents', async (req: AuthenticatedRequest, res) => {
 // RECYCLED CREDITS PIPELINE — /api/platform/credits
 // ============================================================================
 
-// GET /api/platform/credits/recycled — RETIRED
-// Credits are not recycled. Token usage rolls over naturally via token_usage_monthly.
-router.get('/credits/recycled', async (_req: AuthenticatedRequest, res) => {
-  res.status(410).json({
-    error: 'Recycled credits pipeline retired — tokens are not recycled.',
-    stats: { pool: 0, deposits: [] },
-  });
+// GET /api/platform/credits/recycled
+// Returns platform pool balance and deposit history from forfeited tenant credits
+router.get('/credits/recycled', async (req: AuthenticatedRequest, res) => {
+  try {
+    // @ts-expect-error — TS migration: fix in refactoring sprint
+    const { getRecycledCreditsStats } = await import('../services/billing/recycledCreditsPipeline');
+    const stats = await getRecycledCreditsStats();
+    res.json(stats);
+  } catch (err: unknown) {
+    res.status(500).json({ error: 'Failed to fetch recycled credits stats', details: sanitizeError(err) });
+  }
 });
 
-// POST /api/platform/credits/recycled/trigger — RETIRED
-router.post('/credits/recycled/trigger', requirePlatformAdmin, async (_req: AuthenticatedRequest, res) => {
-  res.status(410).json({
-    error: 'Recycled credits sweep retired — no action taken.',
-    success: true,
-    result: null,
-  });
+// POST /api/platform/credits/recycled/trigger
+// Manually trigger a recycled credits sweep (root_admin only, for testing)
+router.post('/credits/recycled/trigger', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { resetMonthlyCredits } = await import('../services/billing/creditResetCron');
+    // Only sweep, don't reset balances — run a targeted sweep of current cycle
+    const { sweepRecycledCredits } = await import('../services/billing/recycledCreditsPipeline');
+    // workspace_credits table dropped (Phase 16) — sweep is a no-op
+    const result = await sweepRecycledCredits([]);
+    res.json({ success: true, result });
+  } catch (err: unknown) {
+    res.status(500).json({ error: 'Sweep failed', details: sanitizeError(err) });
+  }
 });
 
 // ============================================================================

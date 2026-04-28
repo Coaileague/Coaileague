@@ -523,7 +523,7 @@ class StripeEventBridge {
     await universalNotificationEngine.sendNotification({
       workspaceId,
       userId: workspace.ownerId,
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif:stripe:${workspaceId}:${notification.type}`,
           type: 'system',
       title: notification.title,
       message: notification.message,

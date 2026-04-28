@@ -58,3 +58,23 @@ export function validateParams<T>(schema: ZodSchema<T>) {
     next();
   };
 }
+
+/**
+ * formatZodIssues — formats Zod validation errors into a clean array
+ * Replaces the pattern of accessing error.issues directly in route handlers.
+ * Used by Copilot-refactored routes throughout the codebase.
+ */
+export function formatZodIssues(error: import('zod').ZodError): Array<{ field: string; message: string }> {
+  return error.issues.map(issue => ({
+    field: issue.path.join('.') || 'root',
+    message: issue.message,
+  }));
+}
+
+/**
+ * zodErrorResponse — standard 400 response shape for Zod failures.
+ * Returns { error: 'Validation failed', issues: [...] }
+ */
+export function zodErrorResponse(error: import('zod').ZodError): { error: string; issues: Array<{ field: string; message: string }> } {
+  return { error: 'Validation failed', issues: formatZodIssues(error) };
+}

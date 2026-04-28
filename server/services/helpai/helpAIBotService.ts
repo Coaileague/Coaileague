@@ -34,6 +34,9 @@ import {
 } from '../shared/helpaiMemoryService';
 import { buildFullKnowledgeBlock } from './helpAIKnowledgeTools';
 import { createLogger } from '../../lib/logger';
+import { getOfficerPersona, buildPersonaPrompt, updateOfficerProfile } from './helpAIOfficerPersonaService';
+import { detectDistress, notifySupervisorOfDistress } from './helpAIDistressDetector';
+import { appendWorkingMemory } from '../ai-brain/trinityEpisodicMemoryService';
 const log = createLogger('helpAIBotService');
 
 
@@ -703,7 +706,69 @@ Format as plain text, no headers.`,
         ? '\n\nLANGUAGE: CRITICAL — This user\'s preferred language is Spanish. You MUST respond ENTIRELY in Spanish (Español). Every word of your response must be in Spanish. Do not mix languages.'
         : '';
 
-      const systemPrompt = `You are HelpAI, the deeply human and empathetic support assistant for CoAIleague — a workforce management platform for security companies and staffing agencies.${officerFirstName ? `\n\nYou are speaking with ${officerFirstName}. Use their name naturally in conversation.` : ''}${languageInstruction}
+      // === OFFICER PERSONA INJECTION ===
+      // HelpAI knows who she's talking to before the first word
+      let personaBlock = '';
+      let distressContext = { distressHistory: 0, lastEmotionalState: 'neutral' };
+      if (context.userId && context.workspaceId) {
+        try {
+          const persona = await getOfficerPersona(context.userId, context.workspaceId);
+          if (persona) {
+            personaBlock = buildPersonaPrompt(persona);
+            distressContext = {
+              distressHistory: persona.distressHistory,
+              lastEmotionalState: persona.lastEmotionalState,
+            };
+          }
+        } catch { /* persona is non-fatal */ }
+      }
+
+      // === DISTRESS DETECTION ===
+      // Check every message for distress signals before building response
+      if (context.workspaceId && context.userId && message) {
+        try {
+          const hour = new Date().getHours();
+          const distressCheck = detectDistress(message, {
+            hourOfDay: hour,
+            distressHistory: distressContext.distressHistory,
+            lastEmotionalState: distressContext.lastEmotionalState,
+          });
+
+          if (distressCheck.detected && distressCheck.level !== 'low') {
+            // Update officer profile with distress event
+            await updateOfficerProfile({
+              officerId: context.userId,
+              workspaceId: context.workspaceId,
+              emotionalState: `distress:${distressCheck.level}`,
+              wasDistress: distressCheck.level === 'high' || distressCheck.level === 'critical',
+            });
+
+            // Notify supervisor (non-intrusive — they see it in dashboard)
+            if (distressCheck.shouldNotifySupervisor) {
+              const { broadcastToWorkspace } = await import('../../websocket');
+              await notifySupervisorOfDistress({
+                officerId: context.userId,
+                officerName: officerFirstName || 'Officer',
+                workspaceId: context.workspaceId,
+                level: distressCheck.level,
+                signals: distressCheck.signals,
+                broadcastToWorkspace,
+              });
+            }
+
+            // Return distress response immediately (skip normal flow)
+            if (distressCheck.level === 'critical' || distressCheck.level === 'high') {
+              return {
+                response: distressCheck.recommendedResponse,
+                confidence: 1.0,
+                intent: `distress_${distressCheck.level}`,
+              };
+            }
+          }
+        } catch { /* distress detection is non-fatal */ }
+      }
+
+      const systemPrompt = `You are HelpAI, the deeply human and empathetic support assistant for CoAIleague — a workforce management platform for security companies and staffing agencies.${officerFirstName ? `\n\nYou are speaking with ${officerFirstName}. Use their name naturally in conversation.` : ''}${languageInstruction}${personaBlock ? `\n\n${personaBlock}` : ''}
 
 ${personalityBlock}
 ${memorySummary}${warmthContextBlock}

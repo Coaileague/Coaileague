@@ -218,7 +218,7 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
     // Alert if banned
     if (isBanned) {
       NotificationDeliveryService.send({
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:visitor:${log.id}:banned_checkin`,
         type: 'alert_notification',
         workspaceId,
         recipientUserId: workspaceId,
@@ -232,7 +232,7 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
     }
 
     platformEventBus.publish({
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif:visitor:${log.id}:checked_in`,
             type: 'visitor_checked_in',
       workspaceId,
       title: `Visitor Checked In — ${visitorName}`,
@@ -318,7 +318,7 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
     for (const o of overstays) {
       if (!o.alert_sent) {
         NotificationDeliveryService.send({
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif:visitor:${o.id}:overstay`,
           type: 'alert_notification',
           workspaceId,
           recipientUserId: workspaceId,
@@ -331,7 +331,7 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
         }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
         platformEventBus.publish({
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif:visitor:${o.id}:overstay_event`,
             type: 'visitor_overstay',
           workspaceId,
           title: `Visitor Overstay — ${o.visitor_name}`,
@@ -582,7 +582,7 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
         const mins = elapsed % 60;
 
         NotificationDeliveryService.send({
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif:visitor:${o.id}:overstay`,
           type: 'alert_notification',
           workspaceId,
           recipientUserId: workspaceId,
@@ -595,7 +595,7 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
         }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
         platformEventBus.publish({
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif:visitor:${o.id}:overstay_event`,
             type: 'visitor_overstay',
           workspaceId,
           title: `Visitor Overstay — ${o.visitor_name}`,
