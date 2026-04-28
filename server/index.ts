@@ -2176,7 +2176,48 @@ process.on('unhandledRejection', (reason: any, promise) => {
     // registration (no I/O), so this adds <1 ms before the port opens.
     const { crawlerPrerenderMiddleware } = await import('./middleware/crawlerPrerender');
     app.use(crawlerPrerenderMiddleware);
-    serveStatic(app);
+    try {
+      serveStatic(app);
+      log.info('[Startup] Static files registered from dist/public/');
+    } catch (staticErr: any) {
+      // dist/public/ doesn't exist — Vite build didn't run or failed.
+      // Register a fallback that serves a proper page instead of raw JSON.
+      log.error('[Startup] serveStatic failed — dist/public/ not found. Vite build may have failed.', {
+        error: staticErr?.message,
+      });
+      // Fallback: serve a bootstrap page for all non-API routes
+      app.use('*', (req: any, res: any) => {
+        if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) {
+          return res.status(503).json({ message: 'Service starting up', retry: true });
+        }
+        res.status(200).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoAIleague — Loading</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0;
+           display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .card { text-align: center; padding: 2rem; max-width: 400px; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #7c3aed; }
+    p { color: #94a3b8; margin-bottom: 1.5rem; }
+    button { background: #7c3aed; color: white; border: none; padding: 0.75rem 2rem;
+             border-radius: 8px; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #6d28d9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>CoAIleague</h1>
+    <p>The platform is deploying. This usually takes under 2 minutes.</p>
+    <button onclick="window.location.reload()">Reload</button>
+  </div>
+  <script>setTimeout(() => window.location.reload(), 30000);</script>
+</body>
+</html>`);
+      });
+    }
   }
 
   try {
