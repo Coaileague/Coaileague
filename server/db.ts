@@ -113,19 +113,35 @@ export function recordDbFailure(reason?: string): void {
 }
 
 // ============================================================================
-// CONNECTION POOL
-// max:5 — allows concurrent request bursts without exhausting Replit's DB connection limit.
-// keepAlive:false — ensures dead connections are NOT held open after SIGKILL.
+// CONNECTION POOL — Railway + Neon production configuration
+//
+// max:10   — supports ~50 concurrent requests; stays well under Neon's per-compute
+//            connection limit. Each Railway replica gets its own pool, so total
+//            connections = max × replica count.
+// min:0    — don't hold open connections during idle periods (saves Neon slots).
+// idleTimeoutMillis:30000 — 30s before releasing idle connections. 10s was too
+//            aggressive: burst → idle → reconnect latency on the next burst.
+//            30s amortises the ~150ms Neon TCP reconnect cost.
+// connectionTimeoutMillis:4000 — fast failure so the circuit breaker opens quickly.
+// keepAlive:true — sends TCP keepalive probes to prevent NAT tables (Railway's
+//            internal LB, Neon's proxy) from silently dropping idle connections.
+//            Without this, a connection idle for >30s may appear open on our
+//            side but be dead on Neon's side, causing "connection terminated
+//            unexpectedly" on the next query.
+// allowExitOnIdle:false — MUST be false for a long-running server. true is only
+//            safe for one-shot scripts. With true, if all pool clients drain
+//            simultaneously (e.g. during a quiet period) and nothing else holds
+//            the event loop open, Node can exit the process on Railway.
 // ============================================================================
-// Phase 39 — increased to 10 for 300-officer concurrent load (was 5)
-export const pool = new pg.Pool({ 
+export const pool = new pg.Pool({
   connectionString: databaseUrl,
-  max: 10,                    // Phase 39: supports ~50 concurrent requests at 300-officer scale
-  min: 0,                     // No minimum — release connections when idle
-  idleTimeoutMillis: 10000,   // 10s idle before release (reduces reconnection churn)
-  connectionTimeoutMillis: 4000,  // 4s — fast failure so circuit opens quickly
-  allowExitOnIdle: true,
-  keepAlive: false,           // Don't hold TCP sockets open after process death
+  max: 10,
+  min: 0,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 4_000,
+  allowExitOnIdle: false,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10_000, // first probe after 10s idle
 });
 
 pool.on('error', (err) => {

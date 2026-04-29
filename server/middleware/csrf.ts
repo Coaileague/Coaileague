@@ -437,10 +437,11 @@ export function csrfTokenHandler(req: Request, res: Response): void {
 
   // Set cookie as backup for form submissions
   res.cookie(CSRF_COOKIE_NAME, token, {
-    httpOnly: false, // Accessible to JavaScript for header inclusion
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    httpOnly: false, // must be readable by JS so the header can be injected
+    secure: process.env.NODE_ENV === 'production', // HTTPS-only on Railway
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     maxAge: CSRF_TOKEN_EXPIRY_MS,
+    path: '/',
   });
 
   res.json({
