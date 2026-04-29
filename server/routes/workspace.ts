@@ -241,6 +241,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
         }).onConflictDoNothing();
 
         // Token balance managed by tokenManager — no manual credit_balances insert needed
+      }
     } catch (provError: unknown) {
       log.warn(`[Workspace Create] Provisioning failed (non-blocking):`, (provError as any)?.message);
     }
