@@ -1393,12 +1393,8 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
 
   const duplicateWeekMutation = useMutation({
     mutationFn: async ({ sourceWeekStart, targetWeekStart }: { sourceWeekStart: string; targetWeekStart: string }) => {
-      return await apiRequest('POST', '/api/scheduling/duplicate-week', {
-        sourceWeekStart,
-        targetWeekStart,
-        skipExisting: true,
-        workspaceId,
-      });
+      // V1.1 Feature Flag: duplicate week launches post go-live
+      throw new Error('Schedule duplication is coming in V1.1 — launching shortly after go-live!');
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
@@ -1549,7 +1545,8 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   // Create recurring pattern mutation
   const createRecurringMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('POST', '/api/scheduling/recurring', { ...data, workspaceId });
+      // V1.1 Feature Flag: recurring schedules launch post go-live
+      throw new Error('Recurring schedules are coming in V1.1 — launching shortly after go-live!');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });

@@ -58,6 +58,7 @@ function DeactivatedClientsView({ workspaceId }: { workspaceId?: string }) {
 
   const { data: deactivated = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/clients/deactivated', workspaceId],
+    enabled: !!workspaceId,
     queryFn: async () => {
       const url = workspaceId ? `/api/clients/deactivated?workspaceId=${workspaceId}` : '/api/clients/deactivated';
       const res = await fetch(url, { credentials: 'include' });

@@ -673,6 +673,23 @@ function VisitorLogHistory() {
 // MAIN PAGE
 // =============================================================================
 export default function VisitorManagement() {
+  // V1.1 Feature Flag — visitor management backend not yet deployed
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+      <div className="text-center space-y-3 max-w-md">
+        <div className="text-4xl">🚧</div>
+        <h2 className="text-xl font-semibold">Visitor Management</h2>
+        <p className="text-muted-foreground text-sm">
+          Visitor Management is launching in V1.1 — available shortly after go-live.
+          Pre-registrations and visitor logs will be fully accessible once this ships.
+        </p>
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-xs font-medium border border-amber-500/20">
+          Coming in V1.1
+        </div>
+      </div>
+    </div>
+  );
+
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();

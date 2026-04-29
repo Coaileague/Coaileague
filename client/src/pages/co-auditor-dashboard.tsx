@@ -409,6 +409,7 @@ function WorkspaceRow({
 }): JSX.Element {
   const { data: scoreResp } = useQuery<{ ok: boolean } & ComplianceScore>({
     queryKey: ["/api/auditor/compliance-score", ws.workspaceId],
+    enabled: !!workspaceId,
   });
   const score = scoreResp?.score;
 

@@ -125,6 +125,7 @@ export default function Help() {
   // Auth state (current user)
   const { data: authData } = useQuery<{ user: { id: string; email: string; firstName?: string; workspaceId?: string } }>({
     queryKey: ["/api/auth/me"],
+    enabled: !!workspaceId,
   });
 
   const currentUser = authData?.user;

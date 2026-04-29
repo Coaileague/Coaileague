@@ -41,6 +41,23 @@ const fileGrievanceSchema = z.object({
 type FileGrievanceForm = z.infer<typeof fileGrievanceSchema>;
 
 export default function FileGrievance() {
+  // V1.1 Feature Flag
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+      <div className="text-center space-y-3 max-w-md">
+        <div className="text-4xl">🚧</div>
+        <h2 className="text-xl font-semibold">File Grievance</h2>
+        <p className="text-muted-foreground text-sm">
+          The File Grievance system is launching in V1.1 — available shortly after go-live.
+          All dispute history will be preserved and accessible once this feature ships.
+        </p>
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-xs font-medium border border-amber-500/20">
+          Coming in V1.1
+        </div>
+      </div>
+    </div>
+  );
+
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [submittedId, setSubmittedId] = useState<string | null>(null);

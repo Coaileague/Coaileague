@@ -734,7 +734,10 @@ export default function ClientPortal() {
   });
   const preRegistrations: any[] = preRegData?.preRegistrations || [];
   const createPreRegMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/visitor-management/pre-registrations', {
+    mutationFn: async () => {
+      // V1.1: Visitor pre-registration coming soon
+      throw new Error('Visitor management launches in V1.1.');
+    }, // was: apiRequest('POST', '/api/visitor-management/pre-registrations', {
       ...preRegForm,
       expectedArrival: preRegForm.expectedArrival || undefined,
       expectedDeparture: preRegForm.expectedDeparture || undefined,

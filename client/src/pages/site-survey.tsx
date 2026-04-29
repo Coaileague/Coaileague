@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ClipboardCheck, Plus, AlertTriangle, Shield, MapPin, User, CheckCircle2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
+// V1.0 FEATURE FLAG: Site Survey is a V1.1 feature
 export default function SiteSurveyPage() {
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);

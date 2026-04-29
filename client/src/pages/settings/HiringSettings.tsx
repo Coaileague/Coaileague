@@ -24,6 +24,22 @@ interface HiringSettings {
 const STATE_CODES = ["TX", "FL", "CA", "NY", "GA", "NC", "AZ", "NV", "IL", "OH", "PA", "VA", "CO", "WA"];
 
 export default function HiringSettingsPage() {
+  // V1.1 Feature Flag
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4">
+      <div className="text-center space-y-3 max-w-sm">
+        <div className="text-4xl">🚧</div>
+        <h2 className="text-lg font-semibold">Hiring Settings</h2>
+        <p className="text-muted-foreground text-sm">
+          Custom hiring configuration launches in V1.1. Your default settings are active.
+        </p>
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-xs font-medium border border-amber-500/20">
+          Coming in V1.1
+        </div>
+      </div>
+    </div>
+  );
+
   const { toast } = useToast();
   const qc = useQueryClient();
 

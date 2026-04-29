@@ -337,6 +337,7 @@ export default function PublicJobBoard() {
 
   const { data, isLoading, isError } = useQuery<BoardData>({
     queryKey: [`/api/public/jobs/${workspaceId}`],
+    enabled: !!workspaceId,
   });
 
   if (isLoading) return (

@@ -66,6 +66,7 @@ export default function PayrollDashboard() {
 
   const runsQuery = useQuery<PayrollRun[]>({
     queryKey: ['/api/payroll/runs', workspaceId],
+    enabled: !!workspaceId,
     queryFn: () => apiFetch('/api/payroll/runs', PayrollRunListResponse) as unknown as Promise<PayrollRun[]>,
     retry: (failureCount, error: any) => error?.status >= 500 && failureCount < 2,
   });
@@ -200,7 +201,10 @@ export default function PayrollDashboard() {
   });
 
   const runPtoAccrualMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/hr/pto-accrual/run', {}),
+    mutationFn: async () => {
+      // V1.1: PTO accrual endpoint launches in V1.1
+      throw new Error('PTO accrual is launching in V1.1 — coming shortly after go-live.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hr/pto'] });
       toast({ title: '✅ PTO Accrual Run Complete', description: 'All employee PTO balances updated.' });

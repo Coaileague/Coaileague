@@ -63,6 +63,20 @@ interface Subscription {
 }
 
 export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarSyncDialogProps) {
+  // V1.1 Feature Flag — calendar sync backend not yet deployed
+  return (
+    <div className="p-6 text-center space-y-3">
+      <div className="text-3xl">📅</div>
+      <p className="font-medium">Calendar Sync</p>
+      <p className="text-sm text-muted-foreground">
+        iCal import/export and calendar subscriptions launch in V1.1.
+      </p>
+      <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-xs font-medium border border-amber-500/20">
+        Coming in V1.1
+      </div>
+    </div>
+  );
+
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('export');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);

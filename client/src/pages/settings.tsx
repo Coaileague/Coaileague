@@ -5510,34 +5510,8 @@ function CalendarIntegrationCard() {
   });
 
   const handleExportCalendar = async () => {
-    try {
-      const response = await secureFetch('/api/calendar/export/ical', {
-        credentials: 'include',
-      });
-      
-      if (!response.ok) throw new Error('Failed to export calendar');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `schedule-${new Date().toISOString().split('T')[0]}.ics`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Success",
-        description: "Calendar exported successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to export calendar",
-        variant: "destructive",
-      });
-    }
+    // V1.1 Feature Flag
+    toast({ title: "Coming in V1.1", description: "iCal calendar export launches shortly after go-live." });
   };
 
   const handleImportCalendar = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -5550,7 +5524,9 @@ function CalendarIntegrationCard() {
     formData.append('conflictResolution', 'skip');
 
     try {
-      const response = await secureFetch('/api/calendar/import/ical', {
+      // V1.1: iCal import coming soon
+    throw new Error('Calendar import launches in V1.1. Coming shortly after go-live!');
+    // const response = await secureFetch('/api/calendar/import/ical', {
         method: 'POST',
         body: formData,
         credentials: 'include',

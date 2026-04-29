@@ -148,6 +148,7 @@ const TrinityInsights = lazy(() => import("@/pages/trinity-insights"));
 // Critical public-facing pages use lazyWithRetry to survive transient 503/network errors
 const Homepage = lazyWithRetry(() => import("@/pages/homepage"));
 const TrinityChat = lazyWithRetry(() => import("@/pages/trinity-chat"));
+const ComingSoon = lazy(() => import("@/pages/coming-soon"));
 const TrinityFeatures = lazyWithRetry(() => import("@/pages/trinity-features"));
 const PricingPage = lazyWithRetry(() => import("@/pages/pricing"));
 const Contact = lazyWithRetry(() => import("@/pages/contact"));
@@ -327,7 +328,7 @@ const EmployeeOnboardingPacket = lazy(() => import("@/pages/compliance/employee-
 const AuditorPortal = lazy(() => import("@/pages/compliance/auditor-portal"));
 const AuditorLogin = lazy(() => import("@/pages/auditor-login"));
 // Phase 18C/D — Co-League Compliance Concierge (Trinity-driven auditor portal)
-const CoAuditorClaim = lazy(() => import("@/pages/co-auditor-claim"));
+const CoAuditorClaim = ComingSoon;
 const CoAuditorLogin = lazy(() => import("@/pages/co-auditor-login"));
 const CoAuditorDashboard = lazy(() => import("@/pages/co-auditor-dashboard"));
 // AI Regulatory Audit Suite (Phases 2–6)
@@ -393,7 +394,7 @@ const WhiteLabelBranding = lazy(() => import("@/pages/white-label-branding"));
 const MultiCompany = lazy(() => import("@/pages/multi-company"));
 const GateDuty = lazy(() => import("@/pages/gate-duty"));
 const WellnessPage = lazy(() => import("@/pages/wellness"));
-const SiteSurveyPage = lazy(() => import("@/pages/site-survey"));
+const SiteSurveyPage = ComingSoon;
 const FleetManagement = lazy(() => import("@/pages/fleet-management"));
 const FleetCompliance = lazy(() => import("@/pages/fleet-compliance"));
 const ArmoryManagement = lazy(() => import("@/pages/armory-management"));
@@ -413,7 +414,7 @@ const EquipmentPage = lazy(() => import("@/pages/equipment"));
 const GuardTourPage = lazy(() => import("@/pages/guard-tour"));
 const SalesPipelinePage = lazy(() => import("@/pages/sales-pipeline"));
 const WorkOrdersPage = lazy(() => import("@/pages/work-orders"));
-const VisitorManagementPage = lazy(() => import("@/pages/visitor-management"));
+const VisitorManagementPage = ComingSoon;
 const DockChatPage = lazy(() => import("@/pages/dock-chat"));
 const VoiceSettingsPage = lazy(() => import("@/pages/voice-settings"));
 const EmailManagement = lazy(() => import("@/pages/settings/EmailManagement"));
