@@ -1034,6 +1034,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // endpoint that all authenticated workspace members should access — not just platform staff.
   app.use('/api/trinity/thought-status', requireAuth, ensureWorkspaceAccess, trinityThoughtStatusRouter);
 
+  // ── ACTIVE-OPERATIONS: same bypass — all workspace members can poll this ──
+  // TrinityThoughtBar calls /api/trinity/active-operations on every dashboard load.
+  // Must NOT go through requireTrinityAccess (platform staff only) or it 403s every user.
+  app.use('/api/trinity/active-operations', requireAuth, ensureWorkspaceAccess, (req: any, res: any) => {
+    // Inline handler — imports universalStepLogger to get active orchestrations
+    import('./services/orchestration/universalStepLogger').then(({ universalStepLogger }) => {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: 'workspaceId required' });
+      const active = universalStepLogger.getActiveOrchestrations(workspaceId);
+      const operations = active.map((ctx: any) => ({
+        orchestrationId: ctx.orchestrationId,
+        domain: ctx.domain,
+        actionName: ctx.actionName,
+        status: ctx.status,
+        currentStep: ctx.steps?.[ctx.steps.length - 1]?.step || 'TRIGGER',
+        stepStatus: ctx.steps?.[ctx.steps.length - 1]?.status || 'pending',
+        progress: ctx.steps?.length > 0
+          ? Math.round((ctx.steps.filter((s: any) => s.status === 'completed').length / ctx.steps.length) * 100)
+          : 0,
+        modelUsed: ctx.metadata?.modelUsed || 'claude',
+      }));
+      res.json(operations);
+    }).catch(() => res.json([]));
+  });
+
   log.info('[ROUTE-INIT] step: mount-trinity');
   mountTrinityRoutes(app);    // /api/trinity/*, /api/ai/*
   log.info('[ROUTE-INIT] step: mount-workforce');

@@ -217,25 +217,26 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     isLoading,
     error: error as Error | null,
     
-    seasonId: profile.seasonId,
-    isHoliday: profile.isHoliday,
-    holidayName: profile.holidayName,
+    seasonId: profile?.seasonId ?? 'default',
+    isHoliday: profile?.isHoliday ?? false,
+    holidayName: profile?.holidayName ?? null,
     
-    forceDarkMode: profile.theme.forceDarkMode,
+    forceDarkMode: profile?.theme?.forceDarkMode ?? false,
     effectsEnabled,
     
-    primaryEffect: profile.effects.primary,
-    effectIntensity: profile.effects.intensity,
+    // Guard: profile.effects may be undefined if API returns malformed shape
+    primaryEffect: (profile?.effects?.primary ?? 'none') as any,
+    effectIntensity: profile?.effects?.intensity ?? 0,
     
     seasonalColors: {
-      primary: profile.theme.primaryColor,
-      secondary: profile.theme.secondaryColor,
-      accent: profile.theme.accentColor,
-      glow: profile.theme.glowColor,
+      primary: profile?.theme?.primaryColor ?? '#38bdf8',
+      secondary: profile?.theme?.secondaryColor ?? '#a855f7',
+      accent: profile?.theme?.accentColor ?? '#ffffff',
+      glow: profile?.theme?.glowColor ?? '#38bdf8',
     },
     
-    mascotThoughts: profile.mascotHints.seasonalThoughts,
-    mascotEmotes: profile.mascotHints.seasonalEmotes,
+    mascotThoughts: profile?.mascotHints?.seasonalThoughts ?? ["Let's get to work!"],
+    mascotEmotes: profile?.mascotHints?.seasonalEmotes ?? ['idle', 'curious'],
     
     refetch,
   };

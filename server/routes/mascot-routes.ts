@@ -1328,32 +1328,97 @@ async function generateSeasonalProfile(workspaceId?: string) {
 
   // Simple seasonal mapping
   let seasonId = 'default';
-  let theme = 'dark';
-  let effects = false;
-  let hints = [];
+  let effectsEnabled = false;
+  let primaryEffect = 'none';
+  let forceDarkMode = false;
+  let primaryColor = '#38bdf8';
+  let secondaryColor = '#a855f7';
+  let accentColor = '#ffffff';
+  let glowColor = '#38bdf8';
+  let holidayName: string | null = null;
+  let isHoliday = false;
+  let seasonalThoughts: string[] = ["Let's get to work!"];
 
   // Holiday/season detection
   if ((month === 12 && day >= 15) || (month === 1 && day <= 5)) {
     seasonId = 'christmas';
-    effects = true;
-    hints = ['Winter Wonderland', 'Holiday Mode Active'];
+    isHoliday = true;
+    holidayName = 'Christmas';
+    effectsEnabled = true;
+    primaryEffect = 'snow';
+    forceDarkMode = true;
+    primaryColor = '#c41e3a';
+    secondaryColor = '#228b22';
+    accentColor = '#ffd700';
+    glowColor = '#c41e3a';
+    seasonalThoughts = ["Ho ho ho! Let's keep operations running smoothly this holiday season!", "Happy Holidays from the CoAIleague team!"];
   } else if (month === 2 && day >= 14 && day <= 16) {
     seasonId = 'valentines';
-    effects = true;
+    isHoliday = true;
+    holidayName = "Valentine's Day";
+    effectsEnabled = true;
+    primaryEffect = 'hearts';
+    primaryColor = '#e91e63';
+    secondaryColor = '#f06292';
+    accentColor = '#fce4ec';
+    glowColor = '#e91e63';
   } else if ((month === 10 && day >= 15) || (month === 11 && day <= 5)) {
     seasonId = 'halloween';
-    effects = true;
+    isHoliday = true;
+    holidayName = 'Halloween';
+    effectsEnabled = true;
+    primaryEffect = 'bats';
+    forceDarkMode = true;
+    primaryColor = '#ff6600';
+    secondaryColor = '#7b1fa2';
+    accentColor = '#ffd54f';
+    glowColor = '#ff6600';
   } else if (month === 4 && day >= 15 && day <= 25) {
     seasonId = 'easter';
-    effects = true;
+    isHoliday = true;
+    holidayName = 'Easter';
+    effectsEnabled = true;
+    primaryEffect = 'bubbles';
+    primaryColor = '#7c4dff';
+    secondaryColor = '#69f0ae';
+    accentColor = '#ffeb3b';
+    glowColor = '#7c4dff';
   }
 
+  // Return a complete SeasonalProfile shape matching the frontend interface exactly
   return {
     seasonId,
-    theme,
-    effectsEnabled: effects,
-    hints,
-    timestamp: new Date().toISOString(),
+    holidayName,
+    isHoliday,
+    theme: {
+      forceDarkMode,
+      primaryColor,
+      secondaryColor,
+      accentColor,
+      glowColor,
+    },
+    effects: {
+      primary: primaryEffect,
+      secondary: null,
+      cadence: 'medium',
+      intensity: effectsEnabled ? 0.5 : 0,
+      accumulation: false,
+      accumulationCycle: null,
+    },
+    ornaments: {
+      enabled: isHoliday && effectsEnabled,
+      types: [],
+      colors: [],
+      density: 'sparse',
+    },
+    mascotHints: {
+      preferredZones: ['corners'],
+      avoidEffectZones: true,
+      seasonalEmotes: ['idle', 'curious'],
+      seasonalThoughts,
+    },
+    validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    aiGenerated: false,
   };
 }
 
