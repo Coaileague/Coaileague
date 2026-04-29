@@ -2695,6 +2695,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
 
             </div>
           </div>
+          )}
 
         </div>
 
