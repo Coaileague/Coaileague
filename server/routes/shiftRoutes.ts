@@ -6,12 +6,14 @@ import { requireManager, requireManagerOrPlatformStaff, requireEmployee, attachW
 import { storage } from "../storage";
 import { db } from "../db";
 import {
+  auditLogs,
   chatConversations,
   clientContracts,
   clients,
   contractorPool,
   employees,
   insertShiftSchema,
+  notifications,
   shiftCoverageRequests,
   shiftOffers,
   shiftOrders,
@@ -23,6 +25,38 @@ import {
   users,
   workspaces
 } from '@shared/schema';
+
+// ── SCHED-7: Trinity Audit Helper — Who/What/Where/When/Why ─────────────────
+// Every shift mutation must log the 5 W's. Fire-and-forget (non-fatal).
+async function auditShiftMutation(params: {
+  workspaceId: string;
+  userId: string | undefined;
+  userEmail: string | undefined;
+  action: string;
+  shiftId: string;
+  ip: string;
+  why: string;
+  changes?: Record<string, unknown>;
+}): Promise<void> {
+  db.insert(auditLogs).values({
+    workspaceId: params.workspaceId,
+    userId: params.userId || 'system',
+    userEmail: params.userEmail || 'system',
+    action: params.action as any,
+    entityType: 'shift',
+    entityId: params.shiftId,
+    changes: {
+      who: params.userEmail || params.userId,
+      what: params.action,
+      where: params.ip,
+      when: new Date().toISOString(),
+      why: params.why,
+      ...params.changes,
+    },
+    ipAddress: params.ip,
+    userAgent: undefined,
+  } as any).catch(() => null); // Non-fatal — never block shift mutation on audit failure
+}
 import { eq, and, gte, lte, sql, desc, asc, or, between, inArray, ne, isNull, lt } from "drizzle-orm";
 import { getUserPlatformRole, resolveWorkspaceForUser } from "../rbac";
 import { broadcastShiftUpdate, broadcastNotificationToUser as broadcastNotification, broadcastToWorkspace } from "../websocket";
@@ -743,24 +777,23 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         log.error('Error sending shift notification:', notifyError);
       }
 
-      // AUDIT LOG: Shift created
-      try {
-        await storage.createAuditLog({
-          workspaceId,
-          action: 'shift_created',
-          entityType: 'shift',
-          entityId: shift.id,
-          userId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          details: {
-            date: new Date(shift.startTime).toISOString().split('T')[0],
-            positions: (shift as any).assignedEmployeeIds?.length || 0,
-            location: validated.location,
-          },
-        });
-      } catch (auditError) {
-        log.error('Audit log error:', auditError);
-      }
+      // SCHED-7: Trinity Audit — Who/What/Where/When/Why on shift create
+      auditShiftMutation({
+        workspaceId,
+        userId: userId || undefined,
+        userEmail: req.user?.email,
+        action: 'shift_created',
+        shiftId: shift.id,
+        ip: req.ip || 'unknown',
+        why: 'Manager created shift via scheduling module',
+        changes: {
+          date: new Date(shift.startTime).toISOString().split('T')[0],
+          employeeId: (shift as any).employeeId,
+          clientId: (shift as any).clientId,
+          location: validated.location,
+          status: shift.status,
+        },
+      });
       
       // Create shift orders (post orders) if provided
       if (postOrders && Array.isArray(postOrders) && postOrders.length > 0) {
@@ -3076,45 +3109,57 @@ router.post("/offers/:offerId/accept", requireAuth, async (req: AuthenticatedReq
     const { offerId } = req.params;
     const workspaceId = req.workspaceId!;
     const userId = req.user?.id;
-    const { db } = await import('../db');
-    const { notifications } = await import('@shared/schema');
+    const { db, pool } = await import('../db');
+    const { notifications, auditLogs } = await import('@shared/schema');
     const { eq, and } = await import('drizzle-orm');
 
-    const [notif] = await db
-      .select()
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.workspaceId, workspaceId),
-          eq(notifications.relatedEntityId, offerId),
-        ),
-      )
-      .limit(1);
+    // SCHED-4 FIX: Atomic accept using PostgreSQL UPDATE WHERE with conditional
+    // Two officers hitting accept simultaneously: DB engine serializes via row lock
+    // Only the first UPDATE WHERE metadata->>'accepted' IS NULL succeeds
+    const result = await pool.query(`
+      UPDATE notifications
+      SET is_read = true,
+          read_at = NOW(),
+          metadata = jsonb_set(
+            jsonb_set(
+              COALESCE(metadata, '{}'),
+              '{accepted}', 'true'
+            ),
+            '{acceptedByUserId}', $1::jsonb
+          )
+      WHERE workspace_id = $2
+        AND related_entity_id = $3
+        AND user_id = $4
+        AND (metadata->>'accepted') IS NULL
+        AND (metadata->>'declined') IS NULL
+      RETURNING id, user_id, metadata
+    `, [JSON.stringify(userId), workspaceId, offerId, userId]);
 
-    if (!notif) {
-      return res.status(404).json({ error: 'Offer not found' });
+    if (result.rowCount === 0) {
+      // Either offer not found, not theirs, or already acted on
+      const [existing] = await db.select().from(notifications)
+        .where(and(eq(notifications.workspaceId, workspaceId), eq(notifications.relatedEntityId, offerId)))
+        .limit(1);
+      if (!existing) return res.status(404).json({ error: 'Offer not found' });
+      if ((existing as any).userId !== userId) return res.status(403).json({ error: 'This offer was not sent to you' });
+      const meta = (existing as any).metadata || {};
+      if (meta.accepted) return res.json({ success: true, message: 'Already accepted' });
+      if (meta.declined) return res.status(400).json({ error: 'This offer has already been declined' });
+      return res.status(409).json({ error: 'Offer is no longer available' });
     }
 
-    if (notif.userId !== userId) {
-      return res.status(403).json({ error: 'This offer was not sent to you' });
-    }
-
-    const currentMeta = (notif as any).metadata || {};
-    if (currentMeta.accepted) {
-      return res.json({ success: true, message: 'Already accepted' });
-    }
-    if (currentMeta.declined) {
-      return res.status(400).json({ error: 'This offer has already been declined' });
-    }
-
-    await db
-      .update(notifications)
-      .set({
-        isRead: true,
-        readAt: new Date(),
-        metadata: { ...currentMeta, accepted: true, acceptedAt: new Date().toISOString(), acceptedByUserId: userId },
-      })
-      .where(and(eq(notifications.id, notif.id), eq(notifications.workspaceId, workspaceId)));
+    // Trinity audit — Who/What/Where/When/Why
+    db.insert(auditLogs).values({
+      workspaceId,
+      userId,
+      userEmail: req.user?.email || userId,
+      action: 'shift_offer_accepted' as any,
+      entityType: 'shift_offer',
+      entityId: offerId,
+      changes: { who: userId, what: 'shift_offer_accepted', where: req.ip, when: new Date().toISOString(), why: 'Officer accepted via portal' },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] || null,
+    } as any).catch(err => log.warn('[ShiftOffer] Audit log failed (non-fatal):', err));
 
     log.info(`[ShiftOffer] Officer ${userId} accepted offer ${offerId} in workspace ${workspaceId}`);
     return res.json({ success: true, message: 'Shift offer accepted. You will receive confirmation details shortly.' });

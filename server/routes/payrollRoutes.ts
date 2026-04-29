@@ -1753,11 +1753,16 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
         .limit(1);
 
       if (entry) {
-        const grossPay     = parseFloat(String(entry.grossPay     || '0'));
-        const federalTax   = parseFloat(String(entry.federalTax   || '0'));
-        const stateTax     = parseFloat(String(entry.stateTax     || '0'));
-        const socialSec    = parseFloat(String(entry.socialSecurity || '0'));
-        const medicare     = parseFloat(String(entry.medicare     || '0'));
+        // PAY-2 FIX: Decimal.js arithmetic — eliminates float precision errors in net pay
+        // Rule: every financial calculation must use exact decimal arithmetic
+        const { default: Decimal } = await import('decimal.js');
+        Decimal.set({ precision: 28, rounding: Decimal.ROUND_HALF_UP });
+
+        const grossPay  = new Decimal(String(entry.grossPay     || '0'));
+        const fedTax    = new Decimal(String(entry.federalTax   || '0'));
+        const stateTax  = new Decimal(String(entry.stateTax     || '0'));
+        const socialSec = new Decimal(String(entry.socialSecurity || '0'));
+        const medicare  = new Decimal(String(entry.medicare     || '0'));
 
         const allGarnishments = await db.select({ amount: payrollGarnishments.amount })
           .from(payrollGarnishments)
@@ -1765,14 +1770,18 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
             eq(payrollGarnishments.payrollEntryId, payrollEntryId),
             eq(payrollGarnishments.workspaceId, workspaceId),
           ));
-        const totalGarnishments = allGarnishments.reduce((sum, g) => sum + parseFloat(String(g.amount || '0')), 0);
+        const totalGarnishments = allGarnishments.reduce(
+          (sum, g) => sum.plus(new Decimal(String(g.amount || '0'))),
+          new Decimal('0')
+        );
 
-        const preTaxDeductions  = parseFloat(String((entry as any).preTaxDeductions  || '0'));
-        const postTaxDeductions = parseFloat(String((entry as any).postTaxDeductions || '0'));
-        const totalTaxes = federalTax + stateTax + socialSec + medicare;
+        const preTax  = new Decimal(String((entry as any).preTaxDeductions  || '0'));
+        const postTax = new Decimal(String((entry as any).postTaxDeductions || '0'));
+        const totalTaxes = fedTax.plus(stateTax).plus(socialSec).plus(medicare);
 
-        let newNetPay = grossPay - preTaxDeductions - totalTaxes - postTaxDeductions - totalGarnishments;
-        if (newNetPay < 0) newNetPay = 0; // Hard floor — cannot garnish below $0
+        // Net = Gross − PreTax − Taxes − PostTax − Garnishments (floor: $0)
+        let newNetPay = grossPay.minus(preTax).minus(totalTaxes).minus(postTax).minus(totalGarnishments);
+        if (newNetPay.lessThan(0)) newNetPay = new Decimal('0'); // Hard floor
 
         await db.update(payrollEntries)
           .set({ netPay: newNetPay.toFixed(2) as any, updatedAt: new Date() })
