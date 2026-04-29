@@ -70,6 +70,7 @@ async function build() {
         ].join('\n'),
       },
       external: [
+        // --- Node built-ins & native addons ---
         'better-sqlite3',
         'pg-native',
         'sqlite3',
@@ -80,6 +81,15 @@ async function build() {
         'bcrypt',
         'fsevents',
         'typescript',
+        // --- jsdom ecosystem: must NOT be bundled ---
+        // When bundled by esbuild, __dirname in dist/index.js becomes /app/dist/
+        // so jsdom's internal readFileSync for default-stylesheet.css resolves to
+        // /browser/default-stylesheet.css (a Replit-specific path that doesn't exist
+        // on Railway). Externalizing forces Node to load these from node_modules at
+        // runtime where __dirname is the real package directory and paths resolve.
+        'jsdom',
+        'isomorphic-dompurify',
+        'canvas',
       ],
       alias: {
         '@shared': path.resolve(__dirname, 'shared'),
