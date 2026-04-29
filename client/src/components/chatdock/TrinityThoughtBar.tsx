@@ -416,7 +416,7 @@ export function TrinityThoughtBar({
         </div>
 
         {/* Right-center: Cognitive layer */}
-        <div className="flex-shrink-0 w-36">
+        <div className="flex-shrink-0" style={{ minWidth: "160px" }}>
           <CognitiveLayers activeModel={activeModel} modelStatus={modelStatus} state={state} />
         </div>
 
@@ -580,17 +580,21 @@ function CognitiveLayers({
     const badgeColor = isOffline ? "#9CA3AF" : "#FBBF24";
     const borderColor = isOffline ? "#6B7280" : "#F59E0B";
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5 px-2">
         <span
           style={{
-            fontSize: "10px",
-            letterSpacing: "0.1em",
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
             color: badgeColor,
             animation: isOffline ? undefined : "coai-fallback-amber-blink 3s infinite",
-            padding: "1px 5px",
+            padding: "2px 8px",
             border: `1px solid ${borderColor}`,
-            borderRadius: "3px",
+            borderRadius: "4px",
+            backgroundColor: isOffline ? "#6B728011" : "#F59E0B22",
+            whiteSpace: "nowrap",
           }}
+          data-testid={`fallback-badge-${isOffline ? 'offline' : 'fallback'}`}
         >
           {isOffline ? "OFFLINE" : "FALLBACK"}
         </span>
@@ -605,25 +609,40 @@ function CognitiveLayers({
   ];
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 px-2" style={{ minWidth: "140px" }}>
       {models.map(({ key, label }) => {
         const isActive = activeModel === key;
         const isOnline = modelStatus[key] !== "offline";
         const baseColor = MODEL_COLORS[key];
+        
         return (
           <span
             key={key}
             style={{
-              fontSize: "10px",
-              letterSpacing: "0.06em",
-              padding: "1px 4px",
+              fontSize: "11px",
+              fontWeight: isActive ? 700 : 600,
+              letterSpacing: "0.08em",
+              padding: "2px 6px",
               borderRadius: "3px",
-              border: `1px solid ${isActive ? baseColor : `${baseColor}33`}`,
-              backgroundColor: isActive ? `${baseColor}22` : "transparent",
-              color: isActive ? baseColor : isOnline ? `${baseColor}66` : "#6B728055",
+              border: `1px solid ${isActive ? baseColor : isOnline ? `${baseColor}99` : `${baseColor}44`}`,
+              backgroundColor: isActive 
+                ? `${baseColor}33`  // Active: solid 33 alpha background
+                : isOnline
+                ? `${baseColor}11`  // Online but inactive: very subtle background
+                : "transparent",
+              color: isActive 
+                ? baseColor  // Active: full color
+                : isOnline
+                ? `${baseColor}cc`  // Online: 80% opacity
+                : `${baseColor}66`, // Offline: 40% opacity (dimmed)
               transition: "all 0.4s",
+              whiteSpace: "nowrap",
+              cursor: "default",
             }}
+            title={`${label} (${isActive ? 'Active' : isOnline ? 'Online' : 'Offline'})`}
             data-testid={`cognitive-${key}`}
+            role="status"
+            aria-label={`${label} cognitive layer ${isActive ? 'active' : isOnline ? 'online' : 'offline'}`}
           >
             {label}
           </span>
