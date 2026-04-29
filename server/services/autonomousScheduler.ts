@@ -21,6 +21,7 @@ import {
   customSchedulerIntervals,
   idempotencyKeys,
   chatConversations,
+  chatMessages,
   roomEvents,
   clients,
   invoices,
@@ -2075,6 +2076,19 @@ async function runRoomAutoClose() {
               },
               ipAddress: 'system-scheduler',
             });
+
+            // CD-18: HelpAI closing message — workers see a clear read-only signal
+            // Posted as system message so it appears in the room before archival
+            await tx.insert(chatMessages).values({
+              conversationId: room.id,
+              workspaceId: room.workspaceId,
+              senderId: 'helpai-bot',
+              senderName: 'HelpAI',
+              senderType: 'bot',
+              message: `✅ This shift has ended. This room is now read-only and has been archived for compliance.\n\nNeed help? Start a new HelpDesk request anytime.`,
+              messageType: 'text',
+              isSystemMessage: true,
+            } as any).catch(() => null); // Non-fatal — room still closes
 
             log.info('Room auto-closed', { roomId: room.id, subject: room.subject });
             totalRoomsClosed++;

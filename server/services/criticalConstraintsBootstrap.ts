@@ -1587,6 +1587,101 @@ const constraints: CriticalConstraint[] = [
       `);
     },
   },
+  // ── 360 Master Logic — ChatDock Structural Hardening ────────────────────────
+  {
+    name: 'chat_conversations_shift_unique',
+    rationale: 'CD-1: Two managers clicking "Create Shift Room" simultaneously create duplicate rooms. UNIQUE(shift_id, workspace_id) makes the DB engine reject the second INSERT — the only race-safe approach.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_indexes
+         WHERE tablename = 'chat_conversations'
+           AND indexname = 'uq_chat_conv_shift_workspace'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // Deduplicate first — keep earliest room per shift+workspace pair
+      await pool.query(`
+        DELETE FROM chat_conversations a
+        USING chat_conversations b
+        WHERE a.id > b.id
+          AND a.shift_id = b.shift_id
+          AND a.workspace_id = b.workspace_id
+          AND a.shift_id IS NOT NULL
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_chat_conv_shift_workspace
+          ON chat_conversations (shift_id, workspace_id)
+          WHERE shift_id IS NOT NULL
+      `);
+    },
+  },
+  {
+    name: 'chat_messages_sequence_idempotency_delivery',
+    rationale: 'CD-7/CD-8/CD-9: chat_messages missing sequence_number (load-more gaps), client_message_id (dedup on double-tap/retry), and delivery_status (SENT→DELIVERED→READ state machine). All three are structural requirements for reliable field communication.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'chat_messages'
+           AND column_name = 'sequence_number'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // CD-7: sequence_number — per-room monotonic counter for gap detection and reconnect reconciliation
+      await pool.query(`
+        ALTER TABLE chat_messages
+          ADD COLUMN IF NOT EXISTS sequence_number BIGINT DEFAULT NULL
+      `);
+      // Create sequence for each room dynamically via function
+      await pool.query(`
+        CREATE SEQUENCE IF NOT EXISTS chat_message_global_seq
+          START 1 INCREMENT 1 NO CYCLE
+      `);
+      // Backfill existing messages with sequence numbers per conversation
+      await pool.query(`
+        WITH numbered AS (
+          SELECT id,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY conversation_id
+                   ORDER BY created_at, id
+                 ) AS rn
+          FROM chat_messages
+          WHERE sequence_number IS NULL
+        )
+        UPDATE chat_messages cm
+        SET sequence_number = n.rn
+        FROM numbered n
+        WHERE cm.id = n.id
+      `).catch(() => null);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_chat_msg_conv_seq
+          ON chat_messages (conversation_id, sequence_number)
+      `);
+
+      // CD-8: client_message_id — idempotency key set by client, prevents double-send on retry
+      await pool.query(`
+        ALTER TABLE chat_messages
+          ADD COLUMN IF NOT EXISTS client_message_id VARCHAR(64) DEFAULT NULL
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_chat_msg_client_id
+          ON chat_messages (client_message_id)
+          WHERE client_message_id IS NOT NULL
+      `);
+
+      // CD-9: delivery_status — SENT→DELIVERED→READ state machine
+      await pool.query(`
+        ALTER TABLE chat_messages
+          ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(20) DEFAULT 'sent'
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_chat_msg_delivery_status
+          ON chat_messages (delivery_status, conversation_id)
+          WHERE delivery_status != 'read'
+      `);
+    },
+  },
   {
     name: 'shifts_deleted_at_column',
     rationale: 'Soft-delete column added after initial schema definition; ALTER TABLE is idempotent via IF NOT EXISTS',

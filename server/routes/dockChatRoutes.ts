@@ -144,49 +144,97 @@ router.post("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedReq
     const uid = req.user?.id;
     if (!wid || !uid) return res.status(400).json({ error: "Auth required" });
     const { roomId } = req.params;
-    const { content, messageType } = req.body;
+    const { content, messageType, clientMessageId } = req.body;
     if (!content) return res.status(400).json({ error: "content required" });
+
+    // CD-5: Room status gate — block posting to archived/closed rooms
+    const roomCheck = await pool.query(
+      `SELECT status, conversation_type FROM chat_conversations
+       WHERE (id = $1 OR metadata->>'room_id' = $1) AND workspace_id = $2 LIMIT 1`,
+      [roomId, wid]
+    );
+    if (roomCheck.rows[0]?.status === 'closed') {
+      return res.status(403).json({
+        error: "This shift room has been archived. It is now read-only.",
+        code: "ROOM_ARCHIVED",
+      });
+    }
 
     // Bot command handling
     if (content.startsWith("/")) {
       return handleBotCommand(req, res, roomId, content, wid, uid);
     }
 
+    // CD-8: Idempotency key — client generates UUID per send attempt
+    // ON CONFLICT DO NOTHING: if same clientMessageId arrives twice, return existing message
+    const msgClientId = clientMessageId || null;
+
     // @Trinity mention
     if (content.includes("@Trinity") || content.includes("@trinity")) {
-      // Process async, return immediately with user message
       const { rows } = await pool.query(
-        `INSERT INTO chat_messages (workspace_id, sender_id, sender_type, content, message_type, metadata)
-         VALUES ($1,$2,'user',$3,$4,$5) RETURNING *`,
-        [wid, uid, content, messageType || "text", JSON.stringify({ room_id: roomId })]
+        `INSERT INTO chat_messages
+           (workspace_id, sender_id, sender_type, content, message_type, metadata,
+            client_message_id, delivery_status, sequence_number)
+         VALUES ($1,$2,'user',$3,$4,$5,$6,'sent',
+           (SELECT COALESCE(MAX(sequence_number),0)+1 FROM chat_messages
+            WHERE workspace_id=$1 AND metadata->>'room_id'=$7))
+         ON CONFLICT (client_message_id) DO NOTHING
+         RETURNING *`,
+        [wid, uid, content, messageType || "text",
+         JSON.stringify({ room_id: roomId }), msgClientId, roomId]
       );
-      // Queue Trinity response (non-blocking)
+      if (rows.length === 0) {
+        // Already inserted — find and return existing
+        const existing = await pool.query(
+          `SELECT * FROM chat_messages WHERE client_message_id=$1 LIMIT 1`,
+          [msgClientId]
+        );
+        return res.status(200).json(existing.rows[0] || { success: true, deduplicated: true });
+      }
       setImmediate(() => handleTrinityMention(wid, roomId, uid, content));
       return res.status(201).json(rows[0]);
     }
 
+    // Standard message — CD-8 idempotency + CD-9 delivery_status + CD-7 sequence_number
     const { rows } = await pool.query(
-      `INSERT INTO chat_messages (workspace_id, sender_id, sender_type, content, message_type, metadata)
-       VALUES ($1,$2,'user',$3,$4,$5) RETURNING *`,
-      [wid, uid, content, messageType || "text", JSON.stringify({ room_id: roomId })]
+      `INSERT INTO chat_messages
+         (workspace_id, sender_id, sender_type, content, message_type, metadata,
+          client_message_id, delivery_status, sequence_number)
+       VALUES ($1,$2,'user',$3,$4,$5,$6,'sent',
+         (SELECT COALESCE(MAX(sequence_number),0)+1 FROM chat_messages
+          WHERE workspace_id=$1 AND metadata->>'room_id'=$7))
+       ON CONFLICT (client_message_id) DO NOTHING
+       RETURNING *`,
+      [wid, uid, content, messageType || "text",
+       JSON.stringify({ room_id: roomId }), msgClientId, roomId]
     );
 
-    // @mention notifications
+    if (rows.length === 0) {
+      const existing = await pool.query(
+        `SELECT * FROM chat_messages WHERE client_message_id=$1 LIMIT 1`,
+        [msgClientId]
+      );
+      return res.status(200).json(existing.rows[0] || { success: true, deduplicated: true });
+    }
+
+    // @mention notifications (fire-and-forget)
     const mentionMatches = content.match(/@(\w+)/g) || [];
     for (const mention of mentionMatches) {
       const mentionedUser = mention.slice(1);
-      const userRes = await pool.query(`SELECT id FROM users WHERE username=$1 OR first_name=$2`, [mentionedUser, mentionedUser]);
-      if (userRes.rows[0]) {
-        await createNotification({
-          userId: userRes.rows[0].id,
-          workspaceId: wid,
-          title: "You were mentioned",
-          message: `${content.slice(0, 80)}`,
-          type: "mention",
-          actionUrl: `/dock-chat?room=${roomId}`,
-          idempotencyKey: `mention-${Date.now()}-${userRes.rows[0].id}`
+      pool.query(`SELECT id FROM users WHERE username=$1 OR first_name=$2`, [mentionedUser, mentionedUser])
+        .then(userRes => {
+          if (userRes.rows[0]) {
+            createNotification({
+              userId: userRes.rows[0].id,
+              workspaceId: wid,
+              title: "You were mentioned",
+              message: `${content.slice(0, 80)}`,
+              type: "mention",
+              actionUrl: `/dock-chat?room=${roomId}`,
+              idempotencyKey: `mention-${rows[0].id}-${userRes.rows[0].id}`
+            }).catch(() => null);
+          }
         }).catch(() => null);
-      }
     }
 
     res.status(201).json(rows[0]);

@@ -172,12 +172,42 @@ export async function subscribeBroadcast(): Promise<void> {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 let initialized = false;
-export async function initChatDurability(): Promise<void> {
-  if (initialized) return;
+export async function initChatDurability(): Promise<boolean> {
+  if (initialized) return redisAvailable;
   initialized = true;
   await initRedis();
   if (redisAvailable) {
     await subscribeBroadcast();
+  }
+  return redisAvailable;
+}
+
+/**
+ * subscribeToRoomBroadcasts — CD-15 multi-replica support
+ * ChatServerHub calls this to receive events published by other Railway replicas.
+ * The callback fires for every message published to the 'chat:broadcast' channel.
+ */
+export function subscribeToRoomBroadcasts(
+  handler: (event: Record<string, unknown>) => void
+): void {
+  localHandlers.push((_workspaceId: string, data: Record<string, unknown>) => {
+    try { handler(data); } catch { /* non-fatal */ }
+  });
+}
+
+/**
+ * publishRoomEvent — CD-15: publish to Redis so other replicas receive it
+ * Call this AFTER local WS broadcast so local clients get it immediately.
+ */
+export async function publishRoomEvent(
+  workspaceId: string,
+  event: Record<string, unknown>
+): Promise<void> {
+  if (!redisAvailable || !pubClient) return;
+  try {
+    await pubClient.publish('chat:broadcast', JSON.stringify({ workspaceId, data: event }));
+  } catch (err: any) {
+    log.warn('[ChatDurability] Redis publish failed (non-fatal):', err?.message);
   }
 }
 

@@ -213,6 +213,22 @@ class ChatServerHubClass {
   private cacheHits: number = 0;
   private cacheMisses: number = 0;
 
+  // CD-16: HelpAI 30-second dedup window per room per trigger type
+  private helpaiLastResponse: Map<string, number> = new Map();
+  private readonly HELPAI_DEDUP_MS = 30_000;
+
+  private isHelpAIDeduplicated(roomId: string, triggerType: string): boolean {
+    const key = `${roomId}:${triggerType}`;
+    const last = this.helpaiLastResponse.get(key);
+    const now = Date.now();
+    if (last && now - last < this.HELPAI_DEDUP_MS) {
+      log.info(`[ChatServerHub] HelpAI dedup suppressed`, { roomId, triggerType, msSinceLast: now - last });
+      return true;
+    }
+    this.helpaiLastResponse.set(key, now);
+    return false;
+  }
+
   private connectionHealth: ConnectionHealthStats = {
     totalConnections: 0,
     activeConnections: 0,
@@ -1132,6 +1148,26 @@ class ChatServerHubClass {
   setWebSocketBroadcaster(broadcaster: WebSocketBroadcaster): void {
     this.wsBroadcaster = broadcaster;
     log.info('[ChatServerHub] WebSocket broadcaster registered');
+
+    // CD-15: Wire Redis pub/sub for multi-replica Railway deployment
+    // If REDIS_URL is set, this instance subscribes to room events published
+    // by OTHER replicas — eliminating the "lost message" problem across replicas.
+    // Falls back gracefully to in-memory (single-replica mode) if Redis unavailable.
+    import('../chat/chatDurabilityAdapter').then(({ initChatDurability, subscribeToRoomBroadcasts }) => {
+      initChatDurability().then(available => {
+        if (available) {
+          subscribeToRoomBroadcasts((event: Record<string, unknown>) => {
+            // Incoming from another replica — broadcast to our local WS clients
+            if (this.wsBroadcaster && event) {
+              this.wsBroadcaster(event as any);
+            }
+          });
+          log.info('[ChatServerHub] Redis pub/sub active — multi-replica broadcast enabled');
+        } else {
+          log.info('[ChatServerHub] No REDIS_URL — single-replica in-memory mode');
+        }
+      }).catch(err => log.warn('[ChatServerHub] Redis init failed (non-fatal):', err));
+    }).catch(() => null);
   }
 
   /**
