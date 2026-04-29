@@ -27,6 +27,18 @@ import { useChatUnreadTotal } from "@/hooks/useChatManager";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { TrinityThoughtBar } from "@/components/chatdock/TrinityThoughtBar";
+import { Component, type ReactNode } from "react";
+
+// Isolated error boundary so TrinityThoughtBar never crashes the entire header/dashboard
+class TrinityBarErrorBoundary extends Component<{ children: ReactNode }, { err: boolean }> {
+  state = { err: false };
+  static getDerivedStateFromError() { return { err: true }; }
+  componentDidCatch(e: Error) { console.warn('[TrinityBar] Isolated crash caught:', e.message); }
+  render() {
+    if (this.state.err) return null; // Fail silently — don't crash the dashboard
+    return this.props.children;
+  }
+}
 import { TrinityTaskLauncher } from "@/components/trinity/TrinityTaskWidget";
 import { useTrinitySession } from "@/contexts/TrinitySessionContext";
 
@@ -606,11 +618,13 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
         </div>
       </div>
       {isWorkspaceMode && user && (
-        <TrinityThoughtBar
-          className="border-t border-cyan-500/20"
-          sessionId={activeSessionId ?? undefined}
-          isProcessing={!!activeSessionId}
-        />
+        <TrinityBarErrorBoundary>
+          <TrinityThoughtBar
+            className="border-t border-cyan-500/20"
+            sessionId={activeSessionId ?? undefined}
+            isProcessing={!!activeSessionId}
+          />
+        </TrinityBarErrorBoundary>
       )}
     </nav>
   );

@@ -302,7 +302,10 @@ export function TrinityThoughtBar({
     }
   }, [isProcessing, state]);
 
-  const colors = getBroadcastColor("trinity", state);
+  const colors = getBroadcastColor("trinity", state) ?? {
+    primary: "#8B5CF6", dim: "#8B5CF633", glow: "#8B5CF644",
+    text: "#DDD6FE", border: "#8B5CF666",
+  };
   const hasAutonomousScheduleActivity = !!activeSchedulingOperation;
   const isTrinityActive = isProcessing || state === "active" || hasAutonomousScheduleActivity;
   const displayPhrase = state === "offline"
