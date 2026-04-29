@@ -45,6 +45,185 @@ interface CriticalConstraint {
 }
 
 const constraints: CriticalConstraint[] = [
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PHASE 0: Ensure PostgreSQL enum types exist before any ALTER TYPE attempts
+  // ═══════════════════════════════════════════════════════════════════════════
+  // criticalConstraintsBootstrap previously failed with "type does not exist"
+  // errors because it tried to ALTER TYPE before the types were created.
+  // These must come FIRST in the constraints array.
+  {
+    name: 'create_enum_shift_status',
+    rationale: 'shift_status enum must exist before any ALTER TYPE ADD VALUE calls; Drizzle migrations did not create it on this DB',
+    isPresent: async () => {
+      const { rows } = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'shift_status'`);
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        DO $$ BEGIN
+          CREATE TYPE shift_status AS ENUM (
+            'draft','published','scheduled','in_progress','completed','cancelled',
+            'confirmed','pending','approved','auto_approved','no_show','calloff',
+            'denied'
+          );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      `);
+    },
+  },
+  {
+    name: 'create_enum_audit_action',
+    rationale: 'audit_action enum must exist before any ALTER TYPE ADD VALUE calls',
+    isPresent: async () => {
+      const { rows } = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'audit_action'`);
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        DO $$ BEGIN
+          CREATE TYPE audit_action AS ENUM (
+            'create','update','delete','login','logout','clock_in','clock_out',
+            'generate_invoice','payment_received','assign_manager','remove_manager',
+            'kick_user','silence_user','give_voice','remove_voice','ban_user','unban_user',
+            'reset_password','unlock_account','lock_account','change_role','change_permissions',
+            'transfer_ownership','impersonate_user',
+            'export_data','import_data','delete_data','restore_data',
+            'update_motd','update_banner','change_settings','view_audit_logs',
+            'escalate_ticket','transfer_ticket','view_documents','request_secure_info','release_spectator',
+            'automation_job_start','automation_job_complete','automation_job_error','automation_artifact_generated',
+            'scheduler_job_completed','scheduler_job_failed',
+            'workspace_created','coi_request','contract_renewal_request',
+            'approve','reject','bulk_update','deactivate','activate',
+            'coverage_requested','shift_unassigned','shift_assigned',
+            'payroll_approved','invoice_created','invoice_sent','invoice_paid',
+            'schedule_notification','coverage_triggered','payroll_run_started','payroll_run_completed','alert_created',
+            'service_unhealthy','alert_triggered'
+          );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      `);
+    },
+  },
+  {
+    name: 'create_enum_automation_level',
+    rationale: 'automation_level enum must exist before any ALTER TYPE ADD VALUE calls',
+    isPresent: async () => {
+      const { rows } = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'automation_level'`);
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        DO $$ BEGIN
+          CREATE TYPE automation_level AS ENUM (
+            'hand_held','graduated','full_automation','notify_only'
+          );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      `);
+    },
+  },
+  {
+    name: 'create_enum_knowledge_domain',
+    rationale: 'knowledge_domain enum must exist before any ALTER TYPE ADD VALUE calls',
+    isPresent: async () => {
+      const { rows } = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'knowledge_domain'`);
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        DO $$ BEGIN
+          CREATE TYPE knowledge_domain AS ENUM (
+            'scheduling','payroll','compliance','invoicing','employees',
+            'clients','automation','security','performance','general',
+            'onboarding','analytics','communication','time_tracking'
+          );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      `);
+    },
+  },
+  {
+    name: 'create_enum_gap_severity',
+    rationale: 'gap_severity enum must exist before any ALTER TYPE ADD VALUE calls',
+    isPresent: async () => {
+      const { rows } = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'gap_severity'`);
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        DO $$ BEGIN
+          CREATE TYPE gap_severity AS ENUM (
+            'critical','high','medium','low','info','warning','error','blocker'
+          );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      `);
+    },
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PHASE 0B: Fix ai_call_log table schema (auto-created with minimal columns)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    name: 'ai_call_log_full_schema',
+    rationale: 'ai_call_log was auto-created in index.ts with minimal columns; aiMeteringService.ts inserts 20 columns including period_id',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'ai_call_log' AND column_name = 'period_id'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // Ensure the table exists first, then add all missing columns idempotently
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS ai_call_log (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          workspace_id VARCHAR,
+          period_id VARCHAR,
+          model_name VARCHAR,
+          model_role VARCHAR,
+          call_type VARCHAR,
+          feature VARCHAR,
+          model VARCHAR,
+          input_tokens INTEGER DEFAULT 0,
+          output_tokens INTEGER DEFAULT 0,
+          total_tokens INTEGER DEFAULT 0,
+          tokens_used INTEGER DEFAULT 0,
+          cost_microcents BIGINT DEFAULT 0,
+          cost_credits INTEGER DEFAULT 0,
+          triggered_by_user_id VARCHAR,
+          triggered_by_session_id VARCHAR,
+          trinity_action_id VARCHAR,
+          employee_id VARCHAR,
+          response_time_ms INTEGER,
+          was_cached BOOLEAN DEFAULT false,
+          fallback_used BOOLEAN DEFAULT false,
+          fallback_from VARCHAR,
+          claude_validated BOOLEAN DEFAULT false,
+          claude_validation_passed BOOLEAN,
+          claude_validation_action VARCHAR,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS period_id VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS model_name VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS model_role VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS call_type VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS input_tokens INTEGER DEFAULT 0;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS output_tokens INTEGER DEFAULT 0;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS total_tokens INTEGER DEFAULT 0;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS cost_microcents BIGINT DEFAULT 0;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS triggered_by_user_id VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS triggered_by_session_id VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS trinity_action_id VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS employee_id VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS response_time_ms INTEGER;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS was_cached BOOLEAN DEFAULT false;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS fallback_used BOOLEAN DEFAULT false;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS fallback_from VARCHAR;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS claude_validated BOOLEAN DEFAULT false;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS claude_validation_passed BOOLEAN;
+        ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS claude_validation_action VARCHAR;
+        CREATE INDEX IF NOT EXISTS idx_ai_call_log_ws ON ai_call_log (workspace_id);
+        CREATE INDEX IF NOT EXISTS idx_ai_call_log_period ON ai_call_log (period_id);
+        CREATE INDEX IF NOT EXISTS idx_ai_call_log_created ON ai_call_log (created_at);
+      `);
+    },
+  },
   // ── Support login OTP table ──────────────────────────────────────────────
   // Stores daily-rotating SMS PINs for platform support role logins.
   // Created here (not in Drizzle schema) so it boots idempotently in all
