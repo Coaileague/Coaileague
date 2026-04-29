@@ -1,25 +1,19 @@
 /**
- * Credit Wrapper — gates AI calls behind credit balance checks
+ * creditWrapper — LEGACY SHIM
+ * The platform uses tokenManager for all AI usage gating. Credits are not used.
+ * @see server/services/billing/tokenManager.ts
  */
-import { creditBalanceService } from './creditBalanceService';
-import { createLogger } from '../../lib/logger';
-const log = createLogger('CreditWrapper');
+import { tokenManager } from './tokenManager';
 
 export async function withCredits<T>(
   workspaceId: string,
-  cost: number,
+  _cost: number,
   fn: () => Promise<T>,
-  options?: { skipIfInsufficient?: boolean }
 ): Promise<T> {
-  const balance = await creditBalanceService.getBalance(workspaceId);
-  if (balance.total < cost) {
-    if (options?.skipIfInsufficient) {
-      log.warn(`[CreditWrapper] Insufficient credits (${balance.total}/${cost}) for ${workspaceId} — skipping`);
-      return null as T;
-    }
-    throw new Error(`Insufficient AI credits: ${balance.total} available, ${cost} required`);
+  // Real check via tokenManager tier allowance, not credit balance
+  const state = await tokenManager.getWorkspaceTokenState(workspaceId).catch(() => null);
+  if (state && !state.unlimited && state.currentBalance <= 0) {
+    throw new Error(`Token allowance exhausted for workspace ${workspaceId} (tier-based limit)`);
   }
-  const result = await fn();
-  await creditBalanceService.deductCredits(workspaceId, cost).catch(e => log.warn('[CreditWrapper] Deduct failed:', e?.message));
-  return result;
+  return fn();
 }
