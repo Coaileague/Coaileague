@@ -30,6 +30,46 @@ interface ThoughtStatusResponse {
   workspaceId: string;
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// GET /api/trinity/active-operations
+// Returns currently active Trinity operations per workspace for thought bar
+// ═════════════════════════════════════════════════════════════════════════════
+router.get('/active-operations', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
+
+    // Import the universal step logger to get active orchestrations
+    const { universalStepLogger } = await import('../services/orchestration/universalStepLogger');
+    const active = universalStepLogger.getActiveOrchestrations(workspaceId);
+
+    const operations = active.map(ctx => ({
+      orchestrationId: ctx.orchestrationId,
+      domain: ctx.domain,
+      actionName: ctx.actionName,
+      status: ctx.status,
+      currentStep: ctx.steps[ctx.steps.length - 1]?.step || 'TRIGGER',
+      stepStatus: ctx.steps[ctx.steps.length - 1]?.status || 'pending',
+      progress: ctx.steps.length > 0 
+        ? Math.round((ctx.steps.filter(s => s.status === 'completed').length / ctx.steps.length) * 100)
+        : 0,
+      modelUsed: ctx.metadata?.modelUsed || 'claude',
+      createdAt: ctx.createdAt,
+    }));
+
+    res.json(operations);
+  } catch (error: unknown) {
+    log.error('[trinity/active-operations] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch active operations' });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GET /api/trinity/thought-status (original endpoint)
+// ═════════════════════════════════════════════════════════════════════════════
 router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;

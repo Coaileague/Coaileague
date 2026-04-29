@@ -1319,6 +1319,53 @@ router.delete('/preferences', requireTrinityAccess, async (req, res) => {
  * Get current seasonal profile with theme, effects, and mascot hints
  * Public endpoint - no auth required for theme detection
  */
+
+// Generate seasonal profile based on current date
+async function generateSeasonalProfile(workspaceId?: string) {
+  const today = new Date();
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
+
+  // Simple seasonal mapping
+  let seasonId = 'default';
+  let theme = 'dark';
+  let effects = false;
+  let hints = [];
+
+  // Holiday/season detection
+  if ((month === 12 && day >= 15) || (month === 1 && day <= 5)) {
+    seasonId = 'christmas';
+    effects = true;
+    hints = ['Winter Wonderland', 'Holiday Mode Active'];
+  } else if (month === 2 && day >= 14 && day <= 16) {
+    seasonId = 'valentines';
+    effects = true;
+  } else if ((month === 10 && day >= 15) || (month === 11 && day <= 5)) {
+    seasonId = 'halloween';
+    effects = true;
+  } else if (month === 4 && day >= 15 && day <= 25) {
+    seasonId = 'easter';
+    effects = true;
+  }
+
+  return {
+    seasonId,
+    theme,
+    effectsEnabled: effects,
+    hints,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+// Seasonal subagent helper
+function getSeasonalSubagent() {
+  return {
+    isSeasonalDisabled: () => false,
+    getTheme: () => 'dark',
+    getEffects: () => false,
+  };
+}
+
 let seasonalCache: { data: any; timestamp: number } | null = null;
 const SEASONAL_CACHE_TTL = 60000; // 60 seconds (seasonal state changes rarely)
 

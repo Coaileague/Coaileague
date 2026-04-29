@@ -208,11 +208,7 @@ app.use((req, res, next) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(self), payment=(self)');
-  // CSP on every route including /health — helmet will override with full
-  // policy on subsequent routes. Replit dev domains removed (legacy).
-  if (!res.getHeader('Content-Security-Policy')) {
-    res.setHeader('Content-Security-Policy', "default-src 'self'; frame-ancestors 'self'");
-  }
+  // NOTE: CSP is set by helmet middleware below (more complete allowlist for production services)
   next();
 });
 
@@ -544,6 +540,7 @@ app.use(helmet({
         "https://api.resend.com",
         "https://api.stripe.com",
         "https://*.stripe.com",
+        "https://cdn.plaid.com",
         "https://production.plaid.com",
         "https://sandbox.plaid.com",
         "https://development.plaid.com",

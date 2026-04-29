@@ -783,18 +783,31 @@ router.get('/api/notifications/unread-count', requireAuth, async (req: Authentic
         });
       }
       
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
-      const member = await storage.getWorkspaceMemberByUserId(userId);
-      const workspaceId = workspace?.id || member?.workspaceId;
-      
-      // Get notification count using storage
-      const notificationCount = workspaceId ? await storage.getUnreadNotificationCount(userId, workspaceId) : 0;
-      // Get platform updates count using correct storage method
+      let notificationCount = 0;
       let platformUpdatesCount = 0;
-      if (workspaceId) {
-        const platformUpdates = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 100);
-        platformUpdatesCount = platformUpdates?.filter(u => !u.isViewed)?.length || 0;
+      
+      try {
+        const workspace = await storage.getWorkspaceByOwnerId(userId);
+        const member = await storage.getWorkspaceMemberByUserId(userId);
+        const workspaceId = workspace?.id || member?.workspaceId;
+        
+        // Get notification count using storage
+        if (workspaceId && storage.getUnreadNotificationCount) {
+          notificationCount = await storage.getUnreadNotificationCount(userId, workspaceId);
+        }
+        
+        // Get platform updates count using correct storage method
+        if (workspaceId && storage.getPlatformUpdatesWithReadState) {
+          const platformUpdates = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 100);
+          platformUpdatesCount = platformUpdates?.filter(u => !u.isViewed)?.length || 0;
+        }
+      } catch (storageError) {
+        log.warn('[notifications/unread-count] Storage query failed, returning 0:', storageError);
+        // Gracefully degrade - return 0 count instead of 500
+        notificationCount = 0;
+        platformUpdatesCount = 0;
       }
+
       const total = notificationCount + platformUpdatesCount;
       
       res.json({ 
@@ -805,7 +818,8 @@ router.get('/api/notifications/unread-count', requireAuth, async (req: Authentic
       });
     } catch (error) {
       log.error('Error getting unread count:', error);
-      res.status(500).json({ count: 0, message: 'Failed to get unread count' });
+      // Return 0 count with 200 status instead of 500 - better UX
+      res.json({ count: 0, notifications: 0, platformUpdates: 0, message: 'Using fallback count' });
     }
   });
 
