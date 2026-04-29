@@ -14,10 +14,12 @@ import { UniversalModal, UniversalModalDescription, UniversalModalHeader, Univer
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
-import {Eye, FileText, 
-  Download, 
-  Printer, 
-  Send, 
+import {
+  Eye,
+  FileText,
+  Download,
+  Printer,
+  Send,
   Filter,
   TrendingUp,
   DollarSign,
@@ -25,9 +27,8 @@ import {Eye, FileText,
   Clock,
   Calendar as CalendarIcon,
   Share2,
-  Eye,
-  Archive
-} from "lucide-react";
+  Archive,
+} from 'lucide-react';;
 import { format } from "date-fns";
 
 export default function CompanyReports() {

@@ -1,3 +1,15 @@
+import {
+  MessageSquare,
+  Users,
+  LogIn,
+  LogOut,
+  UserPlus,
+  Volume2,
+  VolumeX,
+  Settings,
+  MoreVertical,
+  Loader2,
+} from 'lucide-react';
 import { useState, useEffect } from "react";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -16,17 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  MessageSquare,
-  Users,
-  LogIn,
-  LogOut,
-  UserPlus,
-  Volume2,
-  VolumeX,
-  Settings,
-  MoreVertical,
-} from "lucide-react";
+;
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Suspense, lazy } from "react";
-import { Loader2 } from "lucide-react";
+;
 
 interface RoomMember {
   id: string;

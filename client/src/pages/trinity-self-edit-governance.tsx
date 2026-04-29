@@ -13,7 +13,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { useState } from 'react';
-import {Eye, Shield,
+import {
+  Eye,
+  Shield,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -28,8 +30,7 @@ import {Eye, Shield,
   Loader2,
   GitBranch,
   TestTube,
-  Eye,
-} from 'lucide-react';
+} from 'lucide-react';;
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface EditingRules {

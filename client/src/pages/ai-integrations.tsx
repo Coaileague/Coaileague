@@ -15,11 +15,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
-import {Eye, Plug, Plus, Search, CheckCircle2, XCircle, AlertCircle, Settings,
-  Key, Webhook, FileText, ExternalLink, Copy, Trash2, ToggleLeft,
-  ToggleRight, Activity, DollarSign, Users, Calendar, Mail, Database,
-  Cloud, Zap, Shield, Code, Link as LinkIcon, Eye, EyeOff
-} from "lucide-react";
+import {
+  Eye,
+  Plug,
+  Plus,
+  Search,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Settings,
+  Key,
+  Webhook,
+  FileText,
+  ExternalLink,
+  Copy,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Activity,
+  DollarSign,
+  Users,
+  Calendar,
+  Mail,
+  Database,
+  Cloud,
+  Zap,
+  Shield,
+  Code,
+  Link as LinkIcon,
+  EyeOff,
+} from 'lucide-react';;
 import { SiQuickbooks, SiSalesforce, SiSlack } from "react-icons/si";
 import { MarketplaceCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 

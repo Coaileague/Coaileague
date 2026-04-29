@@ -6,17 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {Eye, AlertCircle, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
+import {
+  Eye,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
   DollarSign,
   Calendar,
   Users,
   FileText,
   TrendingUp,
-  Eye
-} from "lucide-react";
+} from 'lucide-react';;
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { FRIENDLY_LABELS } from "@/lib/friendlyStrings";

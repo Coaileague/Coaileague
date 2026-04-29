@@ -5,12 +5,37 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {Eye, Shield, Users, ArrowRight, Calendar, DollarSign,
-  FileText, BarChart3, MapPin, Briefcase, Building2, Eye, BookOpen,
-  Lightbulb, Heart, Network, ListChecks, Layers, Mic, Clock, Calculator,
-  CheckCircle2, AlarmClock, Wallet, Leaf, MessageCircle, Lock,
-  Activity, Cpu, GitBranch,
-} from 'lucide-react';
+import {
+  Eye,
+  Shield,
+  Users,
+  ArrowRight,
+  Calendar,
+  DollarSign,
+  FileText,
+  BarChart3,
+  MapPin,
+  Briefcase,
+  Building2,
+  BookOpen,
+  Lightbulb,
+  Heart,
+  Network,
+  ListChecks,
+  Layers,
+  Mic,
+  Clock,
+  Calculator,
+  CheckCircle2,
+  AlarmClock,
+  Wallet,
+  Leaf,
+  MessageCircle,
+  Lock,
+  Activity,
+  Cpu,
+  GitBranch,
+} from 'lucide-react';;
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 import { PRICING_TIERS } from '@/config/pricing';
 

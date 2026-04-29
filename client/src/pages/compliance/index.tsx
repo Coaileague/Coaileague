@@ -7,19 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {Eye, Shield, 
-  FileCheck, 
-  AlertTriangle, 
-  Clock, 
-  Users, 
+import {
+  Eye,
+  Shield,
+  FileCheck,
+  AlertTriangle,
+  Clock,
+  Users,
   Lock,
   CheckCircle2,
   XCircle,
   Building2,
   FileWarning,
-  Eye,
-  ClipboardCheck
-} from "lucide-react";
+  ClipboardCheck,
+} from 'lucide-react';;
 import { Link } from "wouter";
 
 interface ComplianceStats {

@@ -22,7 +22,9 @@ import {
 import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import {Eye, Bell,
+import {
+  Eye,
+  Bell,
   Clock,
   DollarSign,
   AlertTriangle,
@@ -39,8 +41,7 @@ import {Eye, Bell,
   History,
   Send,
   Check,
-  Eye,
-} from "lucide-react";
+} from 'lucide-react';;
 import { format } from "date-fns";
 
 type AlertType = 'overtime' | 'low_coverage' | 'compliance_violation' | 'payment_overdue' | 'shift_unfilled' | 'clock_anomaly' | 'budget_exceeded' | 'approval_pending';

@@ -35,7 +35,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {Eye, Building2,
+import {
+  Eye,
+  Building2,
   CreditCard,
   Bell,
   Shield,
@@ -87,10 +89,9 @@ import {Eye, Building2,
   HardDrive,
   Database,
   Lock,
-  Eye,
   EyeOff,
   Save,
-} from "lucide-react";
+} from 'lucide-react';;
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";

@@ -42,8 +42,9 @@ import {
   DocumentLegalText,
   type DocumentStatus,
 } from "@/components/documents/UniversalDocumentFrame";
-import {Eye, FileText,
+import {
   Eye,
+  FileText,
   Send,
   Download,
   Search,
@@ -56,7 +57,7 @@ import {Eye, FileText,
   Clock,
   FileSignature,
   AlertTriangle,
-} from "lucide-react";
+} from 'lucide-react';;
 import { format } from "date-fns";
 
 // ─── ORG DEFAULTS (overridden by live workspace data in the component) ─────────

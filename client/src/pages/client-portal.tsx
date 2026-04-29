@@ -18,12 +18,44 @@ import { UniversalModal, UniversalModalDescription, UniversalModalHeader, Univer
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {Eye, DollarSign, Calendar, Clock, CheckCircle2, AlertCircle, FileText, TrendingUp,
-  CreditCard, Download, ClipboardCheck, AlertTriangle, Shield, Eye, Loader2,
-  FileSignature, ScrollText, MessageSquare, Building2, RefreshCw, ExternalLink,
-  ShieldCheck, FilePlus, SendHorizonal, ChevronRight, CheckCheck, XCircle, Users2,
-  Paperclip, CalendarPlus, UserCheck, Lock, Settings, Key, Wrench, PlusCircle, ListTodo,
-} from "lucide-react";
+import {
+  Eye,
+  DollarSign,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  TrendingUp,
+  CreditCard,
+  Download,
+  ClipboardCheck,
+  AlertTriangle,
+  Shield,
+  Loader2,
+  FileSignature,
+  ScrollText,
+  MessageSquare,
+  Building2,
+  RefreshCw,
+  ExternalLink,
+  ShieldCheck,
+  FilePlus,
+  SendHorizonal,
+  ChevronRight,
+  CheckCheck,
+  XCircle,
+  Users2,
+  Paperclip,
+  CalendarPlus,
+  UserCheck,
+  Lock,
+  Settings,
+  Key,
+  Wrench,
+  PlusCircle,
+  ListTodo,
+} from 'lucide-react';;
 import type { Invoice, Client } from "@shared/schema";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import DockChatWidget from "@/components/client-portal/DockChatWidget";

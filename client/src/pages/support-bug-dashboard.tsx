@@ -9,10 +9,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
-import {Eye, Bug, CheckCircle, XCircle, Clock, Loader2, AlertTriangle,
-  FileCode, Eye, ThumbsUp, ThumbsDown, Wrench,
-  BarChart3, TrendingUp
-} from "lucide-react";
+import {
+  Eye,
+  Bug,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
+  AlertTriangle,
+  FileCode,
+  ThumbsUp,
+  ThumbsDown,
+  Wrench,
+  BarChart3,
+  TrendingUp,
+} from 'lucide-react';;
 import { UniversalEmptyState } from "@/components/universal/UniversalEmptyState";
 
 interface RemediationRequest {

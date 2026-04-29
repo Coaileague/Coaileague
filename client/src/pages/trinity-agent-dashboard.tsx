@@ -43,16 +43,17 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import {Eye, Shield,
+import {
+  Eye,
+  Shield,
   AlertTriangle,
   Activity,
   CheckCircle,
   XCircle,
-  Eye,
   Clock,
   RefreshCw,
   Search,
-} from 'lucide-react';
+} from 'lucide-react';;
 import { TrinityArrowMark } from '@/components/trinity-logo';
 
 // ── Types ──────────────────────────────────────────────────────────────────

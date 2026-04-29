@@ -10,10 +10,22 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
-import {Eye, Users, MessageSquare, Ticket, Clock, AlertCircle, 
-  CheckCircle, UserX, Volume2, VolumeX, Star,
-  ArrowRight, Eye, UserCog, Sparkles
-} from "lucide-react";
+import {
+  Eye,
+  Users,
+  MessageSquare,
+  Ticket,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  UserX,
+  Volume2,
+  VolumeX,
+  Star,
+  ArrowRight,
+  UserCog,
+  Sparkles,
+} from 'lucide-react';;
 import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { sanitizeMessage } from "@/lib/sanitize";
 

@@ -8,9 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import {Eye, Inbox, Clock, CheckCircle, AlertTriangle, XCircle,
-  Play, Settings, Layers, Eye, Ban, RefreshCw, Mail
-} from "lucide-react";
+import {
+  Eye,
+  Inbox,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Play,
+  Settings,
+  Layers,
+  Ban,
+  RefreshCw,
+  Mail,
+} from 'lucide-react';;
 
 const pageConfig: CanvasPageConfig = {
   id: "inbound-opportunities",

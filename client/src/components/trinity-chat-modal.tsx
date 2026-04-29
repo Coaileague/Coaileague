@@ -31,7 +31,9 @@ import {
   TRINITY_ALLOWED_ROLES,
 } from '@/config/trinity';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
-import { Eye, X,
+import {
+  Eye,
+  X,
   Send,
   Loader2,
   GripHorizontal,
@@ -56,8 +58,7 @@ import { Eye, X,
   Command,
   Paperclip,
   ImagePlus,
-  X as XIcon,
-} from 'lucide-react';
+} from 'lucide-react';;
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 // Adapter: makes TrinityLogo compatible with Lucide icon props
 const TrinityIcon = ({ className }: { className?: string }) => <TrinityLogo size={14} />;

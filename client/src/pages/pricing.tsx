@@ -12,10 +12,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import {Eye, CheckCircle2, XCircle, ArrowRight, Calculator, ChevronDown, ChevronUp,
-  Users, Shield, DollarSign, Brain, Zap, Star, Phone, Mail, Eye, BookOpen,
-  Lightbulb, Heart, Network, ListChecks, Layers,
-} from "lucide-react";
+import {
+  Eye,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  Calculator,
+  ChevronDown,
+  ChevronUp,
+  Users,
+  Shield,
+  DollarSign,
+  Brain,
+  Zap,
+  Star,
+  Phone,
+  Mail,
+  BookOpen,
+  Lightbulb,
+  Heart,
+  Network,
+  ListChecks,
+  Layers,
+} from 'lucide-react';;
 import {
   PRICING_TIERS, TIER_LIMITS, STRATEGIC_SEAT_PRICING,
   recommendTier, getAnnualSavings,

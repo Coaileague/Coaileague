@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {Eye, Users,
+import {
+  Eye,
+  Users,
   Shield,
   Clock,
   FileCheck,
@@ -28,7 +30,6 @@ import {Eye, Users,
   AlertOctagon,
   CheckCircle,
   XCircle,
-  Eye,
   ExternalLink,
   Home,
   Radio,
@@ -38,7 +39,7 @@ import {Eye, Users,
   Building,
   Siren,
   ClockAlert,
-} from "lucide-react";
+} from 'lucide-react';;
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";

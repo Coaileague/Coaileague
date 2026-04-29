@@ -22,12 +22,50 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import {Eye, Clock, Play, Square, Calendar, Users, Edit2, Check, X, Bell, History,
-  MapPin, Camera, LogOut, LogIn, Download, Filter, ChevronDown, ChevronLeft, ChevronRight,
-  AlertCircle, CheckCircle, XCircle, Eye, Shield, Coffee, PlayCircle, Menu, Home, ArrowLeft,
-  LayoutGrid, List, CheckSquare, AlertTriangle, Loader2, BarChart2, FileText, DollarSign,
-  TrendingUp, AlertOctagon, FileSpreadsheet, Search, Upload
-} from "lucide-react";
+import {
+  Eye,
+  Clock,
+  Play,
+  Square,
+  Calendar,
+  Users,
+  Edit2,
+  Check,
+  X,
+  Bell,
+  History,
+  MapPin,
+  Camera,
+  LogOut,
+  LogIn,
+  Download,
+  Filter,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Shield,
+  Coffee,
+  PlayCircle,
+  Menu,
+  Home,
+  ArrowLeft,
+  LayoutGrid,
+  List,
+  CheckSquare,
+  AlertTriangle,
+  Loader2,
+  BarChart2,
+  FileText,
+  DollarSign,
+  TrendingUp,
+  AlertOctagon,
+  FileSpreadsheet,
+  Search,
+  Upload,
+} from 'lucide-react';;
 import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";

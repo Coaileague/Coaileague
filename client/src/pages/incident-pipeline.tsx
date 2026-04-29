@@ -2,14 +2,15 @@ import { useState } from "react";
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import {Eye, AlertTriangle,
+import {
+  Eye,
+  AlertTriangle,
   ChevronLeft,
   Clock,
   CheckCircle2,
   XCircle,
   Send,
   RefreshCw,
-  Eye,
   Filter,
   Search,
   FileText,
@@ -21,7 +22,7 @@ import {Eye, AlertTriangle,
   MapPin,
   AlertCircle,
   ArrowLeft,
-} from "lucide-react";
+} from 'lucide-react';;
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

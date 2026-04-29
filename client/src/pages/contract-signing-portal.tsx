@@ -12,10 +12,25 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import {Eye, FileText, Pen, CheckCircle, XCircle, Clock, Shield, 
-  AlertTriangle, Eye, Download, MessageSquare, Eraser,
-  Lock, ChevronDown, ChevronUp, Upload, CheckSquare, Hourglass
-} from "lucide-react";
+import {
+  Eye,
+  FileText,
+  Pen,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Shield,
+  AlertTriangle,
+  Download,
+  MessageSquare,
+  Eraser,
+  Lock,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+  CheckSquare,
+  Hourglass,
+} from 'lucide-react';;
 import { format } from "date-fns";
 
 interface ContractData {

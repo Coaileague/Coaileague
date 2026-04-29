@@ -24,11 +24,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {Eye, Users, Building2, Shield, Search, UserCheck, UserX, 
-  Brain, Zap, RefreshCw, AlertTriangle, CheckCircle, 
-  Ban, Play, Settings, Eye, Clock, Activity,
-  Briefcase, Calendar, Receipt, MapPin, DollarSign, Mail, UserCog
-} from "lucide-react";
+import {
+  Eye,
+  Users,
+  Building2,
+  Shield,
+  Search,
+  UserCheck,
+  UserX,
+  Brain,
+  Zap,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Ban,
+  Play,
+  Settings,
+  Clock,
+  Activity,
+  Briefcase,
+  Calendar,
+  Receipt,
+  MapPin,
+  DollarSign,
+  Mail,
+  UserCog,
+} from 'lucide-react';;
 
 interface EndUser {
   id: string;

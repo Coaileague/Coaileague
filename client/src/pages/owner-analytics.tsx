@@ -15,8 +15,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {Eye, Users, 
-  TrendingUp, 
+import {
+  Eye,
+  Users,
+  TrendingUp,
   TrendingDown,
   Activity,
   Cpu,
@@ -34,11 +36,10 @@ import {Eye, Users,
   Shield,
   Sparkles,
   FileCheck,
-  Eye,
   EyeOff,
   RefreshCw,
-  Scale
-} from "lucide-react";
+  Scale,
+} from 'lucide-react';;
 import { 
   AreaChart, 
   Area, 

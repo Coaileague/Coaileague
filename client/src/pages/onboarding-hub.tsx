@@ -16,11 +16,30 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import {Eye, CheckCircle2, Clock, AlertCircle, ChevronRight, FileText, Users,
-  Building2, Shield, Upload, PenLine, Search, Eye, Download,
-  RefreshCw, Loader2, CheckCheck, Circle, Lock, ArrowLeft,
-  ClipboardList, FileCheck, Zap,
-} from "lucide-react";
+import {
+  Eye,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ChevronRight,
+  FileText,
+  Users,
+  Building2,
+  Shield,
+  Upload,
+  PenLine,
+  Search,
+  Download,
+  RefreshCw,
+  Loader2,
+  CheckCheck,
+  Circle,
+  Lock,
+  ArrowLeft,
+  ClipboardList,
+  FileCheck,
+  Zap,
+} from 'lucide-react';;
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const PAGE_CONFIG: CanvasPageConfig = {

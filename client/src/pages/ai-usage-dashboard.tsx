@@ -12,9 +12,18 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend
 } from "recharts";
-import {Eye, Brain, Zap, Clock, Activity, Target, Users,
-  TrendingUp, Eye, AlertCircle, Lightbulb
-} from "lucide-react";
+import {
+  Eye,
+  Brain,
+  Zap,
+  Clock,
+  Activity,
+  Target,
+  Users,
+  TrendingUp,
+  AlertCircle,
+  Lightbulb,
+} from 'lucide-react';;
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 

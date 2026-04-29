@@ -21,7 +21,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {Eye, Plus, 
+import {
+  Eye,
+  Plus,
   Search,
   FileText,
   Clock,
@@ -32,7 +34,6 @@ import {Eye, Plus,
   Send,
   DollarSign,
   MoreVertical,
-  Eye,
   Edit,
   Download,
   XCircle,
@@ -42,7 +43,7 @@ import {Eye, Plus,
   BarChart3,
   Loader2,
   ArrowUpDown,
-} from "lucide-react";
+} from 'lucide-react';;
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { useTableSort } from "@/hooks/use-table-sort";
 import {

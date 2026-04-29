@@ -17,10 +17,26 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import { Skeleton } from "@/components/ui/skeleton";
-import {Eye, MessageSquare, Send, Search, UserPlus, MoreVertical,
-  Eye, Sparkles, CheckCheck, Circle, Lock, Zap,
-  Paperclip, X, FileText, Image as ImageIcon, Download, ArrowLeft, Loader2
-} from "lucide-react";
+import {
+  Eye,
+  MessageSquare,
+  Send,
+  Search,
+  UserPlus,
+  MoreVertical,
+  Sparkles,
+  CheckCheck,
+  Circle,
+  Lock,
+  Zap,
+  Paperclip,
+  X,
+  FileText,
+  Image as ImageIcon,
+  Download,
+  ArrowLeft,
+  Loader2,
+} from 'lucide-react';;
 import { MessageAttachment } from "@/components/message-attachment";
 import { CameraCapture } from "@/components/camera-capture";
 import { usePasteImageHandler, PasteImageHint } from "@/components/paste-image-handler";

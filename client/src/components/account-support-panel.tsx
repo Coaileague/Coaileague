@@ -10,10 +10,26 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {Eye, Eye, User, Mail, Phone, MapPin, Calendar, Shield, Key, 
-  RefreshCw, Unlock, Lock, CheckCircle, XCircle,
-  Eye, EyeOff, Edit, Save, AlertTriangle, Clock
-} from "lucide-react";
+import {
+  Eye,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Shield,
+  Key,
+  RefreshCw,
+  Unlock,
+  Lock,
+  CheckCircle,
+  XCircle,
+  EyeOff,
+  Edit,
+  Save,
+  AlertTriangle,
+  Clock,
+} from 'lucide-react';;
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

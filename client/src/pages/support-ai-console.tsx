@@ -24,7 +24,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
-import {Eye, Brain,
+import {
+  Eye,
+  Brain,
   Send,
   MessageSquare,
   FileCode,
@@ -45,15 +47,14 @@ import {Eye, Brain,
   Loader2,
   Search,
   Edit3,
-  Eye,
   Trash2,
   Plus,
   FolderOpen,
   Code,
   Sparkles,
   Zap,
-  Activity
-} from "lucide-react";
+  Activity,
+} from 'lucide-react';;
 import { format } from "date-fns";
 import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter } from '@/components/ui/universal-modal';
 import {

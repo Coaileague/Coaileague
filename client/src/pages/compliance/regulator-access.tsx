@@ -11,19 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {Eye, Shield, 
-  Key, 
-  UserCheck, 
-  Clock, 
+import {
+  Eye,
+  Shield,
+  Key,
+  UserCheck,
+  Clock,
   XCircle,
   Copy,
   Building2,
   Plus,
   Loader2,
   AlertTriangle,
-  Eye,
-  Ban
-} from "lucide-react";
+  Ban,
+} from 'lucide-react';;
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 

@@ -18,22 +18,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {Eye, Lock, 
-  Unlock, 
-  Terminal, 
-  Bot, 
-  Shield, 
-  Headset, 
-  Settings, 
+import {
+  Eye,
+  Lock,
+  Unlock,
+  Terminal,
+  Bot,
+  Shield,
+  Headset,
+  Settings,
   Search,
   AlertTriangle,
   Trash2,
   Ban,
-  Eye,
   ChevronRight,
   Copy,
-  Check
-} from 'lucide-react';
+  Check,
+} from 'lucide-react';;
 import { useToast } from '@/hooks/use-toast';
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 

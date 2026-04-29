@@ -10,8 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {Eye, Building2, 
-  Users, 
+import {
+  Eye,
+  Building2,
+  Users,
   Search,
   Shield,
   UserCog,
@@ -36,8 +38,7 @@ import {Eye, Building2,
   PowerOff,
   KeyRound,
   LogOut,
-  Eye,
-} from "lucide-react";
+} from 'lucide-react';;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";

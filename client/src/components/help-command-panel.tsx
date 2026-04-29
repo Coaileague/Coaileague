@@ -8,11 +8,34 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
-import {Eye, MessageSquare, Users, Shield, Zap, Settings, AlertCircle, 
-  UserPlus, Lock, Unlock, UserX, RefreshCw, Bell, Flag,
-  Eye, EyeOff, Volume2, VolumeX, UserCog, FileText,
-  CheckCircle, XCircle, ArrowRight, Sparkles, X, Save, Play
-} from "lucide-react";
+import {
+  Eye,
+  MessageSquare,
+  Users,
+  Shield,
+  Zap,
+  Settings,
+  AlertCircle,
+  UserPlus,
+  Lock,
+  Unlock,
+  UserX,
+  RefreshCw,
+  Bell,
+  Flag,
+  EyeOff,
+  Volume2,
+  VolumeX,
+  UserCog,
+  FileText,
+  CheckCircle,
+  XCircle,
+  ArrowRight,
+  Sparkles,
+  X,
+  Save,
+  Play,
+} from 'lucide-react';;
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 

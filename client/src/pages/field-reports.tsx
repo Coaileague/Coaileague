@@ -13,7 +13,9 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { format } from "date-fns";
-import {Eye, AlertTriangle,
+import {
+  Eye,
+  AlertTriangle,
   Shield,
   FileText,
   Clock,
@@ -29,14 +31,13 @@ import {Eye, AlertTriangle,
   Building2,
   Filter,
   Download,
-  Eye,
   Loader2,
   ClipboardCheck,
   Bot,
   Lightbulb,
   ShieldAlert,
-  Wrench
-} from "lucide-react";
+  Wrench,
+} from 'lucide-react';;
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

@@ -9,16 +9,44 @@ import { Redirect } from "wouter";
 import { performLogout } from "@/lib/logoutHandler";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
-import {Eye, Clock, Users, Building2, Shield,
-  FolderOpen, Activity, Eye, MessageSquare, Megaphone, FileText,
-  ArrowRightLeft, CalendarOff, ClipboardList, AlertTriangle,
-  Settings, HelpCircle, LogOut, Briefcase, ChevronRight, X,
-  Radio, ShieldAlert, ShoppingBag, Scale, GraduationCap, Star,
-  Award, TrendingUp,
-  Mail, CheckCircle, MapPin, Wallet,
-  Package, FileCheck2, Receipt,
+import {
+  Eye,
+  Clock,
+  Users,
+  Building2,
+  Shield,
+  FolderOpen,
+  Activity,
+  MessageSquare,
+  Megaphone,
+  FileText,
+  ArrowRightLeft,
+  CalendarOff,
+  ClipboardList,
+  AlertTriangle,
+  Settings,
+  HelpCircle,
+  LogOut,
+  Briefcase,
+  ChevronRight,
+  X,
+  Radio,
+  ShieldAlert,
+  ShoppingBag,
+  Scale,
+  GraduationCap,
+  Star,
+  Award,
+  TrendingUp,
+  Mail,
+  CheckCircle,
+  MapPin,
+  Wallet,
+  Package,
+  FileCheck2,
+  Receipt,
   type LucideIcon,
-} from "lucide-react";
+} from 'lucide-react';;
 
 interface MenuItemProps {
   icon: LucideIcon;
