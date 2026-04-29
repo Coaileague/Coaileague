@@ -46,8 +46,6 @@ import { OverlayControllerProvider } from "@/contexts/overlay-controller";
 import { UniversalLoadingGateProvider } from "@/contexts/universal-loading-gate";
 import { TransitionProvider } from "@/contexts/transition-context";
 
-import { SimpleModeProvider } from "@/contexts/SimpleModeContext";
-import { SimpleModeToggle } from "@/components/SimpleModeToggle";
 import { Button } from "@/components/ui/button";
 import { PaymentEnforcementProvider } from "@/hooks/use-payment-enforcement";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -1348,7 +1346,6 @@ function AppContent() {
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Easy View Toggle - Simplified interface for non-technical users */}
-                  <SimpleModeToggle variant="compact" />
                   {/* Trinity AI Assistant - Opens chat modal */}
                   <HeaderTrinityButton />
                   {/* Chat Button - Header mounted in middle */}
@@ -1959,8 +1956,7 @@ export default function App() {
                   <TooltipProvider>
                       {/* SeasonalThemeProvider removed — seasonal effects disabled */}
                       <>
-                        <SimpleModeProvider>
-                        <LayerManagerProvider>
+      <LayerManagerProvider>
                         <TransitionLoaderProvider>
                         <TrinityModalProvider>
                         <TrinitySessionProvider>
@@ -2001,8 +1997,7 @@ export default function App() {
                         </TrinityModalProvider>
                         </TransitionLoaderProvider>
                         </LayerManagerProvider>
-                        </SimpleModeProvider>
-                      </>
+      </>
                   </TooltipProvider>
                   </TransitionProvider>
                 </WorkspaceBrandProvider>

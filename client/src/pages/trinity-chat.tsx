@@ -16,21 +16,11 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Send,
   User,
-  Briefcase,
-  Heart,
   Settings,
   History,
   MessageSquare,
@@ -97,15 +87,11 @@ export default function TrinityChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const bus = useWebSocketBus();
+  const mode = 'business' as const; // Trinity is unified — no external mode switching
   
   const userName = user?.firstName || user?.username || user?.email?.split('@')[0] || 'there';
 
-  // Sync initial mode when role is resolved (platform staff → guru, others → business)
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMode(isPlatformStaff ? 'guru' : 'business');
-    }
-  }, [isPlatformStaff]);
+
 
   useEffect(() => {
     if (!bus) return;
@@ -135,7 +121,7 @@ export default function TrinityChat() {
 
   // Chat mutation
   const chatMutation = useMutation({
-    mutationFn: async (payload: { message: string; mode: ConversationMode; sessionId?: string }) => {
+    mutationFn: async (payload: { message: string; sessionId?: string }) => {
       const response = await apiRequest('POST', '/api/trinity/chat/chat', payload);
       return response.json();
     },
@@ -163,10 +149,6 @@ export default function TrinityChat() {
     },
   });
 
-  // Mode switch mutation
-  const modeMutation = useMutation({
-    mutationFn: async (newMode: ConversationMode) => {
-      const response = await apiRequest('POST', '/api/trinity/chat/mode', { mode: newMode });
       return response.json();
     },
     onSuccess: (data) => {
@@ -174,7 +156,7 @@ export default function TrinityChat() {
       setMessages([]);
       toast({
         title: 'Mode Changed',
-        description: `Switched to ${[data.mode as ConversationMode].label} mode`,
+        description: 'Trinity updated',
       });
     },
   });
@@ -229,28 +211,13 @@ export default function TrinityChat() {
     setMessage('');
   };
 
-  const handleModeSwitch = (newMode: ConversationMode) => {
-    // Check if personal mode requires settings
-    if (newMode === 'personal' && !buddySettings?.personalDevelopmentEnabled) {
-      toast({
-        title: 'Personal Development Mode',
-        description: 'Enable Personal Development in settings first',
-        variant: 'destructive',
-      });
-      setSettingsOpen(true);
-      return;
-    }
-
-    setMode(newMode);
-    modeMutation.mutate(newMode);
-  };
 
   const loadSession = async (session: ChatSession) => {
     try {
       const response = await apiRequest('GET', `/api/trinity/chat/session/${session.id}/messages`);
       const data = await response.json();
       setSessionId(session.id);
-      setMode(session.mode);
+      // session.mode is always 'business' — Trinity unified mode
       setMessages(
         data.messages.map((m: any) => ({
           id: m.id,
@@ -270,7 +237,11 @@ export default function TrinityChat() {
   };
 
   const trinityRoleBadge = isPlatformStaff ? (
-) : isCOORole ? (
+    <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/40 gap-1 shrink-0" data-testid="badge-trinity-platform-staff">
+      <Shield className="h-3 w-3 shrink-0" />
+      <span className="truncate">Platform Staff</span>
+    </Badge>
+  ) : isCOORole ? (
     <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40 gap-1 shrink-0 max-w-[140px] sm:max-w-none" data-testid="badge-trinity-coo-mode">
       <Crown className="h-3 w-3 shrink-0" />
       <span className="truncate">COO Mode</span>
@@ -280,88 +251,6 @@ export default function TrinityChat() {
   const headerActions = (
     <div className="flex items-center gap-2 flex-wrap">
       {trinityRoleBadge}
-      {/* Mode Switcher */}
-      <div className="hidden md:block">
-        {isPlatformStaff ? (
-          <Tabs value={mode} onValueChange={(v) => handleModeSwitch(v as ConversationMode)}>
-            <TabsList className="grid grid-cols-3">
-              <TabsTrigger value="business" className="gap-1" data-testid="tab-business">
-                <Briefcase className="h-3 w-3" />
-                <span>Business</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="personal"
-                className="gap-1"
-                disabled={!buddySettings?.personalDevelopmentEnabled}
-                data-testid="tab-personal"
-              >
-                <Heart className="h-3 w-3" />
-                <span>Personal</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="guru"
-                className="gap-1"
-                data-testid="tab-guru"
-              >
-                <Shield className="h-3 w-3" />
-                <span>Guru</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        ) : (
-          <Tabs value={mode} onValueChange={(v) => handleModeSwitch(v as ConversationMode)}>
-            <TabsList className="grid grid-cols-2">
-              <TabsTrigger value="business" className="gap-1" data-testid="tab-business">
-                <Briefcase className="h-3 w-3" />
-                <span>Business</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="personal"
-                className="gap-1"
-                disabled={!buddySettings?.personalDevelopmentEnabled}
-                data-testid="tab-personal"
-              >
-                <Heart className="h-3 w-3" />
-                <span>Personal</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
-      </div>
-
-      <div className="md:hidden">
-        <Select value={mode} onValueChange={(v) => handleModeSwitch(v as ConversationMode)}>
-          <SelectTrigger className="w-[130px] h-9">
-            <SelectValue placeholder="Mode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="business">
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-3 w-3" />
-                <span>Business</span>
-              </div>
-            </SelectItem>
-            <SelectItem 
-              value="personal" 
-              disabled={!buddySettings?.personalDevelopmentEnabled}
-            >
-              <div className="flex items-center gap-2">
-                <Heart className="h-3 w-3" />
-                <span>Personal</span>
-              </div>
-            </SelectItem>
-            {isPlatformStaff && (
-              <SelectItem value="guru">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-3 w-3" />
-                  <span>Guru</span>
-                </div>
-              </SelectItem>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* History Button */}
       <UniversalModal open={historyOpen} onOpenChange={setHistoryOpen}>
         <UniversalModalTrigger asChild>
@@ -392,7 +281,7 @@ export default function TrinityChat() {
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-xs">
-                        {[session.mode].label}
+                        Trinity
                       </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(session.lastActivityAt), { addSuffix: true })}
@@ -522,16 +411,10 @@ export default function TrinityChat() {
                   <LogoMark size="lg" className="mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Welcome to Trinity Chat</h3>
                   <p className="text-muted-foreground mb-6">
-                    {mode === 'business'
-                      ? "Ask me about schedules, reports, or business insights"
-                      : mode === 'personal'
-                      ? "Let's focus on your growth and development"
-                      : "I'm here to help with anything"}
+                    "Ask me anything — schedules, reports, team insights, or whatever's on your mind"
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {mode === 'business' && (
-                      <>
-                        <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Show me today's schedule")}>
+                    <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Show me today's schedule")}>
                           Today's schedule
                         </Badge>
                         <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Any overtime issues this week?")}>
@@ -540,11 +423,7 @@ export default function TrinityChat() {
                         <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Generate a performance report")}>
                           Performance report
                         </Badge>
-                      </>
-                    )}
-                    {mode === 'personal' && buddySettings?.personalDevelopmentEnabled && (
-                      <>
-                        <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Help me set goals for this quarter")}>
+                    >
                           Set goals
                         </Badge>
                         <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("I need to have a difficult conversation")}>
@@ -595,7 +474,7 @@ export default function TrinityChat() {
                       <TrinityEnhancedThoughtProcess
                         request={message}
                         isVisible={true}
-                        actionCategories={mode === 'business' ? ['schedule', 'payment', 'communication'] : ['communication', 'personalstate', 'ai']}
+                        actionCategories={['schedule', 'payment', 'communication', 'personalstate', 'ai']}
                       />
                     ) : (
                       thoughtPhase ? (
@@ -632,10 +511,7 @@ export default function TrinityChat() {
                 placeholder={
                   mode === 'business'
                     ? "Ask about schedules, payroll, or business insights..."
-                    : mode === 'personal'
-                    ? "Share what's on your mind..."
-                    : "Ask me anything - business or personal..."
-                }
+                    : false}
                 className="flex-1"
                 disabled={chatMutation.isPending}
                 data-testid="input-message"

@@ -137,6 +137,7 @@ function getLimbicBlock(signal: EmotionalSignal): string {
 // DB column value ('business') for session back-compat only; it does not
 // drive prompt construction. Guru-depth reasoning activates automatically
 // from org state, emotional signals, and high-stakes keywords.
+// Trinity is ONE — no mode switching. ConversationMode retained as type alias for migration compatibility.
 export type ConversationMode = 'business';
 // DEPRECATED: 'personal', 'integrated', 'guru' modes removed — one Trinity.
 export type SpiritualGuidance = 'none' | 'general' | 'christian';
@@ -708,7 +709,7 @@ class TrinityChatService {
 
     // === BUSINESS INSIGHTS DETECTION ===
     // If owner/manager is asking about business health/guidance, run a full scan
-    if (mode === 'business' && isBusinessInsightRequest(message)) {
+    if (isBusinessInsightRequest(message)) {
       try {
         log.info(`[TrinityChatService] Business insight request detected — running health scan for workspace: ${workspaceId}`);
         await this.recordTurn(session.id, 'user', message);
@@ -1188,7 +1189,7 @@ DO NOT:
 
     // === PROACTIVE INTELLIGENCE SCAN ===
     // After building prompt but before generating response, scan for proactive insights
-    if (true) { // Trinity intelligence — always active (mode toggle removed)
+    if (true) { // Trinity — always active
       try {
         const [proactiveInsights, behaviorContext] = await Promise.all([
           this.buildProactiveInsights(workspaceId, orgPatterns, workspaceContext),
@@ -1217,7 +1218,7 @@ DO NOT:
     // civil liability protocols, and workforce classification rules into the
     // system prompt. Trinity ALWAYS cites specific statutes and uses correct
     // legal language based on the workspace's primaryOperatingState.
-    if (mode === 'business' && workspaceId && isManagerLevel) {
+    if (workspaceId && isManagerLevel) {
       try {
         // State-aware regulatory + penal/civil code context
         const { trinityStateContext } = await import('../trinity/trinityStateContextService');
@@ -1249,7 +1250,7 @@ DO NOT:
 
     // === PHASE C: AUTONOMOUS TASK QUEUE STATUS ===
     // Surface pending tasks awaiting human approval in Trinity's context
-    if (mode === 'business' && workspaceId && isManagerLevel) {
+    if (workspaceId && isManagerLevel) {
       try {
         const { trinityAutonomousTaskQueue } = await import('./trinityAutonomousTaskQueue');
         const { tasks, summary } = await trinityAutonomousTaskQueue.getActiveTasksForBriefing(workspaceId);
@@ -1338,7 +1339,7 @@ DO NOT:
     //   • Somatic marker fired (indicates Trinity detected a risk pattern)
     // Non-blocking: if deliberation fails the response still proceeds normally.
     const isHighStakes = isManagerLevel && (isStrategic || HIGH_STAKES_KEYWORDS.test(message) || somaticFlag.fired);
-    if (mode === 'business' && isHighStakes && workspaceId) {
+    if (isHighStakes && workspaceId) {
       try {
         const deliberationResult = await trinityDeliberationLoop.deliberate({
           type: 'workspace_health_degraded',
@@ -1363,7 +1364,7 @@ DO NOT:
     // === CLARIFICATION ENGINE — Pre-flight ambiguity check ===
     // If the request is ambiguous AND high-stakes, ask ONE clarifying question
     // instead of making the expensive AI call. Never asks more than 1 question.
-    if (true) { // Trinity intelligence — always active (mode toggle removed)
+    if (true) { // Trinity — always active
       try {
         const clarificationDecision = trinityClarificationService.evaluate(
           message, history, workspaceContext,
@@ -1397,7 +1398,7 @@ DO NOT:
     // and returns a live, status-aware sequenced plan rather than executing blindly.
     // This is the Executive Function layer of Trinity's biological brain model.
     let executivePlanResponse: string | null = null;
-    if (true) { // Trinity intelligence — always active (mode toggle removed)
+    if (true) { // Trinity — always active
       const planDetection = detectMultiStepRequest(message);
       if (planDetection.detected && planDetection.planType) {
         log.info(`[ExecutivePlanner] Multi-step request detected — planType=${planDetection.planType}`);
@@ -1417,7 +1418,7 @@ DO NOT:
     // Detects when the user is asking for a plan, strategy, or 3+ step execution.
     // Injects a chain-of-thought scaffolding instruction into the system prompt
     // so Trinity decomposes the problem systematically before responding.
-    if (mode === 'business' && !executivePlanResponse) {
+    if (!executivePlanResponse) {
       const PLANNING_TRIGGERS = [
         /\bplan\s+(for|to|out)\b/i,
         /\baction\s+plan\b/i,
@@ -1446,7 +1447,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     // Runs BEFORE the AI call when a diagnostic question is detected.
     // Injects the hypothesis analysis into the system prompt context.
     let hypothesisNarrative: string | null = null;
-    if (mode === 'business' && trinityHypothesisEngine.isDiagnosticQuestion(message)) {
+    if (trinityHypothesisEngine.isDiagnosticQuestion(message)) {
       try {
         const workspaceDataForHypothesis = {
           overtimeRate: (workspaceContext as any)?.overtimeHoursThisMonth && (workspaceContext as any)?.totalHoursThisMonth
@@ -1490,7 +1491,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     // greets them with a synthesized overnight brief built from dream-cycle
     // insights (breakthroughs, trajectory shifts, at-risk officers, etc).
     let morningBrief: string | null = null;
-    if (mode === 'business' && isManagerLevel && workspaceId) {
+    if (isManagerLevel && workspaceId) {
       try {
         const isFirstToday = await this.isFirstInteractionToday(userId, workspaceId);
         if (isFirstToday) {
@@ -1514,7 +1515,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     // Checks the response for high-stakes claims with low confidence.
     // Non-blocking: appends verification footer if needed.
     let finalResponseText = aiResponse.text;
-    if (true) { // Trinity intelligence — always active (mode toggle removed)
+    if (true) { // Trinity — always active
       try {
         const domain = trinityUncertaintyService.classifyDomain(message, aiResponse.text);
         if (domain !== 'general') {
@@ -3009,8 +3010,7 @@ Do NOT skip steps — decompose fully before concluding.`;
   ): Promise<void> {
     try {
       // Build mode-appropriate insight prompt
-      const isBusinessMode = mode === 'business' || mode === 'guru';
-      const insightTypes = isBusinessMode
+      const insightTypes = true
         ? `- billing_pattern: User's billing/invoicing habits or concerns
 - payroll_concern: Pay accuracy, hold, or timing worry
 - scheduling_gap: Coverage problem or scheduling preference
