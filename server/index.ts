@@ -878,6 +878,12 @@ async function initializeCriticalServices() {
         ON CONFLICT (id) DO NOTHING
       `).catch(() => null);
 
+      await devPool.query(`
+        INSERT INTO workspaces (id, name, owner_id, subscription_tier, subscription_status, business_category, created_at, updated_at)
+        VALUES ('platform-workspace-00000','CoAIleague Platform','root-user-00000000','enterprise','active','platform',NOW(),NOW())
+        ON CONFLICT (id) DO NOTHING
+      `).catch(() => null);
+
       // Upsert ACME owner — always with correct password + workspace
       await devPool.query(`
         INSERT INTO users (id, email, first_name, last_name, password_hash, role, email_verified, current_workspace_id, created_at, updated_at, login_attempts, mfa_enabled)
@@ -901,10 +907,45 @@ async function initializeCriticalServices() {
         WHERE email = 'owner@acme-security.test'
       `, [PASS_HASH]).catch(() => null);
 
-      // Ensure workspace member record
+      // Upsert Root admin — always with correct password
+      await devPool.query(`
+        INSERT INTO users (id, email, first_name, last_name, password_hash, role, email_verified, current_workspace_id, created_at, updated_at, login_attempts, mfa_enabled)
+        VALUES ('root-user-00000000','root@coaileague.com','Root','Administrator',$1,'root_admin',true,'platform-workspace-00000',NOW(),NOW(),0,false)
+        ON CONFLICT (id) DO UPDATE SET
+          password_hash = EXCLUDED.password_hash,
+          email_verified = true,
+          current_workspace_id = 'platform-workspace-00000',
+          login_attempts = 0,
+          updated_at = NOW()
+      `, [PASS_HASH]).catch(() => null);
+
+      await devPool.query(`
+        UPDATE users SET
+          password_hash = $1,
+          email_verified = true,
+          login_attempts = 0,
+          updated_at = NOW()
+        WHERE email = 'root@coaileague.com'
+      `, [PASS_HASH]).catch(() => null);
+
+      // Ensure workspace member record (ACME)
       await devPool.query(`
         INSERT INTO workspace_members (id, workspace_id, user_id, role, created_at)
         VALUES (gen_random_uuid(),'dev-acme-security-ws','dev-owner-001','org_owner',NOW())
+        ON CONFLICT DO NOTHING
+      `).catch(() => null);
+
+      // Ensure platform_roles for root
+      await devPool.query(`
+        INSERT INTO platform_roles (id, user_id, role, created_at, updated_at)
+        VALUES (gen_random_uuid(),'root-user-00000000','root_admin',NOW(),NOW())
+        ON CONFLICT DO NOTHING
+      `).catch(() => null);
+
+      // Ensure workspace_member for root
+      await devPool.query(`
+        INSERT INTO workspace_members (id, workspace_id, user_id, role, created_at)
+        VALUES (gen_random_uuid(),'platform-workspace-00000','root-user-00000000','org_owner',NOW())
         ON CONFLICT DO NOTHING
       `).catch(() => null);
 
@@ -920,7 +961,7 @@ async function initializeCriticalServices() {
           updated_at = NOW()
       `).catch(() => null);
 
-      log.info('[DevAccounts] ACME test account ready: owner@acme-security.test / admin123');
+      log.info('[DevAccounts] Test accounts ready — owner@acme-security.test / admin123 | root@coaileague.com / admin123');
     } catch (err: any) {
       log.error('[DevAccounts] Failed to ensure dev accounts:', err?.message);
     }

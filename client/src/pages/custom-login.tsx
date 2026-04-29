@@ -228,6 +228,12 @@ export default function CustomLogin() {
     await form.handleSubmit(onSubmit)();
   };
 
+  const loginRoot = async () => {
+    form.setValue("email", "root@coaileague.com");
+    form.setValue("password", "admin123");
+    await form.handleSubmit(onSubmit)();
+  };
+
   const resendVerification = async () => {
     if (!unverifiedEmail) return;
     setResendingVerification(true);
@@ -490,18 +496,54 @@ export default function CustomLogin() {
                 </form>
               </Form>
 
-              {/* Demo login button (dev mode) */}
+              {/* Dev bypass buttons — development environment only, never in production */}
               {devLoginEnabled && (
-                <Button
-                  onClick={loginDemo}
-                  disabled={isLoading}
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  data-testid="button-demo-login"
-                >
-                  Use Demo Account
-                </Button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-amber-500/30" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80 px-1">
+                      Dev Bypass
+                    </span>
+                    <div className="h-px flex-1 bg-amber-500/30" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={loginDemo}
+                      disabled={isLoading}
+                      className="flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all disabled:opacity-50 text-left group"
+                      data-testid="button-dev-login-acme"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500/70 group-hover:text-amber-500">
+                        ACME Security
+                      </span>
+                      <span className="text-xs font-semibold text-foreground">
+                        Org Owner
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono truncate w-full">
+                        owner@acme-security.test
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={loginRoot}
+                      disabled={isLoading}
+                      className="flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg border border-red-500/40 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/60 transition-all disabled:opacity-50 text-left group"
+                      data-testid="button-dev-login-root"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-500/70 group-hover:text-red-500">
+                        CoAIleague
+                      </span>
+                      <span className="text-xs font-semibold text-foreground">
+                        Root Admin
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono truncate w-full">
+                        root@coaileague.com
+                      </span>
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Footer links */}
