@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, cre
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck, MessageCircle, Trash2, CheckCircle2 } from "lucide-react";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
@@ -1603,7 +1603,28 @@ interface UNSCommandCenterProps {
   workspaceRole?: string;
 }
 
+// Notification type → icon + color mapping
+function getNotificationIcon(type: string) {
+  const t = (type || '').toLowerCase();
+  if (t.includes('alert') || t.includes('warn') || t.includes('labor') || t.includes('compliance'))
+    return { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10' };
+  if (t.includes('coverage') || t.includes('shift') || t.includes('scheduling'))
+    return { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-500/10' };
+  if (t.includes('payroll') || t.includes('invoice') || t.includes('billing') || t.includes('pay'))
+    return { icon: Check, color: 'text-green-500', bg: 'bg-green-500/10' };
+  if (t.includes('message') || t.includes('chat') || t.includes('comm'))
+    return { icon: MessageCircle, color: 'text-purple-500', bg: 'bg-purple-500/10' };
+  if (t.includes('security') || t.includes('auth') || t.includes('access'))
+    return { icon: Shield, color: 'text-red-500', bg: 'bg-red-500/10' };
+  if (t.includes('success') || t.includes('approv') || t.includes('complet'))
+    return { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' };
+  if (t.includes('trinity') || t.includes('ai') || t.includes('spark'))
+    return { icon: Sparkles, color: 'text-violet-500', bg: 'bg-violet-500/10' };
+  return { icon: Bell, color: 'text-muted-foreground', bg: 'bg-muted' };
+}
+
 function UNSCommandCenter({ isOpen, onClose, onAskTrinity, platformRole, workspaceRole }: UNSCommandCenterProps) {
+  const queryClient = useQueryClient();
   const { data: rawData, isLoading } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
     enabled: isOpen,
@@ -1618,82 +1639,132 @@ function UNSCommandCenter({ isOpen, onClose, onAskTrinity, platformRole, workspa
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const pendingCount = notifications.filter(n => n.actionRequired).length;
+  const shown = notifications.slice(0, 12);
+
+  const handleMarkAllRead = () => {
+    fetch('/api/notifications/mark-all-read', { method: 'POST' })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] }))
+      .catch(() => null);
+  };
 
   return (
-    <div className="flex flex-col h-[400px] max-h-[60vh] w-[380px] max-w-[calc(100vw-2rem)]">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+    <div className="flex flex-col h-[460px] max-h-[65vh] w-[400px] max-w-[calc(100vw-1.5rem)]">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 shrink-0">
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4 text-primary" />
           <span className="font-semibold text-sm">Notifications</span>
           {unreadCount > 0 && (
-            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold ml-1">
-              {unreadCount}
+            <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {unreadCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={handleMarkAllRead}
+              className="h-7 text-[11px] text-muted-foreground hover:text-foreground px-2">
+              Mark all read
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       {/* Notification List */}
       <ScrollArea className="flex-1">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full py-8">
-            <p className="text-xs text-muted-foreground">Loading notifications...</p>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-8 text-muted-foreground">
-            <Bell className="h-8 w-8 opacity-30 mb-2" />
-            <p className="text-xs text-center">No notifications yet</p>
-          </div>
-        ) : (
-          <div className="divide-y">
-            {notifications.slice(0, 8).map((notification) => (
-              <div
-                key={notification.id}
-                className="p-3 hover:bg-muted/50 transition-colors cursor-pointer border-l-2 border-l-transparent hover:border-l-primary"
-              >
-                <div className="flex gap-2">
-                  {!notification.isRead && (
-                    <div className="h-2 w-2 rounded-full bg-primary mt-1 flex-shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{notification.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {notification.message || 'No message'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-muted-foreground">
-                        {formatDistanceToNow(parseISO(notification.createdAt), { addSuffix: true })}
-                      </span>
-                      {notification.actionRequired && (
-                        <Badge variant="destructive" className="text-[10px]">Action Required</Badge>
-                      )}
-                    </div>
-                  </div>
+          <div className="flex flex-col gap-2 p-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex gap-3 p-2 animate-pulse">
+                <div className="h-8 w-8 rounded-full bg-muted shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 bg-muted rounded w-3/4" />
+                  <div className="h-2.5 bg-muted rounded w-full" />
+                  <div className="h-2 bg-muted rounded w-1/3" />
                 </div>
               </div>
             ))}
+          </div>
+        ) : shown.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full py-12 text-muted-foreground gap-3">
+            <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
+              <Bell className="h-6 w-6 opacity-40" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium">All caught up</p>
+              <p className="text-xs mt-0.5 opacity-70">No notifications yet</p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {shown.map((notification, idx) => {
+              const { icon: Icon, color, bg } = getNotificationIcon(notification.type || notification.category || '');
+              const isUnread = !notification.isRead;
+              return (
+                <div
+                  key={notification.id}
+                  className={`group flex gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer relative ${idx > 0 ? 'border-t border-border/30' : ''}`}
+                >
+                  {/* Unread dot */}
+                  {isUnread && (
+                    <div className="absolute left-1.5 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-primary" />
+                  )}
+
+                  {/* Icon */}
+                  <div className={`h-8 w-8 rounded-full ${bg} flex items-center justify-center shrink-0 mt-0.5`}>
+                    <Icon className={`h-3.5 w-3.5 ${color}`} />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm leading-snug ${isUnread ? 'font-semibold' : 'font-medium'} truncate`}>
+                      {notification.title}
+                    </p>
+                    {notification.message && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
+                        {notification.message}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-muted-foreground">
+                        {notification.createdAt ? formatDistanceToNow(parseISO(notification.createdAt), { addSuffix: true }) : ''}
+                      </span>
+                      {notification.actionRequired && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] text-red-500 font-medium">
+                          <AlertTriangle className="h-2.5 w-2.5" />
+                          Action needed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Arrow on hover */}
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-all mt-2 shrink-0" />
+                </div>
+              );
+            })}
           </div>
         )}
         <ScrollBar orientation="vertical" />
       </ScrollArea>
 
-      {/* Footer with action */}
-      {pendingCount > 0 && (
-        <div className="border-t bg-muted/30 p-3">
-          <Button
-            onClick={onAskTrinity}
-            size="sm"
-            variant="outline"
-            className="w-full gap-1 text-xs"
-          >
-            <Zap className="h-3 w-3" />
-            Ask Trinity ({pendingCount})
+      {/* Footer */}
+      <div className="border-t border-border/40 p-2.5 flex gap-2 shrink-0">
+        {pendingCount > 0 && (
+          <Button onClick={onAskTrinity} size="sm" variant="outline" className="flex-1 gap-1 text-xs h-8">
+            <Zap className="h-3 w-3 text-violet-500" />
+            Ask Trinity ({pendingCount} pending)
           </Button>
-        </div>
-      )}
+        )}
+        {notifications.length > 12 && (
+          <Button size="sm" variant="ghost" className="flex-1 text-xs h-8 text-muted-foreground">
+            View all {notifications.length}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
