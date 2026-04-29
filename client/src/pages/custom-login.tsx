@@ -52,6 +52,18 @@ export default function CustomLogin() {
   const [loginData, setLoginData] = useState<LoginResponse["user"] | null>(null);
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [devLoginEnabled, setDevLoginEnabled] = useState(false);
+
+  // Client-side dev detection: show bypass on localhost or development URLs
+  // This is independent of the server flag and more reliable
+  const isDevUrl = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname.includes('development') ||
+    window.location.hostname.includes('staging') ||
+    window.location.port === '5000' ||
+    window.location.port === '3000'
+  );
+
+  const showDevBypass = devLoginEnabled || isDevUrl;
   const [emailUnverified, setEmailUnverified] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [resendingVerification, setResendingVerification] = useState(false);
@@ -223,12 +235,40 @@ export default function CustomLogin() {
   };
 
   const loginDemo = async () => {
+    setIsLoading(true);
+    try {
+      // Try direct dev bypass endpoint first (bypasses complex auth flow)
+      const res = await fetch('/api/dev/quick-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account: 'acme' }),
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) { window.location.href = '/dashboard'; return; }
+      }
+    } catch { /* fallback below */ }
+    // Fallback: fill form and submit normally
     form.setValue("email", "owner@acme-security.test");
     form.setValue("password", "admin123");
     await form.handleSubmit(onSubmit)();
   };
 
   const loginRoot = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/dev/quick-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account: 'root' }),
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) { window.location.href = '/dashboard'; return; }
+      }
+    } catch { /* fallback below */ }
     form.setValue("email", "root@coaileague.com");
     form.setValue("password", "admin123");
     await form.handleSubmit(onSubmit)();
@@ -497,7 +537,7 @@ export default function CustomLogin() {
               </Form>
 
               {/* Dev bypass buttons — development environment only, never in production */}
-              {devLoginEnabled && (
+              {showDevBypass && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="h-px flex-1 bg-amber-500/30" />

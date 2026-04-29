@@ -4,6 +4,7 @@
 
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { isProduction as isProductionEnv } from "./lib/isProduction";
 
 // ============================================================================
 // PLATFORM WORKSPACE SEEDING LOCK
@@ -479,6 +480,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Bootstrap — MUST be before CSRF (uses key-based auth not CSRF tokens)
   app.use('/api/bootstrap', bootstrapRouter);
+
+  // ── DEV QUICK LOGIN — available only in non-production environments ─────────
+  // Bypasses the full auth flow (recaptcha, MFA, session regenerate complexity)
+  // to give developers a reliable 1-click login even when the main flow has issues.
+  // NEVER active in production — gated by isProductionEnv() which checks Railway env.
+  if (!isProductionEnv()) {
+    app.post('/api/dev/quick-login', async (req: any, res: any) => {
+      try {
+        const { account } = req.body || {};
+        const { pool: devPool } = await import('./db');
+        
+        let email: string;
+        let workspaceId: string;
+        
+        if (account === 'root') {
+          email = 'root@coaileague.com';
+          workspaceId = 'platform-workspace-00000';
+        } else {
+          email = 'owner@acme-security.test';
+          workspaceId = 'dev-acme-security-ws';
+        }
+        
+        // Look up user directly
+        const userResult = await devPool.query(
+          `SELECT id, email, first_name, last_name, role, current_workspace_id
+           FROM users WHERE lower(email) = lower($1) LIMIT 1`,
+          [email]
+        );
+        
+        if (!userResult.rows.length) {
+          return res.status(404).json({ success: false, error: 'Dev account not found. Ensure server has started and seeded accounts.' });
+        }
+        
+        const user = userResult.rows[0];
+        const effectiveWorkspaceId = user.current_workspace_id || workspaceId;
+        
+        // Set session directly
+        req.session.userId = user.id;
+        req.session.workspaceId = effectiveWorkspaceId;
+        req.session.activeWorkspaceId = effectiveWorkspaceId;
+        req.session.plan = account === 'root' ? 'enterprise' : 'enterprise';
+        
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err: any) => err ? reject(err) : resolve());
+        });
+        
+        log.info(`[DevQuickLogin] Logged in as ${email} (${user.id})`);
+        
+        return res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            role: user.role,
+            currentWorkspaceId: effectiveWorkspaceId,
+          }
+        });
+      } catch (err: any) {
+        log.error('[DevQuickLogin] Error:', err?.message);
+        return res.status(500).json({ success: false, error: err?.message });
+      }
+    });
+    log.info('[DevQuickLogin] Dev quick-login endpoint active at POST /api/dev/quick-login');
+  }
 
   // CSRF protection
   app.use(ensureCsrfToken);

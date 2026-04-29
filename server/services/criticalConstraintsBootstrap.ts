@@ -269,6 +269,9 @@ const constraints: CriticalConstraint[] = [
         ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS resolution_tier VARCHAR;
         ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS severity VARCHAR DEFAULT 'info';
         ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS correlation_id VARCHAR;
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS changes JSONB;
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS before_state JSONB;
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS after_state JSONB;
       `);
     },
   },
@@ -735,6 +738,24 @@ const constraints: CriticalConstraint[] = [
       await pool.query(
         `CREATE INDEX IF NOT EXISTS workspace_holidays_date_idx ON workspace_holidays (holiday_date)`,
       );
+    },
+  },
+  {
+    name: 'create_enum_payroll_status',
+    rationale: 'payroll_status enum must exist before any ALTER TYPE ADD VALUE calls',
+    isPresent: async () => {
+      const { rows } = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'payroll_status'`);
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        DO $$ BEGIN
+          CREATE TYPE payroll_status AS ENUM (
+            'draft','pending','approved','processed','disbursing','paid','completed','partial',
+            'failed','cancelled'
+          );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      `);
     },
   },
   {

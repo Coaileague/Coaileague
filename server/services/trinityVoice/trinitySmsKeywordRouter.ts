@@ -41,16 +41,27 @@ const RECOGNIZED = new Set([
   'VERIFY', 'EVERIFY', 'VERIFICATION',
   'STATUS',
   'HELP', 'COMMANDS', 'COMMAND',
-  // Phase 18C — Emergency escalation keywords. Intentionally NOT gated behind
-  // phone verification so an officer under duress can always reach help.
+  // Phase 18C — Emergency escalation keywords.
   'EMERGENCY', 'PANIC', 'DURESS', 'SOS', 'HELP911', '911',
-  // Phase 20 — calloff workflow. Officer texts CALLOFF [optional reason] to
-  // trigger Trinity's autonomous coverage workflow.
+  // Phase 20 — calloff workflow.
   'CALLOFF', 'CALLOUT', 'CALLINSICK', 'SICK',
-  // Phase 23 — self-service data lookups for officers on their personal phones.
-  // Phase 24 — additional natural-language aliases so variants resolve too.
+  // Phase 23/24 — self-service lookups.
   'SCHEDULE', 'SHIFTS', 'MYSCHEDULE', 'WHENDOIWORK', 'WHENDOIWRK',
   'PAY', 'PAYCHECK', 'PAYSTUB', 'PAYDAY', 'MYPAY', 'HOURS', 'PAYROLL',
+  // ── Spanish aliases (Phase 25 — bilingual SMS) ────────────────────────────
+  // Clock in/out
+  'ENTRADA', 'ENTRAR', 'CHECKIN',          // = CLOCKIN
+  'SALIDA', 'SALIR', 'CHECKOUT',           // = CLOCKOUT
+  // Schedule
+  'HORARIO', 'TURNOS', 'MIHORARIO',        // = SCHEDULE
+  // Pay
+  'PAGO', 'SUELDO', 'NOMINA', 'NÓMINA',   // = PAY
+  // Calloff
+  'AUSENCIA', 'NOASISTO', 'ENFERMO',      // = CALLOFF
+  // Emergency
+  'EMERGENCIA', 'PANICO', 'PÁNICO', 'AYUDA911', // = EMERGENCY
+  // Help
+  'AYUDA', 'COMANDOS',                    // = HELP
 ]);
 
 function normalizeKeyword(token: string): string {
@@ -276,11 +287,11 @@ async function handleStatus(officer: any, fromPhone: string): Promise<string> {
 function helpReply(): string {
   return (
     `Trinity commands: ` +
-    `CLOCKIN <emp#> <pin>, CLOCKOUT <emp#> <pin>, ` +
-    `CALLOFF <reason>, SCHEDULE, PAY, ` +
-    `COMPLAINT <message>, REQUEST <message>, VERIFY <emp# or name>, ` +
-    `STATUS, HELP, EMERGENCY <location>. ` +
-    `Reply STOP to opt out of texts.`
+    `CLOCKIN <emp#> <pin> | ENTRADA, CLOCKOUT <emp#> <pin> | SALIDA, ` +
+    `CALLOFF <reason> | AUSENCIA, SCHEDULE | HORARIO, PAY | PAGO, ` +
+    `YES (accept offer) | NO (decline offer), ` +
+    `COMPLAINT <message>, REQUEST <message>, STATUS, EMERGENCY | EMERGENCIA. ` +
+    `Reply STOP to unsubscribe.`
   );
 }
 
@@ -405,18 +416,28 @@ export async function handleTrinitySmsKeyword(params: {
     case 'SOS':
     case 'HELP911':
     case '911':
+    case 'EMERGENCIA':
+    case 'PANICO':
+    case 'PÁNICO':
+    case 'AYUDA911':
       return handleEmergency(args, body, params.fromPhone);
 
     case 'CLOCKIN':
     case 'CLOCK-IN':
     case 'CLOCK_IN':
     case 'IN':
+    case 'ENTRADA':
+    case 'ENTRAR':
+    case 'CHECKIN':
       return handleClockIn(args, officer);
 
     case 'CLOCKOUT':
     case 'CLOCK-OUT':
     case 'CLOCK_OUT':
     case 'OUT':
+    case 'SALIDA':
+    case 'SALIR':
+    case 'CHECKOUT':
       return handleClockOut(args, officer);
 
     case 'COMPLAINT':
@@ -437,6 +458,8 @@ export async function handleTrinitySmsKeyword(params: {
     case 'HELP':
     case 'COMMANDS':
     case 'COMMAND':
+    case 'AYUDA':
+    case 'COMANDOS':
       return helpReply();
 
     // Phase 20 — CALLOFF: trigger Trinity's autonomous coverage workflow.
@@ -444,15 +467,21 @@ export async function handleTrinitySmsKeyword(params: {
     case 'CALLOUT':
     case 'CALLINSICK':
     case 'SICK':
+    case 'AUSENCIA':
+    case 'NOASISTO':
+    case 'ENFERMO':
       return handleCalloff(args, body, officer, params.fromPhone);
 
     // Phase 23 — self-service data lookups (Tier 1 phone-verified).
-    // Phase 24 — natural-language aliases route to the same handlers.
+    // Phase 25 — Spanish aliases.
     case 'SCHEDULE':
     case 'SHIFTS':
     case 'MYSCHEDULE':
     case 'WHENDOIWORK':
     case 'WHENDOIWRK':
+    case 'HORARIO':
+    case 'TURNOS':
+    case 'MIHORARIO':
       return handleSchedule(params.fromPhone);
 
     case 'PAY':
@@ -462,6 +491,10 @@ export async function handleTrinitySmsKeyword(params: {
     case 'MYPAY':
     case 'HOURS':
     case 'PAYROLL':
+    case 'PAGO':
+    case 'SUELDO':
+    case 'NOMINA':
+    case 'NÓMINA':
       return handlePay(params.fromPhone);
 
     default:

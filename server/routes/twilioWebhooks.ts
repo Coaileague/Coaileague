@@ -81,6 +81,22 @@ function parseYesReply(body: string): { accepted: boolean; name?: string } {
   return { accepted: true, name: rest || undefined };
 }
 
+// Bilingual decline detection — NO, NO GRACIAS, DECLINE, RECHAZAR, NOPE
+const DECLINE_KEYWORDS = new Set([
+  'NO', 'NO GRACIAS', 'DECLINE', 'RECHAZAR', 'NOPE', 'CANT', 'CANNOT',
+  'NO PUEDO', 'NO PUEDO IR', 'UNABLE', 'PASS', 'SKIP',
+]);
+function parseNoReply(body: string): { declined: boolean } {
+  const upper = body.trim().toUpperCase();
+  // Exact match first
+  if (DECLINE_KEYWORDS.has(upper)) return { declined: true };
+  // Starts-with check for "NO GRACIAS ..." etc.
+  for (const kw of DECLINE_KEYWORDS) {
+    if (upper.startsWith(kw + ' ') || upper.startsWith(kw + ',')) return { declined: true };
+  }
+  return { declined: false };
+}
+
 async function replySms(to: string, body: string, workspaceId?: string) {
   return sendSMS({ to, body, workspaceId, type: 'shift_offer_reply' }); // infra
 }
@@ -211,9 +227,104 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
     }
 
     const parsed = parseYesReply(body);
+    const parsedDecline = parseNoReply(body);
 
     // Respond immediately with empty TwiML so Twilio doesn't time out
     const emptyTwiml = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+
+    // ── Shift offer DECLINE (NO / NO GRACIAS / DECLINE / RECHAZAR) ────────────
+    if (parsedDecline.declined) {
+      res.set('Content-Type', 'text/xml');
+      res.send(emptyTwiml);
+
+      scheduleNonBlocking('twilio.inbound-sms-decline', async () => {
+        try {
+          const normalizedFrom = normalizePhone(from);
+          const { detectLanguage } = await import('../services/trinityVoice/smsLanguageDetector');
+          const lang = detectLanguage(body);
+          const t = (en: string, es: string) => lang === 'es' ? es : en;
+
+          const allEmployeesDecline = await db.select().from(employees);
+          const matchedEmpDecline = allEmployeesDecline.find(e =>
+            e.phone && normalizePhone(e.phone) === normalizedFrom
+          );
+
+          if (!matchedEmpDecline) {
+            await sendSMS({
+              to: from,
+              body: t(
+                "We couldn't find your account. No shift offer was declined.",
+                "No encontramos tu cuenta. No se rechazó ninguna oferta de turno."
+              ),
+              type: 'shift_offer_reply',
+            }).catch(() => null);
+            return;
+          }
+
+          const wsId = matchedEmpDecline.workspaceId;
+          const ws = wsId ? await db.query.workspaces?.findFirst?.({ where: eq(workspaces.id, wsId) }) : null;
+          const orgName = (ws as any)?.name || 'CoAIleague';
+
+          // Find pending offer notification
+          const pendingOffers = await db
+            .select()
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.recipientUserId, matchedEmpDecline.userId || ''),
+                eq(notifications.type, 'coverage_offer' as any),
+              )
+            );
+
+          const offerNotif = pendingOffers.find(n => {
+            const meta = (n as any).metadata || {};
+            return meta.status !== 'accepted' && meta.status !== 'declined' && !meta.declined;
+          });
+
+          if (!offerNotif) {
+            await sendSMS({
+              to: from,
+              body: t(
+                `${orgName}: No pending shift offer found for your account.`,
+                `${orgName}: No encontramos ninguna oferta de turno pendiente para tu cuenta.`
+              ),
+              workspaceId: wsId,
+              type: 'shift_offer_reply',
+            }).catch(() => null);
+            return;
+          }
+
+          // Mark as declined
+          const currentMeta = (offerNotif as any).metadata || {};
+          await db.update(notifications)
+            .set({ metadata: { ...currentMeta, status: 'declined', declinedAt: new Date().toISOString(), declinedVia: 'sms' } } as any)
+            .where(eq(notifications.id, offerNotif.id));
+
+          platformEventBus.emit('shift_offer_declined', {
+            employeeId: matchedEmpDecline.id,
+            workspaceId: wsId,
+            shiftId: offerNotif.relatedEntityId,
+            notificationId: offerNotif.id,
+            via: 'sms',
+          });
+
+          await sendSMS({
+            to: from,
+            body: t(
+              `${orgName}: Got it — you've declined this shift offer. Trinity will continue searching for coverage.`,
+              `${orgName}: Entendido — rechazaste esta oferta de turno. Trinity continuará buscando cobertura.`
+            ),
+            workspaceId: wsId,
+            type: 'shift_offer_reply',
+          }).catch(() => null);
+
+          log.info(`[TwilioSMS] Employee ${matchedEmpDecline.id} DECLINED offer ${offerNotif.relatedEntityId} via SMS`);
+        } catch (err: any) {
+          log.warn('[TwilioSMS] Decline handler error:', err?.message);
+        }
+      });
+      return;
+    }
 
     if (!parsed.accepted) {
       // ── Trinity SMS Auto-Resolution ──────────────────────────────────────

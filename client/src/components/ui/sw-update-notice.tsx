@@ -1,155 +1,138 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, X, ArrowUpCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { X, ArrowRight, Sparkles } from 'lucide-react';
 
+/**
+ * SW Update Toast — Vivaldi-style minimal non-blocking update prompt
+ * Icon left | App name + version label | Arrow action right
+ * Slides in from bottom-right, dismissible, non-blocking
+ */
 export function SWUpdateBanner() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-
     const handleSWMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'SW_UPDATED') {
-        setUpdateAvailable(true);
-        setDismissed(false);
-      }
+      if (event.data?.type === 'SW_UPDATED') { setUpdateAvailable(true); setDismissed(false); }
     };
-
     navigator.serviceWorker.addEventListener('message', handleSWMessage);
-
-    navigator.serviceWorker.ready.then((registration) => {
-      if (registration.waiting) {
-        setUpdateAvailable(true);
-      }
-
-      const handleUpdateFound = () => {
-        const newWorker = registration.installing;
-        if (!newWorker) return;
-
-        const handleStateChange = () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            setUpdateAvailable(true);
-            setDismissed(false);
+    navigator.serviceWorker.ready.then((reg) => {
+      if (reg.waiting) setUpdateAvailable(true);
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        if (!w) return;
+        w.addEventListener('statechange', () => {
+          if (w.state === 'installed' && navigator.serviceWorker.controller) {
+            setUpdateAvailable(true); setDismissed(false);
           }
-        };
-
-        newWorker.addEventListener('statechange', handleStateChange);
-        // We can't easily remove this one because it's on a worker that might be gone, 
-        // but it's less of a leak than the registration listener.
-      };
-
-      registration.addEventListener('updatefound', handleUpdateFound);
-      
-      // Cleanup for registration listener
-      const originalCleanup = () => {
-        navigator.serviceWorker.removeEventListener('message', handleSWMessage);
-        registration.removeEventListener('updatefound', handleUpdateFound);
-      };
-      
-      // We need to return this cleanup, but we're inside a promise.
-      // In practice, registration listeners are often okay to leave if they are long-lived,
-      // but the prompt asked to check for them.
+        });
+      });
     });
-
-    return () => {
-      navigator.serviceWorker.removeEventListener('message', handleSWMessage);
-    };
+    return () => navigator.serviceWorker.removeEventListener('message', handleSWMessage);
   }, []);
 
   useEffect(() => {
     if (updateAvailable && !dismissed) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setAnimateIn(true);
-        });
-      });
+      requestAnimationFrame(() => requestAnimationFrame(() => setAnimateIn(true)));
     } else {
       setAnimateIn(false);
     }
   }, [updateAvailable, dismissed]);
 
-  const handleRefresh = () => {
-    navigator.serviceWorker?.ready.then((registration) => {
-      if (registration.waiting) {
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      }
+  const handleUpdate = () => {
+    navigator.serviceWorker?.ready.then((reg) => {
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     });
-    setTimeout(() => window.location.reload(), 300);
+    setTimeout(() => window.location.reload(), 250);
   };
 
-  const handleDismiss = () => {
-    setAnimateIn(false);
-    setTimeout(() => setDismissed(true), 300);
-  };
+  const handleDismiss = () => { setAnimateIn(false); setTimeout(() => setDismissed(true), 280); };
 
   if (!updateAvailable || dismissed) return null;
 
-  const mobileBottomOffset = isMobile
-    ? 'calc(48px + env(safe-area-inset-bottom, 0px) + 0.75rem)'
-    : '1rem';
-
   return (
     <div
-      className="sw-update-toast-container"
       style={{
         position: 'fixed',
-        bottom: mobileBottomOffset,
-        left: isMobile ? '0.75rem' : 'auto',
-        right: isMobile ? '0.75rem' : '1rem',
+        bottom: '1.25rem',
+        right: '1.25rem',
         zIndex: 99999,
-        maxWidth: isMobile ? 'none' : '340px',
-        width: isMobile ? 'auto' : 'calc(100vw - 2rem)',
-        pointerEvents: 'none',
+        transform: animateIn ? 'translateY(0) scale(1)' : 'translateY(1.5rem) scale(0.97)',
+        opacity: animateIn ? 1 : 0,
+        transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.22s ease',
+        pointerEvents: 'auto',
       }}
+      role="alert"
+      aria-live="polite"
+      data-testid="banner-sw-update"
     >
       <div
-        role="alert"
-        aria-live="polite"
-        data-testid="banner-sw-update"
-        className="overflow-visible"
         style={{
-          pointerEvents: 'auto',
-          background: 'hsl(var(--popover))',
-          border: '1px solid hsl(var(--border))',
-          borderRadius: '0.5rem',
-          boxShadow: '0 2px 8px hsl(var(--foreground) / 0.08)',
-          padding: '0.625rem 0.75rem',
-          borderLeft: '3px solid hsl(var(--primary))',
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
-          transform: animateIn ? 'translateY(0)' : 'translateY(calc(100% + 2rem))',
-          opacity: animateIn ? 1 : 0,
-          transition: 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: 'hsl(var(--popover))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: '0.75rem',
+          padding: '0.625rem 0.875rem 0.625rem 0.75rem',
+          boxShadow: '0 4px 20px hsl(var(--foreground)/0.1), 0 1px 4px hsl(var(--foreground)/0.06)',
+          minWidth: '240px',
+          maxWidth: '320px',
         }}
       >
         {/* Icon */}
-        <ArrowUpCircle className="h-4 w-4 shrink-0 text-primary" />
+        <div style={{
+          width: 32, height: 32, borderRadius: '0.5rem', flexShrink: 0,
+          background: 'hsl(var(--primary)/0.1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Sparkles className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
+        </div>
 
         {/* Text */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: '0.75rem', fontWeight: 600, margin: 0, lineHeight: 1.3, color: 'hsl(var(--foreground))' }}>
-            New version available
+          <p style={{ fontSize: '0.8125rem', fontWeight: 600, margin: 0, color: 'hsl(var(--foreground))' }}>
+            CoAIleague updated
           </p>
-          <p style={{ fontSize: '0.6875rem', margin: '0.1rem 0 0', lineHeight: 1.3, color: 'hsl(var(--muted-foreground))' }}>
-            Tap Update for the latest
+          <p style={{ fontSize: '0.6875rem', margin: '0.1rem 0 0', color: 'hsl(var(--muted-foreground))' }}>
+            Restart to apply new version
           </p>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
-          <Button size="sm" className="h-7 px-2.5 text-xs" onClick={handleRefresh} data-testid="button-sw-refresh">
-            <RefreshCw className="h-3 w-3 mr-1" />
-            Update
-          </Button>
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleDismiss} data-testid="button-sw-dismiss" aria-label="Dismiss">
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {/* Update arrow */}
+        <button
+          onClick={handleUpdate}
+          data-testid="button-sw-refresh"
+          title="Update now"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 30, height: 30, borderRadius: '0.5rem', border: 'none',
+            background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))',
+            cursor: 'pointer', flexShrink: 0, transition: 'opacity 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        >
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Dismiss X */}
+        <button
+          onClick={handleDismiss}
+          data-testid="button-sw-dismiss"
+          aria-label="Dismiss update notification"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 24, height: 24, borderRadius: '0.375rem', border: 'none',
+            background: 'transparent', cursor: 'pointer', flexShrink: 0,
+            color: 'hsl(var(--muted-foreground))', transition: 'color 0.15s, background 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'hsl(var(--accent))'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          <X className="h-3 w-3" />
+        </button>
       </div>
     </div>
   );
