@@ -1642,8 +1642,18 @@ function UNSCommandCenter({ isOpen, onClose, onAskTrinity, platformRole, workspa
   const shown = notifications.slice(0, 12);
 
   const handleMarkAllRead = () => {
-    fetch('/api/notifications/mark-all-read', { method: 'POST' })
-      .then(() => queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] }))
+    fetch('/api/notifications/mark-all-read', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed');
+        // Invalidate all notification query keys so count badge updates
+        queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+      })
       .catch(() => null);
   };
 

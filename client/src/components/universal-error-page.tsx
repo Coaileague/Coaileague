@@ -148,14 +148,8 @@ export function UniversalErrorPage({
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-lg border shadow-sm">
         <CardHeader className="text-center pb-4 pt-8">
-          <div className="flex justify-center mb-6">
-            <div className="p-3 bg-muted rounded-lg border">
-              <TrinityLogo size={32} />
-            </div>
-          </div>
-
-          <div className="mx-auto mb-4 flex justify-center">
-            <TrinityArrowMark size={64} />
+          <div className="mx-auto mb-6 flex justify-center">
+            <TrinityArrowMark size={56} />
           </div>
 
           <div className={`${config.bubbleStyle} border rounded-lg p-3 mb-4 mx-auto max-w-sm`}>

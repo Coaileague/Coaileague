@@ -101,6 +101,7 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { apiFetch } from "@/lib/apiError";
 import { WorkspaceResponse, OnboardingStatusResponse } from "@shared/schemas/responses/workspace";
 import { CONTACTS, DOMAINS } from "@shared/platformConfig";
+import { useSimpleMode } from "@/contexts/SimpleModeContext";
 import { LICENSE_TYPES, type LicenseCategory } from "@shared/licenseTypes";
 
 const settingsConfig: CanvasPageConfig = {

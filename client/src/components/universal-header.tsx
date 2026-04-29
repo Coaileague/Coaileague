@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { UniversalModal, UniversalModalTrigger } from '@/components/ui/universal-modal';
-;
-import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings, Search, Home } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings, Search, Home, X } from "lucide-react";
 import { useState, useEffect, useMemo, useId } from "react";
 import { HeaderLogo } from "@/components/unified-brand-logo";
 import { performLogout, setLogoutTransitionLoader } from "@/lib/logoutHandler";
@@ -529,91 +529,70 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     <Menu className="h-5 w-5" />
                   </Button>
                 )}
-                  <div className="flex flex-col gap-2">
-                    {mobileWorkspaceFamilies.length > 0 ? (
-                      <div className="space-y-2 min-w-0">
-                        {mobileWorkspaceFamilies.map((family) => (
-                          <Collapsible key={family.id} defaultOpen={family.routes.some(r => location === r.href)}>
-                            <CollapsibleTrigger className="flex items-center justify-between w-full px-2 py-1.5 rounded-md bg-muted/50 hover-elevate gap-2 min-w-0">
-                              <span className="text-xs font-semibold truncate">{family.label}</span>
-                              <ChevronDown className="h-3 w-3 shrink-0 transition-transform data-[state=open]:rotate-180" />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="pt-1 space-y-0.5">
-                              {family.routes.map((route) => {
-                                const isActive = location === route.href;
-                                const Icon = route.icon;
-                                return (
-                                  <Button
-                                    key={route.id}
-                                    variant={isActive ? "default" : "ghost"}
-                                    className="w-full justify-start gap-2 h-auto py-2 px-2 min-h-0 min-w-0"
-                                    onClick={() => {
-                                      setLocation(route.href);
-                                      setMobileMenuOpen(false);
-                                    }}
-                                    data-testid={`mobile-workspace-route-${route.id}`}
-                                  >
-                                    <Icon className="h-4 w-4 shrink-0" />
-                                    <span className="text-xs font-medium truncate flex-1 text-left">{route.label}</span>
-                                    {route.badge && (
-                                      <span className="px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full shrink-0">
-                                        {route.badge}
-                                      </span>
-                                    )}
-                                  </Button>
-                                );
-                              })}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-muted-foreground p-2">
-                        Loading...
-                      </div>
-                    )}
-                    
-                    <div className="border-t pt-3 mt-2 space-y-1 min-w-0">
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start gap-2 text-xs h-auto py-2 px-2 min-w-0"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLocation("/support");
-                        }}
-                        data-testid="mobile-workspace-help"
-                      >
-                        <Bug className="h-4 w-4 shrink-0" />
-                        <span className="truncate">Help</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start gap-2 text-xs h-auto py-2 px-2 min-w-0"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLocation("/settings");
-                        }}
-                        data-testid="mobile-workspace-settings"
-                      >
-                        <Settings className="h-4 w-4 shrink-0" />
-                        <span className="truncate">Settings</span>
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="w-full justify-center gap-2 text-xs h-auto py-2 min-w-0"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          handleLogout();
-                        }}
-                        data-testid="mobile-workspace-logout"
-                      >
-                        <LogOut className="h-4 w-4 shrink-0" />
-                        <span className="truncate">Sign Out</span>
-                      </Button>
-                    </div>
-                  </div>
               </div>
             </>
+            {/* Right-side Sheet drawer — workspace navigation */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 flex flex-col">
+                <SheetHeader className="px-4 py-3 border-b flex-row items-center justify-between">
+                  <SheetTitle className="text-sm font-semibold">Navigation</SheetTitle>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMobileMenuOpen(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+                  {mobileWorkspaceFamilies.length > 0 ? (
+                    <div className="space-y-3">
+                      {mobileWorkspaceFamilies.map((family) => (
+                        <div key={family.id}>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 mb-1">{family.label}</p>
+                          {family.routes.map((route) => {
+                            const isActive = location === route.href;
+                            const Icon = route.icon;
+                            return (
+                              <Button
+                                key={route.id}
+                                variant={isActive ? "secondary" : "ghost"}
+                                className="w-full justify-start gap-3 h-10 px-3 font-normal"
+                                onClick={() => { setLocation(route.href); setMobileMenuOpen(false); }}
+                                data-testid={`mobile-workspace-route-${route.id}`}
+                              >
+                                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span className="text-sm">{route.label}</span>
+                                {route.badge && (
+                                  <span className="ml-auto px-1.5 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full font-semibold">
+                                    {route.badge}
+                                  </span>
+                                )}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground px-2 py-4 text-center">Loading navigation...</div>
+                  )}
+                </div>
+                <div className="border-t px-3 py-3 space-y-1">
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-10 px-3 font-normal"
+                    onClick={() => { setMobileMenuOpen(false); setLocation("/settings"); }}>
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Settings</span>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-10 px-3 font-normal"
+                    onClick={() => { setMobileMenuOpen(false); setLocation("/support"); }}>
+                    <Bug className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Help & Support</span>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-10 px-3 font-normal text-destructive hover:text-destructive"
+                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}>
+                    <LogOut className="h-4 w-4" />
+                    <span className="text-sm">Sign Out</span>
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           )}
         </div>
       </div>
