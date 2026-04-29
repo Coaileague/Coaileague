@@ -97,8 +97,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
 import { SettingsCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
-import { SimpleModeToggle } from "@/components/SimpleModeToggle";
-import { useSimpleMode } from "@/contexts/SimpleModeContext";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { apiFetch } from "@/lib/apiError";
 import { WorkspaceResponse, OnboardingStatusResponse } from "@shared/schemas/responses/workspace";
@@ -3075,9 +3073,6 @@ export default function Settings() {
 
         {/* Quick Settings Section */}
         <TabsContent value="quick" className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
-          {/* Easy View Mode - Top Priority Setting */}
-          <SimpleModeToggle variant="labeled" />
-          
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Quick Toggles Card */}
             <Card>

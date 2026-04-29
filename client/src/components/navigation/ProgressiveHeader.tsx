@@ -18,7 +18,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useTrinityModal } from '@/components/trinity-chat-modal';
 import { TrinityMiniButton } from '@/components/trinity-button';
 import { NotificationsPopover } from '@/components/notifications-popover';
-import { SimpleModeToggle } from '@/components/SimpleModeToggle';
 import { performLogout, setLogoutTransitionLoader } from '@/lib/logoutHandler';
 import { useTransitionLoaderIfMounted } from '@/components/canvas-hub';
 import { CreditBalanceBadge } from '@/components/plan-status';
@@ -103,8 +102,6 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
           <Menu className="h-5 w-5" />
         </Button>
       )}
-      
-      {!isMobile && <SimpleModeToggle variant="default" />}
       
       {!isMobile && (
         <Button

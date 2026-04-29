@@ -2692,8 +2692,14 @@ function NotificationsPopoverInner({ user }: { user: any }) {
             aria-haspopup="true"
             aria-expanded={open}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!open); } }}
+            className="relative cursor-pointer"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-5 w-5 text-foreground" />
+            {totalUnread > 0 && (
+              <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full shadow-lg">
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
+            )}
           </div>
         </PopoverTrigger>
         <PopoverContent 
