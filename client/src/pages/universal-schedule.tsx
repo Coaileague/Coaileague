@@ -2000,11 +2000,12 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
               cells.push(
                 <div
                   key={i}
-                  className={`border border-slate-200/60 dark:border-slate-700/60 p-2 min-h-[140px] cursor-pointer transition-colors ${
-                    isToday ? 'bg-blue-50/50 dark:bg-blue-900/15' : ''
-                  } ${!isCurrentMonth ? 'opacity-40' : ''} ${
+                  className={[
+                    'border border-slate-200/60 dark:border-slate-700/60 p-2 min-h-[140px] cursor-pointer transition-colors',
+                    isToday ? 'bg-blue-50/50 dark:bg-blue-900/15' : '',
+                    !isCurrentMonth ? 'opacity-40' : '',
                     isCurrentMonth ? 'hover:bg-slate-50 dark:hover:bg-slate-800/60' : ''
-                  }`}
+                  ].join(' ')}
                   onClick={() => {
                     setSelectedDay(cellDate);
                     setCurrentWeek(cellDate);
@@ -2106,13 +2107,14 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                     return (
                       <div 
                         key={hour}
-                        className={`min-w-[62px] flex-1 text-center py-2.5 text-[10px] font-semibold border-r border-slate-200/60 dark:border-slate-700/60 last:border-r-0 ${
-                          isNowHour 
-                            ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold' 
-                            : isWorkHour 
-                              ? 'text-slate-600 dark:text-slate-300' 
+                        className={[
+                          'min-w-[62px] flex-1 text-center py-2.5 text-[10px] font-semibold border-r border-slate-200/60 dark:border-slate-700/60 last:border-r-0',
+                          isNowHour
+                            ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold'
+                            : isWorkHour
+                              ? 'text-slate-600 dark:text-slate-300'
                               : 'text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-slate-800/30'
-                        }`}
+                        ].join(' ')}
                       >
                         {formatHour(hour)}
                       </div>
@@ -2172,9 +2174,10 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                     return (
                       <div 
                         key={hour}
-                        className={`min-w-[62px] flex-1 border-r border-emerald-200/60 dark:border-emerald-800/40 last:border-r-0 transition-all duration-150 relative ${
+                        className={[
+                          'min-w-[62px] flex-1 border-r border-emerald-200/60 dark:border-emerald-800/40 last:border-r-0 transition-all duration-150 relative',
                           isHovered ? 'bg-emerald-100/80 dark:bg-emerald-900/50 ring-1 ring-inset ring-emerald-300/50' : ''
-                        }`}
+                        ].join(' ')}
                         onMouseEnter={() => setHoveredCell({ empId: 'open-shifts', hour })}
                         onMouseLeave={() => setHoveredCell(null)}
                         onClick={(e) => {
@@ -2251,9 +2254,11 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                   return (
                     <div
                       key={shift.id}
-                      className={`absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all duration-200 hover:shadow-sm hover:z-20 hover:-translate-y-px border border-dashed border-emerald-400 bg-emerald-50 dark:bg-emerald-900/60 text-xs flex flex-col justify-center overflow-hidden ${
-                        isProcessing ? 'trinity-shift-processing' : ''
-                      } ${trinityWorking ? 'trinity-grid-processing' : ''}`}
+                      className={[
+                        'absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all duration-200 hover:shadow-sm hover:z-20 hover:-translate-y-px border border-dashed border-emerald-400 bg-emerald-50 dark:bg-emerald-900/60 text-xs flex flex-col justify-center overflow-hidden',
+                        isProcessing ? 'trinity-shift-processing' : '',
+                        trinityWorking ? 'trinity-grid-processing' : ''
+                      ].join(' ')}
                       style={{ 
                         left: `${leftPercent}%`,
                         width: `${Math.max(widthPercent, 5)}%`,
@@ -2325,9 +2330,10 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                     return (
                       <div
                         key={hour}
-                        className={`min-w-[62px] flex-1 border-r border-sky-200/40 dark:border-sky-800/30 last:border-r-0 transition-all duration-150 relative ${
+                        className={[
+                          'min-w-[62px] flex-1 border-r border-sky-200/40 dark:border-sky-800/30 last:border-r-0 transition-all duration-150 relative',
                           isHovered ? 'bg-sky-100/80 dark:bg-sky-900/50 ring-1 ring-inset ring-sky-300/50' : ''
-                        }`}
+                        ].join(' ')}
                         onMouseEnter={() => setHoveredCell({ empId: 'available-shifts', hour })}
                         onMouseLeave={() => setHoveredCell(null)}
                         onClick={(e) => {
@@ -2465,7 +2471,11 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                   
                   return (
                     <DroppableEmployeeRow key={emp.id} employeeId={emp.id} isDropTarget={dropTargetEmployeeId === emp.id}>
-                    <div className={`flex border-b border-slate-200/60 dark:border-slate-700/60 transition-colors group ${empIndex % 2 === 0 ? 'bg-card/70 dark:bg-slate-900/50 schedule-zebra-even' : 'bg-slate-50/80 dark:bg-slate-800/40 schedule-zebra-odd'} ${isRowHighlighted ? 'schedule-row-hovered' : ''}`} style={{ minHeight: `${dynamicRowHeight}px` }}>
+                    <div className={[
+                      'flex border-b border-slate-200/60 dark:border-slate-700/60 transition-colors group',
+                      empIndex % 2 === 0 ? 'bg-card/70 dark:bg-slate-900/50 schedule-zebra-even' : 'bg-slate-50/80 dark:bg-slate-800/40 schedule-zebra-odd',
+                      isRowHighlighted ? 'schedule-row-hovered' : ''
+                    ].join(' ')} style={{ minHeight: `${dynamicRowHeight}px` }}>
                       <div 
                         className="w-[200px] min-w-[200px] px-3 py-2.5 border-r border-slate-200/60 dark:border-slate-600/60 bg-slate-50/90 dark:bg-slate-800/80 flex items-center gap-2.5 cursor-pointer hover:bg-card dark:hover:bg-slate-700/80 flex-shrink-0 transition-colors"
                         onClick={() => setSelectedEmployee(emp)}
@@ -2517,9 +2527,11 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                               <div 
                                 key={hour}
                                 tabIndex={0}
-                                className={`min-w-[62px] flex-1 border-r border-slate-200/50 dark:border-slate-700/50 last:border-r-0 transition-all duration-150 relative schedule-grid-cell ${
-                                  isHovered ? 'bg-blue-100/70 dark:bg-blue-900/40 ring-1 ring-inset ring-blue-300/50 dark:ring-blue-600/40' : ''
-                                } ${isFocused ? 'schedule-cell-focused' : ''}`}
+                                className={[
+                                  'min-w-[62px] flex-1 border-r border-slate-200/50 dark:border-slate-700/50 last:border-r-0 transition-all duration-150 relative schedule-grid-cell',
+                                  isHovered ? 'bg-blue-100/70 dark:bg-blue-900/40 ring-1 ring-inset ring-blue-300/50 dark:ring-blue-600/40' : '',
+                                  isFocused ? 'schedule-cell-focused' : ''
+                                ].join(' ')}
                                 onMouseEnter={() => setHoveredCell({ empId: emp.id, hour })}
                                 onMouseLeave={() => setHoveredCell(null)}
                                 onClick={(e) => {
@@ -2660,11 +2672,12 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                                   {conflictBadge && (
                                     <Badge 
                                       variant="outline" 
-                                      className={`absolute bottom-0.5 left-0.5 text-[7px] px-1 py-0 ${
-                                        conflictBadge.severity === 'error' 
-                                          ? 'bg-red-100 dark:bg-red-900/60 border-red-500 text-red-700 dark:text-red-300' 
+                                      className={[
+                                        'absolute bottom-0.5 left-0.5 text-[7px] px-1 py-0',
+                                        conflictBadge.severity === 'error'
+                                          ? 'bg-red-100 dark:bg-red-900/60 border-red-500 text-red-700 dark:text-red-300'
                                           : 'bg-yellow-100 dark:bg-yellow-900/60 border-yellow-500 text-yellow-700 dark:text-yellow-300'
-                                      }`}
+                                      ].join(' ')}
                                     >
                                       {conflictBadge.type}
                                     </Badge>
