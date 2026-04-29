@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { HelpCircle, Settings, LogOut, Mail, Home, Calendar, LayoutDashboard, FileText, DollarSign, Users, Building2, Clock } from 'lucide-react';
+import { HelpCircle, Settings, LogOut, Mail, Home, Calendar, LayoutDashboard, FileText, DollarSign, Users, Building2, Clock, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
@@ -90,6 +90,20 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
 
   const rightActions = (
     <div className="flex items-center gap-0 sm:gap-1.5">
+      {!isMobile && (
+        <Button
+          ref={triggerRef}
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 hidden sm:flex mr-2"
+          onClick={() => toggleOverlay('menu')}
+          data-testid="nav-trigger"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
+      
       {!isMobile && <SimpleModeToggle variant="default" />}
       
       {!isMobile && (

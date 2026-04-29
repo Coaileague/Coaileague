@@ -109,7 +109,7 @@ import { TrinityTrainingPanel } from '@/components/schedule/TrinityTrainingPanel
 import { ScheduleUploadPanel } from '@/components/schedule/ScheduleUploadPanel';
 import { ViewModeToggle } from '@/components/schedule/ViewModeToggle';
 import { TrinitySchedulingProgress } from '@/components/schedule/TrinitySchedulingProgress';
-import { TrinityStatusBar, TrinityThinkingPanel } from '@/components/schedule/TrinitySchedulingFeedback';
+import { TrinityStatusBar } from '@/components/schedule/TrinitySchedulingFeedback';
 import { useTrinitySchedulingProgress } from '@/hooks/use-trinity-scheduling-progress';
 import { ShiftCreationModal, type ShiftFormData, DAYS_OF_WEEK, POST_ORDER_TEMPLATES } from '@/components/schedule/ShiftCreationModal';
 import { DuplicateShiftModal, SwapRequestModal, EditShiftModal, ShiftActionDialog, EscalationMatrixDialog } from '@/components/schedule/ScheduleDialogs';
@@ -2682,36 +2682,8 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
 
             </div>
           </div>
-          )}
 
         </div>
-
-        {/* Trinity Thinking Panel - Fixed at bottom when processing */}
-        <TrinityThinkingPanel 
-          thoughts={session.thoughts} 
-          isWorking={trinityWorking} 
-          onClear={clearSession}
-          onReviewRequested={() => {
-            if (schedulingResult) {
-              setShowSchedulingSummary(true);
-            } else if (completionResult) {
-              setSchedulingResult({
-                success: true,
-                sessionId: completionResult.sessionId,
-                executionId: completionResult.executionId || completionResult.sessionId,
-                totalMutations: completionResult.mutationCount,
-                mutations: completionResult.mutations || [],
-                summary: completionResult.summary,
-                aiSummary: completionResult.aiSummary || '',
-                requiresVerification: completionResult.requiresVerification,
-              });
-              setShowSchedulingSummary(true);
-            } else {
-              queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
-              toast({ title: 'Schedule Updated', description: 'Shifts have been refreshed with latest data.' });
-            }
-          }}
-        />
 
         {/* Trinity Insights Slide-in Panel - hidden when Trinity is actively scheduling to avoid duplicate AI processing */}
         {showTrinityInsights && !trinityWorking && (

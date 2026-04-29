@@ -616,9 +616,10 @@ function generateTypeBasedActions(
 }
 
 // Generate a correlation key to detect semantic duplicates from different sources
-function generateCorrelationKey(title: string, category: string, createdAt: string): string {
-  // Normalize title: lowercase, remove non-alphanumeric, extract key words
-  const normalizedTitle = title.toLowerCase()
+function generateCorrelationKey(title: string | null | undefined, category: string, createdAt: string): string {
+  // Safely normalize title: handle null/undefined
+  const safeTitle = (title || 'notification').toString();
+  const normalizedTitle = safeTitle.toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .split(/\s+/)
     .filter(word => word.length > 3) // Only keep significant words

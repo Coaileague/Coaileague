@@ -554,15 +554,15 @@ function TrinityIcon({
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        width: 18,
-        height: 18,
+        width: 24,
+        height: 24,
         borderRadius: "50%",
-        border: `1.5px solid ${color}`,
+        border: `2px solid ${color}`,
         color,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 700,
         flexShrink: 0,
-        boxShadow: `0 0 5px ${color}33`,
+        boxShadow: `0 0 8px ${color}44`,
         animation: ringAnimation,
       }}
       aria-hidden="true"
@@ -571,7 +571,7 @@ function TrinityIcon({
         <span
           style={{
             position: "absolute",
-            inset: -4,
+            inset: -5,
             borderRadius: "50%",
             border: `1px solid ${color}55`,
             animation: "trinity-icon-halo 1.8s ease-out infinite",
@@ -579,7 +579,7 @@ function TrinityIcon({
         />
       )}
       <span style={{ display: "inline-flex", animation: markAnimation }}>
-        <TrinityArrowMark size={11} />
+        <TrinityArrowMark size={13} />
       </span>
     </span>
   );
