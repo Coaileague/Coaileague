@@ -34,7 +34,6 @@ import { TrinityBadge } from "@/components/trinity-marketing-hero";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { deriveTrinityModeFromUser } from "@/hooks/use-business-buddy-tier";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -104,7 +103,6 @@ export function SetupGuidePanel({
   const { user } = useAuth();
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
   // Derive Trinity mode locally to avoid /api/trinity/context fetch on every nav.
-  const isGuruMode = deriveTrinityModeFromUser(user) === 'guru';
 
   const { data: guideData, isLoading } = useQuery<SetupGuideData>({
     queryKey: ["/api/onboarding/setup-guide"],
@@ -235,13 +233,6 @@ export function SetupGuidePanel({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {isGuruMode && guideData.trinityGreeting && (
-          <div className="px-3 py-2 mx-2 my-2 rounded-lg bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-cyan-500/20 text-xs text-muted-foreground flex items-start gap-2">
-            <TrinityBadge showLabel={false} className="shrink-0 mt-0.5" />
-            <span className="text-foreground/80">{guideData.trinityGreeting}</span>
-          </div>
-        )}
-
         <Accordion
           type="multiple"
           value={expandedSections}
@@ -284,13 +275,6 @@ export function SetupGuidePanel({
                 </AccordionTrigger>
 
                 <AccordionContent className="pb-0">
-                  {section.trinityTip && isGuruMode && (
-                    <div className="mx-4 mb-2 p-2 rounded-lg bg-gradient-to-r from-cyan-500/5 to-purple-500/5 border border-cyan-500/10 text-xs text-muted-foreground flex items-start gap-2">
-                      <TrinityBadge showLabel={false} className="shrink-0 mt-0.5" />
-                      <span className="text-foreground/70">{section.trinityTip}</span>
-                    </div>
-                  )}
-
                   <div className="space-y-0.5 pb-2">
                     {section.tasks.map((task) => (
                       <TaskItem

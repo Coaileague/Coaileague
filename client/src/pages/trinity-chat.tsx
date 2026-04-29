@@ -45,9 +45,7 @@ import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
 import { TrinityEnhancedThoughtProcess } from '@/components/trinity-enhanced';
 
 import {
-  type ConversationMode,
-  type SpiritualGuidance,
-  TRINITY_MODES,
+  type SpiritualGuidance
 } from '@/config/trinity';
 
 interface Message {
@@ -59,7 +57,6 @@ interface Message {
 
 interface ChatSession {
   id: string;
-  mode: ConversationMode;
   startedAt: Date;
   lastActivityAt: Date;
   turnCount: number;
@@ -89,10 +86,8 @@ export default function TrinityChat() {
   const isCOORole = !isPlatformStaff && (
     workspaceRole === 'org_owner' || workspaceRole === 'co_owner' || workspaceRole === 'manager'
   );
-  const initialMode: ConversationMode = isPlatformStaff ? 'guru' : 'business';
 
   const [message, setMessage] = useState('');
-  const [mode, setMode] = useState<ConversationMode>(initialMode);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -179,7 +174,7 @@ export default function TrinityChat() {
       setMessages([]);
       toast({
         title: 'Mode Changed',
-        description: `Switched to ${TRINITY_MODES[data.mode as ConversationMode].label} mode`,
+        description: `Switched to ${[data.mode as ConversationMode].label} mode`,
       });
     },
   });
@@ -228,7 +223,6 @@ export default function TrinityChat() {
 
     chatMutation.mutate({
       message,
-      mode,
       sessionId: sessionId || undefined,
     });
 
@@ -276,11 +270,7 @@ export default function TrinityChat() {
   };
 
   const trinityRoleBadge = isPlatformStaff ? (
-    <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/40 gap-1 shrink-0 max-w-[140px] sm:max-w-none" data-testid="badge-trinity-guru-mode">
-      <Shield className="h-3 w-3 shrink-0" />
-      <span className="truncate">Tech Guru Mode</span>
-    </Badge>
-  ) : isCOORole ? (
+) : isCOORole ? (
     <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40 gap-1 shrink-0 max-w-[140px] sm:max-w-none" data-testid="badge-trinity-coo-mode">
       <Crown className="h-3 w-3 shrink-0" />
       <span className="truncate">COO Mode</span>
@@ -402,7 +392,7 @@ export default function TrinityChat() {
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-xs">
-                        {TRINITY_MODES[session.mode].label}
+                        {[session.mode].label}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(session.lastActivityAt), { addSuffix: true })}

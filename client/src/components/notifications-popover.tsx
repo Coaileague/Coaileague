@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
-import { deriveTrinityModeFromUser } from "@/hooks/use-business-buddy-tier";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
 import { useChatDock } from "@/contexts/ChatDockContext";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
@@ -1297,7 +1296,6 @@ function NotificationCard({
   onAction,
   onCardClick,
   onClose,
-  isGuruMode,
   canInteract,
   compact = false,
 }: { 
@@ -1306,7 +1304,6 @@ function NotificationCard({
   onAction: (notification: UNSNotification, action: NonNullable<UNSNotification['actions']>[0]) => void;
   onCardClick: (notification: UNSNotification) => void;
   onClose: () => void; // Closes the notification panel before opening Trinity
-  isGuruMode: boolean;
   canInteract: boolean;
   compact?: boolean;
 }) {
@@ -1838,7 +1835,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
   const { workspaceRole, platformRole: accessPlatformRole } = useWorkspaceAccess();
   
   // Derive Trinity mode locally from user — avoids /api/trinity/context fetch on every nav.
-  const isGuruMode = deriveTrinityModeFromUser(user) === 'guru';
+  const isGuruMode = false; // Trinity mode removed — Trinity decides internally
   
   // WebSocket for real-time updates
   const { isConnected } = useNotificationWebSocket(userId, workspaceId);
@@ -2619,7 +2616,6 @@ function NotificationsPopoverInner({ user }: { user: any }) {
                     onAction={handleAction}
                     onCardClick={setSelectedNotification}
                     onClose={() => setOpen(false)}
-                    isGuruMode={isGuruMode}
                     canInteract={!!user}
                     compact={compact}
                   />
@@ -2632,7 +2628,6 @@ function NotificationsPopoverInner({ user }: { user: any }) {
                   onAction={handleAction}
                   onCardClick={setSelectedNotification}
                   onClose={() => setOpen(false)}
-                  isGuruMode={isGuruMode}
                   canInteract={!!user}
                   compact={compact}
                 />
@@ -2664,7 +2659,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
     </div>
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, alertsCount, updatesCount, systemCount, user, allNotifications, visibleNotifications, isGuruMode, isMobile, setOpen]);
+  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, alertsCount, updatesCount, systemCount, user, allNotifications, visibleNotifications, isMobile, setOpen]);
 
   // Create stable component references using the memoized generator
   // Mobile: enable swipe-to-delete for iOS-style notification dismissal

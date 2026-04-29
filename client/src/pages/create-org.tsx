@@ -10,7 +10,6 @@ import { useLocation } from "wouter";
 import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { triggerGlobalEmote } from "@/hooks/use-mascot-emotes";
 import { IndustrySelector, type IndustrySelection } from "@/components/industry-selector";
 import { DOMAINS } from "@shared/platformConfig";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
@@ -321,8 +320,6 @@ export default function CreateOrg() {
           console.warn("[CreateOrg] TOS workspace link failed:", e);
         }
       }
-
-      triggerGlobalEmote("org_created");
       toast({
         title: "Organization Created",
         description: `${data.workspace.name} has been created successfully! Organization ID: ${data.workspace.organizationId}`,

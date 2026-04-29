@@ -26,75 +26,16 @@ import { Briefcase, Heart, Shield, type LucideIcon } from 'lucide-react';
  * - Uses Claude for complex analysis and recommendations
  */
 
-export type ConversationMode = 'business' | 'personal' | 'guru';
-export type SpiritualGuidance = 'none' | 'general' | 'christian';
-export type AccountabilityLevel = 'gentle' | 'balanced' | 'challenging';
+/** @deprecated Trinity mode toggle removed — kept for DB schema compat only */
+export type ConversationMode = 'business';
+// SpiritualGuidance removed
+// ModeConfig removed
 
-export interface ModeConfig {
-  id: ConversationMode;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  requiresSupportAgent?: boolean;  // Guru mode requires verified support agent
-  aiRouting?: 'gemini' | 'gpt' | 'claude' | 'intelligent';  // Which AI to use
-  colors: {
-    gradient: string;
-    badge: string;
-    text: string;
-  };
-}
+// SpiritualConfig removed
 
-export interface SpiritualConfig {
-  id: SpiritualGuidance;
-  label: string;
-  description: string;
-}
+// AccountabilityConfig removed
 
-export interface AccountabilityConfig {
-  id: AccountabilityLevel;
-  label: string;
-  description: string;
-}
-
-export const TRINITY_MODES: Record<ConversationMode, ModeConfig> = {
-  business: {
-    id: 'business',
-    label: 'Business',
-    description: 'Data-driven insights with live metrics',
-    icon: Briefcase,
-    aiRouting: 'gemini',  // Efficient for routine business queries
-    colors: {
-      gradient: 'from-blue-500 to-cyan-500',
-      badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      text: 'text-blue-500',
-    },
-  },
-  personal: {
-    id: 'personal',
-    label: 'Buddy',
-    description: 'Personal coaching with intelligent AI routing',
-    icon: Heart,
-    aiRouting: 'intelligent',  // Routes to best AI based on query complexity
-    colors: {
-      gradient: 'from-emerald-500 to-teal-500',
-      badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-      text: 'text-emerald-500',
-    },
-  },
-  guru: {
-    id: 'guru',
-    label: 'Guru',
-    description: 'Expert support mode (support agents only)',
-    icon: Shield,
-    requiresSupportAgent: true,  // Only available to verified support agents
-    aiRouting: 'claude',  // Uses Claude for deep analysis
-    colors: {
-      gradient: 'from-purple-500 to-violet-500',
-      badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      text: 'text-purple-500',
-    },
-  },
-};
+// TRINITY_MODES removed — Trinity decides internally, no mode toggle
 
 export const SPIRITUAL_GUIDANCE_OPTIONS: SpiritualConfig[] = [
   {

@@ -496,8 +496,7 @@ class TrinityChatService {
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const { userId, workspaceId, message, sessionId, images } = request;
-    // Mode retained only as session DB column default — not used for prompt routing.
-    const mode: ConversationMode = 'business';
+    // Trinity has no mode toggle — her biological brain decides how to respond
 
     // THALAMUS — Universal Sensory Gateway (first organ every signal passes through)
     // Non-blocking for LOW priority; async-logged for background processing
@@ -1189,7 +1188,7 @@ DO NOT:
 
     // === PROACTIVE INTELLIGENCE SCAN ===
     // After building prompt but before generating response, scan for proactive insights
-    if (mode === 'business') {
+    if (true) { // Trinity intelligence — always active (mode toggle removed)
       try {
         const [proactiveInsights, behaviorContext] = await Promise.all([
           this.buildProactiveInsights(workspaceId, orgPatterns, workspaceContext),
@@ -1364,7 +1363,7 @@ DO NOT:
     // === CLARIFICATION ENGINE — Pre-flight ambiguity check ===
     // If the request is ambiguous AND high-stakes, ask ONE clarifying question
     // instead of making the expensive AI call. Never asks more than 1 question.
-    if (mode === 'business') {
+    if (true) { // Trinity intelligence — always active (mode toggle removed)
       try {
         const clarificationDecision = trinityClarificationService.evaluate(
           message, history, workspaceContext,
@@ -1398,7 +1397,7 @@ DO NOT:
     // and returns a live, status-aware sequenced plan rather than executing blindly.
     // This is the Executive Function layer of Trinity's biological brain model.
     let executivePlanResponse: string | null = null;
-    if (mode === 'business') {
+    if (true) { // Trinity intelligence — always active (mode toggle removed)
       const planDetection = detectMultiStepRequest(message);
       if (planDetection.detected && planDetection.planType) {
         log.info(`[ExecutivePlanner] Multi-step request detected — planType=${planDetection.planType}`);
@@ -1515,7 +1514,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     // Checks the response for high-stakes claims with low confidence.
     // Non-blocking: appends verification footer if needed.
     let finalResponseText = aiResponse.text;
-    if (mode === 'business') {
+    if (true) { // Trinity intelligence — always active (mode toggle removed)
       try {
         const domain = trinityUncertaintyService.classifyDomain(message, aiResponse.text);
         if (domain !== 'general') {

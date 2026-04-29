@@ -26,12 +26,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { 
-  TRINITY_MODES, 
-  TRINITY_BRANDING, 
+    TRINITY_BRANDING, 
   TRINITY_MOBILE_CONFIG,
   TRINITY_ALLOWED_ROLES,
-  type ConversationMode 
-} from '@/config/trinity';
+  type} from '@/config/trinity';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
 import {Eye, X,
   Send,
@@ -136,8 +134,6 @@ interface TrinityModalContextType {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   clearMessages: () => void;
-  mode: ConversationMode;
-  setMode: (mode: ConversationMode) => void;
   pendingPrompt: string | null;
   setPendingPrompt: (prompt: string | null) => void;
   pendingAutoSubmit: boolean;
@@ -157,7 +153,6 @@ const defaultContext: TrinityModalContextType = {
   setMessages: () => {},
   clearMessages: () => {},
   mode: 'business',
-  setMode: () => {},
   pendingPrompt: null,
   setPendingPrompt: () => {},
   pendingAutoSubmit: false,
@@ -181,7 +176,6 @@ const TRINITY_CHANNEL_NAME = 'trinity-chat-sync';
 export function TrinityModalProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [mode, setMode] = useState<ConversationMode>('business');
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [pendingAutoSubmit, setPendingAutoSubmit] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
@@ -231,7 +225,6 @@ export function TrinityModalProvider({ children }: { children: React.ReactNode }
         } else if (type === 'clear_messages') {
           setMessages([]);
         } else if (type === 'mode_change') {
-          setMode(data.mode);
         }
       };
 
@@ -325,7 +318,6 @@ export function TrinityModalProvider({ children }: { children: React.ReactNode }
     <TrinityModalContext.Provider value={{ 
       isOpen, openModal, closeModal, toggleModal, openWithContext,
       messages, setMessages: setMessagesWithSync, clearMessages,
-      mode, setMode,
       pendingPrompt, setPendingPrompt,
       pendingAutoSubmit, setPendingAutoSubmit,
     }}>
@@ -556,7 +548,7 @@ function UsageBlock({ usage }: { usage: UsageData }) {
 }
 
 // Thinking visualization component with animated Trinity arrow mark
-function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: ConversationMode }) {
+function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode?: string }) {
   
   // Get current active step for the substage display
   const currentStep = steps.find(s => s.status === 'processing') || steps[steps.length - 1];
@@ -702,38 +694,26 @@ function PreviewPanel({ preview, onApply, onCancel }: {
   );
 }
 
-// Mode selector component - shows Guru mode only for platform staff
-function ModeSelector({ mode, onModeChange }: { mode: ConversationMode; onModeChange: (mode: ConversationMode) => void }) {
-  const { user } = useAuth();
   
   // Check if user is platform staff using TRINITY_ALLOWED_ROLES (centralized config)
   const isPlatformStaff = user?.role && 
     (TRINITY_ALLOWED_ROLES.platformRoles as readonly string[]).includes(user.role);
   
   // Filter modes - only show Guru to platform staff (support agents)
-  const availableModes = Object.values(TRINITY_MODES).filter(modeConfig => {
-    if (modeConfig.requiresSupportAgent && !isPlatformStaff) return false;
     return true;
   });
   
   return (
     <div className="flex gap-1 p-1 bg-muted rounded-lg">
-      {availableModes.map((modeConfig) => {
-        const Icon = modeConfig.icon;
-        const isActive = mode === modeConfig.id;
         return (
           <button
-            key={modeConfig.id}
-            onClick={() => onModeChange(modeConfig.id)}
             className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
               isActive 
-                ? `bg-gradient-to-r ${modeConfig.colors.gradient} text-white shadow-sm` 
+                ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm" 
                 : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
             }`}
-            data-testid={`button-trinity-mode-${modeConfig.id}`}
           >
             <Icon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{modeConfig.label}</span>
           </button>
         );
       })}
@@ -918,7 +898,7 @@ interface TrinityModalProps {
 function TrinityModal({ onClose }: TrinityModalProps) {
   const [location] = useLocation();
   const { toast } = useToast();
-  const { messages, setMessages, clearMessages, mode, setMode, pendingPrompt, setPendingPrompt, pendingAutoSubmit, setPendingAutoSubmit } = useTrinityModal();
+  const { messages, setMessages, clearMessages, pendingPrompt, setPendingPrompt, pendingAutoSubmit, setPendingAutoSubmit } = useTrinityModal();
   const [inputValue, setInputValue] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [mobileMode, setMobileMode] = useState<MobileMode>('immersive');
@@ -1302,7 +1282,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  const modeConfig = TRINITY_MODES[mode];
+  // modeConfig removed
 
   // Mobile drag controls - restricts drag to handle only
   const mobileDragControls = useDragControls();
@@ -1463,7 +1443,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                         <div
                           className={`rounded-md px-3 py-2.5 overflow-hidden ${
                             msg.role === 'user'
-                              ? `bg-gradient-to-r ${modeConfig.colors.gradient} text-white rounded-br-sm shadow-sm`
+                              ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-br-sm shadow-sm"
                               : 'bg-muted border border-border/60 rounded-tl-sm'
                           }`}
                         >
@@ -1712,7 +1692,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                       <div
                         className={`rounded-md px-3 py-2.5 overflow-hidden ${
                           msg.role === 'user'
-                            ? `bg-gradient-to-r ${modeConfig.colors.gradient} text-white rounded-br-sm shadow-sm`
+                            ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-br-sm shadow-sm"
                             : 'bg-muted border border-border/60 rounded-tl-sm'
                         }`}
                       >
