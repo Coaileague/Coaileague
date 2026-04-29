@@ -61,16 +61,16 @@ setInterval(() => {
 // Type for User from database queries
 type User = typeof users.$inferSelect;
 import {
-  hashPassword,
-  verifyPassword,
-  validatePassword,
-  recordFailedLogin,
-  recordSuccessfulLogin,
-  recordIpAuthFailure,
   checkAccountLocked,
-  createVerificationToken,
   createPasswordResetToken,
+  createVerificationToken,
+  hashPassword,
+  recordFailedLogin,
+  recordIpAuthFailure,
+  recordSuccessfulLogin,
+  requireAuth,
   resetPassword,
+  validatePassword,
   verifyEmailToken,
   requireAuth,
 } from "../auth";
