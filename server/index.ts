@@ -522,7 +522,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"], // unpkg for swagger-ui
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.plaid.com"], // unpkg for swagger-ui, cdn.plaid.com for Plaid Link
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:", "https:", "https://*.tile.openstreetmap.org"],
@@ -533,6 +533,8 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         "wss:",
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com",
         `https://${DOMAINS.root}`,
         `https://${DOMAINS.www}`,
         `https://*.${DOMAINS.root}`,
