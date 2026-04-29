@@ -530,7 +530,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                   </Button>
                 )}
               </div>
-            </>
             {/* Right-side Sheet drawer — workspace navigation */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 flex flex-col">
@@ -593,6 +592,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 </div>
               </SheetContent>
             </Sheet>
+            </>
           )}
         </div>
       </div>
