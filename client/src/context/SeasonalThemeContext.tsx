@@ -9,7 +9,7 @@
  */
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+// useQuery removed — seasonal state is static (no API call)
 import { SEASONAL_EFFECTS_CONFIG } from '@/config/seasonalThemes';
 import { setGlobalSeasonalState, type HolidayKey } from '@/config/mascotConfig';
 import { useAuth } from '@/hooks/useAuth';
@@ -145,23 +145,13 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
   const darkModeAppliedRef = useRef(false);
   const previousThemeRef = useRef<'light' | 'dark' | null>(null);
   
-  // Only fetch seasonal state when user is authenticated
-  const { data, isLoading, error, refetch } = useQuery<{ success: boolean; profile: SeasonalProfile }>({
-    queryKey: ['/api/mascot/seasonal/state'],
-    enabled: !!user,
-    staleTime: 0, // Always refetch to ensure server-controlled seasonal state
-    gcTime: 60 * 1000, // Keep in cache for 1 minute for deduplication
-    refetchInterval: 5 * 60 * 1000, // Check every 5 minutes for changes
-    retry: 1,
-  });
-  
-  // Use API profile if available
-  // CRITICAL: If API returns a profile with seasonId: 'default', respect it (means seasonal is disabled)
-  // Only use date-based fallback if API call completely failed (network error, not 401)
-  // When seasonal is disabled via DISABLE_SEASONAL_THEMING env var, server returns seasonId: 'default'
-  const profile = data?.success && data?.profile 
-    ? data.profile 
-    : (isLoading ? DEFAULT_PROFILE : DEFAULT_PROFILE); // Use default when loading or on error - no client-side override!
+  // SEASONAL EFFECTS DISABLED — always use static DEFAULT_PROFILE, no API call
+  // Removed: /api/mascot/seasonal/state polling (was causing dashboard crash)
+  // Re-enable when SeasonalSubagent is production-ready
+  const isLoading = false;
+  const error = null;
+  const refetch = () => {};
+  const profile = DEFAULT_PROFILE;
   
   useEffect(() => {
     if (!profile) return;

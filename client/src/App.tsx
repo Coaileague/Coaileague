@@ -46,7 +46,7 @@ import { OverlayControllerProvider } from "@/contexts/overlay-controller";
 import { UniversalLoadingGateProvider } from "@/contexts/universal-loading-gate";
 import { TransitionProvider } from "@/contexts/transition-context";
 
-import { SeasonalThemeProvider, useSeasonalTheme } from "@/context/SeasonalThemeContext";
+// SeasonalThemeProvider / useSeasonalTheme removed — seasonal effects disabled
 import { SimpleModeProvider } from "@/contexts/SimpleModeContext";
 import { SimpleModeToggle } from "@/components/SimpleModeToggle";
 import { Button } from "@/components/ui/button";
@@ -123,7 +123,7 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
   });
 }
 
-const SeasonalEffectsLayer = lazy(() => import("@/components/effects/SeasonalEffectsLayer"));
+// SeasonalEffectsLayer removed — seasonal effects disabled
 
 const DeveloperPortal = lazy(() => import("@/pages/developers"));
 
@@ -472,7 +472,7 @@ import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 const SetupGuidePanel = lazy(() => import("@/components/setup-guide-panel").then(m => ({ default: m.SetupGuidePanel })));
 const CompactBubble = lazy(() => import("@/components/mascot/CompactBubble").then(m => ({ default: m.CompactBubble })));
-const FestiveDialogueBubble = lazy(() => import("@/components/mascot/FestiveDialogueBubble").then(m => ({ default: m.FestiveDialogueBubble })));
+// FestiveDialogueBubble removed — seasonal effects disabled
 const MascotTaskBox = lazy(() => import("@/components/mascot-task-box").then(m => ({ default: m.MascotTaskBox })));
 const ClientStatusLookup = lazy(() => import("@/pages/client-status-lookup"));
 const FeaturesShowcase = lazy(() => import("@/pages/features-showcase"));
@@ -535,11 +535,10 @@ function MascotRenderer() {
     userId: user?.id,
   });
   
-  // Use SeasonalThemeContext for AI-orchestrated seasonal state (respects SeasonalSubagent)
-  const { seasonId, isHoliday } = useSeasonalTheme();
-  
-  // Determine if we should apply holiday mode (only when SeasonalSubagent says so)
-  const isChristmasSeason = seasonId === 'christmas';
+  // Seasonal effects disabled — static defaults
+  const seasonId = 'default';
+  const isHoliday = false;
+  const isChristmasSeason = false;
   
   const currentMode = useMemo(() => {
     // AI activity takes priority over local mode when active
@@ -1006,15 +1005,7 @@ function MascotRenderer() {
       
       {/* Dialogue bubble - uses festive version during holiday season (controlled by SeasonalSubagent) - lazy loaded */}
       <Suspense fallback={null}>
-        {currentThought && isHoliday ? (
-          <FestiveDialogueBubble
-            thought={currentThought}
-            mascotPosition={{ x: effectiveX, y: effectiveY }}
-            mascotSize={bubbleSize}
-            isMobile={isMobile}
-            onDismiss={() => setCurrentThought(null)}
-          />
-        ) : currentThought ? (
+        {currentThought ? (
           <CompactBubble
             thought={currentThought}
             mascotPosition={{ x: effectiveX, y: effectiveY }}
@@ -2510,7 +2501,8 @@ export default function App() {
                 <WorkspaceBrandProvider>
                   <TransitionProvider>
                   <TooltipProvider>
-                      <SeasonalThemeProvider>
+                      {/* SeasonalThemeProvider removed — seasonal effects disabled */}
+                      <>
                         <SimpleModeProvider>
                         <LayerManagerProvider>
                         <TransitionLoaderProvider>
@@ -2535,12 +2527,7 @@ export default function App() {
                           <TrinityAnnouncementDisplay position="bottom-right" />
                           <TrinityTrademarkStrip />
                         </ResponsiveAppFrame>
-                        {/* Seasonal effects layer - snowfall, ornaments, etc. - lazy loaded */}
-                        <ErrorBoundary>
-                          <Suspense fallback={null}>
-                            <SeasonalEffectsLayer />
-                          </Suspense>
-                        </ErrorBoundary>
+                        {/* SeasonalEffectsLayer removed — disabled */}
                         {/* Floating Setup Guide - Stripe-style universal widget (positioned bottom-right) - lazy loaded */}
                         <ErrorBoundary>
                           <Suspense fallback={null}>
@@ -2559,7 +2546,7 @@ export default function App() {
                         </TransitionLoaderProvider>
                         </LayerManagerProvider>
                         </SimpleModeProvider>
-                      </SeasonalThemeProvider>
+                      </>
                   </TooltipProvider>
                   </TransitionProvider>
                 </WorkspaceBrandProvider>
