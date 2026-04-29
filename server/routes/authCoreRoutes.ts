@@ -7,7 +7,10 @@ import { users, platformRoles, employees, workspaces, expenseCategories } from "
 import { eq, and, sql } from "drizzle-orm";
 // Phase 53: 2FA / Device Trust / Session Limit
 import { verifyMfaToken } from '../services/auth/mfa';
-import { requireAuth } from '../auth';
+import {
+  checkAccountLocked,
+  recordSuccessfulLogin,
+  recordIpAuthFailure, requireAuth } from '../auth';
 import { isProduction } from '../lib/isProduction';
 
 /**
