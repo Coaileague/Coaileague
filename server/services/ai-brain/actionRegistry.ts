@@ -190,9 +190,87 @@ class AIBrainActionRegistry {
     registerTrainingSessionActions();
     this.registerDisciplinaryActions();
 
+    // Register async action modules inline so they're complete before initialize() resolves
+    registerAutonomousSchedulingBrainActions();
+    const { registerFinanceOrchestratorActions } = await import('./trinityFinanceOrchestrator');
+    registerFinanceOrchestratorActions();
+    const { registerInfraActions } = await import('./trinityInfraActions');
+    registerInfraActions();
+    const { registerInvoiceEmailActions } = await import('./trinityInvoiceEmailActions');
+    registerInvoiceEmailActions();
+    const { registerReportAnalyticsActions } = await import('./trinityReportAnalyticsActions');
+    registerReportAnalyticsActions();
+    const { registerOpsActions } = await import('./trinityOpsActions');
+    registerOpsActions();
+    const { registerExtendedActions } = await import('./trinityExtendedActions');
+    registerExtendedActions();
+    const { registerScheduleTimeclockActions } = await import('./trinityScheduleTimeclockActions');
+    registerScheduleTimeclockActions();
+    const { registerTimesheetPayrollCycleActions } = await import('./trinityTimesheetPayrollCycleActions');
+    registerTimesheetPayrollCycleActions();
+    const { registerComplianceIncidentActions } = await import('./trinityComplianceIncidentActions');
+    registerComplianceIncidentActions();
+
+    const { registerCommsProactiveActions } = await import('./trinityCommsProactiveActions');
+    registerCommsProactiveActions();
+    const { registerPostOrdersSafetyActions } = await import('./trinityPostOrdersSafetyActions');
+    registerPostOrdersSafetyActions();
+    const { registerCashFlowActions } = await import('./trinityCashFlowActions');
+    registerCashFlowActions();
+    const { registerHiringPipelineActions } = await import('./trinityHiringPipelineActions');
+    registerHiringPipelineActions();
+    const { registerDelegationTrackerActions } = await import('./trinityDelegationTrackerActions');
+    registerDelegationTrackerActions();
+    const { registerShiftConfirmationActions } = await import('./trinityShiftConfirmationActions');
+    registerShiftConfirmationActions();
+    const { registerChangePropagationActions } = await import('./trinityChangePropagationActions');
+    registerChangePropagationActions();
+    const { registerSubcontractorActions } = await import('./trinitySubcontractorActions');
+    await registerSubcontractorActions();
+    const { registerDrugTestingActions } = await import('./trinityDrugTestingActions');
+    registerDrugTestingActions();
+    const { registerEmergencyStaffingActions } = await import('./trinityEmergencyStaffingActions');
+    registerEmergencyStaffingActions();
+    const { registerExternalIntelligenceActions } = await import('./trinityExternalIntelligenceActions');
+    registerExternalIntelligenceActions();
+    const { registerMilestoneActions } = await import('./trinityMilestoneActions');
+    registerMilestoneActions();
+    const { registerSchedulingPlatformActions } = await import('./trinitySchedulingPlatformActions');
+    registerSchedulingPlatformActions();
+    const { registerWorkspaceTimeActions } = await import('./trinityWorkspaceTimeActions');
+    registerWorkspaceTimeActions();
+    const { registerIntelligenceLayerActions } = await import('./trinityIntelligenceLayers');
+    registerIntelligenceLayerActions();
+    const { registerTaxComplianceActions } = await import('./trinityTaxComplianceActions');
+    registerTaxComplianceActions();
+    const { registerFormActions } = await import('./trinityFormActions');
+    registerFormActions();
+    const { registerAgentSpawningActions } = await import('./trinityAgentSpawningActions');
+    registerAgentSpawningActions();
+    const { registerLicenseActions } = await import('./trinityLicenseActions');
+    registerLicenseActions();
+    const { registerPortalActions } = await import('./trinityPortalActions');
+    registerPortalActions();
+    const { registerHelpdeskActions } = await import('./trinityHelpdeskActions');
+    registerHelpdeskActions();
+    const { registerTrinityPerformanceActions } = await import('./trinityPerformanceActions');
+    await registerTrinityPerformanceActions();
+    const { registerMissingDomainActions } = await import('./trinityMissingDomainActions');
+    registerMissingDomainActions();
+    const { registerShiftOfferAndOutboundActions } = await import('./trinityShiftOfferActions');
+    registerShiftOfferAndOutboundActions();
+    const { registerTrinityAuditorActions } = await import('./trinityAuditorActions');
+    registerTrinityAuditorActions();
+    const { registerTrinitySecurityActions } = await import('./trinitySecurityActions');
+    registerTrinitySecurityActions();
+    const { registerTrinityWorkflowActions } = await import('../trinity/workflows/workflowOrchestrator');
+    registerTrinityWorkflowActions();
+    const { registerProactiveActions } = await import('../trinity/proactive/proactiveOrchestrator');
+    registerProactiveActions();
+
     this.initialized = true;
     (global as any)._aiBrainActionRegistryInitializing = false;
-    log.info(`[AI Brain Action Registry] Initialization complete`);
+    log.info(`[AI Brain Action Registry] Initialization complete — all action modules registered`);
   }
 
   // ============================================================================
@@ -4173,116 +4251,7 @@ class AIBrainActionRegistry {
 // Export singleton instance
 export const aiBrainActionRegistry = new AIBrainActionRegistry();
 
-// Initialize on import
-aiBrainActionRegistry.initialize().then(async () => {
-  registerAutonomousSchedulingBrainActions();
-  const { registerFinanceOrchestratorActions } = await import('./trinityFinanceOrchestrator');
-  registerFinanceOrchestratorActions();
-  const { registerInfraActions } = await import('./trinityInfraActions');
-  registerInfraActions();
-  const { registerInvoiceEmailActions } = await import('./trinityInvoiceEmailActions');
-  registerInvoiceEmailActions();
-  const { registerReportAnalyticsActions } = await import('./trinityReportAnalyticsActions');
-  registerReportAnalyticsActions();
-  const { registerOpsActions } = await import('./trinityOpsActions');
-  registerOpsActions();
-  const { registerExtendedActions } = await import('./trinityExtendedActions');
-  registerExtendedActions();
-  const { registerScheduleTimeclockActions } = await import('./trinityScheduleTimeclockActions');
-  registerScheduleTimeclockActions();
-  const { registerTimesheetPayrollCycleActions } = await import('./trinityTimesheetPayrollCycleActions');
-  registerTimesheetPayrollCycleActions();
-  const { registerComplianceIncidentActions } = await import('./trinityComplianceIncidentActions');
-  registerComplianceIncidentActions();
-  const { registerCommsProactiveActions } = await import('./trinityCommsProactiveActions');
-  registerCommsProactiveActions();
-  const { registerPostOrdersSafetyActions } = await import('./trinityPostOrdersSafetyActions');
-  registerPostOrdersSafetyActions();
-  const { registerCashFlowActions } = await import('./trinityCashFlowActions');
-  registerCashFlowActions();
-  const { registerHiringPipelineActions } = await import('./trinityHiringPipelineActions');
-  registerHiringPipelineActions();
-  const { registerDelegationTrackerActions } = await import('./trinityDelegationTrackerActions');
-  registerDelegationTrackerActions();
-  const { registerShiftConfirmationActions } = await import('./trinityShiftConfirmationActions');
-  registerShiftConfirmationActions();
-  const { registerChangePropagationActions } = await import('./trinityChangePropagationActions');
-  registerChangePropagationActions();
-
-  const { registerSubcontractorActions } = await import('./trinitySubcontractorActions');
-  await registerSubcontractorActions();
-  const { registerDrugTestingActions } = await import('./trinityDrugTestingActions');
-  registerDrugTestingActions();
-  const { registerEmergencyStaffingActions } = await import('./trinityEmergencyStaffingActions');
-  registerEmergencyStaffingActions();
-  const { registerExternalIntelligenceActions } = await import('./trinityExternalIntelligenceActions');
-  registerExternalIntelligenceActions();
-  const { registerMilestoneActions } = await import('./trinityMilestoneActions');
-  registerMilestoneActions();
-  const { registerSchedulingPlatformActions } = await import('./trinitySchedulingPlatformActions');
-  registerSchedulingPlatformActions();
-  const { registerWorkspaceTimeActions } = await import('./trinityWorkspaceTimeActions');
-  registerWorkspaceTimeActions();
-  const { registerIntelligenceLayerActions } = await import('./trinityIntelligenceLayers');
-  registerIntelligenceLayerActions();
-
-  const { registerTaxComplianceActions } = await import('./trinityTaxComplianceActions');
-  registerTaxComplianceActions();
-
-  // Form Actions (Online Forms Phase) — form.prefill, form.auto_submit, form.query_status
-  const { registerFormActions } = await import('./trinityFormActions');
-  registerFormActions();
-
-  // Agent Spawning System (Phase 4)
-  const { registerAgentSpawningActions } = await import('./trinityAgentSpawningActions');
-  registerAgentSpawningActions();
-
-  // License Management (Phase 17)
-  const { registerLicenseActions } = await import('./trinityLicenseActions');
-  registerLicenseActions();
-
-  // Portal Actions (Phase 20) — portal.client.query, portal.officer.query, portal.auditor.status, portal.send_link
-  const { registerPortalActions } = await import('./trinityPortalActions');
-  registerPortalActions();
-
-  // Helpdesk Actions (Phase 23B) — helpdesk.ticket.create, helpdesk.ticket.query, helpdesk.ticket.resolve, helpdesk.faq.search, helpdesk.faq.suggest, helpdesk.workspace.history
-  const { registerHelpdeskActions } = await import('./trinityHelpdeskActions');
-  registerHelpdeskActions();
-
-  // Performance Management Actions (Phase 35J) — performance.summary, performance.flag, performance.commend
-  const { registerTrinityPerformanceActions } = await import('./trinityPerformanceActions');
-  await registerTrinityPerformanceActions();
-
-  // Phase 58 — Missing Domain Actions: voice, forms, esignature, proposals, hr_docs
-  const { registerMissingDomainActions } = await import('./trinityMissingDomainActions');
-  registerMissingDomainActions();
-
-  // Phase 18B — Trinity outbound shift offers + outbound welfare-check calls
-  const { registerShiftOfferAndOutboundActions } = await import('./trinityShiftOfferActions');
-  registerShiftOfferAndOutboundActions();
-
-  // Phase 18C — Regulatory auditor intake, listing, close, expire
-  const { registerTrinityAuditorActions } = await import('./trinityAuditorActions');
-  registerTrinityAuditorActions();
-
-  // Phase 18D — Security actions (overrides, allow-list, caller-ID lookup)
-  const { registerTrinitySecurityActions } = await import('./trinitySecurityActions');
-  registerTrinitySecurityActions();
-
-  // Phase 20 — Trinity autonomous workflow actions:
-  //   trinity.execute_calloff_coverage, trinity.scan_stale_calloffs,
-  //   trinity.missed_clockin_check, trinity.send_shift_reminders,
-  //   trinity.run_invoice_lifecycle, trinity.run_compliance_scan,
-  //   trinity.process_payroll_anomalies
-  const { registerTrinityWorkflowActions } = await import('../trinity/workflows/workflowOrchestrator');
-  registerTrinityWorkflowActions();
-
-  // Phase 24 — Trinity proactive monitor actions:
-  //   trinity.run_pre_shift_intel, trinity.run_revenue_scan,
-  //   trinity.send_weekly_brief, trinity.run_anomaly_watch
-  const { registerProactiveActions } = await import('../trinity/proactive/proactiveOrchestrator');
-  registerProactiveActions();
-}).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
+// Note: all action registrations are now inside initialize() — no deferred .then() needed
 
 export default aiBrainActionRegistry;
 
