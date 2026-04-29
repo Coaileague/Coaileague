@@ -24,12 +24,15 @@ export function SimpleModeToggle({ variant = 'default', className }: SimpleModeT
         onClick={toggleSimpleMode}
         disabled={isLoading}
         className={cn(
-          "h-8 w-8 flex-shrink-0",
-          isSimpleMode && "text-primary",
+          "h-8 w-8 flex-shrink-0 transition-all duration-200",
+          isSimpleMode 
+            ? "text-primary bg-primary/10 ring-1 ring-primary/30" 
+            : "text-muted-foreground hover:text-foreground",
           className
         )}
         data-testid="button-simple-mode-toggle"
         title={isSimpleMode ? "Switch to Pro View" : "Switch to Easy View"}
+        aria-pressed={isSimpleMode}
       >
         {isSimpleMode ? (
           <Eye className="h-4 w-4" />
@@ -46,14 +49,15 @@ export function SimpleModeToggle({ variant = 'default', className }: SimpleModeT
         onClick={toggleSimpleMode}
         disabled={isLoading}
         className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-colors",
+          "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-200",
           isSimpleMode 
-            ? "bg-primary/10 text-primary" 
-            : "bg-muted text-muted-foreground hover-elevate",
+            ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/50" 
+            : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
           className
         )}
         data-testid="button-simple-mode-toggle"
         title={isSimpleMode ? "Switch to Advanced View" : "Switch to Easy View"}
+        aria-pressed={isSimpleMode}
       >
         {isSimpleMode ? (
           <>
@@ -72,16 +76,16 @@ export function SimpleModeToggle({ variant = 'default', className }: SimpleModeT
 
   if (variant === 'labeled') {
     return (
-      <div className={cn("flex items-center justify-between gap-4 p-4 rounded-lg border bg-card", className)}>
+      <div className={cn("flex items-center justify-between gap-4 p-4 rounded-lg border bg-card transition-all", isSimpleMode ? "border-primary/50 bg-primary/5" : "border-border", className)}>
         <div className="flex items-center gap-3">
           <div className={cn(
-            "p-2 rounded-lg",
-            isSimpleMode ? "bg-primary/10" : "bg-muted"
+            "p-2 rounded-lg transition-all duration-200",
+            isSimpleMode ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
           )}>
             {isSimpleMode ? (
-              <Eye className="h-5 w-5 text-primary" />
+              <Eye className="h-5 w-5" />
             ) : (
-              <Sparkles className="h-5 w-5 text-muted-foreground" />
+              <Sparkles className="h-5 w-5" />
             )}
           </div>
           <div>
@@ -101,21 +105,23 @@ export function SimpleModeToggle({ variant = 'default', className }: SimpleModeT
           onCheckedChange={toggleSimpleMode}
           disabled={isLoading}
           data-testid="switch-simple-mode"
+          aria-label={isSimpleMode ? "Disable Easy View" : "Enable Easy View"}
         />
       </div>
     );
   }
 
   return (
-    <div className={cn("flex items-center gap-1.5 flex-shrink-0", className)}>
+    <div className={cn("flex items-center gap-2 flex-shrink-0 transition-all duration-200", isSimpleMode && "ring-1 ring-primary/30 px-1 rounded", className)}>
       <Switch
         id="simple-mode"
         checked={isSimpleMode}
         onCheckedChange={toggleSimpleMode}
         disabled={isLoading}
         data-testid="switch-simple-mode"
+        aria-label={isSimpleMode ? "Disable Easy View" : "Enable Easy View"}
       />
-      <Label htmlFor="simple-mode" className="text-xs sm:text-sm cursor-pointer whitespace-nowrap hidden sm:inline">
+      <Label htmlFor="simple-mode" className={cn("text-xs sm:text-sm cursor-pointer whitespace-nowrap hidden sm:inline transition-colors duration-200", isSimpleMode && "text-primary font-medium")}>
         Easy View
       </Label>
     </div>

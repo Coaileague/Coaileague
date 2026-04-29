@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { HelpCircle, Settings, LogOut, Mail, Home } from 'lucide-react';
+import { HelpCircle, Settings, LogOut, Mail, Home, Calendar, LayoutDashboard, FileText, DollarSign, Users, Building2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
@@ -186,7 +186,73 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
       >
         {rightActions && <div className="flex items-center gap-2">{rightActions}</div>}
       </div>
-      {/* NavigationOverlay removed — overlay handled by canvas-hub layer */}
+      
+      {/* Navigation Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:bg-transparent"
+          onClick={closeOverlay}
+          onMouseLeave={!isMobile ? handleOverlayMouseLeave : undefined}
+        />
+      )}
+      
+      {isOpen && (
+        <div className="fixed top-12 left-0 right-0 z-50 bg-card border-b border-border shadow-lg max-h-[calc(100vh-48px)] overflow-y-auto">
+          <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+            {/* Dashboard */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-foreground">Dashboard</h3>
+              <nav className="space-y-1">
+                <button onClick={() => { setLocation('/'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Home className="inline h-4 w-4 mr-1" /> Home
+                </button>
+                <button onClick={() => { setLocation('/settings'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <LayoutDashboard className="inline h-4 w-4 mr-1" /> Workspace
+                </button>
+              </nav>
+            </div>
+            
+            {/* Operations */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-foreground">Operations</h3>
+              <nav className="space-y-1">
+                <button onClick={() => { setLocation('/shifts'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Calendar className="inline h-4 w-4 mr-1" /> Shifts
+                </button>
+                <button onClick={() => { setLocation('/timesheets'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Clock className="inline h-4 w-4 mr-1" /> Timesheets
+                </button>
+              </nav>
+            </div>
+            
+            {/* Finance */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-foreground">Finance</h3>
+              <nav className="space-y-1">
+                <button onClick={() => { setLocation('/invoices'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <FileText className="inline h-4 w-4 mr-1" /> Invoices
+                </button>
+                <button onClick={() => { setLocation('/payroll'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <DollarSign className="inline h-4 w-4 mr-1" /> Payroll
+                </button>
+              </nav>
+            </div>
+            
+            {/* People */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2 text-foreground">People</h3>
+              <nav className="space-y-1">
+                <button onClick={() => { setLocation('/employees'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Users className="inline h-4 w-4 mr-1" /> Employees
+                </button>
+                <button onClick={() => { setLocation('/clients'); closeOverlay(); }} className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Building2 className="inline h-4 w-4 mr-1" /> Clients
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

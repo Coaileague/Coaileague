@@ -1603,23 +1603,96 @@ interface UNSCommandCenterProps {
 }
 
 function UNSCommandCenter({ isOpen, onClose, onAskTrinity, platformRole, workspaceRole }: UNSCommandCenterProps) {
+  const { data: rawData, isLoading } = useQuery<NotificationsData>({
+    queryKey: ["/api/notifications/combined"],
+    enabled: isOpen,
+    staleTime: 0,
+  });
+
   if (!isOpen) return null;
+
+  const notifications = Array.isArray(rawData?.notifications) 
+    ? rawData.notifications 
+    : [];
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const pendingCount = notifications.filter(n => n.actionRequired).length;
+
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-[400px] max-h-[60vh] w-[380px] max-w-[calc(100vw-2rem)]">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4 text-primary" />
-          <span className="font-semibold text-sm">Notification Center</span>
+          <span className="font-semibold text-sm">Notifications</span>
+          {unreadCount > 0 && (
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold ml-1">
+              {unreadCount}
+            </span>
+          )}
         </div>
         <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
           <X className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex-1 overflow-auto p-3">
-        <p className="text-xs text-muted-foreground text-center py-8">
-          Universal Notification System — Loading...
-        </p>
-      </div>
+
+      {/* Notification List */}
+      <ScrollArea className="flex-1">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full py-8">
+            <p className="text-xs text-muted-foreground">Loading notifications...</p>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full py-8 text-muted-foreground">
+            <Bell className="h-8 w-8 opacity-30 mb-2" />
+            <p className="text-xs text-center">No notifications yet</p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {notifications.slice(0, 8).map((notification) => (
+              <div
+                key={notification.id}
+                className="p-3 hover:bg-muted/50 transition-colors cursor-pointer border-l-2 border-l-transparent hover:border-l-primary"
+              >
+                <div className="flex gap-2">
+                  {!notification.isRead && (
+                    <div className="h-2 w-2 rounded-full bg-primary mt-1 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{notification.title}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {notification.message || 'No message'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatDistanceToNow(parseISO(notification.createdAt), { addSuffix: true })}
+                      </span>
+                      {notification.actionRequired && (
+                        <Badge variant="destructive" className="text-[10px]">Action Required</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <ScrollBar orientation="vertical" />
+      </ScrollArea>
+
+      {/* Footer with action */}
+      {pendingCount > 0 && (
+        <div className="border-t bg-muted/30 p-3">
+          <Button
+            onClick={onAskTrinity}
+            size="sm"
+            variant="outline"
+            className="w-full gap-1 text-xs"
+          >
+            <Zap className="h-3 w-3" />
+            Ask Trinity ({pendingCount})
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2623,7 +2696,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
           </div>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-auto p-0 border-0 bg-transparent shadow-none overflow-visible" 
+          className="w-auto p-0 border border-border bg-popover shadow-lg overflow-visible z-50" 
           style={{ overflow: 'visible' }}
           align="end"
           sideOffset={8}

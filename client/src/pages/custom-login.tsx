@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { UniversalWelcomeNotification } from "@/components/universal-welcome-notification";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, AlertCircle, Shield } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -280,270 +280,283 @@ export default function CustomLogin() {
         />
       )}
 
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="flex flex-col gap-5 w-full max-w-sm">
-          <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={() => setLocation("/")}
-              className="hover-elevate transition-all shrink-0"
-              data-testid="button-logo-login"
-            >
-              <LoginLogo />
-            </button>
-            <button
-              onClick={() => setLocation("/")}
-              className="text-xs font-medium transition-colors text-primary"
-              data-testid="link-back-landing"
-            >
-              Back to Home
-            </button>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-30 animate-pulse duration-7000"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl opacity-20 animate-pulse duration-8000 animation-delay-2000"></div>
+        </div>
 
-          <div className="rounded-md bg-card text-card-foreground border border-border/50 p-5">
-            <div className="text-center mb-5">
-              <h1 className="text-lg font-semibold mb-1 text-foreground" data-testid="text-sign-in-heading">
-                Sign In
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 w-full max-w-5xl relative z-10">
+          {/* Left side - Branding & messaging */}
+          <div className="hidden lg:flex flex-col justify-center gap-6 flex-1 min-w-0">
+            <div className="space-y-3 animate-fade-in">
+              <div className="inline-block">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+                  <span className="inline-block w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+                  Workforce Management Platform
+                </span>
+              </div>
+              <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
+                Orchestrate Your Workforce
               </h1>
-              <p className="text-xs text-muted-foreground" data-testid="text-sign-in-subtitle">
-                Access your workspace
+              <p className="text-lg text-slate-300 max-w-lg">
+                CoAIleague brings enterprise-grade workforce management to security, staffing, and service industries. Trusted by companies like Statewide Protective Services.
               </p>
             </div>
 
-            {emailUnverified && (
-              <div
-                className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm"
-                data-testid="banner-email-unverified"
-              >
-                <p className="font-medium text-amber-400">Please verify your email first</p>
-                <p className="text-muted-foreground mt-1">
-                  Check your inbox for a verification link from CoAIleague{unverifiedEmail ? ` sent to ${unverifiedEmail}` : ""}.
-                </p>
-                <button
-                  type="button"
-                  className="mt-1 inline-flex items-center text-xs font-medium text-amber-400 underline underline-offset-2 disabled:opacity-60"
-                  onClick={resendVerification}
-                  disabled={resendingVerification}
-                  data-testid="button-resend-verification"
-                >
-                  {resendingVerification ? "Sending…" : "Resend verification email →"}
-                </button>
+            <div className="space-y-4 pt-4 animate-fade-in animation-delay-200">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 mt-1">
+                  <Loader2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white text-sm">Smart Scheduling</h3>
+                  <p className="text-sm text-slate-400">AI-powered shift management and intelligent coverage.</p>
+                </div>
               </div>
-            )}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-cyan-500/10 mt-1">
+                  <Eye className="h-5 w-5 text-cyan-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white text-sm">Real-time Visibility</h3>
+                  <p className="text-sm text-slate-400">Live dashboards for dispatch, payroll, and compliance.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/10 mt-1">
+                  <Shield className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white text-sm">Enterprise Security</h3>
+                  <p className="text-sm text-slate-400">SOC 2 Type II compliance and workspace isolation.</p>
+                </div>
+              </div>
+            </div>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3" aria-label="Login form">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
-                        Email
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          id="email"
-                          type="email"
-                          placeholder="you@company.com"
-                          disabled={isLoading}
-                          data-testid="input-email"
-                          aria-label="Email address"
-                          aria-required="true"
-                          className="h-8 text-xs"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <div className="pt-4 text-xs text-slate-500">
+              Built for security. Trusted by teams.
+            </div>
+          </div>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel htmlFor="password" data-testid="label-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
-                        Password
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
+          {/* Right side - Login form */}
+          <div className="w-full lg:w-96 animate-fade-in animation-delay-100">
+            <div className="rounded-xl bg-card/80 backdrop-blur-xl text-card-foreground border border-border/40 shadow-2xl p-8 space-y-6">
+              {/* Logo and header */}
+              <div className="space-y-2 text-center">
+                <button
+                  onClick={() => setLocation("/")}
+                  className="mx-auto hover-elevate transition-all block"
+                  data-testid="button-logo-login"
+                >
+                  <LoginLogo />
+                </button>
+                <h2 className="text-xl font-bold text-foreground" data-testid="text-sign-in-heading">
+                  Sign In
+                </h2>
+                <p className="text-sm text-muted-foreground" data-testid="text-sign-in-subtitle">
+                  Access your workspace to manage operations
+                </p>
+              </div>
+
+              {/* Email unverified banner */}
+              {emailUnverified && (
+                <div
+                  className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm space-y-2"
+                  data-testid="banner-email-unverified"
+                >
+                  <p className="font-semibold text-amber-400 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Please verify your email
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Check your inbox for a verification link from CoAIleague{unverifiedEmail ? ` sent to ${unverifiedEmail}` : ""}.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-2 inline-flex items-center text-xs font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-60 transition-colors"
+                    onClick={resendVerification}
+                    disabled={resendingVerification}
+                    data-testid="button-resend-verification"
+                  >
+                    {resendingVerification ? "Sending…" : "Resend verification email →"}
+                  </button>
+                </div>
+              )}
+
+              {/* Login form */}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4" aria-label="Login form">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Email Address
+                        </FormLabel>
+                        <FormControl>
                           <Input
                             {...field}
-                            id="password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter password"
+                            id="email"
+                            type="email"
+                            placeholder="owner@company.com"
                             disabled={isLoading}
-                            data-testid="input-password"
-                            aria-label="Password"
-                            aria-required="true"
-                            className="h-8 text-xs pr-8"
+                            data-testid="input-email"
+                            className="transition-all focus:ring-2 focus:ring-primary/50"
                           />
-                          <button
-                            type="button"
-                            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors text-muted-foreground hover:text-foreground"
-                            onClick={() => setShowPassword(!showPassword)}
-                            data-testid="button-toggle-password"
-                            aria-label={showPassword ? "Hide password" : "Show password"}
-                          >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="flex items-center justify-between gap-2 -mt-1 flex-wrap">
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Password
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              {...field}
+                              id="password"
+                              type={showPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              disabled={isLoading}
+                              data-testid="input-password"
+                              className="pr-10 transition-all focus:ring-2 focus:ring-primary/50"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              disabled={isLoading}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                              data-testid="button-toggle-password-visibility"
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="rememberMe"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormItem className="flex flex-row items-center space-x-2 space-y-0 mt-1">
                         <FormControl>
                           <Checkbox
-                            id="rememberMe"
                             checked={field.value}
                             onCheckedChange={field.onChange}
+                            id="remember-me"
                             disabled={isLoading}
                             data-testid="checkbox-remember-me"
                           />
                         </FormControl>
-                        <FormLabel htmlFor="rememberMe" className="cursor-pointer font-normal text-xs text-muted-foreground">
-                          Remember me
+                        <FormLabel htmlFor="remember-me" className="font-normal text-sm cursor-pointer">
+                          Remember me on this device
                         </FormLabel>
                       </FormItem>
                     )}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setLocation("/forgot-password")}
-                    className="font-medium transition-colors text-xs text-primary hover:text-primary/80"
-                    data-testid="link-forgot-password"
+
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full mt-4 h-10 font-semibold gap-2 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all duration-200"
+                    data-testid="button-submit-login"
                   >
-                    Forgot password?
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Signing in...</span>
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+
+              {/* Demo login button (dev mode) */}
+              {devLoginEnabled && (
+                <Button
+                  onClick={loginDemo}
+                  disabled={isLoading}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  data-testid="button-demo-login"
+                >
+                  Use Demo Account
+                </Button>
+              )}
+
+              {/* Footer links */}
+              <div className="space-y-2 text-center text-xs border-t border-border/40 pt-4">
+                <div className="text-muted-foreground">
+                  <span>Don't have an account? </span>
+                  <button
+                    onClick={() => setLocation("/register")}
+                    className="text-primary hover:text-primary/80 font-semibold transition-colors"
+                    data-testid="link-register"
+                  >
+                    Create one
                   </button>
                 </div>
-
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full mt-2"
-                  data-testid="button-login"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Signing in...
-                    </span>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-            </Form>
-
-            <div className="flex items-center gap-3 my-3">
-              <div className="flex-1 border-t border-border"></div>
-              <span className="text-xs text-muted-foreground">or</span>
-              <div className="flex-1 border-t border-border"></div>
+                <div className="text-muted-foreground">
+                  <button
+                    onClick={() => setLocation("/forgot-password")}
+                    className="text-primary hover:text-primary/80 font-semibold transition-colors"
+                    data-testid="link-forgot-password"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="text-center mb-4">
-              <p className="text-xs text-muted-foreground">
-                Don't have an account?{" "}
-                <button
-                  onClick={() => setLocation("/register")}
-                  className="font-semibold transition-colors text-primary hover:text-primary/80"
-                  data-testid="link-register"
-                >
-                  Create one
-                </button>
+            {/* Mobile-only branding */}
+            <div className="lg:hidden text-center mt-6 space-y-2 animate-fade-in animation-delay-200">
+              <p className="text-sm text-slate-300 font-medium">
+                Workforce Management for Security & Staffing
+              </p>
+              <p className="text-xs text-slate-500">
+                Trusted by companies like Statewide Protective Services
               </p>
             </div>
-
-            <Button
-              variant="outline"
-              onClick={loginDemo}
-              disabled={isLoading}
-              className="w-full text-xs"
-              data-testid="button-demo"
-            >
-              {isLoading ? "Loading demo..." : "Try Demo Account"}
-            </Button>
-
-            {devLoginEnabled && (
-              <div className="flex flex-col gap-2 mt-2">
-                <button
-                  onClick={async () => {
-                    setIsLoading(true);
-                    const devTransition = startLoginTransition(transitionLoader);
-                    try {
-                      devTransition?.setProgress(20);
-                      devTransition?.updateMessage('Signing In', 'Dev bypass login...');
-                      const res = await apiRequest("GET", "/api/auth/dev-login");
-                      const result = await res.json();
-                      devTransition?.setProgress(50);
-                      devTransition?.setProgress(75);
-                      devTransition?.updateMessage('Welcome!', `Welcome back, ${result.user?.firstName || 'Owner'}`);
-                      sessionStorage.setItem('coaileague_post_login_redirect', '/dashboard');
-                      setLoginData(result.user);
-                      setShowWelcome(true);
-                      if (devTransition) await devTransition.complete();
-                      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-                      sessionStorage.removeItem('coaileague_post_login_redirect');
-                      setLocation("/dashboard");
-                    } catch (e: any) {
-                      devTransition?.cancel();
-                      toast({ title: "Dev login failed", description: e.message, variant: "destructive" });
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="w-full rounded-md text-xs font-semibold transition-all border-2 border-dashed h-8 text-green-600 dark:text-green-400 border-green-500 dark:border-green-400 bg-green-500/10 dark:bg-green-400/10"
-                  data-testid="button-dev-login"
-                >
-                  {isLoading ? "Logging in..." : "Dev Bypass \u2192 ACME Security Owner"}
-                </button>
-                <button
-                  onClick={async () => {
-                    setIsLoading(true);
-                    const devTransition = startLoginTransition(transitionLoader);
-                    try {
-                      devTransition?.setProgress(20);
-                      devTransition?.updateMessage('Signing In', 'Dev bypass login...');
-                      const res = await apiRequest("GET", "/api/auth/dev-login-root");
-                      const result = await res.json();
-                      devTransition?.setProgress(50);
-                      devTransition?.setProgress(75);
-                      devTransition?.updateMessage('Welcome!', `Welcome back, ${result.user?.firstName || 'Admin'}`);
-                      sessionStorage.setItem('coaileague_post_login_redirect', '/dashboard');
-                      setLoginData(result.user);
-                      setShowWelcome(true);
-                      if (devTransition) await devTransition.complete();
-                      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-                      sessionStorage.removeItem('coaileague_post_login_redirect');
-                      setLocation("/dashboard");
-                    } catch (e: any) {
-                      devTransition?.cancel();
-                      toast({ title: "Dev login failed", description: e.message, variant: "destructive" });
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="w-full rounded-md text-xs font-semibold transition-all border-2 border-dashed h-8 text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-400 bg-amber-500/10 dark:bg-amber-400/10"
-                  data-testid="button-dev-login-root"
-                >
-                  {isLoading ? "Logging in..." : "Dev Bypass \u2192 Root Admin (Support Staff)"}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+        .animation-delay-100 { animation-delay: 100ms; }
+        .animation-delay-200 { animation-delay: 200ms; }
+        .animation-delay-2000 { animation-delay: 2000ms; }
+        @supports (animation-duration: 7s) {
+          .duration-7000 { animation-duration: 7s; }
+          .duration-8000 { animation-duration: 8s; }
+        }
+      `}</style>
     </>
   );
 }

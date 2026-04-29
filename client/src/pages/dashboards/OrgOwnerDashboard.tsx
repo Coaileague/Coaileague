@@ -199,7 +199,7 @@ export default function OrgOwnerDashboard() {
     (invoice: any) => invoice.status === "sent" || invoice.status === "overdue",
   );
   const outstandingTotal = outstandingInvoices.reduce(
-    (sum: number, invoice: any) => sum + (Number(invoice.totalAmount) || 0),
+    (sum: number, invoice: any) => sum + (Number(invoice.totalAmount) || Number(invoice.subtotal) || Number(invoice.amount) || 0),
     0,
   );
   const draftInvoices = invoiceList.filter((invoice: any) => invoice.status === "draft").length;
