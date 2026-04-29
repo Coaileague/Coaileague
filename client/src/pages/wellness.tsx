@@ -49,7 +49,7 @@ export default function WellnessPage() {
 
   const checkinMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/wellness/sessions/\${id}/checkin`);
+      const res = await apiRequest("POST", `/api/wellness/sessions/${id}/checkin`);
       return res.json();
     },
     onSuccess: () => {
@@ -64,7 +64,7 @@ export default function WellnessPage() {
 
   const sosMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/wellness/sessions/\${id}/sos`);
+      const res = await apiRequest("POST", `/api/wellness/sessions/${id}/sos`);
       return res.json();
     },
     onSuccess: () => {
@@ -77,7 +77,7 @@ export default function WellnessPage() {
 
   const endSessionMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/wellness/sessions/\${id}/end`);
+      const res = await apiRequest("POST", `/api/wellness/sessions/${id}/end`);
       return res.json();
     },
     onSuccess: () => {
@@ -159,13 +159,13 @@ export default function WellnessPage() {
             <div className="text-2xl font-bold" data-testid="text-active-sessions">{activeCount}</div>
           </CardContent>
         </Card>
-        <Card className={['hover-elevate \', overdueCount > 0 ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-900/10' : ''].join(' ')}>
+        <Card className={['hover-elevate', overdueCount > 0 ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-900/10' : ''].join(' ')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-1">
             <CardTitle className="text-sm font-medium">Overdue Check-ins</CardTitle>
-            <AlertTriangle className={`h-4 w-4 \${overdueCount > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
+            <AlertTriangle className={`h-4 w-4 ${overdueCount > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold \${overdueCount > 0 ? 'text-amber-500' : ''}`} data-testid="text-overdue-checkins">
+            <div className={`text-2xl font-bold ${overdueCount > 0 ? 'text-amber-500' : ''}`} data-testid="text-overdue-checkins">
               {overdueCount}
             </div>
           </CardContent>
@@ -193,7 +193,7 @@ export default function WellnessPage() {
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <div className="font-bold text-lg" data-testid={`text-overdue-name-\${session.id}`}>{session.employee_name || 'Unknown Officer'}</div>
+                      <div className="font-bold text-lg" data-testid={`text-overdue-name-${session.id}`}>{session.employee_name || 'Unknown Officer'}</div>
                       <div className="text-sm text-muted-foreground">ID: {session.employee_id}</div>
                     </div>
                     <Badge variant="destructive">OVERDUE</Badge>
@@ -205,7 +205,7 @@ export default function WellnessPage() {
                     <Button 
                       size="sm" 
                       className="flex-1" 
-                      data-testid={`button-checkin-\${session.id}`}
+                      data-testid={`button-checkin-${session.id}`}
                       onClick={() => checkinMutation.mutate(session.id)}
                     >
                       <RefreshCcw className="mr-2 h-4 w-4" /> Check In
@@ -214,7 +214,7 @@ export default function WellnessPage() {
                       size="sm" 
                       variant="destructive" 
                       className="flex-1"
-                      data-testid={`button-sos-\${session.id}`}
+                      data-testid={`button-sos-${session.id}`}
                       onClick={() => sosMutation.mutate(session.id)}
                     >
                       <ShieldAlert className="mr-2 h-4 w-4" /> SOS
@@ -255,7 +255,7 @@ export default function WellnessPage() {
                 sessions?.map((session: any) => {
                   const isOverdue = new Date(session.next_check_in_due) < new Date();
                   return (
-                    <TableRow key={session.id} data-testid={`row-session-\${session.id}`}>
+                    <TableRow key={session.id} data-testid={`row-session-${session.id}`}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
@@ -275,7 +275,7 @@ export default function WellnessPage() {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            data-testid={`button-row-checkin-\${session.id}`}
+                            data-testid={`button-row-checkin-${session.id}`}
                             onClick={() => checkinMutation.mutate(session.id)}
                           >
                             <RefreshCcw className="h-4 w-4" />
@@ -284,7 +284,7 @@ export default function WellnessPage() {
                             variant="outline" 
                             size="sm" 
                             className="text-destructive hover:text-destructive"
-                            data-testid={`button-row-end-\${session.id}`}
+                            data-testid={`button-row-end-${session.id}`}
                             onClick={() => endSessionMutation.mutate(session.id)}
                           >
                             <Square className="h-4 w-4" />
