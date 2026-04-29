@@ -51,6 +51,12 @@ export async function runLicenseExpiryAlerts(): Promise<void> {
     );
     const isUrgent = daysLeft <= 30;
 
+    // Idempotency key: employeeId + alert type + date — prevents duplicate notifications
+    // on multi-replica deploys or if cron fires twice in same day
+    const today = new Date().toISOString().slice(0, 10);
+    const alertType = isUrgent ? 'urgent' : 'warning';
+    const idempotencyKey = `license-expiry-${emp.id}-${alertType}-${today}`;
+
     platformEventBus
       .publish({
         type: 'license_expiring_soon',
@@ -58,12 +64,14 @@ export async function runLicenseExpiryAlerts(): Promise<void> {
         title: `${isUrgent ? '⚠️ URGENT: ' : ''}Guard Card Expiring — ${emp.firstName} ${emp.lastName}`,
         description: `${emp.isArmed ? 'Armed' : 'Unarmed'} officer's license expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. Renewal must be initiated immediately to avoid work suspension.`,
         workspaceId: emp.workspaceId,
+        idempotencyKey,
         metadata: {
           employeeId: emp.id,
           daysUntilExpiry: daysLeft,
           expiryDate: emp.guardCardExpiryDate,
           isArmed: emp.isArmed,
-          urgency: isUrgent ? 'urgent' : 'warning',
+          urgency: alertType,
+          idempotencyKey,
         },
       })
       .catch(() => {});

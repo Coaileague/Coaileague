@@ -6573,29 +6573,98 @@ select:focus-visible,
   );
 }
 
-/* ── ChatDock message bubbles ─────────────────────────────────────────────── */
+/* ── ChatDock message bubbles — iMessage/Messenger style ─────────────────── */
+/* Own messages: blue, pill with small TR corner (tail effect) */
 .chat-bubble-own {
-  border-radius: 1rem 1rem 0.25rem 1rem;
+  border-radius: 18px 18px 4px 18px;
+  background: linear-gradient(135deg, #0b93f6 0%, #0880dc 100%);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(11, 147, 246, 0.20);
 }
+/* Other messages: neutral, pill with small TL corner */
 .chat-bubble-other {
-  border-radius: 1rem 1rem 1rem 0.25rem;
+  border-radius: 18px 18px 18px 4px;
+  background: var(--color-bg-secondary, hsl(var(--muted)));
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
-/* Grouped: remove the tail on grouped messages */
+/* Grouped own — no tail (continuous conversation) */
 .chat-bubble-grouped-own {
-  border-radius: 1rem 1rem 0.25rem 1rem;
+  border-radius: 18px 18px 4px 18px;
+  background: linear-gradient(135deg, #0b93f6 0%, #0880dc 100%);
+  color: #ffffff;
 }
+/* Grouped other — tighter top-left */
 .chat-bubble-grouped-other {
-  border-radius: 0.25rem 1rem 1rem 0.25rem;
+  border-radius: 4px 18px 18px 4px;
+  background: var(--color-bg-secondary, hsl(var(--muted)));
+}
+/* Dark mode other bubbles */
+.dark .chat-bubble-other,
+.dark .chat-bubble-grouped-other {
+  background: hsl(var(--muted));
 }
 
 /* HelpAI bot messages — gold left border */
 .chat-bubble-helpai {
-  border-left: 2px solid hsl(38 92% 50%);
+  border-left: 3px solid hsl(38 92% 50%);
+  border-radius: 4px 18px 18px 4px !important;
 }
 
 /* Trinity messages — purple left border */
 .chat-bubble-trinity {
-  border-left: 2px solid hsl(271 81% 56%);
+  border-left: 3px solid hsl(271 81% 56%);
+  border-radius: 4px 18px 18px 4px !important;
+}
+
+/* ── ChatDock polish: room list items ─────────────────────────────────────── */
+.chatdock-room-item {
+  transition: background 0.12s ease;
+  border-radius: 10px;
+}
+.chatdock-room-item:hover {
+  background: hsl(var(--muted) / 0.7);
+}
+.chatdock-room-item.active {
+  background: hsl(var(--muted));
+}
+
+/* ── Read receipt tick styles ─────────────────────────────────────────────── */
+.chat-tick-sent    { color: rgba(255,255,255,0.55); }
+.chat-tick-read    { color: #53bdeb; }
+.chat-tick-other   { color: hsl(var(--muted-foreground)); }
+
+/* ── Message timestamp — show on hover ────────────────────────────────────── */
+.chat-msg-timestamp {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+.group:hover .chat-msg-timestamp {
+  opacity: 1;
+}
+
+/* ── Typing indicator dots ────────────────────────────────────────────────── */
+.chat-typing-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 14px;
+  border-radius: 18px 18px 18px 4px;
+  background: hsl(var(--muted));
+}
+.chat-typing-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: hsl(var(--muted-foreground) / 0.6);
+  animation: chatTypingBounce 1.2s ease-in-out infinite;
+}
+.chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes chatTypingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
 }
 
 /* Read receipt states */

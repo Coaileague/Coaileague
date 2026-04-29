@@ -986,6 +986,24 @@ export class UniversalNotificationEngine {
         }
       }
 
+      // AGENT 4 FIX: idempotencyKey dedup — catches multi-replica duplicate fires
+      // If caller provides idempotencyKey, check DB for it before title-based dedup
+      if (payload.idempotencyKey) {
+        const existingByKey = await db.select({ id: platformUpdates.id })
+          .from(platformUpdates)
+          .where(
+            and(
+              sql`${platformUpdates.metadata}->>'idempotencyKey' = ${payload.idempotencyKey}`,
+              gte(platformUpdates.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000))
+            )
+          )
+          .limit(1);
+        if (existingByKey.length > 0) {
+          log.info(`[UniversalNotificationEngine] Idempotency dedup hit, skipping: ${payload.idempotencyKey}`);
+          return { success: true, id: existingByKey[0].id, isDuplicate: true };
+        }
+      }
+
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const existingByTitle = await db.select({ id: platformUpdates.id })
         .from(platformUpdates)

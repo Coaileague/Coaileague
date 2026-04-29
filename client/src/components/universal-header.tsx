@@ -394,8 +394,8 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
           ) : (
             // WORKSPACE NAVIGATION
             <>
-              {/* Desktop workspace controls */}
-              <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
+              {/* Desktop workspace controls — pinned to far right */}
+              <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0 ml-auto">
                 <div className="hidden lg:block">
                   <TrinityDesktopButton 
                     onClick={openTrinityModal} 

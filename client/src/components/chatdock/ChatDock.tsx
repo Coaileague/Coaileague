@@ -377,7 +377,7 @@ function NewConversationView({ onBack, onCreated }: { onBack: () => void; onCrea
             <button
               key={u.id}
               className={cn(
-                "w-full flex items-center gap-2.5 px-3 py-2.5 hover-elevate active-elevate-2 text-left rounded-lg transition-colors",
+                "w-full flex items-center gap-2.5 px-3 py-2.5 text-left rounded-xl transition-all duration-150 hover:bg-muted/70",
                 isSelected && "bg-primary/[0.06] dark:bg-primary/[0.10]"
               )}
               onClick={() => {
@@ -2273,11 +2273,11 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                   onClick={isMobile ? () => handleDoubleTap(msg.id) : undefined}
                 >
                   {!isOwn && !isGrouped && (
-                    <span className="text-[10px] text-muted-foreground mb-0.5 px-2 inline-flex items-center gap-1">
+                    <span className="text-[10px] font-medium text-muted-foreground mb-0.5 px-2 inline-flex items-center gap-1">
                       {isBot
                         ? (msg.senderId === 'helpai-bot' || msg.senderName === 'HelpAI'
-                            ? 'HelpAI'
-                            : (msg.senderName || 'Trinity'))
+                            ? <span className="text-amber-500 font-semibold">HelpAI</span>
+                            : <span className="text-violet-500 font-semibold">{msg.senderName || 'Trinity'}</span>)
                         : (msg.senderName || "Unknown")}
                       {(msg as any).bridgeChannelType && (
                         <ChannelIndicator channelType={(msg as any).bridgeChannelType} />
@@ -2299,10 +2299,10 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                         "px-3.5 py-2 text-[13px] break-words leading-relaxed",
                         isDeletedForAll ? "italic opacity-50" : "",
                         isOwn
-                          ? cn("bg-primary text-primary-foreground", isGrouped ? "chat-bubble-grouped-own" : "chat-bubble-own")
+                          ? cn(isGrouped ? "chat-bubble-grouped-own" : "chat-bubble-own")
                           : isBot
-                            ? cn("bg-accent/80 text-accent-foreground", isGrouped ? "chat-bubble-grouped-other" : "chat-bubble-other")
-                            : cn("bg-muted text-foreground", isGrouped ? "chat-bubble-grouped-other" : "chat-bubble-other")
+                            ? cn(isGrouped ? "chat-bubble-grouped-other chat-bubble-helpai" : "chat-bubble-other chat-bubble-helpai")
+                            : cn(isGrouped ? "chat-bubble-grouped-other" : "chat-bubble-other")
                       )}
                     >
                       {parentMsg && <QuotedMessage parentMessage={parentMsg} compact />}
