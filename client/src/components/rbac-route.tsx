@@ -43,8 +43,10 @@ interface RoleCheckResult {
 const PLATFORM_ADMIN_ROLES = ['root_admin', 'deputy_admin'];
 const PLATFORM_STAFF_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
 const OWNER_ROLES = ['org_owner', 'co_owner'];
-const LEADER_ROLES = ['org_owner', 'department_manager'];
-const SUPERVISOR_ROLES = ['org_owner', 'co_owner', 'department_manager', 'supervisor'];
+// Leader = all management/leadership tiers (matches server MANAGER_ROLES in roleDefinitions.ts)
+const LEADER_ROLES = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager'];
+// Supervisor = all leaders + supervisors
+const SUPERVISOR_ROLES = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'department_manager', 'supervisor'];
 
 function checkCapability(
   capability: RBACCapability,

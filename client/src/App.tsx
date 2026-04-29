@@ -1494,7 +1494,7 @@ function AppContent() {
                   </RBACRoute>
                 </Route>
                 <Route path="/trinity/transparency">
-                  <RBACRoute require="platform_staff">
+                  <RBACRoute require={["owner", "platform_staff"]}>
                     <ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
@@ -2254,7 +2254,7 @@ function AppContent() {
                   </RBACRoute>
                 </Route>
                 <Route path="/trinity/transparency">
-                  <RBACRoute require="platform_staff">
+                  <RBACRoute require={["owner", "platform_staff"]}>
                     <ErrorBoundary><TrinityTransparencyDashboard /></ErrorBoundary>
                   </RBACRoute>
                 </Route>

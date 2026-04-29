@@ -9,19 +9,72 @@ import type { TrinitySchedulingSession, TrinityThought } from '@/hooks/use-trini
 interface TrinityStatusBarProps {
   session: TrinitySchedulingSession;
   onAbort?: () => void;
+  onReview?: () => void;
+  onDismiss?: () => void;
 }
 
-export function TrinityStatusBar({ session, onAbort }: TrinityStatusBarProps) {
-  if (!session.isWorking) return null;
-  
-  const progressPercent = session.totalShifts > 0 
+export function TrinityStatusBar({ session, onAbort, onReview, onDismiss }: TrinityStatusBarProps) {
+  // Show while working OR for a short period after completion (gives review/dismiss options)
+  const hasActivity = session.isWorking || session.thoughts.length > 0;
+  if (!hasActivity) return null;
+
+  const progressPercent = session.totalShifts > 0
     ? Math.round((session.currentIndex / session.totalShifts) * 100)
     : 0;
 
   const latestThought = [...session.thoughts].reverse().find(t => t.type === 'deliberating' || t.type === 'analyzing' || t.type === 'assigned' || t.type === 'skipped');
-  
+  const assignedCount = session.thoughts.filter(t => t.type === 'assigned').length;
+  const skippedCount = session.thoughts.filter(t => t.type === 'skipped').length;
+
+  if (!session.isWorking && session.thoughts.length > 0) {
+    // Completed state — show summary with review/dismiss actions
+    return (
+      <div
+        className="bg-green-600 dark:bg-green-700 text-white border-b border-green-500/60 px-3 py-1.5 shrink-0"
+        data-testid="trinity-status-bar-complete"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            <span className="text-[11px] sm:text-xs font-semibold">
+              Trinity complete — {assignedCount} filled{skippedCount > 0 ? `, ${skippedCount} skipped` : ''}
+            </span>
+            <span className="text-[10px] opacity-75 hidden sm:inline">
+              Review before publishing
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onReview && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-6 text-xs px-2"
+                onClick={onReview}
+                data-testid="btn-review-trinity"
+              >
+                <ClipboardCheck className="h-3 w-3 mr-1" />
+                Review
+              </Button>
+            )}
+            {onDismiss && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white h-6 w-6 hover:bg-white/20"
+                onClick={onDismiss}
+                data-testid="btn-dismiss-trinity"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div 
+    <div
       className="bg-primary text-primary-foreground border-b border-primary/60 px-3 py-1.5 shrink-0"
       data-testid="trinity-status-bar"
     >
@@ -49,7 +102,7 @@ export function TrinityStatusBar({ session, onAbort }: TrinityStatusBarProps) {
                 {session.currentIndex}/{session.totalShifts}
               </span>
               <div className="w-12 sm:w-20 h-1 bg-primary-foreground/20 rounded-full overflow-hidden shrink-0">
-                <div 
+                <div
                   className="h-full bg-primary-foreground/70 transition-all duration-300 ease-out"
                   style={{ width: `${progressPercent}%` }}
                 />
@@ -62,10 +115,10 @@ export function TrinityStatusBar({ session, onAbort }: TrinityStatusBarProps) {
             )}
           </div>
         </div>
-        
+
         {onAbort && (
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             className="text-primary-foreground h-7 w-7"
             onClick={onAbort}

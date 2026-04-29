@@ -32,22 +32,26 @@ export interface IsolatedScheduleToolbarProps {
   draftShiftsCount: number;
   openShiftsCount: number;
   automationEnabled: boolean;
-  
+
   isAutoFilling: boolean;
   isTogglingAutomation: boolean;
-  
+  isOptimizing?: boolean;
+  isGenerating?: boolean;
+
   viewMode: ViewMode;
   selectedDay: Date;
   currentMonth?: Date;
-  
+
   sidebarCollapsed: boolean;
-  
+
   workspaceId?: string;
-  
+
   onToggleSidebar: () => void;
   onCreateShift: () => void;
   onPublish: () => void;
   onAutoFill: () => void;
+  onOptimizeSchedule?: () => void;
+  onFullGenerate?: () => void;
   onToggleAutomation: () => void;
   onOpenTrinityInsights: () => void;
   onOpenTrinityChat?: () => void;
@@ -65,6 +69,8 @@ function ScheduleToolbarComponent({
   draftShiftsCount,
   openShiftsCount,
   automationEnabled,
+  isOptimizing = false,
+  isGenerating = false,
   isAutoFilling,
   isTogglingAutomation,
   viewMode,
@@ -76,6 +82,8 @@ function ScheduleToolbarComponent({
   onCreateShift,
   onPublish,
   onAutoFill,
+  onOptimizeSchedule,
+  onFullGenerate,
   onToggleAutomation,
   onOpenTrinityInsights,
   onOpenTrinityChat,
@@ -182,18 +190,39 @@ function ScheduleToolbarComponent({
                 Trinity AI Scheduling
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={onAutoFill}
-                disabled={isAutoFilling || openShiftsCount === 0}
+                disabled={isAutoFilling || isOptimizing || isGenerating || openShiftsCount === 0}
                 data-testid="button-auto-fill"
               >
                 <Wand2 className="w-4 h-4 mr-2" />
-                {isAutoFilling ? 'Filling...' : 'Auto-Fill Open Shifts'}
+                {isAutoFilling ? 'Filling...' : 'Fill Open Shifts'}
                 {openShiftsCount > 0 && (
                   <Badge variant="secondary" className="ml-auto">{openShiftsCount}</Badge>
                 )}
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              {onOptimizeSchedule && (
+                <DropdownMenuItem
+                  onClick={onOptimizeSchedule}
+                  disabled={isAutoFilling || isOptimizing || isGenerating}
+                  data-testid="button-optimize-schedule"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {isOptimizing ? 'Optimizing...' : 'Optimize Schedule'}
+                </DropdownMenuItem>
+              )}
+              {onFullGenerate && (
+                <DropdownMenuItem
+                  onClick={onFullGenerate}
+                  disabled={isAutoFilling || isOptimizing || isGenerating}
+                  data-testid="button-full-generate"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  {isGenerating ? 'Generating...' : 'Full Generate Week'}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
                 onClick={onToggleAutomation}
                 disabled={isTogglingAutomation}
                 data-testid="button-auto-schedule"
@@ -203,10 +232,10 @@ function ScheduleToolbarComponent({
                 ) : (
                   <ToggleLeft className="w-4 h-4 mr-2" />
                 )}
-                {isTogglingAutomation 
-                  ? 'Toggling...' 
-                  : automationEnabled 
-                    ? 'Auto-Schedule: ON' 
+                {isTogglingAutomation
+                  ? 'Toggling...'
+                  : automationEnabled
+                    ? 'Auto-Schedule: ON'
                     : 'Enable Auto-Schedule'}
               </DropdownMenuItem>
               <DropdownMenuSeparator />

@@ -69,6 +69,23 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
         { id: 'dev-emp-013', email: 'foster@lonestar-security.test', firstName: 'Marcus', lastName: 'Foster', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
         { id: 'dev-emp-014', email: 'reyes@lonestar-security.test', firstName: 'Ana', lastName: 'Reyes', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
         { id: 'dev-demo-user', email: 'demo@coaileague.test', firstName: 'Demo', lastName: 'User', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        // Extended Acme team — supervisors, department managers, contractors, officers
+        { id: 'dev-emp-015', email: 'nguyen@acme-security.test', firstName: 'Tony', lastName: 'Nguyen', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-016', email: 'moore@acme-security.test', firstName: 'Patricia', lastName: 'Moore', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-017', email: 'taylor@acme-security.test', firstName: 'Brian', lastName: 'Taylor', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-018', email: 'white@acme-security.test', firstName: 'Sandra', lastName: 'White', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-019', email: 'kenny@acme-security.test', firstName: 'Kenneth', lastName: 'Parker', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-020', email: 'santos@acme-security.test', firstName: 'Maria', lastName: 'Santos', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-021', email: 'phillips@acme-security.test', firstName: 'Derek', lastName: 'Phillips', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-022', email: 'cruz@acme-security.test', firstName: 'Vanessa', lastName: 'Cruz', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-023', email: 'obrien@acme-security.test', firstName: 'James', lastName: 'OBrien', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-024', email: 'scott@acme-security.test', firstName: 'Brandon', lastName: 'Scott', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-025', email: 'turner@acme-security.test', firstName: 'Keisha', lastName: 'Turner', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-026', email: 'clark@acme-security.test', firstName: 'Nathan', lastName: 'Clark', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-027', email: 'allen@acme-security.test', firstName: 'Sophia', lastName: 'Allen', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-028', email: 'flores@acme-security.test', firstName: 'Luis', lastName: 'Flores', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-029', email: 'robinson@acme-security.test', firstName: 'Tasha', lastName: 'Robinson', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
+        { id: 'dev-emp-030', email: 'morgan@acme-security.test', firstName: 'Chris', lastName: 'Morgan', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user' },
       ];
 
       for (const user of devUsers) {
@@ -99,7 +116,7 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
       }
 
       // Update users with their workspace assignments
-      await tx.execute(sql`UPDATE users SET current_workspace_id = ${DEV_SENTINEL_WORKSPACE} WHERE id IN ('dev-owner-001', 'dev-manager-001', 'dev-manager-002', 'dev-emp-001', 'dev-emp-002', 'dev-emp-003', 'dev-emp-004', 'dev-emp-005', 'dev-emp-006', 'dev-emp-007', 'dev-emp-008', 'dev-emp-009', 'dev-emp-010') AND current_workspace_id IS NULL`);
+      await tx.execute(sql`UPDATE users SET current_workspace_id = ${DEV_SENTINEL_WORKSPACE} WHERE id IN ('dev-owner-001', 'dev-manager-001', 'dev-manager-002', 'dev-emp-001', 'dev-emp-002', 'dev-emp-003', 'dev-emp-004', 'dev-emp-005', 'dev-emp-006', 'dev-emp-007', 'dev-emp-008', 'dev-emp-009', 'dev-emp-010', 'dev-emp-015', 'dev-emp-016', 'dev-emp-017', 'dev-emp-018', 'dev-emp-019', 'dev-emp-020', 'dev-emp-021', 'dev-emp-022', 'dev-emp-023', 'dev-emp-024', 'dev-emp-025', 'dev-emp-026', 'dev-emp-027', 'dev-emp-028', 'dev-emp-029', 'dev-emp-030') AND current_workspace_id IS NULL`);
       await tx.execute(sql`UPDATE users SET current_workspace_id = 'dev-lonestar-security-ws' WHERE id IN ('dev-owner-002', 'dev-emp-011', 'dev-emp-012', 'dev-emp-013', 'dev-emp-014') AND current_workspace_id IS NULL`);
       await tx.execute(sql`UPDATE users SET current_workspace_id = 'dev-demo-workspace' WHERE id = 'dev-demo-user' AND current_workspace_id IS NULL`);
 
@@ -131,6 +148,23 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
         { id: 'dev-acme-emp-011', userId: 'dev-emp-008', firstName: 'Jennifer', lastName: 'Lee', email: 'lee@acme-security.test', hourlyRate: '24.50', role: 'Access Control Specialist', workspaceRole: 'employee', empNum: 'EMP-ACME-00011' },
         { id: 'dev-acme-emp-012', userId: 'dev-emp-009', firstName: 'David', lastName: 'Wilson', email: 'wilson@acme-security.test', hourlyRate: '19.50', role: 'Security Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00012' },
         { id: 'dev-acme-emp-013', userId: 'dev-emp-010', firstName: 'Lisa', lastName: 'Anderson', email: 'anderson@acme-security.test', hourlyRate: '21.00', role: 'Dispatch Coordinator', workspaceRole: 'employee', empNum: 'EMP-ACME-00013' },
+        // Extended team: supervisors, department managers, contractors, extra officers
+        { id: 'dev-acme-emp-014', userId: 'dev-emp-015', firstName: 'Tony', lastName: 'Nguyen', email: 'nguyen@acme-security.test', hourlyRate: '28.00', role: 'Shift Supervisor', workspaceRole: 'supervisor', empNum: 'EMP-ACME-00014' },
+        { id: 'dev-acme-emp-015', userId: 'dev-emp-016', firstName: 'Patricia', lastName: 'Moore', email: 'moore@acme-security.test', hourlyRate: '29.50', role: 'Site Supervisor', workspaceRole: 'supervisor', empNum: 'EMP-ACME-00015' },
+        { id: 'dev-acme-emp-016', userId: 'dev-emp-017', firstName: 'Brian', lastName: 'Taylor', email: 'taylor@acme-security.test', hourlyRate: '33.00', role: 'Department Manager - North Region', workspaceRole: 'department_manager', empNum: 'EMP-ACME-00016' },
+        { id: 'dev-acme-emp-017', userId: 'dev-emp-018', firstName: 'Sandra', lastName: 'White', email: 'white@acme-security.test', hourlyRate: '34.00', role: 'Department Manager - South Region', workspaceRole: 'department_manager', empNum: 'EMP-ACME-00017' },
+        { id: 'dev-acme-emp-018', userId: 'dev-emp-019', firstName: 'Kenneth', lastName: 'Parker', email: 'kenny@acme-security.test', hourlyRate: '18.00', role: 'Contract Security Officer', workspaceRole: 'contractor', empNum: 'CTR-ACME-00001' },
+        { id: 'dev-acme-emp-019', userId: 'dev-emp-020', firstName: 'Maria', lastName: 'Santos', email: 'santos@acme-security.test', hourlyRate: '17.50', role: 'Contract Security Officer', workspaceRole: 'contractor', empNum: 'CTR-ACME-00002' },
+        { id: 'dev-acme-emp-020', userId: 'dev-emp-021', firstName: 'Derek', lastName: 'Phillips', email: 'phillips@acme-security.test', hourlyRate: '19.00', role: 'Contract Patrol Officer', workspaceRole: 'contractor', empNum: 'CTR-ACME-00003' },
+        { id: 'dev-acme-emp-021', userId: 'dev-emp-022', firstName: 'Vanessa', lastName: 'Cruz', email: 'cruz@acme-security.test', hourlyRate: '18.50', role: 'Contract Security Officer', workspaceRole: 'contractor', empNum: 'CTR-ACME-00004' },
+        { id: 'dev-acme-emp-022', userId: 'dev-emp-023', firstName: 'James', lastName: 'OBrien', email: 'obrien@acme-security.test', hourlyRate: '20.00', role: 'Contract Access Control Specialist', workspaceRole: 'contractor', empNum: 'CTR-ACME-00005' },
+        { id: 'dev-acme-emp-023', userId: 'dev-emp-024', firstName: 'Brandon', lastName: 'Scott', email: 'scott@acme-security.test', hourlyRate: '21.50', role: 'Security Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00023' },
+        { id: 'dev-acme-emp-024', userId: 'dev-emp-025', firstName: 'Keisha', lastName: 'Turner', email: 'turner@acme-security.test', hourlyRate: '22.00', role: 'Senior Security Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00024' },
+        { id: 'dev-acme-emp-025', userId: 'dev-emp-026', firstName: 'Nathan', lastName: 'Clark', email: 'clark@acme-security.test', hourlyRate: '20.50', role: 'Security Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00025' },
+        { id: 'dev-acme-emp-026', userId: 'dev-emp-027', firstName: 'Sophia', lastName: 'Allen', email: 'allen@acme-security.test', hourlyRate: '23.00', role: 'Patrol Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00026' },
+        { id: 'dev-acme-emp-027', userId: 'dev-emp-028', firstName: 'Luis', lastName: 'Flores', email: 'flores@acme-security.test', hourlyRate: '21.00', role: 'Security Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00027' },
+        { id: 'dev-acme-emp-028', userId: 'dev-emp-029', firstName: 'Tasha', lastName: 'Robinson', email: 'robinson@acme-security.test', hourlyRate: '22.50', role: 'Security Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00028' },
+        { id: 'dev-acme-emp-029', userId: 'dev-emp-030', firstName: 'Chris', lastName: 'Morgan', email: 'morgan@acme-security.test', hourlyRate: '20.00', role: 'Security Officer', workspaceRole: 'employee', empNum: 'EMP-ACME-00029' },
       ];
 
       for (const emp of acmeEmployees) {
@@ -242,6 +276,57 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
         await tx.execute(sql`
           INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, category, start_time, end_time, date, status, billable_to_client, created_at, updated_at)
           VALUES (${`dev-shift-${String(i + 1).padStart(3, '0')}`}, ${DEV_SENTINEL_WORKSPACE}, ${shift.empId}, ${shift.clientId}, ${shift.title}, ${shift.category}, ${startDate.toISOString()}, ${endDate.toISOString()}, ${dateStr}, 'confirmed', TRUE, NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING
+        `);
+      }
+
+      // =====================================================================
+      // 6b. OPEN SHIFTS — Unassigned shifts for Trinity to fill
+      //     These have no employee_id so they appear as "open" in the schedule
+      // =====================================================================
+      console.log('[DevSeed] Creating open shifts for Trinity auto-fill testing...');
+
+      const openShiftTemplates = [
+        { clientId: 'dev-client-001', title: 'Mall Patrol - Open Day Shift', category: 'security', dayOffset: 0, startHour: 6, endHour: 14 },
+        { clientId: 'dev-client-001', title: 'Mall Patrol - Open Evening Shift', category: 'security', dayOffset: 0, startHour: 14, endHour: 22 },
+        { clientId: 'dev-client-001', title: 'Mall Patrol - Open Night Shift', category: 'security', dayOffset: 0, startHour: 22, endHour: 6 },
+        { clientId: 'dev-client-002', title: 'Tower Lobby - Open Day', category: 'field_ops', dayOffset: 1, startHour: 7, endHour: 15 },
+        { clientId: 'dev-client-002', title: 'Tower Lobby - Open Night', category: 'field_ops', dayOffset: 1, startHour: 19, endHour: 3 },
+        { clientId: 'dev-client-003', title: 'Hospital Security - Open Day', category: 'emergency', dayOffset: 1, startHour: 6, endHour: 14 },
+        { clientId: 'dev-client-003', title: 'Hospital Security - Open Night', category: 'emergency', dayOffset: 1, startHour: 22, endHour: 6 },
+        { clientId: 'dev-client-004', title: 'Event Security - Open', category: 'security', dayOffset: 2, startHour: 16, endHour: 0 },
+        { clientId: 'dev-client-005', title: 'Bank Open Shift - Morning', category: 'security', dayOffset: 2, startHour: 8, endHour: 16 },
+        { clientId: 'dev-client-006', title: 'Apartment Complex - Open Night', category: 'field_ops', dayOffset: 2, startHour: 22, endHour: 6 },
+        { clientId: 'dev-client-007', title: 'Warehouse Open - Day', category: 'field_ops', dayOffset: 3, startHour: 6, endHour: 14 },
+        { clientId: 'dev-client-007', title: 'Warehouse Open - Night', category: 'field_ops', dayOffset: 3, startHour: 22, endHour: 6 },
+        { clientId: 'dev-client-001', title: 'Mall Weekend - Open AM', category: 'security', dayOffset: 4, startHour: 8, endHour: 16 },
+        { clientId: 'dev-client-001', title: 'Mall Weekend - Open PM', category: 'security', dayOffset: 4, startHour: 16, endHour: 0 },
+        { clientId: 'dev-client-003', title: 'Hospital ER - Open', category: 'emergency', dayOffset: 5, startHour: 18, endHour: 6 },
+        { clientId: 'dev-client-002', title: 'Tower Weekend - Open', category: 'field_ops', dayOffset: 5, startHour: 8, endHour: 20 },
+        { clientId: 'dev-client-005', title: 'Bank Branch - Open Saturday', category: 'security', dayOffset: 5, startHour: 9, endHour: 17 },
+        { clientId: 'dev-client-006', title: 'Apartment - Open Sunday', category: 'field_ops', dayOffset: 6, startHour: 7, endHour: 15 },
+        { clientId: 'dev-client-004', title: 'Event Security - Open Sunday', category: 'security', dayOffset: 6, startHour: 14, endHour: 22 },
+        { clientId: 'dev-client-007', title: 'Warehouse Open - Sunday Day', category: 'field_ops', dayOffset: 6, startHour: 6, endHour: 14 },
+      ];
+
+      for (let i = 0; i < openShiftTemplates.length; i++) {
+        const shift = openShiftTemplates[i];
+        const startDate = new Date(today);
+        startDate.setDate(startDate.getDate() + shift.dayOffset);
+        startDate.setHours(shift.startHour, 0, 0, 0);
+
+        const endDate = new Date(startDate);
+        if (shift.endHour <= shift.startHour) {
+          endDate.setDate(endDate.getDate() + 1);
+        }
+        endDate.setHours(shift.endHour, 0, 0, 0);
+
+        const dateStr = startDate.toISOString().split('T')[0];
+        const openShiftId = `dev-open-shift-${String(i + 1).padStart(3, '0')}`;
+
+        await tx.execute(sql`
+          INSERT INTO shifts (id, workspace_id, employee_id, client_id, title, category, start_time, end_time, date, status, billable_to_client, created_at, updated_at)
+          VALUES (${openShiftId}, ${DEV_SENTINEL_WORKSPACE}, NULL, ${shift.clientId}, ${shift.title}, ${shift.category}, ${startDate.toISOString()}, ${endDate.toISOString()}, ${dateStr}, 'open', TRUE, NOW(), NOW())
           ON CONFLICT (id) DO NOTHING
         `);
       }
@@ -616,11 +701,12 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
     }
 
     console.log('[DevSeed] Development data seeded successfully!');
-    console.log('   - Users: 20 test accounts (inc. Marcus Rodriguez)');
-    console.log('   - Workspaces: 3 organizations (Acme Security, Lone Star Security Cleaning, Demo)');
-    console.log('   - Employees: 19 across workspaces (inc. GC-2024-001)');
+    console.log('   - Users: 36 test accounts (inc. Marcus Rodriguez)');
+    console.log('   - Workspaces: 3 organizations (Acme Security, Lone Star Security, Demo)');
+    console.log('   - Employees: 35 across workspaces (29 Acme + 5 Lone Star + Marcus Rodriguez)');
+    console.log('     Acme roles: 1 org_owner, 2 managers, 2 department_managers, 2 supervisors, 5 contractors, 17 employees');
     console.log('   - Clients: 12 client accounts (inc. Downtown Mall Security)');
-    console.log('   - Shifts: 18 + Phase 0 today shift');
+    console.log('   - Shifts: 18 assigned + 20 open (Trinity fill targets) + Phase 0 today shift');
     console.log('   - Invoices: 5 Acme invoices (draft/sent/overdue/paid/partial)');
     console.log('   - Pay Stubs: 3 Acme officer stubs + 2 Marcus stubs');
     console.log('   - AI Credits: Allocated to all workspaces');

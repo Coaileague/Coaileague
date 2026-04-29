@@ -170,14 +170,23 @@ function OpenShiftsTab({ shifts, clients, employees, isLoading }: {
   const pickupMutation = useMutation({
     mutationFn: async (shiftId: string) => {
       const res = await apiRequest('POST', `/api/shifts/${shiftId}/pickup`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        // Surface compliance block with a helpful message
+        if (body.code === 'COMPLIANCE_BLOCK') {
+          const reasons = (body.reasons as string[] | undefined)?.join(', ') || '';
+          throw new Error(reasons ? `Compliance check failed: ${reasons}` : (body.message || 'Compliance documents are incomplete.'));
+        }
+        throw new Error(body.message || `Server error ${res.status}`);
+      }
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: 'Shift picked up successfully' });
+      toast({ title: 'Shift claimed!', description: 'You have been assigned to this shift.' });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
     },
     onError: (error: any) => {
-      toast({ title: 'Failed to pick up shift', description: error.message, variant: 'destructive' });
+      toast({ title: 'Unable to claim shift', description: error.message, variant: 'destructive' });
     },
   });
 
