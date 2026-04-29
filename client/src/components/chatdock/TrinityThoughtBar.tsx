@@ -150,8 +150,8 @@ export function TrinityThoughtBar({
       return res.json();
     },
     enabled: !!workspaceId && !sessionId,
-    refetchInterval: sessionId ? false : 2000,  // 2s for real-time updates
-    staleTime: 500,
+    refetchInterval: sessionId ? false : 5000,  // 5s (was 2s causing rate limits)
+    staleTime: 1000,
     retry: false,
   });
 

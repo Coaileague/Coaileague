@@ -100,7 +100,7 @@ export function OperationVisibilityPanel({
   const { data: stepsData } = useQuery({
     queryKey: ['/api/orchestrated-schedule/orchestration', orchestrationId, 'steps'],
     enabled: !!orchestrationId,
-    refetchInterval: 2000,
+    refetchInterval: 5000,  // 5s (was 2s causing rate limits)
     queryFn: () => apiFetch(`/api/orchestrated-schedule/orchestration/${orchestrationId}/steps`, AnyResponse),
   });
 
