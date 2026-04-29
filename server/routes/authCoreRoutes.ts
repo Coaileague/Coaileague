@@ -690,8 +690,15 @@ router.post("/api/auth/login", async (req, res) => {
         errors: error.errors,
       });
     }
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack?.split('\n')[1]?.trim() : '';
     log.error("Login error:", error);
-    res.status(500).json({ message: "Login failed" });
+    // In dev: expose actual error so we can debug faster
+    const isDev = process.env.NODE_ENV !== 'production' || process.env.RAILWAY_ENVIRONMENT === 'development';
+    res.status(500).json({ 
+      message: "Login failed",
+      ...(isDev ? { debug: errMsg, at: errStack } : {})
+    });
   }
 });
 
