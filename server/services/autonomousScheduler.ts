@@ -2406,6 +2406,7 @@ export function startAutonomousScheduler() {
     // if the workflow aborts mid-flight. runNightlyInvoiceGeneration is
     // schedule-gated (weekly/monthly), so this hourly sweep is the real safety net.
     invoiceLifecycleSweep: { enabled: true, schedule: '17 * * * *', description: 'Hourly retry for approved time entries stuck without an invoice (Phase 26F)' },
+    approvalExpiry: { enabled: true, schedule: '*/15 * * * *', description: 'Mark pending AI approvals as expired once they pass their expiresAt timestamp' },
   };
 
   log.info('CoAIleague autonomous scheduler starting');
@@ -2655,11 +2656,8 @@ export function startAutonomousScheduler() {
   // table indefinitely and blocked automation that was waiting on
   // them. Workflow audit 2026-04-08 flagged this as "approval workflows
   // / expireOldApprovals never called by cron" — this is the fix.
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  registerJobInfo('Approval Expiry Sweep', (SCHEDULER_CONFIG as any).approvalExpiry.schedule, (SCHEDUL as any)(ER_CONFIG.approvalExpiry.description as any), (SCHEDULER_CONFIG as any).approvalExpiry.enabled);
-  // @ts-expect-error — TS migration: fix in refactoring sprint
+  registerJobInfo('Approval Expiry Sweep', SCHEDULER_CONFIG.approvalExpiry.schedule, SCHEDULER_CONFIG.approvalExpiry.description, SCHEDULER_CONFIG.approvalExpiry.enabled);
   if (SCHEDULER_CONFIG.approvalExpiry.enabled) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     cron.schedule(SCHEDULER_CONFIG.approvalExpiry.schedule, () => {
       trackJobExecution('Approval Expiry Sweep', async () => {
         const startTime = Date.now();
@@ -2685,7 +2683,7 @@ export function startAutonomousScheduler() {
         }
       });
     });
-    log.info('Approval Expiry Sweep registered', { schedule: (SCHEDULER_CONFIG as any).approvalExpiry.schedule, description: (SCHEDULER_CONFIG as any).approvalExpiry.description });
+    log.info('Approval Expiry Sweep registered', { schedule: SCHEDULER_CONFIG.approvalExpiry.schedule, description: SCHEDULER_CONFIG.approvalExpiry.description });
   }
 
   // 4. Idempotency Key Cleanup (4 AM daily)

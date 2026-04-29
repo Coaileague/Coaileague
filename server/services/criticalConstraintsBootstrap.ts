@@ -534,7 +534,7 @@ const constraints: CriticalConstraint[] = [
   // ── Phase V varchar-id defaults for trinity_knowledge_base / somatic_pattern_library ──
   {
     name: 'trinity_knowledge_base_id_default',
-    rationale: 'trinity_knowledge_base.id column has no DEFAULT but seed INSERTs use DEFAULT for id. Railway log forensics 2026-04-08.',
+    rationale: 'trinity_knowledge_base.id column (uuid type) has no DEFAULT but seed INSERTs use DEFAULT for id. Railway log forensics 2026-04-08.',
     isPresent: async () => {
       const { rows } = await pool.query(
         `SELECT 1 FROM information_schema.columns
@@ -544,26 +544,35 @@ const constraints: CriticalConstraint[] = [
       return rows.length > 0;
     },
     apply: async () => {
+      // Column is uuid type — no ::text cast, that causes "default expression is of type text"
       await pool.query(
-        `ALTER TABLE trinity_knowledge_base ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`,
+        `ALTER TABLE trinity_knowledge_base ALTER COLUMN id SET DEFAULT gen_random_uuid()`,
       );
     },
   },
   {
     name: 'somatic_pattern_library_id_default',
-    rationale: 'somatic_pattern_library.id column has no DEFAULT — same pattern as trinity_knowledge_base. Railway log forensics 2026-04-08.',
+    rationale: 'somatic_pattern_library.id is a PostgreSQL IDENTITY integer (generatedAlwaysAsIdentity in Drizzle). It already auto-generates values — no default expression can or should be set on it. Mark as present if it is an identity column so we never try the ::text cast that always fails.',
     isPresent: async () => {
+      // Identity columns auto-generate values; nextval in the default OR is_identity='YES' both mean it's handled.
       const { rows } = await pool.query(
         `SELECT 1 FROM information_schema.columns
          WHERE table_name = 'somatic_pattern_library' AND column_name = 'id'
-           AND column_default LIKE '%gen_random_uuid%'`,
+           AND (is_identity = 'YES' OR column_default LIKE '%nextval%' OR column_default LIKE '%gen_random_uuid%')`,
       );
       return rows.length > 0;
     },
     apply: async () => {
-      await pool.query(
-        `ALTER TABLE somatic_pattern_library ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`,
-      );
+      // Column is an integer IDENTITY — we cannot SET DEFAULT on it.
+      // If the column exists but somehow lacks identity, add the GENERATED ALWAYS AS IDENTITY property.
+      try {
+        await pool.query(
+          `ALTER TABLE somatic_pattern_library ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY`,
+        );
+      } catch (err: any) {
+        // Already an identity column or not possible — either way, nothing to do.
+        log.warn(`[somatic_pattern_library] identity alter skipped: ${err?.message?.slice(0, 120)}`);
+      }
     },
   },
   // ── Phase V missing partial unique index for RL confidence upserts ──
@@ -760,7 +769,7 @@ const constraints: CriticalConstraint[] = [
   },
   {
     name: 'payroll_status_value_completed',
-    rationale: 'payroll_status enum is declared with "completed" in shared/schema/enums.ts but the live Railway enum is missing it. Every payroll run transition to "completed" errors with "invalid input value for enum payroll_status" and cascades into autonomousScheduler audit log failures (production log forensics 2026-04-08).',
+    rationale: 'payroll_status enum is declared with "completed" in shared/schema/enums.ts but the live Railway DB either has no payroll_status type at all or is missing "completed". Every payroll run transition to "completed" errors. Production log forensics 2026-04-08: "type payroll_status does not exist".',
     isPresent: async () => {
       const { rows } = await pool.query(
         `SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
@@ -769,7 +778,25 @@ const constraints: CriticalConstraint[] = [
       return rows.length > 0;
     },
     apply: async () => {
-      await pool.query(`ALTER TYPE payroll_status ADD VALUE IF NOT EXISTS 'completed'`);
+      // The type may not exist at all — create it with all declared values first.
+      // DO block avoids "already exists" error when type is already there.
+      await pool.query(`
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payroll_status') THEN
+            CREATE TYPE payroll_status AS ENUM (
+              'draft', 'pending', 'approved', 'processed',
+              'disbursing', 'paid', 'completed', 'partial'
+            );
+          END IF;
+        END $$;
+      `);
+      // Now add any missing values idempotently (ALTER TYPE ADD VALUE must run
+      // outside a transaction in PG ≤12, but PG13+ allows it — try each separately).
+      for (const val of ['draft', 'pending', 'approved', 'processed', 'disbursing', 'paid', 'completed', 'partial']) {
+        try {
+          await pool.query(`ALTER TYPE payroll_status ADD VALUE IF NOT EXISTS '${val}'`);
+        } catch { /* already present or inside-transaction restriction — ignore */ }
+      }
     },
   },
   // ── Phase X: Optimistic locking column (TRINITY.md §15) ─────────────────
@@ -905,11 +932,13 @@ const constraints: CriticalConstraint[] = [
       return rows.length === 0;
     },
     apply: async () => {
+      // 'action' is intentionally excluded: the audit regression test
+      // (testRequiredFieldValidation) verifies that action cannot be null.
       const { rows } = await pool.query(
         `SELECT column_name FROM information_schema.columns
          WHERE table_name = 'audit_logs'
            AND is_nullable = 'NO'
-           AND column_name NOT IN ('id', 'created_at')`
+           AND column_name NOT IN ('id', 'created_at', 'action')`
       );
       for (const r of rows) {
         try {
@@ -921,6 +950,28 @@ const constraints: CriticalConstraint[] = [
           log.warn(`[criticalConstraints] failed to drop NOT NULL on audit_logs.${r.column_name}: ${err?.message?.slice(0, 120)}`);
         }
       }
+    },
+  },
+  {
+    name: 'audit_logs_action_not_null',
+    rationale: 'audit_logs.action must be NOT NULL for SOX compliance — the auditSchemaRegression testRequiredFieldValidation test explicitly verifies this constraint. The audit_logs_drop_stale_not_nulls bootstrap was incorrectly dropping it because Drizzle declares the column nullable. This constraint re-enforces NOT NULL on action and is listed AFTER the drop-stale pass so it always wins.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'audit_logs' AND column_name = 'action'
+           AND is_nullable = 'NO'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // Null out any existing NULL action values so SET NOT NULL doesn't fail on
+      // existing data (replace with a sentinel rather than deleting SOX-required rows).
+      await pool.query(
+        `UPDATE audit_logs SET action = 'unknown' WHERE action IS NULL`,
+      );
+      await pool.query(
+        `ALTER TABLE audit_logs ALTER COLUMN action SET NOT NULL`,
+      );
     },
   },
   {
@@ -1251,6 +1302,135 @@ const constraints: CriticalConstraint[] = [
             AND status NOT IN ('cancelled', 'denied')
           )
       `);
+    },
+  },
+  // ── Missing columns that block core AI metering, audit, and billing features ──
+  {
+    name: 'workspace_ai_periods_model_columns',
+    rationale: 'workspace_ai_periods was created with a minimal schema (total_tokens_k, overage_tokens_k) but AiMeteringService UPDATE uses per-model columns: gemini/claude/gpt _input_tokens_k, _output_tokens_k, _cost_microcents, plus total_cost_microcents and overage_charges_cents. Every AI token record fails with column-not-found (log: [42703]: column "gemini_input_tokens_k" does not exist).',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'workspace_ai_periods' AND column_name = 'gemini_input_tokens_k'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      const cols: Array<{ name: string; type: string }> = [
+        { name: 'gemini_input_tokens_k',  type: 'DECIMAL(12,3) DEFAULT 0' },
+        { name: 'gemini_output_tokens_k', type: 'DECIMAL(12,3) DEFAULT 0' },
+        { name: 'gemini_cost_microcents', type: 'BIGINT DEFAULT 0' },
+        { name: 'claude_input_tokens_k',  type: 'DECIMAL(12,3) DEFAULT 0' },
+        { name: 'claude_output_tokens_k', type: 'DECIMAL(12,3) DEFAULT 0' },
+        { name: 'claude_cost_microcents', type: 'BIGINT DEFAULT 0' },
+        { name: 'gpt_input_tokens_k',     type: 'DECIMAL(12,3) DEFAULT 0' },
+        { name: 'gpt_output_tokens_k',    type: 'DECIMAL(12,3) DEFAULT 0' },
+        { name: 'gpt_cost_microcents',    type: 'BIGINT DEFAULT 0' },
+        { name: 'total_cost_microcents',  type: 'BIGINT DEFAULT 0' },
+        { name: 'overage_charges_cents',  type: 'INTEGER DEFAULT 0' },
+      ];
+      for (const col of cols) {
+        try {
+          await pool.query(
+            `ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type}`,
+          );
+        } catch (err: any) {
+          log.warn(`[workspace_ai_periods] Failed to add ${col.name}: ${err?.message?.slice(0, 120)}`);
+        }
+      }
+    },
+  },
+  {
+    name: 'universal_audit_log_action_description',
+    rationale: 'universal_audit_log is missing action_description and changes columns. trinityResolutionFabric.recordOutcome INSERTs with both on every resolution cycle, producing [42703]: column "action_description" of relation "universal_audit_log" does not exist — logged as [ResolutionFabric] Failed to record outcome on every automation run.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'universal_audit_log' AND column_name = 'action_description'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(
+        `ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS action_description TEXT`,
+      );
+      await pool.query(
+        `ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS changes JSONB`,
+      );
+    },
+  },
+  {
+    name: 'ai_call_log_metering_columns',
+    rationale: 'ai_call_log was auto-created with a minimal schema (id, workspace_id, feature, model, tokens_used, cost_credits) but AiMeteringService inserts 20 columns including period_id, model_name, model_role, call_type, input_tokens, output_tokens, total_tokens, cost_microcents, and per-provider validation columns. Every metered AI call INSERT fails.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'ai_call_log' AND column_name = 'period_id'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      const cols: Array<{ name: string; type: string }> = [
+        { name: 'period_id',                   type: 'VARCHAR' },
+        { name: 'model_name',                  type: 'VARCHAR' },
+        { name: 'model_role',                  type: 'VARCHAR' },
+        { name: 'call_type',                   type: 'VARCHAR' },
+        { name: 'input_tokens',                type: 'INTEGER DEFAULT 0' },
+        { name: 'output_tokens',               type: 'INTEGER DEFAULT 0' },
+        { name: 'total_tokens',                type: 'INTEGER DEFAULT 0' },
+        { name: 'cost_microcents',             type: 'BIGINT DEFAULT 0' },
+        { name: 'triggered_by_user_id',        type: 'VARCHAR' },
+        { name: 'triggered_by_session_id',     type: 'VARCHAR' },
+        { name: 'trinity_action_id',           type: 'VARCHAR' },
+        { name: 'employee_id',                 type: 'VARCHAR' },
+        { name: 'response_time_ms',            type: 'INTEGER' },
+        { name: 'was_cached',                  type: 'BOOLEAN DEFAULT false' },
+        { name: 'fallback_used',               type: 'BOOLEAN DEFAULT false' },
+        { name: 'fallback_from',               type: 'VARCHAR' },
+        { name: 'claude_validated',            type: 'BOOLEAN DEFAULT false' },
+        { name: 'claude_validation_passed',    type: 'BOOLEAN' },
+        { name: 'claude_validation_action',    type: 'VARCHAR' },
+      ];
+      for (const col of cols) {
+        try {
+          await pool.query(
+            `ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type}`,
+          );
+        } catch (err: any) {
+          log.warn(`[ai_call_log] Failed to add ${col.name}: ${err?.message?.slice(0, 120)}`);
+        }
+      }
+    },
+  },
+  {
+    name: 'ai_usage_daily_summary_table',
+    rationale: 'ai_usage_daily_summary table does not exist. AiMeteringService.rollupDailySummary (called nightly) INSERTs with ON CONFLICT (workspace_id, summary_date) — fails with "relation does not exist" without the table and unique index.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'ai_usage_daily_summary'`,
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS ai_usage_daily_summary (
+          id               VARCHAR     PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          workspace_id     VARCHAR     NOT NULL,
+          summary_date     DATE        NOT NULL,
+          gemini_tokens_k  DECIMAL(12,3) DEFAULT 0,
+          claude_tokens_k  DECIMAL(12,3) DEFAULT 0,
+          gpt_tokens_k     DECIMAL(12,3) DEFAULT 0,
+          total_tokens_k   DECIMAL(12,3) DEFAULT 0,
+          total_cost_microcents BIGINT DEFAULT 0,
+          call_count       INTEGER     DEFAULT 0,
+          created_at       TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await pool.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_daily_summary_ws_date
+           ON ai_usage_daily_summary (workspace_id, summary_date)`,
+      );
     },
   },
   {
