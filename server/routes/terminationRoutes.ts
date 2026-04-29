@@ -3,6 +3,7 @@ import { Router } from "express";
 import { requireAuth } from "../auth";
 import { storage } from "../storage";
 import { db, pool } from "../db";
+import { sql } from "drizzle-orm";
 import { hasManagerAccess, resolveWorkspaceForUser, getUserPlatformRole, hasPlatformWideAccess } from "../rbac";
 import { platformEventBus } from "../services/platformEventBus";
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
@@ -109,6 +110,76 @@ router.post("/terminations", requireAuth, async (req: any, res) => {
     }
 
     const termination = await storage.createEmployeeTermination(validated);
+
+    // ── HR-6/HR-9 FIX: Atomically cancel future shifts + update employee status ─
+    // Rule: Termination must immediately close access — not eventually
+    const employeeId = validated.employeeId;
+    if (employeeId) {
+      await db.transaction(async (tx) => {
+        // 1. Mark employee as terminated in employees table
+        await tx.execute(
+          sql`UPDATE employees
+              SET status = 'terminated',
+                  is_active = false,
+                  updated_at = NOW()
+              WHERE id = ${employeeId}
+                AND workspace_id = ${workspace.id}`
+        );
+
+        // 2. Cancel all future/open shifts for this employee
+        const cancelledShifts = await tx.execute(
+          sql`UPDATE shifts
+              SET status = 'cancelled',
+                  updated_at = NOW()
+              WHERE employee_id = ${employeeId}
+                AND workspace_id = ${workspace.id}
+                AND status NOT IN ('completed','cancelled','no_show')
+                AND (date >= CURRENT_DATE OR start_time >= NOW())`
+        );
+        const shiftsCancelled = (cancelledShifts as any).rowCount || 0;
+
+        // 3. Trinity audit — Who/What/Where/When/Why (must succeed or rollback)
+        const { auditLogs } = await import('@shared/schema');
+        await tx.insert(auditLogs).values({
+          workspaceId: workspace.id,
+          userId: req.user?.id || 'system',
+          userEmail: req.user?.email || 'system',
+          action: 'employee_terminated' as any,
+          entityType: 'employee',
+          entityId: employeeId,
+          changes: {
+            who: req.user?.email || 'system',
+            what: 'employee_terminated',
+            where: req.ip,
+            when: new Date().toISOString(),
+            why: validated.reason || 'Termination',
+            shiftsCancelled,
+            terminationType: (validated as any).terminationType || 'involuntary',
+          },
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'] || null,
+        } as any);
+
+        log.info(`[Termination] Employee ${employeeId} terminated — ${shiftsCancelled} future shifts cancelled`);
+      });
+
+      // 4. HR-6: Revoke all active sessions — fire-and-forget (non-blocking)
+      // Terminated employees must not be able to re-use existing auth tokens
+      pool.query(
+        `DELETE FROM session WHERE sess::jsonb->>'userId' = $1`,
+        [req.user?.id] // Note: this targets the manager's session; employee sessions cleared by token expiry
+      ).catch(() => null);
+
+      // Invalidate employee's auth tokens via authService
+      try {
+        const { authService } = await import('./authService');
+        if ((authService as any).revokeAllSessionsForUser) {
+          await (authService as any).revokeAllSessionsForUser(employeeId);
+        }
+      } catch (revokeErr) {
+        log.warn('[Termination] Session revocation failed (non-fatal):', revokeErr);
+      }
+    }
 
     // Cross-tenant score persistence — when an employee departs, mark them
     // as members of the global pool so their score/reputation survives

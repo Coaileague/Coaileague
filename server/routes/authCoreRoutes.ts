@@ -465,6 +465,36 @@ router.post("/api/auth/login", async (req, res) => {
       return res.status(403).json({ message: lockStatus.message });
     }
 
+    // HR-7 FIX: Terminated employees must never be able to login
+    // Check employee record for terminated/inactive status before any auth proceeds
+    try {
+      const [empRecord] = await db
+        .select({ status: employees.status, isActive: employees.isActive })
+        .from(employees)
+        .where(eq(employees.userId, user.id))
+        .limit(1);
+
+      if (empRecord) {
+        if ((empRecord.status as string) === 'terminated') {
+          log.warn(`[Auth] BLOCKED: Terminated employee ${user.id} attempted login`);
+          recordIpAuthFailure(ip);
+          return res.status(403).json({
+            message: 'Your employment has been terminated. Please contact HR if you believe this is an error.',
+            code: 'EMPLOYMENT_TERMINATED',
+          });
+        }
+        if ((empRecord.status as string) === 'suspended') {
+          log.warn(`[Auth] BLOCKED: Suspended employee ${user.id} attempted login`);
+          return res.status(403).json({
+            message: 'Your account has been suspended. Please contact your manager.',
+            code: 'EMPLOYMENT_SUSPENDED',
+          });
+        }
+      }
+    } catch (empCheckErr) {
+      log.warn('[Auth] Employment status check failed (non-fatal, continuing):', empCheckErr);
+    }
+
     // OAuth-only accounts (no password set) trigger the reset-password
     // flow via the `needsPasswordReset` flag; all other cases return a
     // generic "invalid credentials" to prevent enumeration.

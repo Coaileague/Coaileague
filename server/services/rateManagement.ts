@@ -207,12 +207,35 @@ export async function updateEmployeeRate(employeeId: string, hourlyRate: number,
     throw new Error(`Unauthorized: Employee ${employeeId} does not belong to workspace ${workspaceId}`);
   }
 
-  await db.update(employees)
-    .set({
-      hourlyRate: hourlyRate.toFixed(2),
-      updatedAt: new Date(),
-    })
-    .where(eq(employees.id, employeeId));
+  const previousRate = employee.hourlyRate;
+
+  await db.transaction(async (tx) => {
+    await tx.update(employees)
+      .set({ hourlyRate: hourlyRate.toFixed(2), updatedAt: new Date() })
+      .where(eq(employees.id, employeeId));
+
+    // HR-11 FIX: Audit log with old AND new rate — Who/What/Where/When/Why
+    // Pay rate changes are financial mutations — permanent audit trail required
+    const { auditLogs } = await import('@shared/schema');
+    await tx.insert(auditLogs).values({
+      workspaceId: workspaceId || employee.workspaceId || 'system',
+      userId: changedBy || 'system',
+      userEmail: changedBy || 'system',
+      action: 'employee_pay_rate_changed' as any,
+      entityType: 'employee',
+      entityId: employeeId,
+      changes: {
+        who: changedBy || 'system',
+        what: 'pay_rate_changed',
+        when: new Date().toISOString(),
+        why: 'Manager updated pay rate',
+        previousRate: String(previousRate || '0'),
+        newRate: hourlyRate.toFixed(2),
+        delta: (hourlyRate - parseFloat(String(previousRate || '0'))).toFixed(2),
+      },
+      ipAddress: 'system',
+    } as any);
+  });
 
   // Notify the employee their pay rate was updated
   if (employee.userId && employee.workspaceId) {

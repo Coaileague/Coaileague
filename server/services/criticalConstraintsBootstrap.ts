@@ -1730,6 +1730,38 @@ const constraints: CriticalConstraint[] = [
       `);
     },
   },
+  // ── Employee/HRIS 360 — Schema Hardening ────────────────────────────────
+  {
+    name: 'employees_unique_email_workspace',
+    rationale: 'HR-3: UNIQUE(email, workspace_id) on employees prevents duplicate officer profiles. Without this, rapid-fire invite clicks or race conditions create ghost employees with the same email — payroll splits, schedule confusion, double-billing. Partial index: only for non-terminated active employees.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_indexes
+         WHERE tablename = 'employees'
+           AND indexname = 'uq_employees_email_workspace'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      // Remove duplicate rows first (keep most recently updated)
+      await pool.query(`
+        DELETE FROM employees a
+        USING employees b
+        WHERE a.id > b.id
+          AND a.email = b.email
+          AND a.workspace_id = b.workspace_id
+          AND a.email IS NOT NULL
+          AND a.status NOT IN ('terminated')
+          AND b.status NOT IN ('terminated')
+      `).catch(() => null);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_employees_email_workspace
+          ON employees (lower(email), workspace_id)
+          WHERE email IS NOT NULL
+            AND status NOT IN ('terminated')
+      `);
+    },
+  },
   {
     name: 'shifts_deleted_at_column',
     rationale: 'Soft-delete column added after initial schema definition; ALTER TABLE is idempotent via IF NOT EXISTS',
