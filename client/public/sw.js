@@ -222,6 +222,10 @@ self.addEventListener('activate', function swHealthCheck(event) {
 addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // NEVER intercept cross-origin requests — they may violate CSP when the SW
+  // tries to fetch or cache them, producing console noise and failed requests.
+  if (url.origin !== self.location.origin) return;
+
   if (event.request.method !== 'GET') {
     if (['POST', 'PUT', 'PATCH'].includes(event.request.method) && isOfflineCapable(event.request.url)) {
       event.respondWith(handleOfflinePost(event.request));

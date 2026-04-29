@@ -224,6 +224,54 @@ const constraints: CriticalConstraint[] = [
       `);
     },
   },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PHASE 0C: Fix workspace_ai_periods and universal_audit_log missing columns
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    name: 'workspace_ai_periods_model_columns',
+    rationale: 'workspace_ai_periods was created without per-model token columns; aiMeteringService UPDATE uses gemini/claude/gpt_input_tokens_k etc.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'workspace_ai_periods' AND column_name = 'gemini_input_tokens_k'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS gemini_input_tokens_k DECIMAL(12,3) DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS gemini_output_tokens_k DECIMAL(12,3) DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS gemini_cost_microcents BIGINT DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS claude_input_tokens_k DECIMAL(12,3) DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS claude_output_tokens_k DECIMAL(12,3) DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS claude_cost_microcents BIGINT DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS gpt_input_tokens_k DECIMAL(12,3) DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS gpt_output_tokens_k DECIMAL(12,3) DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS gpt_cost_microcents BIGINT DEFAULT 0;
+        ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS total_cost_microcents BIGINT DEFAULT 0;
+      `);
+    },
+  },
+  {
+    name: 'universal_audit_log_action_description',
+    rationale: 'universal_audit_log.action_description missing — ResolutionFabric writes to it; also add outcome and resolution_tier columns',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'universal_audit_log' AND column_name = 'action_description'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS action_description TEXT;
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS outcome VARCHAR;
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS resolution_tier VARCHAR;
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS severity VARCHAR DEFAULT 'info';
+        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS correlation_id VARCHAR;
+      `);
+    },
+  },
   // ── Support login OTP table ──────────────────────────────────────────────
   // Stores daily-rotating SMS PINs for platform support role logins.
   // Created here (not in Drizzle schema) so it boots idempotently in all

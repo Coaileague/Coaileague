@@ -307,7 +307,7 @@ export default function CustomLogin() {
                 Orchestrate Your Workforce
               </h1>
               <p className="text-lg text-slate-300 max-w-lg">
-                CoAIleague brings enterprise-grade workforce management to security, staffing, and service industries. Trusted by companies like Statewide Protective Services.
+                CoAIleague brings enterprise-grade workforce management to security, staffing, and service industries.
               </p>
             </div>
 
@@ -576,7 +576,7 @@ export default function CustomLogin() {
                 Workforce Management for Security & Staffing
               </p>
               <p className="text-xs text-slate-500">
-                Trusted by companies like Statewide Protective Services
+                Trusted by leading security companies
               </p>
             </div>
           </div>
