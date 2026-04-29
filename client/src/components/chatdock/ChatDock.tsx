@@ -1474,8 +1474,8 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
           onTouchCancel={handleLongPressCancel}
           onContextMenu={(e) => { e.preventDefault(); setActionMenuRoom(room.roomId); }}
           className={cn(
-            "w-full flex items-center gap-2.5 px-3 py-2 hover-elevate active-elevate-2 transition-colors text-left cursor-pointer",
-            hasUnread && "bg-primary/[0.04] dark:bg-primary/[0.08]",
+            "w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left cursor-pointer rounded-xl",
+            hasUnread && "bg-blue-500/[0.06] dark:bg-blue-500/[0.1]",
             isSupport && "border-b border-border/30"
           )}
           aria-label={`${room.name}${hasUnread ? `, ${room.unreadCount} unread messages` : ""}${room.lastMessage ? `, last message: ${room.lastMessage}` : ""}`}
@@ -1483,43 +1483,38 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
         >
           <div className="relative flex-shrink-0">
             <div className={isDM ? "chatdock-avatar-ring" : "chatdock-avatar-ring-group"}>
-              <Avatar className="h-9 w-9">
+              <Avatar className="h-11 w-11">
                 <AvatarFallback className={cn(
-                  "text-xs font-bold",
+                  "text-sm font-bold",
                   isSupport ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
                     : isShift ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white"
-                    : isDM ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white"
+                    : isDM ? "bg-gradient-to-br from-blue-500 to-blue-700 text-white"
                     : "bg-gradient-to-br from-violet-500 to-purple-600 text-white"
                 )}>
-                  {isSupport ? <Headphones className="h-4 w-4" />
-                    : isShift ? <Calendar className="h-4 w-4" />
+                  {isSupport ? <Headphones className="h-5 w-5" />
+                    : isShift ? <Calendar className="h-5 w-5" />
                     : isDM ? room.name.slice(0, 2).toUpperCase()
-                    : <Users className="h-4 w-4" />}
+                    : <Users className="h-5 w-5" />}
                 </AvatarFallback>
               </Avatar>
             </div>
             {isOnline && (
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border border-card rounded-full z-10" data-testid={`status-online-${room.roomId}`}>
-                <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-40" />
+              <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full z-10">
+                <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-50" />
               </span>
             )}
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 flex-1 min-w-0">
-                <span className={cn(
-                  "text-[13px] truncate min-w-0",
-                  hasUnread ? "font-bold text-foreground" : "font-medium text-foreground"
-                )}>{room.name}</span>
-                {(room as any).bridgeChannelType && (
-                  <ChannelBadge channelType={(room as any).bridgeChannelType} />
-                )}
-              </div>
+              <span className={cn(
+                "text-[14px] truncate min-w-0",
+                hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground/90"
+              )}>{room.name}</span>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {room.lastMessageAt && (
                   <span className={cn(
                     "text-[11px] whitespace-nowrap",
-                    hasUnread ? "text-primary font-medium" : "text-muted-foreground"
+                    hasUnread ? "text-[#1877f2] font-semibold" : "text-muted-foreground"
                   )}>
                     {smartTimestamp(room.lastMessageAt)}
                   </span>
@@ -1529,7 +1524,7 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className={cn(
                 "text-[12px] truncate flex-1 min-w-0 leading-snug flex items-center gap-1",
-                hasUnread ? "text-foreground/80 font-medium" : "text-muted-foreground"
+                hasUnread ? "text-foreground/75 font-medium" : "text-muted-foreground"
               )}>
                 {(() => {
                   const preview = getLastMsgPreview(room.lastMessage);
@@ -1537,10 +1532,10 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
                   if (preview.isMedia) {
                     return <>
                       {prefix && <span className="truncate">{prefix}</span>}
-                      {preview.mediaType === "image" && <Image className="h-3 w-3 flex-shrink-0 text-primary/60" />}
-                      {preview.mediaType === "video" && <Video className="h-3 w-3 flex-shrink-0 text-primary/60" />}
-                      {preview.mediaType === "audio" && <Mic className="h-3 w-3 flex-shrink-0 text-primary/60" />}
-                      {preview.mediaType === "file" && <FileText className="h-3 w-3 flex-shrink-0 text-primary/60" />}
+                      {preview.mediaType === "image" && <Image className="h-3 w-3 flex-shrink-0 text-[#1877f2]/60" />}
+                      {preview.mediaType === "video" && <Video className="h-3 w-3 flex-shrink-0 text-[#1877f2]/60" />}
+                      {preview.mediaType === "audio" && <Mic className="h-3 w-3 flex-shrink-0 text-[#1877f2]/60" />}
+                      {preview.mediaType === "file" && <FileText className="h-3 w-3 flex-shrink-0 text-[#1877f2]/60" />}
                       <span className="truncate">{preview.text}</span>
                     </>;
                   }
@@ -1550,7 +1545,7 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
                 })()}
               </span>
               {hasUnread && (
-                <span className="flex items-center justify-center min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[9px] font-bold rounded-full px-0.5 flex-shrink-0" data-testid={`badge-unread-${room.roomId}`}>
+                <span className="chatdock-unread-badge" data-testid={`badge-unread-${room.roomId}`}>
                   {room.unreadCount > 99 ? "99+" : room.unreadCount}
                 </span>
               )}
@@ -1563,40 +1558,42 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
 
   return (
     <div className="flex flex-col h-full">
-      <div className="chatdock-header-gradient flex items-center justify-between gap-1 px-2 py-1 flex-shrink-0" data-drag-region>
-        <div className="flex items-center gap-1.5">
-          <MessageCircle className="h-4 w-4 text-white/90 flex-shrink-0" />
-          <h3 className="text-[13px] font-bold tracking-tight whitespace-nowrap text-white leading-none" data-testid="text-messages-title">Messages</h3>
+      <div className="chatdock-header-gradient flex items-center justify-between gap-1 px-3 py-2.5 flex-shrink-0" data-drag-region>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner">
+            <MessageCircle className="h-4 w-4 text-white" />
+          </div>
+          <h3 className="text-[15px] font-bold tracking-tight whitespace-nowrap text-white leading-none" data-testid="text-messages-title">Messages</h3>
         </div>
-        <div className="flex items-center gap-0">
-          <Button size="icon" variant="ghost" className="text-white/80" onClick={() => setShowNewConvo(true)} data-testid="button-new-conversation" aria-label="New conversation">
+        <div className="flex items-center gap-1">
+          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/80 hover:bg-white/15 hover:text-white" onClick={() => setShowNewConvo(true)} data-testid="button-new-conversation" aria-label="New conversation">
             <Plus className="h-4 w-4" />
           </Button>
           {!isFullPage && (
             <>
-              <Button size="icon" variant="ghost" className="text-white/80" onClick={() => { closeBubble(); setLocation("/chatrooms"); }} data-testid="button-chat-bubble-fullscreen" aria-label="Open full chat page">
-                <ExternalLink className="h-3.5 w-3.5" />
+              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/80 hover:bg-white/15 hover:text-white" onClick={() => { closeBubble(); setLocation("/chatrooms"); }} data-testid="button-chat-bubble-fullscreen" aria-label="Open full chat page">
+                <ExternalLink className="h-4 w-4" />
               </Button>
-              <Button size="icon" variant="ghost" className="text-white/80" onClick={closeBubble} data-testid="button-chat-bubble-close" aria-label="Close messages">
-                <X className="h-3.5 w-3.5" />
+              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/80 hover:bg-white/15 hover:text-white" onClick={closeBubble} data-testid="button-chat-bubble-close" aria-label="Close messages">
+                <X className="h-4 w-4" />
               </Button>
             </>
           )}
         </div>
       </div>
 
-      <div className="px-2 py-1 bg-card border-b border-border/30 space-y-1">
+      <div className="px-3 pt-2 pb-1.5 bg-card border-b border-border/40 space-y-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
           <Input
             placeholder="Search conversations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 text-xs h-7 rounded-full bg-muted/60 border-0 focus-visible:ring-1 focus-visible:ring-primary/30"
+            className="pl-9 text-sm h-9 rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-blue-500/40 placeholder:text-muted-foreground/50"
             data-testid="input-chat-bubble-search"
           />
         </div>
-        <div className="flex items-center gap-1 flex-wrap" data-testid="filter-chat-type">
+        <div className="flex items-center gap-1.5 flex-wrap pb-0.5" data-testid="filter-chat-type">
           {([
             { id: "all", label: "All", Icon: MessageCircle },
             { id: "dms", label: "DMs", Icon: MessageSquare },
@@ -1608,10 +1605,10 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
               key={f.id}
               onClick={() => setFilter(f.id)}
               className={cn(
-                "flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors",
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all",
                 filter === f.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/60 text-muted-foreground hover-elevate"
+                  ? "bg-[#1877f2] text-white shadow-sm shadow-blue-500/30"
+                  : "bg-muted/70 text-muted-foreground hover:bg-muted"
               )}
               data-testid={`button-filter-${f.id}`}
             >
@@ -2095,40 +2092,44 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
 
   return (
     <div className="flex flex-col h-full" role="region" aria-label={`Conversation: ${roomName}`}>
-      <div className="chatdock-chat-header flex items-center gap-1.5 px-1.5 py-1 flex-shrink-0" data-drag-region>
+      <div className="chatdock-chat-header flex items-center gap-2 px-2.5 py-2 flex-shrink-0" data-drag-region>
         <Button
           size="icon"
           variant="ghost"
-          className="text-white/80"
+          className="h-8 w-8 rounded-full text-white/80 hover:bg-white/15 hover:text-white flex-shrink-0"
           onClick={closeChat}
           data-testid="button-chat-back"
           aria-label="Back to conversations"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <Avatar className="h-7 w-7 flex-shrink-0">
-          <AvatarFallback className="text-[9px] bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold">
-            {roomName.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0" onClick={() => setShowInfo(true)} role="button" tabIndex={0}>
-          <span className="text-[13px] font-semibold truncate block leading-tight text-white">{roomName}</span>
+        <div className="relative flex-shrink-0">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback className="text-xs bg-white/20 text-white font-bold backdrop-blur-sm">
+              {roomName.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          {onlineUsers.length > 0 && (
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border-2 border-[#1877f2] rounded-full" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0" onClick={() => setShowInfo(true)} role="button" tabIndex={0} aria-label="Room info">
+          <span className="text-[14px] font-bold truncate block leading-tight text-white">{roomName}</span>
           {!isConnected ? (
-            <span className="text-[9px] text-white/60 flex items-center gap-1 leading-none">
+            <span className="text-[10px] text-white/60 flex items-center gap-1 leading-none">
               <WifiOff className="h-2.5 w-2.5" /> Connecting...
             </span>
           ) : onlineUsers.length > 0 ? (
-            <span className="text-[9px] text-green-300 leading-none flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block animate-pulse" />
-              Active now
-            </span>
-          ) : null}
+            <span className="text-[10px] text-emerald-300 leading-none">Active now</span>
+          ) : (
+            <span className="text-[10px] text-white/50 leading-none">Tap for info</span>
+          )}
         </div>
-        <Button size="icon" variant="ghost" className="text-white/80" onClick={() => setShowChatSearch(!showChatSearch)} data-testid="button-chat-search" aria-label="Search in chat">
-          <Search className="h-3.5 w-3.5" />
+        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/80 hover:bg-white/15 hover:text-white" onClick={() => setShowChatSearch(!showChatSearch)} data-testid="button-chat-search" aria-label="Search in chat">
+          <Search className="h-4 w-4" />
         </Button>
-        <Button size="icon" variant="ghost" className="text-white/80" onClick={() => setShowInfo(true)} data-testid="button-room-info" aria-label="Room info">
-          <MoreVertical className="h-3.5 w-3.5" />
+        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/80 hover:bg-white/15 hover:text-white" onClick={() => setShowInfo(true)} data-testid="button-room-info" aria-label="Room info">
+          <MoreVertical className="h-4 w-4" />
         </Button>
       </div>
 
@@ -2480,21 +2481,19 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
         data-testid="input-file-upload"
       />
 
-      <div
-        className="border-t border-border/20 chatdock-input-bar px-2 py-2"
-      >
-        <div className="flex items-center gap-1.5">
+      <div className="chatdock-input-bar">
+        <div className="flex items-center gap-2">
           <div className="relative">
             <Button
               size="icon"
               variant="ghost"
-              className="flex-shrink-0 text-primary/70"
+              className="h-9 w-9 rounded-full flex-shrink-0 text-[#1877f2]/80 hover:bg-[#1877f2]/10 hover:text-[#1877f2]"
               onClick={(e) => { e.stopPropagation(); setShowAttach(!showAttach); }}
               disabled={!isConnected}
               data-testid="button-attach-file"
               aria-label="Attach file"
             >
-              <Paperclip className="h-4.5 w-4.5" />
+              <Paperclip className="h-4 w-4" />
             </Button>
             {showAttach && (
               <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-md shadow-sm py-2 min-w-[180px] z-50 animate-in slide-in-from-bottom-2 fade-in duration-150" data-testid="menu-attach">
@@ -2611,7 +2610,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } if (e.key === "Escape") { setReplyingTo(null); setEditingMessage(null); setInput(""); } }}
             placeholder={editingMessage ? "Edit message..." : replyingTo ? `↩ Reply to ${replyingTo.senderName}...` : isConnected ? "Message (@ to mention)..." : "Connecting..."}
             disabled={!isConnected}
-            className="text-sm flex-1 h-9 rounded-full bg-muted/40 border border-border/30 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/20 px-4"
+            className="text-sm flex-1 h-10 rounded-full bg-muted/60 border-0 focus-visible:ring-1 focus-visible:ring-[#1877f2]/40 px-4"
             data-testid={`input-chat-msg-${roomId}`}
           />
           {!input.trim() && !editingMessage && (
@@ -2626,19 +2625,18 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
           <div className="flex-shrink-0">
             <Button
               size="icon"
-              variant={input.trim() && isConnected ? "default" : "ghost"}
               className={cn(
-                "rounded-full transition-all duration-200",
+                "h-10 w-10 rounded-full transition-all duration-200",
                 input.trim() && isConnected
-                  ? "chatdock-send-active shadow-sm shadow-cyan-500/20"
-                  : "text-muted-foreground"
+                  ? "chatdock-send-active"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
               onClick={handleSend}
               disabled={!input.trim() || !isConnected}
               data-testid={`button-send-msg-${roomId}`}
               aria-label={editingMessage ? "Save edit" : "Send message"}
             >
-              {editingMessage ? <Check className="h-4.5 w-4.5" /> : <Send className="h-4.5 w-4.5" />}
+              {editingMessage ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </div>
@@ -2722,8 +2720,8 @@ function BubblePopup() {
 
   useEffect(() => {
     if (bubbleOpen && !isMobile) {
-      const popupW = 380;
-      const popupH = activeChatRoom ? 580 : Math.min(600, window.innerHeight * 0.75);
+      const popupW = 440;
+      const popupH = activeChatRoom ? 600 : Math.min(620, window.innerHeight * 0.78);
       setPosition({
         x: window.innerWidth - popupW - 16,
         y: window.innerHeight - popupH - 72,
@@ -2798,12 +2796,12 @@ function BubblePopup() {
     <div
       ref={popupRef}
       className={cn(
-        "fixed w-[380px] z-[1031] bg-card border border-border rounded-md shadow-sm flex flex-col overflow-hidden",
-        !hasAnimated && "animate-in slide-in-from-bottom-2 fade-in duration-200",
+        "fixed w-[440px] z-[1031] bg-card flex flex-col overflow-hidden",
+        !hasAnimated && "animate-in slide-in-from-bottom-3 fade-in duration-250",
         isDragging && "select-none"
       )}
       style={{
-        height: activeChatRoom ? "580px" : "min(600px, 75vh)",
+        height: activeChatRoom ? "600px" : "min(620px, 78vh)",
         left: `${position.x}px`,
         top: `${position.y}px`,
         cursor: isDragging ? "grabbing" : undefined,
@@ -2839,15 +2837,23 @@ function DesktopChatFAB() {
       <button
         onClick={toggleBubble}
         aria-label={bubbleOpen ? "Close chat" : "Open chat"}
-        className="relative w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        style={{
+          background: bubbleOpen
+            ? 'linear-gradient(135deg, #374151, #1f2937)'
+            : 'linear-gradient(135deg, #1877f2 0%, #0a5fd6 100%)',
+          boxShadow: bubbleOpen
+            ? '0 4px 16px rgba(0,0,0,0.3)'
+            : '0 4px 20px rgba(24,119,242,0.45), 0 2px 8px rgba(0,0,0,0.15)',
+        }}
       >
         {bubbleOpen
-          ? <X className="h-5 w-5" />
-          : <MessageCircle className="h-5 w-5" />
+          ? <X className="h-6 w-6 text-white" />
+          : <MessageCircle className="h-6 w-6 text-white" />
         }
         {!bubbleOpen && unreadTotal > 0 && (
           <span
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 pointer-events-none"
+            className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 pointer-events-none shadow-md"
             data-testid="badge-desktop-chat-unread"
           >
             {unreadTotal > 99 ? "99+" : unreadTotal}

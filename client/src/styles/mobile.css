@@ -1533,219 +1533,227 @@
 }
 
 /* ============================================================
-   CHATDOCK PREMIUM VISUAL SYSTEM
-   Native-quality messenger UI
+   CHATDOCK — Facebook Messenger aesthetic, CoAIleague identity
+   Panel: frosted glass, premium shadow, 2xl radius
+   List:  Messenger-style room rows, 44px avatars, bold unreads
+   Chat:  Clean header, FB-style bubbles, WhatsApp input bar
    ============================================================ */
+
+/* ── Panel chrome ─────────────────────────────────────────── */
+[data-testid="chat-bubble-popup-desktop"] {
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.08),
+    0 8px 32px rgba(0,0,0,0.18),
+    0 32px 64px rgba(0,0,0,0.12);
+  border-radius: 18px !important;
+  border: none !important;
+  backdrop-filter: blur(2px);
+}
+.dark [data-testid="chat-bubble-popup-desktop"] {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 8px 32px rgba(0,0,0,0.45),
+    0 32px 64px rgba(0,0,0,0.35);
+}
+
+/* ── Conversation-list header (Messenger style) ────────────── */
 .chatdock-header-gradient {
-  background: linear-gradient(135deg, #0891b2 0%, #2563eb 50%, #4f46e5 100%);
+  background: linear-gradient(160deg, #1877f2 0%, #0a5fd6 60%, #0550c0 100%);
   color: white;
+  padding: 14px 12px 12px;
+  user-select: none;
 }
-
 .dark .chatdock-header-gradient {
-  background: linear-gradient(135deg, #164e63 0%, #1e3a5f 50%, #312e81 100%);
+  background: linear-gradient(160deg, #0f3f7a 0%, #0a2d5c 60%, #071e3d 100%);
 }
 
+/* ── Active chat header ───────────────────────────────────── */
 .chatdock-chat-header {
-  background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
+  background: linear-gradient(160deg, #1877f2 0%, #0a5fd6 100%);
   color: white;
+  padding: 10px 8px;
+  user-select: none;
 }
-
 .dark .chatdock-chat-header {
-  background: linear-gradient(135deg, #164e63 0%, #1e40af 100%);
+  background: linear-gradient(160deg, #0f3f7a 0%, #082448 100%);
 }
 
+/* ── Chat background — subtle warmth ─────────────────────── */
 .chatdock-chat-bg {
   background-color: hsl(var(--background));
   background-image:
-    radial-gradient(circle at 20% 80%, hsl(var(--primary) / 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, hsl(var(--primary) / 0.02) 0%, transparent 50%);
+    radial-gradient(ellipse at 0% 100%, hsla(214,89%,60%,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 100% 0%, hsla(214,89%,60%,0.03) 0%, transparent 60%);
 }
 
-.chatdock-empty-ring {
-  background: conic-gradient(
-    from 0deg,
-    hsl(var(--primary) / 0.15),
-    hsl(var(--primary) / 0.04),
-    hsl(var(--primary) / 0.15),
-    hsl(var(--primary) / 0.04),
-    hsl(var(--primary) / 0.15)
-  );
-  animation: chatdockRingSpin 8s linear infinite;
-}
-
-@keyframes chatdockRingSpin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes chatdockTypingPulse {
-  0%, 100% {
-    transform: scale(0.6);
-    opacity: 0.35;
-  }
-  50% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.chatdock-typing-dot {
-  animation: chatdockTypingPulse 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.chatdock-send-active {
-  background: linear-gradient(135deg, #06b6d4, #2563eb);
-  color: white;
-  border: none;
-}
-
-.chatdock-input-bar {
-  background: linear-gradient(to top, hsl(var(--card)) 0%, hsl(var(--card) / 0.97) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.chatdock-avatar-ring {
-  padding: 2px;
-  background: linear-gradient(135deg, #06b6d4, #3b82f6, #6366f1);
-  border-radius: 9999px;
-}
-
-.chatdock-avatar-ring-group {
-  padding: 2px;
-  background: linear-gradient(135deg, #8b5cf6, #a855f7, #d946ef);
-  border-radius: 9999px;
-}
-
-/* ============================================================
-   MOBILE CHAT PILL — WhatsApp-style persistent chat entry
-   ============================================================ */
-@keyframes chatPillBounceIn {
-  0% { transform: translateX(-50%) scale(0.8) translateY(12px); opacity: 0; }
-  60% { transform: translateX(-50%) scale(1.04) translateY(-2px); opacity: 1; }
-  100% { transform: translateX(-50%) scale(1) translateY(0); opacity: 1; }
-}
-
-.mobile-chat-pill-enter {
-  animation: chatPillBounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes chatPillUnread {
-  0%, 100% { box-shadow: 0 4px 20px rgba(8,145,178,0.35); }
-  50% { box-shadow: 0 4px 28px rgba(8,145,178,0.55), 0 0 0 4px rgba(8,145,178,0.15); }
-}
-
-/* ============================================================
-   CHATDOCK CONVERSATION LIST — WhatsApp-style item polish
-   ============================================================ */
+/* ── Room list item ───────────────────────────────────────── */
 .chatdock-room-item {
   position: relative;
   transition: background-color 80ms ease-out;
+  border-radius: 10px;
+  margin: 1px 6px;
 }
-
+.chatdock-room-item:hover {
+  background-color: hsl(var(--muted) / 0.7);
+}
+.chatdock-room-item--unread {
+  background-color: hsl(214 89% 60% / 0.06);
+}
+.chatdock-room-item--unread:hover {
+  background-color: hsl(214 89% 60% / 0.1);
+}
 .chatdock-room-item--unread::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  border-radius: 0 2px 2px 0;
-  background: hsl(var(--primary));
+  display: none; /* replaced by bold text + filled badge */
 }
 
-/* ============================================================
-   CHATDOCK IMAGE CARDS — WhatsApp-style media thumbnails
-   ============================================================ */
-.chat-img-card {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  display: block;
-  max-width: 240px;
+/* ── Avatar rings (Messenger gradient borders) ────────────── */
+.chatdock-avatar-ring {
+  padding: 2.5px;
+  background: linear-gradient(135deg, #1877f2, #42b0ff);
+  border-radius: 9999px;
+}
+.chatdock-avatar-ring-group {
+  padding: 2.5px;
+  background: linear-gradient(135deg, #7c3aed, #c026d3);
+  border-radius: 9999px;
 }
 
-@media (max-width: 767px) {
-  .chat-img-card {
-    max-width: 100%;
-    width: 100%;
-  }
+/* ── Message bubbles — Facebook Messenger shape ───────────── */
+.chat-bubble-own {
+  border-radius: 18px 18px 4px 18px;
+  background: linear-gradient(135deg, #1877f2 0%, #0a5fd6 100%);
+  color: white;
+}
+.chat-bubble-grouped-own {
+  border-radius: 18px 18px 4px 18px;
+  background: linear-gradient(135deg, #1877f2 0%, #0a5fd6 100%);
+  color: white;
+}
+.chat-bubble-other {
+  border-radius: 18px 18px 18px 4px;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.chat-bubble-grouped-other {
+  border-radius: 18px 18px 18px 4px;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.dark .chat-bubble-other,
+.dark .chat-bubble-grouped-other {
+  background: hsl(220 18% 20%);
 }
 
-.chat-img-card img {
-  width: 100%;
-  height: auto;
-  max-height: 220px;
-  object-fit: cover;
-  display: block;
+/* ── Input bar — WhatsApp pill style ─────────────────────── */
+.chatdock-input-bar {
+  background: hsl(var(--card));
+  border-top: 1px solid hsl(var(--border) / 0.5);
+  padding: 8px 10px;
 }
 
-.chat-img-card__overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 8px 4px;
-  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+/* ── Send button active ───────────────────────────────────── */
+.chatdock-send-active {
+  background: linear-gradient(135deg, #1877f2, #0a5fd6);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(24,119,242,0.35);
+}
+.chatdock-send-active:hover {
+  background: linear-gradient(135deg, #1465d0, #0847a8);
+  box-shadow: 0 4px 12px rgba(24,119,242,0.45);
 }
 
-.chat-img-card__actions {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 150ms;
-}
-
-.chat-img-card:hover .chat-img-card__actions {
-  opacity: 1;
-}
-
-/* ============================================================
-   CHATDOCK INPUT BAR — Mobile WhatsApp-style
-   ============================================================ */
-@media (max-width: 767px) {
-  .chatdock-input-bar {
-    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-  }
-
-  .chatdock-mobile-header {
-    padding-top: max(8px, env(safe-area-inset-top, 0px));
-  }
-}
-
-/* ============================================================
-   CHATDOCK TYPING INDICATOR — WhatsApp-style 3-dot bounce
-   ============================================================ */
+/* ── Typing indicator ────────────────────────────────────── */
 .chatdock-typing-indicator {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 8px 12px;
-  border-radius: 20px 20px 20px 4px;
+  padding: 8px 14px;
+  border-radius: 18px 18px 18px 4px;
   background: hsl(var(--muted));
 }
+@keyframes chatdockTypingPulse {
+  0%, 100% { transform: scale(0.6); opacity: 0.35; }
+  50%       { transform: scale(1);   opacity: 1; }
+}
+.chatdock-typing-dot {
+  animation: chatdockTypingPulse 1.4s cubic-bezier(0.4,0,0.2,1) infinite;
+}
 
-/* ============================================================
-   CHATDOCK MOBILE FULL-SCREEN — Edge-to-edge immersive view
-   ============================================================ */
+/* ── Empty state ring ────────────────────────────────────── */
+.chatdock-empty-ring {
+  background: conic-gradient(
+    from 0deg,
+    hsl(214 89% 60% / 0.2),
+    hsl(214 89% 60% / 0.05),
+    hsl(214 89% 60% / 0.2),
+    hsl(214 89% 60% / 0.05),
+    hsl(214 89% 60% / 0.2)
+  );
+  animation: chatdockRingSpin 8s linear infinite;
+}
+@keyframes chatdockRingSpin { to { transform: rotate(360deg); } }
+
+/* ── Unread badge — filled blue circle ──────────────────── */
+.chatdock-unread-badge {
+  min-width: 20px;
+  height: 20px;
+  background: #1877f2;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(24,119,242,0.4);
+}
+
+/* ── Image cards ─────────────────────────────────────────── */
+.chat-img-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  display: block;
+  max-width: 240px;
+}
 @media (max-width: 767px) {
-  [data-testid="chat-bubble-popup-mobile"] {
-    border-radius: 0 !important;
-  }
+  .chat-img-card { max-width: 100%; width: 100%; }
+}
+.chat-img-card img {
+  width: 100%; height: auto;
+  max-height: 220px; object-fit: cover; display: block;
+}
+.chat-img-card__overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 6px 8px 4px;
+  background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%);
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+}
+.chat-img-card__actions {
+  position: absolute; top: 6px; right: 6px;
+  display: flex; gap: 4px; opacity: 0; transition: opacity 150ms;
+}
+.chat-img-card:hover .chat-img-card__actions { opacity: 1; }
 
+/* ── Mobile: full-screen immersive ──────────────────────── */
+@media (max-width: 767px) {
+  [data-testid="chat-bubble-popup-mobile"] { border-radius: 0 !important; }
   [data-testid="chat-bubble-popup-mobile"] .chatdock-chat-header {
-    padding-left: max(16px, env(safe-area-inset-left, 16px));
+    padding-left:  max(16px, env(safe-area-inset-left,  16px));
     padding-right: max(16px, env(safe-area-inset-right, 16px));
   }
+  .chatdock-input-bar {
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── Mobile compact overrides ────────────────────────────── */
+@media (max-width: 767px) {
+  .chatdock-header-gradient { padding: 10px 10px 8px !important; }
+  .chatdock-chat-header     { padding: 6px 6px !important; }
 }
 
 /* ============================================================
