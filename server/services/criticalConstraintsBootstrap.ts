@@ -1438,6 +1438,33 @@ const constraints: CriticalConstraint[] = [
     },
   },
   {
+    name: 'trinity_rate_limit_log_table',
+    rationale: 'trinity_rate_limit_log table and unique index on (workspace_id, window_start) required by aiCallWrapper.ts ON CONFLICT clause. Missing index causes [err] "there is no unique or exclusion constraint matching the ON CONFLICT specification" on every AI call.',
+    isPresent: async () => {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_indexes
+         WHERE tablename = 'trinity_rate_limit_log'
+           AND indexname = 'uq_trinity_rate_limit_ws_window'`
+      );
+      return rows.length > 0;
+    },
+    apply: async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS trinity_rate_limit_log (
+          id           VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          workspace_id VARCHAR NOT NULL,
+          window_start TIMESTAMPTZ NOT NULL,
+          request_count INTEGER DEFAULT 1,
+          created_at   TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await pool.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS uq_trinity_rate_limit_ws_window
+           ON trinity_rate_limit_log (workspace_id, window_start)`
+      );
+    },
+  },
+  {
     name: 'shifts_deleted_at_column',
     rationale: 'Soft-delete column added after initial schema definition; ALTER TABLE is idempotent via IF NOT EXISTS',
     isPresent: async () => {

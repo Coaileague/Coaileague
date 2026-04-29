@@ -500,7 +500,7 @@ class TrinityResolutionFabricService {
           status, priority, assigned_to_trinity, trinity_attempted,
           trinity_actions_taken, resolution_method, source, created_at, updated_at
         ) VALUES (
-          gen_random_uuid()::text, $1, $2, 'platform', $3, $4,
+          gen_random_uuid(), $1, $2, 'platform', $3, $4,
           'open', $5, false, true,
           $6, 'pending_human', 'trinity_autonomous', NOW(), NOW()
         ) RETURNING id
@@ -776,7 +776,7 @@ class TrinityResolutionFabricService {
           id, workspace_id, actor_id, action, entity_type, entity_id,
           action_description, changes, created_at
         ) VALUES (
-          gen_random_uuid()::text, $1, $2, 'trinity.resolution', 'issue', $3,
+          gen_random_uuid(), $1, $2, 'trinity.resolution', 'issue', $3,
           $4, $5, NOW()
         )
       `, [
