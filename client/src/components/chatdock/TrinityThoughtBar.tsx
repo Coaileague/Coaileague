@@ -136,22 +136,58 @@ export function TrinityThoughtBar({
     actionName: string;
     currentStep: string;
     stepStatus: string;
+    progress?: number;
+    modelUsed?: 'gpt' | 'claude' | 'gemini';
   }>>({
-    queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId],
+    queryKey: ['/api/trinity/active-operations', workspaceId],
     queryFn: async () => {
       if (!workspaceId) return [];
       const res = await fetch(
-        `/api/orchestrated-schedule/active-operations?workspaceId=${encodeURIComponent(workspaceId)}`,
+        `/api/trinity/active-operations?workspaceId=${encodeURIComponent(workspaceId)}`,
         { credentials: 'include' }
       );
       if (!res.ok) return [];
       return res.json();
     },
     enabled: !!workspaceId && !sessionId,
-    refetchInterval: sessionId ? false : 3000,
-    staleTime: 1000,
+    refetchInterval: sessionId ? false : 2000,  // 2s for real-time updates
+    staleTime: 500,
     retry: false,
   });
+
+  // Get the MOST IMPORTANT active operation (Trinity's current action)
+  // Priority: critical > high > normal > low
+  const getOperationPriority = (op: typeof activeOperations[0]) => {
+    if (op.stepStatus === 'error' || op.stepStatus === 'critical') return 5;
+    if (op.domain === 'compliance') return 4; // Compliance highest priority
+    if (op.domain === 'payroll') return 3;
+    if (op.domain === 'scheduling') return 2;
+    return 1;
+  };
+
+  const currentTrinityAction = activeOperations.length > 0
+    ? activeOperations.sort((a, b) => getOperationPriority(b) - getOperationPriority(a))[0]
+    : null;
+
+  // Map domain to readable action phrase
+  const getActionPhrase = (action: typeof currentTrinityAction) => {
+    if (!action) return null;
+    
+    const stepPhrase = action.currentStep?.toUpperCase() || '';
+    const actionName = action.actionName || '';
+    
+    // Show what Trinity is ACTIVELY DOING
+    const domainActions: Record<string, string> = {
+      'scheduling': `Scheduling: ${actionName} — ${stepPhrase}`,
+      'payroll': `Processing payroll: ${actionName} — ${stepPhrase}`,
+      'compliance': `Ensuring compliance: ${actionName} — ${stepPhrase}`,
+      'invoicing': `Managing invoices: ${actionName} — ${stepPhrase}`,
+      'timesheets': `Approving timesheets: ${actionName} — ${stepPhrase}`,
+      'reports': `Generating reports: ${actionName} — ${stepPhrase}`,
+    };
+    
+    return domainActions[action.domain] || `${actionName}: ${stepPhrase}`;
+  };
 
   const activeSchedulingOperation = activeOperations.find((operation) => operation.domain === "scheduling");
 
@@ -190,6 +226,22 @@ export function TrinityThoughtBar({
     const newState = getStatusState("trinity", modelStatus, priority, isProcessing);
     setState(newState);
   }, [modelStatus, priority, isProcessing]);
+
+  // ─── Wire Trinity's actual actions to thought phrase ───────────────────────
+  useEffect(() => {
+    if (currentTrinityAction) {
+      // Trinity is actively performing an action
+      const actionPhrase = getActionPhrase(currentTrinityAction);
+      if (actionPhrase) {
+        setPhrase(actionPhrase);
+        setPhraseVisible(true);
+        // Set active model based on which AI is handling this action
+        if (currentTrinityAction.modelUsed) {
+          setActiveModel(currentTrinityAction.modelUsed);
+        }
+      }
+    }
+  }, [currentTrinityAction]);
 
   // ─── Thread tick (real-time simulation, 4s cycle) ─────────────────────────
   useEffect(() => {
@@ -393,7 +445,9 @@ export function TrinityThoughtBar({
         {/* Left-center: Current action */}
         <div className="flex-shrink-0 w-52 min-w-0">
           <div style={{ fontSize: "10px", color: colors.dim === "#7C3AED33" ? "#8B5CF6" : colors.text, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "1px" }}>
-            {state === "critical" ? "CRITICAL ALERT" : state === "fallback" ? "FALLBACK MODE" : "CURRENT ACTION"}
+            {currentTrinityAction 
+              ? `TRINITY ACTION (${currentTrinityAction.domain.toUpperCase()})`
+              : state === "critical" ? "CRITICAL ALERT" : state === "fallback" ? "FALLBACK MODE" : "CURRENT ACTION"}
           </div>
           <div
             style={{
@@ -404,10 +458,39 @@ export function TrinityThoughtBar({
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              fontWeight: currentTrinityAction ? 600 : 400,  // Bold when Trinity actively working
             }}
           >
-            {displayPhrase}
+            {currentTrinityAction 
+              ? displayPhrase  // Show Trinity's actual current action
+              : displayPhrase} {/* Fall back to thought phrase */}
           </div>
+          {currentTrinityAction?.progress && (
+            <div style={{ 
+              fontSize: "9px", 
+              marginTop: "2px",
+              color: colors.text + "99",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px"
+            }}>
+              <div style={{
+                height: "4px",
+                width: "40px",
+                backgroundColor: colors.text + "22",
+                borderRadius: "2px",
+                overflow: "hidden"
+              }}>
+                <div style={{
+                  height: "100%",
+                  width: `${currentTrinityAction.progress}%`,
+                  backgroundColor: colors.primary,
+                  transition: "width 0.3s ease"
+                }} />
+              </div>
+              <span>{Math.round(currentTrinityAction.progress)}%</span>
+            </div>
+          )}
         </div>
 
         {/* Center: Thread pills (fluid) */}
