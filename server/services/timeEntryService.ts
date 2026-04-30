@@ -264,6 +264,112 @@ export async function approveTimeEntry(
 }
 
 /**
+ * Compute the scheduled-vs-actual hours variance for a time entry.
+ *
+ * variancePct = |actual - scheduled| / scheduled × 100
+ *
+ * Returns null when no variance can be computed (no shift link, missing
+ * clockIn/Out, or scheduled hours == 0). Callers must treat null as
+ * "manual review required" — the auto-approval threshold cannot apply
+ * without a baseline.
+ */
+export async function calculateEntryVariance(
+  entryId: string,
+): Promise<{
+  scheduledHours: number;
+  actualHours: number;
+  varianceMinutes: number;
+  variancePct: number;
+} | null> {
+  const { shifts } = await import('@shared/schema');
+  const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, entryId) });
+  if (!entry || !entry.clockIn || !entry.clockOut || !entry.shiftId) return null;
+
+  const shift = await db.query.shifts.findFirst({ where: eq(shifts.id, entry.shiftId) });
+  if (!shift?.startTime || !shift?.endTime) return null;
+
+  const scheduledMinutes = (new Date(shift.endTime).getTime() - new Date(shift.startTime).getTime()) / 60000;
+  if (scheduledMinutes <= 0) return null;
+
+  const actualMinutes = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / 60000;
+  const varianceMinutes = Math.abs(actualMinutes - scheduledMinutes);
+  const variancePct = (varianceMinutes / scheduledMinutes) * 100;
+
+  return {
+    scheduledHours: scheduledMinutes / 60,
+    actualHours: actualMinutes / 60,
+    varianceMinutes,
+    variancePct,
+  };
+}
+
+/**
+ * Variance-aware auto-approval. Trinity calls this on a completed time entry:
+ *   - variance < threshold (default 5%) AND GPS-verified  → auto-approve
+ *   - otherwise                                            → flag for manual review
+ *     (status stays 'pending'; reason recorded in `notes`)
+ *
+ * Honors per-workspace toggles by accepting `autoApprove` and `thresholdPct`
+ * — pass them from the caller after reading workspace settings.
+ */
+export async function autoApproveByVariance(input: {
+  entryId: string;
+  approvedBy: string; // Typically 'trinity-system' for autonomous approvals
+  thresholdPct?: number;
+  requireGpsVerified?: boolean;
+}): Promise<{
+  decision: 'auto_approved' | 'flagged_for_review' | 'no_baseline';
+  variance: Awaited<ReturnType<typeof calculateEntryVariance>>;
+  reason?: string;
+}> {
+  const { entryId, approvedBy, thresholdPct = 5, requireGpsVerified = true } = input;
+
+  const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, entryId) });
+  if (!entry) throw new Error(`Time entry ${entryId} not found`);
+  if (entry.status !== 'pending') {
+    return { decision: 'flagged_for_review', variance: null, reason: `Entry status is '${entry.status}' — only 'pending' entries are eligible for auto-approval` };
+  }
+
+  const variance = await calculateEntryVariance(entryId);
+  if (variance === null) {
+    return { decision: 'no_baseline', variance: null, reason: 'No scheduled shift linked or missing clock-in/out — manual review required' };
+  }
+
+  if (requireGpsVerified && entry.gpsVerificationStatus !== 'verified') {
+    return {
+      decision: 'flagged_for_review',
+      variance,
+      reason: `GPS not verified (status: ${entry.gpsVerificationStatus ?? 'unknown'}) — auto-approval requires GPS-verified clock-in`,
+    };
+  }
+
+  if (variance.variancePct < thresholdPct) {
+    await db.update(timeEntries)
+      .set({
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+        notes: `${entry.notes || ''}\n[AUTO-APPROVED ${new Date().toISOString()}] Trinity variance check: ${variance.variancePct.toFixed(2)}% < ${thresholdPct}% threshold`,
+        updatedAt: new Date(),
+      })
+      .where(eq(timeEntries.id, entryId));
+    return { decision: 'auto_approved', variance, reason: `Variance ${variance.variancePct.toFixed(2)}% within ${thresholdPct}% threshold` };
+  }
+
+  await db.update(timeEntries)
+    .set({
+      notes: `${entry.notes || ''}\n[VARIANCE FLAG ${new Date().toISOString()}] Scheduled ${variance.scheduledHours.toFixed(2)}h vs actual ${variance.actualHours.toFixed(2)}h — variance ${variance.variancePct.toFixed(2)}% exceeds ${thresholdPct}% threshold; manual review required`,
+      updatedAt: new Date(),
+    })
+    .where(eq(timeEntries.id, entryId));
+  return {
+    decision: 'flagged_for_review',
+    variance,
+    reason: `Variance ${variance.variancePct.toFixed(2)}% exceeds ${thresholdPct}% threshold`,
+  };
+}
+
+/**
  * Reject a time entry with reason
  */
 export async function rejectTimeEntry(

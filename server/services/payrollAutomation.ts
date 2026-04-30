@@ -1464,6 +1464,31 @@ export class PayrollAutomationEngine {
           tx,
         });
         log.info(`[AI Payroll™] Claimed ${claimed.claimedCount}/${claimed.requestedCount} entries for run ${run.id} — within transaction`);
+
+        // Write per-entry FLSA-bucketed hours back to the source time_entries
+        // so downstream readers (billing path, margin report fallback) see
+        // accurate regular/OT/holiday splits. Without this, time_entries.
+        // overtimeHours stays NULL and the billing path bills everything at
+        // straight rate — silently understating revenue and inflating the
+        // computed gross margin.
+        for (const empSummary of aggregationResult.employeeSummaries) {
+          for (const entry of empSummary.entries) {
+            await tx.update(timeEntries)
+              .set({
+                regularHours: entry.regularHours.toFixed(2),
+                overtimeHours: entry.overtimeHours.toFixed(2),
+                holidayHours: entry.holidayHours.toFixed(2),
+                payableAmount: entry.totalPay.toFixed(2),
+                capturedPayRate: entry.payRate.toFixed(2),
+                updatedAt: new Date(),
+              })
+              .where(and(
+                eq(timeEntries.id, entry.timeEntryId),
+                eq(timeEntries.workspaceId, workspaceId),
+              ));
+          }
+        }
+        log.info(`[AI Payroll™] Wrote per-entry hours buckets back to ${allTimeEntryIds.length} time entries`);
       }
 
       // FIX-3: Ledger write INSIDE the payroll transaction.

@@ -33,10 +33,12 @@ import { db } from '../db';
 import {
   invoices,
   payrollRuns,
+  payrollEntries,
   timeEntries,
   clients,
   clientContracts,
 } from '@shared/schema';
+import { Decimal } from 'decimal.js';
 import { and, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm';
 import {
   formatCurrency,
@@ -374,29 +376,33 @@ export async function finalizeFinancialBatch(
 
   log.info(`[FinStaging] finalize_financial_batch ws=${workspaceId} invoices=${invoiceTargets.length} payroll=${payrollTargets.length} reason=${reason ?? 'n/a'}`);
 
-  // Lock invoices in a single transaction; collect linked time-entry IDs.
+  // Collect linked time-entry IDs for the invoice batch.
+  //
+  // Note: we deliberately do NOT change `invoices.status` here. The atomic
+  // lock on source time entries is already in place from stage_billing_run
+  // (entries are status='approved' + billedAt set + invoiceId set), and the
+  // route-layer WORM guard already rejects edits. Setting status='sent' would
+  // lie — sendInvoice is the explicit step that emails the client and flips
+  // status. Finalize's job is to acknowledge the commitment, not to dispatch.
   const lockedTimeEntryIds = new Set<string>();
   const finalizedInvoices: FinalizeFinancialBatchResult['invoices'] = [];
 
   if (invoiceTargets.length > 0) {
-    await db.transaction(async (tx) => {
-      for (const inv of invoiceTargets) {
-        await tx.update(invoices)
-          .set({ status: 'sent', sentAt: finalizedAt, updatedAt: finalizedAt })
-          .where(and(eq(invoices.id, inv.id), eq(invoices.workspaceId, workspaceId)));
+    for (const inv of invoiceTargets) {
+      const linked = await db.select({ id: timeEntries.id })
+        .from(timeEntries)
+        .where(and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(timeEntries.invoiceId, inv.id),
+        ));
+      for (const e of linked) lockedTimeEntryIds.add(e.id);
 
-        // Collect time entry IDs already linked via invoiceId.
-        const linked = await tx.select({ id: timeEntries.id })
-          .from(timeEntries)
-          .where(and(
-            eq(timeEntries.workspaceId, workspaceId),
-            eq(timeEntries.invoiceId, inv.id),
-          ));
-        for (const e of linked) lockedTimeEntryIds.add(e.id);
-
-        finalizedInvoices.push({ invoiceId: inv.id, invoiceNumber: inv.invoiceNumber, status: 'sent' });
-      }
-    });
+      finalizedInvoices.push({
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        status: 'finalized',
+      });
+    }
   }
 
   // Approve payroll runs via the canonical approvePayrollRun helper. We pass
@@ -434,6 +440,160 @@ export async function finalizeFinancialBatch(
     payrollRuns: finalizedRuns,
     lockedTimeEntryIds: Array.from(lockedTimeEntryIds),
   };
+}
+
+// ─── Tool 5: add_payroll_adjustment ─────────────────────────────────────────
+
+export type PayrollAdjustmentKind =
+  | 'reimbursement'   // Owed TO employee (uniform, mileage, etc.) — net pay ↑
+  | 'deduction'       // Owed BY employee (equipment fee, advance) — net pay ↓
+  | 'bonus'           // Discretionary bonus — gross pay ↑
+  | 'correction';     // Generic correction — caller specifies sign
+
+export interface PayrollAdjustment {
+  id: string;
+  kind: PayrollAdjustmentKind;
+  label: string;
+  /** Signed dollar amount: positive = credit to employee, negative = charge. */
+  amount: string;
+  addedBy: string;
+  addedAt: string;
+  reason?: string;
+}
+
+export interface AddPayrollAdjustmentInput {
+  workspaceId: string;
+  payrollEntryId: string;
+  kind: PayrollAdjustmentKind;
+  label: string;
+  amount: number; // Signed
+  addedBy: string;
+  reason?: string;
+}
+
+export interface AddPayrollAdjustmentResult {
+  payrollEntryId: string;
+  adjustment: PayrollAdjustment;
+  newGrossPay: string;
+  newNetPay: string;
+  totalAdjustments: string;
+}
+
+/**
+ * Append a signed line-item adjustment to a draft payroll entry's
+ * `adjustments` JSONB column and recompute net pay. Refuses to mutate entries
+ * whose run is in a terminal state (paid/completed/void) — those are
+ * write-protected and require a corrective run.
+ */
+export async function addPayrollAdjustment(
+  input: AddPayrollAdjustmentInput,
+): Promise<AddPayrollAdjustmentResult> {
+  const { workspaceId, payrollEntryId, kind, label, amount, addedBy, reason } = input;
+
+  if (!Number.isFinite(amount)) {
+    throw new Error('addPayrollAdjustment: amount must be a finite number');
+  }
+  // Defensive sign check: refuse to silently invert an obviously-wrong sign.
+  if (kind === 'reimbursement' && amount < 0) {
+    throw new Error('addPayrollAdjustment: reimbursement amounts must be positive');
+  }
+  if (kind === 'deduction' && amount > 0) {
+    throw new Error('addPayrollAdjustment: deduction amounts must be negative');
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const [entry] = await tx.select().from(payrollEntries)
+      .where(and(
+        eq(payrollEntries.id, payrollEntryId),
+        eq(payrollEntries.workspaceId, workspaceId),
+      ))
+      .limit(1);
+    if (!entry) throw new Error(`Payroll entry ${payrollEntryId} not found`);
+
+    const [run] = await tx.select().from(payrollRuns)
+      .where(eq(payrollRuns.id, entry.payrollRunId))
+      .limit(1);
+    if (!run) throw new Error(`Payroll run ${entry.payrollRunId} not found`);
+
+    const TERMINAL = new Set(['paid', 'completed', 'void']);
+    if (TERMINAL.has(run.status as string)) {
+      throw new Error(
+        `Cannot adjust a ${run.status} payroll run. Adjustments require a draft/pending/approved run; create a corrective run for finalized payroll.`,
+      );
+    }
+
+    const existing: PayrollAdjustment[] = Array.isArray(entry.adjustments) ? (entry.adjustments as PayrollAdjustment[]) : [];
+    const adjustment: PayrollAdjustment = {
+      id: `ADJ-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+      kind,
+      label,
+      amount: toFinancialString(amount),
+      addedBy,
+      addedAt: new Date().toISOString(),
+      reason,
+    };
+    const updatedAdjustments = [...existing, adjustment];
+
+    // Recompute pay. Bonus increases gross (and therefore taxable income).
+    // Reimbursements/deductions/corrections apply to net only — they are
+    // non-taxable line items by convention. Tax recomputation on a bonus
+    // requires the full tax engine; we surface that limit by refusing to
+    // process bonuses through this lightweight tool.
+    if (kind === 'bonus') {
+      throw new Error(
+        'Bonus adjustments must go through PayrollAutomationEngine.amendPayrollEntry — they affect taxable gross and require tax recomputation.',
+      );
+    }
+
+    const adjustmentTotal = updatedAdjustments.reduce(
+      (sum, a) => sum.plus(a.amount),
+      new Decimal(0),
+    );
+    const totalAdjustments = adjustmentTotal.toFixed(4);
+
+    const baseGross = toFinancialString(entry.grossPay ?? '0');
+    const baseTaxes = sumFinancialValues([
+      toFinancialString(entry.federalTax ?? '0'),
+      toFinancialString(entry.stateTax ?? '0'),
+      toFinancialString(entry.socialSecurity ?? '0'),
+      toFinancialString(entry.medicare ?? '0'),
+    ]);
+    const baseNetPreAdj = subtractFinancialValues(baseGross, baseTaxes);
+    const newNet = sumFinancialValues([baseNetPreAdj, totalAdjustments]);
+
+    // Floor net pay at $0 — same CCPA-floor invariant the calculation path
+    // applies. Negative net pay must never reach the DB.
+    const netPayForDB = Number(newNet) < 0 ? '0.00' : formatCurrency(newNet);
+
+    await tx.update(payrollEntries)
+      .set({
+        adjustments: updatedAdjustments as any,
+        netPay: netPayForDB,
+        updatedAt: new Date(),
+        notes: `${entry.notes || ''}\n[ADJUSTMENT ${adjustment.id} ${adjustment.addedAt}] ${kind} '${label}' ${adjustment.amount} by ${addedBy}${reason ? ` — ${reason}` : ''}`,
+      })
+      .where(eq(payrollEntries.id, payrollEntryId));
+
+    // Recompute run-level net pay total.
+    const allEntries = await tx.select({ netPay: payrollEntries.netPay })
+      .from(payrollEntries)
+      .where(eq(payrollEntries.payrollRunId, run.id));
+    const runNet = sumFinancialValues(allEntries.map(e => toFinancialString(e.netPay ?? '0')));
+    await tx.update(payrollRuns)
+      .set({ totalNetPay: formatCurrency(runNet), updatedAt: new Date() })
+      .where(eq(payrollRuns.id, run.id));
+
+    return {
+      payrollEntryId,
+      adjustment,
+      newGrossPay: baseGross,
+      newNetPay: newNet,
+      totalAdjustments,
+    };
+  });
+
+  log.info(`[FinStaging] add_payroll_adjustment entry=${payrollEntryId} kind=${kind} amount=${input.amount} → net=${result.newNetPay}`);
+  return result;
 }
 
 // ─── Tool 4: generate_margin_report ─────────────────────────────────────────
@@ -620,4 +780,5 @@ export const financialStagingService = {
   stagePayrollBatch,
   finalizeFinancialBatch,
   generateMarginReport,
+  addPayrollAdjustment,
 };

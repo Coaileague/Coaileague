@@ -4194,11 +4194,40 @@ class AIBrainActionRegistry {
       },
     };
 
+    const addPayrollAdjustmentAction: ActionHandler = {
+      actionId: 'finance.add_payroll_adjustment',
+      name: 'Add Payroll Line-Item Adjustment',
+      category: 'payroll',
+      description: 'Append a signed line-item adjustment (reimbursement, deduction, or correction) to a draft payroll entry. Net pay recomputes; bonuses must go through amendPayrollEntry to recompute taxable gross.',
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+        await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+        const { payrollEntryId, kind, label, amount, reason } = request.payload || {};
+        if (!payrollEntryId || !kind || !label || amount === undefined) {
+          return createResult(request.actionId, false, 'payrollEntryId, kind, label, amount required', null, start);
+        }
+        const { addPayrollAdjustment } = await import('../financialStagingService');
+        const result = await addPayrollAdjustment({
+          workspaceId: request.workspaceId,
+          payrollEntryId,
+          kind,
+          label,
+          amount: Number(amount),
+          addedBy: request.userId || 'system',
+          reason,
+        });
+        return createResult(request.actionId, true, `${kind} adjustment $${amount} applied; net=$${result.newNetPay}`, result, start);
+      },
+    };
+
     helpaiOrchestrator.registerAction(withAuditWrap(stageBillingRunAction, 'invoice'));
     helpaiOrchestrator.registerAction(withAuditWrap(stagePayrollBatchAction, 'payroll_run'));
     helpaiOrchestrator.registerAction(withAuditWrap(finalizeFinancialBatchAction, 'financial_batch'));
     helpaiOrchestrator.registerAction(withAuditWrap(generateMarginReportAction, 'financial_report'));
-    log.info('[AI Brain] Financial staging pipeline actions registered (4 actions)');
+    helpaiOrchestrator.registerAction(withAuditWrap(addPayrollAdjustmentAction, 'payroll_entry'));
+    log.info('[AI Brain] Financial staging pipeline actions registered (5 actions)');
   }
 
   // ============================================================================
