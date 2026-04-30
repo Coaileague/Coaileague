@@ -27,6 +27,24 @@ function getClientIp(req: Request): string {
 }
 
 /**
+ * Per-user key generator for authenticated rate limiters.
+ *
+ * WHY: Railway (and most cloud deployments) routes all traffic through a shared
+ * egress proxy, so req.ip is the SAME for every user. A global IP-based bucket
+ * of 60 req/min means ALL users share one counter — the first busy user burns
+ * the limit for everyone and causes 429s.
+ *
+ * FIX: For authenticated requests, key by userId so each user gets their own
+ * independent bucket. Unauthenticated requests (login, register, etc.) still
+ * key by IP where per-IP limiting is semantically correct.
+ */
+function getUserKey(req: Request): string {
+  const userId = (req as any).user?.id;
+  if (userId) return `user:${userId}`;
+  return getClientIp(req);
+}
+
+/**
  * Rate Limit Violation Logger
  *
  * Logs every 429 response. On repeat violations (3+ in 10 minutes from same IP),
@@ -109,7 +127,7 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: Request) => getClientIp(req),
+  keyGenerator: (req: Request) => getUserKey(req),
 
   handler: (req: Request, res: Response) => {
     setRetryAfterHeader(res, 900);
@@ -153,7 +171,7 @@ export const mutationLimiter = rateLimit({
     error: 'Too many operations from this IP, please slow down.',
     retryAfter: '1 minute'
   },
-  keyGenerator: (req: Request) => getClientIp(req),
+  keyGenerator: (req: Request) => getUserKey(req),
 
   handler: (req: Request, res: Response) => {
     setRetryAfterHeader(res, 60);
@@ -174,7 +192,7 @@ export const readLimiter = rateLimit({
     error: 'Too many requests from this IP, please slow down.',
     retryAfter: '1 minute'
   },
-  keyGenerator: (req: Request) => getClientIp(req),
+  keyGenerator: (req: Request) => getUserKey(req),
 
   handler: (req: Request, res: Response) => {
     setRetryAfterHeader(res, 60);

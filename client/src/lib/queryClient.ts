@@ -253,6 +253,18 @@ export const getQueryFn: <T>(options: {
       }
     }
 
+    if (res.status === 429) {
+      // Rate limited — retry once after the Retry-After delay. Never crash to splash screen.
+      const retryAfterSec = parseInt(res.headers.get('Retry-After') || '10', 10);
+      const waitMs = Math.min(retryAfterSec * 1000, 30_000); // cap at 30s
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      const retryRes = await fetch(url, { credentials: 'include' });
+      if (retryRes.ok) {
+        return deepToCamel(await retryRes.json()) as T;
+      }
+      throw new ApiError(429, 'RATE_LIMITED', 'Too many requests — please try again in a moment.');
+    }
+
     await throwIfResNotOk(res);
     // Incoming: snake_case → camelCase on every GET response
     return deepToCamel(await res.json()) as T;
@@ -266,8 +278,19 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 0,
       retry: (failureCount, error) => {
+        // 429 is retryable — the getQueryFn already does one inline retry with
+        // Retry-After delay. If it still fails, allow one more attempt here.
+        if (error instanceof ApiError && error.status === 429) return failureCount < 1;
+        // All other 4xx are permanent failures — don't retry.
         if (error instanceof ApiError && error.status < 500) return false;
         return failureCount < 2;
+      },
+      retryDelay: (attempt, error) => {
+        // For 429s: use a longer delay on each attempt
+        if (error instanceof ApiError && error.status === 429) {
+          return Math.min(1000 * 2 ** attempt, 15_000); // 2s, 4s, ... up to 15s
+        }
+        return Math.min(1000 * 2 ** attempt, 10_000);
       },
     },
     mutations: {

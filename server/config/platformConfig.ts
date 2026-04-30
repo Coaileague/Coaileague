@@ -63,11 +63,15 @@ export const RATE_LIMITS = {
   },
   mutation: {
     windowMs: parseInt(process.env.RL_MUTATION_WINDOW_MS || String(60 * 1000)),       // 1 min
-    max: STRESS_TEST_MODE ? 10000 : parseInt(process.env.RL_MUTATION_MAX || '30'),
+    // Raised 30→60: a single save can trigger 3-5 invalidations + re-fetches
+    max: STRESS_TEST_MODE ? 10000 : parseInt(process.env.RL_MUTATION_MAX || '60'),
   },
   read: {
     windowMs: parseInt(process.env.RL_READ_WINDOW_MS || String(60 * 1000)),           // 1 min
-    max: STRESS_TEST_MODE ? 100000 : parseInt(process.env.RL_READ_MAX || '60'),
+    // Raised 60→300: dashboard pages fire 10-20 parallel reads on mount.
+    // Railway proxies all requests through the same egress IP, making per-IP
+    // limits useless — readLimiter now keys by userId (see rateLimiter.ts).
+    max: STRESS_TEST_MODE ? 100000 : parseInt(process.env.RL_READ_MAX || '300'),
   },
   passwordReset: {
     windowMs: parseInt(process.env.RL_PWRESET_WINDOW_MS || String(60 * 60 * 1000)),  // 1 hr
