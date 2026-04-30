@@ -1140,33 +1140,10 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
       userAgent: req.get('user-agent')
     });
 
-<<<<<<< HEAD
     // Gamification hook removed — emitGamificationEvent was never implemented
     // anywhere in the codebase, so this block would throw a ReferenceError
     // every time the (default-on) enableGamification flag was evaluated.
     // Re-add when the gamification subsystem ships.
-=======
-    // Gamification: Award points for shift completion
-    if (isFeatureEnabled('enableGamification')) {
-      try {
-        await platformEventBus.publish({
-          type: 'gamification_xp_awarded',
-          category: 'gamification',
-          workspaceId,
-          title: 'Shift Completed',
-          description: `Employee ${employee.id} completed a shift`,
-          metadata: {
-            event: 'shift_completed',
-            employeeId: employee.id,
-            shiftId: activeEntry.shiftId || undefined,
-            hoursWorked: netHours,
-          },
-        });
-      } catch (gamError) {
-        log.error('Gamification shift_completed failed (non-blocking):', gamError);
-      }
-    }
->>>>>>> origin/claude/trinity-autonomous-sweep-FkZBB
 
     // AI Brain: Emit clock-out telemetry for anomaly detection (overtime alerts)
     try {
@@ -1863,11 +1840,7 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
     if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
     if (clientId !== undefined) updateData.clientId = clientId;
 
-<<<<<<< HEAD
     if (totalHours !== undefined && totalHours !== null) {
-=======
-    if (totalHours != null) {
->>>>>>> origin/claude/trinity-autonomous-sweep-FkZBB
       updateData.totalHours = totalHours.toString();
     } else if (clockIn || clockOut) {
       const newClockIn = new Date(clockIn || entry.clockIn);
@@ -1882,11 +1855,7 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
     if (updateData.totalHours && effectiveRate != null) {
       updateData.totalAmount = calculateInvoiceLineItem(
         toFinancialString(updateData.totalHours),
-<<<<<<< HEAD
         toFinancialString(effectiveRate),
-=======
-        toFinancialString(effectiveRate)
->>>>>>> origin/claude/trinity-autonomous-sweep-FkZBB
       );
     }
 

@@ -631,19 +631,14 @@ router.patch('/escalated/:id/assign', requirePlatformStaff, async (req: Authenti
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-<<<<<<< HEAD
     // Phase 3A — Atomic assignment: only assign if not already assigned to someone else
     // Drizzle UPDATE returns empty array if WHERE condition not met (row already claimed)
-=======
-    // Atomic claim: only assigns if ticket is escalated AND not yet claimed by another agent
->>>>>>> origin/claude/fix-dashboard-crash-GIa2j
     const [updatedTicket] = await db.update(supportTickets)
       .set({
         platformAssignedTo: staffId || userId,
         status: 'in_progress',
         updatedAt: new Date(),
       })
-<<<<<<< HEAD
       .where(and(
         eq(supportTickets.id, id),
         eq(supportTickets.workspaceId, workspaceId!),
@@ -668,29 +663,6 @@ router.patch('/escalated/:id/assign', requirePlatformStaff, async (req: Authenti
         message: 'This ticket was already assigned to another agent.',
         assignedTo: existing.assignedTo,
         code: 'ALREADY_ASSIGNED',
-=======
-      .where(
-        and(
-          eq(supportTickets.id, id),
-          eq(supportTickets.workspaceId, workspaceId!),
-          eq(supportTickets.isEscalated, true),
-          isNull(supportTickets.platformAssignedTo),
-        )
-      )
-      .returning();
-
-    if (!updatedTicket) {
-      // Either ticket not found, not escalated, or already claimed by another agent
-      const existing = await db.query.supportTickets.findFirst({
-        where: eq(supportTickets.id, id),
-      });
-      if (!existing || !existing.isEscalated) {
-        return res.status(404).json({ message: "Escalated ticket not found" });
-      }
-      return res.status(409).json({
-        message: "Ticket already assigned to another agent",
-        assignedTo: existing.platformAssignedTo,
->>>>>>> origin/claude/fix-dashboard-crash-GIa2j
       });
     }
 

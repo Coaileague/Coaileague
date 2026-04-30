@@ -2,17 +2,11 @@ import { db } from 'server/db';
 import { timeEntries } from '@shared/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
-<<<<<<< HEAD
 // Accept either the top-level db handle or a Drizzle transaction handle —
 // callers compose this helper inside an outer db.transaction(...) and the
 // tx parameter there is structurally narrower than typeof db.
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type DbExecutor = typeof db | DbTransaction;
-=======
-// Accepts either the top-level db handle or a transaction handle from db.transaction(...).
-// Both expose the same query builder surface used below (.update / .set / .where / .returning).
-type PayrollClaimerDb = Pick<typeof db, 'update'>;
->>>>>>> origin/claude/trinity-autonomous-sweep-FkZBB
 
 export interface PayrollTimeEntryClaimResult {
   requestedCount: number;
@@ -27,11 +21,7 @@ export interface ClaimPayrollTimeEntriesParams {
   payrollRunId: string;
   requireAll?: boolean;
   claimedAt?: Date;
-<<<<<<< HEAD
   tx?: DbExecutor;
-=======
-  tx?: PayrollClaimerDb;
->>>>>>> origin/claude/trinity-autonomous-sweep-FkZBB
 }
 
 /**

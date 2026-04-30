@@ -1642,7 +1642,6 @@ export class PayrollAutomationEngine {
         throw new Error(`Payroll run ${payrollRunId} not found`);
       }
 
-<<<<<<< HEAD
       if (timeEntryIds && timeEntryIds.length > 0) {
         // Inspect current claim state so we can split entries into
         // already-claimed-by-this-run, claimed-by-another-run, and unclaimed.
@@ -1678,20 +1677,6 @@ export class PayrollAutomationEngine {
         } else {
           log.info(`[AI Payroll™] Approved run ${payrollRunId}: all ${alreadyClaimedHere} entries already claimed at run creation — no-op`);
         }
-=======
-      // Bulk-claim source time entries atomically via canonical claimer.
-      // The workspace scope is read off the run row we just locked — there is
-      // no workspaceId parameter on this method's signature.
-      if (timeEntryIds && timeEntryIds.length > 0) {
-        const claimed = await claimPayrollTimeEntries({
-          workspaceId: row.workspaceId,
-          timeEntryIds,
-          payrollRunId,
-          requireAll: true,
-          tx,
-        });
-        log.info(`[AI Payroll™] Claimed ${claimed.claimedCount}/${claimed.requestedCount} entries for run ${payrollRunId}`);
->>>>>>> origin/claude/fix-financial-locking-timeout-6AR5Y
       } else {
         log.info(`[AI Payroll™] Approved run ${payrollRunId} with no timeEntryIds passed — assuming creation-time claim path`);
       }

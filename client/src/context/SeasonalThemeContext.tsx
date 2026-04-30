@@ -201,7 +201,6 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     isLoading,
     error: error as Error | null,
     
-<<<<<<< HEAD
     seasonId: profile?.seasonId ?? 'default',
     isHoliday: profile?.isHoliday ?? false,
     holidayName: profile?.holidayName ?? null,
@@ -222,27 +221,6 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     
     mascotThoughts: profile?.mascotHints?.seasonalThoughts ?? ["Let's get to work!"],
     mascotEmotes: profile?.mascotHints?.seasonalEmotes ?? ['idle', 'curious'],
-=======
-    seasonId: profile?.seasonId ?? DEFAULT_PROFILE.seasonId,
-    isHoliday: profile?.isHoliday ?? DEFAULT_PROFILE.isHoliday,
-    holidayName: profile?.holidayName ?? DEFAULT_PROFILE.holidayName,
-
-    forceDarkMode: profile?.theme?.forceDarkMode ?? DEFAULT_PROFILE.theme.forceDarkMode,
-    effectsEnabled,
-
-    primaryEffect: profile?.effects?.primary ?? DEFAULT_PROFILE.effects.primary,
-    effectIntensity: profile?.effects?.intensity ?? DEFAULT_PROFILE.effects.intensity,
-
-    seasonalColors: {
-      primary: profile?.theme?.primaryColor ?? DEFAULT_PROFILE.theme.primaryColor,
-      secondary: profile?.theme?.secondaryColor ?? DEFAULT_PROFILE.theme.secondaryColor,
-      accent: profile?.theme?.accentColor ?? DEFAULT_PROFILE.theme.accentColor,
-      glow: profile?.theme?.glowColor ?? DEFAULT_PROFILE.theme.glowColor,
-    },
-
-    mascotThoughts: profile?.mascotHints?.seasonalThoughts ?? DEFAULT_PROFILE.mascotHints.seasonalThoughts,
-    mascotEmotes: profile?.mascotHints?.seasonalEmotes ?? DEFAULT_PROFILE.mascotHints.seasonalEmotes,
->>>>>>> origin/claude/fix-dashboard-crash-GIa2j
     
     refetch,
   };

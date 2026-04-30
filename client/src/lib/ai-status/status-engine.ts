@@ -186,12 +186,8 @@ export function getStatusState(
  */
 export function getBroadcastColor(entity: CoAIEntity, state: CoAIStatusState): ColorToken {
   const map = entity === "trinity" ? TRINITY_COLORS : HELPAI_COLORS;
-<<<<<<< HEAD
   // Defensive fallback: if state is somehow invalid at runtime, return idle colors
   return map[state] ?? map["idle"] ?? TRINITY_COLORS["idle"];
-=======
-  return map[state] ?? map.idle;
->>>>>>> origin/claude/fix-dashboard-crash-GIa2j
 }
 
 /**

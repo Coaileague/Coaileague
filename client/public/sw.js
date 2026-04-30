@@ -21,15 +21,9 @@
  * - Cache versioning with automatic stale data purge on SW update
  */
 
-<<<<<<< HEAD
 const CACHE_VERSION = 13;
 const CACHE_NAME = 'coaileague-v4.9';
 const STATIC_CACHE = 'coaileague-static-v4.9';
-=======
-const CACHE_VERSION = 12;
-const CACHE_NAME = 'coaileague-v4.8';
-const STATIC_CACHE = 'coaileague-static-v4.8';
->>>>>>> origin/claude/fix-dashboard-crash-GIa2j
 const API_CACHE = 'coaileague-api-v' + CACHE_VERSION;
 const offlineFallbackPage = '/offline.html';
 

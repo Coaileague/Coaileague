@@ -278,16 +278,10 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 0,
       retry: (failureCount, error) => {
-<<<<<<< HEAD
         // 429 is retryable — the getQueryFn already does one inline retry with
         // Retry-After delay. If it still fails, allow one more attempt here.
         if (error instanceof ApiError && error.status === 429) return failureCount < 1;
         // All other 4xx are permanent failures — don't retry.
-=======
-        // 401 is a definitive auth answer — never retry; retrying causes log spam
-        // and can trigger multiple redirect cycles during session expiry.
-        if (error instanceof ApiError && error.status === 401) return false;
->>>>>>> origin/claude/fix-dashboard-crash-GIa2j
         if (error instanceof ApiError && error.status < 500) return false;
         return failureCount < 2;
       },
