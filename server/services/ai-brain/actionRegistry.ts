@@ -43,6 +43,7 @@ import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
 import { logActionAudit } from './actionAuditLogger';
 import { requiresFinancialApproval, actorMeetsApprovalRequirement } from './financialApprovalThresholds';
 import { trinityDeliberationLoop } from './trinityDeliberationLoop';
+import { AtomicFinancialLockService, FinancialLockConflict } from '../atomicFinancialLockService';
 const log = createLogger('actionRegistry');
 
 // ============================================================================
@@ -1466,6 +1467,22 @@ class AIBrainActionRegistry {
           updates.totalHours = Math.round((new Date(updates.clockOut).getTime() - new Date(updates.clockIn).getTime()) / (1000 * 60 * 60) * 100) / 100;
         }
         if (Object.keys(updates).length === 0) return createResult(request.actionId, false, 'No valid fields to update', null, start);
+        // Refuse to mutate an entry that has crossed the financial point-of-no-return.
+        // Trinity must route corrections through credit memo / payroll adjustment instead.
+        try {
+          await AtomicFinancialLockService.assertCanModify(entryId);
+        } catch (err) {
+          if (err instanceof FinancialLockConflict) {
+            await logActionAudit({
+              actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole,
+              entityType: 'time_entry', entityId: entryId,
+              success: false, errorMessage: `Financial lock: ${err.reason}`, durationMs: Date.now() - start,
+            });
+            return createResult(request.actionId, false, err.message, { code: 'FINANCIAL_LOCK', reason: err.reason }, start);
+          }
+          throw err;
+        }
         const [updated] = await db.update(timeEntries)
           .set(updates)
           .where(and(eq(timeEntries.id, entryId), eq(timeEntries.workspaceId, request.workspaceId!)))

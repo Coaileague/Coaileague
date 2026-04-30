@@ -28,6 +28,7 @@ import crypto from 'crypto';
 import { createLogger } from '../../../lib/logger';
 import { invoicePayments } from '@shared/schema';
 import { logActionAudit } from '../actionAuditLogger';
+import { AtomicFinancialLockService } from '../../atomicFinancialLockService';
 const log = createLogger('invoiceSubagent');
 
 // ============================================================================
@@ -383,12 +384,21 @@ class InvoiceSubagentService {
             amount: item.amount.toFixed(2),
             timeEntryId: item.timeEntryId,
           });
-
-          // Atomic billedAt stamp — prevents double-billing if process restarts mid-loop
-          await tx.update(timeEntries)
-            .set({ invoiceId: inv.id, billedAt: new Date(), updatedAt: new Date() })
-            .where(eq(timeEntries.id, item.timeEntryId));
         }
+
+        // Atomic stage via the canonical gatekeeper. The previous inline
+        // `update().set({ billedAt })` did NOT check status='approved' or
+        // billedAt IS NULL, so a re-run of this subagent could re-bill an
+        // already-invoiced entry. stageForInvoice enforces both invariants
+        // and rolls back the entire transaction (invoice + line items) if
+        // any candidate has been claimed by a concurrent invoice.
+        await AtomicFinancialLockService.stageForInvoice({
+          workspaceId,
+          clientId,
+          invoiceId: inv.id,
+          timeEntryIds: lineItems.map((item) => item.timeEntryId),
+          tx,
+        });
 
         return { newInvoice: inv };
       });

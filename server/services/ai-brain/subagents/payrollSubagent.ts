@@ -18,7 +18,7 @@ import {
   employees,
   idempotencyKeys
 } from '@shared/schema';
-import { eq, and, gte, lte, sql, desc, inArray, isNull } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { multiplyFinancialValues, toFinancialString } from '../../financialCalculator';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { tokenManager, TOKEN_COSTS } from '../../billing/tokenManager';
@@ -34,6 +34,7 @@ import { workspaces } from '@shared/schema';
 
 import { createLogger } from '../../../lib/logger';
 import { withDistributedLock, LOCK_KEYS } from '../../distributedLock';
+import { AtomicFinancialLockService } from '../../atomicFinancialLockService';
 const log = createLogger('PayrollSubagent');
 
 // Phase 17C: workspace-scoped lock key derived from PAYROLL_AUTO_CLOSE base.
@@ -807,30 +808,13 @@ class PayrollSubagentService {
         // timeData is the full rows from fetchTimeEntries — all have .id.
         const sourceTimeEntryIds = [...new Set(timeData.map((t: any) => t.id as string))];
 
-        // ── Atomic transaction: claim entries → create run → link ────────────
-        // If any step fails the entire transaction rolls back.
-        // No payroll run header is left without its source entries claimed.
+        // ── Atomic transaction: create draft run → stage entries → submit ────
+        // Routed through the canonical AtomicFinancialLockService so the
+        // approve+unpayrolled invariants and atomic claim semantics live in
+        // exactly one place. The run is inserted as 'draft' (entries being
+        // attached) and then transitioned to 'pending' (submitted for
+        // approval) only after every source entry has been claimed.
         const payrollRun = await db.transaction(async (tx) => {
-          // 1. Atomically claim approved, unclaimed time entries
-          const claimed = await tx
-            .update(timeEntries)
-            .set({ payrolledAt: new Date(), updatedAt: new Date() })
-            .where(and(
-              eq(timeEntries.workspaceId, workspaceId),
-              inArray(timeEntries.id, sourceTimeEntryIds),
-              isNull(timeEntries.payrolledAt),
-            ))
-            .returning({ id: timeEntries.id });
-
-          if (claimed.length !== sourceTimeEntryIds.length) {
-            throw new Error(
-              `Payroll run aborted: ${sourceTimeEntryIds.length - claimed.length} of ` +
-              `${sourceTimeEntryIds.length} time entries were already payrolled or unavailable. ` +
-              `No payroll run was created.`
-            );
-          }
-
-          // 2. Create the payroll run header
           const [run] = await tx.insert(payrollRuns).values({
             workspaceId,
             periodStart: payPeriodStart,
@@ -838,21 +822,24 @@ class PayrollSubagentService {
             totalGrossPay: totalGross.toFixed(2),
             totalTaxes: totalDeductions.toFixed(2),
             totalNetPay: totalNet.toFixed(2),
-            status: 'pending',
+            status: 'draft',
           }).returning();
 
-          // 3. Back-link claimed entries to this payroll run
-          if (claimed.length > 0) {
-            await tx
-              .update(timeEntries)
-              .set({ payrollRunId: run.id, updatedAt: new Date() })
-              .where(and(
-                eq(timeEntries.workspaceId, workspaceId),
-                inArray(timeEntries.id, claimed.map((e) => e.id)),
-              ));
-          }
+          await AtomicFinancialLockService.stageForPayroll({
+            workspaceId,
+            payrollRunId: run.id,
+            timeEntryIds: sourceTimeEntryIds,
+            tx,
+          });
 
-          return run;
+          // Transition draft → pending now that every source entry is claimed.
+          const [submitted] = await tx
+            .update(payrollRuns)
+            .set({ status: 'pending', updatedAt: new Date() })
+            .where(eq(payrollRuns.id, run.id))
+            .returning();
+
+          return submitted;
         });
 
         this.tracer.endSpan(createSpan, 'completed', { payrollRunId: payrollRun.id });
