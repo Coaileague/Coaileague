@@ -255,12 +255,13 @@ router.post('/api/paystubs/batch', requireAuth, attachWorkspaceId, requireManage
     const end = new Date(endDate);
     const results: { employeeId: string; success: boolean; error?: string }[] = [];
 
-    const targetEmployees = employeeIds?.length > 0
+    const filterIds: string[] = Array.isArray(employeeIds) ? employeeIds : [];
+    const targetEmployees = filterIds.length > 0
       ? await db.query.employees.findMany({
           where: and(
             eq(employees.workspaceId, workspaceId),
           ),
-        }).then(emps => emps.filter(e => employeeIds.includes(e.id)))
+        }).then(emps => emps.filter(e => filterIds.includes(e.id)))
       : await db.query.employees.findMany({
           where: eq(employees.workspaceId, workspaceId),
         });

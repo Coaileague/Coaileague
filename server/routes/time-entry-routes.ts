@@ -1133,10 +1133,8 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
       actorEmployeeId: employee.id,
       actorName: `${employee.firstName} ${employee.lastName}`,
       actionType: 'clock_out',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      description: `Clocked out at ${clockOutTime.toLocaleTimeString()} - Total: ${totalHours} hours${geofenceWarning ? ' [OUTSIDE GEOFENCE]' : ''}`,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      payload: { latitude, longitude, accuracy, totalHours, outsideGeofence: !!geofenceWarning },
+      description: `Clocked out at ${clockOutTime.toLocaleTimeString()} - Total: ${netHours} hours${geofenceWarning ? ' [OUTSIDE GEOFENCE]' : ''}`,
+      payload: { latitude, longitude, accuracy, totalHours: netHours, outsideGeofence: !!geofenceWarning },
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
@@ -1144,12 +1142,18 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
     // Gamification: Award points for shift completion
     if (isFeatureEnabled('enableGamification')) {
       try {
-        emitGamificationEvent('shift_completed', {
-          workspaceId: workspaceId,
-          employeeId: employee.id,
-          shiftId: activeEntry.shiftId || undefined,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          hoursWorked: totalHours,
+        await platformEventBus.publish({
+          type: 'gamification_xp_awarded',
+          category: 'gamification',
+          workspaceId,
+          title: 'Shift Completed',
+          description: `Employee ${employee.id} completed a shift`,
+          metadata: {
+            event: 'shift_completed',
+            employeeId: employee.id,
+            shiftId: activeEntry.shiftId || undefined,
+            hoursWorked: netHours,
+          },
         });
       } catch (gamError) {
         log.error('Gamification shift_completed failed (non-blocking):', gamError);
@@ -1851,7 +1855,7 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
     if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
     if (clientId !== undefined) updateData.clientId = clientId;
 
-    if (totalHours !== undefined) {
+    if (totalHours != null) {
       updateData.totalHours = totalHours.toString();
     } else if (clockIn || clockOut) {
       const newClockIn = new Date(clockIn || entry.clockIn);
@@ -1862,10 +1866,11 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
       }
     }
 
-    if (updateData.totalHours && (hourlyRate || entry.hourlyRate)) {
+    const effectiveRate = hourlyRate ?? entry.hourlyRate;
+    if (updateData.totalHours && effectiveRate != null) {
       updateData.totalAmount = calculateInvoiceLineItem(
         toFinancialString(updateData.totalHours),
-        toFinancialString(hourlyRate || entry.hourlyRate)
+        toFinancialString(effectiveRate)
       );
     }
 

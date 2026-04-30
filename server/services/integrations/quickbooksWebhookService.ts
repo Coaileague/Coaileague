@@ -38,7 +38,7 @@ import {
   clients, 
   employees,
 } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { platformEventBus } from '../platformEventBus';
 import { auditLogger } from '../audit-logger';
@@ -225,12 +225,11 @@ class QuickBooksWebhookService {
         // Try to claim the event key — skip if already processed
         let claimed = false;
         try {
-          await db.execute(
-            `INSERT INTO quickbooks_processed_events (event_key, processed_at)
-             VALUES ($1, NOW())
-             ON CONFLICT (event_key) DO NOTHING`,
-            [eventKey]
-          ).catch(() => { /* table may not exist — fall back to in-memory */ });
+          await db.execute(sql`
+            INSERT INTO quickbooks_processed_events (event_key, processed_at)
+            VALUES (${eventKey}, NOW())
+            ON CONFLICT (event_key) DO NOTHING
+          `).catch(() => { /* table may not exist — fall back to in-memory */ });
           claimed = true;
         } catch {
           // Fallback to in-memory if DB table unavailable

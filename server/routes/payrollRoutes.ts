@@ -978,18 +978,18 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
       // LAYER 2: Credits from org balance — AI token usage at cost (no markup)
       try {
-        const { creditManager, CREDIT_COSTS } = await import('../services/billing/creditManager');
-
-        const sessionFee = CREDIT_COSTS['payroll_session_fee'] || 35;
-        await creditManager.deductCredits({
+        const { tokenManager, TOKEN_COSTS } = await import('../services/billing/tokenManager');
+        const sessionFee = (TOKEN_COSTS as Record<string, number>)['payroll_session_fee'] || 35;
+        await tokenManager.recordUsage({
           workspaceId,
           userId: userId || 'system',
           featureKey: 'payroll_session_fee',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          featureName: 'Payroll AI Processing',
           description: `Payroll run ${id.substring(0, 8)} — AI token usage (tax calc, compliance checks) — ${employeeCount} employees`,
-          relatedEntityType: 'payroll_run',
-          relatedEntityId: id,
+          metadata: {
+            featureName: 'Payroll AI Processing',
+            relatedEntityType: 'payroll_run',
+            relatedEntityId: id,
+          },
         });
 
         log.info(`[PayrollRoute] Credits: ${sessionFee}cr AI token usage (${employeeCount} employees)`);
@@ -1512,14 +1512,13 @@ router.get('/tax-filing/guide/:formType', async (req: AuthenticatedRequest, res)
 
     if (workspaceId) {
       try {
-        const { creditManager } = await import('../services/billing/creditManager');
-        await creditManager.deductCredits({
+        const { tokenManager } = await import('../services/billing/tokenManager');
+        await tokenManager.recordUsage({
           workspaceId,
           userId: req.user?.id || 'system',
           featureKey: 'tax_filing_assistance',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          featureName: 'Tax Filing Assistance Guide',
           description: `Tax filing guide for form ${req.params.formType}`,
+          metadata: { featureName: 'Tax Filing Assistance Guide' },
         });
       } catch (billingErr) {
         log.warn('[TaxFiling] Credit deduction failed for filing guide (non-blocking):', billingErr);
@@ -1866,14 +1865,13 @@ router.post('/tax-forms/941', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
-      await creditManager.deductCredits({
+      const { tokenManager } = await import('../services/billing/tokenManager');
+      await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
         featureKey: 'tax_prep_941',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        featureName: 'Form 941 Quarterly Tax Prep',
         description: `Form 941 Q${quarter} ${year} — payroll tax aggregation and PDF generation`,
+        metadata: { featureName: 'Form 941 Quarterly Tax Prep' },
       });
     } catch (billingErr) {
       log.warn('[TaxPrep] Credit deduction failed for 941 (non-blocking):', billingErr);
@@ -1977,18 +1975,19 @@ router.post('/tax-forms/generate', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
+      const { tokenManager } = await import('../services/billing/tokenManager');
       const creditKey = formType === 'w2' ? 'tax_prep_w2' : 'tax_prep_1099';
       const formLabel = formType === 'w2' ? 'W-2 Employee Tax Form' : '1099-NEC Contractor Tax Form';
-      await creditManager.deductCredits({
+      await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
         featureKey: creditKey,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        featureName: formLabel,
         description: `${formLabel} generation for ${taxYear}`,
-        relatedEntityType: 'tax_form',
-        relatedEntityId: `${formType}-${taxYear}-${req.params.employeeId}`,
+        metadata: {
+          featureName: formLabel,
+          relatedEntityType: 'tax_form',
+          relatedEntityId: `${formType}-${taxYear}-${req.params.employeeId}`,
+        },
       });
     } catch (billingErr) {
       log.warn(`[TaxPrep] Credit deduction failed for ${formType} (non-blocking):`, billingErr);
@@ -2068,14 +2067,13 @@ router.post('/tax-forms/940', async (req: AuthenticatedRequest, res) => {
     }
 
     try {
-      const { creditManager } = await import('../services/billing/creditManager');
-      await creditManager.deductCredits({
+      const { tokenManager } = await import('../services/billing/tokenManager');
+      await tokenManager.recordUsage({
         workspaceId,
         userId: req.user?.id || 'system',
         featureKey: 'tax_prep_940',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        featureName: 'Form 940 Annual FUTA Tax Prep',
         description: `Form 940 annual FUTA report for ${year}`,
+        metadata: { featureName: 'Form 940 Annual FUTA Tax Prep' },
       });
     } catch (billingErr) {
       log.warn('[TaxPrep] Credit deduction failed for 940 (non-blocking):', billingErr);
@@ -2209,17 +2207,18 @@ router.post('/runs/:id/execute-internal', async (req: AuthenticatedRequest, res)
 
       if (result.processedEntries > 0) {
         try {
-          const { creditManager } = await import('../services/billing/creditManager');
-          await creditManager.deductCredits({
+          const { tokenManager } = await import('../services/billing/tokenManager');
+          await tokenManager.recordUsage({
             workspaceId,
             userId: userId || 'system',
             featureKey: 'ai_payroll_processing',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
-            featureName: 'Internal Payroll Execution',
             description: `Internal payroll run ${id.substring(0, 8)} — ${result.processedEntries} employees processed`,
-            relatedEntityType: 'payroll_run',
-            relatedEntityId: id,
             quantity: result.processedEntries,
+            metadata: {
+              featureName: 'Internal Payroll Execution',
+              relatedEntityType: 'payroll_run',
+              relatedEntityId: id,
+            },
           });
           log.info(`[PayrollRoute] Internal payroll billed ${result.processedEntries} × 2 = ${result.processedEntries * 2} credits`);
         } catch (creditErr: unknown) {
@@ -3001,7 +3000,6 @@ router.get('/runs/:id/nacha', async (req: AuthenticatedRequest, res) => {
 
     // ACH COMPLIANCE: Decrypt routing/account numbers — fields are AES-256-GCM encrypted at rest.
     // safeDecrypt falls back to raw value for any legacy plaintext rows (migration safety).
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     function safeDecrypt(value: string | null | undefined): string | null {
       if (!value) return null;
       try { return decryptToken(value); } catch { return value; }

@@ -1914,7 +1914,8 @@ export class InvoiceService {
 
       // Status badge
       const status = (inv.status || 'draft').toUpperCase();
-      const statusColor = { PAID: '#059669', OVERDUE: '#dc2626', SENT: '#2563eb' }[status] || '#6b7280';
+      const statusColors: Record<string, string> = { PAID: '#059669', OVERDUE: '#dc2626', SENT: '#2563eb' };
+      const statusColor = statusColors[status] || '#6b7280';
       doc.moveDown(0.5)
         .fontSize(10).fillColor(statusColor)
         .text(`Status: ${status}`, { align: 'right' });

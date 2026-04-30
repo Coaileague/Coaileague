@@ -633,7 +633,7 @@ const router = Router();
       if (!activeEntry) return res.status(404).json({ message: "No active clock-in session" });
 
       await db.update(timeEntriesTable)
-        .set({ lastGpsPingAt: new Date(), lastGpsPingLat: latitude, lastGpsPingLng: longitude })
+        .set({ lastGpsPingAt: new Date(), lastGpsPingLat: String(latitude), lastGpsPingLng: String(longitude) })
         .where(eq(timeEntriesTable.id, activeEntry.id));
 
       if (activeEntry.shiftId) {

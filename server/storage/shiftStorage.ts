@@ -18,5 +18,9 @@ export const updateShift = (id: string, workspaceId: string, data: any) =>
 export const deleteShift = (id: string, workspaceId: string) =>
   storage.deleteShift(id, workspaceId);
 
-export const getShiftsByEmployee = (employeeId: string, workspaceId: string) =>
-  storage.getShiftsByEmployee(employeeId, workspaceId);
+export const getShiftsByEmployeeAndDateRange = (
+  workspaceId: string,
+  employeeId: string,
+  startDate: Date,
+  endDate: Date,
+) => storage.getShiftsByEmployeeAndDateRange(workspaceId, employeeId, startDate, endDate);

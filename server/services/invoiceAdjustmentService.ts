@@ -165,7 +165,7 @@ export async function creditInvoice(
     previousTotal: invoice.total,
     newTotal,
     adjustmentAmount: -amount,
-    invoice: updated[0],
+    invoice: updated,
   };
 }
 
@@ -273,7 +273,7 @@ export async function discountInvoice(
     previousTotal: invoice.total,
     newTotal,
     adjustmentAmount: -discountAmount,
-    invoice: updated[0],
+    invoice: updated,
   };
 }
 
@@ -429,7 +429,7 @@ export async function refundInvoice(
     previousTotal: invoice.total,
     newTotal,
     adjustmentAmount: -refundAmount,
-    invoice: updated[0],
+    invoice: updated,
     stripeRefundId,
   };
 }
@@ -527,7 +527,7 @@ export async function correctInvoiceLineItem(
     previousTotal: invoiceTotal,
     newTotal,
     adjustmentAmount: difference,
-    invoice: updated[0],
+    invoice: updated,
   };
 }
 

@@ -2,6 +2,10 @@ import { db } from 'server/db';
 import { timeEntries } from '@shared/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
+// Accepts either the top-level db handle or a transaction handle from db.transaction(...).
+// Both expose the same query builder surface used below (.update / .set / .where / .returning).
+type PayrollClaimerDb = Pick<typeof db, 'update'>;
+
 export interface PayrollTimeEntryClaimResult {
   requestedCount: number;
   claimedCount: number;
@@ -15,7 +19,7 @@ export interface ClaimPayrollTimeEntriesParams {
   payrollRunId: string;
   requireAll?: boolean;
   claimedAt?: Date;
-  tx?: typeof db;
+  tx?: PayrollClaimerDb;
 }
 
 /**

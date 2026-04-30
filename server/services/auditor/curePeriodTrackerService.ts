@@ -316,9 +316,10 @@ async function convertToAutoFail(timer: any): Promise<void> {
     try {
       const { sendCanSpamCompliantEmail } = await import('../emailCore');
       await sendCanSpamCompliantEmail({
-        to:      auditorEmail,
-        subject: `Cure Period Expired — Audit ${timer.audit_id} Auto-Converted to FAIL`,
-        html:    `<p>The cure period for audit <strong>${timer.audit_id}</strong> has expired without verified corrections being submitted. The audit has been automatically converted to <strong>FAIL</strong> status. A default fine of $${DEFAULT_EXPIRY_FINE.toFixed(2)} has been assessed per the audit terms.</p>`,
+        to:        auditorEmail,
+        subject:   `Cure Period Expired — Audit ${timer.audit_id} Auto-Converted to FAIL`,
+        html:      `<p>The cure period for audit <strong>${timer.audit_id}</strong> has expired without verified corrections being submitted. The audit has been automatically converted to <strong>FAIL</strong> status. A default fine of $${DEFAULT_EXPIRY_FINE.toFixed(2)} has been assessed per the audit terms.</p>`,
+        emailType: 'compliance_alert',
       });
     } catch (err: any) {
       log.warn('[CurePeriod] Auditor auto-FAIL email failed (non-fatal):', err?.message);

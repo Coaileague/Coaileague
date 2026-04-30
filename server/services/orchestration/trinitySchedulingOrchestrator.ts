@@ -270,7 +270,7 @@ class TrinitySchedulingOrchestratorService {
         const storedMutations = (execution as any).outputPayload.pendingMutations as SchedulingMutation[];
         return this.applyMutationsToDatabase(storedMutations, executionId);
       }
-      return { success: true, appliedCount: 0, errors: [] };
+      return { success: true, appliedCount: 0, inserted: 0, updated: 0, deleted: 0, skipped: 0, errors: [] };
     }
 
     return this.applyMutationsToDatabase(mutations, executionId);

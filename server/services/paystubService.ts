@@ -16,6 +16,7 @@ import {
   sumFinancialValues,
   subtractFinancialValues,
   multiplyFinancialValues,
+  addFinancialValues,
   toFinancialString,
   formatCurrency,
 } from "./financialCalculator";
@@ -53,6 +54,8 @@ interface PaystubResult {
   paystubId?: string;
   pdfBuffer?: Buffer;
   data?: PaystubData;
+  vaultId?: string;
+  documentNumber?: string;
   error?: string;
 }
 

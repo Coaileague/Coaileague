@@ -1609,7 +1609,7 @@ export class PayrollAutomationEngine {
       // Bulk-claim source time entries atomically via canonical claimer.
       if (timeEntryIds && timeEntryIds.length > 0) {
         const claimed = await claimPayrollTimeEntries({
-          workspaceId,
+          workspaceId: row.workspaceId,
           timeEntryIds,
           payrollRunId,
           requireAll: true,

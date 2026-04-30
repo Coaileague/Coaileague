@@ -28,94 +28,103 @@ import crypto from 'crypto';
 // Phase 49: Notification preference enforcement
 import { shouldDeliver } from './notificationPreferenceService';
 
-export type NotificationDeliveryType =
-  | 'shift_assignment'
-  | 'shift_cancellation'
-  | 'calloff_received'
-  | 'coverage_needed'
-  | 'payroll_approval_required'
-  | 'payroll_approved'
-  | 'payroll_paid'
-  | 'invoice_sent'
-  | 'invoice_overdue'
-  | 'invoice_paid'
-  | 'document_requires_signature'
-  | 'onboarding_invite'
-  | 'trinity_alert'
-  | 'system_alert'
-  | 'shift_reminder'
+// Single source of truth for all notification types.
+// The union type below is derived from this tuple, and it doubles as the
+// runtime allow-list used to validate manager-submitted payloads.
+export const NOTIFICATION_DELIVERY_TYPES = [
+  'shift_assignment',
+  'shift_cancellation',
+  'calloff_received',
+  'coverage_needed',
+  'payroll_approval_required',
+  'payroll_approved',
+  'payroll_paid',
+  'invoice_sent',
+  'invoice_overdue',
+  'invoice_paid',
+  'document_requires_signature',
+  'onboarding_invite',
+  'trinity_alert',
+  'system_alert',
+  'shift_reminder',
   // Phase 8: business notification types routed through NDS
-  | 'report_delivery'
-  | 'support_ticket_confirmation'
-  | 'invoice_notification'
-  | 'payment_reminder'
-  | 'client_welcome'
-  | 'lead_welcome'
-  | 'regulatory_notification'
-  | 'document_notification'
-  | 'compliance_alert'
-  | 'rms_notification'
-  | 'sps_document'
-  | 'sales_outreach'
-  | 'ai_proactive'
-  | 'billing_notification'
-  | 'client_portal_invite'
-  | 'dar_report'
-  | 'ticket_closed'
-  | 'coi_request'
-  | 'schedule_notification'
-  | 'payroll_notification'
-  | 'incident_alert'
-  | 'contractor_confirmation'
-  | 'onboarding_notification'
-  | 'alert_notification'
-  | 'contract_notification'
-  | 'certification_alert'
-  | 'staffing_status_update'
-  | 'inbound_opportunity_notification'
-  | 'shift_offer_notification'
-  | 'client_portal_invitation'
-  | 'staffing_onboarding_invitation'
-  | 'non_shift_email_routing'
-  | 'contract_acknowledgment'
-  | 'ai_usage_80pct'
-  | 'ai_usage_90pct'
-  | 'ai_usage_at_cap'
-  | 'free_trial_hard_cap_blocked'
-  | 'trial_expiring_soon'
-  | 'trial_expired'
-  | 'grace_period_ending'
-  | 'voice_soft_cap_reached'
-  | 'voice_soft_cap_sms_reached'
-  | 'token_overage_billing_applied'
-  | 'voice_overage_billing_applied'
-  | 'voice_platinum_activated'
-  | 'voice_platinum_cancelled'
-  | 'annual_renewal_reminder'
-  | 'seat_overage_detected'
-  | 'new_email_received'
-  | 'trinity_email_processed'
-  | 'email_seat_activated'
-  | 'email_seat_deactivated'
-  | 'email_fair_use_warning'
-  | 'client_portal_report'
-  | 'client_portal_dispute'
-  | 'trinity_welcome_email'
-  | 'proof_of_service_prompt'
-  | 'shift_trade_request'
-  | 'shift_trade_accepted'
-  | 'shift_trade_declined'
-  | 'shift_trade_approved'
-  | 'incident_submitted'
-  | 'incident_high_severity'
-  | 'dar_delivered'
-  | 'security_threat'
-  | 'compliance_document_approved'
-  | 'compliance_document_rejected'
-  | 'bolo_match'
-  | 'hris_disconnected'
-  | 'panic_alert'     // Duress/emergency — always critical, bypasses quiet hours
-  | 'duress_alert';   // Alias for panic_alert
+  'report_delivery',
+  'support_ticket_confirmation',
+  'invoice_notification',
+  'payment_reminder',
+  'client_welcome',
+  'lead_welcome',
+  'regulatory_notification',
+  'document_notification',
+  'compliance_alert',
+  'rms_notification',
+  'sps_document',
+  'sales_outreach',
+  'ai_proactive',
+  'billing_notification',
+  'client_portal_invite',
+  'dar_report',
+  'ticket_closed',
+  'coi_request',
+  'schedule_notification',
+  'payroll_notification',
+  'incident_alert',
+  'contractor_confirmation',
+  'onboarding_notification',
+  'alert_notification',
+  'contract_notification',
+  'certification_alert',
+  'staffing_status_update',
+  'inbound_opportunity_notification',
+  'shift_offer_notification',
+  'client_portal_invitation',
+  'staffing_onboarding_invitation',
+  'non_shift_email_routing',
+  'contract_acknowledgment',
+  'ai_usage_80pct',
+  'ai_usage_90pct',
+  'ai_usage_at_cap',
+  'free_trial_hard_cap_blocked',
+  'trial_expiring_soon',
+  'trial_expired',
+  'grace_period_ending',
+  'voice_soft_cap_reached',
+  'voice_soft_cap_sms_reached',
+  'token_overage_billing_applied',
+  'voice_overage_billing_applied',
+  'voice_platinum_activated',
+  'voice_platinum_cancelled',
+  'annual_renewal_reminder',
+  'seat_overage_detected',
+  'new_email_received',
+  'trinity_email_processed',
+  'email_seat_activated',
+  'email_seat_deactivated',
+  'email_fair_use_warning',
+  'client_portal_report',
+  'client_portal_dispute',
+  'trinity_welcome_email',
+  'proof_of_service_prompt',
+  'shift_trade_request',
+  'shift_trade_accepted',
+  'shift_trade_declined',
+  'shift_trade_approved',
+  'incident_submitted',
+  'incident_high_severity',
+  'dar_delivered',
+  'security_threat',
+  'compliance_document_approved',
+  'compliance_document_rejected',
+  'bolo_match',
+  'hris_disconnected',
+  'panic_alert',     // Duress/emergency — always critical, bypasses quiet hours
+  'duress_alert',    // Alias for panic_alert
+] as const;
+
+export type NotificationDeliveryType = typeof NOTIFICATION_DELIVERY_TYPES[number];
+
+export const isValidNotificationType = (t: string): t is NotificationDeliveryType =>
+  (NOTIFICATION_DELIVERY_TYPES as readonly string[]).includes(t);
 
 export type NotificationDeliveryChannel = 'email' | 'sms' | 'websocket' | 'in_app' | 'push';
 

@@ -490,12 +490,19 @@ router.post("/:id/submit", async (req: AuthenticatedRequest, res) => {
           .from(payrollTimesheets).where(eq(payrollTimesheets.id, id)).limit(1);
         throw Object.assign(new Error(`CONFLICT:${current?.status || 'unknown'}`), { code: 'CONFLICT' });
       }
-      await tx.insert(payrollTimesheetAudit).values({
-        timesheetId: id, workspaceId, userId,
+      // audit is best-effort — use the canonical audit_logs table
+      await tx.insert(auditLogs).values({
+        workspaceId,
+        userId,
+        userEmail: req.user?.email ?? "unknown",
+        userRole: req.user?.role ?? "user",
         action: "submit_timesheet",
-        description: `Submitted timesheet ${id} for approval`,
-        createdAt: new Date(),
-      }).catch(() => {}); // audit is best-effort
+        entityType: "payroll_timesheet",
+        entityId: id,
+        actionDescription: `Submitted timesheet ${id} for approval`,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") ?? undefined,
+      }).catch(() => {});
       return [ts];
     });
 
