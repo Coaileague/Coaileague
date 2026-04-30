@@ -77,7 +77,7 @@ function ActionLogCard({ log, onReview }: { log: AiBrainActionLog; onReview: (id
 
   // @ts-expect-error — TS migration: fix in refactoring sprint
   const resultConfig = getResultConfig(log.result);
-  const ResultIcon = resultConfig.icon;
+  const ResultIcon = resultConfig?.icon ?? CheckCircle2;
   const domainColor = getDomainColor(log.actorType);
 
   // @ts-expect-error — TS migration: fix in refactoring sprint

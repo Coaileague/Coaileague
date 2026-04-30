@@ -41,7 +41,8 @@ import {
   History,
   Send,
   Check,
-} from 'lucide-react';;
+  Info,
+} from 'lucide-react';
 import { format } from "date-fns";
 
 type AlertType = 'overtime' | 'low_coverage' | 'compliance_violation' | 'payment_overdue' | 'shift_unfilled' | 'clock_anomaly' | 'budget_exceeded' | 'approval_pending';
@@ -549,10 +550,10 @@ export default function AlertSettings() {
               {selectedConfig && (
                 <>
                   {(() => {
-                    const Icon = ALERT_TYPE_INFO[selectedConfig.alertType].icon;
+                    const Icon = ALERT_TYPE_INFO[selectedConfig.alertType]?.icon ?? Info;
                     return <Icon className="w-5 h-5" />;
                   })()}
-                  Configure {ALERT_TYPE_INFO[selectedConfig.alertType].label}
+                  Configure {ALERT_TYPE_INFO[selectedConfig.alertType]?.label ?? 'Alert'}
                 </>
               )}
             </UniversalModalTitle>

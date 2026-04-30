@@ -676,7 +676,7 @@ export default function EmployeeOnboardingWizard() {
         <Card data-testid={`step-${STEPS[step]?.id}`}>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2">
-              {step < STEPS.length - 1 && (() => { const Icon = STEPS[step].icon; return <Icon className="h-5 w-5 text-primary" />; })()}
+              {step < STEPS.length - 1 && (() => { const Icon = STEPS[step]?.icon; return <Icon className="h-5 w-5 text-primary" />; })()}
               {step === STEPS.length - 1 ? 'Application Submitted!' : STEPS[step]?.label}
             </CardTitle>
             {step === 0 && (
