@@ -25,6 +25,7 @@ import {
 } from "@shared/schema";
 import { eq, and, or, gt, sql, isNull, inArray } from "drizzle-orm";
 import { createLogger } from '../lib/logger';
+import { AtomicFinancialLockService, FinancialLockConflict } from './atomicFinancialLockService';
 const log = createLogger('deletionProtectionService');
 
 
@@ -545,7 +546,20 @@ class DeletionProtectionService {
 
       case 'timeEntry':
       case 'time_entry':
-        // Soft-delete by marking as voided — preserves audit trail
+        // Refuse to soft-delete a financially locked entry — voiding the
+        // status of an entry attached to a sent invoice or disbursed payroll
+        // run would orphan a real receivable/payable. The caller must issue
+        // a credit memo or payroll adjustment instead.
+        try {
+          await AtomicFinancialLockService.assertCanModify(entityId);
+        } catch (err) {
+          if (err instanceof FinancialLockConflict) {
+            log.warn(`[DeletionProtection] Refusing to soft-delete financially locked time_entry ${entityId}: ${err.message}`);
+            throw err;
+          }
+          throw err;
+        }
+        // Soft-delete by marking as voided — preserves audit trail.
         await db.update(timeEntries)
           .set({ status: 'voided' } as any)
           .where(eq(timeEntries.id, entityId));

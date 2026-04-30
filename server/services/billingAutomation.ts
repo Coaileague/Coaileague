@@ -38,6 +38,7 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, isNull, desc, sql, ne, inArray } from "drizzle-orm";
 import { aggregateBillableHours, markEntriesAsBilled, unmarkEntriesAsBilled } from "./automation/billableHoursAggregator";
+import { AtomicFinancialLockService } from "./atomicFinancialLockService";
 import { platformEventBus } from "./platformEventBus";
 import { publishEvent } from "./orchestration/pipelineErrorHandler";
 import { calculateStateTax, calculateBonusTaxation } from "./taxCalculator";
@@ -602,29 +603,7 @@ async function createInvoiceFromBillableSummary(
   // Previous approach (SELECT then INSERT) had a TOCTOU window where concurrent
   // calls all passed the SELECT check before any committed the UPDATE.
   const invoice = await db.transaction(async (tx) => {
-    // Step 1: Atomically claim the time entries by setting billedAt now.
-    // Concurrent transactions will block here until this TX commits/rolls back,
-    // then find billedAt already set and throw — preventing duplicate invoices.
-    let claimedIds: string[] = [];
-    if (timeEntryIds.length > 0) {
-      const claimed = await tx
-        .update(timeEntries)
-        .set({ billedAt: new Date(), updatedAt: new Date() })
-        .where(and(inArray(timeEntries.id, timeEntryIds), isNull(timeEntries.billedAt)))
-        .returning({ id: timeEntries.id });
-      claimedIds = claimed.map(r => r.id);
-
-      if (claimedIds.length === 0) {
-        throw new Error(`B1-CONCURRENT: All ${timeEntryIds.length} entries already claimed by concurrent run — aborting to prevent double-billing`);
-      }
-      if (claimedIds.length !== timeEntryIds.length) {
-        const missed = timeEntryIds.length - claimedIds.length;
-        throw new Error(`B1-CONCURRENT: ${missed}/${timeEntryIds.length} entries already claimed by concurrent run — aborting to prevent partial double-billing`);
-      }
-      log.info(`[BillingAutomation] B1-CLAIM: Atomically claimed ${claimedIds.length} entries before invoice insert`);
-    }
-
-    // Step 2: Create invoice in DRAFT status (requires manager approval before sending to client)
+    // Step 1: Create invoice in DRAFT status (requires manager approval before sending to client)
     const [inv] = await tx
       .insert(invoices)
       .values({
@@ -648,7 +627,7 @@ async function createInvoiceFromBillableSummary(
       })
       .returning();
 
-    // Create line items linking time entries to the invoice
+    // Step 2: Create line items linking time entries to the invoice.
     if (lineItems.length > 0) {
       await tx.insert(invoiceLineItems).values(
         lineItems.map((item, idx) => ({
@@ -672,14 +651,21 @@ async function createInvoiceFromBillableSummary(
       );
     }
 
-    // Step 3: Link invoice ID to the claimed entries.
-    // billedAt was already set atomically in Step 1; only invoiceId needs updating now.
-    if (claimedIds.length > 0) {
-      await tx
-        .update(timeEntries)
-        .set({ invoiceId: inv.id, updatedAt: new Date() })
-        .where(inArray(timeEntries.id, claimedIds));
-      log.info(`[BillingAutomation] B1-LINK: Linked ${claimedIds.length} entries to invoice ${inv.id}`);
+    // Step 3: Atomic stage via the canonical gatekeeper. Replaces the previous
+    // inline `update().set({ billedAt })` block, which was missing the
+    // status='approved' guard — that bug would let a billing run claim
+    // pending or rejected entries. stageForInvoice enforces approved + unbilled
+    // and rolls back the entire transaction (invoice + line items + ledger)
+    // if any candidate is unavailable.
+    if (timeEntryIds.length > 0) {
+      const { attached } = await AtomicFinancialLockService.stageForInvoice({
+        workspaceId,
+        clientId: clientSummary.clientId,
+        invoiceId: inv.id,
+        timeEntryIds,
+        tx,
+      });
+      log.info(`[BillingAutomation] Atomically staged ${attached} entries on invoice ${inv.id}`);
     }
 
     // Step 4 (FIX-3): Ledger write INSIDE the transaction.

@@ -46,6 +46,7 @@ import {
 } from 'drizzle-orm';
 import { generateWeeklyInvoices } from '../services/billingAutomation';
 import { PayrollAutomationEngine } from '../services/payrollAutomation';
+import { AtomicFinancialLockService } from '../services/atomicFinancialLockService';
 import { requireOwner } from '../rbac';
 import { requireWorkspaceId, requireUserId } from '../utils/apiResponse';
 import { calculateInvoiceLineItem, calculateRegularPay, toFinancialString } from '../services/financialCalculator';
@@ -84,12 +85,26 @@ router.post('/dev/repair-invoices', async (req: Request, res: Response) => {
   try {
     log.info(`[TrinityRevenue] Starting invoice repair for workspace ${workspaceId}`);
 
-    // Step 2: Delete line items for all draft invoices
+    // Step 1: Find all draft invoices for the workspace.
     const draftInvoiceIds = await db
       .select({ id: invoices.id })
       .from(invoices)
       .where(and(eq(invoices.workspaceId, workspaceId), eq(invoices.status, 'draft')));
 
+    // Step 2: Release time_entries from each draft invoice via the canonical
+    // gatekeeper BEFORE deleting anything. The previous version did a bulk
+    // `UPDATE time_entries SET billedAt=NULL WHERE billedAt IS NOT NULL`,
+    // which would orphan time_entries that were attached to sent/paid
+    // invoices — silently breaking real receivables. releaseFromInvoice
+    // refuses to release entries from non-draft invoices, so this can only
+    // affect draft inventory now.
+    let entriesReleased = 0;
+    for (const { id } of draftInvoiceIds) {
+      const { released } = await AtomicFinancialLockService.releaseFromInvoice(id);
+      entriesReleased += released;
+    }
+
+    // Step 3: Delete line items for the now-released draft invoices.
     let lineItemsDeleted = 0;
     if (draftInvoiceIds.length > 0) {
       const ids = draftInvoiceIds.map(i => i.id);
@@ -100,25 +115,13 @@ router.post('/dev/repair-invoices', async (req: Request, res: Response) => {
       lineItemsDeleted = deleted.length;
     }
 
-    // Step 3: Delete the draft invoices themselves
+    // Step 4: Delete the draft invoice rows themselves.
     const deletedInvoices = await db
       .delete(invoices)
       .where(and(eq(invoices.workspaceId, workspaceId), eq(invoices.status, 'draft')))
       .returning({ id: invoices.id });
 
-    // Step 4: Reset billedAt + invoiceId on all time entries
-    const resetEntries = await db
-      .update(timeEntries)
-      .set({ billedAt: null, invoiceId: null, updatedAt: new Date() })
-      .where(
-        and(
-          eq(timeEntries.workspaceId, workspaceId),
-          isNotNull(timeEntries.billedAt),
-        )
-      )
-      .returning({ id: timeEntries.id });
-
-    log.info(`[TrinityRevenue] Cleaned: ${deletedInvoices.length} invoices, ${lineItemsDeleted} line items, ${resetEntries.length} entries reset`);
+    log.info(`[TrinityRevenue] Cleaned: ${deletedInvoices.length} invoices, ${lineItemsDeleted} line items, ${entriesReleased} entries released`);
 
     // Step 5: Re-run billing with the atomic-claim fix
     const now = new Date();
@@ -133,7 +136,7 @@ router.post('/dev/repair-invoices', async (req: Request, res: Response) => {
       repair: {
         invoicesDeleted: deletedInvoices.length,
         lineItemsDeleted,
-        entriesReset: resetEntries.length,
+        entriesReleased,
       },
       billing: {
         invoicesGenerated: newInvoices.invoicesGenerated,
