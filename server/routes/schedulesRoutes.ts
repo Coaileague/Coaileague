@@ -555,8 +555,6 @@ router.get('/export/csv', requireManager, async (req: AuthenticatedRequest, res)
   }
 });
 
-export default router;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/schedules/auto-fill/preflight
 // Pre-Flight Dry Run — runs the constraint engine WITHOUT writing to the DB.
@@ -652,3 +650,5 @@ router.post('/auto-fill/preflight', requireManager, async (req: AuthenticatedReq
     res.status(500).json({ error: 'Failed to run preflight check' });
   }
 });
+
+export default router;

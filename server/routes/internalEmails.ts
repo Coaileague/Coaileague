@@ -1665,8 +1665,6 @@ router.post("/mailbox/ensure-folders", requireAuth, async (req: Request, res: Re
   }
 });
 
-export default router;
-
 /**
  * POST /api/internal-email/react
  * Trinity or user sends a reaction emoji (✅ 👀) to an email thread.
@@ -1704,3 +1702,5 @@ router.post("/react", requireAuth, async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Failed to add reaction" });
   }
 });
+
+export default router;

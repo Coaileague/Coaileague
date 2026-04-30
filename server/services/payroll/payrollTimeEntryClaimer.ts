@@ -1,6 +1,6 @@
 import { db } from 'server/db';
 import { timeEntries } from '@shared/schema';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 // Accept either the top-level db handle or a Drizzle transaction handle —
 // callers compose this helper inside an outer db.transaction(...) and the

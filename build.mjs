@@ -69,8 +69,9 @@ async function build() {
           `const __dirname = __path.dirname(__filename);`,
         ].join('\n'),
       },
+      packages: 'external',    // All node_modules resolved at runtime (Railway deploys with node_modules)
       external: [
-        // --- Node built-ins & native addons ---
+        // --- Node built-ins & native addons (still need explicit list for safety) ---
         'better-sqlite3',
         'pg-native',
         'sqlite3',

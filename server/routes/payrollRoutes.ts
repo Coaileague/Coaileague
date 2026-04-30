@@ -3407,8 +3407,6 @@ router.delete('/employees/:employeeId/bank-accounts/:accountId', async (req: Aut
   }
 });
 
-export default router;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/payroll/period/close
 // Month-End Close — locks ALL time entries and the payroll run for a period.
@@ -3544,3 +3542,5 @@ router.get('/period/status', requireAuth, async (req: AuthenticatedRequest, res)
     res.status(500).json({ error: 'Failed to check period status' });
   }
 });
+
+export default router;
