@@ -104,7 +104,7 @@ router.get('/insights', async (req: any, res) => {
     }
   });
 
-router.post('/auto-fill', async (req: any, res) => {
+router.post('/auto-fill', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.id;
       // Use middleware-resolved workspaceId first, fall back to DB lookup
