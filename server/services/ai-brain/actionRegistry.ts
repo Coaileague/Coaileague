@@ -31,6 +31,7 @@ import {
   clients,
   notifications,
   workspaces,
+  employees,
 } from '@shared/schema';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { broadcastShiftUpdate, broadcastToWorkspace } from '../../websocket';
@@ -729,7 +730,7 @@ class AIBrainActionRegistry {
       actionId: 'scheduling.update_shift',
       name: 'Update Shift',
       category: 'scheduling',
-      description: 'Update an existing shift — change time, assigned employee, or status. Requires shift ID.',
+      description: 'Update a shift — enforces state machine transitions and payroll integrity lock.',
       requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
@@ -738,6 +739,37 @@ class AIBrainActionRegistry {
 
         if (!shiftId) return createResult(request.actionId, false, 'shiftId required', null, start);
         if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+        // STATE LOCK: Load current shift before making any changes
+        const [current] = await db.select({ status: shifts.status, startTime: shifts.startTime, endTime: shifts.endTime })
+          .from(shifts).where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
+        if (!current) return createResult(request.actionId, false, 'Shift not found', null, start);
+
+        const TERMINAL_STATES = ['in_progress', 'started', 'completed', 'no_show', 'calloff'];
+        if (TERMINAL_STATES.includes(current.status || '')) {
+          return createResult(request.actionId, false,
+            `STATE_LOCK: Shift is in '\${current.status}' state. Payroll record is locked — no edits allowed. Use the /end or /complete endpoint to finalize.`, null, start);
+        }
+
+        // ALLOWED_TRANSITIONS: If requesting a status change, validate it
+        if (status && status !== current.status) {
+          const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+            draft:        ['open', 'published', 'cancelled'],
+            open:         ['assigned', 'published', 'cancelled', 'draft'],
+            assigned:     ['open', 'published', 'cancelled'],
+            published:    ['open', 'assigned', 'cancelled'],
+            scheduled:    ['open', 'published', 'cancelled'],
+            confirmed:    ['published', 'open', 'cancelled'],
+            pending:      ['open', 'published', 'cancelled'],
+            approved:     ['published', 'open', 'cancelled'],
+            auto_approved:['published', 'open', 'cancelled'],
+          };
+          const allowed = ALLOWED_TRANSITIONS[current.status || ''] ?? [];
+          if (!allowed.includes(status)) {
+            return createResult(request.actionId, false,
+              `ILLEGAL_TRANSITION: Cannot move from '\${current.status}' to '\${status}'. Allowed: \${allowed.join(', ') || 'none (terminal state)'}.`, null, start);
+          }
+        }
 
         const updateSet: Record<string, any> = { updatedAt: new Date() };
         if (startTime) updateSet.startTime = new Date(startTime);
@@ -755,6 +787,16 @@ class AIBrainActionRegistry {
           .returning();
 
         if (!updated) return createResult(request.actionId, false, 'Shift not found or access denied', null, start);
+
+        // Audit every shift edit for SOC2 compliance
+        await logActionAudit({
+          actionId: request.actionId, workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'shift', entityId: shiftId,
+          success: true, message: `Shift updated: \${Object.keys(updateSet).filter(k => k !== 'updatedAt').join(', ')}`,
+          changesBefore: { status: current.status, startTime: current.startTime, endTime: current.endTime } as any,
+          changesAfter: updated as any, durationMs: Date.now() - start,
+        });
 
         broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
         return createResult(request.actionId, true, 'Shift updated', updated, start);
@@ -830,7 +872,7 @@ class AIBrainActionRegistry {
       actionId: 'scheduling.publish_shift',
       name: 'Publish Shift',
       category: 'scheduling',
-      description: 'Publish a draft shift, making it visible to employees.',
+      description: 'Publish a draft shift, making it visible to employees. Fires notification dispatch + audit trail.',
       requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
@@ -840,19 +882,56 @@ class AIBrainActionRegistry {
         if (!shiftId) return createResult(request.actionId, false, 'shiftId required', null, start);
         if (!workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
 
+        // STATE LOCK: Do not re-publish shifts already in terminal states
+        const [current] = await db.select({ status: shifts.status, title: shifts.title, startTime: shifts.startTime })
+          .from(shifts).where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
+        if (!current) return createResult(request.actionId, false, 'Shift not found', null, start);
+        const TERMINAL = ['in_progress', 'started', 'completed', 'no_show', 'calloff'];
+        if (TERMINAL.includes(current.status || '')) {
+          return createResult(request.actionId, false,
+            `STATE_LOCK: Cannot publish a shift in '${current.status}' state — payroll record is locked.`, null, start);
+        }
+
         const [updated] = await db.update(shifts)
-          .set({ status: 'scheduled', updatedAt: new Date() })
+          .set({ status: 'published', updatedAt: new Date() })
           .where(and(
             eq(shifts.id, shiftId),
             eq(shifts.workspaceId, workspaceId),
-            eq(shifts.status, 'draft'),
+            // Only allow draft/open → published
+            sql`\${shifts.status} IN ('draft','open','pending')`,
           ))
           .returning();
 
-        if (!updated) return createResult(request.actionId, false, 'Draft shift not found (already published?)', null, start);
+        if (!updated) return createResult(request.actionId, false, 'Shift could not be published (check status)', null, start);
 
+        // PAYLOAD CHAIN 1: Real-time WebSocket broadcast
         broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
-        return createResult(request.actionId, true, 'Shift published', updated, start);
+
+        // PAYLOAD CHAIN 2: Notification dispatch to eligible officers
+        try {
+          await universalNotificationEngine.sendNotification({
+            workspaceId,
+            type: 'shift_published',
+            title: 'New Shift Available',
+            message: `A shift on \${updated.startTime ? new Date(updated.startTime).toLocaleDateString() : 'upcoming date'} is now open for pickup.`,
+            channel: 'broadcast',
+            metadata: { shiftId, shiftTitle: current.title, triggeredBy: 'trinity_publish' },
+          } as any);
+        } catch (notifErr: any) {
+          log.warn('[ActionRegistry] Publish notification failed (non-fatal):', notifErr?.message);
+        }
+
+        // PAYLOAD CHAIN 3: Audit trail
+        await logActionAudit({
+          actionId: request.actionId, workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'shift', entityId: shiftId,
+          success: true,
+          message: `Trinity published shift \${shiftId} (\${current.title || 'untitled'}) — notifications dispatched`,
+          changesAfter: updated as any, durationMs: Date.now() - start,
+        });
+
+        return createResult(request.actionId, true, `Shift published. Officers notified.`, updated, start);
       },
     };
 
@@ -885,16 +964,45 @@ class AIBrainActionRegistry {
         }
 
         const published = await db.update(shifts)
-          .set({ status: 'scheduled', updatedAt: new Date() })
+          .set({ status: 'published', updatedAt: new Date() })   // 'published' not 'scheduled'
           .where(and(...conditions))
-          .returning({ id: shifts.id });
+          .returning({ id: shifts.id, title: shifts.title, startTime: shifts.startTime });
 
+        // PAYLOAD CHAIN 1: Real-time WebSocket broadcast to all clients
         broadcastToWorkspace(workspaceId, {
           type: 'schedule_published',
           count: published.length,
           shiftIds: published.map(s => s.id),
         });
-        return createResult(request.actionId, true, `Published ${published.length} shift(s)`, { count: published.length, shiftIds: published.map(s => s.id) }, start);
+
+        // PAYLOAD CHAIN 2: Notification dispatch — officers see the new shifts
+        if (published.length > 0) {
+          try {
+            await universalNotificationEngine.sendNotification({
+              workspaceId,
+              type: 'schedule_published',
+              title: `\${published.length} Shift\${published.length > 1 ? 's' : ''} Published`,
+              message: `\${published.length} new shift\${published.length > 1 ? 's are' : ' is'} now available. Check your schedule.`,
+              channel: 'broadcast',
+              metadata: { count: published.length, triggeredBy: 'trinity_bulk_publish', shiftIds: published.map(s => s.id) },
+            } as any);
+          } catch (notifErr: any) {
+            log.warn('[ActionRegistry] Bulk publish notification failed (non-fatal):', notifErr?.message);
+          }
+        }
+
+        // PAYLOAD CHAIN 3: Audit trail
+        await logActionAudit({
+          actionId: request.actionId, workspaceId, userId: request.userId,
+          userRole: request.userRole, platformRole: request.platformRole,
+          entityType: 'shift', entityId: 'bulk',
+          success: true,
+          message: `Trinity bulk-published \${published.length} shift(s) — notification dispatched to workspace`,
+          changesAfter: { count: published.length, shiftIds: published.map(s => s.id) } as any,
+          durationMs: Date.now() - start,
+        });
+
+        return createResult(request.actionId, true, `Published \${published.length} shift(s). Officers notified.`, { count: published.length, shiftIds: published.map(s => s.id) }, start);
       },
     };
 
@@ -1814,7 +1922,7 @@ class AIBrainActionRegistry {
       actionId: 'scheduling.fill_open_shift',
       name: 'Fill Open Shift',
       category: 'scheduling',
-      description: 'Assign an employee to an unassigned shift',
+      description: 'Assign an employee to an unassigned shift. Enforces guard card compliance, overlap detection, and state machine rules.',
       requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
@@ -1822,13 +1930,60 @@ class AIBrainActionRegistry {
         if (!shiftId || !employeeId) return createResult(request.actionId, false, 'shiftId and employeeId required', null, start);
         if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
 
+        const workspaceId = request.workspaceId!;
+
+        // COMPLIANCE GATE: Guard card must not be expired (Texas OC 1702)
+        const [emp] = await db.select({
+          id: employees.id, firstName: employees.firstName, lastName: employees.lastName,
+          guardCardStatus: employees.guardCardStatus, guardCardExpiryDate: employees.guardCardExpiryDate,
+        }).from(employees).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId))).limit(1);
+
+        if (emp) {
+          const cardExpiry = emp.guardCardExpiryDate ? new Date(emp.guardCardExpiryDate as string) : null;
+          const cardStatus = emp.guardCardStatus as string | null;
+          const isExpired = cardStatus === 'expired' || cardStatus === 'suspended' || (cardExpiry && cardExpiry < new Date());
+          if (isExpired) {
+            const detail = cardExpiry ? `expired \${cardExpiry.toLocaleDateString()}` : 'status: ' + cardStatus;
+            await logActionAudit({ actionId: request.actionId, workspaceId, userId: request.userId,
+              userRole: request.userRole, platformRole: request.platformRole, entityType: 'shift', entityId: shiftId,
+              success: false, errorMessage: `COMPLIANCE_VIOLATION: Guard card \${detail}`,
+              payload: { shiftId, employeeId, reason: 'guard_card_expired' } as any, durationMs: Date.now() - start });
+            return createResult(request.actionId, false,
+              `COMPLIANCE_VIOLATION: \${emp.firstName} \${emp.lastName}'s guard card \${detail}. Cannot assign. Renew card first (Texas OC 1702).`, null, start);
+          }
+        }
+
+        // CONFLICT GATE: Check for overlapping shifts
+        const [targetShift] = await db.select({ startTime: shifts.startTime, endTime: shifts.endTime, status: shifts.status })
+          .from(shifts).where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
+        if (targetShift) {
+          const LOCK_STATES = ['in_progress', 'started', 'completed', 'no_show', 'calloff'];
+          if (LOCK_STATES.includes(targetShift.status || '')) {
+            return createResult(request.actionId, false,
+              `STATE_LOCK: Shift is in '\${targetShift.status}' state — payroll record is locked. Cannot reassign.`, null, start);
+          }
+          // Check employee doesn't have an overlapping shift
+          const overlapping = await db.select({ id: shifts.id }).from(shifts).where(and(
+            eq(shifts.workspaceId, workspaceId),
+            eq(shifts.employeeId, employeeId),
+            sql`\${shifts.start_time} < \${targetShift.endTime}`,
+            sql`\${shifts.end_time} > \${targetShift.startTime}`,
+            sql`\${shifts.id} != \${shiftId}`,
+            sql`\${shifts.status} NOT IN ('cancelled','calloff','no_show')`,
+          )).limit(1);
+          if (overlapping.length > 0) {
+            return createResult(request.actionId, false,
+              `SCHEDULE_CONFLICT: Officer already has an overlapping shift during this time window. Double-booking blocked.`, null, start);
+          }
+        }
+
         const [updated] = await db.update(shifts)
           .set({ 
             employeeId, 
-            status: 'scheduled',
+            status: 'published',   // published = assigned and visible
             updatedAt: new Date() 
           })
-          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, request.workspaceId!)))
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
           .returning();
 
         if (!updated) {
