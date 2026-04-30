@@ -146,7 +146,6 @@ import {
  ContextMenuSeparator,
  ContextMenuLabel,
 } from "@/components/ui/context-menu";
-import { SeasonalBackground } from "@/components/seasonal-background";
 import type { ChatMessage } from "@shared/schema";
 import { HelpDeskProgressHeader } from "@/components/helpdesk-progress-header";
 import { AgentToolbelt } from "@/components/agent-toolbelt";
@@ -471,12 +470,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  // Mobile room selection - show room browser first before chat
  const [mobileSelectedRoom, setMobileSelectedRoom] = useState<{ id: string; name: string } | null>(null);
  const [showMobileRoomBrowser, setShowMobileRoomBrowser] = useState(true);
- 
- // Seasonal animations toggle (staff only)
- const [seasonalAnimationsEnabled, setSeasonalAnimationsEnabled] = useState(() =>{
- const stored = localStorage.getItem('seasonal-animations-enabled');
- return stored !== null ? stored === 'true' : true; // Default enabled
- });
  
  // Determine the conversation ID to join (prop >route param >mobile selection > URL param >escalation >default)
  // Memoize to ensure stable reference for WebSocket hook (Guru Mode: Prevent Feedback Loop)
@@ -2010,7 +2003,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  return (
  <div className={`flex flex-col ${containerHeight} bg-background relative`} role="main" aria-label="Help Desk Chat">
  {/* Seasonal Animated Background */}
- <SeasonalBackground enabled={seasonalAnimationsEnabled} />
  
  {/* CoAIleague Chat Header - Trinity branded */}
  <header className="relative z-50 bg-primary border-b border-primary-foreground/20 flex-shrink-0">

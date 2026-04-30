@@ -40,7 +40,6 @@ export interface CanvasPageConfig {
   enablePullToRefresh?: boolean
   withBottomNav?: boolean
   showSeasonalBanner?: boolean
-  showSeasonalEffects?: boolean
   heroGradient?: boolean
   requiresAuth?: boolean
   headerActions?: React.ReactNode
@@ -58,9 +57,7 @@ const DEFAULT_CONFIG: Partial<CanvasPageConfig> = {
   showHeader: true,
   enablePullToRefresh: true,
   withBottomNav: true,
-  showSeasonalBanner: true,
-  showSeasonalEffects: true,
-  heroGradient: false,
+  showSeasonalBanner: true,  heroGradient: false,
   requiresAuth: true,
 }
 
@@ -107,9 +104,7 @@ const CATEGORY_DEFAULTS: Record<PageCategory, Partial<CanvasPageConfig>> = {
     requiresAuth: false,
     showHeader: false,
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
-  },
+    showSeasonalBanner: false,  },
   legal: {
     variant: 'standard',
     requiresAuth: false,
@@ -258,7 +253,6 @@ export function CanvasHubPage({ config, children, className }: CanvasHubPageProp
           enablePullToRefresh={resolvedConfig.enablePullToRefresh}
           withBottomNav={resolvedConfig.withBottomNav}
           showSeasonalBanner={resolvedConfig.showSeasonalBanner}
-          showSeasonalEffects={resolvedConfig.showSeasonalEffects}
           className={className}
         >
           {resolvedConfig.showHeader && (

@@ -266,8 +266,6 @@ export default function PayInvoice() {
     subtitle: 'Loading invoice details and secure payment configuration',
     category: 'public',
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   const errorConfig: CanvasPageConfig = {
@@ -276,8 +274,6 @@ export default function PayInvoice() {
     subtitle: 'Configuration Error',
     category: 'public',
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   const notFoundConfig: CanvasPageConfig = {
@@ -286,8 +282,6 @@ export default function PayInvoice() {
     subtitle: 'Invoice Not Found',
     category: 'public',
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   if (isLoadingStripeConfig || isLoadingInvoice) {
@@ -350,8 +344,6 @@ export default function PayInvoice() {
     subtitle: 'Invoice Payment Portal',
     category: 'public',
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   return (

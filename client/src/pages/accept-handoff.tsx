@@ -97,8 +97,6 @@ export default function AcceptHandoff() {
     subtitle: "Validating your invitation...",
     category: "auth",
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   const errorConfig: CanvasPageConfig = {
@@ -107,8 +105,6 @@ export default function AcceptHandoff() {
     subtitle: "Invalid or Expired Link",
     category: "auth",
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   const successConfig: CanvasPageConfig = {
@@ -117,8 +113,6 @@ export default function AcceptHandoff() {
     subtitle: `You are now the owner of ${tokenData?.workspace?.name}`,
     category: "auth",
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   const mainConfig: CanvasPageConfig = {
@@ -127,8 +121,6 @@ export default function AcceptHandoff() {
     subtitle: "Our support team has set up a workspace for you",
     category: "auth",
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   if (tokenLoading || authLoading) {

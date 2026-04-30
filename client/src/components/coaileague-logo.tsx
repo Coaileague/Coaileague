@@ -9,7 +9,6 @@ interface CoAIleagueLogoProps {
   className?: string;
   onlyIcon?: boolean;
   variant?: "light" | "dark" | "auto";
-  enableSeasonalEffects?: boolean;
 }
 
 /**

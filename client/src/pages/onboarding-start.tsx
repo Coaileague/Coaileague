@@ -61,8 +61,6 @@ export default function OnboardingStart() {
     subtitle: 'Enter the invitation code provided by your employer',
     category: 'auth',
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   const choicePageConfig: CanvasPageConfig = {
@@ -71,8 +69,6 @@ export default function OnboardingStart() {
     subtitle: 'How would you like to get started?',
     category: 'auth',
     withBottomNav: false,
-    showSeasonalBanner: false,
-    showSeasonalEffects: false,
   };
 
   if (mode === "join") {
