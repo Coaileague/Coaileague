@@ -4808,6 +4808,24 @@ body[data-nav-overlay-open="true"] [role="main"] {
     font-size: 16px !important;
   }
 
+  /* Radix UI SelectTrigger renders as <button> not <select>.
+     iOS zooms when any focused element's computed font-size < 16px.
+     Force 16px on all trigger/combobox roles to prevent zoom-and-lock. */
+  [role="combobox"],
+  [data-radix-select-trigger],
+  [cmdk-input] {
+    font-size: 16px !important;
+  }
+
+  /* Prevent iOS zoom on text-xs inputs by scaling the container rather than
+     the font itself — keeps visual density while keeping font-size ≥ 16px.
+     Use [data-input-compact] to opt specific inputs into this pattern. */
+  [data-input-compact] {
+    font-size: 16px !important;
+    transform: scale(0.875);
+    transform-origin: left center;
+  }
+
   [data-radix-collection-item] {
     min-height: 44px;
   }

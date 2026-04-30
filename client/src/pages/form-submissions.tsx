@@ -642,9 +642,17 @@ function SigningTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-muted-foreground">Multi-party document signing with sequential email delivery.</p>
-        <Button onClick={() => setShowCreate(true)} data-testid="button-create-sequence">
-          <Plus className="w-4 h-4 mr-1" />New Signing Sequence
-        </Button>
+        <div className="relative">
+          <Button
+            disabled
+            title="E-signature signing sequences are coming in V1.1"
+            data-testid="button-create-sequence"
+            className="opacity-60 cursor-not-allowed"
+          >
+            <Plus className="w-4 h-4 mr-1" />New Signing Sequence
+            <span className="ml-2 text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-medium">V1.1</span>
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

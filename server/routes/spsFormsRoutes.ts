@@ -52,13 +52,24 @@ const upload = multer({
 });
 
 // ── Encryption helpers (AES-256-CBC) ─────────────────────────────────────────
-// SECURITY: FIELD_ENCRYPTION_KEY must be set in production via Railway env vars.
-// The placeholder below encrypts data but with a known key — anyone who reads this
-// source file can decrypt it. Set a random 32-char secret in Railway before go-live.
-const ENC_KEY = process.env.FIELD_ENCRYPTION_KEY || 'changeme-32-byte-key-placeholder!'; // 32 chars
-if (!process.env.FIELD_ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {
-  console.error('[SECURITY] ⚠️  FIELD_ENCRYPTION_KEY is not set — SPS form data is encrypted with a known fallback key. Set FIELD_ENCRYPTION_KEY in Railway environment variables immediately.');
+// SECURITY: FIELD_ENCRYPTION_KEY is required. Set it in Railway environment variables.
+// Railway UI: Settings → Variables → Add Variable → FIELD_ENCRYPTION_KEY = <32-char random secret>
+// Generate one: node -e "console.log(require('crypto').randomBytes(32).toString('hex').slice(0,32))"
+const _rawEncKey = process.env.FIELD_ENCRYPTION_KEY;
+if (
+  process.env.NODE_ENV === 'production' &&
+  (!_rawEncKey || _rawEncKey.includes('placeholder') || _rawEncKey.includes('changeme') || _rawEncKey.length < 16)
+) {
+  // Hard crash — do not run with a known or missing key. This is intentional.
+  throw new Error(
+    'FATAL: FIELD_ENCRYPTION_KEY is not set or is using an insecure placeholder. ' +
+    'Set a strong 32-character random secret in Railway environment variables before deploying. ' +
+    'Generate one: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\').slice(0,32))"'
+  );
 }
+// In development/test: use placeholder so local dev works without extra setup.
+// In production: only reaches here if a valid key is present (hard crash above otherwise).
+const ENC_KEY = _rawEncKey || 'dev-only-placeholder-key-32chars!!';
 function encrypt(plain: string): string {
   const key = Buffer.from(ENC_KEY.slice(0, 32).padEnd(32, '0'));
   const iv = randomBytes(16);
