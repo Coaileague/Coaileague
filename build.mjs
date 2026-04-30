@@ -60,13 +60,16 @@ async function build() {
       format: 'esm',
       outdir: 'dist',
       banner: {
+        // Provides require() for CJS modules bundled into ESM output.
+        // __filename and __dirname are intentionally omitted — esbuild
+        // injects its own var __filename / var __dirname shims when
+        // bundling source files that reference these CJS globals. Having
+        // a const __filename in this banner AND esbuild's var __filename
+        // in the body causes: SyntaxError: Identifier '__filename' has
+        // already been declared (const vs var at module scope in strict ESM).
         js: [
           `import { createRequire as __createRequire } from 'module';`,
-          `import { fileURLToPath as __fileURLToPath } from 'url';`,
-          `import __path from 'path';`,
           `const require = __createRequire(import.meta.url);`,
-          `const __filename = __fileURLToPath(import.meta.url);`,
-          `const __dirname = __path.dirname(__filename);`,
         ].join('\n'),
       },
       packages: 'external',    // All node_modules resolved at runtime (Railway deploys with node_modules)
