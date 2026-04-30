@@ -6,9 +6,9 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-// ES module equivalent of __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// ES module equivalent of _moduleDir — prefixed to avoid collision with esbuild shim
+const _moduleFilename = fileURLToPath(import.meta.url);
+const _moduleDir = dirname(_moduleFilename);
 
 // Direct imports for revenue-critical skills (not directory-based)
 import { payrollValidationSkill } from './payrollValidation';
@@ -46,7 +46,7 @@ export class SkillLoader {
   private readonly log = createLogger('SkillLoader');
 
   constructor(skillsDirectory?: string) {
-    this.skillsDirectory = skillsDirectory || path.join(__dirname, '.');
+    this.skillsDirectory = skillsDirectory || path.join(_moduleDir, '.');
   }
 
   /**
