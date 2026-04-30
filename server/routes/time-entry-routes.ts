@@ -45,6 +45,7 @@ import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { loneWorkerSafetyService } from '../services/automation/loneWorkerSafetyService';
 import { shiftHandoffService } from '../services/fieldOperations/shiftHandoffService';
 import { presenceMonitorService } from '../services/fieldOperations/presenceMonitorService';
+import { AtomicFinancialLockService, FinancialLockConflict } from '../services/atomicFinancialLockService';
 import { z } from 'zod';
 const log = createLogger('TimeEntryRoutes');
 
@@ -1141,20 +1142,10 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
       userAgent: req.get('user-agent')
     });
 
-    // Gamification: Award points for shift completion
-    if (isFeatureEnabled('enableGamification')) {
-      try {
-        emitGamificationEvent('shift_completed', {
-          workspaceId: workspaceId,
-          employeeId: employee.id,
-          shiftId: activeEntry.shiftId || undefined,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          hoursWorked: totalHours,
-        });
-      } catch (gamError) {
-        log.error('Gamification shift_completed failed (non-blocking):', gamError);
-      }
-    }
+    // Gamification hook removed — emitGamificationEvent was never implemented
+    // anywhere in the codebase, so this block would throw a ReferenceError
+    // every time the (default-on) enableGamification flag was evaluated.
+    // Re-add when the gamification subsystem ships.
 
     // AI Brain: Emit clock-out telemetry for anomaly detection (overtime alerts)
     try {
@@ -1851,7 +1842,7 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
     if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
     if (clientId !== undefined) updateData.clientId = clientId;
 
-    if (totalHours !== undefined) {
+    if (totalHours !== undefined && totalHours !== null) {
       updateData.totalHours = totalHours.toString();
     } else if (clockIn || clockOut) {
       const newClockIn = new Date(clockIn || entry.clockIn);
@@ -1862,10 +1853,11 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
       }
     }
 
-    if (updateData.totalHours && (hourlyRate || entry.hourlyRate)) {
+    const effectiveRate = hourlyRate ?? entry.hourlyRate;
+    if (updateData.totalHours && effectiveRate != null) {
       updateData.totalAmount = calculateInvoiceLineItem(
         toFinancialString(updateData.totalHours),
-        toFinancialString(hourlyRate || entry.hourlyRate)
+        toFinancialString(effectiveRate),
       );
     }
 
@@ -2078,6 +2070,23 @@ timeEntryRouter.post('/entries/:id/reject', requireWorkspaceRole(['department_ma
 
     if (!entry) {
       return res.status(404).json({ error: 'Time entry not found' });
+    }
+
+    // Refuse to reject an entry that has been billed or payrolled. Flipping
+    // its status to 'rejected' while invoiceId/payrollRunId remain set
+    // creates an inconsistent record — a rejected entry that's still funding
+    // a real receivable or payable. Use a credit memo / payroll adjustment.
+    try {
+      await AtomicFinancialLockService.assertCanModify(id);
+    } catch (err) {
+      if (err instanceof FinancialLockConflict) {
+        return res.status(409).json({
+          error: err.message,
+          code: 'FINANCIAL_LOCK',
+          reason: err.reason,
+        });
+      }
+      throw err;
     }
 
     // Get employee record

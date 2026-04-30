@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   AtomicFinancialLockService,
   FinancialLockConflict,
@@ -10,6 +10,7 @@ import {
   PAYROLL_RELEASABLE_STATUSES,
   __test__,
 } from '../../server/services/atomicFinancialLockService';
+import { invoiceStatusEnum, payrollStatusEnum } from '../../shared/schema/enums';
 
 describe('AtomicFinancialLockService', () => {
   describe('status taxonomies', () => {
@@ -132,6 +133,94 @@ describe('AtomicFinancialLockService', () => {
         timeEntryIds: [],
       });
       expect(result).toEqual({ attached: 0 });
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Schema-drift guards — every value the DB enums can hold must be classified
+  // as either LOCKED or RELEASABLE. If someone adds a status to the enum and
+  // forgets to extend the taxonomy, this catches it instead of letting an
+  // unclassified status slip through (would default-to-not-locked, allowing
+  // edits on a billed entry).
+  // ─────────────────────────────────────────────────────────────────────────
+  describe('schema-drift guards', () => {
+    it('every invoice_status enum value is classified by the service', () => {
+      const allInvoiceStatuses = invoiceStatusEnum.enumValues;
+      const classified = new Set<string>([
+        ...INVOICE_LOCKED_STATUSES,
+        ...INVOICE_RELEASABLE_STATUSES,
+      ]);
+      const unclassified = allInvoiceStatuses.filter((s) => !classified.has(s));
+      expect(unclassified).toEqual([]);
+    });
+
+    it('every payroll_status enum value is classified by the service', () => {
+      const allPayrollStatuses = payrollStatusEnum.enumValues;
+      const classified = new Set<string>([
+        ...PAYROLL_LOCKED_STATUSES,
+        ...PAYROLL_RELEASABLE_STATUSES,
+      ]);
+      const unclassified = allPayrollStatuses.filter((s) => !classified.has(s));
+      expect(unclassified).toEqual([]);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // assertCanModify behavioural tests — patch the executor used internally
+  // by isLocked so we never touch Postgres but still exercise the real
+  // taxonomy + branching logic.
+  // ─────────────────────────────────────────────────────────────────────────
+  describe('assertCanModify behavioural', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function fakeTx(row: { invoice_id: string | null; invoice_status: string | null; payroll_run_id: string | null; payroll_status: string | null; } | null) {
+      return {
+        execute: vi.fn().mockResolvedValue({ rows: row ? [row] : [] }),
+      } as unknown as Parameters<typeof AtomicFinancialLockService.assertCanModify>[1];
+    }
+
+    it('passes when entry has no invoice and no payroll attachment', async () => {
+      const tx = fakeTx({ invoice_id: null, invoice_status: null, payroll_run_id: null, payroll_status: null });
+      await expect(
+        AtomicFinancialLockService.assertCanModify('te-1', tx),
+      ).resolves.toBeUndefined();
+    });
+
+    it('passes when invoice is in a releasable status', async () => {
+      const tx = fakeTx({ invoice_id: 'inv-1', invoice_status: 'draft', payroll_run_id: null, payroll_status: null });
+      await expect(
+        AtomicFinancialLockService.assertCanModify('te-1', tx),
+      ).resolves.toBeUndefined();
+    });
+
+    it('throws FinancialLockConflict with reason=invoice when invoice is sent', async () => {
+      const tx = fakeTx({ invoice_id: 'inv-1', invoice_status: 'sent', payroll_run_id: null, payroll_status: null });
+      await expect(
+        AtomicFinancialLockService.assertCanModify('te-1', tx),
+      ).rejects.toMatchObject({ name: 'FinancialLockConflict', reason: 'invoice' });
+    });
+
+    it('throws FinancialLockConflict with reason=payroll when payroll run is disbursing', async () => {
+      const tx = fakeTx({ invoice_id: null, invoice_status: null, payroll_run_id: 'run-1', payroll_status: 'disbursing' });
+      await expect(
+        AtomicFinancialLockService.assertCanModify('te-1', tx),
+      ).rejects.toMatchObject({ name: 'FinancialLockConflict', reason: 'payroll' });
+    });
+
+    it('throws FinancialLockConflict with reason=both when invoice and payroll are both locked', async () => {
+      const tx = fakeTx({ invoice_id: 'inv-1', invoice_status: 'paid', payroll_run_id: 'run-1', payroll_status: 'paid' });
+      await expect(
+        AtomicFinancialLockService.assertCanModify('te-1', tx),
+      ).rejects.toMatchObject({ name: 'FinancialLockConflict', reason: 'both' });
+    });
+
+    it('passes when payroll run is processed (reversible until disbursement)', async () => {
+      const tx = fakeTx({ invoice_id: null, invoice_status: null, payroll_run_id: 'run-1', payroll_status: 'processed' });
+      await expect(
+        AtomicFinancialLockService.assertCanModify('te-1', tx),
+      ).resolves.toBeUndefined();
     });
   });
 });

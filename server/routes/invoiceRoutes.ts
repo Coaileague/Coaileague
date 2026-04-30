@@ -87,6 +87,7 @@ function releaseInvoiceGenLock(workspaceId: string) {
   invoiceGenLocks.delete(workspaceId);
 }
 import { unmarkEntriesAsBilled } from "../services/automation/billableHoursAggregator";
+import { AtomicFinancialLockService } from "../services/atomicFinancialLockService";
 import Stripe from "stripe";
 import { sendInvoiceGeneratedEmail } from "../services/emailCore";
 import { requireAuth } from "../auth";
@@ -432,21 +433,13 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           const dueDate = new Date(now);
           dueDate.setDate(dueDate.getDate() + paymentTermsDays);
 
-          // RACE CONDITION FIX: Create invoice + link time entries atomically using tx-bound queries
+          // Create invoice + atomic stage via the canonical gatekeeper.
+          // Replaces a manual SELECT-FOR-UPDATE + per-entry UPDATE loop that
+          // (a) filtered only on isNull(invoiceId), missing the
+          // status='approved' guard, and (b) issued N round-trips for what
+          // is one batch claim. stageForInvoice rolls back the invoice
+          // header if any candidate entry has been concurrently claimed.
           const invoice = await db.transaction(async (tx) => {
-            // Lock unbilled entries to prevent concurrent invoice generation claiming same entries
-            const lockedEntries = await tx.select({ id: timeEntriesTable.id })
-              .from(timeEntriesTable)
-              .where(and(
-                inArray(timeEntriesTable.id, unbilledEntries.map((e: any) => e.id)),
-                isNull(timeEntriesTable.invoiceId)
-              ))
-              .for('update');
-
-            if (lockedEntries.length === 0) {
-              return null; // All entries already claimed by concurrent request
-            }
-
             const [inv] = await tx
               .insert(invoices)
               .values({
@@ -464,11 +457,18 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
               } as any)
               .returning();
 
-            const billedNow = new Date();
-            for (const entry of lockedEntries) {
-              await tx.update(timeEntriesTable)
-                .set({ invoiceId: inv.id, billedAt: billedNow, updatedAt: billedNow })
-                .where(and(eq(timeEntriesTable.id, entry.id), isNull(timeEntriesTable.invoiceId)));
+            try {
+              await AtomicFinancialLockService.stageForInvoice({
+                workspaceId: workspace.id,
+                clientId: client.id,
+                invoiceId: inv.id,
+                timeEntryIds: unbilledEntries.map((e: any) => e.id),
+                tx,
+              });
+            } catch (stageErr) {
+              // Throw to roll back the invoice header — same semantics as the
+              // original "return null" path when a concurrent run claimed first.
+              throw stageErr;
             }
             return inv;
           });
