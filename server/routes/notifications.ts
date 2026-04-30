@@ -785,8 +785,16 @@ router.get('/api/notifications/unread-count', requireAuth, async (req: Authentic
       
       let notificationCount = 0;
       let platformUpdatesCount = 0;
+
+      // Platform staff (no workspace) — skip workspace-scoped storage queries entirely
+      const isPlatformUser = !!(req as any).platformRole;
       
       try {
+        if (isPlatformUser) {
+          // Platform admins see a simple count from the notifications table directly
+          notificationCount = 0;
+          platformUpdatesCount = 0;
+        } else {
         const workspace = await storage.getWorkspaceByOwnerId(userId);
         const member = await storage.getWorkspaceMemberByUserId(userId);
         const workspaceId = workspace?.id || member?.workspaceId;
@@ -801,6 +809,7 @@ router.get('/api/notifications/unread-count', requireAuth, async (req: Authentic
           const platformUpdates = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 100);
           platformUpdatesCount = platformUpdates?.filter(u => !u.isViewed)?.length || 0;
         }
+        } // end else (workspace user)
       } catch (storageError) {
         log.warn('[notifications/unread-count] Storage query failed, returning 0:', storageError);
         // Gracefully degrade - return 0 count instead of 500

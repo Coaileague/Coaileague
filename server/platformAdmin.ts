@@ -18,6 +18,18 @@ import {
 } from "@shared/schema";
 import { eq, sql, and, or, desc, gte, isNotNull, lte } from "drizzle-orm";
 
+/** Safely run a DB query — returns undefined on error instead of throwing */
+async function safeQuery<T>(fn: () => Promise<T>, label: string): Promise<T | undefined> {
+  try {
+    return await fn();
+  } catch (err: any) {
+    log.warn(`[PlatformStats] Query failed (${label}):`, err?.message?.split('\n')[0] ?? String(err));
+    return undefined;
+  }
+}
+
+
+
 const db = (storage as any).db;
 
 /**
@@ -131,8 +143,8 @@ export async function getPlatformStats(req: Request, res: Response) {
       });
     });
 
-    // Get recent support tickets
-    const recentTickets = await db
+    // Get recent support tickets (safe — table may not be fully migrated)
+    const recentTickets = await safeQuery(() => db
       .select({
         ticket: supportTickets,
         workspace: workspaces
@@ -140,7 +152,7 @@ export async function getPlatformStats(req: Request, res: Response) {
       .from(supportTickets)
       .leftJoin(workspaces, eq(supportTickets.workspaceId, workspaces.id))
       .orderBy(desc(supportTickets.createdAt))
-      .limit(5);
+      .limit(5), "recentTickets") ?? [];
 
     recentTickets.forEach(({ ticket, workspace }: any) => {
       recentActivity.push({
@@ -228,13 +240,14 @@ export async function getPlatformStats(req: Request, res: Response) {
       );
     
     // Calculate Customer Satisfaction from surveys (1-5 scale → percentage)
-    const [csatData] = await db
+    const _csatRaw = await safeQuery(() => db
       .select({
         avgRating: sql<string>`COALESCE(AVG(${satisfactionSurveys.rating}), 0)::numeric(10,2)`,
         totalSurveys: sql<number>`count(*)::int`
       })
       .from(satisfactionSurveys)
-      .where(gte(satisfactionSurveys.createdAt, firstDayOfMonth));
+      .where(gte(satisfactionSurveys.createdAt, firstDayOfMonth)), "csatData");
+    const [csatData] = _csatRaw ?? [undefined];
     
     const avgResponseTime = parseFloat(avgResponseData?.avgHours || "0");
     const slaCompliance = slaData?.total > 0 

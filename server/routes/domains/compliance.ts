@@ -37,8 +37,11 @@ import licenseDashboardRouter from "../license-dashboard";
 import insuranceRouter from "../insuranceRoutes";
 import complianceEvidenceRouter from "../complianceEvidenceRoutes";
 import { spsFormsRouter } from '../spsFormsRoutes';
+import { matrixRoutes } from '../compliance/matrix';
 
 export function mountComplianceRoutes(app: Express): void {
+  // Compliance matrix routes — includes /api/compliance/matrix/my-score
+  app.use('/api/compliance/matrix', requireAuth, ensureWorkspaceAccess, matrixRoutes);
   // Governance inline routes BEFORE security-compliance to ensure lock-vault is handled
   app.use("/api", requireAuth, ensureWorkspaceAccess, governanceInlineRouter);
   app.use("/api/compliance/evidence", requireAuth, ensureWorkspaceAccess, complianceEvidenceRouter);
