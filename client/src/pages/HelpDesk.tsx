@@ -1007,12 +1007,20 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  try { sessionStorage.setItem('helpai_session_id', session.sessionId); } catch {}
  }
  }).catch((err) => {
-   console.error('HelpAI session start failed:', err);
-   toast({
-     title: "AI Session Error",
-     description: "We couldn't initialize your AI assistant session, but your ticket has been created.",
-     variant: "destructive"
-   });
+   const isOffline = !navigator.onLine || (err instanceof TypeError && err.message === 'Failed to fetch');
+   if (isOffline) {
+     toast({
+       title: "HelpAI is offline",
+       description: "You're in a low-signal area. Your ticket was created. HelpAI will reconnect when signal returns.",
+     });
+   } else {
+     console.error('HelpAI session start failed:', err);
+     toast({
+       title: "AI Session Error",
+       description: "We couldn't initialize your AI assistant session, but your ticket has been created.",
+       variant: "destructive"
+     });
+   }
  });
  
  // Send intake data to agents via system message with guest's actual name

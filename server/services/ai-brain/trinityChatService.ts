@@ -151,6 +151,9 @@ export interface ChatRequest {
   sessionId?: string;
   images?: string[];
   isSupportMode?: boolean;
+  /** Support ticket that triggered this chat — links Trinity support-mode
+   *  actions to the originating ticket for a complete audit trail. */
+  supportTicketId?: string;
   // Access tier that drives how the thalamus/ACC process the signal.
   // Set by the chat route based on workspaceRole/platformRole —
   // owner/co_owner get full financial + scheduling, manager gets
@@ -611,6 +614,39 @@ class TrinityChatService {
     // Role names must match PlatformRole type in rbac.ts
     const SUPPORT_PLATFORM_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
     const isSupportMode = request.isSupportMode || (userPlatformRole !== null && SUPPORT_PLATFORM_ROLES.includes(userPlatformRole));
+
+    // SUPPORT MODE HARD AUDIT — every support agent Trinity session gets
+    // a universal_audit_trail entry so there are zero ghost actions.
+    // supportTicketId links the action to the originating ticket.
+    if (isSupportMode) {
+      try {
+        await pool.query(`
+          INSERT INTO universal_audit_trail
+            (workspace_id, actor_id, actor_type, actor_bot, actor_role,
+             action, entity_type, entity_id, change_type,
+             metadata, source_route, created_at)
+          VALUES ($1,$2,'platform_staff','Trinity',$3,
+                  'trinity.support_mode_session','workspace',$4,'action',
+                  $5,'trinity_chat',NOW())
+        `, [
+          workspaceId,
+          userId,
+          userPlatformRole || 'support_agent',
+          workspaceId,
+          JSON.stringify({
+            supportMode: true,
+            supportAgentId: userId,
+            supportTicketId: request.supportTicketId || null,
+            sessionId: session?.id || null,
+            messagePreview: request.message.substring(0, 120),
+            trustTier: request.trustTier || 'owner',
+          }),
+        ]);
+      } catch (auditErr: any) {
+        // Non-fatal — audit failure must never block the support agent
+        log.warn('[TrinityChat] Support mode audit write failed:', auditErr?.message);
+      }
+    }
 
     let privacyCheck: { allowed: boolean; reason?: string } = { allowed: true };
     try {
@@ -2602,6 +2638,30 @@ Do NOT skip steps — decompose fully before concluding.`;
     // Unified Trinity: one personality, context-injected from live workspace data.
     // No mode declaration — Trinity's biological brain decides how she shows up.
     basePrompt += '\n\n' + buildWorkspaceContextBlock(workspaceContext, userName);
+
+    // === BIOLOGICAL MEMORY: USER IDENTITY ANCHOR ===
+    // Trinity knows who she's speaking with from the first message of every session.
+    // This is what makes her feel like a biological brain, not a stateless chatbot.
+    // Injected right after the workspace context so it's always in the near context window.
+    if (userName && userName !== 'there') {
+      const orgName = workspaceContext?.organizationName || workspaceContext?.name || '';
+      const roleLabel =
+        workspaceRole === 'org_owner' ? 'Organization Owner' :
+        workspaceRole === 'co_owner' ? 'Co-Owner' :
+        workspaceRole === 'org_admin' ? 'Organization Administrator' :
+        workspaceRole === 'org_manager' || workspaceRole === 'department_manager' ? 'Manager' :
+        workspaceRole === 'manager' ? 'Manager' :
+        workspaceRole === 'supervisor' ? 'Supervisor' :
+        workspaceRole === 'shift_leader' ? 'Shift Leader' :
+        workspaceRole ? workspaceRole.replace(/_/g, ' ') : '';
+      const supportLabel = isSupportMode ? 'CoAIleague Platform Support' : '';
+      const identityLine = [userName, roleLabel, orgName, supportLabel]
+        .filter(Boolean).join(' · ');
+
+      basePrompt += `\n\nUSER IDENTITY (carry across all turns — never ask who they are):\n${identityLine}\n` +
+        `Address them by their first name when it feels natural. ` +
+        `They don't need to re-introduce themselves or explain their role — you already know it.`;
+    }
 
     // Guru-depth reasoning activates automatically from context rather than
     // from a UI setting. We escalate when the conversation genuinely warrants

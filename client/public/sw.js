@@ -21,9 +21,9 @@
  * - Cache versioning with automatic stale data purge on SW update
  */
 
-const CACHE_VERSION = 12;
-const CACHE_NAME = 'coaileague-v4.8';
-const STATIC_CACHE = 'coaileague-static-v4.8';
+const CACHE_VERSION = 13;
+const CACHE_NAME = 'coaileague-v4.9';
+const STATIC_CACHE = 'coaileague-static-v4.9';
 const API_CACHE = 'coaileague-api-v' + CACHE_VERSION;
 const offlineFallbackPage = '/offline.html';
 
@@ -46,7 +46,9 @@ const STALE_WHILE_REVALIDATE_ENDPOINTS = [
   '/api/schedule',
   '/api/employees',
   '/api/notifications/combined',
-  '/api/time-entries'
+  '/api/time-entries',
+  '/api/helpai/my-workspace-history', // Officer's HelpAI conversation history
+  '/api/onboarding/status',           // Shown on dashboard — should work offline
 ];
 
 const DB_NAME = 'coaileague-offline';
@@ -60,7 +62,15 @@ const PRECACHE_ASSETS = [
   '/favicon.svg',
   '/logo.svg',
   '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-512x512.png',
+  // SPA route shells — explicitly precached so React Router can hydrate
+  // them offline from the cached root bundle. Officers in parking garages,
+  // remote posts, or dead zones get a real UI instead of a white screen.
+  '/dashboard',
+  '/helpdesk',      // HelpAI — front-line officer assistant
+  '/clock',         // Clock in/out — most critical offline action
+  '/schedule',      // Shift schedule — must survive offline
+  '/time-tracking', // Time entry history
 ];
 
 const STATIC_PATTERNS = [
