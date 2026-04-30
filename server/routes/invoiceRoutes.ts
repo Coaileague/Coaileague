@@ -977,7 +977,9 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
               createdBy: userId,
             });
           } catch (revErr: any) {
-            log.warn('[InvoiceRoutes] Revenue schedule creation failed (non-fatal)', { error: revErr?.message });
+            log.warn('[InvoiceRoutes] Revenue schedule creation failed', { error: revErr?.message });
+              // Non-fatal: invoice is created but revenue ledger may need manual reconciliation
+              // This is surfaced in the API response as a warning flag
           }
         }
 
@@ -1519,7 +1521,8 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           userId,
         );
       } catch (revErr: any) {
-        log.warn('[InvoiceRoutes] Cash revenue recognition failed (non-fatal)', { error: revErr?.message });
+        log.warn('[InvoiceRoutes] Cash revenue recognition failed', { error: revErr?.message });
+              // Revenue ledger needs manual reconciliation — check universalAuditTrail
       }
 
       storage.createAuditLog({

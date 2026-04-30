@@ -151,8 +151,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         }
       } else {
         const result = await resolveWorkspaceForUser(userId, req.query.workspaceId as string | undefined);
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        targetWorkspaceId = result.workspaceId;
+        targetWorkspaceId = result.workspaceId ?? undefined;
         if (!targetWorkspaceId) {
           return res.status(403).json({ error: result.error || 'No workspace access found' });
         }
@@ -413,10 +412,8 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       const rawValidated = validationResult.data;
 
       if (rawValidated.startTime && rawValidated.endTime) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const start = new Date(rawValidated as any).startTime;
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const end = new Date(rawValidated as any).endTime;
+        const start = new Date(rawValidated.startTime as string | Date);
+        const end = new Date(rawValidated.endTime as string | Date);
         if (businessRuleResponse(res, [
           validateShiftTimes(start, end),
           validateShiftStartPast(start),
@@ -1032,10 +1029,8 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       const validated = validationResult.data;
 
       if (validated.startTime && validated.endTime) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const start = new Date(validated as any).startTime;
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const end = new Date(validated as any).endTime;
+        const start = new Date(validated.startTime as string | Date);
+        const end = new Date(validated.endTime as string | Date);
         if (businessRuleResponse(res, [
           validateShiftTimes(start, end),
           validateShiftStartPast(start),
@@ -2769,7 +2764,9 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
                             employeeId: employee.id,
                             distanceMeters: Math.round(distanceM),
                           },
-                        }).catch(() => {});
+                        }).catch((notifErr: any) => {
+                          log.warn('[ShiftGPS] Geofence notification failed (non-blocking):', notifErr?.message);
+                        });
                       }
                     } catch (ndsErr) {
                       log.warn('[ShiftGPS] NDS manager alert failed (non-blocking):', ndsErr);

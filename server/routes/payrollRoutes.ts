@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import { broadcastToWorkspace } from '../websocket';
+import { auditLogs } from '@shared/schema';
 import { sanitizeError } from '../middleware/errorHandler';
 import { PLATFORM } from '../config/platformConfig';
 import { validatePayrollPeriod, validateDeductionAmount, validateNonNegativeAmount, businessRuleResponse } from '../lib/businessRules';
@@ -165,8 +167,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
       // Audit log: payroll data exports are sensitive — always record who exported what
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        await db.insert((await import('@shared/schema')).auditLogs).values({
+        await db.insert(auditLogs).values({
           id: crypto.randomUUID(),
           workspaceId,
           userId,
@@ -345,8 +346,8 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       }
 
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      const { broadcastToWorkspace: bcastProposalApprove } = await import('../services/websocketService');
-      bcastProposalApprove(userWorkspace.workspaceId, { type: 'payroll_updated', action: 'proposal_approved', proposalId: id });
+      const { broadcastToWorkspace: broadcastToWorkspace } = await import('../services/websocketService');
+      broadcastToWorkspace(userWorkspace.workspaceId, { type: 'payroll_updated', action: 'proposal_approved', proposalId: id });
       platformEventBus.publish({
         type: 'payroll_run_approved',
         category: 'automation',
@@ -435,8 +436,8 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll proposal rejection', { error: err?.message }));
 
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      const { broadcastToWorkspace: bcastProposalReject } = await import('../services/websocketService');
-      bcastProposalReject(userWorkspace.workspaceId, { type: 'payroll_updated', action: 'proposal_rejected', proposalId: id });
+      const { broadcastToWorkspace: broadcastToWorkspace } = await import('../services/websocketService');
+      broadcastToWorkspace(userWorkspace.workspaceId, { type: 'payroll_updated', action: 'proposal_rejected', proposalId: id });
 
       res.json({
         success: true,
@@ -667,8 +668,8 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       ).catch(err => log.error('Failed to create payroll notification:', err));
 
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      const { broadcastToWorkspace: bcastRunCreated } = await import('../services/websocketService');
-      bcastRunCreated(workspaceId, { type: 'payroll_updated', action: 'run_created', runId: (payrollRun as any).id });
+      const { broadcastToWorkspace: broadcastToWorkspace } = await import('../services/websocketService');
+      broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'run_created', runId: (payrollRun as any).id });
       platformEventBus.publish({
         type: 'payroll_run_created',
         category: 'automation',
@@ -872,8 +873,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
       // Real-time: update payroll dashboard for all managers in this workspace
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const { broadcastToWorkspace } = await import('../services/websocketService');
+        // broadcastToWorkspace imported statically
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'approved', runId: run.id });
       } catch (_wsErr: any) {
         log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });
@@ -1125,8 +1125,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
       // Real-time: update payroll dashboard for all managers in this workspace
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        const { broadcastToWorkspace } = await import('../services/websocketService');
+        // broadcastToWorkspace imported statically
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'processed', runId: id });
       } catch (_wsErr: any) {
         log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });

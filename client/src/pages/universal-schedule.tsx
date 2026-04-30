@@ -439,7 +439,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const { data: allShiftsData = [], isLoading: allShiftsLoading } = useQuery<Shift[]>({
     queryKey: ['/api/shifts', workspaceId],
     queryFn: async () => {
-      const response = await fetch(`/api/shifts?workspaceId=${workspaceId}`, { credentials: 'include' });
+      const response = await secureFetch(`/api/shifts?workspaceId=${workspaceId}`);
       if (!response.ok) return [];
       const data = await response.json();
       return Array.isArray(data) ? data : (data.shifts || data.data || []);
@@ -930,7 +930,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
     queryKey: ['/api/employees', workspaceId],
     queryFn: async () => {
       if (!workspaceId) return { data: [] };
-      const res = await fetch(`/api/employees?workspaceId=${workspaceId}&limit=500`, { credentials: 'include' });
+      const res = await secureFetch(`/api/employees?workspaceId=${workspaceId}&limit=500`);
       if (!res.ok) return { data: [] };
       return res.json();
     },

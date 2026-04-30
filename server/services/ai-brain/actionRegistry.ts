@@ -18,7 +18,7 @@ import { db } from '../../db';
 import { aiTokenGateway } from '../billing/aiTokenGateway';
 import { TOKEN_COSTS } from '../billing/tokenManager';
 import { FAST_MODE_TIERS, type FastModeTier } from './fastModeService';
-import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, lt, gt, sql, isNull, notInArray } from 'drizzle-orm';
 import {
   clientBillingSettings,
   employees,
@@ -469,7 +469,7 @@ class AIBrainActionRegistry {
             entityId: (shift as any)?.id ?? null,
             success: true,
             message: 'Shift created',
-            changesAfter: shift as any,
+            changesAfter: shift as Record<string, unknown>,
             durationMs: Date.now() - start,
           });
           return createResult(request.actionId, true, `Shift created`, shift, start);
@@ -673,7 +673,7 @@ class AIBrainActionRegistry {
               userRole: request.userRole, platformRole: request.platformRole,
               entityType: 'shift', entityId: (filledShift as any)?.id ?? openShift.id,
               success: true, message: `Open shift filled: assigned to ${assignment.employeeName}`,
-              changesAfter: filledShift as any, durationMs: Date.now() - start,
+              changesAfter: filledShift as Record<string, unknown>, durationMs: Date.now() - start,
             });
             return createResult(request.actionId, true,
               `Open shift created and assigned to ${assignment.employeeName} with ${(result.confidence.score * 100).toFixed(0)}% confidence`,
@@ -700,7 +700,7 @@ class AIBrainActionRegistry {
               userRole: request.userRole, platformRole: request.platformRole,
               entityType: 'shift', entityId: openShift.id,
               success: true, message: 'Open shift created — no suitable employee found, shift remains open',
-              changesAfter: openShift as any, durationMs: Date.now() - start,
+              changesAfter: openShift as Record<string, unknown>, durationMs: Date.now() - start,
             });
             return createResult(request.actionId, true,
               'Open shift created but no suitable employee found - shift remains open',
@@ -807,8 +807,8 @@ class AIBrainActionRegistry {
           userRole: request.userRole, platformRole: request.platformRole,
           entityType: 'shift', entityId: shiftId,
           success: true, message: `Shift updated: \${Object.keys(updateSet).filter(k => k !== 'updatedAt').join(', ')}`,
-          changesBefore: { status: current.status, startTime: current.startTime, endTime: current.endTime } as any,
-          changesAfter: updated as any, durationMs: Date.now() - start,
+          changesBefore: { status: current.status, startTime: current.startTime, endTime: current.endTime } as Record<string, unknown>,
+          changesAfter: updated as Record<string, unknown>, durationMs: Date.now() - start,
         });
 
         broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
@@ -941,7 +941,7 @@ class AIBrainActionRegistry {
           entityType: 'shift', entityId: shiftId,
           success: true,
           message: `Trinity published shift \${shiftId} (\${current.title || 'untitled'}) — notifications dispatched`,
-          changesAfter: updated as any, durationMs: Date.now() - start,
+          changesAfter: updated as Record<string, unknown>, durationMs: Date.now() - start,
         });
 
         return createResult(request.actionId, true, `Shift published. Officers notified.`, updated, start);
@@ -1188,7 +1188,7 @@ class AIBrainActionRegistry {
             userRole: request.userRole, platformRole: request.platformRole,
             entityType: 'employee', entityId: (updated as any).id,
             success: true, message: `Employee ${updated.firstName} ${updated.lastName} activated`,
-            changesAfter: updated as any, durationMs: Date.now() - start,
+            changesAfter: updated as Record<string, unknown>, durationMs: Date.now() - start,
           });
           return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been activated`, updated, start);
         } catch (err: any) {
@@ -1229,7 +1229,7 @@ class AIBrainActionRegistry {
             userRole: request.userRole, platformRole: request.platformRole,
             entityType: 'employee', entityId: (updated as any).id,
             success: true, message: `Employee ${updated.firstName} ${updated.lastName} deactivated`,
-            changesAfter: updated as any, durationMs: Date.now() - start,
+            changesAfter: updated as Record<string, unknown>, durationMs: Date.now() - start,
           });
           return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been deactivated`, updated, start);
         } catch (err: any) {
@@ -1292,7 +1292,7 @@ class AIBrainActionRegistry {
           success: true,
           message: 'Employee updated',
           changesBefore: before as any,
-          changesAfter: updated as any,
+          changesAfter: updated as Record<string, unknown>,
           durationMs: Date.now() - start,
         });
         return createResult(request.actionId, true, `Employee ${updated.firstName} ${updated.lastName} updated`, updated, start);
@@ -1711,7 +1711,7 @@ class AIBrainActionRegistry {
           userRole: request.userRole, platformRole: request.platformRole,
           entityType: 'time_entry', entityId: entryId,
           success: true, message: 'Time entry updated',
-          changesAfter: updated as any, durationMs: Date.now() - start,
+          changesAfter: updated as Record<string, unknown>, durationMs: Date.now() - start,
         });
         return createResult(request.actionId, true, `Time entry updated`, updated, start);
       },
@@ -2007,10 +2007,10 @@ class AIBrainActionRegistry {
           const overlapping = await db.select({ id: shifts.id }).from(shifts).where(and(
             eq(shifts.workspaceId, workspaceId),
             eq(shifts.employeeId, employeeId),
-            sql`\${shifts.start_time} < \${targetShift.endTime}`,
-            sql`\${shifts.end_time} > \${targetShift.startTime}`,
-            sql`\${shifts.id} != \${shiftId}`,
-            sql`\${shifts.status} NOT IN ('cancelled','calloff','no_show')`,
+            lt(shifts.startTime, targetShift.endTime as Date),
+            gt(shifts.endTime, targetShift.startTime as Date),
+            sql`${shifts.id} != ${shiftId}`,
+            notInArray(shifts.status as any, ['cancelled', 'calloff', 'no_show']),
           )).limit(1);
           if (overlapping.length > 0) {
             return createResult(request.actionId, false,
@@ -2101,7 +2101,7 @@ class AIBrainActionRegistry {
           userRole: request.userRole, platformRole: request.platformRole,
           entityType: 'shift', entityId: shiftId,
           success: true, message: `Shift ${shiftId} assigned to employee ${employeeId}${softWarnings.length ? ' [soft warnings: ' + softWarnings.length + ']' : ''}`,
-          changesAfter: updated as any, durationMs: Date.now() - start,
+          changesAfter: updated as Record<string, unknown>, durationMs: Date.now() - start,
         });
         broadcastShiftUpdate(request.workspaceId!, 'shift_updated', updated);
         return createResult(request.actionId, true, `Shift ${shiftId} assigned to employee ${employeeId}`, updated, start);
@@ -2170,7 +2170,7 @@ class AIBrainActionRegistry {
           entityId: timeEntryId,
           success: true,
           message: `Time entry ${timeEntryId} approved`,
-          changesAfter: updated as any,
+          changesAfter: updated as Record<string, unknown>,
           durationMs: Date.now() - start,
         });
 
@@ -2366,7 +2366,7 @@ class AIBrainActionRegistry {
           entityId: timeEntryId,
           success: true,
           message: `Officer clocked out at ${logoutTime.toISOString()}`,
-          changesAfter: updated as any,
+          changesAfter: updated as Record<string, unknown>,
           durationMs: Date.now() - start,
         });
 
@@ -2719,7 +2719,7 @@ class AIBrainActionRegistry {
           success: true,
           message: 'Invoice voided via dual-AI gate',
           changesBefore: existing as any,
-          changesAfter: updated as any,
+          changesAfter: updated as Record<string, unknown>,
           payload: { reason },
           durationMs: Date.now() - start,
         });
