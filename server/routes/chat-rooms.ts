@@ -1247,47 +1247,39 @@ router.post(
         return res.status(403).json({ error: "Only room admins/owners can add participants" });
       }
 
-      // Add participants
-      const addedParticipants = [];
-      for (const participantId of participantIds) {
-        // Check if already a participant
-        const [existing] = await db
-          .select()
-          .from(chatParticipants)
-          .where(
-            and(
-              eq(chatParticipants.conversationId, roomId),
-              eq(chatParticipants.participantId, participantId)
-            )
-          )
-          .limit(1);
-
-        if (existing) continue; // Skip if already participant
-
-        // Get user info
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, participantId))
-          .limit(1);
-
-        if (!user) continue; // Skip if user not found
-
-        await db.insert(chatParticipants).values({
-          conversationId: roomId,
-          workspaceId,
-          participantId: user.id,
-          participantName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email!,
-          participantEmail: user.email,
-          participantRole: role || 'member',
-          canSendMessages: true,
-          canViewHistory: true,
-          canInviteOthers: role === 'org_admin' || role === 'org_owner' || role === 'co_owner',
-          invitedBy: userId,
-          isActive: true,
-        });
-
-        addedParticipants.push(user.id);
+      // Add participants — batched: 2 queries total regardless of participant count
+      const addedParticipants: string[] = [];
+      if (participantIds.length > 0) {
+        // @ts-expect-error — TS migration: fix in refactoring sprint
+        const [existingRows, userRows] = await Promise.all([
+          db.select({ participantId: chatParticipants.participantId })
+            .from(chatParticipants)
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            .where(and(eq(chatParticipants.conversationId, roomId), inArray(chatParticipants.participantId, participantIds))),
+          db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email })
+            .from(users)
+            // @ts-expect-error — TS migration: fix in refactoring sprint
+            .where(inArray(users.id, participantIds)),
+        ]);
+        const alreadyIn = new Set(existingRows.map((r: any) => r.participantId));
+        const userMap = new Map(userRows.map((u: any) => [u.id, u]));
+        const canInvite = role === 'org_admin' || role === 'org_owner' || role === 'co_owner';
+        const toInsert = participantIds
+          .filter((pid: string) => !alreadyIn.has(pid) && userMap.has(pid))
+          .map((pid: string) => {
+            const u = userMap.get(pid)!;
+            return {
+              conversationId: roomId, workspaceId, participantId: u.id,
+              participantName: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+              participantEmail: u.email, participantRole: role || 'member',
+              canSendMessages: true, canViewHistory: true,
+              canInviteOthers: canInvite, invitedBy: userId, isActive: true,
+            };
+          });
+        if (toInsert.length > 0) {
+          await db.insert(chatParticipants).values(toInsert);
+          addedParticipants.push(...toInsert.map((r: any) => r.participantId));
+        }
       }
 
       // Create audit event

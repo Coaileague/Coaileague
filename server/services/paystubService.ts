@@ -203,91 +203,128 @@ export class PaystubService {
   /**
    * Generate PDF paystub
    */
-  async generatePDF(data: PaystubData): Promise<Buffer> {
+  /**
+   * Generate PDF paystub — branded with CoAIleague design system
+   */
+  async generatePDF(data: PaystubData, workspaceName?: string): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
-      const chunks: Buffer[] = [];
+      // Dynamic import to avoid circular deps
+      Promise.all([
+        import('./pdfTemplateBase'),
+        import('pdfkit'),
+      ]).then(([{ PDF, PAGE, renderPdfHeader, renderPdfFooter, hlinePdf, sectionBar }, PDFKit]) => {
+        const PDFDocument = PDFKit.default ?? PDFKit;
+        const doc = new PDFDocument({ size: 'LETTER', margin: PAGE.ML, autoFirstPage: true });
+        const chunks: Buffer[] = [];
+        let pageNum = 0;
 
-      doc.on('data', (chunk) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+        doc.on('error', reject);
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
 
-      doc.fontSize(20).text('EARNINGS STATEMENT', { align: 'center' });
-      doc.moveDown();
+        const docId = `PS-${Date.now().toString(36).toUpperCase()}`;
+        const periodLabel = `${data.payPeriodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${data.payPeriodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
-      doc.fontSize(12);
-      doc.text(`Pay Period: ${data.payPeriodStart.toLocaleDateString()} - ${data.payPeriodEnd.toLocaleDateString()}`);
-      doc.text(`Pay Date: ${data.payDate.toLocaleDateString()}`);
-      doc.moveDown();
+        // Branded header
+        pageNum++;
+        renderPdfHeader(doc, {
+          title: 'EARNINGS STATEMENT',
+          subtitle: `Pay Period: ${periodLabel}`,
+          docId,
+          workspaceName: workspaceName || 'CoAIleague',
+          pageNum,
+          totalPages: 1,
+        });
 
-      doc.fontSize(14).text('EARNINGS', { underline: true });
-      doc.fontSize(10);
-      const earningsY = doc.y + 10;
-      
-      doc.text('Description', 50, earningsY);
-      doc.text('Hours', 200, earningsY);
-      doc.text('Rate', 280, earningsY);
-      doc.text('Amount', 380, earningsY);
+        let y = PAGE.MT;
+        const L = PAGE.ML, R = PAGE.ML + PAGE.CW;
 
-      doc.moveTo(50, earningsY + 15).lineTo(450, earningsY + 15).stroke();
+        // Section: Earnings
+        y = sectionBar(doc, 'EARNINGS', y) + 8;
+        doc.fontSize(9).fillColor(PDF.gray);
+        doc.text('Description', L, y);
+        doc.text('Hours', L + 240, y);
+        doc.text('Rate', L + 310, y);
+        doc.text('Amount', L + 390, y, { width: 80, align: 'right' });
+        y += 14;
+        hlinePdf(doc, PDF.grayLight, y);
+        y += 6;
 
-      let y = earningsY + 25;
-      doc.text('Regular Pay', 50, y);
-      doc.text(data.regularHours.toFixed(2), 200, y);
-      doc.text(`$${data.regularRate.toFixed(2)}`, 280, y);
-      doc.text(`$${parseFloat(multiplyFinancialValues(toFinancialString(String(data.regularHours)), toFinancialString(String(data.regularRate)))).toFixed(2)}`, 380, y);
-
-      if (data.overtimeHours > 0) {
-        y += 20;
-        doc.text('Overtime Pay (1.5x)', 50, y);
-        doc.text(data.overtimeHours.toFixed(2), 200, y);
-        doc.text(`$${data.overtimeRate.toFixed(2)}`, 280, y);
-        doc.text(`$${parseFloat(multiplyFinancialValues(toFinancialString(String(data.overtimeHours)), toFinancialString(String(data.overtimeRate)))).toFixed(2)}`, 380, y);
-      }
-
-      y += 25;
-      doc.fontSize(11).text('Gross Pay:', 280, y, { continued: true });
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      doc.text(`  $${data.grossPay.toFixed(2)}`, { bold: true });
-
-      doc.moveDown(2);
-      doc.fontSize(14).text('DEDUCTIONS', { underline: true });
-      doc.fontSize(10);
-
-      y = doc.y + 10;
-      for (const deduction of data.deductions) {
-        doc.text(deduction.name, 50, y);
-        doc.text(`-$${deduction.amount.toFixed(2)}`, 380, y);
+        doc.fillColor(PDF.dark).fontSize(10);
+        doc.text('Regular Pay', L, y);
+        doc.text(data.regularHours.toFixed(2), L + 240, y);
+        doc.text(`$${data.regularRate.toFixed(2)}/hr`, L + 310, y);
+        const regAmount = data.regularHours * data.regularRate;
+        doc.text(`$${regAmount.toFixed(2)}`, L + 390, y, { width: 80, align: 'right' });
         y += 18;
-      }
 
-      const totalDeductions = parseFloat(data.deductions.reduce((sum, d) => addFinancialValues(sum, toFinancialString(String(d.amount))), '0'));
-      y += 10;
-      doc.fontSize(11).text('Total Deductions:', 280, y, { continued: true });
-      doc.text(`  -$${totalDeductions.toFixed(2)}`);
+        if (data.overtimeHours > 0) {
+          doc.text('Overtime Pay (1.5×)', L, y);
+          doc.text(data.overtimeHours.toFixed(2), L + 240, y);
+          doc.text(`$${data.overtimeRate.toFixed(2)}/hr`, L + 310, y);
+          const otAmount = data.overtimeHours * data.overtimeRate;
+          doc.text(`$${otAmount.toFixed(2)}`, L + 390, y, { width: 80, align: 'right' });
+          y += 18;
+        }
 
-      doc.moveDown(2);
-      doc.moveTo(50, doc.y).lineTo(450, doc.y).stroke();
-      doc.moveDown();
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      doc.fontSize(16).text(`NET PAY: $${data.netPay.toFixed(2)}`, { align: 'center', bold: true });
+        y += 4;
+        hlinePdf(doc, PDF.grayLight, y);
+        y += 8;
+        doc.fontSize(11).fillColor(PDF.navyMid).font('Helvetica-Bold');
+        doc.text('Gross Pay', L, y);
+        doc.text(`$${data.grossPay.toFixed(2)}`, L + 390, y, { width: 80, align: 'right' });
+        doc.font('Helvetica');
+        y += 24;
 
-      // Phase 30: Render AI-generated earnings summary if provided
-      if (data.aiSummary) {
-        doc.moveDown(2);
-        doc.fontSize(9).fillColor('#444');
-        doc.text('Earnings Summary:', { underline: true });
-        doc.moveDown(0.5);
-        doc.fontSize(8).fillColor('#666');
-        doc.text(data.aiSummary, { width: 400, align: 'left' });
-      }
+        // Section: Deductions
+        y = sectionBar(doc, 'DEDUCTIONS', y) + 8;
+        doc.fillColor(PDF.dark).fontSize(10);
 
-      doc.moveDown(3);
-      doc.fontSize(8).fillColor('gray');
-      doc.text('This is a computer-generated document. Please retain for your records.', { align: 'center' });
-      doc.text(`Generated by CoAIleague on ${new Date().toLocaleString()}`, { align: 'center' });
+        const totalDed = data.deductions.reduce((s, d) => s + d.amount, 0);
+        for (const ded of data.deductions) {
+          doc.text(ded.name, L, y);
+          doc.text(`-$${ded.amount.toFixed(2)}`, L + 390, y, { width: 80, align: 'right' });
+          y += 18;
+        }
+        y += 4;
+        hlinePdf(doc, PDF.grayLight, y);
+        y += 8;
+        doc.fontSize(11).fillColor(PDF.warn).font('Helvetica-Bold');
+        doc.text('Total Deductions', L, y);
+        doc.text(`-$${totalDed.toFixed(2)}`, L + 390, y, { width: 80, align: 'right' });
+        doc.font('Helvetica');
+        y += 28;
 
-      doc.end();
+        // Net Pay — highlighted box
+        doc.rect(L, y, PAGE.CW, 36).fill(PDF.navy);
+        doc.fillColor(PDF.goldLight).fontSize(14).font('Helvetica-Bold');
+        doc.text('NET PAY', L + 16, y + 10);
+        doc.text(`$${data.netPay.toFixed(2)}`, L + 390, y + 10, { width: 80, align: 'right' });
+        doc.font('Helvetica').fillColor(PDF.dark);
+        y += 56;
+
+        // YTD if available
+        if (data.ytdGross || data.ytdNet) {
+          doc.fontSize(9).fillColor(PDF.gray);
+          doc.text(`YTD Gross: $${(data.ytdGross || 0).toFixed(2)}`, L, y);
+          doc.text(`YTD Net: $${(data.ytdNet || 0).toFixed(2)}`, L + 200, y);
+          y += 18;
+        }
+
+        // AI summary
+        if (data.aiSummary) {
+          y += 8;
+          doc.fontSize(8).fillColor(PDF.gray);
+          doc.text('AI Earnings Summary:', L, y, { underline: true });
+          y += 12;
+          doc.fontSize(8).fillColor(PDF.grayDark);
+          doc.text(data.aiSummary, L, y, { width: PAGE.CW, lineGap: 2 });
+        }
+
+        // Branded footer
+        renderPdfFooter(doc, { docId, pageNum, totalPages: 1 });
+        doc.end();
+      }).catch(reject);
     });
   }
 
@@ -312,7 +349,7 @@ export class PaystubService {
         return { success: false, error: 'No hours worked in this period' };
       }
 
-      const pdfBuffer = await this.generatePDF(data);
+      const pdfBuffer = await this.generatePDF(data, (ws as any)?.name);
 
       if (sendNotification) {
         const employee = await db.query.employees.findFirst({

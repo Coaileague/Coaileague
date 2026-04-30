@@ -601,22 +601,24 @@ router.post("/api/webhooks/resend", async (req, res) => {
         const bouncedAddresses: string[] = event.data.to ?? [];
         const bounceResendId: string = (event as any).data.id || '';
         log.error(`[Resend] Hard bounce for ${bouncedAddresses.join(", ")}`);
-        for (const email of bouncedAddresses) {
+        // Batch insert all bounces in one query (N+1 fix)
+        if (bouncedAddresses.length > 0) {
           try {
             await db.insert(emailUnsubscribes)
-              .values({
+              .values(bouncedAddresses.map(email => ({
                 email,
-                workspaceId: null, // bounce applies globally across all workspaces
+                workspaceId: null,
                 unsubscribeAll: true,
                 unsubscribeToken: crypto.randomBytes(32).toString('hex'),
-                unsubscribeSource: 'bounce',
-                unsubscribeReason: `Hard bounce reported by Resend — email ID: ${(event as any).data.id}`,
-              })
-              .onConflictDoNothing(); // unique constraint on (email, workspaceId) may fire
+                unsubscribeSource: 'bounce' as const,
+                unsubscribeReason: `Hard bounce reported by Resend — email ID: ${(event as any).data?.id || 'unknown'}`,
+              })))
+              .onConflictDoNothing();
           } catch (err: unknown) {
-            log.error('[Resend] Failed to suppress bounced address:', email, (err instanceof Error ? err.message : String(err)));
+            log.error('[Resend] Failed to batch suppress bounced addresses:', (err instanceof Error ? err.message : String(err)));
           }
         }
+
         // D04: Atomic bounce status sync — emailEvents + notificationDeliveries
         // must reflect the same bounce outcome. Webhook is retried on failure,
         // so all-or-nothing is safe.

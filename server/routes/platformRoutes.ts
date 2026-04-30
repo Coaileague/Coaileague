@@ -1859,4 +1859,30 @@ publicPlatformRouter.get('/announcements', async (req: AuthenticatedRequest, res
 });
 
 export { publicPlatformRouter };
+
+// ── Email Health Check — verifies Resend webhook is configured ─────────────
+router.get('/email-health', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  const apiKey = process.env.RESEND_API_KEY;
+  const sendingDomain = process.env.RESEND_SENDING_DOMAIN || process.env.RESEND_FROM_DOMAIN;
+
+  const checks = {
+    RESEND_API_KEY:          { set: !!apiKey,         required: true,  note: 'Required for all email sends' },
+    RESEND_WEBHOOK_SECRET:   { set: !!webhookSecret,  required: true,  note: 'Required for inbound email processing' },
+    RESEND_SENDING_DOMAIN:   { set: !!sendingDomain,  required: false, note: 'Set to prevent spam folder delivery' },
+  };
+
+  const failing = Object.entries(checks).filter(([, v]) => v.required && !v.set).map(([k]) => k);
+  const status = failing.length === 0 ? 'healthy' : 'degraded';
+
+  return res.json({
+    status,
+    checks,
+    failing,
+    recommendation: failing.length > 0
+      ? `Set these Railway env vars: ${failing.join(', ')}`
+      : 'All email configuration is present.',
+  });
+});
+
 export default router;
