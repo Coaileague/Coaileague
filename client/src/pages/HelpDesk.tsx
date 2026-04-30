@@ -1,4 +1,4 @@
-import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy, type TouchEvent as ReactTouchEvent } from "react";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { secureFetch } from "@/lib/csrf";

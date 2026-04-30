@@ -48,7 +48,7 @@ import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { ShiftCardSkeleton } from '@/components/ui/skeleton-loaders';
 import type { Shift, Employee, Client } from '@shared/schema';
 import { getShiftStatus, SHIFT_STATUS, type ShiftStatusConfig } from '@/constants/scheduling';
-import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Get shift status styling using centralized constants from /constants/scheduling.ts

@@ -1,4 +1,4 @@
-import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 /**
  * Worker Dashboard — Homebase-style command center for security guards and field workers
  *

@@ -1,4 +1,4 @@
-import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useEffect, Suspense, lazy } from "react";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useAuth } from "@/hooks/useAuth";
