@@ -1136,3 +1136,50 @@ helpaiRouter.get('/v2/command-bus', requireAuth, async (req: AuthenticatedReques
     res.status(500).json({ message: "Failed to fetch command bus" });
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/helpai/auditor/brief
+// Called when an auditor opens their portal — Trinity delivers the opening
+// briefing: who you are, what happened in prior audits, what's currently open,
+// live compliance snapshot. The portal frontend shows this as Trinity's
+// first message before the auditor types anything.
+// ─────────────────────────────────────────────────────────────────────────────
+helpaiRouter.get('/auditor/brief', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (req.workspaceRole !== 'auditor') {
+      return res.status(403).json({ error: 'Auditor role required' });
+    }
+    const auditorId = req.user?.id;
+    const workspaceId = req.workspaceId;
+    if (!auditorId || !workspaceId) {
+      return res.status(400).json({ error: 'Auth context required' });
+    }
+
+    const { trinityAuditIntelligenceService } = await import('../services/trinity/trinityAuditIntelligenceService');
+    const brief = await trinityAuditIntelligenceService.buildAuditorBrief(auditorId, workspaceId);
+    if (!brief) {
+      return res.json({ brief: null, greeting: "I'm ready to assist with your audit. How can I help you today?" });
+    }
+
+    // Generate Trinity's opening statement in her voice
+    const { generateGeminiResponse } = await import('../gemini');
+    const auditPrompt = trinityAuditIntelligenceService.buildAuditSystemPrompt(brief);
+    const openingQuery =
+      `The auditor (${brief.auditor.name} from ${brief.auditor.agencyName}) ` +
+      `has just opened their audit portal for ${brief.workspaceName}. ` +
+      `In 3-4 sentences, brief them on what you know: who they are, what's currently open, ` +
+      `and the most urgent item they should look at first. Be direct and specific, not generic.`;
+
+    const greeting = await generateGeminiResponse({
+      message: openingQuery,
+      systemPrompt: auditPrompt,
+      workspaceId,
+      userId: auditorId,
+    });
+
+    res.json({ brief, greeting });
+  } catch (err: any) {
+    log.error('[HelpAI] Auditor brief error:', err?.message);
+    res.status(500).json({ error: 'Failed to generate audit brief' });
+  }
+});

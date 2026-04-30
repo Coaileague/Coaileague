@@ -17,6 +17,7 @@ import { requireAuth } from '../auth';
 import { executeSupportAction } from '../services/helpai/supportActionRegistry';
 import { trinityResolutionFabric } from '../services/ai-brain/trinityResolutionFabric';
 import { flagFaqCandidate, promoteQualifiedFaqCandidates } from '../services/helpai/faqLearningService';
+import { trinityAuditIntelligenceService } from '../services/trinity/trinityAuditIntelligenceService';
 import { createLogger } from '../lib/logger';
 import { z } from 'zod';
 
@@ -529,12 +530,49 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
     const actionsLog: any[] = [];
 
     // ── Phase 6: Auditor HelpAI branch ─────────────────────────────────────
-    // When the caller is a DPS/regulatory auditor, route through a compliance-
-    // scoped handler that only exposes licensing / certification / incident
-    // records. Financial and payroll data are always blocked here — even
-    // before it reaches platformActionHub's auditor guard.
+    // When the caller is a DPS/regulatory auditor, route through Trinity
+    // Audit Intelligence — a full AI session backed by a complete brief of
+    // who the auditor is, the tenant's compliance history, open findings,
+    // overdue conditions, and live license/incident snapshot.
+    // Financial data, payroll, and banking are hard-blocked at the service layer.
     const isAuditorSession = req.workspaceRole === 'auditor';
     if (isAuditorSession) {
+      try {
+        const auditorId = req.user?.id || userId || '';
+        const brief = await trinityAuditIntelligenceService.buildAuditorBrief(
+          auditorId,
+          workspaceId || '',
+        );
+
+        if (brief) {
+          // Full Trinity AI call with audit-scoped system prompt
+          const auditSystemPrompt = trinityAuditIntelligenceService.buildAuditSystemPrompt(brief);
+          const { generateGeminiResponse } = await import('../gemini');
+          const reply = await generateGeminiResponse({
+            message,
+            systemPrompt: auditSystemPrompt,
+            workspaceId: workspaceId || '',
+            userId: auditorId,
+          });
+          return res.json({
+            category: 'auditor_query',
+            trinityAttempted: true,
+            resolved: true,
+            message: reply,
+            language: 'en',
+            auditContext: {
+              auditorName: brief.auditor.name,
+              workspaceName: brief.workspaceName,
+              openFindings: brief.history.openFindings.length,
+              overdueConditions: brief.history.overdueConditions.length,
+            },
+          });
+        }
+      } catch (auditErr: any) {
+        log.warn('[HelpAITriage] Audit intelligence failed, falling back to pattern handler:', auditErr?.message);
+      }
+
+      // Fallback: simple pattern-based handler when AI layer fails
       const auditResponse = await handleAuditorHelpAI(message, workspaceId || '', userId || '');
       return res.json({
         category: 'auditor_query',

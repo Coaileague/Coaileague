@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { UniversalEmptyState } from "@/components/universal";
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
@@ -106,6 +107,25 @@ export default function AuditorPortal() {
     queryFn: () => auditorFetch('/api/security-compliance/enforcement/point-rules'),
   });
 
+  // Trinity Audit Intelligence — fetched once on mount, displayed as opening brief
+  const [trinityGreeting, setTrinityGreeting] = useState<string | null>(null);
+  const [briefLoaded, setBriefLoaded] = useState(false);
+
+  useEffect(() => {
+    // Fetch Trinity's opening brief for this audit session
+    const loadBrief = async () => {
+      try {
+        const res = await fetch('/api/helpai/auditor/brief', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.greeting) setTrinityGreeting(data.greeting);
+      } catch { /* non-fatal */ } finally {
+        setBriefLoaded(true);
+      }
+    };
+    loadBrief();
+  }, []);
+
   const isLoading = statesLoading || reportLoading;
 
   const states = stateConfigsData?.configs || [];
@@ -162,6 +182,29 @@ export default function AuditorPortal() {
   return (
     <CanvasHubPage config={pageConfig}>
       <div className="space-y-6" data-testid="auditor-portal-page">
+
+        {/* Trinity Audit Intelligence — opening brief, shown once per session */}
+        {trinityGreeting && (
+          <div
+            className="flex gap-3 p-4 rounded-lg border border-cyan-500/30 bg-gradient-to-r from-cyan-500/5 to-transparent"
+            data-testid="banner-trinity-audit-brief"
+          >
+            <div className="shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center">
+                <span className="text-cyan-400 text-xs font-bold">T</span>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-cyan-400 uppercase tracking-wide mb-1">
+                Trinity · Audit Intelligence
+              </p>
+              <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">
+                {trinityGreeting}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 p-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30" data-testid="banner-read-only">
           <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
