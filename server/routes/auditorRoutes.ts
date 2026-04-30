@@ -42,7 +42,7 @@ import {
   listRegulatorNotificationsForWorkspace,
 } from '../services/auditor/auditorAccessService';
 
-import { requireAuth, requireManager } from '../rbac';
+import { requireAuth, requireManager , requireAuditor } from '../rbac';
 const log = createLogger('AuditorRoutes');
 export const auditorRouter = Router();
 
