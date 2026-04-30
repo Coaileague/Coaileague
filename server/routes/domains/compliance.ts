@@ -19,7 +19,7 @@ import formBuilderRouter from "../formBuilderRoutes";
 import formRouter from "../formRoutes";
 import policyComplianceRouter from "../policyComplianceRoutes";
 import complianceInlineRouter from "../complianceInlineRoutes";
-import complianceApprovalsRouter from "../compliance/approvals";
+import { approvalsRoutes as complianceApprovalsRouter } from "../compliance/approvals";
 import governanceInlineRouter from "../governanceInlineRoutes";
 import uacpRouter from "../uacpRoutes";
 import securityAuditRouter from "../security-audit";
