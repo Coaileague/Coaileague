@@ -7903,16 +7903,17 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
           }
         }
       } catch (error) {
-        log.error('WebSocket message processing error', { error });
-        log.error('Message processing error details', {
-          errorName: error instanceof Error ? error.name : 'Unknown',
-          errorMessage: error instanceof Error ? error.message : String(error),
-          rawMessagePreview: data ? String(data).substring(0, 500) : 'N/A',
-        });
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: 'Failed to process message',
-        }));
+        const errName    = error instanceof Error ? error.name    : 'Unknown';
+        const errMessage = error instanceof Error ? error.message : String(error);
+        const errStack   = error instanceof Error ? (error.stack || '').split('\n').slice(1, 4).join(' | ') : '';
+        const msgType    = (typeof data !== 'undefined') ? (() => { try { return JSON.parse(String(data).substring(0,200))?.type || 'parse-failed'; } catch { return 'non-json'; } })() : 'no-data';
+        log.error(`WebSocket message processing error [${errName}] type=${msgType}: ${errMessage} | ${errStack}`);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Failed to process message',
+          }));
+        }
       }
     };
     

@@ -2082,6 +2082,13 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
 
   --popover-border: 213 16% 86%;       /* Neutral border */
 
+  /* Modal / Sheet / Dialog surface — SOLID, no transparency.
+     Light: pure white, elevated above the light-gray canvas.
+     This variable is the single source of truth for all overlay surfaces. */
+  --modal-bg: 0 0% 100%;              /* Pure white — elevated above canvas */
+  --modal-border: 213 16% 88%;        /* Neutral border */
+  --modal-overlay: rgba(0, 0, 0, 0.55); /* Overlay scrim */
+
   /* Primary - CoAIleague Blue (#2563eb from public pages) */
   --primary: 221 83% 53%;              /* CoAIleague blue #2563eb - Primary CTAs */
 
@@ -2218,6 +2225,13 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
   --popover: 215 24% 18%;
   --popover-foreground: 210 20% 96%;
   --popover-border: 215 20% 25%;
+  
+  /* Modal / Sheet / Dialog surface — SOLID, no transparency.
+     Dark: elevated navy (#111E35) — visibly distinct from the deep navy page (#0A1729).
+     Saturation dropped slightly so the modal reads as a lifted surface, not a peer. */
+  --modal-bg: 217 48% 14%;            /* Elevated navy — sits above the page */
+  --modal-border: 217 40% 24%;        /* Brighter blue-tinted border for definition */
+  --modal-overlay: rgba(0, 0, 0, 0.65); /* Darker scrim to push modal forward */
   
   /* Primary - CoAIleague Blue */
   --primary: 221 83% 58%;              /* CoAIleague blue #2563eb - Slightly brighter for dark mode */

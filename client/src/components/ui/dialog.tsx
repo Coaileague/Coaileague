@@ -25,7 +25,8 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-[2500] bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=closed]:pointer-events-none",
+      "fixed inset-0 z-[2500] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=closed]:pointer-events-none",
+      "bg-black/65",
       className
     )}
     {...props}
@@ -40,17 +41,21 @@ const dialogContentVariants = cva(
     "translate-x-[-50%] translate-y-[-50%]",
     // Layout
     "grid gap-0",
-    // Visual
-    "border bg-background/98 backdrop-blur-sm shadow-md rounded-xl",
-    // Containment — critical for all screen sizes
+    // Solid elevated surface — NO transparency, NO backdrop-blur
+    // bg-[hsl(var(--modal-bg))] resolves to white (light) or elevated navy (dark)
+    "border-[hsl(var(--modal-border))] bg-[hsl(var(--modal-bg))]",
+    "border",
+    // Depth stack: outer shadow + subtle top-edge highlight ring
+    "shadow-2xl shadow-black/25 dark:shadow-black/60",
+    "ring-1 ring-inset ring-white/[0.06]",
+    "rounded-xl",
+    // Containment
     "max-h-[calc(100dvh-2rem)] overflow-hidden",
-    // Mobile safe area
     "p-0",
     // Animation
     "duration-200",
     "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
     "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-    // Touch scroll inside modal
     "box-border",
   ].join(" "),
   {
@@ -221,7 +226,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-row flex-wrap justify-end gap-2 px-3 py-3 sm:px-5 sm:py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0",
+      "flex flex-row flex-wrap justify-end gap-2 px-3 py-3 sm:px-5 sm:py-4 border-t border-[hsl(var(--modal-border))] bg-black/[0.04] dark:bg-white/[0.03] rounded-b-xl shrink-0",
       className
     )}
     {...props}

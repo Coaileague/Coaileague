@@ -1965,17 +1965,43 @@ self.addEventListener('activate', async () => {
     // duplicating logic — they proxy to existing route handlers or query DB.
 
     // Trinity pending-approvals alias (actual handler lives in automationGovernanceRoutes)
-    app.get('/api/trinity/pending-approvals', requireAuth, ensureWorkspaceAccess, async (req: any, res: any) => {
-      const wid = req.workspaceId || req.query.workspaceId;
-      if (!wid) return res.status(400).json({ error: 'workspaceId required' });
+    app.get('/api/trinity/pending-approvals', requireAuth, async (req: any, res: any) => {
       try {
-        const { rows } = await pool.query(
-          `SELECT id, workspace_id, action_type, status, parameters, reason, created_at, expires_at
-           FROM governance_approvals
-           WHERE workspace_id = $1 AND status = 'pending'
-           ORDER BY created_at DESC LIMIT 50`,
-          [wid]
-        );
+        // Platform staff can query all workspaces or a specific one via ?workspaceId=
+        // Workspace owners: resolved from ensureWorkspaceAccess session (or from DB fallback)
+        const isPlatformStaff = !!(req as any).platformRole ||
+          (req.user as any)?.role === 'platform_staff';
+
+        let wid: string | undefined =
+          req.workspaceId ||
+          (req.query.workspaceId as string) ||
+          req.session?.workspaceId;
+
+        // For workspace owners without a session workspace, resolve via DB
+        if (!wid && !isPlatformStaff) {
+          try {
+            const { storage } = await import('./storage');
+            const workspace = await storage.getWorkspaceByOwnerId(req.user?.id);
+            const member   = await storage.getWorkspaceMemberByUserId(req.user?.id);
+            wid = workspace?.id || member?.workspaceId;
+          } catch (_) { /* fallback to 400 below */ }
+        }
+
+        if (!wid && !isPlatformStaff) {
+          return res.status(400).json({ error: 'workspaceId required' });
+        }
+
+        const query = wid
+          ? `SELECT id, workspace_id, action_type, status, parameters, reason, created_at, expires_at
+             FROM governance_approvals
+             WHERE workspace_id = $1 AND status = 'pending'
+             ORDER BY created_at DESC LIMIT 50`
+          : `SELECT id, workspace_id, action_type, status, parameters, reason, created_at, expires_at
+             FROM governance_approvals
+             WHERE status = 'pending'
+             ORDER BY created_at DESC LIMIT 50`;
+
+        const { rows } = await pool.query(query, wid ? [wid] : []);
         res.json({ success: true, approvals: rows, count: rows.length });
       } catch (err: any) {
         log.error('[Route] Internal error:', err);

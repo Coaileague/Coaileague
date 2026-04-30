@@ -461,6 +461,7 @@ import {
   regulatorAccess,
   complianceScores,
   complianceChecklists,
+  employeeComplianceRecords,
   officerReadiness,
   officerComplaints,
   officerGrievances,

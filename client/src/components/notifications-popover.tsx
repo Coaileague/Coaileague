@@ -1368,7 +1368,7 @@ function NotificationCard({
         <Button
           variant="ghost"
           size="icon"
-          className={`absolute ${compact ? 'top-2 right-3 h-5 w-5' : 'top-3 right-4 h-6 w-6'} opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full`}
+          className={`absolute ${compact ? 'top-2 right-3 h-5 w-5' : 'top-3 right-4 h-6 w-6'} opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-[hsl(var(--modal-bg))] hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full`}
           onClick={(e) => {
             e.stopPropagation();
             onDismiss(notification.id);
@@ -2491,7 +2491,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
                 data-testid="topic-chip-all"
               >
                 All
-                <span className={[topicFilter === 'all' ? 'bg-background/20' : 'bg-muted-foreground/15', 'rounded-full px-1 text-[9px]'].join(' ')}>{allCount}</span>
+                <span className={[topicFilter === 'all' ? 'bg-white/15 dark:bg-white/10' : 'bg-muted-foreground/15', 'rounded-full px-1 text-[9px]'].join(' ')}>{allCount}</span>
               </button>
               {topicsWithNotifs.map(topic => {
                 const count = tabPool.filter(n => (TOPIC_TYPE_MAP[topic] ?? []).includes(n.subCategory ?? '')).length;
@@ -2506,7 +2506,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
                     data-testid={`topic-chip-${topic}`}
                   >
                     {TOPIC_LABELS[topic]}
-                    <span className={[isActive ? 'bg-background/20' : 'bg-muted-foreground/15', 'rounded-full px-1 text-[9px]'].join(' ')}>{count}</span>
+                    <span className={[isActive ? 'bg-white/15 dark:bg-white/10' : 'bg-muted-foreground/15', 'rounded-full px-1 text-[9px]'].join(' ')}>{count}</span>
                   </button>
                 );
               })}
@@ -2765,7 +2765,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
           </div>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-auto p-0 border border-border/60 bg-popover/95 backdrop-blur-xl shadow-xl overflow-visible z-50 rounded-2xl" 
+          className="w-auto p-0 border border-[hsl(var(--modal-border))] bg-[hsl(var(--modal-bg))] shadow-2xl shadow-black/25 dark:shadow-black/60 ring-1 ring-inset ring-white/[0.06] overflow-visible z-50 rounded-2xl" 
           style={{ overflow: 'visible' }}
           align="end"
           sideOffset={8}

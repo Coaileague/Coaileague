@@ -24,7 +24,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-[2000] bg-black/30 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none",
+      "fixed inset-0 z-[2000] bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none",
       className
     )}
     {...props}
@@ -35,7 +35,10 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
   [
-    "fixed z-[2001] bg-background/98 backdrop-blur-sm shadow-lg",
+    // Solid elevated surface — NO transparency, NO backdrop-blur
+    "fixed z-[2001] bg-[hsl(var(--modal-bg))] border-[hsl(var(--modal-border))]",
+    "shadow-2xl shadow-black/25 dark:shadow-black/60",
+    "ring-1 ring-inset ring-white/[0.06]",
     "transition ease-in-out",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:duration-250 data-[state=open]:duration-300",
@@ -227,7 +230,7 @@ const SheetFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-row flex-wrap justify-end gap-2 px-3 py-3 sm:px-5 sm:py-4 border-t border-border bg-muted/30 shrink-0",
+      "flex flex-row flex-wrap justify-end gap-2 px-3 py-3 sm:px-5 sm:py-4 border-t border-[hsl(var(--modal-border))] bg-black/[0.04] dark:bg-white/[0.03] shrink-0",
       "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
       className
     )}

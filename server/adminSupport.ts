@@ -659,38 +659,39 @@ export async function updateTicketStatus(
  * Used for admin dashboard overview
  */
 export async function getPlatformStats() {
-  const [workspaceCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(workspaces);
-
-  const [userCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(users);
-
-  const [activeSubscriptions] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(subscriptions)
-    .where(eq(subscriptions.status, "active"));
-
-  const [openTickets] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(supportTickets)
-    .where(eq(supportTickets.status, "open"));
-
-  const [totalInvoices] = await db
-    .select({
+  // Use Promise.allSettled so a single missing/broken table cannot crash the whole endpoint.
+  // Each query falls back to a safe zero-value on failure.
+  const [
+    workspaceResult,
+    userResult,
+    subscriptionResult,
+    ticketResult,
+    invoiceResult,
+  ] = await Promise.allSettled([
+    db.select({ count: sql<number>`count(*)::int` }).from(workspaces),
+    db.select({ count: sql<number>`count(*)::int` }).from(users),
+    db.select({ count: sql<number>`count(*)::int` }).from(subscriptions)
+      .where(eq(subscriptions.status, "active")),
+    db.select({ count: sql<number>`count(*)::int` }).from(supportTickets)
+      .where(eq(supportTickets.status, "open")),
+    db.select({
       count: sql<number>`count(*)::int`,
       total: sql<string>`COALESCE(SUM(CAST(total AS DECIMAL)), 0)`,
-    })
-    .from(invoices)
-    .where(eq(invoices.status, "paid"));
+    }).from(invoices).where(eq(invoices.status, "paid")),
+  ]);
+
+  const workspaceCount  = workspaceResult.status   === 'fulfilled' ? workspaceResult.value[0]    : null;
+  const userCount       = userResult.status         === 'fulfilled' ? userResult.value[0]          : null;
+  const activeSubs      = subscriptionResult.status === 'fulfilled' ? subscriptionResult.value[0]  : null;
+  const openTickets     = ticketResult.status       === 'fulfilled' ? ticketResult.value[0]        : null;
+  const totalInvoices   = invoiceResult.status      === 'fulfilled' ? invoiceResult.value[0]       : null;
 
   return {
-    totalWorkspaces: workspaceCount?.count || 0,
-    totalUsers: userCount?.count || 0,
-    activeSubscriptions: activeSubscriptions?.count || 0,
-    openTickets: openTickets?.count || 0,
-    totalRevenue: totalInvoices?.total || "0",
-    invoiceCount: totalInvoices?.count || 0,
+    totalWorkspaces:    workspaceCount?.count  || 0,
+    totalUsers:         userCount?.count        || 0,
+    activeSubscriptions: activeSubs?.count      || 0,
+    openTickets:        openTickets?.count      || 0,
+    totalRevenue:       totalInvoices?.total    || "0",
+    invoiceCount:       totalInvoices?.count    || 0,
   };
 }

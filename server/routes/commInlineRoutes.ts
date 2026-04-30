@@ -257,8 +257,7 @@ router.post("/push/subscribe", requireAuth, async (req: AuthenticatedRequest, re
     
     const { pushNotificationService } = await import("../services/pushNotificationService");
     const result = await pushNotificationService.registerPushSubscription(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      req.user!,
+      req.user!.id,
       subscription,
       deviceInfo
     );
