@@ -103,6 +103,22 @@ export const BACKEND_ROUTE_MANIFEST = [
 
   // ── Shift Chatrooms ─────────────────────────────────────────────────────────
   { method: "GET",    path: "/api/shift-chatrooms/by-shift/:id",  file: "shiftChatroomRoutes.ts" },
+
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+  { method: "GET",    path: "/api/auth/session",          file: "authRoutes.ts" },
+  { method: "GET",    path: "/api/auth/user",             file: "authRoutes.ts" },
+  { method: "POST",   path: "/api/auth/logout-all",       file: "authRoutes.ts" },
+  { method: "POST",   path: "/api/auth/magic-link",       file: "authRoutes.ts" },
+  { method: "POST",   path: "/api/auth/forgot-password",  file: "authRoutes.ts" },
+  { method: "POST",   path: "/api/auth/reset-password",   file: "authRoutes.ts" },
+  { method: "PATCH",  path: "/api/auth/profile",          file: "authRoutes.ts" },
+  { method: "POST",   path: "/api/auth/mfa/setup",        file: "authRoutes.ts" },
+  { method: "POST",   path: "/api/auth/mfa/verify",       file: "authRoutes.ts" },
+
+  // ── Onboarding ───────────────────────────────────────────────────────────────
+  { method: "GET",    path: "/api/onboarding/progress",        file: "onboardingRoutes.ts" },
+  { method: "POST",   path: "/api/onboarding/initialize",      file: "onboardingRoutes.ts" },
+  { method: "GET",    path: "/api/onboarding/tasks",           file: "onboardingRoutes.ts" },
 ] as const;
 
 // ─── Test Runner ──────────────────────────────────────────────────────────────

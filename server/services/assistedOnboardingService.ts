@@ -157,7 +157,7 @@ class AssistedOnboardingService {
 
       try {
         const { provisionWorkspace } = await import('./workspaceProvisioningService');
-        await provisionWorkspace({ workspaceId: workspace.id, ownerId: supportUserId });
+        await provisionWorkspace({ workspaceId: workspace.id, ownerId: supportUserId, workspaceName: (workspace as any).name });
       } catch (provError: unknown) {
         log.warn('[AssistedOnboarding] Workspace provisioning failed (non-blocking):', (provError as any)?.message);
       }

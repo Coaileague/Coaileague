@@ -247,10 +247,16 @@ class FaultTolerantStore extends session.Store {
   }
 
   set(sid: string, sess: session.SessionData, cb?: (err?: any) => void): void {
+    // Write to in-memory cache immediately for fast subsequent reads
     this.cacheSet(sid, sess);
+    // Persist to DB store — call cb only after the write completes
+    // so Railway multi-replica restarts don't lose the session.
     this.withTimeout(
-      (done) => this.inner.set(sid, sess, done),
-      (err) => cb?.(err)
+      (done) => this.inner.set(sid, sess, (err) => {
+        done(err);
+        cb?.(err); // cb fires after DB write, not before
+      }),
+      (err) => cb?.(err) // timeout path: still notify caller of failure
     );
   }
 
