@@ -137,7 +137,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   const [location, setLocation] = useLocation();
   const { activeSessionId } = useTrinitySession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isChristmas, setIsChristmas] = useState(false);
+  // V1.1: Seasonal theming removed — SnowfallEngine restored in UI polish phase
   const isMobile = useIsMobile();
   const { openModal: openTrinityModal } = useTrinityModal();
   const { toggleBubble } = useChatDock();
@@ -148,8 +148,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
-  const [lightPhase, setLightPhase] = useState(0);
-  
   const transitionLoader = useTransitionLoaderIfMounted();
   useEffect(() => {
     if (transitionLoader) {
@@ -185,45 +183,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     return selectCondensedMobileFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
   }, [workspaceLoading, isWorkspaceMode, workspaceRole, subscriptionTier, isPlatformStaff]);
-
-  // Detect Christmas season only if seasonal theming is not disabled
-  useEffect(() => {
-    // Check if seasonal theming is disabled via environment variable
-    if (disableSeasonal) {
-      setIsChristmas(false);
-      return;
-    }
-    // Also check via API to respect runtime settings
-    fetch('/api/mascot/seasonal/state', { credentials: 'include' })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.isDisabled || data?.forceDeactivated) {
-          setIsChristmas(false);
-        } else {
-                    setIsChristmas(holiday?.key === 'christmas');
-        }
-      })
-      .catch(() => {
-        // On error, fall back to date check
-                setIsChristmas(holiday?.key === 'christmas');
-      });
-  }, []);
-
-  // Animate Christmas light colors on mobile word logo
-  useEffect(() => {
-    if (!isChristmas) return;
-    const interval = setInterval(() => {
-      setLightPhase(prev => (prev + 1) % 6);
-    }, 600); // Fast twinkling for mobile lights
-    return () => clearInterval(interval);
-  }, [isChristmas]);
-
-  // Christmas light colors for each letter position
-  const mobileChristmasColors = useMemo(() => {
-    const colors = ['#dc2626', '#16a34a', '#eab308', '#3b82f6', '#a855f7', '#f97316'];
-    // Rotate colors based on phase for twinkling effect
-    return colors.map((_, i) => colors[(i + lightPhase) % colors.length]);
-  }, [lightPhase]);
 
   // Only show notification/messaging features in WORKSPACE mode (not on public pages)
   // This keeps public landing pages clean and uncluttered
