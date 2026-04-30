@@ -675,7 +675,7 @@ export default function EmployeeProfile() {
                       <SelectValue placeholder="No manager assigned" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No manager</SelectItem>
+                      <SelectItem value="__none__">No manager</SelectItem>
                       {(managers || []).map((m: any) => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.firstName} {m.lastName}

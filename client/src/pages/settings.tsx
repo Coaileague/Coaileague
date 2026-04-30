@@ -3295,7 +3295,7 @@ export default function Settings() {
                     <SelectValue placeholder="Select your industry" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Select...</SelectItem>
+                    <SelectItem value="__placeholder__" disabled>Select…</SelectItem>
                     {businessCategories?.map((category: any) => (
                       <SelectItem key={category.value} value={category.value}>
                         <div className="flex flex-col">
@@ -4113,7 +4113,7 @@ export default function Settings() {
                         <SelectValue placeholder="Select timing" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Select...</SelectItem>
+                        <SelectItem value="__placeholder__" disabled>Select…</SelectItem>
                         {reminderOptions?.timingOptions?.map((option: any) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}

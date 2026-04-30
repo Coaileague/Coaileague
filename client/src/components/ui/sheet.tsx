@@ -56,7 +56,7 @@ const sheetVariants = cva(
           "inset-x-0 bottom-0 border-t rounded-t-2xl",
           "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           // Full-width on mobile, centered card on desktop
-          "max-h-[92dvh]",
+          "max-h-[calc(92dvh-56px)] sm:max-h-[92dvh]",
           "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
           "sm:max-w-xl sm:mx-auto sm:rounded-xl sm:border",
         ].join(" "),

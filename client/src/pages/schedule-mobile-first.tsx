@@ -212,7 +212,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         title: 'Shift marked as calloff',
         description: 'Replacement broadcast has been sent to available officers.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       setCalloffPromptShiftId(null);
     },
@@ -360,7 +360,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     },
     onSuccess: () => {
       toast({ title: "Shift created successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
 
       setSheetOpen(false);
       setSelectedEmployee(undefined);
@@ -382,7 +382,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     },
     onSuccess: () => {
       toast({ title: "Shift deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
 
     },
     onError: (error: any) => {
@@ -440,27 +440,24 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     }
   };
   
+  const [claimingShiftId, setClaimingShiftId] = React.useState<string | null>(null);
   const handleClaimShift = async (shift: Shift) => {
     if (!currentEmployee?.id) {
-      toast({ 
-        title: "Unable to claim shift", 
-        description: "Please wait for your profile to load",
-        variant: "destructive" 
-      });
+      toast({ title: "Unable to claim shift", description: "Please wait for your profile to load", variant: "destructive" });
       return;
     }
+    if (claimingShiftId === shift.id) return; // debounce — prevent triple-fire on double-tap
+    setClaimingShiftId(shift.id);
     try {
-      await apiRequest('PATCH', `/api/shifts/${shift.id}`, { 
-        employeeId: currentEmployee.id 
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      await apiRequest('POST', `/api/shifts/${shift.id}/pickup`, {});
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       setDetailSheetOpen(false);
-      toast({ title: "Shift claimed successfully" });
-    } catch (error) {
-      toast({ 
-        title: "Failed to claim shift", 
-        variant: "destructive" 
-      });
+      toast({ title: "Shift claimed", description: "This shift is now yours." });
+    } catch (error: any) {
+      toast({ title: "Failed to claim shift", description: error?.message || "Please try again", variant: "destructive" });
+    } finally {
+      setClaimingShiftId(null);
     }
   };
 
@@ -472,7 +469,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       const isMyShift = shift.employeeId && shift.employeeId === currentEmployee?.id;
       const endpoint = isMyShift ? 'acknowledge' : 'pickup';
       await apiRequest('POST', `/api/shifts/${shift.id}/${endpoint}`, {});
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       const msg = isMyShift ? 'You are confirmed for this shift.' : 'Shift claimed successfully.';
       toast({ title: 'Shift accepted', description: msg });
@@ -489,7 +486,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     try {
       // POST /deny is the dedicated officer decline endpoint
       await apiRequest('POST', `/api/shifts/${shift.id}/deny`, {});
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       toast({ title: 'Shift declined', description: 'Your supervisor has been notified.' });
     } catch (error: any) {
@@ -521,7 +518,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         endTime: endTime.toISOString(),
         status: 'scheduled',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
 
       toast({ title: "Shift duplicated to next day" });
     } catch (error) {
@@ -555,7 +552,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         endTime: endTime.toISOString(),
         status: 'scheduled',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
 
       toast({ title: "Shift copied to next week" });
     } catch (error) {
@@ -581,7 +578,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
           status: 'scheduled',
         });
       }
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
 
       toast({ 
         title: "Template applied", 

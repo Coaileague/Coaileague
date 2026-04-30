@@ -1043,7 +1043,7 @@ export default function EmployeeOnboardingWizard() {
                         <SelectValue placeholder="No preference" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No preference</SelectItem>
+                        <SelectItem value="__none__">No preference</SelectItem>
                         <SelectItem value="morning">Morning (6am–2pm)</SelectItem>
                         <SelectItem value="afternoon">Afternoon (2pm–10pm)</SelectItem>
                         <SelectItem value="evening">Evening (4pm–midnight)</SelectItem>
