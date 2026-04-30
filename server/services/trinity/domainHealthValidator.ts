@@ -202,8 +202,16 @@ export function runDomainHealthCheck(): PlatformHealthReport {
 export function logDomainHealthSummary(): void {
   try {
     const report = runDomainHealthCheck();
-    const statusIcon = report.overall_status === 'healthy' ? '✅' : report.overall_status === 'partial' ? '⚠️' : '❌';
-    log.info(`[DomainHealth] ${statusIcon} Platform ${report.overall_status.toUpperCase()}: ${report.healthy_domains}/${report.total_domains} domains healthy, ${report.total_trinity_actions} Trinity actions registered`);
+    const msg = `[DomainHealth] Platform ${report.overall_status.toUpperCase()}: ${report.healthy_domains}/${report.total_domains} domains healthy, ${report.total_trinity_actions} Trinity actions registered`;
+    if (report.overall_status === 'healthy') {
+      log.info(`[DomainHealth] ✅ ${msg.slice('[DomainHealth] '.length)}`);
+    } else if (report.overall_status === 'partial') {
+      // Partial is informational — some domains have low Trinity action coverage
+      // but the platform is functional. Log at info to avoid false-positive warnings.
+      log.info(msg);
+    } else {
+      log.warn(msg);
+    }
     if (report.top_issues.length > 0) {
       log.info(`[DomainHealth] Top issues:`);
       for (const issue of report.top_issues) {

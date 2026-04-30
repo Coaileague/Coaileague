@@ -921,12 +921,12 @@ const constraints: CriticalConstraint[] = [
     rationale: 'The Drizzle audit_logs schema only declares id and created_at as NOT NULL. The live DB has many additional NOT NULL columns (user_role, user_name, action, entity_type, entity_id, etc.) inherited from previous schema migrations that drizzle-kit push never reverted. System-actor writes omit most of these and fail with "null value in column ... violates not-null constraint". This generic scan finds every NOT NULL column on audit_logs except id and created_at and drops the constraint to match the schema.',
     isPresent: async () => {
       // Present (i.e. needs no work) when audit_logs has zero NOT NULL
-      // columns other than id + created_at
+      // columns other than id, created_at, and action (SOX-required).
       const { rows } = await pool.query(
         `SELECT 1 FROM information_schema.columns
          WHERE table_name = 'audit_logs'
            AND is_nullable = 'NO'
-           AND column_name NOT IN ('id', 'created_at')
+           AND column_name NOT IN ('id', 'created_at', 'action')
          LIMIT 1`
       );
       return rows.length === 0;
@@ -2210,6 +2210,14 @@ function pgQuoteLiteral(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
+// Columns that must NEVER have their NOT NULL dropped even if Drizzle declares them nullable.
+// audit_logs.action: SOX compliance — the auditSchemaRegression test (testRequiredFieldValidation)
+// verifies that action cannot be NULL. The audit_logs_action_not_null constraint re-enforces
+// this after the drop-stale pass; this set prevents the generic scanner from undoing it.
+const NOT_NULL_PROTECTED = new Set<string>([
+  'audit_logs.action',
+]);
+
 async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<{
   tablesScanned: number;
   columnsChecked: number;
@@ -2261,6 +2269,11 @@ async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<
 
     result.columnsChecked += nullableColumnNames.length;
     for (const r of driftRows) {
+      const protectedKey = `${tableCfg.name}.${r.column_name}`;
+      if (NOT_NULL_PROTECTED.has(protectedKey)) {
+        log.info(`[notNullDrift] skipping ${protectedKey} — protected column (SOX compliance)`);
+        continue;
+      }
       try {
         await pool.query(
           `ALTER TABLE "${tableCfg.name}" ALTER COLUMN "${r.column_name}" DROP NOT NULL`

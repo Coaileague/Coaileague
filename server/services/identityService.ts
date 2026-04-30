@@ -90,7 +90,29 @@ async function ensureOrgIdentifiersInTx(
     }
     externalId = genOrgExternalId(orgCode);
     log.info(`[Identity] Attempt ${attempts + 1}: trying org code ${orgCode} -> ${externalId}`);
-    
+
+    // Pre-check: if this externalId is already claimed by ANY entity, skip the
+    // INSERT entirely to avoid a unique-constraint violation that would abort the
+    // PostgreSQL transaction and break all subsequent queries in the same tx.
+    const existingForCode = await tx
+      .select({ entityId: externalIdentifiers.entityId })
+      .from(externalIdentifiers)
+      .where(eq(externalIdentifiers.externalId, externalId))
+      .limit(1);
+
+    if (existingForCode.length > 0) {
+      if (existingForCode[0].entityId === orgId) {
+        // This org already owns this code — return it immediately.
+        orgCode = externalId.substring(4);
+        success = true;
+        break;
+      }
+      // Code is taken by a different entity — retry with a random suffix.
+      log.info(`[Identity] Org code ${externalId} taken by another entity, retrying`);
+      attempts++;
+      continue;
+    }
+
     try {
       // Create external identifier
       log.info(`[Identity] Inserting org external ID into database...`);
@@ -116,13 +138,12 @@ async function ensureOrgIdentifiersInTx(
         });
       }
       log.info(`[Identity] Org external ID insert successful!`);
-      
+
       // Success!
       success = true;
     } catch (error: any) {
-      // If unique constraint violation, another transaction may have created it
+      // Concurrent insert race — re-check if this org now has an external ID.
       if (error.code === '23505') {
-        // Re-check if org now has an external ID (race condition)
         const recheck = await tx
           .select()
           .from(externalIdentifiers)
@@ -133,15 +154,15 @@ async function ensureOrgIdentifiersInTx(
             )
           )
           .limit(1);
-        
+
         if (recheck.length > 0) {
-          // Another transaction succeeded - use its ID
+          // Another concurrent transaction succeeded — use its ID.
           orgCode = recheck[0].externalId.substring(4);
           externalId = recheck[0].externalId;
           success = true;
           break;
         }
-        
+
         // Still not found, retry with random suffix
         if (attempts < 9) {
           attempts++;
