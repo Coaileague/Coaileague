@@ -921,12 +921,12 @@ const constraints: CriticalConstraint[] = [
     rationale: 'The Drizzle audit_logs schema only declares id and created_at as NOT NULL. The live DB has many additional NOT NULL columns (user_role, user_name, action, entity_type, entity_id, etc.) inherited from previous schema migrations that drizzle-kit push never reverted. System-actor writes omit most of these and fail with "null value in column ... violates not-null constraint". This generic scan finds every NOT NULL column on audit_logs except id and created_at and drops the constraint to match the schema.',
     isPresent: async () => {
       // Present (i.e. needs no work) when audit_logs has zero NOT NULL
-      // columns other than id + created_at
+      // columns other than id, created_at, and action (SOX-required).
       const { rows } = await pool.query(
         `SELECT 1 FROM information_schema.columns
          WHERE table_name = 'audit_logs'
            AND is_nullable = 'NO'
-           AND column_name NOT IN ('id', 'created_at')
+           AND column_name NOT IN ('id', 'created_at', 'action')
          LIMIT 1`
       );
       return rows.length === 0;
@@ -1344,23 +1344,21 @@ const constraints: CriticalConstraint[] = [
     name: 'universal_audit_log_action_description',
     rationale: 'universal_audit_log is missing action_description and changes columns. trinityResolutionFabric.recordOutcome INSERTs with both on every resolution cycle, producing [42703]: column "action_description" of relation "universal_audit_log" does not exist — logged as [ResolutionFabric] Failed to record outcome on every automation run.',
     isPresent: async () => {
-      // Check for BOTH columns — if either is missing, apply runs
+      // Both columns must be present — if either is missing the apply() runs again.
       const { rows } = await pool.query(
         `SELECT column_name FROM information_schema.columns
          WHERE table_name = 'universal_audit_log'
-           AND column_name IN ('action_description', 'changes', 'before_state', 'after_state', 'outcome', 'resolution_tier')`,
+           AND column_name IN ('action_description', 'changes')`,
       );
-      return rows.length >= 6; // All 6 columns must exist
+      return rows.length >= 2;
     },
     apply: async () => {
-      await pool.query(`
-        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS action_description TEXT;
-        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS outcome VARCHAR;
-        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS resolution_tier VARCHAR;
-        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS changes JSONB;
-        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS before_state JSONB;
-        ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS after_state JSONB;
-      `);
+      await pool.query(
+        `ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS action_description TEXT`,
+      );
+      await pool.query(
+        `ALTER TABLE universal_audit_log ADD COLUMN IF NOT EXISTS changes JSONB`,
+      );
     },
   },
   {
@@ -1435,395 +1433,6 @@ const constraints: CriticalConstraint[] = [
         `CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_daily_summary_ws_date
            ON ai_usage_daily_summary (workspace_id, summary_date)`,
       );
-    },
-  },
-  {
-    name: 'workspace_onboarding_states_table',
-    rationale: 'OnboardingStateMachine.loadState() queries workspace_onboarding_states but the table does not exist, causing [OnboardingStateMachine] Failed to load state on every boot.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM information_schema.tables
-         WHERE table_schema = 'public' AND table_name = 'workspace_onboarding_states'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS workspace_onboarding_states (
-          id           VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
-          workspace_id VARCHAR NOT NULL UNIQUE,
-          state_data   JSONB NOT NULL DEFAULT '{}'::jsonb,
-          current_step VARCHAR(100),
-          status       VARCHAR(50) DEFAULT 'in_progress',
-          started_at   TIMESTAMPTZ DEFAULT NOW(),
-          completed_at TIMESTAMPTZ,
-          created_at   TIMESTAMPTZ DEFAULT NOW(),
-          updated_at   TIMESTAMPTZ DEFAULT NOW()
-        )
-      `);
-      await pool.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS idx_workspace_onboarding_states_ws
-           ON workspace_onboarding_states (workspace_id)`
-      );
-    },
-  },
-  {
-    name: 'id_sequences_org_kind_unique_index',
-    rationale: 'id_sequences.uniqueOrgKind declared in Drizzle schema but not propagated by drizzle-kit push. Without it, concurrent ensureOrgIdentifiersInTx calls insert multiple (orgId, kind) rows. Then the atomic UPDATE hits all rows, multiple calls get issued=1, both generate EMP-ORG-00001, and the second INSERT into external_identifiers fails with duplicate key. One unique index eliminates the race entirely.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM pg_indexes
-         WHERE tablename = 'id_sequences'
-           AND indexname = 'id_sequences_org_kind_idx'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      // Remove duplicate rows first (keep lowest id per orgId+kind)
-      await pool.query(`
-        DELETE FROM id_sequences a
-        USING id_sequences b
-        WHERE a.id > b.id
-          AND a.org_id = b.org_id
-          AND a.kind = b.kind
-      `);
-      await pool.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS id_sequences_org_kind_idx
-           ON id_sequences (org_id, kind)`
-      );
-    },
-  },
-  {
-    name: 'trinity_rate_limit_log_table',
-    rationale: 'trinity_rate_limit_log table and unique index on (workspace_id, window_start) required by aiCallWrapper.ts ON CONFLICT clause. Missing index causes [err] "there is no unique or exclusion constraint matching the ON CONFLICT specification" on every AI call.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM pg_indexes
-         WHERE tablename = 'trinity_rate_limit_log'
-           AND indexname = 'uq_trinity_rate_limit_ws_window'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS trinity_rate_limit_log (
-          id           VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
-          workspace_id VARCHAR NOT NULL,
-          window_start TIMESTAMPTZ NOT NULL,
-          request_count INTEGER DEFAULT 1,
-          created_at   TIMESTAMPTZ DEFAULT NOW()
-        )
-      `);
-      await pool.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS uq_trinity_rate_limit_ws_window
-           ON trinity_rate_limit_log (workspace_id, window_start)`
-      );
-    },
-  },
-  // ── 360 Master Logic — Layer 1: Schema Rules ─────────────────────────────
-  {
-    name: 'invite_tokens_unique_email_workspace',
-    rationale: 'Anti-race condition: UNIQUE(email, workspace_id) on client_portal_invite_tokens prevents two concurrent manager requests from creating duplicate invites for the same recipient. DB engine rejects the second even at identical millisecond timestamps.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM pg_indexes
-         WHERE tablename = 'client_portal_invite_tokens'
-           AND indexname = 'uq_invite_email_workspace'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      // Only index non-expired, non-used tokens — allows re-invite after expiry
-      await pool.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_invite_email_workspace
-          ON client_portal_invite_tokens (email, workspace_id)
-          WHERE is_used = false
-      `);
-    },
-  },
-  {
-    name: 'invite_tokens_status_and_activated_at',
-    rationale: 'Layer 1: Status enum (invited/active/expired/locked) + activated_at timestamp replace boolean is_used. Status is the single source of truth; UI reads it directly — never calculates color from timestamps.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM information_schema.columns
-         WHERE table_name = 'client_portal_invite_tokens'
-           AND column_name = 'invite_status'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      await pool.query(`
-        DO $$ BEGIN
-          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'invite_status_canonical') THEN
-            CREATE TYPE invite_status_canonical AS ENUM ('invited','active','expired','locked');
-          END IF;
-        END $$
-      `).catch(() => null);
-      // Add invite_status column (keeps is_used for backward compat)
-      await pool.query(`
-        ALTER TABLE client_portal_invite_tokens
-          ADD COLUMN IF NOT EXISTS invite_status VARCHAR(20) NOT NULL DEFAULT 'invited'
-      `);
-      // Add activated_at — set by the INVITED→ACTIVE handshake
-      await pool.query(`
-        ALTER TABLE client_portal_invite_tokens
-          ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ DEFAULT NULL
-      `);
-      // Backfill: used tokens = active, expired tokens = expired
-      await pool.query(`
-        UPDATE client_portal_invite_tokens
-        SET invite_status = CASE
-          WHEN is_used = true THEN 'active'
-          WHEN expires_at < NOW() THEN 'expired'
-          ELSE 'invited'
-        END
-        WHERE invite_status = 'invited'
-      `);
-      // Index for Reaper sweeps
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS idx_invite_tokens_status
-          ON client_portal_invite_tokens (invite_status, created_at)
-      `);
-    },
-  },
-  // ── 360 Master Logic — ChatDock Structural Hardening ────────────────────────
-  {
-    name: 'chat_conversations_shift_unique',
-    rationale: 'CD-1: Two managers clicking "Create Shift Room" simultaneously create duplicate rooms. UNIQUE(shift_id, workspace_id) makes the DB engine reject the second INSERT — the only race-safe approach.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM pg_indexes
-         WHERE tablename = 'chat_conversations'
-           AND indexname = 'uq_chat_conv_shift_workspace'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      // Deduplicate first — keep earliest room per shift+workspace pair
-      await pool.query(`
-        DELETE FROM chat_conversations a
-        USING chat_conversations b
-        WHERE a.id > b.id
-          AND a.shift_id = b.shift_id
-          AND a.workspace_id = b.workspace_id
-          AND a.shift_id IS NOT NULL
-      `);
-      await pool.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_chat_conv_shift_workspace
-          ON chat_conversations (shift_id, workspace_id)
-          WHERE shift_id IS NOT NULL
-      `);
-    },
-  },
-  {
-    name: 'chat_messages_sequence_idempotency_delivery',
-    rationale: 'CD-7/CD-8/CD-9: chat_messages missing sequence_number (load-more gaps), client_message_id (dedup on double-tap/retry), and delivery_status (SENT→DELIVERED→READ state machine). All three are structural requirements for reliable field communication.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM information_schema.columns
-         WHERE table_name = 'chat_messages'
-           AND column_name = 'sequence_number'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      // CD-7: sequence_number — per-room monotonic counter for gap detection and reconnect reconciliation
-      await pool.query(`
-        ALTER TABLE chat_messages
-          ADD COLUMN IF NOT EXISTS sequence_number BIGINT DEFAULT NULL
-      `);
-      // Create sequence for each room dynamically via function
-      await pool.query(`
-        CREATE SEQUENCE IF NOT EXISTS chat_message_global_seq
-          START 1 INCREMENT 1 NO CYCLE
-      `);
-      // Backfill existing messages with sequence numbers per conversation
-      await pool.query(`
-        WITH numbered AS (
-          SELECT id,
-                 ROW_NUMBER() OVER (
-                   PARTITION BY conversation_id
-                   ORDER BY created_at, id
-                 ) AS rn
-          FROM chat_messages
-          WHERE sequence_number IS NULL
-        )
-        UPDATE chat_messages cm
-        SET sequence_number = n.rn
-        FROM numbered n
-        WHERE cm.id = n.id
-      `).catch(() => null);
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS idx_chat_msg_conv_seq
-          ON chat_messages (conversation_id, sequence_number)
-      `);
-
-      // CD-8: client_message_id — idempotency key set by client, prevents double-send on retry
-      await pool.query(`
-        ALTER TABLE chat_messages
-          ADD COLUMN IF NOT EXISTS client_message_id VARCHAR(64) DEFAULT NULL
-      `);
-      await pool.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_chat_msg_client_id
-          ON chat_messages (client_message_id)
-          WHERE client_message_id IS NOT NULL
-      `);
-
-      // CD-9: delivery_status — SENT→DELIVERED→READ state machine
-      await pool.query(`
-        ALTER TABLE chat_messages
-          ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(20) DEFAULT 'sent'
-      `);
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS idx_chat_msg_delivery_status
-          ON chat_messages (delivery_status, conversation_id)
-          WHERE delivery_status != 'read'
-      `);
-    },
-  },
-  // ── ChatDock 360 — Pillar 1: Room Identity Lock ──────────────────────────
-  {
-    name: 'chat_conversations_shift_unique_index',
-    rationale: 'CD-1: UNIQUE(shift_id, workspace_id) on chat_conversations prevents duplicate shift rooms. Without this, two concurrent shift-start events create two rooms for the same shift — officers split across ghost rooms and messages are lost. Partial index: only where shift_id IS NOT NULL.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM pg_indexes
-         WHERE tablename = 'chat_conversations'
-           AND indexname = 'uq_chat_conv_shift_workspace'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      await pool.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_chat_conv_shift_workspace
-          ON chat_conversations (shift_id, workspace_id)
-          WHERE shift_id IS NOT NULL
-      `);
-    },
-  },
-  {
-    name: 'chat_conversations_type_check_constraint',
-    rationale: 'CD-2: conversationType is varchar — any string accepted at DB level. CHECK constraint enforces canonical values: open_chat, shift_chat, dm_user, dm_support, dm_bot, dm_group. Route-level validation alone is not enough — direct DB writes bypass it.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM information_schema.check_constraints
-         WHERE constraint_name = 'chk_chat_conv_type'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      // First fix any existing invalid values
-      await pool.query(`
-        UPDATE chat_conversations
-        SET conversation_type = 'open_chat'
-        WHERE conversation_type NOT IN (
-          'open_chat','shift_chat','dm_user','dm_support','dm_bot','dm_group'
-        )
-      `).catch(() => null);
-      await pool.query(`
-        ALTER TABLE chat_conversations
-          ADD CONSTRAINT chk_chat_conv_type
-          CHECK (conversation_type IN (
-            'open_chat','shift_chat','dm_user','dm_support','dm_bot','dm_group'
-          ))
-      `);
-    },
-  },
-  // ── Employee/HRIS 360 — Schema Hardening ────────────────────────────────
-  {
-    name: 'employees_unique_email_workspace',
-    rationale: 'HR-3: UNIQUE(email, workspace_id) on employees prevents duplicate officer profiles. Without this, rapid-fire invite clicks or race conditions create ghost employees with the same email — payroll splits, schedule confusion, double-billing. Partial index: only for non-terminated active employees.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM pg_indexes
-         WHERE tablename = 'employees'
-           AND indexname = 'uq_employees_email_workspace'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      // Remove duplicate rows first (keep most recently updated)
-      await pool.query(`
-        DELETE FROM employees a
-        USING employees b
-        WHERE a.id > b.id
-          AND a.email = b.email
-          AND a.workspace_id = b.workspace_id
-          AND a.email IS NOT NULL
-          AND a.status NOT IN ('terminated')
-          AND b.status NOT IN ('terminated')
-      `).catch(() => null);
-      await pool.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_employees_email_workspace
-          ON employees (lower(email), workspace_id)
-          WHERE email IS NOT NULL
-            AND status NOT IN ('terminated')
-      `);
-    },
-  },
-  // ── Document Vault 360 — Schema Hardening ───────────────────────────────
-  {
-    name: 'document_vault_status_column',
-    rationale: 'DV-6: document_vault has no status column — lifecycle tracking impossible. Without draft/final/superseded/archived/locked states, there is no way to enforce immutability, evidence holds, or version supersession. UI cannot show document lifecycle state.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM information_schema.columns
-         WHERE table_name = 'document_vault'
-           AND column_name = 'status'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      await pool.query(`
-        ALTER TABLE document_vault
-          ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'final'
-      `);
-      // Backfill: existing records are final (already persisted)
-      await pool.query(`
-        UPDATE document_vault SET status = 'final' WHERE status IS NULL OR status = ''
-      `).catch(() => null);
-      // Add CHECK constraint to enforce the enum
-      await pool.query(`
-        ALTER TABLE document_vault
-          ADD CONSTRAINT chk_doc_vault_status
-          CHECK (status IN ('draft','final','superseded','archived','locked'))
-      `).catch(() => null); // Non-fatal if constraint already exists
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS doc_vault_status_idx
-          ON document_vault (workspace_id, status)
-      `);
-    },
-  },
-  {
-    name: 'clients_unique_email_workspace',
-    rationale: 'CP-1: UNIQUE(email, workspace_id) on clients prevents duplicate client records. Without this, two managers creating the same client simultaneously both succeed — billing splits across ghost records. Partial index: only non-inactive clients.',
-    isPresent: async () => {
-      const { rows } = await pool.query(
-        `SELECT 1 FROM pg_indexes
-         WHERE tablename = 'clients'
-           AND indexname = 'uq_clients_email_workspace'`
-      );
-      return rows.length > 0;
-    },
-    apply: async () => {
-      // Keep most recently updated record per email+workspace
-      await pool.query(`
-        DELETE FROM clients a
-        USING clients b
-        WHERE a.id > b.id
-          AND lower(a.email) = lower(b.email)
-          AND a.workspace_id = b.workspace_id
-          AND a.email IS NOT NULL
-          AND COALESCE(a.is_active, true) = true
-          AND COALESCE(b.is_active, true) = true
-      `).catch(() => null);
-      await pool.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_clients_email_workspace
-          ON clients (lower(email), workspace_id)
-          WHERE email IS NOT NULL
-            AND COALESCE(is_active, true) = true
-      `);
     },
   },
   {
@@ -2210,6 +1819,14 @@ function pgQuoteLiteral(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
+// Columns that must NEVER have their NOT NULL dropped even if Drizzle declares them nullable.
+// audit_logs.action: SOX compliance — the auditSchemaRegression test (testRequiredFieldValidation)
+// verifies that action cannot be NULL. The audit_logs_action_not_null constraint re-enforces
+// this after the drop-stale pass; this set prevents the generic scanner from undoing it.
+const NOT_NULL_PROTECTED = new Set<string>([
+  'audit_logs.action',
+]);
+
 async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<{
   tablesScanned: number;
   columnsChecked: number;
@@ -2261,6 +1878,11 @@ async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<
 
     result.columnsChecked += nullableColumnNames.length;
     for (const r of driftRows) {
+      const protectedKey = `${tableCfg.name}.${r.column_name}`;
+      if (NOT_NULL_PROTECTED.has(protectedKey)) {
+        log.info(`[notNullDrift] skipping ${protectedKey} — protected column (SOX compliance)`);
+        continue;
+      }
       try {
         await pool.query(
           `ALTER TABLE "${tableCfg.name}" ALTER COLUMN "${r.column_name}" DROP NOT NULL`

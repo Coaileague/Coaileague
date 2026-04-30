@@ -2421,7 +2421,6 @@ export function startAutonomousScheduler() {
     // schedule-gated (weekly/monthly), so this hourly sweep is the real safety net.
     invoiceLifecycleSweep: { enabled: true, schedule: '17 * * * *', description: 'Hourly retry for approved time entries stuck without an invoice (Phase 26F)' },
     approvalExpiry: { enabled: true, schedule: '*/15 * * * *', description: 'Mark pending AI approvals as expired once they pass their expiresAt timestamp' },
-    inviteReaper: { enabled: true, schedule: '0 2 * * *', description: 'Invite Reaper — daily 2 AM: expire pending/invited tokens > 7 days old (Synapse-Standard)' },
   };
 
   log.info('CoAIleague autonomous scheduler starting');
@@ -2699,18 +2698,6 @@ export function startAutonomousScheduler() {
       });
     });
     log.info('Approval Expiry Sweep registered', { schedule: SCHEDULER_CONFIG.approvalExpiry.schedule, description: SCHEDULER_CONFIG.approvalExpiry.description });
-  }
-
-  // Invite Reaper — daily 2 AM (Synapse-Standard Onboarding)
-  registerJobInfo('Invite Reaper', (SCHEDULER_CONFIG as any).inviteReaper.schedule, (SCHEDULER_CONFIG as any).inviteReaper.description, (SCHEDULER_CONFIG as any).inviteReaper.enabled);
-  if ((SCHEDULER_CONFIG as any).inviteReaper.enabled) {
-    cron.schedule((SCHEDULER_CONFIG as any).inviteReaper.schedule, () => {
-      trackJobExecution('Invite Reaper', async () => {
-        const { runInviteReaper } = await import('./onboarding/inviteReaperService');
-        await runInviteReaper();
-      });
-    });
-    log.info('Invite Reaper registered — daily 2 AM sweep: pending/invited tokens > 7 days → expired');
   }
 
   // 4. Idempotency Key Cleanup (4 AM daily)

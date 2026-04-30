@@ -841,7 +841,9 @@ async function initializeCriticalServices() {
       const { probeDbConnection } = await import('./db');
       return await probeDbConnection();
     } catch { return false; }
-  })(); // ← IIFE must be called — .catch on a function object throws "not a function"
+})().catch((err: any) => {
+      log.error(`[PostListen] Unhandled crash: ${err instanceof Error ? err.message : String(err)}`);
+    });
 
   // ── CANONICAL SEED GATE ──────────────────────────────────────────────────────
   // Seeds run ONCE when a new local dev environment is set up.
