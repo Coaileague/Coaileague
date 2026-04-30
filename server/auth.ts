@@ -218,7 +218,7 @@ class FaultTolerantStore extends session.Store {
     const timer = setTimeout(() => {
       if (!done) {
         done = true;
-        cb(null, undefined); // graceful no-op on timeout
+        cb(new Error(`Session store operation timed out after ${this.timeoutMs}ms`), undefined);
       }
     }, this.timeoutMs);
 
@@ -237,7 +237,7 @@ class FaultTolerantStore extends session.Store {
       (err, result) => {
         if (result) {
           this.cacheSet(sid, result);
-          cb(err, result);
+          cb(null, result);
         } else {
           const cached = this.cacheGet(sid);
           cb(null, cached ?? null);

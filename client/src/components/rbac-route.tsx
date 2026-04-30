@@ -241,13 +241,9 @@ export function RBACRoute({
     // Not authenticated - redirect to login
     if (!isAuthenticated) {
       if (typeof window !== 'undefined') {
-        window.location.href = navConfig.auth.login;
+        window.location.replace(navConfig.auth.login);
       }
-      return (
-        <div className="h-screen flex flex-col items-center justify-center bg-background">
-          <UniversalSpinner size="md" label="Redirecting…" />
-        </div>
-      );
+      return null;
     }
     
     if (!showDeniedCard) {

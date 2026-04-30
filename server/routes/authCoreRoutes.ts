@@ -765,6 +765,7 @@ router.post("/api/auth/login", async (req, res) => {
         error: 'SESSION_SAVE_FAILED',
         retryable: true,
       });
+
     }
 
     // Phase 53: Register session for concurrent session limit tracking
