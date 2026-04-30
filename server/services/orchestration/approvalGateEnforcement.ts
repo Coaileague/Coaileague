@@ -370,6 +370,10 @@ class ApprovalGateEnforcementService {
         riskScore,
         riskFactors,
         payload,
+        impactSummary: aiImpactSummary || `Manual review required — no policy defined for category '${category}'.`,
+        requiredApproverRole: 'org_owner',
+        escalationLevel: 0,
+        remindersSent: 0,
       };
       this.gates.set(gateId, gate);
       return {

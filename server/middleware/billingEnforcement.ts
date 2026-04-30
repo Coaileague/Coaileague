@@ -192,16 +192,24 @@ export function enforceTokenPolicy(actionId: string): RequestHandler {
           error: result.reason || 'Token allowance exceeded for this billing period',
           code: 'TOKEN_LIMIT_EXCEEDED',
           currentTier: result.tier,
-          usagePercent: result.usagePercent,
-          autoRefillEnabled: result.autoRefillEnabled,
+          usagePercent: result.percentUsed,
           upgradeUrl: `/billing/upgrade?reason=tokens&from=${result.tier}`,
         });
       }
 
+      // Derive warning level from the highest crossed threshold (50/75/90).
+      const highestThreshold = result.crossedWarningThresholds.length > 0
+        ? Math.max(...result.crossedWarningThresholds)
+        : 0;
+      const warningLevel = highestThreshold >= 90 ? 'critical'
+        : highestThreshold >= 75 ? 'warning'
+        : highestThreshold >= 50 ? 'info'
+        : 'none';
+
       // Attach warning level for Trinity to surface proactive messages
-      if (result.warningLevel && result.warningLevel !== 'none') {
-        (req as any).tokenWarningLevel = result.warningLevel;
-        (req as any).tokenUsagePercent = result.usagePercent;
+      if (warningLevel !== 'none') {
+        (req as any).tokenWarningLevel = warningLevel;
+        (req as any).tokenUsagePercent = result.percentUsed;
       }
 
       next();

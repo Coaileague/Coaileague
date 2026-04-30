@@ -9,6 +9,7 @@ import {
 } from '@shared/schema';
 import { createLogger } from '../../lib/logger';
 import { initiateTransfer, isPlaidConfigured, plaidDecrypt, verifyBankAccount } from '../partners/plaidService';
+import { toFinancialString } from '../financialCalculator';
 
 const log = createLogger('achTransferService');
 
@@ -17,6 +18,7 @@ export type AchTransferOutcome = 'initiated' | 'payment_held' | 'skipped' | 'fai
 export interface AchTransferResult {
   status: AchTransferOutcome;
   transferId?: string;
+  amount?: string;
   reason?: string;
 }
 

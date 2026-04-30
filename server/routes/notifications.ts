@@ -2,7 +2,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth';
-import { requireManager } from '../rbac';
+import { requireManager, type AuthenticatedRequest } from '../rbac';
 import { db } from '../db';
 import { eq, and, isNull } from 'drizzle-orm';
 import { storage } from '../storage';
@@ -43,20 +43,7 @@ function broadcastNotification(
   }
 }
 
-// Middleware - will be applied when mounting
-// @ts-expect-error — TS migration: fix in refactoring sprint
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    workspaceId?: string;
-    currentWorkspaceId?: string;
-    [key: string]: any;
-  };
-  userId?: string;
-  workspaceId?: string;
-  session?: any;
-  query?: any;
-}
+// AuthenticatedRequest is now imported from ../rbac (canonical source).
 
 const router = Router();
 
@@ -204,7 +191,6 @@ router.get('/api/notifications/combined', requireAuth, async (req, res) => {
       res.status(500).json({ message: 'Failed to fetch notifications' });
     }
   });
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id;
@@ -247,7 +233,6 @@ router.post('/api/notifications/mark-all-read', requireAuth, async (req: Authent
   });
 
   // Batch mark-read endpoint for mobile notification hub
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/mark-read-batch', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -294,7 +279,6 @@ router.post('/api/notifications/mark-read-batch', requireAuth, async (req: Authe
   });
 
   // Alias route for acknowledge-all (frontend uses this endpoint)
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/acknowledge-all', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -336,7 +320,6 @@ router.post('/api/notifications/acknowledge-all', requireAuth, async (req: Authe
 
 
   // Clear all / Delete all - actually removes notifications from user's history
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/notifications/clear-all", requireAuth, async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id;
 
@@ -425,7 +408,6 @@ router.post("/api/notifications/clear-all", requireAuth, async (req: Authenticat
 
 
   // Onboarding digest endpoint - Trinity welcome + last 3 What's New + system updates for new users
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get("/api/notifications/onboarding-digest", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
@@ -452,11 +434,10 @@ router.get("/api/notifications/onboarding-digest", requireAuth, async (req: Auth
   });
 
   // Send Trinity welcome notification to a user
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/notifications/trinity-welcome", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
-      const workspaceId = req.workspaceId || req.user?.defaultWorkspaceId;
+      const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || req.user?.workspaceId;
       const { userName } = req.body;
 
       if (!userId) {
@@ -486,7 +467,6 @@ router.post("/api/notifications/trinity-welcome", requireAuth, async (req: Authe
     }
   });
   // Tab-specific clear endpoint - clears notifications for a specific tab only
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/notifications/clear-tab/:tab", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -548,12 +528,11 @@ router.post("/api/notifications/clear-tab/:tab", requireAuth, async (req: Authen
   });
 
   // Notification system diagnostics (AI Brain Trinity orchestrated)
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get("/api/notifications/diagnostics", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.user?.id;
-      const workspaceId = authReq.workspaceId || authReq.user?.defaultWorkspaceId;
+      const workspaceId = authReq.workspaceId || authReq.user?.currentWorkspaceId || authReq.user?.workspaceId;
 
       const { notificationDiagnostics } = await import("../services/ai-brain/notificationDiagnostics");
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -571,7 +550,6 @@ router.get("/api/notifications/diagnostics", requireAuth, async (req: Authentica
   });
 
   // Universal Platform Diagnostics API (AI Brain Trinity orchestrated with Gemini 3)
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get("/api/platform/diagnostics", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -601,7 +579,6 @@ router.get("/api/platform/diagnostics", requireAuth, async (req: AuthenticatedRe
   });
 
   // Hotpatch execution API with RBAC
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/platform/hotpatch", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -630,7 +607,6 @@ router.post("/api/platform/hotpatch", requireAuth, async (req: AuthenticatedRequ
   });
 
   // Get diagnostic subagents list
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get("/api/platform/diagnostics/subagents", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { DOMAIN_SUBAGENTS } = await import("../services/ai-brain/universalDiagnosticOrchestrator");
@@ -647,7 +623,6 @@ router.get("/api/platform/diagnostics/subagents", requireAuth, async (req: Authe
   });
 
   // Acknowledge a single notification
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/notifications/acknowledge/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -706,7 +681,6 @@ router.post("/api/notifications/acknowledge/:id", requireAuth, async (req: Authe
   });
 
   // Acknowledge maintenance alert
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/maintenance-alerts/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -737,7 +711,6 @@ router.post('/api/maintenance-alerts/:id/acknowledge', requireAuth, async (req: 
   // ============================================================================
 
   // Get unified unread counts (notifications + platform updates)
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/notifications/unread-counts', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id;
@@ -771,7 +744,6 @@ router.get('/api/notifications/unread-counts', requireAuth, async (req: Authenti
     }
   });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/notifications/unread-count', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id;
@@ -837,7 +809,6 @@ router.get('/api/notifications/unread-count', requireAuth, async (req: Authentic
   });
 
   // Mark individual notification as read
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/:id/mark-read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -874,7 +845,6 @@ router.post('/api/notifications/:id/mark-read', requireAuth, async (req: Authent
   });
 
   // Mark platform update as viewed
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/platform-updates/:id/mark-viewed', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -905,7 +875,6 @@ router.post('/api/platform-updates/:id/mark-viewed', requireAuth, async (req: Au
   });
 
   // Sync notification counts (force refresh from database)
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/sync-counts', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -934,7 +903,6 @@ router.post('/api/notifications/sync-counts', requireAuth, async (req: Authentic
   });
 
   // Get user notifications
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -981,7 +949,6 @@ router.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, 
   });
 
   // Toggle notification read status (mark as read/unread)
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1020,7 +987,6 @@ router.patch('/api/notifications/:id/read', requireAuth, async (req: Authenticat
   });
 
   // Delete notification
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1067,7 +1033,6 @@ router.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRe
   // ============================================================================
 
   // Notification action endpoint - handle workflow approvals, shift invites, etc.
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/:id/action', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id;
@@ -1190,7 +1155,6 @@ router.post('/api/notifications/:id/action', requireAuth, async (req: Authentica
   // ============================================================================
 
   // Edit chat message
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.patch('/api/chat/message/:id/edit', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1245,7 +1209,6 @@ router.patch('/api/chat/message/:id/edit', requireAuth, async (req: Authenticate
   });
 
   // Delete chat message
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.delete('/api/chat/message/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1301,7 +1264,6 @@ router.delete('/api/chat/message/:id', requireAuth, async (req: AuthenticatedReq
   // ============================================================================
 
   // Get notification preferences
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/notifications/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1327,7 +1289,6 @@ router.get('/api/notifications/preferences', requireAuth, async (req: Authentica
   });
 
   // Update notification preferences
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.patch('/api/notifications/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1368,7 +1329,6 @@ router.patch('/api/notifications/preferences', requireAuth, async (req: Authenti
   });
 
   // Subscribe to notification type
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/subscribe', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1410,7 +1370,6 @@ router.post('/api/notifications/subscribe', requireAuth, async (req: Authenticat
   });
 
   // Unsubscribe from notification type
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/unsubscribe', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1456,7 +1415,6 @@ router.post('/api/notifications/unsubscribe', requireAuth, async (req: Authentic
   // ============================================================================
 
   // Get SMS configuration status
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/notifications/sms-status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { isSMSConfigured } = await import('../services/smsService');
@@ -1473,7 +1431,6 @@ router.get('/api/notifications/sms-status', requireAuth, async (req: Authenticat
   });
 
   // Get shift reminder timing options
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/notifications/reminder-options', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { getReminderTimingOptions } = await import('../services/shiftRemindersService');
@@ -1493,7 +1450,6 @@ router.get('/api/notifications/reminder-options', requireAuth, async (req: Authe
   });
 
   // Send test SMS to user
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/test-sms', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1554,7 +1510,6 @@ router.post('/api/notifications/test-sms', requireAuth, async (req: Authenticate
   });
 
   // Verify SMS phone number
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/verify-phone', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -1596,7 +1551,6 @@ router.post('/api/notifications/verify-phone', requireAuth, async (req: Authenti
   });
 
   // Trigger manual shift reminder (for testing)
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/notifications/send-shift-reminder', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
@@ -1629,7 +1583,6 @@ router.post('/api/notifications/send-shift-reminder', requireAuth, async (req: A
 // ============================================================================
 
 // GET /api/notifications/log — delivery log for current workspace
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/notifications/log', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
@@ -1686,26 +1639,35 @@ router.post('/api/notifications/ack/:id', requireAuth, async (req: Authenticated
 });
 
 // POST /api/notifications/send — restricted to manager+ for manual/test sends
-router.post('/api/notifications/send', requireManager, async (req: AuthenticatedRequest, res) => {
+router.post('/api/notifications/send', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'No active workspace' });
 
-    const sendSchema = (await import('zod')).z.object({
-      recipientUserId: (await import('zod')).z.string().uuid(),
-      type: (await import('zod')).z.string().min(1),
-      channel: (await import('zod')).z.enum(['email', 'sms', 'websocket', 'in_app', 'push']),
-      body: (await import('zod')).z.string().min(1),
-      subject: (await import('zod')).z.string().optional(),
-      idempotencyKey: (await import('zod')).z.string().optional(),
+    const {
+      NotificationDeliveryService,
+      NOTIFICATION_DELIVERY_TYPES,
+    } = await import('../services/notificationDeliveryService');
+
+    const sendSchema = z.object({
+      recipientUserId: z.string().uuid(),
+      type: z.enum(NOTIFICATION_DELIVERY_TYPES),
+      channel: z.enum(['email', 'sms', 'websocket', 'in_app', 'push']),
+      body: z.string().min(1),
+      subject: z.string().optional(),
+      idempotencyKey: z.string().optional(),
     });
     const parsed = sendSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: 'Validation failed', details: parsed.error.flatten() });
     const { type, recipientUserId, channel, subject, body, idempotencyKey } = parsed.data;
 
-    const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({
-      type, workspaceId, recipientUserId, channel, subject, body,
+      type,
+      workspaceId,
+      recipientUserId,
+      channel,
+      subject,
+      body: { message: body },
       idempotencyKey,
     });
 

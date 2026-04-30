@@ -247,7 +247,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
   // Notify org owner if there are flagged employees
   if (report.flaggedCount > 0) {
     try {
-      const [ws] = await db.select({ ownerId: workspaces.ownerId })
+      const [ws] = await db.select({ id: workspaces.id, ownerId: workspaces.ownerId })
         .from(workspaces)
         .where(eq(workspaces.id, workspaceId))
         .limit(1);

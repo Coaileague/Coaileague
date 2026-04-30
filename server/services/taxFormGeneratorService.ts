@@ -194,7 +194,7 @@ export class TaxFormGeneratorService {
     employeeId: string,
     workspaceId: string,
     taxYear: number
-  ): Promise<{ success: boolean; pdfBuffer?: Buffer; taxFormId?: string; error?: string }> {
+  ): Promise<{ success: boolean; pdfBuffer?: Buffer; taxFormId?: string; vaultId?: string; documentNumber?: string; error?: string }> {
     try {
       const employee = await db.query.employees.findFirst({
         where: and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)),
@@ -324,7 +324,7 @@ export class TaxFormGeneratorService {
     employeeId: string,
     workspaceId: string,
     taxYear: number
-  ): Promise<{ success: boolean; pdfBuffer?: Buffer; taxFormId?: string; error?: string }> {
+  ): Promise<{ success: boolean; pdfBuffer?: Buffer; taxFormId?: string; vaultId?: string; documentNumber?: string; error?: string }> {
     try {
       const employee = await db.query.employees.findFirst({
         where: and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)),
@@ -494,7 +494,7 @@ export class TaxFormGeneratorService {
   async generate940Report(
     workspaceId: string,
     year: number
-  ): Promise<{ success: boolean; pdfBuffer?: Buffer; data?: Form940Data; error?: string }> {
+  ): Promise<{ success: boolean; pdfBuffer?: Buffer; data?: Form940Data; vaultId?: string; documentNumber?: string; error?: string }> {
     try {
       const workspace = await db.query.workspaces.findFirst({
         where: eq(workspaces.id, workspaceId),
@@ -781,7 +781,7 @@ export class TaxFormGeneratorService {
     workspaceId: string,
     quarter: number,
     year: number
-  ): Promise<{ success: boolean; pdfBuffer?: Buffer; taxFormId?: string; data?: Form941Data; error?: string }> {
+  ): Promise<{ success: boolean; pdfBuffer?: Buffer; taxFormId?: string; data?: Form941Data; vaultId?: string; documentNumber?: string; error?: string }> {
     try {
       if (quarter < 1 || quarter > 4) {
         return { success: false, error: 'Quarter must be between 1 and 4' };

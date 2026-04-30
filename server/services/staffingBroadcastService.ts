@@ -22,7 +22,7 @@ import {
   shiftCoverageRequests,
   timeEntries,
 } from '@shared/schema';
-import { eq, and, isNull, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { storage } from '../storage';
 import {
   sendShiftBroadcastEmail,

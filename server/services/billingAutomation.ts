@@ -107,6 +107,9 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
         ),
         allTimeEntryIds
       );
+      // B5: createInvoiceFromBillableSummary returns null when the umbrella zero-rate
+      // guard fires. The event has already been published; just skip this client.
+      if (!invoice) continue;
       generatedInvoices.push(invoice);
       // DUAL-EMIT LAW: publish invoice_created so Trinity + automationTriggerService
       // receive this event for nightly batch-generated invoices (not just manual creation).
@@ -226,6 +229,8 @@ export async function generateInvoiceForClient(
         ),
         allTimeEntryIds
       );
+      // B5: null = umbrella zero-rate guard fired. Event already emitted; just skip.
+      if (!invoice) continue;
       generatedInvoices.push(invoice);
       // DUAL-EMIT LAW: publish invoice_created so Trinity + automationTriggerService
       // receive this event for per-client auto-generated invoices.
@@ -314,7 +319,51 @@ async function createInvoiceFromBillableSummary(
   clientSummary: any, // ClientBillableSummary from aggregator
   warnings: string[],
   timeEntryIds: string[] // B1: received from caller for atomic marking
-) {
+): Promise<Invoice | null> {
+  // B5: Zero-Dollar Invoice umbrella guard.
+  // The per-employee B4 guard skips employees with no billing rate but still lets
+  // the invoice be created with empty line items, which marks billedAt on the
+  // time entries and orphans them from any future invoice. If every entry has
+  // no resolvable rate, refuse to create the invoice so the entries stay
+  // claimable on the next run once a rate is configured. Caller treats null as "skipped".
+  const allEntriesZeroRate = clientSummary.entries.every(
+    (e: any) => !e.billingRate || Number(e.billingRate) === 0
+  );
+  if (allEntriesZeroRate) {
+    const unbilledHours = clientSummary.entries.reduce(
+      (h: number, e: any) => h + (Number(e.totalHours) || 0),
+      0,
+    );
+    log.warn(
+      `[BillingAutomation] B5 ZERO-DOLLAR GUARD: Skipping ${clientSummary.clientName} — ` +
+      `no billing rate at shift, client, or workspace level (${unbilledHours.toFixed(2)}h held).`,
+    );
+    publishEvent(
+      // @ts-expect-error — TS migration: fix in refactoring sprint
+      platformEventBus.publish({
+        type: 'billing_rate_missing',
+        category: 'billing',
+        title: `Zero-Dollar Invoice Blocked: ${clientSummary.clientName}`,
+        description:
+          `Trinity blocked an invoice for ${clientSummary.clientName} because no billing rate ` +
+          `is configured. ${clientSummary.entries.length} entries (${unbilledHours.toFixed(2)}h) ` +
+          `will remain unbilled until a rate is set on the site, client contract, or workspace.`,
+        workspaceId,
+        metadata: {
+          clientId: clientSummary.clientId,
+          clientName: clientSummary.clientName,
+          unbilledHours,
+          entryCount: clientSummary.entries.length,
+          timeEntryIds: clientSummary.entries.map((e: any) => e.timeEntryId),
+          // @ts-expect-error — TS migration: fix in refactoring sprint
+          severity: 'revenue_risk',
+        },
+      }),
+      '[BillingAutomation] B5 zero-dollar guard event publish',
+    );
+    return null;
+  }
+
   // Get client rate configuration (for subscription billing if applicable)
   const [clientRate] = await db
     .select()
@@ -1119,6 +1168,15 @@ export async function generateWeeklyInvoices(
         ),
         allTimeEntryIds
       );
+      // B5: null = umbrella zero-rate guard fired. Surface in skippedClients so the
+      // caller's response payload (and the manager dashboard) shows what was held back.
+      if (!invoice) {
+        skippedClients.push({
+          clientName: clientSummary.clientName,
+          reason: 'No billing rate configured at shift, client, or workspace level',
+        });
+        continue;
+      }
       generatedInvoices.push(invoice);
 
       // Spec Section 4.2: If auto_send_invoice is enabled, transition draft → sent

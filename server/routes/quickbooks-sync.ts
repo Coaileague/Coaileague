@@ -5,24 +5,14 @@ import { db } from '../db';
 import { eq, and, isNull, desc, gte } from 'drizzle-orm';
 import { partnerConnections, partnerSyncLogs, invoices } from '@shared/schema';
 import { requireAuth } from '../auth';
-import { requireManager } from '../rbac';
+import { requireManager, type AuthenticatedRequest } from '../rbac';
 import { requireProfessional } from '../tierGuards';
 import { tokenManager } from '../services/billing/tokenManager';
 import { createLogger } from '../lib/logger';
 const log = createLogger('QuickbooksSync');
 
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    workspaceId?: string;
-    currentWorkspaceId?: string;
-    email?: string;
-    name?: string;
-    platformRole?: string;
-  };
-}
+// AuthenticatedRequest is now imported from ../rbac (canonical source).
 
 const router = Router();
 
@@ -75,7 +65,6 @@ const qboInvoiceSchema = z.object({
 });
 
 // Run initial sync on OAuth connect
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/quickbooks/sync/initial", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
@@ -123,7 +112,6 @@ router.post("/api/quickbooks/sync/initial", requireAuth, requireManager, async (
 });
 
 // Create invoice with idempotency - Zod validated
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/quickbooks/invoice/create", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
@@ -157,7 +145,6 @@ router.post("/api/quickbooks/invoice/create", requireAuth, requireManager, async
 });
 
 // Run CDC poll for changes
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post("/api/quickbooks/sync/cdc", requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
@@ -210,7 +197,6 @@ router.post("/api/quickbooks/sync/cdc", requireAuth, requireManager, async (req:
 });
 
 // Get manual review queue
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get("/api/quickbooks/review-queue", requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
@@ -348,7 +334,6 @@ router.post("/api/webhooks/quickbooks", async (req: Request, res: Response) => {
 // and syncs them as QB customers. Also available as manual trigger.
 // POST /api/admin/quickbooks/sync-staffing-clients
 // ─────────────────────────────────────────────────────────────────────────────
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/admin/quickbooks/sync-staffing-clients', requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
@@ -493,7 +478,6 @@ router.post('/api/admin/quickbooks/sync-staffing-clients', requireAuth, requireM
 // POST /api/quickbooks/sync/retry-queue/:logId
 // ─────────────────────────────────────────────────────────────────────────────
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/quickbooks/sync/retry-queue', requireAuth, requireProfessional, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
@@ -528,7 +512,6 @@ router.get('/api/quickbooks/sync/retry-queue', requireAuth, requireProfessional,
   }
 });
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.post('/api/quickbooks/sync/retry-queue/:logId', requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
@@ -571,7 +554,6 @@ router.post('/api/quickbooks/sync/retry-queue/:logId', requireAuth, requireManag
 // GET /api/quickbooks/connection-status
 // ─────────────────────────────────────────────────────────────────────────────
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/api/quickbooks/connection-status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
