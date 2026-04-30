@@ -1,6 +1,6 @@
 import { db } from 'server/db';
 import { timeEntries } from '@shared/schema';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 // Accept either the top-level db handle or a Drizzle transaction handle —
 // callers compose this helper inside an outer db.transaction(...) and the
@@ -65,7 +65,8 @@ export async function claimPayrollTimeEntries({
     .where(and(
       eq(timeEntries.workspaceId, workspaceId),
       inArray(timeEntries.id, uniqueIds),
-      isNull(timeEntries.payrolledAt),
+      isNull(timeEntries.payrolledAt),           // Not already payrolled
+      eq(timeEntries.status as any, 'approved'), // Only approved entries can be payrolled
     ))
     .returning({ id: timeEntries.id });
 

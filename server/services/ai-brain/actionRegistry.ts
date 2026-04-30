@@ -2151,6 +2151,17 @@ class AIBrainActionRegistry {
           actionId: request.actionId,
         }).catch(() => null); // fire-and-forget, non-fatal
 
+        // FINANCIAL LOCK GATE: Cannot approve an entry that is already billed or payrolled
+        try {
+          await AtomicFinancialLockService.assertCanModify(timeEntryId);
+        } catch (lockErr: any) {
+          if (lockErr instanceof FinancialLockConflict) {
+            return createResult(request.actionId, false,
+              `FINANCIAL_LOCK: ${lockErr.message}`, null, start);
+          }
+          throw lockErr;
+        }
+
         const [updated] = await db.update(timeEntries)
           .set({
             status: 'approved',

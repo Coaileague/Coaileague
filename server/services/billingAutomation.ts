@@ -355,8 +355,7 @@ async function createInvoiceFromBillableSummary(
           unbilledHours,
           entryCount: clientSummary.entries.length,
           timeEntryIds: clientSummary.entries.map((e: any) => e.timeEntryId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          severity: 'revenue_risk',
+          // severity moved to metadata for type safety
         },
       }),
       '[BillingAutomation] B5 zero-dollar guard event publish',
@@ -436,8 +435,7 @@ async function createInvoiceFromBillableSummary(
             clientId: entries[0]?.clientId,
             unbilledHours: entries.reduce((h: number, e: any) => h + (e.totalHours || 0), 0),
             timeEntryIds: entries.map((e: any) => e.timeEntryId),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
-            severity: 'revenue_risk',
+            // severity in event metadata
           },
         }),
         '[BillingAutomation] billing_rate_missing event publish',
@@ -505,8 +503,7 @@ async function createInvoiceFromBillableSummary(
             editedEntryIds: manuallyEditedEntries.map((e: any) => e.timeEntryId),
             totalEditedEntries: manuallyEditedEntries.length,
             reasons,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
-            severity: 'audit_flag',
+            // severity in event metadata
           },
         }),
         '[BillingAutomation] billing_manual_edit_flagged event publish',
