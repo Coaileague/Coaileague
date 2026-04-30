@@ -75,7 +75,7 @@ export function ShiftSwapDrawer({
 
   const requestSwapMutation = useMutation({
     mutationFn: async (data: { shiftId: string; targetEmployeeId: string; notes?: string }) => {
-      const response = await apiRequest('POST', `/api/scheduling/shifts/${data.shiftId}/swap-request`, {
+      const response = await apiRequest('POST', `/api/scheduling/swap-requests`, {
         targetEmployeeId: data.targetEmployeeId,
         reason: data.notes,
       });

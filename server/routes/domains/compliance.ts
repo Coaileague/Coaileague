@@ -19,6 +19,7 @@ import formBuilderRouter from "../formBuilderRoutes";
 import formRouter from "../formRoutes";
 import policyComplianceRouter from "../policyComplianceRoutes";
 import complianceInlineRouter from "../complianceInlineRoutes";
+import complianceApprovalsRouter from "../compliance/approvals";
 import governanceInlineRouter from "../governanceInlineRoutes";
 import uacpRouter from "../uacpRoutes";
 import securityAuditRouter from "../security-audit";
@@ -41,6 +42,9 @@ import { matrixRoutes } from '../compliance/matrix';
 
 export function mountComplianceRoutes(app: Express): void {
   // Compliance matrix routes — includes /api/compliance/matrix/my-score
+  // Security compliance approvals (documents, certifications, records)
+  app.use("/api/security-compliance/approvals", requireAuth, ensureWorkspaceAccess, complianceApprovalsRouter);
+
   app.use('/api/compliance/matrix', requireAuth, ensureWorkspaceAccess, matrixRoutes);
   // Governance inline routes BEFORE security-compliance to ensure lock-vault is handled
   app.use("/api", requireAuth, ensureWorkspaceAccess, governanceInlineRouter);

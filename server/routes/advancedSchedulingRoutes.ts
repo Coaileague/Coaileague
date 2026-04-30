@@ -346,3 +346,34 @@ advancedSchedulingRouter.delete('/templates/:templateId', requireManager, async 
   }
 });
 
+
+// POST /shifts/:shiftId/duplicate — clone a single shift (new date, draft status, no employee)
+advancedSchedulingRouter.post('/shifts/:shiftId/duplicate', requireManager, async (req: Request, res: Response) => {
+  try {
+    const { shiftId } = req.params;
+    const workspaceId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const { targetDate, startTime: newStart, endTime: newEnd } = req.body;
+    if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
+    const { shifts } = await import('@shared/schema');
+    const { db } = await import('../db');
+    const { eq, and } = await import('drizzle-orm');
+    const [original] = await db.select().from(shifts)
+      .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
+    if (!original) return res.status(404).json({ error: 'Shift not found' });
+    // Build duplicate — reset assignment/status, optionally move to new date
+    const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = original as any;
+    const created = await db.insert(shifts).values({
+      ...rest,
+      workspaceId,
+      status: 'draft',
+      employeeId: null,
+      startTime: newStart ? new Date(newStart) : targetDate ? new Date(targetDate) : original.startTime,
+      endTime: newEnd ? new Date(newEnd) : targetDate ? new Date(targetDate) : original.endTime,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any).returning();
+    res.json({ success: true, shift: created[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to duplicate shift' });
+  }
+});

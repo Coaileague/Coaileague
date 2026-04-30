@@ -292,7 +292,7 @@ router.post("/:id/cancel", async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Timesheet Edit Requests — manager review of officer-submitted edit requests
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/timesheet-edit-requests/pending', requireAuth, async (req: any, res) => {
+router.get('/pending', requireAuth, async (req: any, res) => {  // mounted at /api/timesheet-edit-requests/pending
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(401).json({ error: 'Workspace required' });
@@ -306,7 +306,7 @@ router.get('/timesheet-edit-requests/pending', requireAuth, async (req: any, res
   }
 });
 
-router.put('/timesheet-edit-requests/:id/review', requireAuth, async (req: any, res) => {
+router.put('/:id/review', requireAuth, async (req: any, res) => {  // mounted at /api/timesheet-edit-requests/:id/review
   try {
     const { id } = req.params;
     const { approved, reviewNotes } = req.body;

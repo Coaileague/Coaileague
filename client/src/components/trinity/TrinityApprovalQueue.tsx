@@ -51,18 +51,18 @@ export function TrinityApprovalQueue() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/trinity/pending-approvals"],
+    queryKey: ["/api/trinity/scheduling/pending-approvals"],
     refetchInterval: 30000,
   });
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/trinity/pending-approvals/${id}/approve`);
+      const res = await apiRequest("POST", `/api/trinity/scheduling/pending-approvals/${id}/approve`);
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trinity/pending-approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trinity/scheduling/pending-approvals"] });
       toast({ title: "Action approved", description: "Trinity will execute it now." });
     },
     onError: () => toast({ title: "Approval failed", variant: "destructive" }),
@@ -70,12 +70,12 @@ export function TrinityApprovalQueue() {
 
   const rejectMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/trinity/pending-approvals/${id}/reject`, { reason: "Owner rejected" });
+      const res = await apiRequest("POST", `/api/trinity/scheduling/pending-approvals/${id}/reject`, { reason: "Owner rejected" });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trinity/pending-approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trinity/scheduling/pending-approvals"] });
       toast({ title: "Action rejected" });
     },
     onError: () => toast({ title: "Rejection failed", variant: "destructive" }),
