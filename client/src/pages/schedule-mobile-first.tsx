@@ -17,6 +17,7 @@ import { useClientLookup } from '@/hooks/useClients';
 import { useEmployee } from '@/hooks/useEmployee';
 import { isSupervisorOrAbove } from '@/lib/roleHierarchy';
 import { useTrinitySchedulingProgress } from '@/hooks/use-trinity-scheduling-progress';
+import { TrinitySchedulingSummaryModal } from '@/components/trinity-scheduling-summary-modal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -145,10 +146,12 @@ export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMo
   const { 
     session: trinitySession, 
     trinityWorking,
+    completionResult: trinityCompletionResult,
     isShiftBeingProcessed,
     wasShiftJustAssigned,
     clearSession: clearTrinitySession,
   } = useTrinitySchedulingProgress(workspaceId);
+  const [showTrinitySummary, setShowTrinitySummary] = useState(false);
   
   const isManagerOrSupervisor = useMemo(() => {
     if (!currentEmployee || !currentEmployee.workspaceRole) return false;
@@ -240,6 +243,13 @@ export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMo
 
   // Fetch clients
   const { data: clients = [] } = useClientLookup();
+
+  // Show Trinity summary modal when auto-fill completes (biological feedback loop)
+  useEffect(() => {
+    if (trinityCompletionResult && trinityCompletionResult.summary?.openShiftsFilled > 0) {
+      setShowTrinitySummary(true);
+    }
+  }, [trinityCompletionResult]);
 
   // Calculate pending shifts
   const pendingShifts = useMemo(() => {
@@ -1321,6 +1331,41 @@ export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMo
         open={showCalendarSync}
         onOpenChange={setShowCalendarSync}
         employeeId={currentEmployee?.id}
+      />
+
+      {/* Trinity Biological Feedback Loop — runs after every auto-fill */}
+      <TrinitySchedulingSummaryModal
+        open={showTrinitySummary}
+        onOpenChange={setShowTrinitySummary}
+        result={trinityCompletionResult ? {
+          success: true,
+          sessionId: trinityCompletionResult.sessionId,
+          executionId: trinityCompletionResult.executionId || '',
+          totalMutations: trinityCompletionResult.mutationCount || 0,
+          mutations: (trinityCompletionResult.mutations || []).map((m: any) => ({
+            id: m.id,
+            type: m.type || 'fill_open_shift',
+            description: m.description,
+            employeeName: m.employeeName,
+            clientName: m.clientName,
+            startTime: m.startTime,
+            endTime: m.endTime,
+          })),
+          summary: {
+            shiftsCreated: trinityCompletionResult.summary?.shiftsCreated || 0,
+            shiftsEdited: trinityCompletionResult.summary?.shiftsEdited || 0,
+            shiftsDeleted: trinityCompletionResult.summary?.shiftsDeleted || 0,
+            employeesSwapped: trinityCompletionResult.summary?.employeesSwapped || 0,
+            openShiftsFilled: trinityCompletionResult.summary?.openShiftsFilled || 0,
+            totalHoursScheduled: trinityCompletionResult.summary?.totalHoursScheduled || 0,
+            estimatedLaborCost: trinityCompletionResult.summary?.estimatedLaborCost || 0,
+          },
+          aiSummary: (trinityCompletionResult as any).aiSummary || `Trinity filled ${trinityCompletionResult.summary?.openShiftsFilled || 0} shifts.`,
+          requiresVerification: false,
+        } : null}
+        workspaceId={workspaceId || ''}
+        onVerified={() => { setShowTrinitySummary(false); clearTrinitySession(); }}
+        onRejected={() => setShowTrinitySummary(false)}
       />
 
       {/* Phase 26H — Supervisor calloff confirm (deep-link from Phase 26G) */}

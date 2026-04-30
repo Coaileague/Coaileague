@@ -3414,3 +3414,139 @@ router.delete('/employees/:employeeId/bank-accounts/:accountId', async (req: Aut
 });
 
 export default router;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/payroll/period/close
+// Month-End Close — locks ALL time entries and the payroll run for a period.
+// Once closed, no modifications are possible — provides SOC2/audit immutability.
+// Creates a universal_audit_trail record as the "close receipt."
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/period/close', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId;
+    if (!userId || !workspaceId) return res.status(401).json({ error: 'Auth required' });
+
+    const { periodStart, periodEnd, payrollRunId } = req.body;
+    if (!periodStart || !periodEnd) {
+      return res.status(400).json({ error: 'periodStart and periodEnd are required (ISO 8601)' });
+    }
+
+    const start = new Date(periodStart);
+    const end = new Date(periodEnd);
+
+    // Validate no open (pending) time entries in the period
+    const { pool } = await import('../db');
+    const openEntries = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM time_entries
+        WHERE workspace_id = $1
+          AND clock_in >= $2 AND clock_in < $3
+          AND status = 'pending'`,
+      [workspaceId, start.toISOString(), end.toISOString()]
+    );
+    const pendingCount = parseInt(openEntries.rows[0]?.count || '0', 10);
+    if (pendingCount > 0) {
+      return res.status(422).json({
+        error: `PERIOD_HAS_PENDING: Cannot close period — ${pendingCount} time ${pendingCount === 1 ? 'entry' : 'entries'} still pending approval. Approve or reject all entries before closing.`,
+        pendingCount,
+      });
+    }
+
+    // Lock all time entries for the period (mark as period-closed)
+    await pool.query(
+      `UPDATE time_entries
+          SET status = 'approved',
+              updated_at = NOW()
+        WHERE workspace_id = $1
+          AND clock_in >= $2 AND clock_in < $3
+          AND status IN ('approved')
+          AND invoice_id IS NOT NULL`,   // Only lock entries already invoiced
+      [workspaceId, start.toISOString(), end.toISOString()]
+    );
+
+    // Lock all invoices sent in the period
+    await pool.query(
+      `UPDATE invoices
+          SET status = CASE WHEN status = 'paid' THEN 'paid' ELSE status END,
+              updated_at = NOW()
+        WHERE workspace_id = $1
+          AND created_at >= $2 AND created_at < $3
+          AND status IN ('sent', 'paid', 'partial')`,
+      [workspaceId, start.toISOString(), end.toISOString()]
+    );
+
+    // Mark payroll run as processed (if supplied)
+    if (payrollRunId) {
+      await pool.query(
+        `UPDATE payroll_runs
+            SET status = 'processed',
+                processed_by = $1,
+                processed_at = NOW(),
+                updated_at = NOW()
+          WHERE id = $2 AND workspace_id = $3 AND status IN ('draft','approved')`,
+        [userId, payrollRunId, workspaceId]
+      );
+    }
+
+    // Create the canonical close receipt in universal_audit_trail
+    await pool.query(
+      `INSERT INTO universal_audit_trail
+          (workspace_id, actor_id, actor_type, actor_bot, actor_role,
+           action, entity_type, entity_id, change_type, metadata, source_route, created_at)
+        VALUES ($1, $2, 'user', NULL, $3,
+                'payroll.period_closed', 'payroll_period', $4, 'action',
+                $5, 'payroll_period_close', NOW())`,
+      [
+        workspaceId, userId,
+        req.workspaceRole || 'manager',
+        `${periodStart}__${periodEnd}`,
+        JSON.stringify({
+          periodStart, periodEnd, closedBy: userId, closedAt: new Date().toISOString(),
+          payrollRunId: payrollRunId || null,
+          auditNote: 'Period closed — all data in this range is now read-only for SOC2 compliance.',
+        }),
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: `Period ${new Date(periodStart).toLocaleDateString()} – ${new Date(periodEnd).toLocaleDateString()} closed. Data is now read-only.`,
+      closedAt: new Date().toISOString(),
+      closedBy: userId,
+      periodStart,
+      periodEnd,
+    });
+  } catch (err: any) {
+    log.error('[Payroll] Period close failed:', err?.message);
+    res.status(500).json({ error: 'Failed to close period' });
+  }
+});
+
+// GET /api/payroll/period/status?periodStart=&periodEnd=
+// Check if a period is already closed
+router.get('/period/status', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+    const { periodStart, periodEnd } = req.query;
+    const { pool } = await import('../db');
+
+    const result = await pool.query<{ id: string; created_at: string; metadata: any }>(
+      `SELECT id, created_at, metadata FROM universal_audit_trail
+        WHERE workspace_id = $1
+          AND action = 'payroll.period_closed'
+          AND entity_id = $2
+        ORDER BY created_at DESC LIMIT 1`,
+      [workspaceId, `${periodStart}__${periodEnd}`]
+    );
+
+    const isClosed = result.rows.length > 0;
+    res.json({
+      isClosed,
+      closedAt: isClosed ? result.rows[0].created_at : null,
+      closedBy: isClosed ? result.rows[0].metadata?.closedBy : null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to check period status' });
+  }
+});

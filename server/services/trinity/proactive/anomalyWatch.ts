@@ -120,15 +120,20 @@ export async function runAnomalyWatchSweep(): Promise<AnomalyWatchResult> {
 
 export async function runAnomalyWatchForWorkspace(workspaceId: string): Promise<Anomaly[]> {
   const out: Anomaly[] = [];
-  const [gpsFraud, coverageGaps, incidentPatterns, ghostEmployees, billingAnomalies] =
+  const [gpsFraud, coverageGaps, incidentPatterns, ghostEmployees, billingAnomalies,
+    futureShiftExpiry, billRateMismatch] =
     await Promise.all([
       findGpsFraud(workspaceId),
       findCoverageGaps(workspaceId),
       findIncidentPatterns(workspaceId),
       findGhostEmployees(workspaceId),
       findBillingAnomalies(workspaceId),
+      // Chaos edge cases: future shifts with expired guard cards + bill rate drift
+      detectFutureShiftGuardCardExpiry(workspaceId),
+      detectBillRateMismatch(workspaceId),
     ]);
-  out.push(...gpsFraud, ...coverageGaps, ...incidentPatterns, ...ghostEmployees, ...billingAnomalies);
+  out.push(...gpsFraud, ...coverageGaps, ...incidentPatterns, ...ghostEmployees, ...billingAnomalies,
+    ...futureShiftExpiry, ...billRateMismatch);
   return out;
 }
 
@@ -569,4 +574,151 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHAOS EDGE CASE 1: Mid-shift / Future-shift guard card expiry detection
+// Runs inside the AnomalyWatch sweep. Detects officers whose guard card expires
+// BEFORE a future assigned shift, not just when it's already expired.
+// Trinity creates a compliance alert and flags the future shifts for reassignment.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function detectFutureShiftGuardCardExpiry(workspaceId: string): Promise<Anomaly[]> {
+  const out: Anomaly[] = [];
+  try {
+    const { pool } = await import('../../../db');
+
+    // Find future shifts assigned to officers whose guard card expires before shift start
+    const { rows } = await pool.query<{
+      shift_id: string;
+      shift_start: string;
+      employee_id: string;
+      employee_name: string;
+      guard_card_expiry: string;
+      days_before_expiry: number;
+    }>(
+      `SELECT
+          s.id AS shift_id,
+          s.start_time AS shift_start,
+          e.id AS employee_id,
+          (e.first_name || ' ' || e.last_name) AS employee_name,
+          e.guard_card_expiry_date AS guard_card_expiry,
+          EXTRACT(DAY FROM (s.start_time - e.guard_card_expiry_date::timestamp)) AS days_before_expiry
+        FROM shifts s
+        JOIN employees e ON s.employee_id = e.id
+        WHERE s.workspace_id = $1
+          AND s.start_time > NOW()
+          AND s.status NOT IN ('cancelled','calloff','no_show','completed')
+          AND e.guard_card_expiry_date IS NOT NULL
+          AND e.guard_card_expiry_date::timestamp < s.start_time
+        ORDER BY s.start_time ASC
+        LIMIT 50`,
+      [workspaceId]
+    );
+
+    for (const row of rows) {
+      out.push({
+        workspaceId,
+        code: 'compliance_violation' as AnomalyCode,
+        severity: 'high',
+        title: `Future shift guard card conflict: ${row.employee_name}`,
+        description: `${row.employee_name}'s guard card expires ${new Date(row.guard_card_expiry).toLocaleDateString()} — BEFORE their shift on ${new Date(row.shift_start).toLocaleDateString()}. This shift will need to be reassigned or the card renewed (Texas OC 1702).`,
+        affectedEntityId: row.shift_id,
+        affectedEntityType: 'shift',
+        dedupKey: `future-gc-expiry:${row.shift_id}:${row.guard_card_expiry}`,
+        metadata: {
+          shiftId: row.shift_id,
+          employeeId: row.employee_id,
+          employeeName: row.employee_name,
+          guardCardExpiry: row.guard_card_expiry,
+          shiftStart: row.shift_start,
+          daysBeforeExpiry: Math.round(row.days_before_expiry),
+          reconciliationPath: 'Renew guard card before shift, or reassign shift to a licensed officer.',
+        },
+      });
+    }
+  } catch (err: any) {
+    log.warn('[AnomalyWatch] Future shift guard card check failed:', err?.message);
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHAOS EDGE CASE 2: Bill rate change after time entries approved (pre-invoice)
+// Detects: client bill rate changed AFTER time entries were captured at old rate
+// Trinity surfaces a reconciliation alert so the invoice reflects current rates.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function detectBillRateMismatch(workspaceId: string): Promise<Anomaly[]> {
+  const out: Anomaly[] = [];
+  try {
+    const { pool } = await import('../../../db');
+
+    // Find approved time entries where the captured bill rate differs from current client rate
+    const { rows } = await pool.query<{
+      entry_id: string;
+      employee_name: string;
+      client_name: string;
+      captured_bill_rate: string;
+      current_bill_rate: string;
+      hours: string;
+      clock_in: string;
+      rate_delta: number;
+    }>(
+      `SELECT
+          te.id AS entry_id,
+          (e.first_name || ' ' || e.last_name) AS employee_name,
+          COALESCE(cl.company_name, cl.first_name || ' ' || cl.last_name, 'Unknown') AS client_name,
+          COALESCE(te.captured_bill_rate, '0') AS captured_bill_rate,
+          COALESCE(cbs.billable_rate, '0') AS current_bill_rate,
+          COALESCE(te.total_hours, '0') AS hours,
+          te.clock_in,
+          ABS(COALESCE(cbs.billable_rate::numeric, 0) - COALESCE(te.captured_bill_rate::numeric, 0)) AS rate_delta
+        FROM time_entries te
+        JOIN employees e ON te.employee_id = e.id
+        LEFT JOIN clients cl ON te.client_id = cl.id
+        LEFT JOIN client_billing_settings cbs ON cbs.client_id = te.client_id AND cbs.workspace_id = $1
+        WHERE te.workspace_id = $1
+          AND te.status = 'approved'
+          AND te.invoice_id IS NULL
+          AND te.captured_bill_rate IS NOT NULL
+          AND cbs.billable_rate IS NOT NULL
+          AND ABS(cbs.billable_rate::numeric - te.captured_bill_rate::numeric) > 0.01
+        ORDER BY te.clock_in DESC
+        LIMIT 20`,
+      [workspaceId]
+    );
+
+    for (const row of rows) {
+      const capturedRate = parseFloat(row.captured_bill_rate);
+      const currentRate = parseFloat(row.current_bill_rate);
+      const hours = parseFloat(row.hours);
+      const impact = Math.abs((currentRate - capturedRate) * hours);
+
+      out.push({
+        workspaceId,
+        code: 'billing_anomaly' as AnomalyCode,
+        severity: impact > 100 ? 'high' : 'medium',
+        title: `Bill rate mismatch: ${row.client_name}`,
+        description: `Time entry for ${row.employee_name} at ${row.client_name} was captured at $${capturedRate.toFixed(2)}/h but current client rate is $${currentRate.toFixed(2)}/h. ` +
+          `Estimated invoice impact: ${currentRate > capturedRate ? '+' : '-'}$${impact.toFixed(2)}. ` +
+          `Reconciliation path: update the time entry bill rate before invoicing.`,
+        affectedEntityId: row.entry_id,
+        affectedEntityType: 'time_entry',
+        dedupKey: `bill-rate-mismatch:${row.entry_id}`,
+        metadata: {
+          entryId: row.entry_id,
+          employeeName: row.employee_name,
+          clientName: row.client_name,
+          capturedBillRate: capturedRate,
+          currentBillRate: currentRate,
+          rateDelta: currentRate - capturedRate,
+          estimatedInvoiceImpact: impact,
+          hoursWorked: hours,
+          reconciliationPath: `Update captured_bill_rate on time entry ${row.entry_id} to $${currentRate.toFixed(2)} before generating invoice.`,
+        },
+      });
+    }
+  } catch (err: any) {
+    log.warn('[AnomalyWatch] Bill rate mismatch check failed:', err?.message);
+  }
+  return out;
 }

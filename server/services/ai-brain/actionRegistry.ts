@@ -781,6 +781,19 @@ class AIBrainActionRegistry {
           return createResult(request.actionId, false, 'No fields to update', null, start);
         }
 
+        // OPTIMISTIC LOCK: If caller provides expectedUpdatedAt, verify no concurrent modification
+        const { expectedUpdatedAt } = request.payload || {};
+        if (expectedUpdatedAt) {
+          const expectedMs = new Date(expectedUpdatedAt).getTime();
+          const actualMs = current.updatedAt ? new Date(current.updatedAt as string).getTime() : 0;
+          // Allow 1s tolerance for clock skew
+          if (Math.abs(actualMs - expectedMs) > 1000) {
+            return createResult(request.actionId, false,
+              `CONCURRENT_MODIFICATION: This shift was modified by someone else since you last loaded it. ` +
+              `Last modified: ${new Date(actualMs).toLocaleTimeString()}. Reload and try again.`, null, start);
+          }
+        }
+
         const [updated] = await db.update(shifts)
           .set(updateSet)
           .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
@@ -963,10 +976,38 @@ class AIBrainActionRegistry {
           conditions.push(lte(shifts.startTime, weekEnd));
         }
 
-        const published = await db.update(shifts)
-          .set({ status: 'published', updatedAt: new Date() })   // 'published' not 'scheduled'
-          .where(and(...conditions))
-          .returning({ id: shifts.id, title: shifts.title, startTime: shifts.startTime });
+        // BATCH ATOMIC ROLLBACK: Run inside db.transaction() so any compliance failure
+        // rolls back ALL changes in the batch. Prevents "partially published" schedules
+        // where shift #499 fails but #1-498 are already live.
+        let published: { id: string; title: string | null; startTime: Date | string | null }[];
+        try {
+          published = await db.transaction(async (tx) => {
+            // Pre-flight: load all candidate shifts to check state locks
+            const candidates = await tx.select({
+              id: shifts.id, status: shifts.status, title: shifts.title, startTime: shifts.startTime,
+            }).from(shifts).where(and(...conditions));
+
+            const TERMINAL = ['in_progress', 'started', 'completed', 'no_show', 'calloff'];
+            const locked = candidates.filter(c => TERMINAL.includes(c.status || ''));
+            if (locked.length > 0) {
+              throw Object.assign(
+                new Error(`BATCH_REJECTED: ${locked.length} shift(s) are in terminal state and cannot be published. ` +
+                  `Locked shifts: ${locked.map(l => l.title || l.id).join(', ')}. Entire batch rolled back.`),
+                { code: 'BATCH_TERMINAL_STATE_VIOLATION' }
+              );
+            }
+
+            // All clear — publish atomically inside the transaction
+            return tx.update(shifts)
+              .set({ status: 'published', updatedAt: new Date() })
+              .where(and(...conditions))
+              .returning({ id: shifts.id, title: shifts.title, startTime: shifts.startTime });
+          });
+        } catch (txErr: any) {
+          // Transaction rolled back — return semantic error code
+          const code = txErr.code || 'BATCH_TRANSACTION_FAILED';
+          return createResult(request.actionId, false, txErr.message || 'Batch publish failed — transaction rolled back', { code }, start);
+        }
 
         // PAYLOAD CHAIN 1: Real-time WebSocket broadcast to all clients
         broadcastToWorkspace(workspaceId, {
@@ -1977,30 +2018,89 @@ class AIBrainActionRegistry {
           }
         }
 
+        // OPTIMISTIC LOCK: Verify this shift hasn't been grabbed by a concurrent request
+        const { expectedUpdatedAt } = request.payload || {};
+        if (expectedUpdatedAt && targetShift) {
+          const expectedMs = new Date(expectedUpdatedAt).getTime();
+          const currentTs = (targetShift as any).updatedAt;
+          const actualMs = currentTs ? new Date(currentTs).getTime() : 0;
+          if (Math.abs(actualMs - expectedMs) > 1000) {
+            return createResult(request.actionId, false,
+              `CONCURRENT_MODIFICATION: Shift ${shiftId} was already modified by another request. ` +
+              `It may have been filled by a concurrent process. Reload and verify.`, null, start);
+          }
+        }
+
         const [updated] = await db.update(shifts)
           .set({ 
             employeeId, 
             status: 'published',   // published = assigned and visible
             updatedAt: new Date() 
           })
-          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+          // Additional WHERE condition prevents race: if another process filled it, this returns 0 rows
+          .where(and(
+            eq(shifts.id, shiftId),
+            eq(shifts.workspaceId, workspaceId),
+            isNull(shifts.employeeId),  // Still unassigned when we write
+          ))
           .returning();
 
         if (!updated) {
+          // Shift was grabbed by a concurrent request between our read and write — RACE CAUGHT
           await logActionAudit({
             actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
             userRole: request.userRole, platformRole: request.platformRole,
             entityType: 'shift', entityId: shiftId,
-            success: false, errorMessage: 'Shift not found or access denied',
+            success: false, errorMessage: 'CONCURRENT_MODIFICATION: Shift was filled by concurrent request',
             payload: { shiftId, employeeId } as any, durationMs: Date.now() - start,
           });
-          return createResult(request.actionId, false, 'Shift not found or access denied', null, start);
+          return createResult(request.actionId, false,
+            'CONCURRENT_MODIFICATION: Another manager just filled this shift while you were assigning. DB-level race caught.', null, start);
         }
+
+        // SOFT WARNINGS — assignment proceeds, but Trinity surfaces risks to manager
+        const softWarnings: string[] = [];
+
+        // PROXIMITY_ALERT: Employee address far from site (advisory)
+        if (emp) {
+          const empZip = (emp as any).zip || (emp as any).zipCode;
+          const siteZip = targetShift ? (targetShift as any).siteZip : null;
+          // Simple check: if zip codes differ significantly (first 3 digits), flag it
+          if (empZip && siteZip && empZip.substring(0, 3) !== siteZip.substring(0, 3)) {
+            softWarnings.push(`PROXIMITY_ALERT: Officer may have a long commute to this site. Verify travel time before confirming.`);
+          }
+        }
+
+        // OVERTIME_APPROACHING: Will this push the officer close to 40h/week?
+        if (targetShift) {
+          try {
+            const shiftHours = targetShift.endTime && targetShift.startTime
+              ? (new Date(targetShift.endTime as string).getTime() - new Date(targetShift.startTime as string).getTime()) / 3600000
+              : 0;
+            const weekStart = new Date(targetShift.startTime as string);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0,0,0,0);
+            const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+            const weekHoursRes = await db.select({
+              total: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${shifts.endTime} - ${shifts.startTime})) / 3600.0), 0)`,
+            }).from(shifts).where(and(
+              eq(shifts.workspaceId, workspaceId), eq(shifts.employeeId, employeeId),
+              gte(shifts.startTime, weekStart), lte(shifts.startTime, weekEnd),
+              sql`${shifts.status} NOT IN ('cancelled','calloff','no_show')`,
+            ));
+            const currentWeekHours = Number(weekHoursRes[0]?.total || 0);
+            const projectedHours = currentWeekHours + shiftHours;
+            if (projectedHours >= 35 && projectedHours < 40) {
+              softWarnings.push(`OVERTIME_APPROACHING: This assignment will bring officer to ${projectedHours.toFixed(1)}h this week — approaching 40h OT threshold.`);
+            }
+          } catch { /* soft warning failure is non-fatal */ }
+        }
+
         await logActionAudit({
           actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
           userRole: request.userRole, platformRole: request.platformRole,
           entityType: 'shift', entityId: shiftId,
-          success: true, message: `Shift ${shiftId} assigned to employee ${employeeId}`,
+          success: true, message: `Shift ${shiftId} assigned to employee ${employeeId}${softWarnings.length ? ' [soft warnings: ' + softWarnings.length + ']' : ''}`,
           changesAfter: updated as any, durationMs: Date.now() - start,
         });
         broadcastShiftUpdate(request.workspaceId!, 'shift_updated', updated);
