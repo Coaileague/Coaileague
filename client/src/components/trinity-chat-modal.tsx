@@ -58,6 +58,8 @@ import {
   Command,
   Paperclip,
   ImagePlus,
+  History,
+  Upload,
 } from 'lucide-react';;
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 // Adapter: makes TrinityLogo compatible with Lucide icon props
@@ -887,11 +889,24 @@ function TrinityModal({ onClose }: TrinityModalProps) {
   const [conversationId] = useState(() => `trinity-${Date.now()}`);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [pendingDocument, setPendingDocument] = useState<{ name: string; base64: string; mime: string } | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historySessionId, setHistorySessionId] = useState<string | null>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+
+  // History sessions for the panel
+  const { data: historyData, isLoading: historyLoading } = useQuery<{
+    sessions: Array<{ id: string; summary?: string; lastActivityAt: string; messageCount?: number }>;
+  }>({
+    queryKey: ['/api/trinity/chat/history'],
+    enabled: historyOpen,
+    staleTime: 30_000,
+  });
 
   // ID of the last assistant message — used to animate only the most-recent
   // Trinity avatar (responding state) while older ones stay idle.
@@ -1135,6 +1150,36 @@ function TrinityModal({ onClose }: TrinityModalProps) {
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setPendingImages([]);
+    setPendingDocument(null);
+
+    // If there's a pending PDF/document, send via the /with-file multipart endpoint
+    if (pendingDocument) {
+      const formData = new FormData();
+      formData.append('message', text || 'Please analyze this document.');
+      if (historySessionId) formData.append('sessionId', historySessionId);
+      // Convert base64 back to Blob for FormData
+      const byteString = atob(pendingDocument.base64);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      const blob = new Blob([ab], { type: pendingDocument.mime });
+      formData.append('file', blob, pendingDocument.name);
+      fetch('/api/trinity/chat/with-file', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      }).then(r => r.json()).then(data => {
+        const reply: Message = {
+          id: `msg-${Date.now()}-assistant`,
+          role: 'assistant',
+          content: data.message || data.response || 'I reviewed the document.',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, reply]);
+      }).catch(() => {});
+      return;
+    }
+
     chatMutation.mutate({ message: text, images });
   };
 
@@ -1154,6 +1199,38 @@ function TrinityModal({ onClose }: TrinityModalProps) {
     setInputValue('');
     chatMutation.mutate({ message: text });
   }, [autoSubmitTick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDocumentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
+        const base64 = dataUrl.split(',')[1];
+        if (base64) setPendingDocument({ name: file.name, base64, mime: file.type });
+      }
+    };
+    reader.readAsDataURL(file);
+    if (docInputRef.current) docInputRef.current.value = '';
+  };
+
+  const loadHistorySession = async (sessionId: string) => {
+    try {
+      const res = await fetch(`/api/trinity/chat/session/${sessionId}/messages`, { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const loaded = (data.messages || []).map((m: any, i: number) => ({
+        id: `hist-${sessionId}-${i}`,
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content || m.message || '',
+        timestamp: new Date(m.createdAt || Date.now()),
+      }));
+      setMessages(loaded as any);
+      setHistorySessionId(sessionId);
+      setHistoryOpen(false);
+    } catch { /* non-fatal */ }
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -1491,7 +1568,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                   />
                 </AnimatePresence>
                 <div className="flex gap-1.5 items-center">
-                  {/* Hidden file input */}
+                  {/* Hidden image input */}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1501,6 +1578,15 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                     onChange={handleImageSelect}
                     data-testid="input-image-file-mobile"
                   />
+                  {/* Hidden document/PDF input */}
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,.csv"
+                    className="hidden"
+                    onChange={handleDocumentSelect}
+                    data-testid="input-document-file"
+                  />
                   <Button
                     type="button"
                     size="icon"
@@ -1508,23 +1594,48 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={chatMutation.isPending || pendingImages.length >= 5}
                     className="shrink-0 rounded-md"
+                    title="Attach image"
                     data-testid="button-attach-image-mobile"
                   >
                     <Paperclip className="h-4 w-4 text-muted-foreground" />
                   </Button>
-                  <Input
-                    ref={inputRef}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Ask me anything..."
-                    disabled={chatMutation.isPending}
-                    className="flex-1 rounded-md text-sm"
-                    data-testid="input-trinity-message"
-                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => docInputRef.current?.click()}
+                    disabled={chatMutation.isPending || !!pendingDocument}
+                    className="shrink-0 rounded-md"
+                    title="Upload PDF or document for Trinity to analyze"
+                    data-testid="button-attach-document"
+                  >
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                  <div className="flex-1 flex flex-col gap-1 min-w-0">
+                    {/* Pending document chip */}
+                    {pendingDocument && (
+                      <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded px-2 py-0.5 text-xs">
+                        <FileText className="h-3 w-3 text-primary shrink-0" />
+                        <span className="truncate text-primary font-medium">{pendingDocument.name}</span>
+                        <button onClick={() => setPendingDocument(null)} className="shrink-0 text-muted-foreground hover:text-destructive ml-auto">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                    <Input
+                      ref={inputRef}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder={pendingDocument ? `Ask about ${pendingDocument.name}…` : "Ask me anything..."}
+                      disabled={chatMutation.isPending}
+                      className="rounded-md text-sm"
+                      data-testid="input-trinity-message"
+                    />
+                  </div>
                   <Button
                     onClick={handleSend}
-                    disabled={(!inputValue.trim() && pendingImages.length === 0) || chatMutation.isPending}
+                    disabled={(!inputValue.trim() && pendingImages.length === 0 && !pendingDocument) || chatMutation.isPending}
                     size="icon"
                     className="bg-primary hover:bg-primary/90 rounded-md shrink-0"
                     data-testid="button-send-trinity-message"
@@ -1599,6 +1710,16 @@ function TrinityModal({ onClose }: TrinityModalProps) {
               <Button
                 size="icon"
                 variant="ghost"
+                onClick={() => setHistoryOpen(h => !h)}
+                title="Conversation history"
+                data-testid="button-trinity-history"
+                className={historyOpen ? 'text-primary' : ''}
+              >
+                <History className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 onClick={() => setIsMinimized(true)}
                 title="Minimize"
                 data-testid="button-minimize-trinity"
@@ -1618,6 +1739,40 @@ function TrinityModal({ onClose }: TrinityModalProps) {
           </CardHeader>
 
           <CardContent className="p-0 flex flex-col min-h-0 flex-1">
+            {/* ── History Panel — slides down from header ── */}
+            {historyOpen && (
+              <div className="border-b border-border/60 bg-muted/30 max-h-[220px] overflow-y-auto">
+                <div className="px-3 py-2 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Past conversations</span>
+                  <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setHistoryOpen(false)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                {historyLoading ? (
+                  <div className="px-3 pb-3 text-xs text-muted-foreground">Loading…</div>
+                ) : !historyData?.sessions?.length ? (
+                  <div className="px-3 pb-3 text-xs text-muted-foreground">No previous conversations yet.</div>
+                ) : (
+                  <div className="px-2 pb-2 space-y-1">
+                    {historyData.sessions.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => loadHistorySession(s.id)}
+                        className="w-full text-left px-2 py-1.5 rounded-md hover:bg-primary/10 transition-colors group"
+                        data-testid={`button-history-session-${s.id}`}
+                      >
+                        <div className="text-xs font-medium text-foreground truncate group-hover:text-primary">
+                          {s.summary || 'Trinity conversation'}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {new Date(s.lastActivityAt).toLocaleDateString()} · {s.messageCount ?? '?'} messages
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {/* Messages */}
             <ScrollArea className="flex-1 min-h-[200px] max-h-[350px] px-4 pt-3" ref={scrollRef}>
               {messages.length === 0 && !isThinking && (

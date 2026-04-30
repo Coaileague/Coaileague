@@ -320,9 +320,28 @@ async function alreadySentCheckIn(timeEntryId: string): Promise<boolean> {
 async function sendCheckInSms(c: WellnessCandidate): Promise<boolean> {
   if (!c.phone) return false;
   const hours = Math.round(c.hoursWorked * 10) / 10;
-  const body =
-    `Hi ${c.firstName || 'there'}! You just finished a ${hours}-hour shift. How are you doing? ` +
-    `Reply OK if you're good, or HELP if you need anything. — Trinity`;
+  const name = c.firstName || 'there';
+  const hour = new Date().getHours();
+
+  // Time-aware greeting — Trinity knows what time it is
+  const timeContext =
+    hour < 6  ? 'late night' :
+    hour < 12 ? 'morning' :
+    hour < 17 ? 'afternoon' :
+    hour < 21 ? 'evening' : 'late night';
+
+  // Voice: warm, first-person, not a system alert. Varies by shift length.
+  let body: string;
+  if (hours >= 12) {
+    body = `${name}, that was a long one — ${hours} hours. Trinity here. Just checking in. ` +
+      `How are you holding up? Text GOOD or HELP and I'll take it from there.`;
+  } else if (hours >= 10) {
+    body = `${name} — Trinity. You just wrapped a ${hours}-hour shift on a ${timeContext} post. ` +
+      `I want to make sure you're okay. Reply GOOD if all's well, or HELP if you need anything.`;
+  } else {
+    body = `Hey ${name}, Trinity here. Shift's done — ${hours} hours. ` +
+      `Quick check-in: everything good? Reply GOOD or HELP.`;
+  }
   // TCPA: route through sendSMSToEmployee to enforce consent + subscription gates.
   const { sendSMSToEmployee } = await import('../../smsService');
   const res = await sendSMSToEmployee(

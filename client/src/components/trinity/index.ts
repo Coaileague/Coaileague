@@ -7,3 +7,5 @@
 export { TrinityActivityBar } from './TrinityActivityBar';
 export { TrinityActionHistoryPanel } from './TrinityActionHistoryPanel';
 export { TrinityTaskWidget, TrinityTaskLauncher, openTrinityTaskWidget, closeTrinityTaskWidget } from './TrinityTaskWidget';
+export { TrinityObservations } from './TrinityObservations';
+export { TrinityApprovalQueue } from './TrinityApprovalQueue';

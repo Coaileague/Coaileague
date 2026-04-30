@@ -37,6 +37,7 @@ import { toast } from "@/hooks/use-toast";
 import { ComplianceScoreWidget } from "@/components/dashboard/ComplianceScoreWidget";
 import { DashboardLoadError } from "@/components/dashboard/DashboardLoadError";
 import { TrinityApprovalQueue } from "@/components/trinity/TrinityApprovalQueue";
+import { TrinityObservations } from "@/components/trinity/TrinityObservations";
 import { SafeSection } from "@/components/ui/safe-section";
 
 const pageConfig: CanvasPageConfig = {
@@ -554,6 +555,8 @@ export default function OrgOwnerDashboard() {
             </p>
           </div>
         </div>
+
+        <TrinityObservations />
 
         <div className="rounded-lg border border-border bg-card p-4">
           <TrinityApprovalQueue />
