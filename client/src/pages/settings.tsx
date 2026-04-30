@@ -5527,10 +5527,10 @@ function CalendarIntegrationCard() {
       // V1.1: iCal import coming soon
     throw new Error('Calendar import launches in V1.1. Coming shortly after go-live!');
     // const response = await secureFetch('/api/calendar/import/ical', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
+    //     method: 'POST',
+    //     body: formData,
+    //     credentials: 'include',
+    //   });
 
       const data = await response.json();
       
