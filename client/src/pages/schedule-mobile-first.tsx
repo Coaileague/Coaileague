@@ -212,6 +212,7 @@ export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMo
         description: 'Replacement broadcast has been sent to available officers.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       setCalloffPromptShiftId(null);
     },
     onError: (err: any) => {

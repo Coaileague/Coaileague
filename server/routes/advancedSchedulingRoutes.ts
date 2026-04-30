@@ -160,6 +160,51 @@ advancedSchedulingRouter.post('/recurring/:patternId/generate', requireManager, 
 // SHIFT SWAP REQUESTS
 // ============================================================================
 
+
+// POST /swap-requests — create a new shift swap request
+// Body: { shiftId, targetEmployeeId, reason }
+advancedSchedulingRouter.post('/swap-requests', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user;
+    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const userId = user?.id;
+    if (!workspaceId || !userId) return res.status(400).json({ error: 'No workspace context' });
+
+    const { shiftId, targetEmployeeId, reason } = req.body;
+    if (!shiftId) return res.status(400).json({ error: 'shiftId is required' });
+    if (!targetEmployeeId) return res.status(400).json({ error: 'targetEmployeeId is required' });
+
+    const { shiftSwapRequests, shifts, employees } = await import('@shared/schema');
+    const { db } = await import('../db');
+    const { eq, and } = await import('drizzle-orm');
+
+    // Validate shift belongs to this workspace
+    const [shift] = await db.select().from(shifts)
+      .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
+    if (!shift) return res.status(404).json({ error: 'Shift not found' });
+
+    // Validate requesting employee
+    const [reqEmployee] = await db.select().from(employees)
+      .where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId))).limit(1);
+    if (!reqEmployee) return res.status(404).json({ error: 'Employee record not found' });
+
+    const [created] = await db.insert(shiftSwapRequests).values({
+      workspaceId,
+      shiftId,
+      requestedById: reqEmployee.id,
+      targetEmployeeId,
+      reason: reason || null,
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any).returning();
+
+    res.status(201).json({ success: true, swapRequest: created });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to create swap request' });
+  }
+});
+
 advancedSchedulingRouter.get('/swap-requests', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
