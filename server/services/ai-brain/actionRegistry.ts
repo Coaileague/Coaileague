@@ -4194,6 +4194,29 @@ class AIBrainActionRegistry {
       },
     };
 
+    const autoApproveByVarianceAction: ActionHandler = {
+      actionId: 'time.auto_approve_by_variance',
+      name: 'Variance-based Time-Entry Auto-Approval',
+      category: 'timekeeping',
+      description: 'Compare scheduled vs actual hours for a completed time entry. If variance < threshold (default 5%) AND GPS-verified, auto-approve. Otherwise flag for manual review with a reason recorded in entry notes.',
+      requiredRoles: ['system', 'manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+        await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+        const { entryId, thresholdPct, requireGpsVerified } = request.payload || {};
+        if (!entryId) return createResult(request.actionId, false, 'entryId required', null, start);
+        const { autoApproveByVariance } = await import('../timeEntryService');
+        const result = await autoApproveByVariance({
+          entryId,
+          approvedBy: request.userId || 'trinity-system',
+          thresholdPct,
+          requireGpsVerified,
+        });
+        return createResult(request.actionId, true, `${result.decision}: ${result.reason ?? ''}`, result, start);
+      },
+    };
+
     const addPayrollAdjustmentAction: ActionHandler = {
       actionId: 'finance.add_payroll_adjustment',
       name: 'Add Payroll Line-Item Adjustment',
@@ -4227,7 +4250,8 @@ class AIBrainActionRegistry {
     helpaiOrchestrator.registerAction(withAuditWrap(finalizeFinancialBatchAction, 'financial_batch'));
     helpaiOrchestrator.registerAction(withAuditWrap(generateMarginReportAction, 'financial_report'));
     helpaiOrchestrator.registerAction(withAuditWrap(addPayrollAdjustmentAction, 'payroll_entry'));
-    log.info('[AI Brain] Financial staging pipeline actions registered (5 actions)');
+    helpaiOrchestrator.registerAction(withAuditWrap(autoApproveByVarianceAction, 'time_entry'));
+    log.info('[AI Brain] Financial staging pipeline actions registered (6 actions)');
   }
 
   // ============================================================================

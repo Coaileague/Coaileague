@@ -2,7 +2,7 @@ import { db } from "server/db";
 import { timeEntries, employees, workspaces, clients, shifts, employeePayrollInfo } from "@shared/schema";
 import { and, eq, gte, lte, inArray, isNull, isNotNull, or, sql } from "drizzle-orm";
 import { resolveRates, bucketHours, calculateAmount, roundHours } from "./rateResolver";
-import { getHolidayEntry, isHolidayDate } from "./holidayDetector";
+import { getHolidayEntry } from "./holidayDetector";
 import { calculatePayrollTaxes, type PayPeriod, type FilingStatus, type PayrollTaxBreakdown } from "../billing/payrollTaxService";
 import { PayrollAutomationEngine } from "../payrollAutomation";
 import { splitEntryAcrossDays } from "../payroll/shiftSplitter";

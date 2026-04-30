@@ -1932,18 +1932,6 @@ export const detectPayPeriod = async (workspaceId: string) => {
   };
 };
 
-export const calculatePayroll = (params: {
-  timeEntries: TimeEntry[];
-  employeeId: string;
-  employeeName: string;
-  hourlyRate: number;
-  taxState: string;
-}) => {
-  // Legacy function - use processAutomatedPayroll instead
-  log.warn('[AI Payroll™] Legacy calculatePayroll called - use processAutomatedPayroll with aggregator instead');
-  throw new Error('calculatePayroll is deprecated - use processAutomatedPayroll instead');
-};
-
 export const createAutomatedPayrollRun = async (params: {
   workspaceId: string;
   periodStart: Date;

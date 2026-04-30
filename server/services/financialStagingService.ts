@@ -443,12 +443,19 @@ export async function finalizeFinancialBatch(
 }
 
 // ─── Tool 5: add_payroll_adjustment ─────────────────────────────────────────
+//
+// SCOPE LIMIT: this tool only handles POST-TAX line items. Adjustments that
+// affect taxable gross (bonuses, pre-tax 401k contributions, pre-tax benefit
+// premiums, non-accountable-plan reimbursements) MUST go through
+// PayrollAutomationEngine.amendPayrollEntry where the tax engine recomputes
+// federal/state/FICA/Medicare withholding. We refuse those kinds explicitly
+// rather than silently producing wrong taxes.
 
 export type PayrollAdjustmentKind =
-  | 'reimbursement'   // Owed TO employee (uniform, mileage, etc.) — net pay ↑
-  | 'deduction'       // Owed BY employee (equipment fee, advance) — net pay ↓
-  | 'bonus'           // Discretionary bonus — gross pay ↑
-  | 'correction';     // Generic correction — caller specifies sign
+  | 'reimbursement'   // Accountable-plan reimbursement (uniform, mileage). Non-taxable. Net ↑.
+  | 'deduction'       // Post-tax deduction (equipment fee, advance repayment). Net ↓.
+  | 'bonus'           // Discretionary bonus — taxable gross. REFUSED here; use amendPayrollEntry.
+  | 'correction';     // Post-tax correction. Caller specifies sign. Non-taxable.
 
 export interface PayrollAdjustment {
   id: string;
@@ -493,6 +500,12 @@ export async function addPayrollAdjustment(
   if (!Number.isFinite(amount)) {
     throw new Error('addPayrollAdjustment: amount must be a finite number');
   }
+  // Bonuses change taxable gross — refuse early, before we lock any rows.
+  if (kind === 'bonus') {
+    throw new Error(
+      'Bonus adjustments must go through PayrollAutomationEngine.amendPayrollEntry — they affect taxable gross and require tax recomputation.',
+    );
+  }
   // Defensive sign check: refuse to silently invert an obviously-wrong sign.
   if (kind === 'reimbursement' && amount < 0) {
     throw new Error('addPayrollAdjustment: reimbursement amounts must be positive');
@@ -502,16 +515,24 @@ export async function addPayrollAdjustment(
   }
 
   const result = await db.transaction(async (tx) => {
+    // SELECT … FOR UPDATE on the entry row prevents the lost-update race:
+    // without the row lock, two concurrent adjustments could both read
+    // adjustments=[A], then race to write adjustments=[A,B1] vs [A,B2],
+    // overwriting one of them. The lock serializes adjustment appends per
+    // entry while staying inside one transaction so the whole change is
+    // still atomic w.r.t. the run-level totals update below.
     const [entry] = await tx.select().from(payrollEntries)
       .where(and(
         eq(payrollEntries.id, payrollEntryId),
         eq(payrollEntries.workspaceId, workspaceId),
       ))
+      .for('update')
       .limit(1);
     if (!entry) throw new Error(`Payroll entry ${payrollEntryId} not found`);
 
     const [run] = await tx.select().from(payrollRuns)
       .where(eq(payrollRuns.id, entry.payrollRunId))
+      .for('update')
       .limit(1);
     if (!run) throw new Error(`Payroll run ${entry.payrollRunId} not found`);
 
@@ -534,17 +555,9 @@ export async function addPayrollAdjustment(
     };
     const updatedAdjustments = [...existing, adjustment];
 
-    // Recompute pay. Bonus increases gross (and therefore taxable income).
-    // Reimbursements/deductions/corrections apply to net only — they are
-    // non-taxable line items by convention. Tax recomputation on a bonus
-    // requires the full tax engine; we surface that limit by refusing to
-    // process bonuses through this lightweight tool.
-    if (kind === 'bonus') {
-      throw new Error(
-        'Bonus adjustments must go through PayrollAutomationEngine.amendPayrollEntry — they affect taxable gross and require tax recomputation.',
-      );
-    }
-
+    // Recompute net. Allowed kinds (reimbursement, deduction, correction)
+    // are post-tax by contract — they don't affect gross or taxes. Bonuses
+    // were rejected upstream before the row lock.
     const adjustmentTotal = updatedAdjustments.reduce(
       (sum, a) => sum.plus(a.amount),
       new Decimal(0),
@@ -644,6 +657,7 @@ export async function generateMarginReport(
   };
 
   if (invoiceIds && invoiceIds.length > 0) {
+    // Bill side: invoice totals.
     const rows = await db
       .select({
         clientId: invoices.clientId,
@@ -658,6 +672,34 @@ export async function generateMarginReport(
       const b = buckets.get(id) || { clientId: id, clientName: row.clientName || 'Unknown', billable: '0.0000', payable: '0.0000' };
       b.billable = sumFinancialValues([b.billable, toFinancialString(row.total ?? '0')]);
       buckets.set(id, b);
+    }
+
+    // Pay side: pull from the time entries linked to those invoices, so the
+    // margin number is meaningful even when the caller only passes invoiceIds.
+    // Without this, payable would stay at $0 and margin would lie at 100%.
+    if (!payrollRunIds || payrollRunIds.length === 0) {
+      const linkedEntries = await db
+        .select({
+          clientId: timeEntries.clientId,
+          billableAmount: timeEntries.billableAmount,
+          payableAmount: timeEntries.payableAmount,
+          totalHours: timeEntries.totalHours,
+          hourlyRate: timeEntries.hourlyRate,
+          capturedPayRate: timeEntries.capturedPayRate,
+          clientName: clients.companyName,
+        })
+        .from(timeEntries)
+        .leftJoin(clients, eq(timeEntries.clientId, clients.id))
+        .where(and(
+          eq(timeEntries.workspaceId, workspaceId),
+          inArray(timeEntries.invoiceId, invoiceIds),
+        ));
+      for (const row of linkedEntries) {
+        const id = row.clientId || 'unknown';
+        const b = buckets.get(id) || { clientId: id, clientName: row.clientName || 'Unknown', billable: '0.0000', payable: '0.0000' };
+        b.payable = sumFinancialValues([b.payable, derivePayable(row)]);
+        buckets.set(id, b);
+      }
     }
   }
 
