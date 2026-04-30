@@ -19,7 +19,7 @@ import { and, eq } from 'drizzle-orm';
 import { broadcastToWorkspace } from '../websocket';
 import { resolveEffectivePermissions } from '../middleware/workspacePermissions';
 import { FEATURE_REGISTRY, MATRIX_ROLES } from '../lib/rbac/featureRegistry';
-import { hasPlatformWideAccess } from '../rbac';
+import { hasPlatformWideAccess , requireOwnerOrPlatformStaff } from '../rbac';
 import type { AuthenticatedRequest } from '../rbac';
 import { createLogger } from '../lib/logger';
 const log = createLogger('PermissionMatrixRoutes');

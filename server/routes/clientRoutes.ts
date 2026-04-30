@@ -25,7 +25,7 @@ import {
 } from '@shared/schema';
 import { z } from "zod";
 import { requireAuth } from "../auth";
-import { requireManagerOrPlatformStaff, type AuthenticatedRequest } from "../rbac";
+import { requireManagerOrPlatformStaff, type AuthenticatedRequest , requireManager } from "../rbac";
 import { scheduleNonBlocking } from "../lib/scheduleNonBlocking";
 import { clientsQuerySchema } from "../../shared/validation/pagination";
 import { deletionProtection } from "../services/deletionProtectionService";

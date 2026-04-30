@@ -9,7 +9,7 @@
 
 import { Router } from 'express';
 import { automationEventsService, type AutomationJobType, type JobStatus } from '../services/automationEventsService';
-import { requirePlatformStaff, requireManagerOrPlatformStaff } from '../rbac';
+import { requirePlatformStaff, requireManagerOrPlatformStaff , requireManager } from '../rbac';
 import { createLogger } from '../lib/logger';
 const log = createLogger('AutomationEvents');
 

@@ -12,7 +12,7 @@ import { Router } from 'express';
 import { db } from '../db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { clients, clientPortalInviteTokens, auditLogs, users, workspaces } from '@shared/schema';
-import { requireManagerOrPlatformStaff, type AuthenticatedRequest } from '../rbac';
+import { requireManagerOrPlatformStaff, type AuthenticatedRequest , requireManager } from '../rbac';
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 import { validateHandshakePayload } from '../services/onboarding/onboardingHandshakeService';
 import { createLogger } from '../lib/logger';

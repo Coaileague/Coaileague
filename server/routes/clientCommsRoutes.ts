@@ -15,7 +15,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { formatZodIssues } from '../middleware/validateRequest';
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { requireAuth } from '../auth';
-import { requireManagerOrPlatformStaff, type AuthenticatedRequest } from '../rbac';
+import { requireManagerOrPlatformStaff, type AuthenticatedRequest , requireManager } from '../rbac';
 import { db } from '../db';
 import { eq, and, desc } from 'drizzle-orm';
 import {
