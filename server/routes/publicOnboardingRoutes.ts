@@ -614,24 +614,38 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROLE_DISPLAY_NAMES: Record<string, string> = {
-  manager: 'Manager',
+  org_owner: 'Owner',
   co_owner: 'Co-Owner',
   org_admin: 'Administrator',
+  org_manager: 'Manager',
+  manager: 'Manager',
+  department_manager: 'Department Manager',
+  supervisor: 'Supervisor',
   employee: 'Employee',
   staff: 'Staff Member',
-  supervisor: 'Supervisor',
+  contractor: 'Contractor',
+  vendor: 'Vendor',
+  client: 'Client',
+  auditor: 'Auditor',
+  co_auditor: 'Co-Auditor',
 };
 
 const ROLE_LANDING_PAGES: Record<string, string> = {
-  manager: '/leaders-hub',
-  co_owner: '/dashboard',
   org_owner: '/dashboard',
+  co_owner: '/dashboard',
   org_admin: '/dashboard',
   org_manager: '/dashboard',
   admin: '/dashboard',
+  manager: '/leaders-hub',
+  department_manager: '/leaders-hub',
+  supervisor: '/leaders-hub',
   employee: '/schedule',
   staff: '/schedule',
-  supervisor: '/leaders-hub',
+  contractor: '/schedule',
+  vendor: '/client-portal',
+  client: '/client-portal',
+  auditor: '/auditor/portal',
+  co_auditor: '/co-auditor/dashboard',
 };
 
 router.get('/workspace-invite/:code', async (req, res) => {

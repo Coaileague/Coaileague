@@ -690,6 +690,54 @@ async function getWorkspaceManagers(workspaceId: string) {
 }
 
 /**
+ * Handle onboarding_completed — flip the workspace "ready for business" flags
+ * so dashboards, Trinity feature gates, and post-onboarding redirects know the
+ * tenant has finished setup. Also seeds Trinity's thalamic log so the brain is
+ * aware of the new active tenant.
+ *
+ * This closes the wiring gap where workspace.ts publishes onboarding_completed
+ * but no subscriber persisted the completion state — leaving
+ * workspaces.onboardingFullyComplete / onboardingFullyCompleteAt /
+ * onboardingCompletionPercent / onboardingCompletedAt as write-never columns.
+ */
+async function onOnboardingCompleted(event: PlatformEvent): Promise<void> {
+  const workspaceId = event.workspaceId || event.metadata?.workspaceId;
+  if (!workspaceId) return;
+
+  const ownerId = event.metadata?.ownerId ? String(event.metadata.ownerId) : null;
+  const completedAt = new Date();
+
+  log.info(`[TrinityEvents] onboarding_completed — marking workspace ${workspaceId} ready for business`);
+
+  try {
+    await db
+      .update(workspaces)
+      .set({
+        onboardingFullyComplete: true,
+        onboardingFullyCompleteAt: completedAt,
+        onboardingCompletedAt: completedAt,
+        onboardingCompletionPercent: 100,
+      })
+      .where(eq(workspaces.id, String(workspaceId)));
+  } catch (err: any) {
+    log.error(`[TrinityEvents] Failed to mark workspace ${workspaceId} onboarding-complete:`, err?.message);
+  }
+
+  await writeThalamicSignal({
+    workspaceId: String(workspaceId),
+    signalType: 'onboarding_completed',
+    source: 'trinityEventSubscriptions',
+    priorityScore: 70,
+    signalPayload: {
+      workspaceId,
+      ownerId,
+      completedAt: completedAt.toISOString(),
+    },
+    userId: ownerId,
+  });
+}
+
+/**
  * Initialize all Trinity event subscriptions
  */
 export function initializeTrinityEventSubscriptions(): void {
@@ -730,6 +778,13 @@ export function initializeTrinityEventSubscriptions(): void {
   platformEventBus.subscribe('workspace.created', {
     name: 'TrinityWorkspaceBootstrap',
     handler: onWorkspaceCreated,
+  });
+
+  // Onboarding completed — persist workspace "ready for business" flags so
+  // Trinity, dashboards, and downstream gates know the tenant is fully set up.
+  platformEventBus.subscribe('onboarding_completed', {
+    name: 'TrinityOnboardingCompletionHandler',
+    handler: onOnboardingCompleted,
   });
 
   // Shift CRUD — Trinity watches every shift change for coverage intelligence and scheduling memory

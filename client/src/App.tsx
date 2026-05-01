@@ -328,7 +328,7 @@ const EmployeeOnboardingPacket = lazy(() => import("@/pages/compliance/employee-
 const AuditorPortal = lazy(() => import("@/pages/compliance/auditor-portal"));
 const AuditorLogin = lazy(() => import("@/pages/auditor-login"));
 // Phase 18C/D — Co-League Compliance Concierge (Trinity-driven auditor portal)
-const CoAuditorClaim = ComingSoon;
+const CoAuditorClaim = lazy(() => import("@/pages/co-auditor-claim"));
 const CoAuditorLogin = lazy(() => import("@/pages/co-auditor-login"));
 const CoAuditorDashboard = lazy(() => import("@/pages/co-auditor-dashboard"));
 // AI Regulatory Audit Suite (Phases 2–6)
