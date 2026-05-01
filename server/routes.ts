@@ -940,6 +940,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { securityAdminRouter } = await import('./routes/securityAdminRoutes');
   app.use('/api/security-admin', securityAdminRouter);
 
+  // ACME sandbox simulation — orchestrates the full demo month, persists
+  // clearly-fake artifacts, runs chaos tests, and emits the holistic
+  // telemetry log. Disabled in production (the routes themselves refuse).
+  log.info('[ROUTE-INIT] step: acme-sandbox-routes');
+  const { acmeSandboxRouter } = await import('./routes/acmeSandboxRoutes');
+  app.use('/api/sandbox/acme', acmeSandboxRouter);
+
   // Phase 13: Inbound email webhook receivers (calloffs@, incidents@, docs@, support@)
   // No auth required — Resend POSTs here; signature verification is internal.
   app.use('/api/inbound/email', inboundEmailRouter);

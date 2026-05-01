@@ -1,0 +1,27 @@
+{
+  "id": "evt_sandbox_b47459af012de0e5",
+  "object": "event",
+  "api_version": "2024-12-18.acacia",
+  "created": 1777601729,
+  "livemode": false,
+  "type": "invoice.payment_succeeded",
+  "data": {
+    "object": {
+      "id": "in_sandbox_f6028df9e5adc3fe",
+      "object": "invoice",
+      "number": "INV-ACM-2026-04-001",
+      "amount_paid": 672000,
+      "amount_due": 672000,
+      "amount_remaining": 0,
+      "currency": "usd",
+      "status": "paid",
+      "attempt_count": 1,
+      "next_payment_attempt": null,
+      "metadata": {
+        "synapse_invoice_id": "demo-invoice-pmc-week1",
+        "synapse_workspace_id": "demo-workspace-00000000",
+        "source": "acme_sandbox_simulation"
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "webhook_type": "TRANSFER",
+  "webhook_code": "TRANSFER_EVENTS_UPDATE",
+  "transfer_id": "transfer_sandbox_6d002991a3b54b69",
+  "timestamp": "2026-05-01T02:15:29.613Z",
+  "environment": "sandbox",
+  "event": {
+    "event_type": "settled",
+    "account_id": "sandbox-account-acme-payroll",
+    "amount": "10453.32",
+    "iso_currency_code": "USD",
+    "ach_class": "ppd",
+    "metadata": {
+      "synapse_payroll_run_id": "demo-payroll-run-week1",
+      "synapse_workspace_id": "demo-workspace-00000000",
+      "source": "acme_sandbox_simulation"
+    }
+  }
+}
