@@ -1,0 +1,27 @@
+═══════════════════════════════════════════════════════════════
+  ChatDock Wiring Audit  —  static frontend ↔ backend match    
+═══════════════════════════════════════════════════════════════
+Registered routes scanned: 162
+Distinct ChatDock calls:   26
+Resolved to real route:    26
+Unresolved (ghosts):       0
+
+---- Resolved ChatDock endpoint inventory ----
+  ✓ GET    /api/chat/manage/conversations/:p/pinned                      
+  ✓ GET    /api/chat/manage/conversations/:p/reactions                   
+  ✓ GET    /api/chat/manage/conversations/:p/search                      
+  ✓ GET    /api/chat/manage/rooms/:p/participants                        
+  ✓ GET    /api/chat/manage/users/search                                 
+  ✓ GET    /api/chat/rooms                                               
+  ✓ PATCH  /api/chat/manage/messages/:p/edit                             
+  ✓ POST   /api/chat/manage/block                                        
+  ✓ POST   /api/chat/manage/conversations/:p/hide                        
+  ✓ POST   /api/chat/manage/conversations/:p/leave                       
+  ✓ POST   /api/chat/manage/conversations/:p/mute                        
+  ✓ POST   /api/chat/manage/dm/create                                    
+  ✓ POST   /api/chat/manage/link-preview                                 
+  ✓ POST   /api/chat/manage/messages/:p/delete-for-everyone              
+  ✓ POST   /api/chat/manage/messages/:p/delete-for-me                    
+  ✓ POST   /api/chat/manage/messages/:p/forward                          
+  ✓ POST   /api/chat/manage/messages/:p/pin                              
+  ✓ POST   /api/chat/manage/messages/:p/reactions                        

@@ -1,0 +1,84 @@
+═══════════════════════════════════════════════════════════════
+  ChatDock Runtime Verification — Sandbox Postgres + Test Keys 
+═══════════════════════════════════════════════════════════════
+DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
+
+[seed] preparing sandbox fixtures…
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[seed] users=3, workspace=ws-chatdock-sandbox
+[server] listening at http://127.0.0.1:36049
+
+[stage 1] List rooms (manager) — fresh workspace should be empty
+  ✓ [200] GET /api/chat/rooms returns 200 — rooms=0
+
+[stage 2] Search users (manager looking for peer)
+  ✓ [200] Manager search finds peer in workspace — result_count=1
+
+[stage 3] Manager opens DM with peer
+  ✓ [200] POST /api/chat/manage/dm/create returns 200 + conversationId — conversationId=be16b1b1-f551-4c0a-a548-5fd82ebca3dc
+
+[stage 4] Manager creates a group room with peer + bystander
+  ✓ [200] Group room creation returns conversationId — conversationId=185c20cb-b06d-4d13-bb0c-cd194f8e82df participantCount=3
+
+[stage 5] Get group room participants — must list all three
+  ✓ [200] Participants endpoint returns all 3 seeded users — count=3 ids=usr-chatdock-manager,usr-chatdock-peer,usr-chatdock-bystander
+
+[stage 6] Direct DB write of two messages (simulates WS chat_message persistence)
+  ✓ Two DM messages persisted via Drizzle — manager_msg=a3a3bb98-14d4-4e46-9daf-cbdb5ce7698c peer_msg=1b2a83fa-3ea0-4ffa-ba98-c3e676809a29
+
+[stage 7] Manager reacts to peer's message with 👍
+  ✓ [200] POST reactions returns 2xx — {"success":true,"action":"added"}
+  ✓ Reaction row persisted in message_reactions — rows=1
+
+[stage 8] Peer reads conversation reactions feed
+  ✓ [200] Conversation reactions feed reflects manager's 👍 — [{"emoji":"👍","count":1,"users":[{"id":"usr-chatdock-manager","name":"Maya Manager"}],"hasReacted":false}]
+
+[stage 9] Peer edits their own message
+  ✓ [200] Peer edits own message — {"success":true,"message":"Message edited"}
+  ✓ Edited message persisted (isEdited=true, message updated) — isEdited=true message="Sure — free now actually 🚀"
+
+[stage 10] Manager pins their own message + verifies pinned feed
+  ✓ [200] POST pin returns 2xx — {"success":true,"pinned":true}
+  ✓ [200] Pinned feed contains the pinned message — count=1
+
+[stage 11] Conversation full-text search ('schedule')
+  ✓ [200] Search returns ≥1 hit for 'schedule' — hits=1
+
+[stage 12] Manager mutes the DM
+  ✓ [200] POST mute conversation returns 2xx — {"success":true,"muted":true}
+  ✓ conversation_user_state.is_muted=true persisted — state={"isMuted":true,"isHidden":false}
+
+[stage 13] Bystander hides the group room from their own list
+  ✓ [200] Bystander hide returns 2xx — {"success":true,"message":"Conversation hidden"}
+  ✓ After hide, bystander's room list excludes the hidden room — room_count=0 hiddenRoom=185c20cb-b06d-4d13-bb0c-cd194f8e82df
+
+[stage 14] Mark-as-read (manager) on the DM
+  ✓ [200] POST mark-as-read returns 2xx — {"success":true,"message":"Messages marked as read"}
+
+[stage 15] Block / unblock cycle (manager blocks bystander, then unblocks)
+  ✓ [200] POST block returns 2xx — {"success":true,"message":"User blocked"}
+  ✓ blocked_contacts row persisted — rows=1
+  ✓ [200] POST unblock returns 2xx — {"success":true,"message":"User unblocked"}
+  ✓ blocked_contacts row removed after unblock — rows=0
+
+[stage 16] Manager forwards their pinned message to the group room
+  ✓ [200] POST forward returns 2xx — {"success":true,"forwardedMessageId":"df31b30a-aa0c-4a9d-9417-8ffd75977984"}
+  ✓ Forwarded message lands in the group room — group_msg_count=1
+
+[stage 17] Link preview probe — server must not return a usable preview for loopback URLs (SSRF guard)
+  ✓ [200] Link-preview does not return a populated preview for loopback URL — {"success":true,"preview":null}
+
+[stage 18] Manager's delete-for-me on their own DM message
+  ✓ [200] POST delete-for-me returns 2xx — {"success":true,"message":"Message hidden for you"}
+  ✓ message_deleted_for row persisted (per-user soft delete) — rows=1
+
+[stage 19] Trinity auto-react probe — previously a 404 ghost endpoint
+  ✓ [200] POST trinity-react returns 2xx (no longer a ghost endpoint) — {"success":true,"reacted":true,"messageId":"df21eb17-844f-4952-b210-c4da06e23e71","emoji":"✅"}
+  ✓ Trinity ✅ reaction persisted on the user's message — rows=1
+
+[stage 20] Re-list rooms (manager) — should now contain the group room + DM
+  ✓ [200] Manager's room list contains the DM and the group room — rooms=2 ids=185c20cb-b06d-4d13-bb0c-cd194f8e82df,be16b1b1-f551-4c0a-a548-5fd82ebca3dc
+
+═══════════════════════════════════════════════════════════════
+  Summary: 31 passed, 0 failed, 31 total
+═══════════════════════════════════════════════════════════════

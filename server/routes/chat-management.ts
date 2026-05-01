@@ -1379,8 +1379,11 @@ router.post(
         await db.delete(messageReactions).where(eq(messageReactions.id, existing.id));
         res.json({ success: true, action: "removed" });
       } else {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        await db.insert(messageReactions).values({ messageId, userId, emoji });
+        const workspaceId = authReq.workspaceId;
+        if (!workspaceId) {
+          return res.status(400).json({ error: "Workspace context required to add reaction" });
+        }
+        await db.insert(messageReactions).values({ messageId, userId, emoji, workspaceId } as any);
         res.json({ success: true, action: "added" });
       }
     } catch (error: unknown) {
@@ -1567,6 +1570,7 @@ router.post(
       const { id: messageId } = req.params;
       const { targetConversationId } = req.body;
       const userId = authReq.user?.id;
+      const workspaceId = authReq.workspaceId;
 
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
@@ -1597,6 +1601,7 @@ router.post(
       const user = authReq.user;
       const { formatUserDisplayNameForChat } = await import('../utils/formatUserDisplayName');
       // @ts-expect-error — TS migration: fix in refactoring sprint
+      const { storage } = await import('../storage');
       const userPlatformRole = await storage.getUserPlatformRole(userId);
       const senderName = formatUserDisplayNameForChat({
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -1613,8 +1618,7 @@ router.post(
       const [forwarded] = await db
         .insert(chatMessages)
         .values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
-          workspaceId: workspaceId,
+          workspaceId: workspaceId ?? originalMsg.workspaceId,
           conversationId: targetConversationId,
           senderId: userId,
           senderName,
@@ -1822,6 +1826,81 @@ router.get(
     } catch (error: unknown) {
       log.error("[ChatManagement] Error getting parent message:", error);
       res.status(500).json({ error: "Failed to get parent message" });
+    }
+  }
+);
+
+// ============================================================================
+// TRINITY AUTO-REACT - POST /api/chat/manage/messages/:roomId/trinity-react
+// Used by ChatDock after a @Trinity mention is processed: drops a ✅ reaction
+// on the most recent user message in the room as a visible "I got it" signal.
+// Previously a ghost endpoint — the frontend fired into a 404 and swallowed it
+// with .catch(() => null), giving zero feedback to the operator.
+// ============================================================================
+router.post(
+  "/messages/:roomId/trinity-react",
+  managementLimiter,
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const { roomId } = req.params;
+      const { emoji = "✅", source = "trinity_auto" } = req.body ?? {};
+      const userId = authReq.user?.id;
+      const workspaceId = authReq.workspaceId;
+
+      if (!userId || !workspaceId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      if (typeof emoji !== "string" || emoji.length > 50) {
+        return res.status(400).json({ error: "Valid emoji required" });
+      }
+
+      const conversationId = await resolveConversationId(roomId);
+      if (!(await verifyParticipant(conversationId, userId))) {
+        return res.status(403).json({ error: "Not a participant" });
+      }
+
+      // Trinity reacts on the most recent message authored by THIS user that
+      // triggered the mention (i.e. the message Trinity is acknowledging).
+      const [target] = await db
+        .select({ id: chatMessages.id })
+        .from(chatMessages)
+        .where(and(
+          eq(chatMessages.conversationId, conversationId),
+          eq(chatMessages.senderId, userId),
+        ))
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(1);
+
+      if (!target) {
+        return res.json({ success: true, reacted: false, reason: "no_user_message" });
+      }
+
+      // Idempotent: skip if Trinity already reacted with the same emoji.
+      const [existing] = await db
+        .select({ id: messageReactions.id })
+        .from(messageReactions)
+        .where(and(
+          eq(messageReactions.messageId, target.id),
+          eq(messageReactions.userId, userId),
+          eq(messageReactions.emoji, emoji),
+        ))
+        .limit(1);
+
+      if (!existing) {
+        await db.insert(messageReactions).values({
+          messageId: target.id,
+          userId,
+          workspaceId,
+          emoji,
+          reactionType: source,
+        } as any);
+      }
+
+      return res.json({ success: true, reacted: true, messageId: target.id, emoji });
+    } catch (error: unknown) {
+      log.error("[ChatManagement] Error in trinity-react:", error);
+      res.status(500).json({ error: "Failed to record Trinity reaction" });
     }
   }
 );

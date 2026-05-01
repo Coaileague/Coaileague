@@ -586,6 +586,48 @@ helpaiRouter.post(
  * Trinity Dialogue chat endpoint - routes to HelpOS for AI responses
  * Supports both authenticated and anonymous users
  */
+// ChatDock @HelpAI mention path. Previously a ghost endpoint — the ChatDock
+// frontend POSTs here with `{ message, roomId }` after a user types
+// "@HelpAI ...".  Aliased to the canonical /chat handler below so we have
+// one implementation, two URLs (frontend already used /message in older
+// builds; we keep the alias to avoid future regressions).
+helpaiRouter.post('/message', async (req: Request, res: Response) => {
+  try {
+    const { message, roomId } = req.body ?? {};
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    const authReq = req as AuthenticatedRequest;
+    const safeMessage = sanitizeUserInputForAI(message);
+    let userId: string | null = authReq.session?.userId || (authReq as any).user?.id || null;
+    let userName = (authReq as any).session?.userName || (authReq as any).user?.email || 'User';
+    let workspaceId = authReq.session?.workspaceId || (authReq as any).user?.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
+    if (!userId) userId = `anon-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
+
+    const response = await helposService.bubbleAgent_reply({
+      workspaceId,
+      userId,
+      userName,
+      userMessage: safeMessage,
+      conversationHistory: [],
+      // @ts-expect-error — TS migration: storage typed loosely
+      storage,
+    });
+
+    res.json({
+      success: true,
+      response: response.message,
+      message: response.message,
+      reply: response.message,
+      sessionId: response.sessionId,
+      roomId,
+    });
+  } catch (error: unknown) {
+    log.error('[HelpAI] @HelpAI mention error:', error);
+    res.status(500).json({ error: 'Failed to process HelpAI mention' });
+  }
+});
+
 helpaiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;

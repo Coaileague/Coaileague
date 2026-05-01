@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 ;
 import { cn } from "@/lib/utils";
+import { haptics } from "@/lib/haptics";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { chatManager } from "@/services/chatConnectionManager";
@@ -699,14 +700,14 @@ function EmojiReactionBar({
 
   return (
     <div
-      className="flex items-center bg-card border border-border rounded-full shadow-md px-2 py-1 gap-0.5 z-50 animate-in slide-in-from-bottom-1 fade-in duration-150"
+      className="chatdock-reaction-reveal flex items-center bg-card border border-border rounded-full shadow-md px-2 py-1 gap-0.5 z-50"
       data-testid={`reaction-bar-${messageId}`}
     >
       {QUICK_REACTIONS.map((r) => (
         <button
           key={r.key}
           className="flex items-center justify-center w-7 h-7 rounded-full text-base hover:bg-muted transition-all hover:scale-125 active:scale-100"
-          onClick={(e) => { e.stopPropagation(); toggleReaction.mutate(r.key); }}
+          onClick={(e) => { e.stopPropagation(); haptics.light(); toggleReaction.mutate(r.key); }}
           data-testid={`reaction-${r.key}-${messageId}`}
           title={r.label}
         >
@@ -749,7 +750,7 @@ function ReactionBadges({
         return (
           <button
             key={r.emoji}
-            onClick={(e) => { e.stopPropagation(); toggleReaction.mutate(r.emoji); }}
+            onClick={(e) => { e.stopPropagation(); haptics.light(); toggleReaction.mutate(r.emoji); }}
             className={cn(
               "inline-flex items-center gap-0.5 text-[10px] px-1 py-0 rounded-full border transition-colors",
               r.hasReacted
@@ -858,7 +859,7 @@ function MessageActions({
             <button
               key={r.key}
               className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-full hover-elevate"
-              onClick={(e) => { e.stopPropagation(); toggleReaction.mutate(r.key); }}
+              onClick={(e) => { e.stopPropagation(); haptics.light(); toggleReaction.mutate(r.key); }}
               data-testid={`reaction-${r.key}-${messageId}`}
               aria-label={r.label}
             >
@@ -1244,7 +1245,7 @@ function QuickReactionHoverBar({
         <button
           key={r.key}
           className="p-0.5 text-muted-foreground hover:text-primary transition-colors leading-none"
-          onClick={(e) => { e.stopPropagation(); toggleReaction.mutate(r.key); }}
+          onClick={(e) => { e.stopPropagation(); haptics.light(); toggleReaction.mutate(r.key); }}
           data-testid={`quick-react-${r.key}-${messageId}`}
           aria-label={r.label}
         >
@@ -1396,6 +1397,9 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
       longPressStartPos.current = null;
+      // Confirm the long-press fired with a slightly stronger haptic — same
+      // feedback Messenger gives when the reaction bar pops out.
+      haptics.medium();
       setActionMenuRoom(roomId);
     }, 650);
   }, []);
@@ -1471,15 +1475,19 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
         <div
           role="button"
           tabIndex={0}
-          onClick={() => { if (!longPressTriggered.current) onSelectRoom(room.roomId, room.name); }}
+          onClick={() => {
+            if (longPressTriggered.current) return;
+            haptics.light();
+            onSelectRoom(room.roomId, room.name);
+          }}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelectRoom(room.roomId, room.name); }}
           onTouchStart={(e) => handleLongPressStart(room.roomId, e)}
           onTouchMove={handleLongPressMove}
           onTouchEnd={handleLongPressEnd}
           onTouchCancel={handleLongPressCancel}
-          onContextMenu={(e) => { e.preventDefault(); setActionMenuRoom(room.roomId); }}
+          onContextMenu={(e) => { e.preventDefault(); haptics.medium(); setActionMenuRoom(room.roomId); }}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left cursor-pointer rounded-xl",
+            "chatdock-row-press w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left cursor-pointer rounded-xl",
             hasUnread && "bg-blue-500/[0.06] dark:bg-blue-500/[0.1]",
             isSupport && "border-b border-border/30"
           )}
@@ -1894,6 +1902,17 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text || !isConnected) return;
+
+    // Native-feel send confirmation: haptic + brief send-button pop animation.
+    haptics.light();
+    const sendBtn = document.querySelector<HTMLElement>(`[data-testid="button-send-msg-${roomId}"]`);
+    if (sendBtn) {
+      sendBtn.classList.remove("chatdock-send-pop");
+      // Force reflow so the same animation can replay if you spam Send.
+      void sendBtn.offsetWidth;
+      sendBtn.classList.add("chatdock-send-pop");
+      setTimeout(() => sendBtn.classList.remove("chatdock-send-pop"), 280);
+    }
 
     if (editingMessage) {
       editMutation.mutate({ messageId: editingMessage.id, message: text });
@@ -2840,9 +2859,9 @@ function DesktopChatFAB() {
   return (
     <div className="hidden md:flex fixed bottom-6 right-6 z-[1031]" data-testid="desktop-chat-fab">
       <button
-        onClick={toggleBubble}
+        onClick={() => { haptics.light(); toggleBubble(); }}
         aria-label={bubbleOpen ? "Close chat" : "Open chat"}
-        className="relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        className="chatdock-tap relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         style={{
           background: bubbleOpen
             ? 'linear-gradient(135deg, #374151, #1f2937)'

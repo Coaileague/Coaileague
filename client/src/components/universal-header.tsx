@@ -413,8 +413,12 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     {!isChatRoute && (
                       <div className="relative">
                         <button
-                          className="relative inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 shadow-sm shadow-cyan-500/15 active-elevate-2"
-                          onClick={() => { window.dispatchEvent(new CustomEvent('chatdock-opened')); toggleBubble(); }}
+                          className="chatdock-tap relative inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 shadow-sm shadow-cyan-500/15 active-elevate-2"
+                          onClick={() => {
+                            try { (navigator as any)?.vibrate?.(10); } catch {}
+                            window.dispatchEvent(new CustomEvent('chatdock-opened'));
+                            toggleBubble();
+                          }}
                           data-testid="button-header-chat-mobile-universal"
                           aria-label={`Messages${totalUnread > 0 ? `, ${totalUnread} unread` : ""}`}
                           title="Messages"

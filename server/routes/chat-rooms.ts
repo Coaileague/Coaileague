@@ -125,14 +125,22 @@ async function getConversationUnreadCount(conversationId: string | null, userId:
 
 async function getLeftConversationIds(userId: string): Promise<Set<string>> {
   try {
-    const leftRows = await db
+    // Includes conversations the user has either left OR hidden — both should be
+    // omitted from the room list. Hide is a per-user soft-mute that the existing
+    // /api/chat/rooms aggregator was previously ignoring (silent failure: clicking
+    // "Hide" updated conversation_user_state but the room would re-appear on the
+    // next list).
+    const rows = await db
       .select({ conversationId: conversationUserState.conversationId })
       .from(conversationUserState)
       .where(and(
         eq(conversationUserState.userId, userId),
-        eq(conversationUserState.hasLeft, true)
+        or(
+          eq(conversationUserState.hasLeft, true),
+          eq(conversationUserState.isHidden, true),
+        )!
       ));
-    return new Set(leftRows.map(r => r.conversationId));
+    return new Set(rows.map(r => r.conversationId));
   } catch {
     return new Set();
   }
