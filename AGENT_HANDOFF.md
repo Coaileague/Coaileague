@@ -1,204 +1,130 @@
-# COAILEAGUE — MASTER HANDOFF
-# ONE FILE. Update in place.
-# Last updated: 2026-05-01 — Claude (architect, Phases 1-14 + session merges complete)
+# COAILEAGUE — MASTER AGENT HANDOFF
+# ONE FILE — update in place.
+# Last updated: 2026-05-01 — Claude (architect, continuous session monitoring)
 
 ---
 
-## CURRENT STATE
+## CURRENT BASE
 
 ```
-origin/development → 48796f12  (Railway STABLE GREEN ✅)
-HEAD: 48796f12 merge(sessions): cherry-pick 5 done sessions — 27 new files + tenant-iso
-```
-
----
-
-## TURN TRACKER
-
-```
-ARCHITECT (this session): CLAUDE — Phases 1-14 + all completed session merges done
-  Branch: development (pushing directly)
-  Status: MONITORING — waiting for notifications session to complete
-
-SESSIONS STATUS:
-  fix-trinity-notifications-EVDKv  🔄 STILL RUNNING — DO NOT MERGE YET
-    Last: cd1a00ca fix(notifications): grade-A Trinity push UX — proper badge icon + dedup
-    Watching for: handoff/close-out commit before merging
-    Unique new: notification-badge.png, notification-badge-72.png, sw.js update
-    Conflict risk: pushNotificationService.ts, universalNotificationEngine.ts (LOW — 2 files)
-
-  setup-onboarding-workflow-uE8II  ✅ MERGED (handoff commit)
-  test-chatdock-integration-dOzPS  ✅ MERGED (pre-merge boot test)
-  test-email-system-9n4d2          ✅ MERGED (zero-debt complete)
-  test-schedule-integration-0vxFL  ✅ MERGED (close-out memo)
-  action-wiring-manifest-LjP5K     ✅ MERGED (tenant-iso SHA logged)
-
-ENHANCEMENT LANES (older sprint — DO NOT MERGE):
-  enhancement/lane-a-*   → Superseded by our Phase work. They re-introduce as any/ts-expect-error.
-  copilot/merge-dev-into-codex-refactor → billing-api adds @ts-expect-error. REJECTED.
+origin/development → 5c8f43b2  (🟢 GREEN — build clean, Railway auto-deploying)
+TS debt: 8,566 → 2124 combined (-75.2% from baseline)
 ```
 
 ---
 
-## WHAT WAS MERGED THIS SESSION
+## SESSION MONITORING STATUS — ALL PASSES COMPLETE
 
-### Session merges (27 new files + targeted fixes)
+### Branches Verified / Merged / Rejected
 
-**ChatDock session:** ConversationPane.tsx, chatdock-helpers.ts, useChatActions.ts,
-  useChatViewState.ts, haptics.ts — typed action hooks + conversation pane split
-
-**Email session:** emailTemplateBase.ts, templates/ directory (account, billing,
-  onboarding, scheduling, support, index) — structured email template system
-
-**Onboarding session:** employee-blocking-banner.tsx, onboarding-progress-banner.tsx,
-  settings-sync-listener.tsx, use-settings-sync.ts, sub-orgs.tsx,
-  settingsSyncBroadcaster.ts, inviteReaperService.ts — onboarding pipeline improvements
-
-**Schedule session:** ScheduleGrid.tsx, availabilityRoutes.ts, calendarRoutes.ts,
-  gamificationService.ts — schedule grid + availability routing
-
-**Action-wiring session:** trinityAgentDashboardRoutes.ts + tenant-iso §G fixes:
-  clockinPinRoutes.ts, equipmentRoutes.ts, emailRoutes.ts — workspace_id WHERE added
-
-**Dashboard fix:** TrinityAnimatedLogo → TrinityArrowMark (codex crash fix applied)
-
-### REJECTED (would regress TS cleanup)
-  copilot billing-api: adds @ts-expect-error, tokenManager→creditManager refactor
-  enhancement lanes: re-introduce data:any, shift?:any in websocket.ts
-  copilot 18-TS-errors: uses @ts-expect-error workarounds
+| Branch | Status | Unique Value | Action Taken |
+|--------|--------|-------------|--------------|
+| claude/test-chatdock-integration-dOzPS | ✅ DONE | ChatDock split + hooks | MERGED |
+| claude/setup-onboarding-workflow-uE8II | ✅ DONE | 7 onboarding components | MERGED |
+| claude/test-email-system-9n4d2 | ✅ DONE | Email template system | MERGED |
+| claude/test-schedule-integration-0vxFL | ✅ DONE | Schedule + availability routes | MERGED |
+| claude/action-wiring-manifest-LjP5K | ✅ DONE | Trinity agent routes + tenant-iso | MERGED |
+| claude/fix-trinity-notifications-EVDKv | ✅ DONE | skillActionBridge.ts + badges | MERGED |
+| claude/document-pdf-system-SvGgk | ✅ DONE (handoff) | 9 new files (PDF streaming, encryption, mobile UI) | MERGED |
+| claude/unify-duplicate-services-7ZzYF | ✅ DONE (closed) | 14 dead services + 5 dead routes deleted | MERGED |
+| copilot/verify-email-flow-forgot-password | ✅ DONE | CAN-SPAM password reset | MERGED |
+| refactor/service-layer | ✅ DONE | ChatDock pub/sub, message store | MERGED |
+| pr-195 / client-cleanup | ✅ | 53 missing imported components recovered | MERGED |
+| claude/fix-ghost-routes-typescript-COkzh | ⏭ PARTIAL | businessArtifactCatalog.ts only | TS fix commit REJECTED (302 regressions) |
+| enhancement/lane-a-* | ⏭ REJECTED | — | Re-introduce as any/ts-expect-error |
+| copilot/merge-dev-into-codex-refactor | ⏭ REJECTED | — | billing-api @ts-expect-error |
+| codex/fix-dashboard-crash-issue | ✅ ABSORBED | — | Already in dev |
+| texas-licensing, trinity-texas, synapse-golive, fix-failed-deploys, fix-bell, acme-simulation | ✅ ABSORBED | — | No unique content |
 
 ---
 
-## DOMAIN OWNERSHIP & DO NOT OVERWRITE
+## WHAT'S IN DEVELOPMENT NOW
 
-**ARCHITECT (Phases 1-14) owns — critical files:**
-  server/routes.ts — featureStubRouter mount order is CRITICAL (must stay LAST)
-  server/routes/featureStubRoutes.ts — carefully curated 11 genuine stubs only
-  shared/types/domainExtensions.ts — new type file (ShiftWithJoins, EmployeeWithStatus, etc.)
-  server/websocket.ts — WsPayload type applied, do not re-introduce data:any
+### New Files Added (All Sessions Combined)
+**ChatDock:** ConversationPane.tsx, useChatActions.ts, useChatViewState.ts, chatdock-helpers.ts,
+  chatDockEventProtocol.ts, chatDockMessageStore.ts, chatDockPubSub.ts, haptics.ts
+
+**Email:** templates/ (account, billing, onboarding, scheduling, support), wrapInlineEmailHtml.ts,
+  emailTemplateBase.ts
+
+**Onboarding:** employee-blocking-banner.tsx, onboarding-progress-banner.tsx,
+  settings-sync-listener.tsx, use-settings-sync.ts, sub-orgs.tsx, settingsSyncBroadcaster.ts,
+  inviteReaperService.ts
+
+**Schedule:** ScheduleGrid.tsx, availabilityRoutes.ts, calendarRoutes.ts, gamificationService.ts
+
+**Action-wiring:** trinityAgentDashboardRoutes.ts, skillActionBridge.ts
+
+**Documents / PDF:** pdfResponseHeaders.ts, submissionPdfService.ts, auditorTokenService.ts,
+  auditorPublicRoutes.ts, fieldEncryption.ts, persistentRateLimitStore.ts,
+  MobileDocumentSafeSheet.tsx, MobilePayStubSheet.tsx, MobileFormPager.tsx,
+  businessArtifactCatalog.ts
+
+**Missing components recovered (53):** CustomFormRenderer, DocumentUpload, TrinityScorecard,
+  ai-brain/index.ts, chat/index.ts, helpai/index.ts, SnowfallEngine, ScheduleToolbar,
+  ShiftCard, navigation.ts, featureFlags.ts, stateRegulatoryRoutes.ts, + 41 more
+
+### Dead Code Removed (All Sessions)
+**Services (14):** automationMetrics, communicationFallbackService, expansionSeed,
+  fileStorageIsolationService, redisPubSubAdapter, sentimentAnalysis, timeEntryDisputeService,
+  trainingRateService, notificationThrottleService, trinityOrchestrationBridge,
+  aiSchedulingTriggerService, documentDeliveryService, notificationRuleEngine,
+  scheduleRollbackService
+
+**Routes (5):** gamificationRoutes, gpsRoutes, tokenRoutes, trainingRoutes, workflowRoutes
 
 ---
 
-## PLATFORM METRICS
+## CRITICAL ARCHITECTURE RULES (unchanged)
 
 ```
-TypeScript debt: 8,566 → 5057 combined any (41.0% eliminated)
-catch(e: any):    246 → 0    (-100%)
-res: any:          95 → 0    (-100%)
-.values(as any):    9 → 0    (-100%)
-middleware as any: 183 → 0   (-100%)
-Broken routes:     34 → 0
-Silent 404s:       38 → 11 genuine stubs
-All phase bugs:    12 → 0 fixed
+server/routes.ts → featureStubRouter MUST stay LAST (after all domain mounts)
+server/routes/featureStubRoutes.ts → 11 genuine stubs only
+shared/types/domainExtensions.ts → new types (ShiftWithJoins, EmployeeWithStatus, etc.)
+server/websocket.ts → WsPayload type — do NOT re-introduce data:any or shift?:any
+Trinity = ONE unified individual — no mode toggles
+HelpAI = only bot field workers see
 ```
 
 ---
 
-## PENDING — WAITING FOR
-
-| Session | Status | When done |
-|---------|--------|-----------|
-| fix-trinity-notifications-EVDKv | 🔄 Still running | Cherry-pick sw.js + badge icons only (2 new files, 2 conflict files) |
-
-## OPEN ITEMS FOR NEXT PHASE
+## OPEN ITEMS (carry forward)
 
 | ID | Item | Priority |
 |----|------|----------|
-| KI-001 | ChatDock Redis pub/sub (multi-replica) | HIGH |
-| KI-007 | FCM push notifications | HIGH |
-| KI-008 | Durable message store | HIGH |
-| TS-DEBT | Remaining 5057 combined any | MEDIUM |
-| UNBUILT | CAD Console, Audit Suite/audits, Accept Handoff | BACKLOG |
+| KI-001 | ChatDock Redis pub/sub multi-replica (chatDockPubSub.ts ready, needs wiring) | HIGH |
+| KI-007 | FCM push notifications offline workers | HIGH |
+| KI-008 | Durable per-room message sequencing (chatDockMessageStore.ts ready) | HIGH |
+| ENV | FIELD_ENCRYPTION_KEY must be set before PII encryption activates | HIGH |
+| ENV | APP_BASE_URL must be set for auditor token URL composition | MEDIUM |
+| TS-DEBT | Remaining 2124 combined any (deep Trinity AI + Drizzle internals) | LOW |
+
+---
+
+## PLATFORM METRICS — FINAL
+
+```
+TS combined any: 8,566 → 2124 (-75.2%)
+catch(e: any):       246 → 0   (-100%) ✅
+res: any handlers:    95 → 0   (-100%) ✅
+.values(as any):       9 → 0   (-100%) ✅
+middleware as any:   183 → 0   (-100%) ✅
+@ts-expect-error:    142 → 4   (-97%)  ✅
+Broken routes:        34 → 0           ✅
+Dead services removed: 14              ✅
+Dead routes removed:    5              ✅
+Build: 0 server + 0 client errors      ✅
+```
 
 ---
 
 ## MERGE PROTOCOL FOR NEXT AGENT
 
 1. Read this file FIRST
-2. git pull origin development — we are the canonical base
-3. Check notifications session: git log --oneline origin/claude/fix-trinity-notifications-EVDKv ^development
-   - If handoff/close commit seen: cherry-pick ONLY sw.js, notification-badge*.png
-   - Do NOT touch pushNotificationService.ts or universalNotificationEngine.ts (our versions are better)
-4. Run esbuild: must be 0 server + 0 client errors
-5. Run node build.mjs: must succeed
-6. Update this file
-
----
-
-## STANDARD
-
-```
-No stubs/placeholders — real DB data or ACME simulation.
-No as any unless it's a JOIN result (documented in domainExtensions.ts).
-featureStubRouter MUST stay LAST in routes.ts.
-Trinity = one individual. HelpAI = only bot field workers see.
-```
-
----
-
-## RAILWAY DEPLOYMENT LOG
-
-### Failed Deploys (3) — All Fixed
-
-| Fix | Root Cause | Status |
-|-----|-----------|--------|
-| integrations-status.ts missing default export | Old code had no `export default router` | ✅ Fixed (all phases) |
-| Duplicate TrinityAnimatedLogo size attr | `<TrinityAnimatedLogo size={32}` + `size={config.logoSize}` | ✅ Fixed (all phases) |
-| Wrong ErrorBoundary import path | `@/components/ui/error-boundary` → doesn't exist | ✅ Fixed (all phases) |
-| **@capacitor/haptics bundling crash** | **haptics.ts imported native Capacitor module** | **✅ Fixed — PR #223 merged** |
-
-**PR #223** (railway-app[bot]): externalize `@capacitor/haptics` in `vite.config.ts rollupOptions`
-This was the ROOT CAUSE. haptics.ts (from chatdock session) imports @capacitor/haptics which
-is a native Capacitor plugin, not a bundleable npm package. Vite fails at build time.
-Fix: add to rollupOptions.external.
-
-**Current HEAD:** `a288b308` — includes PR #223 + all session merges
-**Build status:** 0 server + 0 client errors ✅
-
----
-
-## FINAL MERGE PASS — ALL SESSIONS COMPLETE (2026-05-01)
-
-### Branch Inventory — Final Status
-
-| Branch | Status | Action |
-|--------|--------|--------|
-| fix-trinity-notifications-EVDKv | ✅ MERGED | Icons + sw.js |
-| setup-onboarding-workflow-uE8II | ✅ MERGED | 7 onboarding files |
-| test-chatdock-integration-dOzPS | ✅ MERGED | ChatDock split + hooks |
-| test-email-system-9n4d2 | ✅ MERGED | Email template system |
-| test-schedule-integration-0vxFL | ✅ MERGED | Schedule + availability routes |
-| action-wiring-manifest-LjP5K | ✅ MERGED | Trinity agent routes + tenant-iso |
-| document-pdf-system-SvGgk | ✅ MERGED | PDF download/preview endpoints |
-| copilot/refactor-service-layer | ✅ PARTIAL | publicLeads + smsRoutes idempotency keys |
-| trinity-texas-compliance-3PFcB | ✅ ABSORBED | texasGatekeeper same in dev |
-| texas-licensing-framework-CXrDv | ✅ ABSORBED | licenseTypes same in dev |
-| synapse-golive-checklist-kr148 | ✅ ABSORBED | audit docs only |
-| fix-failed-deployments-Q2IGU | ✅ ABSORBED | compliance.ts fix already in dev |
-| fix-bell-icon-modal-SoqPW | ⏭ SKIPPED | adds any[] regressions |
-| copilot/merge-dev-into-codex-refactor | ⏭ REJECTED | @ts-expect-error in billing-api |
-| enhancement/lane-a-* | ⏭ REJECTED | re-introduces data:any, shift?:any |
-| copilot/refactor-service-layer (misc/notifications) | ⏭ SKIPPED | 36-53 TS regressions per file |
-
-### Railway Deploy Status
-- PR #223 merged: @capacitor/haptics externalized in vite.config.ts ✅
-- All 3 Railway fix-deploy failures confirmed fixed in development HEAD ✅
-- Build: 0 server + 0 client errors ✅
-
-### Platform Metrics — FINAL
-```
-TypeScript debt: 8,566 → 5057 combined (41.0% eliminated)
-catch(e: any):      246 → 0   (-100%)
-res: any handlers:   95 → 0   (-100%)
-.values(as any):      9 → 0   (-100%)
-middleware as any:  183 → 0   (-100%)
-Broken routes:       34 → 0
-Feature stubs: 39 → 11 (genuinely unbuilt only, mounted LAST)
-Phase bugs fixed:    12 → 0
-```
-
-### DO NOT MERGE (documented)
-- enhancement/lane-a-* branches (re-introduce as any we eliminated)
-- copilot/merge-dev-into-codex-refactor (billing-api @ts-expect-error)
-- fix-bell-icon-modal-SoqPW (notifications-popover adds any[] types)
-- High TS-debt copilot routes (miscRoutes +36, notifications +53 regressions)
+2. git pull origin development (this IS the canonical base)
+3. git fetch origin — check for new branches with commits ahead of development
+4. For each: find truly unique code (diff --diff-filter=A vs ANCESTOR 438cca2d)
+5. Check TS regressions before applying — reject if adds > removes
+6. Compile: esbuild sweep must stay at 0 errors
+7. Build: node build.mjs must succeed
+8. Update this file with what you did
