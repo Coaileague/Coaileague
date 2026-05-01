@@ -1,9 +1,9 @@
 {
-  "ranAt": "2026-05-01T07:01:02.927Z",
+  "ranAt": "2026-05-01T07:15:53.441Z",
   "database": "postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox",
-  "passed": 31,
+  "passed": 35,
   "failed": 0,
-  "total": 31,
+  "total": 35,
   "results": [
     {
       "name": "GET /api/chat/rooms returns 200",
@@ -21,24 +21,39 @@
       "name": "POST /api/chat/manage/dm/create returns 200 + conversationId",
       "pass": true,
       "status": 200,
-      "detail": "conversationId=be16b1b1-f551-4c0a-a548-5fd82ebca3dc"
+      "detail": "conversationId=cad841ec-9bad-43f8-83bc-508112ed8b15"
     },
     {
       "name": "Group room creation returns conversationId",
       "pass": true,
       "status": 200,
-      "detail": "conversationId=185c20cb-b06d-4d13-bb0c-cd194f8e82df participantCount=3"
+      "detail": "conversationId=ee9c3840-6e4e-4319-b611-62e46b19fcd8 participantCount=4"
     },
     {
       "name": "Participants endpoint returns all 3 seeded users",
       "pass": true,
       "status": 200,
-      "detail": "count=3 ids=usr-chatdock-manager,usr-chatdock-peer,usr-chatdock-bystander"
+      "detail": "count=4 ids=usr-chatdock-manager,usr-chatdock-peer,usr-chatdock-bystander,helpai-bot"
+    },
+    {
+      "name": "HelpAI orchestrator was auto-summoned into the new room",
+      "pass": true,
+      "detail": "helpai-bot present in chat_participants"
+    },
+    {
+      "name": "HelpAI joined the DM as an active participant",
+      "pass": true,
+      "detail": "participants=usr-chatdock-manager,usr-chatdock-peer,helpai-bot"
+    },
+    {
+      "name": "HelpAI posted its welcome message into the DM",
+      "pass": true,
+      "detail": "welcome=\"👋 **HelpAI here** — Trinity's AI co-pilot is active in this conversation.\n\nType…\""
     },
     {
       "name": "Two DM messages persisted via Drizzle",
       "pass": true,
-      "detail": "manager_msg=a3a3bb98-14d4-4e46-9daf-cbdb5ce7698c peer_msg=1b2a83fa-3ea0-4ffa-ba98-c3e676809a29"
+      "detail": "manager_msg=b47ca786-9150-47ff-8bf6-8c344957c325 peer_msg=1a5780aa-de43-44c0-8333-b69930da2f06"
     },
     {
       "name": "POST reactions returns 2xx",
@@ -106,7 +121,7 @@
     {
       "name": "After hide, bystander's room list excludes the hidden room",
       "pass": true,
-      "detail": "room_count=0 hiddenRoom=185c20cb-b06d-4d13-bb0c-cd194f8e82df"
+      "detail": "room_count=0 hiddenRoom=ee9c3840-6e4e-4319-b611-62e46b19fcd8"
     },
     {
       "name": "POST mark-as-read returns 2xx",
@@ -140,12 +155,12 @@
       "name": "POST forward returns 2xx",
       "pass": true,
       "status": 200,
-      "detail": "{\"success\":true,\"forwardedMessageId\":\"df31b30a-aa0c-4a9d-9417-8ffd75977984\"}"
+      "detail": "{\"success\":true,\"forwardedMessageId\":\"b187402b-98a4-4ee8-9249-4de88f6d5b41\"}"
     },
     {
       "name": "Forwarded message lands in the group room",
       "pass": true,
-      "detail": "group_msg_count=1"
+      "detail": "group_msg_count=2"
     },
     {
       "name": "Link-preview does not return a populated preview for loopback URL",
@@ -165,10 +180,16 @@
       "detail": "rows=1"
     },
     {
+      "name": "POST /api/helpai/message returns a HelpAI reply (no longer a ghost endpoint)",
+      "pass": true,
+      "status": 200,
+      "detail": "reply=\"Looks like I ran into a technical hiccup. Mind trying once more?…\""
+    },
+    {
       "name": "POST trinity-react returns 2xx (no longer a ghost endpoint)",
       "pass": true,
       "status": 200,
-      "detail": "{\"success\":true,\"reacted\":true,\"messageId\":\"df21eb17-844f-4952-b210-c4da06e23e71\",\"emoji\":\"✅\"}"
+      "detail": "{\"success\":true,\"reacted\":true,\"messageId\":\"6ec55dad-2d8e-46b4-8e74-55040c61914c\",\"emoji\":\"✅\"}"
     },
     {
       "name": "Trinity ✅ reaction persisted on the user's message",
@@ -179,7 +200,7 @@
       "name": "Manager's room list contains the DM and the group room",
       "pass": true,
       "status": 200,
-      "detail": "rooms=2 ids=185c20cb-b06d-4d13-bb0c-cd194f8e82df,be16b1b1-f551-4c0a-a548-5fd82ebca3dc"
+      "detail": "rooms=2 ids=ee9c3840-6e4e-4319-b611-62e46b19fcd8,cad841ec-9bad-43f8-83bc-508112ed8b15"
     }
   ]
 }

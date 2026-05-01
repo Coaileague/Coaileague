@@ -47,6 +47,7 @@ import path from "node:path";
 import chatManagementRouter from "../../server/routes/chat-management";
 import chatRoomsRouter from "../../server/routes/chat-rooms";
 import chatInlineRouter from "../../server/routes/chatInlineRoutes";
+import { helpaiRouter } from "../../server/routes/helpai-routes";
 import chatroomCommandRouter from "../../server/routes/chat";
 import { attachWorkspaceIdOptional } from "../../server/rbac";
 
@@ -225,13 +226,35 @@ async function runTests() {
     rec({ name: "Group room creation returns conversationId", pass: r.status === 200 && !!ctx.roomId, status: r.status, detail: ctx.roomId ? `conversationId=${ctx.roomId} participantCount=${r.json?.participantCount}` : `body=${r.text.slice(0, 200)}` });
   }
 
-  console.log("\n[stage 5] Get group room participants — must list all three");
+  console.log("\n[stage 5] Get group room participants — must list all three users + HelpAI orchestrator");
   if (ctx.roomId) {
     const r = await callApi("GET", `/api/chat/manage/rooms/${ctx.roomId}/participants`);
     const participants = r.json?.participants || r.json || [];
     const ids = new Set(participants.map((p: any) => p.participantId));
     const allPresent = ids.has(FIXTURE.manager.id) && ids.has(FIXTURE.peer.id) && ids.has(FIXTURE.bystander.id);
+    const helpaiPresent = ids.has("helpai-bot");
     rec({ name: "Participants endpoint returns all 3 seeded users", pass: r.status === 200 && allPresent, status: r.status, detail: `count=${participants.length} ids=${[...ids].join(",")}` });
+    rec({ name: "HelpAI orchestrator was auto-summoned into the new room", pass: helpaiPresent, detail: helpaiPresent ? "helpai-bot present in chat_participants" : `participants=${[...ids].join(",")}` });
+  }
+
+  console.log("\n[stage 5b] Confirm HelpAI is also auto-summoned into the DM (universal orchestrator presence)");
+  if (ctx.dmId) {
+    const dmParticipants = await db.select().from(chatParticipants).where(eq(chatParticipants.conversationId, ctx.dmId));
+    const ids = new Set(dmParticipants.map(p => p.participantId));
+    rec({
+      name: "HelpAI joined the DM as an active participant",
+      pass: ids.has("helpai-bot"),
+      detail: `participants=${[...ids].join(",")}`,
+    });
+    const [helpaiWelcome] = await db.select().from(chatMessages).where(and(
+      eq(chatMessages.conversationId, ctx.dmId),
+      eq(chatMessages.senderId, "helpai-bot"),
+    )).limit(1);
+    rec({
+      name: "HelpAI posted its welcome message into the DM",
+      pass: !!helpaiWelcome && /HelpAI/i.test(helpaiWelcome.message || ""),
+      detail: helpaiWelcome ? `welcome="${(helpaiWelcome.message || "").slice(0, 80)}…"` : "no welcome message found",
+    });
   }
 
   console.log("\n[stage 6] Direct DB write of two messages (simulates WS chat_message persistence)");
@@ -387,6 +410,29 @@ async function runTests() {
     rec({ name: "message_deleted_for row persisted (per-user soft delete)", pass: rows.length === 1, detail: `rows=${rows.length}` });
   }
 
+  console.log("\n[stage 18b] @HelpAI summon endpoint — POST /api/helpai/message returns a HelpAI reply");
+  if (ctx.dmId) {
+    asUser(FIXTURE.peer);
+    const r = await callApi("POST", "/api/helpai/message", {
+      message: "@HelpAI what's my next shift?",
+      roomId: ctx.dmId,
+    });
+    // The reply may be a real Gemini response or a graceful fallback (no API
+    // key). Either way the endpoint must respond 2xx with success: true and a
+    // non-empty message string — proves the wire is unbroken end-to-end.
+    const looksValid = r.status >= 200 && r.status < 300
+      && r.json?.success === true
+      && typeof (r.json?.message || r.json?.reply || r.json?.response) === "string";
+    rec({
+      name: "POST /api/helpai/message returns a HelpAI reply (no longer a ghost endpoint)",
+      pass: looksValid,
+      status: r.status,
+      detail: looksValid
+        ? `reply="${(r.json?.message || r.json?.reply || r.json?.response || "").slice(0, 80)}…"`
+        : r.text.slice(0, 200),
+    });
+  }
+
   console.log("\n[stage 19] Trinity auto-react probe — previously a 404 ghost endpoint");
   if (ctx.dmId) {
     asUser(FIXTURE.manager);
@@ -452,6 +498,7 @@ async function bootServer(): Promise<{ url: string; close: () => Promise<void> }
   app.use("/api/chat/rooms", attachWorkspaceIdOptional, chatRoomsRouter);
   app.use("/api/chat", attachWorkspaceIdOptional, chatInlineRouter);
   app.use(chatroomCommandRouter); // defines its own /api/chat/* paths inline
+  app.use("/api/helpai", attachWorkspaceIdOptional, helpaiRouter);
 
   return new Promise((resolve, reject) => {
     const server = http.createServer(app);

@@ -25,3 +25,32 @@ Unresolved (ghosts):       0
   ✓ POST   /api/chat/manage/messages/:p/forward                          
   ✓ POST   /api/chat/manage/messages/:p/pin                              
   ✓ POST   /api/chat/manage/messages/:p/reactions                        
+  ✓ POST   /api/chat/manage/messages/:p/trinity-react                    
+  ✓ POST   /api/chat/manage/rooms/:p/transfer-ownership                  
+  ✓ POST   /api/chat/manage/rooms/:p/update-role                         
+  ✓ POST   /api/chat/manage/rooms/create                                 
+  ✓ POST   /api/chat/manage/unblock                                      
+  ✓ POST   /api/chat/mark-as-read                                        
+  ✓ POST   /api/chat/upload                                              
+  ✓ POST   /api/helpai/message                                           
+
+---- Universal chat-server checks ----
+  ✓ Server listens on exactly one WS path: /ws/chat
+  ✓ Client builds wsUrl from window.location.host (no hard-coded host)
+  ✓ Client picks ws/wss based on document protocol (PWA + native parity)
+  ✓ Capacitor config does NOT override server.url (mobile uses same origin)
+  ✓ ChatServerHub registered as the WS broadcaster (single orchestrator)
+
+---- HelpAI orchestrator wiring ----
+  ✓ HelpAI bot user is seeded into the platform-wide HelpDesk room
+  ✓ HelpAI gets auto-summoned into new conversations (botSummonService)
+  ✓ ChatDock-created DMs auto-summon HelpAI
+  ✓ ChatDock-created group rooms auto-summon HelpAI
+  ✓ ChatServerHub.emitMessagePosted intercepts /helpai slash command
+  ✓ ChatServerHub.emitMessagePosted detects @HelpAI plain-text mention (any client)
+  ✓ POST /api/helpai/message HTTP path exists for ChatDock summon button
+  ✓ HelpAI persona prompt describes a manager-style assistant
+
+═══════════════════════════════════════════════════════════════
+  All universal-chat & HelpAI orchestrator checks passed. ✓
+═══════════════════════════════════════════════════════════════

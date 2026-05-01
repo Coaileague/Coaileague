@@ -4,9 +4,8 @@
 DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
 
 [seed] preparing sandbox fixtures…
-(Use `node --trace-deprecation ...` to show where the warning was created)
 [seed] users=3, workspace=ws-chatdock-sandbox
-[server] listening at http://127.0.0.1:36049
+[server] listening at http://127.0.0.1:33003
 
 [stage 1] List rooms (manager) — fresh workspace should be empty
   ✓ [200] GET /api/chat/rooms returns 200 — rooms=0
@@ -15,16 +14,23 @@ DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
   ✓ [200] Manager search finds peer in workspace — result_count=1
 
 [stage 3] Manager opens DM with peer
-  ✓ [200] POST /api/chat/manage/dm/create returns 200 + conversationId — conversationId=be16b1b1-f551-4c0a-a548-5fd82ebca3dc
+  ✓ [200] POST /api/chat/manage/dm/create returns 200 + conversationId — conversationId=cad841ec-9bad-43f8-83bc-508112ed8b15
 
 [stage 4] Manager creates a group room with peer + bystander
-  ✓ [200] Group room creation returns conversationId — conversationId=185c20cb-b06d-4d13-bb0c-cd194f8e82df participantCount=3
+  ✓ [200] Group room creation returns conversationId — conversationId=ee9c3840-6e4e-4319-b611-62e46b19fcd8 participantCount=4
 
-[stage 5] Get group room participants — must list all three
-  ✓ [200] Participants endpoint returns all 3 seeded users — count=3 ids=usr-chatdock-manager,usr-chatdock-peer,usr-chatdock-bystander
+[stage 5] Get group room participants — must list all three users + HelpAI orchestrator
+  ✓ [200] Participants endpoint returns all 3 seeded users — count=4 ids=usr-chatdock-manager,usr-chatdock-peer,usr-chatdock-bystander,helpai-bot
+  ✓ HelpAI orchestrator was auto-summoned into the new room — helpai-bot present in chat_participants
+
+[stage 5b] Confirm HelpAI is also auto-summoned into the DM (universal orchestrator presence)
+  ✓ HelpAI joined the DM as an active participant — participants=usr-chatdock-manager,usr-chatdock-peer,helpai-bot
+  ✓ HelpAI posted its welcome message into the DM — welcome="👋 **HelpAI here** — Trinity's AI co-pilot is active in this conversation.
+
+Type…"
 
 [stage 6] Direct DB write of two messages (simulates WS chat_message persistence)
-  ✓ Two DM messages persisted via Drizzle — manager_msg=a3a3bb98-14d4-4e46-9daf-cbdb5ce7698c peer_msg=1b2a83fa-3ea0-4ffa-ba98-c3e676809a29
+  ✓ Two DM messages persisted via Drizzle — manager_msg=b47ca786-9150-47ff-8bf6-8c344957c325 peer_msg=1a5780aa-de43-44c0-8333-b69930da2f06
 
 [stage 7] Manager reacts to peer's message with 👍
   ✓ [200] POST reactions returns 2xx — {"success":true,"action":"added"}
@@ -50,7 +56,7 @@ DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
 
 [stage 13] Bystander hides the group room from their own list
   ✓ [200] Bystander hide returns 2xx — {"success":true,"message":"Conversation hidden"}
-  ✓ After hide, bystander's room list excludes the hidden room — room_count=0 hiddenRoom=185c20cb-b06d-4d13-bb0c-cd194f8e82df
+  ✓ After hide, bystander's room list excludes the hidden room — room_count=0 hiddenRoom=ee9c3840-6e4e-4319-b611-62e46b19fcd8
 
 [stage 14] Mark-as-read (manager) on the DM
   ✓ [200] POST mark-as-read returns 2xx — {"success":true,"message":"Messages marked as read"}
@@ -62,8 +68,8 @@ DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
   ✓ blocked_contacts row removed after unblock — rows=0
 
 [stage 16] Manager forwards their pinned message to the group room
-  ✓ [200] POST forward returns 2xx — {"success":true,"forwardedMessageId":"df31b30a-aa0c-4a9d-9417-8ffd75977984"}
-  ✓ Forwarded message lands in the group room — group_msg_count=1
+  ✓ [200] POST forward returns 2xx — {"success":true,"forwardedMessageId":"b187402b-98a4-4ee8-9249-4de88f6d5b41"}
+  ✓ Forwarded message lands in the group room — group_msg_count=2
 
 [stage 17] Link preview probe — server must not return a usable preview for loopback URLs (SSRF guard)
   ✓ [200] Link-preview does not return a populated preview for loopback URL — {"success":true,"preview":null}
@@ -72,13 +78,16 @@ DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
   ✓ [200] POST delete-for-me returns 2xx — {"success":true,"message":"Message hidden for you"}
   ✓ message_deleted_for row persisted (per-user soft delete) — rows=1
 
+[stage 18b] @HelpAI summon endpoint — POST /api/helpai/message returns a HelpAI reply
+  ✓ [200] POST /api/helpai/message returns a HelpAI reply (no longer a ghost endpoint) — reply="Looks like I ran into a technical hiccup. Mind trying once more?…"
+
 [stage 19] Trinity auto-react probe — previously a 404 ghost endpoint
-  ✓ [200] POST trinity-react returns 2xx (no longer a ghost endpoint) — {"success":true,"reacted":true,"messageId":"df21eb17-844f-4952-b210-c4da06e23e71","emoji":"✅"}
+  ✓ [200] POST trinity-react returns 2xx (no longer a ghost endpoint) — {"success":true,"reacted":true,"messageId":"6ec55dad-2d8e-46b4-8e74-55040c61914c","emoji":"✅"}
   ✓ Trinity ✅ reaction persisted on the user's message — rows=1
 
 [stage 20] Re-list rooms (manager) — should now contain the group room + DM
-  ✓ [200] Manager's room list contains the DM and the group room — rooms=2 ids=185c20cb-b06d-4d13-bb0c-cd194f8e82df,be16b1b1-f551-4c0a-a548-5fd82ebca3dc
+  ✓ [200] Manager's room list contains the DM and the group room — rooms=2 ids=ee9c3840-6e4e-4319-b611-62e46b19fcd8,cad841ec-9bad-43f8-83bc-508112ed8b15
 
 ═══════════════════════════════════════════════════════════════
-  Summary: 31 passed, 0 failed, 31 total
+  Summary: 35 passed, 0 failed, 35 total
 ═══════════════════════════════════════════════════════════════

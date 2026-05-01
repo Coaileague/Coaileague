@@ -1008,6 +1008,16 @@ router.post(
         },
       ]);
 
+      // HelpAI universal-orchestrator: every DM gets HelpAI auto-summoned so
+      // end-users can request help mid-conversation with @HelpAI without ever
+      // leaving the dock.  Non-fatal — DM creation must not block on bot setup.
+      try {
+        const { summonHelpAIForConversation } = await import("../services/botSummonService");
+        await summonHelpAIForConversation(newConversation.id, "dm_bot", workspaceId, userId);
+      } catch (summonErr) {
+        log.warn("[ChatManagement] HelpAI summon for DM failed (non-fatal):", summonErr);
+      }
+
       res.json({ success: true, conversationId: newConversation.id, existing: false });
     } catch (error: unknown) {
       log.error("[ChatManagement] Error creating DM:", error);
@@ -1195,11 +1205,20 @@ router.post(
         eventPayload: JSON.stringify({ participantCount: uniqueIds.length }),
       });
 
+      // HelpAI universal-orchestrator: open_chat rooms get HelpAI as an ambient
+      // co-pilot so anyone can summon help with @HelpAI without leaving chat.
+      try {
+        const { summonHelpAIForConversation } = await import("../services/botSummonService");
+        await summonHelpAIForConversation(newConversation.id, "open_chat", workspaceId, userId);
+      } catch (summonErr) {
+        log.warn("[ChatManagement] HelpAI summon for room failed (non-fatal):", summonErr);
+      }
+
       res.json({
         success: true,
         conversationId: newConversation.id,
         name: name.trim(),
-        participantCount: uniqueIds.length,
+        participantCount: uniqueIds.length + 1, // includes HelpAI
       });
     } catch (error: unknown) {
       log.error("[ChatManagement] Error creating room:", error);

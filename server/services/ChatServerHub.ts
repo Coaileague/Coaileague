@@ -1707,6 +1707,58 @@ class ChatServerHubClass {
       return;
     }
 
+    // ── @HelpAI plain-text mention orchestration ────────────────────────────
+    // Universal trigger: any client (web, mobile, iOS PWA, native) that posts
+    // "@HelpAI ..." gets a HelpAI reply broadcast back to every participant.
+    // Works regardless of whether the client uses the HTTP fallback at
+    // /api/helpai/message — if the message reaches the WS pipeline, HelpAI
+    // sees it.  Idempotent on a 30s dedup window per (room, mention) so a
+    // double-tap doesn't spawn two responses.
+    const helpaiMentionMatch = message.match(/@HelpAI\b/i);
+    if (helpaiMentionMatch && !this.isHelpAIDeduplicated(params.conversationId, 'mention')) {
+      try {
+        const stripped = message.replace(/@HelpAI/gi, '').trim() || 'How can you help?';
+        // Resolve or start a session so HelpAI's persona/state carries forward.
+        const existingSession = await db
+          .select()
+          .from(helpaiSessions)
+          .where(and(
+            eq(helpaiSessions.userId, params.userId),
+            eq(helpaiSessions.state, 'assisting'),
+          ))
+          .orderBy(desc(helpaiSessions.createdAt))
+          .limit(1);
+
+        let sessionId = existingSession[0]?.id;
+        if (!sessionId) {
+          const started = await helpAIBotService.startSession(
+            params.workspaceId || PLATFORM_WORKSPACE_ID,
+            params.userId,
+          );
+          sessionId = started.sessionId;
+        }
+
+        const reply = await helpAIBotService.handleMessage(sessionId, stripped);
+        if (reply?.response && this.wsBroadcaster) {
+          this.wsBroadcaster({
+            type: 'bot_reply',
+            conversationId: params.conversationId,
+            workspaceId: params.workspaceId,
+            payload: {
+              message: `⭐ **HelpAI:** ${reply.response}`,
+              senderName: 'HelpAI',
+              senderType: 'bot',
+              triggeredBy: 'mention',
+            },
+          });
+        }
+      } catch (err: any) {
+        log.warn('[ChatServerHub] @HelpAI mention handler failed (non-fatal):', err?.message);
+      }
+      // Continue with standard delivery so the original mention still appears
+      // in the conversation transcript.
+    }
+
     // DETECT SAFETY CODES (####-## pattern)
     const safetyCodeMatch = message.match(/^(\d{4}-\d{2})$/);
     if (safetyCodeMatch) {
