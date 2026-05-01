@@ -91,7 +91,7 @@ cadRouter.post("/calls", requireAuth as any, ensureWorkspaceAccess as any, async
         siteId: siteId||null, siteName: siteName||null, locationDescription, incidentDescription,
         createdBy, latitude, longitude,
       }
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     res.status(201).json(rows[0]);
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });

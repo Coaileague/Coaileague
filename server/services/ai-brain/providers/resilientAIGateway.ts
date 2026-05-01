@@ -494,7 +494,7 @@ class ResilientAIGateway {
             outputTokens,
             triggeredByUserId: request.userId,
           });
-        }).catch((err: any) => log.warn('[AIMeter] claude recordAiCall failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[AIMeter] claude recordAiCall failed (non-blocking):', err?.message));
         log.info(`[BillingGate] Trinity specialist [${featureKey}] - ${totalTokens} tokens (${estimatedCredits} credits) billed to workspace: ${request.workspaceId}`);
       }
     }

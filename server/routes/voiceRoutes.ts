@@ -264,7 +264,7 @@ export async function initializeVoiceTables(): Promise<void> {
         ALTER TABLE voice_call_sessions ADD COLUMN IF NOT EXISTS recording_sid VARCHAR;
         ALTER TABLE voice_call_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
         ALTER TABLE voice_call_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
-      `).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      `).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       // Seed the platform-wide CoAIleague number — idempotent, never duplicates
       // Uses PLATFORM_WORKSPACE_ID (env: PLATFORM_WORKSPACE_ID, default: 'coaileague-platform-workspace')
@@ -403,7 +403,7 @@ function twilioSignatureMiddleware(req: Request, res: Response, next: NextFuncti
       return;
     }
     next();
-  }).catch((err: any) => {
+  }).catch((err: unknown) => {
     log.error('[VoiceRoutes] Signature validation error:', err.message);
     res.status(500).send('Internal Server Error');
   });
@@ -934,7 +934,7 @@ voiceRouter.post('/client-identify', twilioSignatureMiddleware, async (req: Requ
           lang,
         },
         outcome: 'success',
-      }).catch((err: any) => log.warn('[VoiceRoutes] client-identify log failed:', err?.message));
+      }).catch((err: unknown) => log.warn('[VoiceRoutes] client-identify log failed:', err?.message));
     }
 
     const providerNameForAck = resolvedProviderName || (spoken ? spoken : null);
@@ -1162,7 +1162,7 @@ voiceRouter.post('/staff-menu', twilioSignatureMiddleware, async (req: Request, 
     const { sessionId, workspaceId } = extractQS(req);
 
     logCallAction({ callSessionId: sessionId, workspaceId, action: 'staff_menu_selection',
-      payload: { digit: Digits }, outcome: 'success' }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      payload: { digit: Digits }, outcome: 'success' }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     const baseParams = { callSid: CallSid, sessionId, workspaceId, lang, baseUrl };
 
@@ -1702,7 +1702,7 @@ voiceRouter.post('/status-callback', twilioSignatureMiddleware, async (req: Requ
           action: 'call_ended',
           payload: { callStatus: CallStatus, durationSeconds: durationSec },
           outcome: CallStatus === 'completed' ? 'success' : 'failure',
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     }
 
@@ -1787,7 +1787,7 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
       workspaceId,
       action: 'support_issue_received',
       payload: { issue: issue.slice(0, 300), hasClientContext: !!clientContext },
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     // Attempt AI resolution (max ~6s) — pass client context into the brain.
     const aiResult = await resolveWithTrinityBrain({ issue, workspaceId, language: lang, clientContext });
@@ -1807,7 +1807,7 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
         action: 'support_ai_resolved',
         payload: { model: aiResult.modelUsed, responseTimeMs: aiResult.responseTimeMs },
         outcome: 'success',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       // Workspace-scoped audit log so every Trinity voice AI resolution is
       // visible in the universal audit trail (not just the per-call log).
@@ -1850,7 +1850,7 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
       workspaceId,
       action: 'support_ai_escalate',
       payload: { reason: aiResult.escalationReason, model: aiResult.modelUsed },
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     return xmlResponse(res, twiml(
       `<Gather input="speech" action="${nameAction}" method="POST" timeout="8" speechTimeout="auto">` +
@@ -1900,7 +1900,7 @@ voiceRouter.post('/support-confirm', twilioSignatureMiddleware, async (req: Requ
         action: 'support_resolved_by_ai',
         payload: { model: aiModel },
         outcome: 'success',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       return xmlResponse(res, twiml(
         sayL(
           'Excellent! I\'m glad I could help. Thank you for calling. Have a wonderful day. Goodbye!',
@@ -2039,11 +2039,11 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
       action: 'support_case_created',
       payload: { caseNumber: supportCase.case_number, callerName, aiAttempted },
       outcome: 'success',
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     // Notify agents asynchronously (non-blocking)
     setImmediate(() => {
-      notifyHumanAgents({ supportCase, workspaceId }).catch((e: any) => {
+      notifyHumanAgents({ supportCase, workspaceId }).catch((e: unknown) => {
         log.warn('[VoiceRoutes] Agent notification failed (non-fatal):', e?.message);
       });
     });
@@ -2251,7 +2251,7 @@ voiceRouter.post('/agent-clear', twilioSignatureMiddleware, async (req: Request,
         action: 'support_case_resolved_via_voice',
         payload: { caseNumber },
         outcome: 'success',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       return xmlResponse(res, twiml(
         sayEn(`Case ${resolvedCase.case_number.split('').join(' ')} has been marked as resolved. Thank you. Goodbye.`)
@@ -2662,7 +2662,7 @@ voiceRouter.post('/verify-code', twilioSignatureMiddleware, async (req: Request,
         action: '2fa_verified',
         payload: { employeeId, channel: 'email' },
         outcome: 'success',
-      }).catch((e: any) => log.warn('[VoiceRoutes] 2fa audit log failed:', e?.message));
+      }).catch((e: unknown) => log.warn('[VoiceRoutes] 2fa audit log failed:', e?.message));
 
       const okMsg = lang === 'es'
         ? '¡Identidad verificada! Pasando a su menú personalizado ahora.'
@@ -2721,7 +2721,7 @@ async function runTrinityTalkTurn(params: {
     workspaceId,
     action: 'trinity_talk_turn',
     payload: { turn, issue: issue.slice(0, 300) },
-  }).catch((e: any) => log.warn('[VoiceRoutes] trinity-talk audit failed:', e?.message));
+  }).catch((e: unknown) => log.warn('[VoiceRoutes] trinity-talk audit failed:', e?.message));
 
   // Phase 25 — load prior-turn memory from the voice_call_sessions metadata
   // so Trinity remembers what was already said in this call. The sessionId
@@ -3059,7 +3059,7 @@ voiceRouter.post('/sales-choice', twilioSignatureMiddleware, async (req: Request
       workspaceId,
       action: 'sales_choice',
       payload: { digit: Digits, lang },
-    }).catch((e: any) => log.warn('[VoiceRoutes] sales-choice audit failed:', e?.message));
+    }).catch((e: unknown) => log.warn('[VoiceRoutes] sales-choice audit failed:', e?.message));
 
     if (Digits === '2') {
       // Live transfer to sales team. We prefer the platform-level
@@ -3196,7 +3196,7 @@ voiceRouter.post('/schedule-callback', twilioSignatureMiddleware, async (req: Re
         action: 'callback_request_created',
         payload: { ticketNumber, recordingUrl: RecordingUrl || null },
         outcome: 'success',
-      }).catch((e: any) => log.warn('[VoiceRoutes] callback audit log failed:', e?.message));
+      }).catch((e: unknown) => log.warn('[VoiceRoutes] callback audit log failed:', e?.message));
 
       log.info(`[VoiceRoutes] Callback request ${ticketNumber} created for workspace ${workspaceId}`);
 
@@ -3298,7 +3298,7 @@ voiceRouter.post('/verify-employee-id', twilioSignatureMiddleware, async (req: R
       action: 'employment_verification_requested',
       payload: { employeeId: empId, requestedBySession: sessionId, orgCode },
       outcome: 'success',
-    }).catch((e: any) => log.warn('[VoiceRoutes] verify audit log failed:', e?.message));
+    }).catch((e: unknown) => log.warn('[VoiceRoutes] verify audit log failed:', e?.message));
 
     // Direct verifier to email channel — legal best practice. Trinity will not
     // disclose any details over the phone without a signed authorization on
@@ -4171,7 +4171,7 @@ voiceRouter.post('/guest-employment-verify', twilioSignatureMiddleware, async (r
             channel: 'voice',
             callSid: req.body.CallSid || sessionId,
           })
-        ]).catch((e: any) => log.warn('[VoiceVerify] Ticket insert failed:', e?.message));
+        ]).catch((e: unknown) => log.warn('[VoiceVerify] Ticket insert failed:', e?.message));
 
         // Record guest session token usage (500 cap for verification)
         const { recordGuestSessionUsage } = await import('../services/billing/guestSessionService');
@@ -4181,7 +4181,7 @@ voiceRouter.post('/guest-employment-verify', twilioSignatureMiddleware, async (r
           guestType: 'employment_verification',
           channel: 'voice',
           tokensUsed: 500,
-        }).catch((e: any) => log.warn('[VoiceVerify] session usage record failed:', e?.message));
+        }).catch((e: unknown) => log.warn('[VoiceVerify] session usage record failed:', e?.message));
 
       } catch (err: unknown) {
         log.warn('[VoiceVerify] Submit path failed:', err?.message);

@@ -91,11 +91,11 @@ router.patch("/proposals/:id", requireAuth, async (req: AuthenticatedRequest, re
 
     // Publish events on stage changes
     if (req.body.stage === 'won') {
-      platformEventBus.publish({ type: 'proposal_won', category: 'automation', title: 'Proposal Won', description: `Deal ${req.params.id} marked as won.`, workspaceId: wid, metadata: { dealId: req.params.id } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      platformEventBus.publish({ type: 'proposal_won', category: 'automation', title: 'Proposal Won', description: `Deal ${req.params.id} marked as won.`, workspaceId: wid, metadata: { dealId: req.params.id } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     } else if (req.body.stage === 'lost') {
-      platformEventBus.publish({ type: 'proposal_lost', category: 'automation', title: 'Proposal Lost', description: `Deal ${req.params.id} marked as lost. Reason: ${req.body.loss_reason || 'Not specified'}`, workspaceId: wid, metadata: { dealId: req.params.id, reason: req.body.loss_reason } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      platformEventBus.publish({ type: 'proposal_lost', category: 'automation', title: 'Proposal Lost', description: `Deal ${req.params.id} marked as lost. Reason: ${req.body.loss_reason || 'Not specified'}`, workspaceId: wid, metadata: { dealId: req.params.id, reason: req.body.loss_reason } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     } else if (req.body.stage === 'proposal' || req.body.stage === 'rfp') {
-      platformEventBus.publish({ type: 'bid_submitted', category: 'automation', title: 'Bid/Proposal Submitted', description: `Deal ${req.params.id} moved to ${req.body.stage} stage.`, workspaceId: wid, metadata: { dealId: req.params.id } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      platformEventBus.publish({ type: 'bid_submitted', category: 'automation', title: 'Bid/Proposal Submitted', description: `Deal ${req.params.id} moved to ${req.body.stage} stage.`, workspaceId: wid, metadata: { dealId: req.params.id } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
     const r = await db.$client.query(`SELECT * FROM pipeline_deals WHERE id = $1`, [req.params.id]);

@@ -291,7 +291,7 @@ router.patch('/vehicles/:id/flag', requireAuth, async (req: AuthenticatedRequest
       description: `Vehicle ${rows[0].license_plate} flagged: ${reason}`,
       workspaceId: req.workspaceId,
       metadata: { vehicleId: req.params.id, licensePlate: rows[0].license_plate }
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.json(rows[0]);
   } catch (err) {

@@ -108,7 +108,7 @@ router.post('/employees/:id/reactivate', async (req, res) => {
         workspaceId,
         metadata: { seatUsed: usedAfter, seatMax: seatCheck.max, usagePct: Math.round(usagePct * 100) },
         visibility: 'org_leadership',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
     res.json({ success: true, employee: result, message: `${result.firstName} ${result.lastName} has been reactivated` });

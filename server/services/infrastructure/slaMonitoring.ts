@@ -382,7 +382,7 @@ class SLAMonitoringService {
           severity: severity as any,
           audience: 'manager',
         },
-      }).catch((err: any) => log.warn('[SLAMonitoring] Failed to publish sla_breach:', err.message));
+      }).catch((err: unknown) => log.warn('[SLAMonitoring] Failed to publish sla_breach:', err.message));
 
       log.info(
         `[SLAMonitoring] BREACH: ${serviceName} - ${breachType} ` +

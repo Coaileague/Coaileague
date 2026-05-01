@@ -1309,7 +1309,7 @@ DO NOT:
     }
 
     // Record user turn (non-fatal — history recording must not block chat)
-    await this.recordTurn(session.id, 'user', message).catch((err: any) => {
+    await this.recordTurn(session.id, 'user', message).catch((err: unknown) => {
       log.warn('[TrinityChatService] Failed to record user turn (non-fatal):', err?.message);
     });
 
@@ -1602,7 +1602,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     `, [workspaceId, userId, session.id, aiResponse.model || 'gemini', aiResponse.tokensUsed || 0, timeMs]).catch(() => null);
 
     // Record assistant turn (non-fatal — must not block returning the AI response)
-    await this.recordTurn(session.id, 'assistant', aiResponse.text, undefined, aiResponse.toolCalls).catch((err: any) => {
+    await this.recordTurn(session.id, 'assistant', aiResponse.text, undefined, aiResponse.toolCalls).catch((err: unknown) => {
       log.warn('[TrinityChatService] Failed to record assistant turn (non-fatal):', err?.message);
     });
 
@@ -1663,9 +1663,9 @@ Do NOT skip steps — decompose fully before concluding.`;
       `Approach: "${chosenApproach}". Response length: ${aiResponse.text.length} chars.`,
       { success: timeMs < 10000, score: timeMs < 3000 ? 0.95 : timeMs < 5000 ? 0.85 : timeMs < 10000 ? 0.7 : 0.5 },
       workspaceId
-    ).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
+    ).catch((e: unknown) => log.error(e instanceof Error ? e.message : String(e)));
 
-    this.analyzeForInsights(userId, workspaceId, session.id, message, aiResponse.text, mode).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
+    this.analyzeForInsights(userId, workspaceId, session.id, message, aiResponse.text, mode).catch((e: unknown) => log.error(e instanceof Error ? e.message : String(e)));
 
     // === REINFORCEMENT LEARNING — BASAL GANGLIA FEEDBACK LOOP ===
     // Record this chat interaction as an experience in the RL loop.

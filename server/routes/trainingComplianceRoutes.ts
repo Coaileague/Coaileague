@@ -138,7 +138,7 @@ router.post("/records", requireAuth, async (req: AuthenticatedRequest, res) => {
           description: `Expires in ${days} days. Action required.`,
           workspaceId: wid,
           metadata: { employeeId: employee_id, trainingName: training_name, daysLeft: days }
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       } else if (days < 0) {
         platformEventBus.publish({
           type: 'training_expired',
@@ -147,7 +147,7 @@ router.post("/records", requireAuth, async (req: AuthenticatedRequest, res) => {
           description: `Expired ${Math.abs(days)} days ago. Immediate action required.`,
           workspaceId: wid,
           metadata: { employeeId: employee_id, trainingName: training_name }
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     }
 
@@ -508,7 +508,7 @@ router.post("/tcole-alerts", requireAuth, async (req: AuthenticatedRequest, res)
           threshold: activeThreshold,
           year,
         }
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
     res.json({ 
       message: `TCOLE ${activeThreshold}-day compliance alerts sent`,

@@ -589,7 +589,7 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
         actionUrl: '/employees',
         priority: 'high',
         idempotencyKey: `approval_required-${Date.now()}-${managerId}`
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
     log.info(`[PublicOnboarding] Application ${applicationId} submitted — ${application.firstName} ${application.lastName} pending review`);

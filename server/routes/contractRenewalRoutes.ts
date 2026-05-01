@@ -191,7 +191,7 @@ router.post("/run-check", requireAuth, async (req: AuthenticatedRequest, res) =>
               description: `Contract expires in ${daysLeft} days. ${(taskType as any).replace(/_/g, ' ')}.`,
               workspaceId: wid,
               metadata: { contractId: contract.id, daysLeft, taskType }
-            }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+            }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
           }
         }
       }

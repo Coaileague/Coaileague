@@ -210,7 +210,7 @@ export async function runPayrollAutoClose(): Promise<{
               relatedEntityType: 'payroll_run',
               relatedEntityId: result.payrollRunId,
               metadata: { periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), entryCount: approvedEntries.length },
-            }).catch((e: any) => log.warn('Failed to notify owner of payroll draft', { error: e.message }));
+            }).catch((e: unknown) => log.warn('Failed to notify owner of payroll draft', { error: e.message }));
           }
         }
       } catch (wsErr: unknown) {

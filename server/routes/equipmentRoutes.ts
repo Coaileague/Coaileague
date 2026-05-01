@@ -848,7 +848,7 @@ router.post("/:itemId/report-lost", async (req, res) => {
     await client.query('COMMIT');
     res.json({ success: true, assignmentId, deductionAmount });
   } catch (error: unknown) {
-    await client.query('ROLLBACK').catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    await client.query('ROLLBACK').catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     log.error("Error reporting lost equipment by item:", error);
     res.status(500).json({ error: "Failed to report lost equipment" });
   } finally {

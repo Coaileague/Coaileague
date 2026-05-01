@@ -138,7 +138,7 @@ router.post("/records", requireAuth, async (req: AuthenticatedRequest, res) => {
           description: `Score dropped from ${previous} to ${latest}. Churn risk detected.`,
           workspaceId: wid,
           metadata: { clientId: client_id, previousScore: previous, newScore: latest }
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     }
 

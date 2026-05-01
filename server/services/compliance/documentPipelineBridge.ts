@@ -225,7 +225,7 @@ export async function bridgeComplianceToEmployeeDocument(
         documentType: employeeDocType,
       },
       metadata: { source: 'DocumentPipelineBridge' },
-    }).catch((err: any) => log.warn('[DocumentPipelineBridge] Failed to publish document_bridged:', err.message));
+    }).catch((err: unknown) => log.warn('[DocumentPipelineBridge] Failed to publish document_bridged:', err.message));
 
     return { success: true, employeeDocumentId: newDoc.id, action: 'created' };
   } catch (error) {

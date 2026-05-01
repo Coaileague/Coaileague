@@ -216,7 +216,7 @@ export async function getConnectomeStats(): Promise<{
 
 // .unref() prevents this module-level interval from blocking process shutdown
 const hebbianFlushInterval = setInterval(() => {
-  flushPendingActivations().catch((err: any) =>
+  flushPendingActivations().catch((err: unknown) =>
     log.warn('[Hebbian] Flush error (non-fatal):', (err instanceof Error ? err.message : String(err)))
   );
 }, FLUSH_INTERVAL_MS);

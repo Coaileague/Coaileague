@@ -174,7 +174,7 @@ class OnboardingOrchestrator {
                 validateOnly,
               },
             }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
-          }).catch((err: any) => {
+          }).catch((err: unknown) => {
             this.log.error('Data migration task failed:', err);
             result.errors.push(`Data migration failed: ${(err instanceof Error ? err.message : String(err))}`);
           })
@@ -216,7 +216,7 @@ class OnboardingOrchestrator {
                 errorCount: gamificationResult.errors.length,
               },
             }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
-          }).catch((err: any) => {
+          }).catch((err: unknown) => {
             this.log.error('Gamification activation task failed:', err);
             result.errors.push(`Gamification activation failed: ${(err instanceof Error ? err.message : String(err))}`);
           })
@@ -240,7 +240,7 @@ class OnboardingOrchestrator {
             } else {
               this.log.info(`Industry compliance deployed: ${complianceResult.templatesDeployed.length} templates, ${complianceResult.requirementsCreated} requirements`);
             }
-          }).catch((err: any) => {
+          }).catch((err: unknown) => {
             this.log.error('Industry compliance task failed:', err);
             result.warnings.push(`Industry compliance deployment failed: ${(err instanceof Error ? err.message : String(err))}`);
           })
@@ -260,7 +260,7 @@ class OnboardingOrchestrator {
               } else {
                 this.log.info(`Custom industry compliance deployed for "${workspace.customIndustryName}": ${complianceResult.templatesDeployed.length} templates`);
               }
-            }).catch((err: any) => {
+            }).catch((err: unknown) => {
               this.log.error('Custom industry compliance task failed:', err);
               result.warnings.push(`Custom industry compliance deployment failed: ${(err instanceof Error ? err.message : String(err))}`);
             })

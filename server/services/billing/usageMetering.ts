@@ -220,7 +220,7 @@ export class UsageMeteringService {
     // AI usage is now metered via aiMeteringService and workspace_ai_usage only.
 
     // Update daily rollup asynchronously
-    this.updateDailyRollup(input.workspaceId, input.featureKey, event.createdAt!).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
+    this.updateDailyRollup(input.workspaceId, input.featureKey, event.createdAt!).catch((e: unknown) => log.error(e instanceof Error ? e.message : String(e)));
 
     // Emit usage event to Trinity for tracking (unless caller handles its own event emission)
     if (input.emitEvent !== false) {

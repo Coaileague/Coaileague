@@ -247,7 +247,7 @@ router.post("/sessions/:id/sos", requireAuth, async (req: AuthenticatedRequest, 
       description: `SOS triggered by employee ID: \${session.employee_id}`,
       workspaceId: req.workspaceId,
       metadata: { sessionId: session.id, employeeId: session.employee_id }
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.json({ success: true });
   } catch (error) {

@@ -311,7 +311,7 @@ export class StripeWebhookService {
       description: `Workspace ${workspaceId} subscription created with ${tier} tier`,
       workspaceId,
       metadata: { tier, billingCycle, stripeSubscriptionId: subscription.id, status: 'active' },
-    }).catch((err: any) => log.warn('[stripeWebhooks] publish subscription_created failed:', err.message));
+    }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_created failed:', err.message));
 
     return { success: true, handled: true, message: 'Subscription created successfully' };
   }
@@ -412,7 +412,7 @@ export class StripeWebhookService {
         description: `Workspace ${workspaceId} subscription changed from ${previousTier} to ${tier}`,
         workspaceId,
         metadata: { previousTier, newTier: tier, status, isUpgrade },
-      }).catch((err: any) => log.warn('[stripeWebhooks] publish subscription_updated failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_updated failed:', err.message));
     }
     
     return { success: true, handled: true, message: 'Subscription updated successfully' };
@@ -482,7 +482,7 @@ export class StripeWebhookService {
         cancelledAt: new Date().toISOString(),
       },
       visibility: 'org_leadership',
-    }).catch((err: any) => log.warn('platformEventBus publish failed on subscription_cancelled', { error: err?.message }));
+    }).catch((err: unknown) => log.warn('platformEventBus publish failed on subscription_cancelled', { error: err?.message }));
     
     return { success: true, handled: true, message: 'Subscription cancelled, reverted to free tier' };
   }
@@ -589,7 +589,7 @@ export class StripeWebhookService {
         source: 'stripe_webhook_invoice_payment_succeeded',
       },
       visibility: 'manager',
-    }).catch((err: any) => log.warn('platformEventBus publish failed on invoice.payment_succeeded', { error: err?.message }));
+    }).catch((err: unknown) => log.warn('platformEventBus publish failed on invoice.payment_succeeded', { error: err?.message }));
 
     return { success: true, handled: true, message: `Subscription payment recorded — $${amountPaid.toFixed(2)} for workspace ${workspaceId}` };
   }
@@ -749,7 +749,7 @@ export class StripeWebhookService {
           amountDue: (invoice.amount_due || 0) / 100,
         },
         visibility: 'org_leadership',
-      }).catch((err: any) => log.warn('platformEventBus publish failed on payment_failed', { error: err?.message }));
+      }).catch((err: unknown) => log.warn('platformEventBus publish failed on payment_failed', { error: err?.message }));
     }
 
     return {
@@ -1117,7 +1117,7 @@ export class StripeWebhookService {
         description: `Invoice ${paidInvoice.invoiceNumber} paid — $${amountPaid.toFixed(2)}`,
         workspaceId,
         metadata: { chargeId: charge.id, invoiceId: paidInvoice.id, invoiceNumber: paidInvoice.invoiceNumber, amountPaid },
-      }).catch((err: any) => log.warn('[stripeWebhooks] publish invoice_paid failed on charge.succeeded:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish invoice_paid failed on charge.succeeded:', err.message));
     }
 
     return { success: true, handled: true, message: 'charge.succeeded — invoice marked paid, ledger updated' };
@@ -1262,7 +1262,7 @@ export class StripeWebhookService {
           description: `Workspace ${workspaceId} activated ${tier} plan via checkout`,
           workspaceId,
           metadata: { tier, billingCycle: session.metadata?.billingCycle || 'monthly', sessionId: session.id, stripeSubscriptionId: session.subscription },
-        }).catch((err: any) => log.warn('[stripeWebhooks] publish subscription_activated failed:', err.message));
+        }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_activated failed:', err.message));
 
       } catch (activateErr: unknown) {
         log.error('Failed to activate workspace', { error: activateErr.message });
@@ -1385,7 +1385,7 @@ export class StripeWebhookService {
         description: `${isFullRefund ? 'Full' : 'Partial'} refund of $${refundedAmount.toFixed(2)} processed for invoice ${refundedInvoice.invoiceNumber}`,
         workspaceId,
         metadata: { chargeId: charge.id, invoiceId: refundedInvoice.id, invoiceNumber: refundedInvoice.invoiceNumber, refundedAmount, isFullRefund, newStatus: newInvoiceStatus },
-      }).catch((err: any) => log.warn('[stripeWebhooks] publish refund_issued failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish refund_issued failed:', err.message));
       platformEventBus.publish({
         type: 'payment_refunded',
         category: 'billing',
@@ -1393,7 +1393,7 @@ export class StripeWebhookService {
         description: `${isFullRefund ? 'Full' : 'Partial'} refund of $${refundedAmount.toFixed(2)} processed for invoice ${refundedInvoice.invoiceNumber}`,
         workspaceId,
         metadata: { chargeId: charge.id, invoiceId: refundedInvoice.id, invoiceNumber: refundedInvoice.invoiceNumber, refundedAmount, isFullRefund, newStatus: newInvoiceStatus },
-      }).catch((err: any) => log.warn('[stripeWebhooks] publish payment_refunded failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish payment_refunded failed:', err.message));
     }
 
     return { success: true, handled: true, message: `Refund processed — invoice status reverted to '${newInvoiceStatus}', ledger reversed, owner notified` };
@@ -1465,7 +1465,7 @@ export class StripeWebhookService {
           disputeStatus: dispute.status,
         },
         visibility: 'org_leadership',
-      }).catch((err: any) => log.warn('[stripeWebhooks] publish chargeback_received failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish chargeback_received failed:', err.message));
 
       // Broadcast dashboard alert
       try {

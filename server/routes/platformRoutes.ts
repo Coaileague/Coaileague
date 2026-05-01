@@ -1421,7 +1421,7 @@ Keep answers under 200 words unless detail is critical. Today is ${new Date().to
       inputPayload: { question: question.trim() },
       outputPayload: { answer, botName: bot.name },
       success: true,
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.json({ answer, botName: bot.name, botId: agentId, askedAt: new Date().toISOString() });
   } catch (err: unknown) {

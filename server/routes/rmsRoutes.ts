@@ -109,7 +109,7 @@ rmsRouter.post("/dars", requireAuth as any, ensureWorkspaceAccess as any, async 
     await q(`INSERT INTO daily_activity_reports (id,workspace_id,report_number,employee_id,employee_name,site_id,site_name,shift_id,shift_date,shift_start,shift_end,activity_summary,incidents_occurred,incident_report_ids,equipment_checked,equipment_notes,visitor_count,patrol_rounds_completed,post_orders_followed,post_orders_notes,weather_conditions,status,created_at,updated_at,photos) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,'submitted',NOW(),NOW(),$22)`,
       [id, workspaceId, reportNumber, employeeId||null, employeeName, siteId||null, siteName||null, shiftId||null, shiftDate, shiftStart||null, shiftEnd||null, activitySummary, incidentsOccurred, JSON.stringify(incidentReportIds||[]), equipmentChecked, equipmentNotes||null, visitorCount, patrolRoundsCompleted, postOrdersFollowed, postOrdersNotes||null, weatherConditions||null, JSON.stringify(photos||[])]);
     const rows = await q(`SELECT * FROM daily_activity_reports WHERE id=$1`, [id]);
-    platformEventBus.publish({ type: 'dar_submitted', category: 'automation', title: `DAR Submitted — ${reportNumber}`, description: `${employeeName} submitted daily activity report for ${siteName || 'site'} on ${shiftDate}`, workspaceId, metadata: { darId: id, reportNumber, employeeId, employeeName, siteId, siteName, shiftDate, incidentsOccurred, incidentIds: incidentReportIds, photos } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    platformEventBus.publish({ type: 'dar_submitted', category: 'automation', title: `DAR Submitted — ${reportNumber}`, description: `${employeeName} submitted daily activity report for ${siteName || 'site'} on ${shiftDate}`, workspaceId, metadata: { darId: id, reportNumber, employeeId, employeeName, siteId, siteName, shiftDate, incidentsOccurred, incidentIds: incidentReportIds, photos } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     res.status(201).json(rows[0]);
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
@@ -122,7 +122,7 @@ rmsRouter.post("/dars/:id/approve", requireAuth as any, ensureWorkspaceAccess as
     const rows = await q(`SELECT * FROM daily_activity_reports WHERE id=$1`, [req.params.id]);
     const dar = rows[0] as any;
     if (dar) {
-      platformEventBus.publish({ type: 'dar_approved', category: 'automation', title: `DAR Approved — ${dar.report_number}`, description: `${dar.report_number} approved by supervisor ${supervisorId || 'unknown'} for ${dar.employee_name} on ${dar.shift_date}`, workspaceId, metadata: { darId: req.params.id, reportNumber: dar.report_number, employeeName: dar.employee_name, employeeId: dar.employee_id, siteId: dar.site_id, siteName: dar.site_name, supervisorId } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      platformEventBus.publish({ type: 'dar_approved', category: 'automation', title: `DAR Approved — ${dar.report_number}`, description: `${dar.report_number} approved by supervisor ${supervisorId || 'unknown'} for ${dar.employee_name} on ${dar.shift_date}`, workspaceId, metadata: { darId: req.params.id, reportNumber: dar.report_number, employeeName: dar.employee_name, employeeId: dar.employee_id, siteId: dar.site_id, siteName: dar.site_name, supervisorId } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
     res.json(dar);
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
@@ -167,7 +167,7 @@ rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as 
       description: `DAR ${dar.report_number} verified and now visible in client portal`,
       workspaceId,
       metadata: { darId: req.params.id, clientId: dar.client_id, siteId: dar.site_id },
-    }).catch((err: any) => log.warn('[EventBus] dar_available_to_client publish failed:', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] dar_available_to_client publish failed:', err?.message));
 
     // 3. Optional auto-send per workspace setting. Stored in the
     //    automation_policy_blob JSONB so we don't need a new column.
@@ -204,7 +204,7 @@ rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as 
       log.warn('[DAR] Auto-send check failed (non-fatal):', autoSendErr?.message);
     }
 
-    platformEventBus.publish({ type: 'dar_verified', category: 'automation', title: `DAR Verified — ${dar.report_number}`, description: `${dar.report_number} verified by ${verifierName || verifierId}`, workspaceId, metadata: { darId: req.params.id, reportNumber: dar.report_number, verifiedBy: verifierName || verifierId } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    platformEventBus.publish({ type: 'dar_verified', category: 'automation', title: `DAR Verified — ${dar.report_number}`, description: `${dar.report_number} verified by ${verifierName || verifierId}`, workspaceId, metadata: { darId: req.params.id, reportNumber: dar.report_number, verifiedBy: verifierName || verifierId } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     res.json(dar);
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
@@ -334,7 +334,7 @@ rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceA
       }
     }
 
-    platformEventBus.publish({ type: 'dar_submitted', category: 'automation', title: `Shift Report Submitted — ${report.employee_name}`, description: `${report.employee_name} submitted shift transparency report`, workspaceId, metadata: { darId: req.params.id, shiftId: report.shift_id, employeeName: report.employee_name, autoGenerated: false } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    platformEventBus.publish({ type: 'dar_submitted', category: 'automation', title: `Shift Report Submitted — ${report.employee_name}`, description: `${report.employee_name} submitted shift transparency report`, workspaceId, metadata: { darId: req.params.id, shiftId: report.shift_id, employeeName: report.employee_name, autoGenerated: false } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     res.json(report);
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
@@ -372,7 +372,7 @@ rmsRouter.post("/shift-reports/:id/send-to-client", requireAuth as any, ensureWo
 
     await q(`UPDATE dar_reports SET status='sent', sent_to_client=true, sent_at=NOW(), updated_at=NOW() WHERE id=$1`, [req.params.id]);
     platformEventBus.publish({ idempotencyKey: `notif-${Date.now()}`,
-            type: 'dar_sent_to_client', category: 'automation', title: 'Shift Report Sent to Client', description: `Shift report ${req.params.id} delivered to client${recipientEmail ? ` at ${recipientEmail}` : ''}`, workspaceId, metadata: { darId: req.params.id, recipientEmail } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+            type: 'dar_sent_to_client', category: 'automation', title: 'Shift Report Sent to Client', description: `Shift report ${req.params.id} delivered to client${recipientEmail ? ` at ${recipientEmail}` : ''}`, workspaceId, metadata: { darId: req.params.id, recipientEmail } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     const updated = await q(`SELECT * FROM dar_reports WHERE id=$1`, [req.params.id]);
     res.json(updated[0]);
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
@@ -533,10 +533,10 @@ rmsRouter.post("/visitors", requireAuth as any, ensureWorkspaceAccess as any, as
         visitorLogId: id, visitorName, siteName,
         boloId: bolo.id, boloSubjectName: bolo.subject_name,
       });
-      platformEventBus.publish({ type: 'bolo_match_detected', category: 'automation', title: `BOLO Match Detected — ${visitorName}`, description: `Visitor '${visitorName}' matches active BOLO at ${siteName || 'site'}`, workspaceId, metadata: { boloId: bolo.id, subjectName: visitorName, siteId, siteName, visitorLogId: id } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      platformEventBus.publish({ type: 'bolo_match_detected', category: 'automation', title: `BOLO Match Detected — ${visitorName}`, description: `Visitor '${visitorName}' matches active BOLO at ${siteName || 'site'}`, workspaceId, metadata: { boloId: bolo.id, subjectName: visitorName, siteId, siteName, visitorLogId: id } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
-    platformEventBus.publish({ type: 'visitor_checked_in', category: 'automation', title: `Visitor Checked In — ${visitorName}`, description: `${visitorName} checked in at ${siteName || 'site'}`, workspaceId, metadata: { visitorLogId: id, visitorName, siteId, siteName } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    platformEventBus.publish({ type: 'visitor_checked_in', category: 'automation', title: `Visitor Checked In — ${visitorName}`, description: `${visitorName} checked in at ${siteName || 'site'}`, workspaceId, metadata: { visitorLogId: id, visitorName, siteId, siteName } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     res.status(201).json({ ...rows[0], boloMatch: boloMatches.length > 0 });
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
@@ -652,7 +652,7 @@ rmsRouter.post("/cases", requireAuth as any, ensureWorkspaceAccess as any, async
     await q(`INSERT INTO rms_cases (id,workspace_id,case_number,title,category,priority,status,description,site_id,site_name,assigned_to_employee_id,assigned_to_name,incident_report_ids,evidence,notes,police_case_number,document_storage_keys,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,'open',$7,$8,$9,$10,$11,$12,'[]','[]',$13,'[]',NOW(),NOW())`,
       [id, workspaceId, caseNumber, title, category, priority, description||null, siteId||null, siteName||null, assignedToEmployeeId||null, assignedToName||null, JSON.stringify(incidentReportIds||[]), policeCaseNumber||null]);
     const rows = await q(`SELECT * FROM rms_cases WHERE id=$1`, [id]);
-    platformEventBus.publish({ type: 'rms_case_opened', category: 'automation', title: `Case Opened — ${caseNumber}`, description: `${category} case '${title}' opened at ${siteName || 'site'} — priority: ${priority}`, workspaceId, metadata: { caseId: id, caseNumber, title, category, priority, siteId, siteName, assignedToName } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    platformEventBus.publish({ type: 'rms_case_opened', category: 'automation', title: `Case Opened — ${caseNumber}`, description: `${category} case '${title}' opened at ${siteName || 'site'} — priority: ${priority}`, workspaceId, metadata: { caseId: id, caseNumber, title, category, priority, siteId, siteName, assignedToName } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     res.status(201).json(rows[0]);
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
@@ -681,7 +681,7 @@ rmsRouter.post("/bolo", requireAuth as any, ensureWorkspaceAccess as any, async 
       VALUES($1,$2,$3,$4,$5,$6,$7,true,$8,$9,$10,NOW(),NOW())`,
       [id, workspaceId, subjectName, subjectDob||null, subjectDescription||null, photoUrl||null, reason, expiresAt||null, req.session?.userId||null, createdByName||null]);
     const rows = await q(`SELECT * FROM bolo_alerts WHERE id=$1`, [id]);
-    platformEventBus.publish({ type: 'bolo_created', category: 'automation', title: `BOLO Created — ${subjectName}`, description: `New BOLO alert for '${subjectName}' — reason: ${reason}`, workspaceId, metadata: { boloId: id, subjectName, reason } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    platformEventBus.publish({ type: 'bolo_created', category: 'automation', title: `BOLO Created — ${subjectName}`, description: `New BOLO alert for '${subjectName}' — reason: ${reason}`, workspaceId, metadata: { boloId: id, subjectName, reason } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     res.status(201).json(rows[0]);
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
@@ -716,7 +716,7 @@ rmsRouter.post("/evidence", requireAuth as any, ensureWorkspaceAccess as any, as
     const rows = await q(`SELECT * FROM evidence_items WHERE id=$1`, [id]);
     const evidence = rows[0] as any;
     if (evidence) {
-      platformEventBus.publish({ type: 'evidence_created', category: 'automation', title: `Evidence Logged — ${itemNumber}`, description: `Evidence item '${description}' logged into RMS${caseId ? ` for case ${caseId}` : ''}`, workspaceId, metadata: { evidenceId: id, itemNumber, description, category: category||'physical', caseId: caseId||null, currentCustodianName: currentCustodianName||null } }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      platformEventBus.publish({ type: 'evidence_created', category: 'automation', title: `Evidence Logged — ${itemNumber}`, description: `Evidence item '${description}' logged into RMS${caseId ? ` for case ${caseId}` : ''}`, workspaceId, metadata: { evidenceId: id, itemNumber, description, category: category||'physical', caseId: caseId||null, currentCustodianName: currentCustodianName||null } }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
     res.status(201).json(evidence);
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }

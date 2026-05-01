@@ -106,7 +106,7 @@ router.post("/companies", requireAuth, async (req: AuthenticatedRequest, res) =>
           description: `Certificate of Insurance expires in ${days} days.`,
           workspaceId: wid,
           metadata: { subcontractorId: id, companyName: company_name, daysLeft: days }
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     }
 

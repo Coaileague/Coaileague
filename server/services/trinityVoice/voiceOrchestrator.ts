@@ -355,7 +355,7 @@ export async function recordCallUsage(params: {
     outcome: params.outcome || 'abandoned',
     aiAttempted: params.aiAttempted ?? false,
     extensionHandled: params.extensionHandled,
-  }).catch((err: any) => {
+  }).catch((err: unknown) => {
     log.warn('[VoiceOrchestrator] Command bus report failed (non-fatal):', err?.message);
   });
 

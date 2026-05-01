@@ -276,7 +276,7 @@ const router = Router();
         workspaceId,
         payload: { count: 1, entryIds: [updated.id], approvedBy: userId },
         metadata: { source: 'timeEntryRoutes.single_approve' },
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       // Phase 20 — Trinity invoice lifecycle workflow. Scheduled non-blocking
       // so the approval HTTP response doesn't wait on PDF / email dispatch.
@@ -512,7 +512,7 @@ const router = Router();
           workspaceId,
           payload: { count: updated.length, entryIds: updated.map(e => e.id), approvedBy: userId },
           metadata: { source: 'timeEntryRoutes.bulk_approve' },
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
         // Phase 20 — Trinity invoice lifecycle workflow per entry (de-duped
         // inside the workflow if the client is already invoiced for the day).
@@ -704,7 +704,7 @@ const router = Router();
         description: `Officer ${employeeName} submitted a manual override: ${reasonCode}`,
         workspaceId: workspace.id,
         metadata: { employeeId: employee.id, employeeName, shiftId, siteId, siteName, reasonCode, reasonDetail }
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       res.status(201).json({ id, message: "Override submitted — supervisor notified." });
     } catch (error: unknown) {
@@ -805,7 +805,7 @@ const router = Router();
           clockOut: clockOut.toISOString(),
         },
         visibility: 'supervisor',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       res.json(updated);
     } catch (error: unknown) {
@@ -918,7 +918,7 @@ router.post("/calculate-hours", requireAuth, async (req: AuthenticatedRequest, r
 
     // Resolve workspace timezone so day boundaries align with the workspace's
     // local clock — not the host process's. Default to UTC if unknown.
-    const wsId = (req as any).workspaceId || (req.user as any)?.currentWorkspaceId;
+    const wsId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
     let timeZone = 'UTC';
     if (wsId) {
       const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, wsId) });

@@ -515,7 +515,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
             unbilledHours: genInv.unbilledHours,
             source: 'auto_generate',
           },
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
 
       for (const genInv of generatedInvoices) {
@@ -728,7 +728,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         userId,
         metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, sentTo: client.email, clientId: invoice.clientId },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       res.json({ 
         success: true, 
@@ -1025,7 +1025,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         userId,
         metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, total: validated.totalAmount, clientId: validated.clientId, status: 'draft' },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       notificationHelpers.createInvoiceCreatedNotification(
         { storage: storage as any },
@@ -1240,7 +1240,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
             newStatus: status,
           },
           visibility: 'manager',
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
 
       storage.createAuditLog({
@@ -1356,7 +1356,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           unbilledEntriesReleased: unbilledCount,
         },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       storage.createAuditLog({
         workspaceId: workspace.id,
@@ -1587,7 +1587,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           clientId: updated.clientId,
         },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       // Non-blocking: send invoice paid confirmation email to org_owner
       (async () => {
@@ -2749,7 +2749,7 @@ router.post('/portal/:accessToken/invoice/:invoiceId/dispute', async (req, res) 
       performedBy: `portal:${portal.clientId}`,
       metadata: { reason: reason || 'No reason provided', clientId: portal.clientId, source: 'client_portal' },
       createdAt: new Date(),
-    } as any).catch((err: any) => log.warn('[BillingAudit] billing_audit_log write failed (non-blocking):', err?.message));
+    } as any).catch((err: unknown) => log.warn('[BillingAudit] billing_audit_log write failed (non-blocking):', err?.message));
 
     // LAW 21 — Notify org owner of client-initiated invoice dispute
     (async () => {
@@ -2891,7 +2891,7 @@ router.post(
   requireWorkspaceRole(['org_owner', 'co_owner']),
   async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req as any).workspaceId ?? (req as any).user?.workspaceId;
+      const workspaceId = req.workspaceId ?? (req as any).user?.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }

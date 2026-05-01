@@ -452,7 +452,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
           method: 'sms',
           acceptedAt: new Date().toISOString(),
         },
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     } else {
       await replySms(
         from,

@@ -504,7 +504,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
                 relatedEntityType: 'employee',
                 relatedEntityId: employee.id,
                 idempotencyKey: `compliance_alert-${employee.id}-${supUserId}`
-              }).catch((err: any) => log.warn('[time-entry] supervisor notification failed', err?.message));
+              }).catch((err: unknown) => log.warn('[time-entry] supervisor notification failed', err?.message));
             }
           });
 
@@ -630,7 +630,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
 
     // Auto-start lone worker safety for this officer (non-blocking)
     loneWorkerSafetyService.startForEmployee(employee.id, workspaceId, newEntry.id)
-      .catch((e: any) => log.warn('[TimeEntry] Lone worker start failed (non-blocking):', e?.message || String(e)));
+      .catch((e: unknown) => log.warn('[TimeEntry] Lone worker start failed (non-blocking):', e?.message || String(e)));
 
     // Auto-start presence monitoring for this time entry (non-blocking)
     presenceMonitorService.startMonitoring(newEntry.id, {
@@ -664,7 +664,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
       },
       discrepancies: [],
       status: 'active',
-    } as any).catch((e: any) => log.warn('[TimeEntry] Presence monitor start failed (non-blocking):', e?.message || String(e)));
+    } as any).catch((e: unknown) => log.warn('[TimeEntry] Presence monitor start failed (non-blocking):', e?.message || String(e)));
 
     // Create audit event
     await createAuditEvent({
@@ -811,7 +811,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
               issueCount: newCount,
               message: `${employee.firstName} ${employee.lastName} has required Trinity clock-in assistance ${newCount} times. Review attendance patterns.`,
             },
-          }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
         }
       } catch (trackErr: unknown) {
         log.error('[ClockIn] Issue tracking failed (non-blocking):', (trackErr instanceof Error ? trackErr.message : String(trackErr)));
@@ -850,7 +850,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
         gpsLat: latitude || null,
         gpsLng: longitude || null,
       },
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     broadcastToWorkspace(workspaceId, {
       type: 'clock_in',
@@ -1078,7 +1078,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
                   distanceMeters: Math.round(dist),
                   radiusMeters: siteRecord.radius,
                 },
-              }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+              }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
             }
           }
         }
@@ -1175,15 +1175,15 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
         gpsLat: latitude || null,
         gpsLng: longitude || null,
       },
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     // Auto-stop lone worker safety for this officer (non-blocking)
     loneWorkerSafetyService.stopForEmployee(employee.id, workspaceId)
-      .catch((e: any) => log.warn('[TimeEntry] Lone worker stop failed (non-blocking):', e?.message || String(e)));
+      .catch((e: unknown) => log.warn('[TimeEntry] Lone worker stop failed (non-blocking):', e?.message || String(e)));
 
     // Finalize presence monitoring session (non-blocking)
     presenceMonitorService.finalizeMonitoring(activeEntry.id)
-      .catch((e: any) => log.warn('[TimeEntry] Presence monitor finalize failed (non-blocking):', e?.message || String(e)));
+      .catch((e: unknown) => log.warn('[TimeEntry] Presence monitor finalize failed (non-blocking):', e?.message || String(e)));
 
     // Auto-initiate shift handoff when an incoming shift starts within 30 minutes (non-blocking)
     if (activeEntry.shiftId) {
@@ -1315,7 +1315,7 @@ timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('m
       type: 'geofence_override_resolved',
       workspaceId: workspaceId,
       payload: { timeEntryId: req.params.timeEntryId, approved, reason, resolvedBy: user.id },
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.json({ success: true, approved, message: approved ? 'Time entry approved despite geofence violation.' : 'Time entry denied — manual correction required.' });
   } catch (error) {
@@ -1363,7 +1363,7 @@ timeEntryRouter.post('/geofence-override/:timeEntryId/submit', async (req: Authe
       type: 'geofence_override_submitted',
       workspaceId,
       payload: { timeEntryId: req.params.timeEntryId, reason: reason.trim(), submittedBy: user.id },
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.json({ success: true, message: 'Explanation submitted to supervisor for review.' });
   } catch (error) {
@@ -1979,7 +1979,7 @@ timeEntryRouter.post('/entries/:id/approve', requireWorkspaceRole(['department_m
       workspaceId: workspaceId,
       payload: { count: 1, entryIds: [id], approvedBy: user.id },
       metadata: { source: 'timeEntryRouter.approve' },
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.json({ 
       message: 'Time entry approved',

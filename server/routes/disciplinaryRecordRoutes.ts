@@ -75,7 +75,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
         isTermination: parsed.data.recordType === 'termination',
       },
       visibility: 'supervisor',
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.status(201).json(record);
   } catch (err: unknown) {
@@ -329,7 +329,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
         generatedByTrinity: true,
       },
       visibility: 'supervisor',
-    }).catch((err: any) => log.warn('[EventBus] publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] publish failed (non-blocking):', err?.message));
 
     res.json({
       success: true,

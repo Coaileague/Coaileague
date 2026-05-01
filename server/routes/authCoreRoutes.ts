@@ -1319,7 +1319,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
         await db.update(users)
           .set({ currentWorkspaceId: effectiveWorkspaceId, updatedAt: new Date() })
           .where(eq(users.id, freshUser.id))
-          .catch((err: any) => log.warn('[Auth] Failed to persist workspace link:', err?.message));
+          .catch((err: unknown) => log.warn('[Auth] Failed to persist workspace link:', err?.message));
         log.info(`[Auth] Dynamically linked user ${freshUser.id} to owned workspace ${effectiveWorkspaceId}`);
       }
     }
@@ -1365,7 +1365,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
             description: `Login blocked for workspace '${paymentResult.workspaceName}' — ${paymentResult.reason}`,
             workspaceId: paymentResult.workspaceId,
             metadata: { userId: freshUser.id, workspaceName: paymentResult.workspaceName, reason: paymentResult.reason, isOwner: true },
-          }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
         } catch (logError) {
           log.error('[PaymentEnforcement] Failed to log audit:', logError);
         }

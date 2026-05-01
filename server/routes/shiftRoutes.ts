@@ -302,7 +302,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/pending', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = (req as any).workspaceId?.id || req.workspaceId;
+      const workspaceId = req.workspaceId?.id || req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const shifts = await getPendingShifts(workspaceId);
@@ -315,7 +315,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
   router.get('/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const workspaceId = (req as any).workspaceId?.id || req.workspaceId;
+      const workspaceId = req.workspaceId?.id || req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
       const stats = await getApprovalStats(workspaceId);
@@ -709,7 +709,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       } catch (err: unknown) {
         // RC5 (Phase 2): PostgreSQL exclusion constraint 23P01 — shift overlap detected atomically.
         // This is the sole enforcement mechanism for shift overlap prevention.
-        if ((err as any)?.code === '23P01') {
+        if ((err as NodeJS.ErrnoException)?.code === '23P01') {
           return res.status(409).json({
             error: 'This employee already has a shift during this time period',
             code: 'SHIFT_OVERLAP_CONFLICT',
@@ -735,8 +735,14 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
       // Notify assigned employees about new shift
       try {
-        if (shift.assignedEmployeeIds && Array.isArray(shift.assignedEmployeeIds)) {
-          for (const empId of (shift as any).assignedEmployeeIds) {
+        // Build the full set of employees to notify: covers both the single-employee
+      // assignment (employeeId) and the multi-employee array (assignedEmployeeIds).
+      const allAssignedIds = new Set<string>([
+        ...(shift.employeeId ? [shift.employeeId] : []),
+        ...((shift.assignedEmployeeIds && Array.isArray(shift.assignedEmployeeIds)) ? (shift as any).assignedEmployeeIds : []),
+      ]);
+      if (allAssignedIds.size > 0) {
+          for (const empId of allAssignedIds) {
             const empUser = await db.query.users.findFirst({
               where: eq(users.id, empId),
             });
@@ -908,7 +914,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           title: shift.title,
         },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       // 📡 REAL-TIME: Additional shift_assigned event so employee schedule views update instantly
       if (shift.employeeId) {
@@ -1191,7 +1197,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         });
       } catch (err: unknown) {
         // RC5 (Phase 2): PostgreSQL exclusion constraint 23P01 — shift overlap on UPDATE.
-        if ((err as any)?.code === '23P01') {
+        if ((err as NodeJS.ErrnoException)?.code === '23P01') {
           return res.status(409).json({
             error: 'This employee already has a shift during this time period',
             code: 'SHIFT_OVERLAP_CONFLICT',
@@ -1322,7 +1328,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           title: shift.title,
         },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       // 📡 REAL-TIME: If an employee was assigned/reassigned, fire specific shift_assigned event
       if (isManualAssignment && shift.employeeId) {
@@ -1473,7 +1479,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           startTime: shift?.startTime,
         },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       
       // D12-GAP-FIX: Clean up orphaned shift rooms associated with this shift.
       // When a shift is deleted, any shift_chat rooms tied to it become orphaned —
@@ -2044,7 +2050,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         workspaceId,
         metadata: { shiftId: req.params.id, employeeId, action: 'acknowledged' },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       res.json({
         success: true,
@@ -2171,7 +2177,7 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
           clientId: shift.clientId,
         },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       // IDEMPOTENCY CHECK: Prevent duplicate replacements on retry
       const existingReplacement = await db

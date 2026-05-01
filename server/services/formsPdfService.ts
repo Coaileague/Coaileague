@@ -309,7 +309,7 @@ export async function generateAndStorePdf(opts: GenerateOptions): Promise<string
       await pool.query(
         `UPDATE org_documents SET description = description || $1 WHERE id = $2`,
         [` [submission_id:${submission.id}]`, docId]
-      ).catch((err: any) => log.warn('[formsPdfService] org_documents tag failed:', err));
+      ).catch((err: unknown) => log.warn('[formsPdfService] org_documents tag failed:', err));
     }
 
     log.info(`PDF generated for submission ${submission.id} → ${gcsPath} (${pdfBuf.length} bytes)`);

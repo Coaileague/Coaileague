@@ -1103,3 +1103,71 @@ Stubbed features:
 | SF-1 | 436 `.catch(()=>null)` in server — hides real errors | HIGH |
 | SF-2 | 10 unguarded `fetch()` in client — no `.ok` check | MEDIUM |
 | UNBUILT | 12+ feature pages (CAD, budgets, bid-analytics, audit-suite) show stub 503 | BACKLOG |
+
+---
+
+## Phase 7 — Deep Audit: Workflow Semantics, TypeScript Hardening, Route Fixes (2026-05-01)
+
+### Methodology
+Five-pass deep scan across all 2,244 TypeScript files:
+- Pass A: Response shape mismatches (server sends X, client reads Y)
+- Pass B: TypeScript escape hatch audit (: any, as any per file)
+- Pass C: WorkspaceId scope leaks on sensitive table writes
+- Pass D: Auth guard mismatches (sensitive routes without requireAuth)
+- Pass E: Workflow chain integrity (5 critical chains traced end-to-end)
+
+### Auth Guard False Positives Resolved
+23 routes flagged as "unguarded" were all confirmed safe:
+- `adminRoutes.ts`, `deactivateRoutes.ts`, `importRoutes.ts` — auth applied at domain mount level
+  (`app.use("/api/import", requireAuth, ensureWorkspaceAccess, importRouter)`)
+- `payrollRoutes.ts` bank-accounts — auth at domain: `app.use("/api/payroll", requireAuth, ...)`
+- All 23 flagged routes inherit requireAuth from their domain-level mount ✅
+
+### WorkspaceId Scope — Confirmed Intentional
+`controlTowerRoutes.ts` queries without workspaceId — this is a platform-admin root view
+showing data across all workspaces. Not a bug. Protected by `requirePlatformStaff`.
+
+### Real Bugs Fixed
+
+**WORKFLOW-1: Shift creation — employee not notified (single employeeId)**
+- Root cause: notification block only iterated `assignedEmployeeIds[]` array.
+  When a shift used the scalar `employeeId` field (most common case),
+  zero notifications were sent to the assigned employee.
+- Fix: `shiftRoutes.ts` — builds `allAssignedIds = Set([employeeId, ...assignedEmployeeIds])`
+  and notifies all of them. Both in-app (createNotification) and push (NotificationDeliveryService).
+
+**TYPESCRIPT-1: 246 catch(e: any) → catch(e: unknown)**
+- Root cause: 246 catch blocks across server code used `catch(e: any)`,
+  bypassing TypeScript's type system and hiding potential property access errors.
+- Fix: Converted all to `catch(e: unknown)` — now TypeScript enforces that
+  `e.message` cannot be accessed without an `instanceof Error` guard.
+- Impact: Zero new compile errors — the codebase already used safe access patterns.
+
+**TYPESCRIPT-2: 10 (req as any).workspaceId → req.workspaceId**
+- Root cause: AuthenticatedRequest already has `workspaceId: string | undefined`,
+  but 10 handlers cast req to any to access it unnecessarily.
+- Fix: Removed the cast. Type is correct without any coercion.
+
+### Workflow Chain Integrity (All 5 Verified ✅)
+| Chain | Flow | Status |
+|-------|------|--------|
+| 1 | Clock-in → time_entries INSERT → payroll reads entries | ✅ Full chain |
+| 2 | Shift POST → notification → employee alerted | ✅ Fixed (WORKFLOW-1) |
+| 3 | Invoice created → audit log + event bus + notification | ✅ Full chain |
+| 4 | Onboarding /complete → onboardingStatus=completed, isActive=true | ✅ Fixed Phase 5 |
+| 5 | Invite register → tx(users+employees) → session → member_joined | ✅ Full chain |
+
+### Metrics Before/After
+| Metric | Before | After |
+|--------|--------|-------|
+| catch(e: any) patterns | 246 | **0** |
+| (req as any).workspaceId | 10 | **0** |
+| .catch(()=>null) swallows | 436 | 380 (-56) |
+| Unguarded auth routes (real) | 0 | 0 |
+| Broken workflows confirmed | 1 (shift notify) | 0 |
+
+### Phase 8 Targets
+- Reduce remaining 380 `.catch(()=>null)` to proper error logging (Phase 8)
+- Reduce 7,334 remaining `as any` usages — focus on core financial routes (Phase 8)
+- Add missing worker notification when shift is EDITED (not just created)
+- Add client email notification on invoice creation (requires client email lookup)

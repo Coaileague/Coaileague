@@ -514,7 +514,7 @@ export function registerPrivacyRoutes(app: Express, requireAuth: any) {
       await pool.query(
         `UPDATE export_download_tokens SET downloaded_at=now() WHERE token=$1`,
         [token]
-      ).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      ).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       res.setHeader('Content-Type', entry.contentType);
       res.setHeader('Content-Disposition', `attachment; filename="${entry.filename}"`);

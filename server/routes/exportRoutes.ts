@@ -23,7 +23,7 @@ function auditExport(req: AuthenticatedRequest, category: string, filename: stri
     entityId: category,
     description: `Regulatory export: ${category} — file: ${filename}`,
     metadata: { category, filename, filters: filters || {}, ip: req.ip, userAgent: req.headers['user-agent'] },
-  }).catch((err: any) => log.warn('[ExportAudit] Failed to write export audit log', { category, error: err?.message }));
+  }).catch((err: unknown) => log.warn('[ExportAudit] Failed to write export audit log', { category, error: err?.message }));
 }
 
 router.post("/employees", requireManager, async (req: AuthenticatedRequest, res) => {

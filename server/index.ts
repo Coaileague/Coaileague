@@ -842,7 +842,7 @@ async function initializeCriticalServices() {
       const { probeDbConnection } = await import('./db');
       return await probeDbConnection();
     } catch { return false; }
-})().catch((err: any) => {
+})().catch((err: unknown) => {
       log.error(`[PostListen] Unhandled crash: ${err instanceof Error ? err.message : String(err)}`);
     });
 
@@ -1323,12 +1323,12 @@ async function initializeExtendedServices(): Promise<void> {
     timedInit('Hebbian Decay Scheduler', async () => {
       const { runDecayCycle } = await import('./services/ai-brain/hebbianLearningService');
       // Run decay once at startup (catches any missed nightly runs after a restart)
-      runDecayCycle().catch((err: any) =>
+      runDecayCycle().catch((err: unknown) =>
         log.warn('Hebbian startup decay failed (non-fatal)', { error: err?.message })
       );
       // Schedule nightly decay — every 24 hours
       setInterval(() => {
-        runDecayCycle().catch((err: any) =>
+        runDecayCycle().catch((err: unknown) =>
           log.warn('Hebbian nightly decay failed (non-fatal)', { error: err?.message })
         );
       }, 24 * 60 * 60 * 1000).unref();
@@ -2714,7 +2714,7 @@ self.addEventListener('activate', async () => {
       } catch (error) {
         log.error('Onboarding task migration failed (non-fatal)', { error: error instanceof Error ? error.message : String(error) });
       }
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       log.error(`[PostListen] Unhandled crash: ${msg}`);
     });

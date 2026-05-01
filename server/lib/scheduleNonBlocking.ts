@@ -50,7 +50,7 @@ export function scheduleNonBlocking(label: string, fn: () => Promise<unknown>): 
   setImmediate(() => {
     Promise.resolve()
       .then(fn)
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         // Capture the full Postgres error context if present, otherwise
         // fall back to the basic message + stack.
         log.warn(`[scheduleNonBlocking:${label}] task failed`, {

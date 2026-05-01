@@ -276,7 +276,7 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
 // Use this from finalizeBilling() to never delay the AI execution path.
 // ============================================================================
 export function recordTokenUsageAsync(params: RecordTokenUsageParams): void {
-  recordTokenUsage(params).catch((err: any) => {
+  recordTokenUsage(params).catch((err: unknown) => {
     log.error(`[TokenUsageService] Unhandled error in async token write: ${err?.message}`, { workspaceId: params.workspaceId });
   });
 }

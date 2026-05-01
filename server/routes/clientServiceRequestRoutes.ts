@@ -133,7 +133,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
         urgency: parsed.data.urgency,
       },
       visibility: 'supervisor',
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     // Notify every workspace manager/owner in-app so the ticket doesn't sit
     // silently in the portal. Urgent/high requests also get push.

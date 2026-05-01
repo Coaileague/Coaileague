@@ -700,7 +700,7 @@ class UniversalStepLogger {
       description: `Orchestration ${orchestrationId} in domain '${context.domain}' requires human approval`,
       workspaceId: context.workspaceId,
       metadata: { orchestrationId, domain: context.domain, actionName: context.actionName },
-    }).catch((err: any) => log.warn('[UniversalStepLogger] publish orchestration_pending_approval failed:', err.message));
+    }).catch((err: unknown) => log.warn('[UniversalStepLogger] publish orchestration_pending_approval failed:', err.message));
   }
 
   /**
@@ -756,7 +756,7 @@ class UniversalStepLogger {
       description: `Orchestration ${orchestrationId} rejected by ${rejectedBy}: ${reason}`,
       workspaceId: context.workspaceId,
       metadata: { orchestrationId, rejectedBy, reason, domain: context.domain, actionName: context.actionName },
-    }).catch((err: any) => log.warn('[UniversalStepLogger] publish orchestration_rejected failed:', err.message));
+    }).catch((err: unknown) => log.warn('[UniversalStepLogger] publish orchestration_rejected failed:', err.message));
   }
 
   /**
@@ -1046,7 +1046,7 @@ class UniversalStepLogger {
       description: `Feature '${context.requiredFeature}' requires ${check.requiredTier} tier (workspace is on ${check.currentTier})`,
       workspaceId: context.workspaceId,
       metadata: { orchestrationId: context.orchestrationId, feature: context.requiredFeature, currentTier: check.currentTier, requiredTier: check.requiredTier, message: check.upsellMessage, domain: context.domain, actionName: context.actionName },
-    }).catch((err: any) => log.warn('[UniversalStepLogger] publish upsell_triggered failed:', err.message));
+    }).catch((err: unknown) => log.warn('[UniversalStepLogger] publish upsell_triggered failed:', err.message));
     
     log.info(`[UniversalStepLogger] Upsell triggered for ${context.requiredFeature}: ${check.currentTier} → ${check.requiredTier}`);
   }

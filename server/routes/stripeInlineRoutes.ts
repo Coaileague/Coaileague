@@ -314,7 +314,7 @@ router.post('/pay-invoice', requireAuth, async (req: AuthenticatedRequest, res) 
           source: 'stripe_pay_invoice',
         },
         visibility: 'manager',
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
     res.json({ 

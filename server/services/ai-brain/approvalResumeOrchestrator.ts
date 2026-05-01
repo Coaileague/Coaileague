@@ -234,7 +234,7 @@ class ApprovalResumeOrchestrator {
           approvedBy: userId,
           audience: 'manager',
         },
-      }).catch((err: any) => log.warn('[ApprovalResumeOrchestrator] Failed to publish approval_approved:', err.message));
+      }).catch((err: unknown) => log.warn('[ApprovalResumeOrchestrator] Failed to publish approval_approved:', err.message));
 
       return { approved: true, approvedBy: userId, executedAt: now };
     } else {
@@ -310,7 +310,7 @@ class ApprovalResumeOrchestrator {
             approvalId,
             audience: 'manager',
           },
-        }).catch((err: any) => log.warn('[ApprovalResumeOrchestrator] Failed to publish job_resume_approved:', err.message));
+        }).catch((err: unknown) => log.warn('[ApprovalResumeOrchestrator] Failed to publish job_resume_approved:', err.message));
       }
     }
   }

@@ -332,7 +332,7 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
             await pool.query(
               `UPDATE form_submissions SET generated_document_url = $1 WHERE id = $2 AND workspace_id = $3`,
               [pdfUrl, submissionRow.id, workspaceId]
-            ).catch((e: any) => log.warn('Failed to persist PDF URL to form_submissions:', e?.message));
+            ).catch((e: unknown) => log.warn('Failed to persist PDF URL to form_submissions:', e?.message));
           }
 
           // 4. Send confirmation email to submitter via Resend
@@ -371,7 +371,7 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
               emailType: 'form_submission_confirmation',
               workspaceId,
               skipUnsubscribeCheck: true,
-            }).catch((e: any) => log.warn('Submitter confirmation email failed:', e?.message));
+            }).catch((e: unknown) => log.warn('Submitter confirmation email failed:', e?.message));
           }
 
           // 5. Notify workspace manager/owner
@@ -415,7 +415,7 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
               emailType: 'form_submission_notification',
               workspaceId,
               skipUnsubscribeCheck: true,
-            }).catch((e: any) => log.warn('Manager notification email failed:', e?.message));
+            }).catch((e: unknown) => log.warn('Manager notification email failed:', e?.message));
           }
         }
 
@@ -440,13 +440,13 @@ router.post('/public/:token/submit', async (req: Request, res: Response) => {
             contextId: inv.context_id,
           },
           visibility: 'all'
-        }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       } catch (e: unknown) {
         log.error('Form submission pipeline error:', e?.message);
         await pool.query(
           `UPDATE form_submissions SET trinity_processing_status = 'failed' WHERE id = $1 AND workspace_id = $2`,
           [submissionRow.id, workspaceId]
-        ).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        ).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     });
 
@@ -587,7 +587,7 @@ router.post('/signing/sequences', requireAuth, async (req: Request, res: Respons
           emailType: 'document_signing_request',
           workspaceId: user.workspaceId,
           skipUnsubscribeCheck: true,
-        }).catch((e: any) => log.warn(`Signing email failed for ${firstToken.signer_email}:`, e?.message));
+        }).catch((e: unknown) => log.warn(`Signing email failed for ${firstToken.signer_email}:`, e?.message));
       });
     }
 
@@ -730,7 +730,7 @@ router.post('/sign/:token', async (req: Request, res: Response) => {
               emailType: 'document_signing_request',
               workspaceId: t.workspace_id,
               skipUnsubscribeCheck: true,
-            }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+            }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
           });
         }
       }
@@ -752,7 +752,7 @@ router.post('/sign/:token', async (req: Request, res: Response) => {
           nextSignerEmail: nextSigner.email
         },
         visibility: 'all'
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     } else {
       // All signed
       await pool.query(
@@ -775,7 +775,7 @@ router.post('/sign/:token', async (req: Request, res: Response) => {
           signerCount: signers.length
         },
         visibility: 'all'
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
     res.json({ success: true, message: 'Signature recorded successfully.' });
@@ -1052,7 +1052,7 @@ router.post('/:formId/invite', requireAuth, async (req: Request, res: Response) 
           emailType: 'form_invitation',
           workspaceId: user.workspaceId,
           skipUnsubscribeCheck: true,
-        }).catch((e: any) => log.warn(`Invitation email failed for ${email}:`, e?.message));
+        }).catch((e: unknown) => log.warn(`Invitation email failed for ${email}:`, e?.message));
       });
     }
 

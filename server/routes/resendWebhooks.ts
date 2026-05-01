@@ -676,7 +676,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
           }
         }
         // Fire-and-forget rate check — logs CRITICAL alert if 24h bounce rate > threshold
-        checkDeliverabilityRates().catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        checkDeliverabilityRates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
         break;
       }
         
@@ -748,7 +748,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
           }
         }
         // Fire-and-forget rate check — logs CRITICAL alert if 24h complaint rate > threshold
-        checkDeliverabilityRates().catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        checkDeliverabilityRates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
         break;
       }
         

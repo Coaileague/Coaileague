@@ -33,7 +33,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
         req.workspaceId || (req.query.workspaceId as string | undefined)
       );
       res.json({ success: true, profile });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error getting profile:", error);
       res.status(500).json({ success: false, error: error.message });
     }
@@ -51,7 +51,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
         req.query.topic as string | undefined
       );
       res.json({ success: true, context });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error building context:", error);
       res.status(500).json({ success: false, error: error.message });
     }
@@ -80,7 +80,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
       // Get workspace-scoped tools for tenant isolation
       const tools = await trinityMemoryService.getWorkspaceScopedToolCatalog(workspaceId);
       res.json({ success: true, tools, count: tools.length });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error getting tool catalog:", error);
       res.status(500).json({ success: false, error: error.message });
     }
@@ -122,7 +122,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
         .slice(0, 5);
       
       res.json({ success: true, tools: recommendations });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error getting recommended tools:", error);
       res.status(500).json({ success: false, error: error.message });
     }
@@ -151,7 +151,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
       // Get workspace-scoped catalog (this queries fresh data from automation ledger)
       const tools = await trinityMemoryService.getWorkspaceScopedToolCatalog(workspaceId);
       res.json({ success: true, message: "Tool catalog refreshed for workspace", count: tools.length, tools });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error refreshing tool catalog:", error);
       res.status(500).json({ success: false, error: error.message });
     }
@@ -185,7 +185,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
       // Get insights filtered by workspace scope
       const insights = trinityMemoryService.getRelevantInsights(scenarios, limit, workspaceId);
       res.json({ success: true, insights });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error getting insights:", error);
       res.status(500).json({ success: false, error: error.message });
     }
@@ -213,7 +213,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
         applicableScenarios: applicableScenarios || [],
       });
       res.json({ success: true, insight });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error sharing insight:", error);
       res.status(500).json({ success: false, error: error.message });
     }
@@ -233,7 +233,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: any) {
 
       trinityMemoryService.recordInsightUsage(insightId, wasEffective);
       res.json({ success: true, message: "Usage recorded" });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Memory API] Error recording usage:", error);
       res.status(500).json({ success: false, error: error.message });
     }

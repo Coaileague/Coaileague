@@ -320,7 +320,7 @@ class TrinityFastModeService {
         tier: config.tier
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         operationId: operation.id,
         type: operation.type,

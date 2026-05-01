@@ -4388,7 +4388,7 @@ export function startAutonomousScheduler() {
 
   platformChangeMonitor.initEventDrivenScanning().then(() => {
     log.info('Platform Change Monitor event-driven scanning activated — significant events trigger immediate scans');
-  }).catch((err: any) => {
+  }).catch((err: unknown) => {
     log.error('Failed to initialize event-driven scanning', { error: err?.message || String(err) });
   });
 

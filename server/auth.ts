@@ -1058,7 +1058,7 @@ export async function resetPassword(
 
 export function setupAuth(app: Express) {
   // Ensure sessions table exists before session middleware — fixes black screen on Railway
-  ensureSessionsTable().catch((e: any) =>
+  ensureSessionsTable().catch((e: unknown) =>
     console.warn('[Auth] Session table bootstrap:', e?.message?.slice(0, 100))
   );
   app.set("trust proxy", 1);

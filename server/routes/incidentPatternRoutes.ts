@@ -200,7 +200,7 @@ router.post("/analyze", requireAuth, async (req: AuthenticatedRequest, res) => {
         description: `Trinity detected ${newPatterns.length} new incident pattern(s) requiring attention.`,
         workspaceId: wid,
         metadata: { patterns: newPatterns }
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
     res.json({ patternsFound: newPatterns.length, patterns: newPatterns });

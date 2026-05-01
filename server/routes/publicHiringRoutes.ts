@@ -98,7 +98,7 @@ router.post('/:workspaceId/apply', async (req, res) => {
       description: `Applied for posting ${job_posting_id}. License: ${has_license}`,
       workspaceId,
       metadata: { applicantId: id, hasLicense: has_license }
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     // ── Trinity Auto-Score (non-blocking — never delays the applicant's response) ──
     // Fires immediately after application saved. Score lands in DB within ~5 seconds.

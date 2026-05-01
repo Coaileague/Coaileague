@@ -175,7 +175,7 @@ router.post("/sites/:siteId/versions", requireAuth, async (req: AuthenticatedReq
       description: `Version ${nextV} published. ${change_summary || 'No change summary.'}`,
       workspaceId: wid,
       metadata: { versionId: id, siteId, siteName, versionNumber: nextV }
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     const row = await db.$client.query(`SELECT * FROM post_order_versions WHERE id = $1`, [id]);
     res.status(201).json(row.rows[0]);
@@ -285,7 +285,7 @@ router.post("/versions/:versionId/acknowledge", requireAuth, async (req: Authent
       description: `Officer acknowledged version ${version.version_number}`,
       workspaceId: wid,
       metadata: { versionId, empId, method: acknowledgment_method }
-    }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     // DV-19 FIX: Vault PDF — chain of custody for post order acknowledgment
     // Law: officer acknowledgments must be a real branded PDF in vault (SPS compliance)

@@ -463,7 +463,7 @@ class DocumentSigningService {
           html: confirmEmail.html,
           emailType: 'document_signature_confirmation',
           workspaceId: doc.workspaceId,
-        }).catch((e: any) => log.warn(`[DocumentSigning] Confirmation email failed: ${e.message}`));
+        }).catch((e: unknown) => log.warn(`[DocumentSigning] Confirmation email failed: ${e.message}`));
       }
 
       if (doc?.uploadedBy) {

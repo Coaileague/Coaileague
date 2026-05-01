@@ -220,7 +220,7 @@ export async function runShiftEscalationScan(): Promise<ShiftEscalationResult> {
               workspaceId: ws.id,
               reason: 'manual',
               reasonDetails: `Shift escalation scanner: critical gap — shift starts in ${hrs}h`,
-            }).catch((e: any) =>
+            }).catch((e: unknown) =>
               log.error(`[ShiftEscalation] Coverage pipeline error for shift ${gap.id}:`, e)
             );
             coveragePipelinesTriggered++;

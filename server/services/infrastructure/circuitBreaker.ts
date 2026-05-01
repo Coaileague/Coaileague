@@ -457,7 +457,7 @@ class CircuitBreakerService {
             stats: circuit.stats,
           },
           metadata: { source: 'CircuitBreaker', severity: 'critical' },
-        }).catch((err: any) => log.warn('[CircuitBreaker] Failed to publish circuit_breaker_opened:', err.message));
+        }).catch((err: unknown) => log.warn('[CircuitBreaker] Failed to publish circuit_breaker_opened:', err.message));
       } catch (error) {
         log.error('[CircuitBreaker] Failed to log state transition:', error);
       }
@@ -484,7 +484,7 @@ class CircuitBreakerService {
           title: `Circuit Breaker Recovered — ${circuit.serviceName}`,
           description: `Service '${circuit.serviceName}' recovered from OPEN state — normal traffic resumed`,
           metadata: { serviceId: circuit.serviceId, serviceName: circuit.serviceName, recoveryTime: Date.now() - (circuit.openedAt || Date.now()) },
-        }).catch((err: any) => log.error('[CircuitBreaker] Failed to publish circuit_breaker_recovered:', err));
+        }).catch((err: unknown) => log.error('[CircuitBreaker] Failed to publish circuit_breaker_recovered:', err));
       } catch (error) {
         log.error('[CircuitBreaker] Failed to log recovery:', error);
       }

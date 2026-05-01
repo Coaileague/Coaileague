@@ -158,7 +158,7 @@ class AutomationTriggerService {
       await db.update(invoices)
         .set({ status: 'paid', updatedAt: new Date() } as any)
         .where(and(eq(invoices.id, invoiceId), sql`${invoices.status} NOT IN ('void', 'cancelled', 'refunded')`))
-        .catch((e: any) => log.warn('[AutomationTrigger] invoice_paid DB update skipped:', e?.message));
+        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_paid DB update skipped:', e?.message));
       log.info(`[AutomationTrigger] invoice_paid — AR close-out complete for invoice ${invoiceId}`);
     }});
 
@@ -225,10 +225,10 @@ class AutomationTriggerService {
       await db.update(invoices)
         .set({ status: 'overdue', updatedAt: new Date() } as any)
         .where(and(eq(invoices.id, invoiceId), sql`${invoices.status} NOT IN ('paid', 'void', 'cancelled')`))
-        .catch((e: any) => log.warn('[AutomationTrigger] invoice_overdue status update skipped:', e?.message));
+        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_overdue status update skipped:', e?.message));
       // Trigger the automated collections sweep for this workspace
       await runOverdueCollectionsSweep(workspaceId)
-        .catch((e: any) => log.warn('[AutomationTrigger] invoice_overdue collections sweep error:', e?.message));
+        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_overdue collections sweep error:', e?.message));
       log.info(`[AutomationTrigger] invoice_overdue — status updated + collections sweep triggered for ${workspaceId}`);
     }});
 

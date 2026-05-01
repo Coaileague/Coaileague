@@ -222,7 +222,7 @@ async function handleComplaintOrRequest(
       language: 'en',
     });
 
-    notifyHumanAgents({ supportCase: sc, workspaceId }).catch((e: any) =>
+    notifyHumanAgents({ supportCase: sc, workspaceId }).catch((e: unknown) =>
       log.warn('[KeywordRouter] notify human agents failed (non-fatal):', e?.message)
     );
 
@@ -319,7 +319,7 @@ async function handleEmergency(args: string[], body: string, fromPhone: string):
     });
 
     // Fire the notification non-blocking — speed matters here.
-    notifyHumanAgents({ supportCase: sc, workspaceId }).catch((e: any) =>
+    notifyHumanAgents({ supportCase: sc, workspaceId }).catch((e: unknown) =>
       log.warn('[KeywordRouter] emergency notify failed (non-fatal):', e?.message)
     );
 

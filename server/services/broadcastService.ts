@@ -95,7 +95,7 @@ class BroadcastService {
       description: `${request.type} broadcast created by ${createdBy} targeting ${request.targetType}`,
       workspaceId,
       metadata: { broadcastId: broadcast.id, broadcastType: request.type, createdBy, createdByType, targetType: request.targetType },
-    }).catch((err: any) => log.warn('[BroadcastService] publish broadcast_created failed:', err.message));
+    }).catch((err: unknown) => log.warn('[BroadcastService] publish broadcast_created failed:', err.message));
 
     log.info(`[BroadcastService] Broadcast created: ${broadcast.id}`);
     return broadcast as unknown as Broadcast;

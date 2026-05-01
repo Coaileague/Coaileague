@@ -1031,7 +1031,7 @@ function _scheduleMonthlyBillingRun(): void {
           totalAmount: result.totalAmount,
           errors: result.errors.length,
         });
-      }).catch((err: any) => {
+      }).catch((err: unknown) => {
         log.error('[WeeklyBilling] Monthly auto-run failed', { error: err?.message });
       });
     }

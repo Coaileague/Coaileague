@@ -447,7 +447,7 @@ router.get('/quickbooks/callback', async (req: Request, res: Response) => {
     log.error('QuickBooks callback error:', error);
     const { state } = req.query;
     if (state) {
-      await quickbooksOAuthService.cleanupFailedState(state as string).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      await quickbooksOAuthService.cleanupFailedState(state as string).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
     return sendPopupResponse(false, sanitizeError(error) || 'Failed to connect to QuickBooks');
   }

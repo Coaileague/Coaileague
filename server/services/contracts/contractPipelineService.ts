@@ -982,7 +982,7 @@ class ContractPipelineService {
         title: contract.title,
       },
       metadata: { source: 'ContractPipelineService' },
-    }).catch((err: any) => log.warn('[ContractPipeline] Failed to publish contract_executed:', err.message));
+    }).catch((err: unknown) => log.warn('[ContractPipeline] Failed to publish contract_executed:', err.message));
 
     // Trinity notification — inform the contract owner
     if (contract.createdBy) {

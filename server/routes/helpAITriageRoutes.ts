@@ -699,7 +699,7 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
 
     // Background: promote qualified FAQ candidates (fire-and-forget)
     if (workspaceId) {
-      promoteQualifiedFaqCandidates().catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      promoteQualifiedFaqCandidates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
     return res.status(201).json({

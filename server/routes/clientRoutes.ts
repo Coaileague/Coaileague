@@ -439,7 +439,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
           contractRate,
           category: client.category,
         },
-      }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     } catch (_publishErr) { log.warn('[ClientRoutes] Failed to publish client.created event — non-critical:', _publishErr instanceof Error ? _publishErr.message : String(_publishErr)); }
 
     res.status(201).json(filterClientForResponse(client, createFilterContext(req)));

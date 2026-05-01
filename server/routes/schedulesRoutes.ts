@@ -284,7 +284,7 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
         publishedBy: userId,
       },
       visibility: 'manager',
-    }).catch((err: any) => log.warn('[EventBus] schedule_published publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] schedule_published publish failed (non-blocking):', err?.message));
 
     res.json({ success: true, published, message: `Schedule published. ${employeesAffected} employees notified.` });
   } catch (error: unknown) {

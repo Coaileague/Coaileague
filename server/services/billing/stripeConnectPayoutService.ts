@@ -165,7 +165,7 @@ class StripeConnectPayoutService {
           payload: { accountId: account.id },
         },
         { generateHash: true }
-      ).catch((err: any) => log.warn('[StripeConnect] Audit log failed for account_created — operation succeeded but audit record missing', { employeeId, workspaceId, error: err?.message }));
+      ).catch((err: unknown) => log.warn('[StripeConnect] Audit log failed for account_created — operation succeeded but audit record missing', { employeeId, workspaceId, error: err?.message }));
 
       // Generate onboarding link
       const onboardingUrl = await this.createOnboardingLink(account.id, workspaceId);
@@ -417,7 +417,7 @@ class StripeConnectPayoutService {
           },
         },
         { generateHash: true }
-      ).catch((err: any) => log.warn('[StripeConnect] Audit log failed for payout_sent — payout succeeded but audit record missing', { payrollEntryId, transferId: transfer.id, amount: netPay, workspaceId, error: err?.message }));
+      ).catch((err: unknown) => log.warn('[StripeConnect] Audit log failed for payout_sent — payout succeeded but audit record missing', { payrollEntryId, transferId: transfer.id, amount: netPay, workspaceId, error: err?.message }));
 
       return {
         success: true,

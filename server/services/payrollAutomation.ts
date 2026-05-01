@@ -1174,7 +1174,7 @@ export class PayrollAutomationEngine {
             affectedEmployeeIds: [employeeSummary.employeeId],
             employeeCount: 1,
           },
-        }).catch((err: any) => log.warn('[PayrollAuto] payroll_zero_rate_detected publish failed (non-blocking):', err.message));
+        }).catch((err: unknown) => log.warn('[PayrollAuto] payroll_zero_rate_detected publish failed (non-blocking):', err.message));
         // CRITICAL: Skip this employee entirely — do NOT create a $0 payroll entry and do NOT
         // mark their time entries as payrolled. Hours stay unpayrolled so a manager can set
         // the correct rate and re-run payroll. Creating a $0 entry would permanently orphan

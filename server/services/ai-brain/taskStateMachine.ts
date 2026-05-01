@@ -241,7 +241,7 @@ class TaskStateMachine {
         currentPhase: resolvedToPhase,
         transition,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
         previousStatus: fromStatus,
@@ -318,7 +318,7 @@ class TaskStateMachine {
       });
 
       return { taskId, success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { taskId, success: false, error: error.message };
     }
   }

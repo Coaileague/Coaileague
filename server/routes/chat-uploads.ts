@@ -489,7 +489,7 @@ router.post(
                 uploaderName: userName,
                 hasGps: !!gpsData,
               },
-            }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+            }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
           } catch (evtErr: unknown) {
             log.warn('[ChatUploads] Image event emission failed (non-blocking):', (evtErr as any)?.message);
           }
