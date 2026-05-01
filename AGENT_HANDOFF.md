@@ -114,6 +114,139 @@ PHASE 5C — `automation-schemas.ts` audit:
 
 ---
 
+## 🎯 ARCHITECT: PRECISE FIX-IT PUNCH LIST FOR REMAINING DEBT
+
+The two items below were deliberately deferred because static analysis
+alone is insufficient — both need runtime/mount inspection. Each item
+includes (a) the exact target, (b) the verification method that worked
+in Phases 1–5, (c) the specific risks, (d) the success criteria.
+
+### ITEM 1 — Route consolidation (chat / ai-brain / trinity / schedule / automation)
+
+**Target counts (from Phase 0 audit):**
+| Domain     | Now | Goal | Files (`server/routes/`) |
+|------------|----:|-----:|--------------------------|
+| Chat       |  8  |  2   | `chat-export.ts`, `chat-management.ts`, `chat-rooms.ts`, `chat-uploads.ts`, `chat.ts`, `chatInlineRoutes.ts`, `chatPollRoutes.ts`, `chatSearchRoutes.ts` |
+| AI Brain   |  8  |  3   | `ai-brain-capabilities.ts`, `ai-brain-console.ts`, `ai-brain-routes.ts`, `aiBrainControlRoutes.ts`, `aiBrainInlineRoutes.ts`, `aiBrainMemoryRoutes.ts`, `aiOrchestraRoutes.ts`, `aiOrchestratorRoutes.ts` |
+| Schedule   |  4  |  1   | `scheduleosRoutes.ts`, `schedulesRoutes.ts`, `schedulingInlineRoutes.ts` (+`schedulerRoutes.ts` already deleted in Phase 5A) |
+| Automation |  4  |  2   | `automation-events.ts`, `automation.ts`, `automationGovernanceRoutes.ts`, `automationInlineRoutes.ts` |
+| Trinity    | 25+ |  4   | `trinity-alerts.ts` + `trinity*Routes.ts` cluster (see `ls server/routes/ \| grep -i trinity` for full list) |
+
+**Verification protocol (use the same one I used for Phase 5A):**
+```bash
+# 1. For each route file, find every default-importer:
+grep -rEn "from\s+['\"][^'\"]*<route-name>['\"]" server/ --include='*.ts' --include='*.tsx'
+
+# 2. Find every mount path (where each router is mounted):
+grep -rEn "app\.use\(['\"]/api/<prefix>" server/
+
+# 3. List endpoints in each candidate file:
+grep -nE "router\.(get|post|put|delete|patch)" server/routes/<file>.ts
+
+# 4. Check client fetch surface for each /api/<prefix>/* endpoint actually exists:
+grep -rEn "['\"]/api/<prefix>/" client/src --include='*.ts' --include='*.tsx'
+```
+
+**Method: copy-then-delete, never rewrite.** When merging file A → file B:
+1. Open file B, append every `router.<verb>(...)` block from A verbatim.
+2. Confirm no path collisions (e.g., two `/status` handlers).
+3. Delete file A.
+4. Update its mount in `server/routes.ts` (or `routes/domains/*.ts`) to
+   point at file B.
+5. Update `DOMAIN_CONTRACT.ts`.
+
+**Risks to watch:**
+- Mount middleware order matters. `requireAuth` / `ensureWorkspaceAccess`
+  on the mount line vs inside the handler must remain identical.
+- Some routes use `app.use("/api/x", middlewareA, routerA)` and others
+  use middleware inside the router. Don't double-apply.
+- `chat-export.ts` is dynamically imported as `'./chat-export.js'` from
+  `chat.ts` — keep that intact when merging into `chat.ts` or relocate
+  the export with the call sites.
+- Trinity routes: many overlap conceptually but have distinct mount
+  paths (`/api/trinity/alerts`, `/api/trinity/decisions`, etc.). Keep
+  the URL surface identical even after consolidation.
+
+**Success criteria:**
+- `node build.mjs` clean.
+- Boot test passes (server starts without errors).
+- Every URL the client fetches still resolves (smoke-test via
+  `grep -rEn "['\"]/api/" client/src --include='*.tsx'` then curl each).
+- `DOMAIN_CONTRACT.ts` reflects the new file count.
+
+---
+
+### ITEM 2 — `aiBrainGuardrails` config dedup
+
+**Target:**
+- `shared/config/aiBrainGuardrails.ts` (config table)
+- `server/services/aiGuardRails.ts` (runtime checks)
+- `server/services/ai-brain/aiBrainAuthorizationService.ts` (auth checks)
+
+**The duplication:** Each of these defines its own notion of what AI
+operations are allowed/throttled/audited. They likely have overlapping
+constants (rate limits, allowed models, escalation thresholds) but no
+single authoritative source.
+
+**Verification protocol:**
+```bash
+# 1. Diff the constants/thresholds across the three files:
+grep -nE "^export (const|function|class)" shared/config/aiBrainGuardrails.ts
+grep -nE "^export (const|function|class)" server/services/aiGuardRails.ts
+grep -nE "^export (const|function|class)" server/services/ai-brain/aiBrainAuthorizationService.ts
+
+# 2. For each numeric/string constant, search for sibling definitions:
+grep -rEn "<constant-name>" server/ shared/ --include='*.ts'
+
+# 3. Trace the call graph at runtime (caller graph from each export):
+grep -rEn "aiGuardRails\.|aiBrainAuthorizationService\." server/
+```
+
+**Method:**
+1. Build a 3-column table: constant/check name, file owning it, all
+   call sites.
+2. Constants → consolidate into `shared/config/aiBrainGuardrails.ts`
+   (already the canonical config home).
+3. Logic → keep in `aiGuardRails.ts` (operational layer) and
+   `aiBrainAuthorizationService.ts` (auth layer); have BOTH import
+   constants from `shared/config`.
+4. Delete duplicate constants from the runtime files.
+
+**Risks:**
+- Some thresholds may have intentionally diverged for safety (e.g.,
+  auth check stricter than the general guardrail). Don't blindly
+  unify if the divergence is documented as intentional.
+- `aiBrainGuardrails` is loaded at startup; lazy import patterns may
+  change resolution order — check `notificationInit.ts` and similar.
+
+**Success criteria:**
+- Each constant has exactly one definition.
+- `aiBrainAuthorizationService` and `aiGuardRails` both import from
+  `shared/config/aiBrainGuardrails`.
+- TS compile + boot test clean.
+
+---
+
+### NON-FIX (do not touch — verified or by-design)
+
+These were investigated in Phases 1–5 and are confirmed fine. Do not
+spend cycles re-auditing:
+
+- `notificationService` ↔ `universalNotificationEngine` — coexist by
+  design (per-user vs RBAC broadcast). Keep both.
+- `emailCore` ↔ `emailService` ↔ `emailTemplateBase` — layered, not
+  duplicate. Keep all three.
+- `emailAutomation` — billing-aware bulk email, distinct concern.
+- All 5 action registries — layered, not duplicate.
+- `entityCreationNotifier` — domain orchestrator, not a notification dupe.
+- `advancedSchedulingService` — canonical per `sourceOfTruthRegistry`.
+- `scheduleMigration` — exports `extractedShiftSchema` (active).
+- `geoCompliance` — real buddy-punching detection (Phase 3 fixed import).
+- `automation-schemas.ts` — single consumer, not duplicated.
+- `notificationTypeEnum` (Phase 5B) — already single source of truth.
+
+---
+
 ## 🔍 DEBT LEFT BEHIND — REPORT TO NEXT AGENT
 
 This branch's scope is **closed**. Sweep was thorough at the
