@@ -415,4 +415,79 @@ router.get('/service-registry', async (_req: AuthenticatedRequest, res: Response
   }
 });
 
+// ────────────────────────────────────────────────────────────────────────────
+// GET /api/trinity/transparency/registered-actions
+// Returns the live action registry: total handlers, count-by-category,
+// duplicate detection, and the Trinity catalog cap status. Used by support
+// staff to confirm Trinity actually has the capabilities she's expected to
+// have, and to spot bootstrap regressions (an action silently dropped during
+// a refactor is invisible until something tries to call it — this endpoint
+// makes the surface observable on demand).
+// ────────────────────────────────────────────────────────────────────────────
+
+router.get('/registered-actions', async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { helpaiOrchestrator } = await import('../services/helpai/platformActionHub');
+    const actions = helpaiOrchestrator.getRegisteredActions();
+    const byCategory = helpaiOrchestrator.getActionCountByCategory();
+    const consolidation = helpaiOrchestrator.getRegistryConsolidationReport();
+
+    const ids = actions.map((a: any) => a.actionId);
+    const dupCounts = ids.reduce((acc: Record<string, number>, id: string) => {
+      acc[id] = (acc[id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const duplicates = Object.entries(dupCounts)
+      .filter(([, n]) => (n as number) > 1)
+      .map(([id, count]) => ({ actionId: id, count }));
+
+    res.json({
+      success: true,
+      totalActions: actions.length,
+      uniqueActionIds: new Set(ids).size,
+      duplicates,
+      byCategory,
+      consolidation,
+      actions: actions.map((a: any) => ({
+        actionId: a.actionId,
+        name: a.name,
+        category: a.category,
+        description: a.description,
+        requiredRoles: a.requiredRoles,
+      })),
+    });
+  } catch (error: unknown) {
+    log.error('[Transparency] registered-actions fetch failed:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// GET /api/trinity/transparency/skills
+// Returns the live skill registry: total skills, healthy count, manifests,
+// and per-skill execution health. This surfaces the Skill ↔ Action bridge
+// (skill.execute / skills.list / skills.get_manifest / skills.health)
+// so a support agent can confirm that registered skills are actually
+// invocable by Trinity.
+// ────────────────────────────────────────────────────────────────────────────
+
+router.get('/skills', async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { skillRegistry } = await import('../services/ai-brain/skills/skill-registry');
+    const manifests = skillRegistry.getManifests();
+    const health = await skillRegistry.getHealth();
+
+    res.json({
+      success: true,
+      total: manifests.length,
+      healthy: health.healthySkills,
+      unhealthySkills: health.unhealthySkills,
+      manifests,
+    });
+  } catch (error: unknown) {
+    log.error('[Transparency] skills fetch failed:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
 export default router;

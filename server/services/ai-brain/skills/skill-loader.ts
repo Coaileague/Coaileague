@@ -265,6 +265,16 @@ export async function initializeSkillsSystem(): Promise<void> {
       skillLoader.watchSkills();
     }
 
+    // Bridge the skill registry into Trinity's action surface so
+    // skillRegistry.executeSkill() can be invoked through the same path as
+    // every other Trinity capability (helpaiOrchestrator.executeAction).
+    try {
+      const { registerSkillBridgeActions } = await import('./skillActionBridge');
+      registerSkillBridgeActions();
+    } catch (bridgeErr: any) {
+      log.warn('[SkillLoader] Skill action bridge registration failed:', bridgeErr?.message);
+    }
+
     // Health check
     const health = await skillRegistry.getHealth();
 

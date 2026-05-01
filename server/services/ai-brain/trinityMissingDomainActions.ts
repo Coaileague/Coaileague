@@ -476,39 +476,12 @@ export function registerMissingDomainActions(): void {
   helpaiOrchestrator.registerAction(hrDocsListPendingSignatures);
   helpaiOrchestrator.registerAction(hrDocsGetEmployeeFileCabinet);
 
-  // Insurance / gate / recognition visibility stubs (ensures Trinity can route these domains)
-  helpaiOrchestrator.registerAction({
-    actionId: 'insurance.status',
-    name: 'Get Insurance Status',
-    description: 'Returns insurance status summary for workspace coverage and policy state.',
-    category: 'compliance',
-    required_role: 'supervisor',
-    input_schema: { type: 'object', properties: {} },
-    output_schema: { type: 'object', properties: { status: { type: 'string' } } },
-    handler: async () => ({ status: 'not_implemented' }),
-  } as any);
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'insurance.expiry',
-    name: 'Get Insurance Expiry',
-    description: 'Returns upcoming insurance expiration windows and renewal urgency.',
-    category: 'compliance',
-    required_role: 'supervisor',
-    input_schema: { type: 'object', properties: {} },
-    output_schema: { type: 'object', properties: { expiringPolicies: { type: 'array' } } },
-    handler: async () => ({ expiringPolicies: [] }),
-  } as any);
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'insurance.state_compliance',
-    name: 'Get Insurance State Compliance',
-    description: 'Checks policy alignment against state-level insurance requirements.',
-    category: 'compliance',
-    required_role: 'manager',
-    input_schema: { type: 'object', properties: { state: { type: 'string' } } },
-    output_schema: { type: 'object', properties: { compliant: { type: 'boolean' } } },
-    handler: async () => ({ compliant: false }),
-  } as any);
+  // Insurance actions (insurance.status / insurance.expiry / insurance.state_compliance)
+  // are registered with REAL DB-backed handlers from
+  // server/routes/insuranceRoutes.ts at module load time. The stub copies that
+  // used to live here have been removed — they would shadow the real handlers
+  // depending on import order, returning {status: 'not_implemented'} instead of
+  // actual policy data.
 
 
 
