@@ -108,7 +108,7 @@ class FinancialAuditService {
         .limit(1);
 
       if (latestEvents.length > 0) {
-        const payload = latestEvents[0].payload as any;
+        const payload = latestEvents[0].payload as Record<string,unknown>;
         return payload?.checksum || latestEvents[0].actionHash || null;
       }
     } catch (error) {
@@ -201,7 +201,7 @@ class FinancialAuditService {
   }
 
   async logInvoiceEvent(
-    invoice: any,
+    invoice: Record<string,unknown>,
     eventType: 'INVOICE_CREATED' | 'INVOICE_MODIFIED' | 'INVOICE_VOIDED' | 'INVOICE_PAID',
     actor: { id: string; name: string; type: FinancialAuditEntry['actorType'] },
     before?: unknown
@@ -235,7 +235,7 @@ class FinancialAuditService {
   }
 
   async logPayrollEvent(
-    payroll: any,
+    payroll: Record<string,unknown>,
     eventType: 'PAYROLL_CREATED' | 'PAYROLL_APPROVED' | 'PAYROLL_PROCESSED' | 'PAYROLL_MODIFIED',
     actor: { id: string; name: string; type: FinancialAuditEntry['actorType'] },
     before?: unknown
@@ -325,12 +325,12 @@ class FinancialAuditService {
         .limit(50);
 
       const creatorId = (recentEvents.find(e =>
-        (e as any).eventType?.includes('CREATED')
-      ) as any)?.actorId;
+        (e as Record<string,unknown>).eventType?.includes('CREATED')
+      ) as Record<string,unknown>)?.actorId;
 
       const approverId = (recentEvents.find(e =>
-        (e as any).eventType?.includes('APPROVED')
-      ) as any)?.actorId;
+        (e as Record<string,unknown>).eventType?.includes('APPROVED')
+      ) as Record<string,unknown>)?.actorId;
 
       if (actionType === 'approve' && creatorId === actorId) {
         violations.push('SOD-001: Cannot approve own creation');
@@ -341,7 +341,7 @@ class FinancialAuditService {
       }
 
       if (actionType === 'approve' && recentEvents.filter(e =>
-        (e as any).eventType.includes('APPROVED') && (e as any).actorId === actorId
+        (e as Record<string,unknown>).eventType.includes('APPROVED') && (e as Record<string,unknown>).actorId === actorId
       ).length >= 10) {
         violations.push('SOD-003: Approval concentration detected - consider rotation');
       }
@@ -374,7 +374,7 @@ class FinancialAuditService {
       .orderBy(auditLogs.createdAt);
 
     const financialEvents = events.filter(e => 
-      (e as any).eventType.startsWith('FINANCIAL_')
+      (e as Record<string,unknown>).eventType.startsWith('FINANCIAL_')
     );
 
     let totalInvoiced = 0;
@@ -384,7 +384,7 @@ class FinancialAuditService {
     let segregationViolations = 0;
 
     for (const event of financialEvents) {
-      const payload = event.payload as any;
+      const payload = event.payload as Record<string,unknown>;
       const amount = payload?.monetaryImpact?.amount || 0;
 
       if (event.eventType.includes('INVOICE_CREATED')) {
@@ -422,16 +422,16 @@ class FinancialAuditService {
       },
       details: financialEvents.map(e => ({
         id: e.id,
-        eventType: (e as any).eventType.replace('FINANCIAL_', '') as FinancialEventType,
-        entityType: (e as any).aggregateType as any,
+        eventType: (e as Record<string,unknown>).eventType.replace('FINANCIAL_', '') as FinancialEventType,
+        entityType: (e as Record<string,unknown>).aggregateType as any,
         entityId: (e as EmployeeWithStatus).aggregateId,
         workspaceId: e.workspaceId || '',
         actorId: (e as EmployeeWithStatus).actorId,
         actorType: e.actorType as any,
         actorName: (e as EmployeeWithStatus).actorName || 'Unknown',
-        before: (e as any).changes?.before || null,
+        before: (e as Record<string,unknown>).changes?.before || null,
         after: e.payload as any,
-        monetaryImpact: (e as any).payload?.monetaryImpact || { amount: 0, currency: 'USD', direction: 'neutral' },
+        monetaryImpact: (e as Record<string,unknown>).payload?.monetaryImpact || { amount: 0, currency: 'USD', direction: 'neutral' },
         approvals: [],
         checksum: e.actionHash || '',
         previousChecksum: null,
@@ -494,7 +494,7 @@ class FinancialAuditService {
       let previousChecksum: string | null = null;
 
       for (const event of events) {
-        const payload = event.payload as any;
+        const payload = event.payload as Record<string,unknown>;
         const storedPreviousChecksum = payload?.previousChecksum;
 
         if (storedPreviousChecksum !== previousChecksum) {

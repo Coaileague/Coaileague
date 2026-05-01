@@ -44,7 +44,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info(`🔧 Data Correction: root admin email set to ${SENTINEL_EMAIL}`);
   } catch (err) {
-    log.info('🔧 Data Correction: root admin email fix skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: root admin email fix skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Add personal_forward_email columns (safe migration — idempotent)
@@ -53,7 +53,7 @@ export async function runDataCorrections(): Promise<void> {
     await typedExec(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS personal_forward_email VARCHAR(255)`);
     log.info('🔧 Data Correction: personal_forward_email columns ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: personal_forward_email migration skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: personal_forward_email migration skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Safe migration: create privacy/legal tables if they don't exist
@@ -113,7 +113,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: privacy/legal tables ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: privacy/legal table migration skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: privacy/legal table migration skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Ensure the Statewide Protective Services workspace and its owner exist
@@ -131,7 +131,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: workspace_compliance_scores ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: workspace_compliance_scores skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: workspace_compliance_scores skipped:', (err as Record<string,unknown>)?.message);
   }
 
   try {
@@ -161,7 +161,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: guest_session_log ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: guest_session_log skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: guest_session_log skipped:', (err as Record<string,unknown>)?.message);
   }
 
   try {
@@ -183,7 +183,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: platform_service_charges ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: platform_service_charges skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: platform_service_charges skipped:', (err as Record<string,unknown>)?.message);
   }
 
   try {
@@ -199,7 +199,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: workspace_verification_settings ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: workspace_verification_settings skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: workspace_verification_settings skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // governance_approvals — Trinity Phase 2 idempotency + execution lock columns.
@@ -232,7 +232,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: governance_approvals idempotency columns ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: governance_approvals constraints skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: governance_approvals constraints skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // ── sms_outbox — mass-SMS queue for rate-limited Twilio delivery ────────────
@@ -270,7 +270,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: sms_outbox ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: sms_outbox skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: sms_outbox skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Trinity Scoring Engine — applicant dimension columns
@@ -287,7 +287,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: applicants trinity dimension columns ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: applicants trinity columns skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: applicants trinity columns skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Trinity Scoring Engine — job posting targeting columns for industry-specific prompts
@@ -302,7 +302,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: job_postings trinity targeting columns ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: job_postings trinity columns skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: job_postings trinity columns skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Trinity Scoring Engine — per-workspace hiring settings
@@ -322,7 +322,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: workspace_hiring_settings ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: workspace_hiring_settings skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: workspace_hiring_settings skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Phase 4 — SOP index + employee acknowledgment tracking
@@ -346,7 +346,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: workspace_sop_index ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: workspace_sop_index skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: workspace_sop_index skipped:', (err as Record<string,unknown>)?.message);
   }
 
   try {
@@ -374,7 +374,7 @@ export async function runDataCorrections(): Promise<void> {
     `);
     log.info('🔧 Data Correction: sop_acknowledgments ensured');
   } catch (err) {
-    log.info('🔧 Data Correction: sop_acknowledgments skipped:', (err as any)?.message);
+    log.info('🔧 Data Correction: sop_acknowledgments skipped:', (err as Record<string,unknown>)?.message);
   }
 
   log.info('🔧 Data Corrections Service: Complete');
@@ -458,7 +458,7 @@ export async function runStatewideWorkspaceBootstrap(): Promise<void> {
     `);
     log.info('🏢 [StatewideBootstrap] Workspace upserted (enterprise/active/billing_exempt, forward→env:ROOT_EMAIL_FORWARD_TO)');
   } catch (err) {
-    log.error('🏢 [StatewideBootstrap] Workspace upsert failed:', (err as any)?.message);
+    log.error('🏢 [StatewideBootstrap] Workspace upsert failed:', (err as Record<string,unknown>)?.message);
   }
 
   // ── 2. Owner user ─────────────────────────────────────────────────────────
@@ -500,7 +500,7 @@ export async function runStatewideWorkspaceBootstrap(): Promise<void> {
     `);
     log.info(`🏢 [StatewideBootstrap] Owner user upserted (email_verified=TRUE)`);
   } catch (err) {
-    log.error('🏢 [StatewideBootstrap] Owner user upsert failed:', (err as any)?.message);
+    log.error('🏢 [StatewideBootstrap] Owner user upsert failed:', (err as Record<string,unknown>)?.message);
   }
 
   // ── 3. Workspace member ───────────────────────────────────────────────────
@@ -550,7 +550,7 @@ export async function runStatewideWorkspaceBootstrap(): Promise<void> {
     `);
     log.info('🏢 [StatewideBootstrap] Employee record verified');
   } catch (err) {
-    log.error('🏢 [StatewideBootstrap] Employee record upsert failed:', (err as any)?.message);
+    log.error('🏢 [StatewideBootstrap] Employee record upsert failed:', (err as Record<string,unknown>)?.message);
   }
 
   // ── 5. Org code + email slug ──────────────────────────────────────────────
@@ -573,9 +573,9 @@ export async function runStatewideWorkspaceBootstrap(): Promise<void> {
       .then(({ emailProvisioningService }) =>
         emailProvisioningService.provisionWorkspaceAddresses(WS_ID, 'sps')
       )
-      .catch(err => log.warn('🏢 [StatewideBootstrap] Email provisioning warning:', (err as any)?.message));
+      .catch(err => log.warn('🏢 [StatewideBootstrap] Email provisioning warning:', (err as Record<string,unknown>)?.message));
   } catch (err) {
-    log.error('🏢 [StatewideBootstrap] Org code update failed:', (err as any)?.message);
+    log.error('🏢 [StatewideBootstrap] Org code update failed:', (err as Record<string,unknown>)?.message);
   }
 
   log.info('🏢 [StatewideBootstrap] Complete — Statewide Protective Services is ready');
@@ -926,7 +926,7 @@ export async function runProductionDataCleanup(): Promise<void> {
     log.info(`🧹   Test email users remaining: ${remainingTestEmails[0]?.cnt || 0}`);
     log.info('🧹 ═══════════════════════════════════════════');
   } catch (err) {
-    log.error('🧹 Production Data Cleanup: ERROR', (err as any)?.message);
+    log.error('🧹 Production Data Cleanup: ERROR', (err as Record<string,unknown>)?.message);
     log.error('🧹 Full error:', err);
   }
 }
@@ -1009,7 +1009,7 @@ export async function runWorkspaceHealthCorrections(): Promise<void> {
     ));
     log.info('🏢 Workspace Health: TXPS workspace restored to enterprise/active (if it was suspended)');
   } catch (err) {
-    log.info('🏢 Workspace Health: TXPS workspace fix skipped:', (err as any)?.message);
+    log.info('🏢 Workspace Health: TXPS workspace fix skipped:', (err as Record<string,unknown>)?.message);
   }
 
   // Same for the root admin platform workspace
@@ -1052,7 +1052,7 @@ export async function ensureSystemEntities(): Promise<void> {
     }).onConflictDoNothing();
     log.info('[SystemSeed] System automation user and workspace verified');
   } catch (err) {
-    log.error('[SystemSeed] Failed to ensure system entities (non-fatal):', (err as any)?.message);
+    log.error('[SystemSeed] Failed to ensure system entities (non-fatal):', (err as Record<string,unknown>)?.message);
   }
 }
 

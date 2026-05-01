@@ -104,7 +104,7 @@ export class KnowledgeGraphRepository {
 
   async getEntitiesByType(entityType: string, workspaceId?: string, limit = 100): Promise<KnowledgeEntityRecord[]> {
     try {
-      const conditions: any[] = [eq(knowledgeEntities.type, entityType as any)];
+      const conditions: unknown[] = [eq(knowledgeEntities.type, entityType as any)];
       if (workspaceId) conditions.push(eq(knowledgeEntities.workspaceId, workspaceId));
       return await db.select().from(knowledgeEntities)
         .where(and(...conditions))
@@ -755,7 +755,7 @@ export class RLLoopRepository {
    */
   async lookupCorrections(agentId: string, actionType: string, workspaceId?: string, limit = 10): Promise<Record<string,unknown>[]> {
     try {
-      const conditions: any[] = [
+      const conditions: unknown[] = [
         eq(aiLearningEvents.eventType, 'experience'),
         eq(aiLearningEvents.agentId, agentId),
         eq(aiLearningEvents.action, actionType),
@@ -784,7 +784,7 @@ export class RLLoopRepository {
     correctionsByAction: Record<string, { total: number; corrections: number; accuracy: number }>;
   }> {
     try {
-      const conditions: any[] = [eq(aiLearningEvents.eventType, 'experience')];
+      const conditions: unknown[] = [eq(aiLearningEvents.eventType, 'experience')];
       if (agentId) conditions.push(eq(aiLearningEvents.agentId, agentId));
       if (workspaceId) conditions.push(eq(aiLearningEvents.workspaceId, workspaceId));
 

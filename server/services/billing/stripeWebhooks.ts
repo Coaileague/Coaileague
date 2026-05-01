@@ -702,7 +702,7 @@ export class StripeWebhookService {
           .from(platformRoles)
           .where(
             and(
-              inArray(platformRoles.role, ['root_admin', 'deputy_admin', 'sysop', 'support_manager'] as any[]),
+              inArray(platformRoles.role, ['root_admin', 'deputy_admin', 'sysop', 'support_manager']),
               isNull(platformRoles.revokedAt),
               eq(platformRoles.isSuspended, false)
             )
@@ -1293,7 +1293,7 @@ export class StripeWebhookService {
           // 1. Update invoicePayments record
           await tx.update(invoicePayments)
             .set({
-              status: newInvoiceStatus as any,
+              status: newInvoiceStatus as string,
               refundedAmount: String(refundedAmount),
               refundedAt: new Date(),
               updatedAt: new Date(),
@@ -1312,7 +1312,7 @@ export class StripeWebhookService {
 
           // 3. Revert invoice.status — paid invoices must not stay 'paid' after a refund
           const [updated] = await tx.update(invoices)
-            .set({ status: newInvoiceStatus as any, updatedAt: new Date() })
+            .set({ status: newInvoiceStatus as string, updatedAt: new Date() })
             .where(eq(invoices.id, payment.invoiceId))
             .returning();
 
@@ -1583,7 +1583,7 @@ export class StripeWebhookService {
       }
 
       await db.update(workspaces)
-        .set(updates as any)
+        .set(updates as Record<string,unknown>)
         .where(and(eq(workspaces.id, workspaceId), eq(workspaces.stripeCustomerId, customer.id)));
 
       log.info('Synced customer update to workspace', { workspaceId, customerId: customer.id, email: customer.email });

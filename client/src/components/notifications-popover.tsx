@@ -170,10 +170,10 @@ interface UNSNotification {
 }
 
 interface NotificationsData {
-  platformUpdates: any[];
-  maintenanceAlerts: any[];
-  notifications: any[];
-  gapFindings?: any[];
+  platformUpdates: unknown[];
+  maintenanceAlerts: unknown[];
+  notifications: unknown[];
+  gapFindings?: unknown[];
   unreadPlatformUpdates: number;
   unreadNotifications: number;
   unreadAlerts: number;
@@ -2071,7 +2071,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
   });
   
   const orchestrationMutation = useMutation({
-    mutationFn: async (params: { actionCode: string; targetId?: string; metadata?: Record<string, any> }) => {
+    mutationFn: async (params: { actionCode: string; targetId?: string; metadata?: Record<string, unknown> }) => {
       const response = await apiRequest("POST", "/api/quick-fixes/execute", {
         actionCode: params.actionCode,
         targetId: params.targetId,

@@ -3,6 +3,7 @@
  * Routes: /api/chat/dock/*, extending existing /api/chat/rooms infrastructure
  * Reuses organization_chat_rooms, chat_messages, organization_room_members tables.
  */
+import { chatDockMessageStore } from '../services/chat/chatDockMessageStore';
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { pool } from "../db";

@@ -516,7 +516,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       const previousQueries = queryClient.getQueriesData<any>({ queryKey: ['/api/shifts', workspaceId] });
       queryClient.setQueriesData<any>({ queryKey: ['/api/shifts', workspaceId] }, (old: any) => {
         if (!old) return old;
-        const list: any[] = Array.isArray(old) ? old : (old.shifts || old.data || []);
+        const list: unknown[] = Array.isArray(old) ? old : (old.shifts || old.data || []);
         const updated = list.map((s: any) => s.id === shiftId ? { ...s, employeeId: newEmployeeId } : s);
         if (Array.isArray(old)) return updated;
         if (old.shifts) return { ...old, shifts: updated };
@@ -783,7 +783,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const lastAutoFillRef = useRef<number>(0); // Debounce auto-fill
-  const [schedulingResult, setSchedulingResult] = useState<any>(null);
+  const [schedulingResult, setSchedulingResult] = useState<unknown>(null);
   const [showSchedulingSummary, setShowSchedulingSummary] = useState(false);
   const [activeOrchestrationId, setActiveOrchestrationId] = useState<string | null>(null);
   const [manualApprovalMode, setManualApprovalMode] = useState(true);
@@ -1345,7 +1345,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
       toast({ title: 'Published', description: `${draftShiftIds.length} shifts published` });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({ variant: 'destructive', title: 'Publish Failed', description: error.message });
     }
   }, [shifts, selectedDay, toast]);
@@ -1485,7 +1485,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   // Edit shift mutation
   const editShiftMutation = useMutation({
     mutationFn: async ({ shiftId, data }: { shiftId: string; data: Partial<EditShiftFormData> }) => {
-      const payload: Record<string, any> = {};
+      const payload: Record<string, unknown> = {};
       if (data.employeeId !== undefined) payload.employeeId = data.employeeId;
       if (data.title) payload.title = data.title;
       if (data.clientId) payload.clientId = data.clientId;
@@ -1695,7 +1695,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       return { bg: '#f0fdf4', text: '#15803d', border: '#86efac', dot: '#22c55e', label: 'On Shift' };
     }
     // Overtime warning — amber
-    if ((shift as any).isOvertime === true) {
+    if ((shift as Record<string,unknown>).isOvertime === true) {
       return { bg: '#fffbeb', text: '#d97706', border: '#fcd34d', dot: '#f59e0b', label: 'Overtime' };
     }
     // Draft / pending approval — slate
@@ -1798,7 +1798,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
             <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             <span className="text-muted-foreground">OT risk:</span>
             <span className="font-semibold text-amber-600 dark:text-amber-400">
-              {filteredShifts.filter(s => (s as any).isOvertime).length}
+              {filteredShifts.filter(s => (s as Record<string,unknown>).isOvertime).length}
             </span>
           </div>
           {pendingReassignments.size > 0 && (
@@ -2492,7 +2492,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                             {emp.firstName} {emp.lastName}
                           </div>
                           <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate">
-                            {(emp as any).position || 'Staff'}
+                            {(emp as Record<string,unknown>).position || 'Staff'}
                           </div>
                         </div>
                       </div>

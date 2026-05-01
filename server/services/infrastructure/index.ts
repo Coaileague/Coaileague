@@ -291,28 +291,28 @@ export function shutdownInfrastructureServices(): void {
  */
 export async function getInfrastructureHealth(): Promise<{
   q1: {
-    jobQueue: { status: string; stats: any };
-    backup: { status: string; stats: any };
-    errorTracking: { status: string; stats: any };
+    jobQueue: { status: string; stats: Record<string,unknown> };
+    backup: { status: string; stats: Record<string,unknown> };
+    errorTracking: { status: string; stats: Record<string,unknown> };
     apiKeyRotation: { status: string; keyCount: number };
   };
   q2: {
-    distributedTracing: { status: string; stats: any };
-    connectionPooling: { status: string; stats: any };
-    rateLimiting: { status: string; stats: any };
+    distributedTracing: { status: string; stats: Record<string,unknown> };
+    connectionPooling: { status: string; stats: Record<string,unknown> };
+    rateLimiting: { status: string; stats: Record<string,unknown> };
     healthCheck: { status: string; aggregate: any };
     metrics: { status: string; overview: any };
   };
   q3: {
-    circuitBreaker: { status: string; stats: any };
+    circuitBreaker: { status: string; stats: Record<string,unknown> };
     slaMonitoring: { status: string; compliance: any };
   };
   q4: {
-    disasterRecovery: { status: string; stats: any };
-    logAggregation: { status: string; stats: any };
-    securityHardening: { status: string; stats: any };
-    cdnCaching: { status: string; stats: any };
-    auditTrailExport: { status: string; stats: any };
+    disasterRecovery: { status: string; stats: Record<string,unknown> };
+    logAggregation: { status: string; stats: Record<string,unknown> };
+    securityHardening: { status: string; stats: Record<string,unknown> };
+    cdnCaching: { status: string; stats: Record<string,unknown> };
+    auditTrailExport: { status: string; stats: Record<string,unknown> };
   };
 }> {
   const [jobQueueStats, backupStats, errorStats, keys] = await Promise.all([

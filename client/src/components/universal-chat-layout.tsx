@@ -22,6 +22,46 @@ import { useLocation } from "wouter";
 import { MOBILE_CONFIG } from "@/config/mobileConfig";
 import type { ChatMessage } from "@shared/schema";
 
+/** Simple text renderer — preserves emoji and wraps long URLs */
+function MessageTextWithIcons({ text }: { text: string }) {
+  return (
+    <span className="break-words whitespace-pre-wrap text-sm">
+      {text}
+    </span>
+  );
+}
+
+/** Staff name with truncation */
+function StaffNameDisplay({ name, className }: { name: string; className?: string }) {
+  return (
+    <span className={className ?? "text-xs font-semibold text-foreground truncate"}>
+      {name}
+    </span>
+  );
+}
+
+/** Mobile action sheet stub — renders children in a bottom panel */
+function MobileUserActionSheet({
+  children,
+  open,
+  onClose,
+}: {
+  children?: React.ReactNode;
+  open?: boolean;
+  onClose?: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 z-50 bg-background border-t shadow-lg p-4 rounded-t-2xl"
+      onClick={onClose}
+    >
+      {children}
+    </div>
+  );
+}
+
+
 interface User {
   id: string;
   name: string;

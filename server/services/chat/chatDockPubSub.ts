@@ -98,3 +98,43 @@ export function parseChatDockPubSubMessage(message: string): (ChatDockServerEven
     return null;
   }
 }
+
+/**
+ * Auto-selects Redis pub/sub when REDIS_URL is set, falls back to local in-process.
+ * Single replica (no REDIS_URL): local EventEmitter — works fine.
+ * Multi-replica Railway deployment: set REDIS_URL → cross-replica broadcast.
+ */
+export async function createChatDockPubSub(): Promise<ChatDockPubSub> {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    console.log('[ChatDock] REDIS_URL not set — using local in-process pub/sub (single replica mode)');
+    return createLocalChatDockPubSub();
+  }
+  try {
+    // Dynamic import — redis package optional (not bundled in esbuild external)
+    const redis = await import('redis');
+    const publisher  = redis.createClient({ url: redisUrl });
+    const subscriber = publisher.duplicate();
+    await Promise.all([publisher.connect(), subscriber.connect()]);
+    console.log('[ChatDock] Redis pub/sub connected — multi-replica broadcast enabled');
+    return createRedisChatDockPubSub(publisher as unknown as RedisPublisherLike, subscriber as unknown as RedisSubscriberLike);
+  } catch (err) {
+    console.warn('[ChatDock] Redis connection failed — falling back to local pub/sub:', (err as Error).message);
+    return createLocalChatDockPubSub();
+  }
+}
+
+/** Singleton instance — initialized once in server startup */
+let _chatDockPubSubInstance: ChatDockPubSub | null = null;
+
+export function getChatDockPubSub(): ChatDockPubSub {
+  if (!_chatDockPubSubInstance) {
+    // Before async init completes, use local fallback
+    _chatDockPubSubInstance = createLocalChatDockPubSub();
+  }
+  return _chatDockPubSubInstance;
+}
+
+export async function initChatDockPubSub(): Promise<void> {
+  _chatDockPubSubInstance = await createChatDockPubSub();
+}

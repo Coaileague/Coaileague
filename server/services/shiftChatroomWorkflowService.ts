@@ -769,8 +769,8 @@ class ShiftChatroomWorkflowService {
    */
   private async generateDAR(
     context: ShiftChatroomContext,
-    chatroom: any,
-    shift: any,
+    chatroom: Record<string,unknown>,
+    shift: Record<string,unknown>,
     messages: unknown[]
   ): Promise<DARGenerationResult> {
     const photoMessages = messages.filter(m => m.messageType === 'photo');
@@ -807,7 +807,7 @@ class ShiftChatroomWorkflowService {
         uploaderName: employeeName,
         attachmentType: m.attachmentType || 'image/jpeg',
         attachmentSize: m.attachmentSize || 0,
-        gps: (m as any).metadata?.gps || null,
+        gps: (m as Record<string,unknown>).metadata?.gps || null,
       }));
 
     // ── STEP 1: Compile raw content ─────────────────────────────────────────
@@ -891,7 +891,7 @@ class ShiftChatroomWorkflowService {
       flaggedForReview: qualityReview.flaggedForReview,
       forceUseDetected: qualityReview.forceUsed,
       reviewNotes: qualityReview.reviewNotes,
-    } as any);
+    } as Record<string,unknown>);
 
     // ── STEP 6: Publish dar_generated event ─────────────────────────────────
     platformEventBus.publish({
@@ -955,7 +955,7 @@ class ShiftChatroomWorkflowService {
     // ── 5W1H Completeness check ──────────────────────────────────────────────
     // Who, What, When, Where, Why, How
     const incidentMessages = messages.filter(m => {
-      const meta = m.metadata as any;
+      const meta = m.metadata as Record<string,unknown>;
       return meta?.botEvent === 'incident_report_complete';
     });
 
@@ -997,7 +997,7 @@ class ShiftChatroomWorkflowService {
 
     // ── Short shift with no activities ──────────────────────────────────────
     const officerMessages = messages.filter(m => {
-      const meta = m.metadata as any;
+      const meta = m.metadata as Record<string,unknown>;
       return m.userId !== 'reportbot' && m.messageType !== 'system' && !meta?.isBot;
     });
     if (officerMessages.length === 0) {
@@ -1032,7 +1032,7 @@ class ShiftChatroomWorkflowService {
     ];
 
     const officerMessages = messages.filter(m => {
-      const meta = m.metadata as any;
+      const meta = m.metadata as Record<string,unknown>;
       return m.messageType !== 'system' && m.userId !== 'reportbot' && !meta?.isBot;
     });
 
@@ -1055,7 +1055,7 @@ class ShiftChatroomWorkflowService {
 
     // ── Incident reports section ────────────────────────────────────────────
     const incidentMsgs = messages.filter(m => {
-      const meta = m.metadata as any;
+      const meta = m.metadata as Record<string,unknown>;
       return meta?.botEvent === 'incident_report_complete';
     });
 
@@ -1085,11 +1085,11 @@ class ShiftChatroomWorkflowService {
   private generateDARSummary(shift: Record<string, unknown>, messages: unknown[]): string {
     const photoCount = messages.filter(m => m.messageType === 'photo').length;
     const activityCount = messages.filter(m => {
-      const meta = m.metadata as any;
+      const meta = m.metadata as Record<string,unknown>;
       return m.messageType !== 'system' && m.userId !== 'reportbot' && !meta?.isBot;
     }).length;
     const incidentCount = messages.filter(m => {
-      const meta = m.metadata as any;
+      const meta = m.metadata as Record<string,unknown>;
       return meta?.botEvent === 'incident_report_complete';
     }).length;
 
@@ -1503,7 +1503,7 @@ class ShiftChatroomWorkflowService {
    * Generate AI-powered transcript and summary
    */
   private async generateAITranscript(
-    chatroom: any,
+    chatroom: Record<string,unknown>,
     messages: unknown[]
   ): Promise<{ summary: string; actionItems: string[]; keyTopics: string[] }> {
     try {

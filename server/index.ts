@@ -2738,7 +2738,15 @@ self.addEventListener('activate', async () => {
     await initializeBackgroundServices();
     
     // PHASE 5: Start autonomous scheduler
-    log.info('Phase 5: Autonomous scheduler');
+        // Phase 4.5: ChatDock pub/sub (Redis when REDIS_URL set, local otherwise)
+    try {
+      const { initChatDockPubSub } = await import('./services/chat/chatDockPubSub');
+      await initChatDockPubSub();
+      log.info('ChatDock pub/sub initialized');
+    } catch (err) {
+      log.warn('ChatDock pub/sub init failed (non-fatal):', { error: (err as Error).message });
+    }
+        log.info('Phase 5: Autonomous scheduler');
     try {
       startAutonomousScheduler();
       log.info('Autonomous scheduler started successfully');

@@ -1912,7 +1912,7 @@ class AIBrainActionRegistry {
 
           const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
 
-          const conditions: any[] = [gte(notificationDeliveries.createdAt, since)];
+          const conditions: unknown[] = [gte(notificationDeliveries.createdAt, since)];
           if (workspaceId) conditions.push(eq(notificationDeliveries.workspaceId, workspaceId));
           if (channel) conditions.push(eq(notificationDeliveries.channel, channel));
           if (status) conditions.push(eq(notificationDeliveries.status, status));
@@ -4351,7 +4351,7 @@ class AIBrainActionRegistry {
         }
 
         // List invoices
-        const conditions: any[] = [eq(invoices.workspaceId, request.workspaceId!)];
+        const conditions: unknown[] = [eq(invoices.workspaceId, request.workspaceId!)];
         if (request.payload?.status) {
           conditions.push(eq(invoices.status, request.payload.status));
         }

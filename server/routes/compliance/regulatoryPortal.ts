@@ -170,7 +170,7 @@ async function logAuditorSectionAccess(req: Request, workspaceId: string, sectio
       actorIp: ip,
     });
   } catch (err) {
-    log.warn('[AuditorPortal] Audit log write failed (non-fatal):', (err as any)?.message);
+    log.warn('[AuditorPortal] Audit log write failed (non-fatal):', (err as Record<string,unknown>)?.message);
   }
 }
 
@@ -302,7 +302,7 @@ router.post('/request', async (req: Request, res: Response) => {
         auditPurpose,
         stateCode,
       }).catch ((err: unknown) => {
-        log.warn('[RegulatoryPortal] Owner notification email failed (non-fatal):', (err as any)?.message);
+        log.warn('[RegulatoryPortal] Owner notification email failed (non-fatal):', (err as Record<string,unknown>)?.message);
       });
 
       await db.update(auditorVerificationRequests)
@@ -454,7 +454,7 @@ router.post('/request/:id/grant', requireAuth, async (req: Request, res: Respons
     await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
             type: 'regulatory_notification', workspaceId: request.workspaceId, recipientUserId: request.auditorEmail!, channel: 'email', body: { to: request.auditorEmail!, subject: `${PLATFORM.name} Regulatory Portal — Audit Access Granted`, html: _auditGrantHtml } })
       .catch((err: unknown) => {
-        log.warn('[RegulatoryPortal] Credentials email to auditor failed:', (err as any)?.message);
+        log.warn('[RegulatoryPortal] Credentials email to auditor failed:', (err as Record<string,unknown>)?.message);
       });
 
     return res.json({ success: true, message: 'Access granted and credentials sent', accessToken });
@@ -507,9 +507,9 @@ router.get('/dashboard/:workspaceId/overview', requireAuditorPortalAuth, async (
         stateLicenseState: ws.stateLicenseState,
         stateLicenseExpiry: ws.stateLicenseExpiry,
         registeredOn: ws.createdAt,
-        employeeBreakdown: ((activeEmpCount as Record<string,unknown>).rows || (activeEmpCount as any)) ?? [],
-        activeClients: Number(((clientCount as Record<string,unknown>).rows || (clientCount as any))?.[0]?.count ?? 0),
-        activeSites: Number(((siteCount as Record<string,unknown>).rows || (siteCount as any))?.[0]?.count ?? 0),
+        employeeBreakdown: ((activeEmpCount as Record<string,unknown>).rows || (activeEmpCount as Record<string,unknown>)) ?? [],
+        activeClients: Number(((clientCount as Record<string,unknown>).rows || (clientCount as Record<string,unknown>))?.[0]?.count ?? 0),
+        activeSites: Number(((siteCount as Record<string,unknown>).rows || (siteCount as Record<string,unknown>))?.[0]?.count ?? 0),
         auditReadinessScore: readinessData?.score ?? 0,
         overallComplianceScore: readinessData?.score ?? 0,
       },
@@ -877,7 +877,7 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
       WHERE wu.workspace_id = ${workspaceId} AND wu.role = 'org_owner'
       LIMIT 1
     `);
-    const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as any))?.[0];
+    const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as Record<string,unknown>))?.[0];
 
     if (owner) {
       await createNotification({
@@ -889,7 +889,7 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
         metadata: { reportUrl, auditOutcome, requestId },
         idempotencyKey: `audit_report_uploaded-${Date.now()}-${owner.id}`
       }).catch ((err: unknown) => {
-        log.warn('[RegulatoryPortal] In-app audit report notification failed (non-fatal):', (err as any)?.message);
+        log.warn('[RegulatoryPortal] In-app audit report notification failed (non-fatal):', (err as Record<string,unknown>)?.message);
       });
     }
 
@@ -1092,7 +1092,7 @@ async function notifyOrgOwnerOfAuditRequest(
     WHERE wu.workspace_id = ${workspaceId} AND wu.role = 'org_owner'
     LIMIT 1
   `);
-  const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as any))?.[0];
+  const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as Record<string,unknown>))?.[0];
   if (!owner) return;
 
   await createNotification({
@@ -1125,7 +1125,7 @@ async function notifyOrgOwnerOfAuditRequest(
   await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
             type: 'regulatory_notification', workspaceId: (info as Record<string,unknown>).workspaceId, recipientUserId: owner.id, channel: 'email', body: { to: owner.email, subject: `[ACTION REQUIRED] State Regulatory Audit Access Requested for ${orgName}`, html: _auditRequestHtml } })
     .catch((err: unknown) => {
-      log.warn('[RegulatoryPortal] Org owner audit notification email failed (non-fatal):', (err as any)?.message);
+      log.warn('[RegulatoryPortal] Org owner audit notification email failed (non-fatal):', (err as Record<string,unknown>)?.message);
     });
 }
 
@@ -1185,7 +1185,7 @@ router.post('/complete-report', requireAuditorPortalAuth, async (req: Request, r
       WHERE wu.workspace_id = ${request.workspaceId} AND wu.role = 'org_owner'
       LIMIT 1
     `);
-    const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as any))?.[0];
+    const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as Record<string,unknown>))?.[0];
 
     if (owner) {
       await createNotification({
@@ -1197,7 +1197,7 @@ router.post('/complete-report', requireAuditorPortalAuth, async (req: Request, r
         metadata: { requestId, reportUrl, auditOutcome },
         idempotencyKey: `audit_report_uploaded-${Date.now()}-${owner.id}`
       }).catch ((err: unknown) => {
-        log.warn('[RegulatoryPortal] In-app audit submitted notification failed (non-fatal):', (err as any)?.message);
+        log.warn('[RegulatoryPortal] In-app audit submitted notification failed (non-fatal):', (err as Record<string,unknown>)?.message);
       });
     }
 

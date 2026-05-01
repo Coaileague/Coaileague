@@ -435,11 +435,11 @@ export function registerSchedulingCognitionActions() {
 
     const allCandidates = activeEmployees.map(e => {
       const weekHours = loadMap.get(e.id) || 0;
-      const score = Number((e as any).schedulingScore ?? 75);
+      const score = Number((e as Record<string,unknown>).schedulingScore ?? 75);
       const isArmed = (e as EmployeeWithStatus).isArmed || false;
       const armedVerified = (e as EmployeeWithStatus).armedLicenseVerified || false;
       const availMode = (e as EmployeeWithStatus).availabilityMode || 'always_available';
-      const travelRadius = Number((e as any).travelRadiusMiles ?? 25);
+      const travelRadius = Number((e as Record<string,unknown>).travelRadiusMiles ?? 25);
       const eLat = e.latitude ? Number(e.latitude) : null;
       const eLon = e.longitude ? Number(e.longitude) : null;
 
@@ -515,11 +515,11 @@ export function registerSchedulingCognitionActions() {
 
       const e = emp[0]; const c = client[0];
       const payRate = Number(e.hourlyRate || 0);
-      const billRate = (e as any).isArmed
-        ? Number((c as any).armedBillRate || c.contractRate || 0)
-        : Number((c as any).unarmedBillRate || c.contractRate || 0);
+      const billRate = (e as Record<string,unknown>).isArmed
+        ? Number((c as Record<string,unknown>).armedBillRate || c.contractRate || 0)
+        : Number((c as Record<string,unknown>).unarmedBillRate || c.contractRate || 0);
       const otPay = Number(e.overtimeRate || payRate * 1.5);
-      const otBill = Number((c as any).overtimeBillRate || billRate * Number(c.clientOvertimeMultiplier || 1.5));
+      const otBill = Number((c as Record<string,unknown>).overtimeBillRate || billRate * Number(c.clientOvertimeMultiplier || 1.5));
 
       const margin = billRate - payRate;
       const marginPct = billRate > 0 ? (margin / billRate) * 100 : 0;
@@ -529,11 +529,11 @@ export function registerSchedulingCognitionActions() {
       return {
         employeeId, clientId,
         officerName: `${e.firstName} ${e.lastName}`,
-        clientName: (c as any).companyName || 'Client',
+        clientName: (c as Record<string,unknown>).companyName || 'Client',
         regularTime: { payRate, billRate, margin: Math.round(margin * 100) / 100, marginPct: Math.round(marginPct * 10) / 10 },
         overtime: { payRate: otPay, billRate: otBill, margin: Math.round(otMargin * 100) / 100, marginPct: Math.round(otMarginPct * 10) / 10 },
         profitabilityTier: marginPct >= 35 ? 'excellent' : marginPct >= 25 ? 'good' : marginPct >= 15 ? 'acceptable' : marginPct > 0 ? 'thin' : 'unprofitable',
-        advisory: `${e.firstName} ${e.lastName} at ${(c as any).companyName || 'this client'}: ${Math.round(marginPct * 10) / 10}% margin ($${Math.round(margin * 100) / 100}/hr). ${marginPct < 15 ? 'WARNING: Thin margin. Consider rate renegotiation.' : 'Profitable assignment.'}`,
+        advisory: `${e.firstName} ${e.lastName} at ${(c as Record<string,unknown>).companyName || 'this client'}: ${Math.round(marginPct * 10) / 10}% margin ($${Math.round(margin * 100) / 100}/hr). ${marginPct < 15 ? 'WARNING: Thin margin. Consider rate renegotiation.' : 'Profitable assignment.'}`,
         confidenceScore: 0.97,
       };
     }
@@ -621,10 +621,10 @@ export function registerSchedulingCognitionActions() {
 
     const ranked = allEmp.map(e => {
       const weekHours = hourMap.get(e.id) || 0;
-      const score = Number((e as any).schedulingScore ?? 75);
+      const score = Number((e as Record<string,unknown>).schedulingScore ?? 75);
       const isArmed = (e as EmployeeWithStatus).isArmed || false;
       const armedVerified = (e as EmployeeWithStatus).armedLicenseVerified || false;
-      const travelRadius = Number((e as any).travelRadiusMiles ?? 25);
+      const travelRadius = Number((e as Record<string,unknown>).travelRadiusMiles ?? 25);
       const availMode = (e as EmployeeWithStatus).availabilityMode || 'always_available';
       const payRate = Number(e.hourlyRate || 0);
       const margin = billRate > 0 && payRate > 0 ? billRate - payRate : null;

@@ -29,12 +29,12 @@ const log = createLogger('skillActionBridge');
 
 function buildSkillContext(req: ActionRequest): SkillContext {
   return {
-    userId: (req as any).userId || (req.payload as any)?.userId || 'system',
-    workspaceId: req.workspaceId || (req.payload as any)?.workspaceId || '',
-    employeeId: (req.payload as any)?.employeeId,
-    workspaceRole: (req as any).workspaceRole || (req.payload as any)?.workspaceRole,
-    platformRole: (req as any).platformRole || (req.payload as any)?.platformRole,
-    subscriptionTier: (req.payload as any)?.subscriptionTier,
+    userId: (req as Record<string,unknown>).userId || (req.payload as Record<string,unknown>)?.userId || 'system',
+    workspaceId: req.workspaceId || (req.payload as Record<string,unknown>)?.workspaceId || '',
+    employeeId: (req.payload as Record<string,unknown>)?.employeeId,
+    workspaceRole: (req as Record<string,unknown>).workspaceRole || (req.payload as Record<string,unknown>)?.workspaceRole,
+    platformRole: (req as Record<string,unknown>).platformRole || (req.payload as Record<string,unknown>)?.platformRole,
+    subscriptionTier: (req.payload as Record<string,unknown>)?.subscriptionTier,
   };
 }
 

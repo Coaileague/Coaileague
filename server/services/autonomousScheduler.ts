@@ -2792,7 +2792,7 @@ export function startAutonomousScheduler() {
             AND e.user_id IS NOT NULL
         `);
 
-        const rows: any[] = (expired as Record<string,unknown>).rows || [];
+        const rows: unknown[] = (expired as Record<string,unknown>).rows || [];
         log.info('[TerminationExpiry] Processing expired document access', { count: rows.length });
 
         for (const row of rows) {

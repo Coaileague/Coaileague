@@ -32,7 +32,7 @@ router.post("/employees", requireManager, async (req: AuthenticatedRequest, res)
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const { format = 'csv' } = req.body;
-    const result = await exportEmployees(workspaceId, { format: format as any });
+    const result = await exportEmployees(workspaceId, { format: format as 'csv' | 'excel' | 'pdf' });
     auditExport(req, 'employees', result.filename, { format });
 
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
@@ -50,7 +50,7 @@ router.post("/payroll", requireManager, async (req: AuthenticatedRequest, res) =
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const { format = 'csv', startDate, endDate } = req.body;
-    const result = await exportPayroll(workspaceId, { format: format as any, startDate, endDate });
+    const result = await exportPayroll(workspaceId, { format: format as 'csv' | 'excel' | 'pdf', startDate, endDate });
     auditExport(req, 'payroll', result.filename, { format, startDate, endDate });
 
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
@@ -68,7 +68,7 @@ router.post("/audit-logs", requireManager, async (req: AuthenticatedRequest, res
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const { format = 'json', startDate, endDate } = req.body;
-    const result = await exportAuditLogs(workspaceId, { format: format as any, startDate, endDate });
+    const result = await exportAuditLogs(workspaceId, { format: format as 'csv' | 'excel' | 'pdf', startDate, endDate });
     auditExport(req, 'audit_logs', result.filename, { format, startDate, endDate });
 
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
@@ -86,7 +86,7 @@ router.post("/time-entries", requireManager, async (req: AuthenticatedRequest, r
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const { format = 'csv', startDate, endDate } = req.body;
-    const result = await exportTimeEntries(workspaceId, { format: format as any, startDate, endDate });
+    const result = await exportTimeEntries(workspaceId, { format: format as 'csv' | 'excel' | 'pdf', startDate, endDate });
     auditExport(req, 'time_entries', result.filename, { format, startDate, endDate });
 
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
@@ -104,7 +104,7 @@ router.post("/all", requireManager, async (req: AuthenticatedRequest, res) => {
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const { format = 'json', startDate, endDate } = req.body;
-    const result = await exportAllData(workspaceId, { format: format as any, startDate, endDate });
+    const result = await exportAllData(workspaceId, { format: format as 'csv' | 'excel' | 'pdf', startDate, endDate });
     auditExport(req, 'full_data_export', result.filename, { format, startDate, endDate });
 
     res.setHeader('Content-Type', format === 'json' ? 'application/json' : 'text/csv');
@@ -123,7 +123,7 @@ router.post("/invoices", requireManager, async (req: AuthenticatedRequest, res) 
 
     const { format = 'csv', startDate, endDate } = req.body;
     const result = await exportInvoices(workspaceId, {
-      format: format as any,
+      format: format as 'csv' | 'excel' | 'pdf',
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
     });
@@ -145,7 +145,7 @@ router.post("/payments", requireManager, async (req: AuthenticatedRequest, res) 
 
     const { format = 'csv', startDate, endDate } = req.body;
     const result = await exportPaymentRecords(workspaceId, {
-      format: format as any,
+      format: format as 'csv' | 'excel' | 'pdf',
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
     });
@@ -167,7 +167,7 @@ router.post("/expenses", requireManager, async (req: AuthenticatedRequest, res) 
 
     const { format = 'csv', startDate, endDate } = req.body;
     const result = await exportExpenses(workspaceId, {
-      format: format as any,
+      format: format as 'csv' | 'excel' | 'pdf',
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
     });
@@ -189,7 +189,7 @@ router.post("/financial-summary", requireManager, async (req: AuthenticatedReque
 
     const { format = 'csv', startDate, endDate } = req.body;
     const result = await exportFinancialSummary(workspaceId, {
-      format: format as any,
+      format: format as 'csv' | 'excel' | 'pdf',
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
     });
@@ -212,7 +212,7 @@ router.post("/profit-loss", requireManager, async (req: AuthenticatedRequest, re
 
     const { format = 'csv', startDate, endDate } = req.body;
     const result = await exportProfitLoss(workspaceId, userId, {
-      format: format as any,
+      format: format as 'csv' | 'excel' | 'pdf',
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
     });
@@ -234,7 +234,7 @@ router.post("/shifts", requireManager, async (req: AuthenticatedRequest, res) =>
 
     const { format = 'csv', startDate, endDate } = req.body;
     const result = await exportShiftHistory(workspaceId, {
-      format: format as any,
+      format: format as 'csv' | 'excel' | 'pdf',
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
     });

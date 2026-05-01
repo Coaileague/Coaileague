@@ -473,7 +473,7 @@ function StripePaymentForm({
       } else {
         onError("Payment status unclear. Please check your email for confirmation.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       onError(err.message || "Unexpected error during payment.");
     } finally {
       setConfirming(false);
@@ -542,7 +542,7 @@ function InvoicePaymentModal({ invoice, accessToken, onClose, onPaid }: InvoiceP
           invoiceNumber: data.invoiceNumber,
         });
         setStep("ready");
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (cancelled) return;
         setErrorMsg(err.message || "Could not start payment session.");
         setStep("error");
@@ -664,7 +664,7 @@ export default function ClientPortal() {
   const { data: clients = [] } = useClientLookup();
   const currentClient = clients.find(c => c.email === user?.email);
 
-  interface ClientReport { id: number; title: string; reportType: string; status: string; employeeName?: string; createdAt: string; data: Record<string, any>; }
+  interface ClientReport { id: number; title: string; reportType: string; status: string; employeeName?: string; createdAt: string; data: Record<string, unknown>; }
   interface ClientGuardTour { id: string; tour_name?: string; status: string; completed_at?: string; completion_percentage?: string; officer_name?: string; }
   interface ClientDar { id: string; report_number?: string; site_name?: string; shift_date?: string; employee_name?: string; status?: string; pdf_url?: string; photo_count?: number; }
   interface ClientIncident { id: string; title: string; incident_type?: string; severity?: string; occurred_at?: string; location?: string; status?: string; site_id?: string; officer_name?: string; }
@@ -732,7 +732,7 @@ export default function ClientPortal() {
     queryKey: ['/api/visitor-management/pre-registrations'],
     enabled: activeTab === 'visitor-log',
   });
-  const preRegistrations: any[] = preRegData?.preRegistrations || [];
+  const preRegistrations: unknown[] = preRegData?.preRegistrations || [];
   const createPreRegMutation = useMutation({
     mutationFn: async () => {
       // V1.1: Visitor pre-registration coming soon
@@ -868,8 +868,8 @@ export default function ClientPortal() {
   // Sync user name to settings state when user data loads
   useEffect(() => {
     if (user) {
-      setSettingsFirstName((user as any).firstName || "");
-      setSettingsLastName((user as any).lastName || "");
+      setSettingsFirstName((user as Record<string,unknown>).firstName || "");
+      setSettingsLastName((user as Record<string,unknown>).lastName || "");
     }
   }, [(user as any)?.firstName, (user as any)?.lastName]);
 
@@ -1157,7 +1157,7 @@ export default function ClientPortal() {
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 // @ts-ignore — TS migration: fix in refactoring sprint
-                                <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as any).id)} data-testid={`button-pdf-${(inv as any).id}`}>
+                                <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as Record<string,unknown>).id)} data-testid={`button-pdf-${(inv as Record<string,unknown>).id}`}>
                                   <Download className="h-3.5 w-3.5 mr-1" /> PDF
                                 </Button>
                                 {inv.status === "sent" && (
@@ -1203,7 +1203,7 @@ export default function ClientPortal() {
                         <p className="font-bold text-green-600">${Number(inv.total || 0).toFixed(2)}</p>
                         <Badge className="bg-green-500/10 text-green-600 border-0"><CheckCircle2 className="h-3 w-3 mr-1" />Paid</Badge>
                         // @ts-ignore — TS migration: fix in refactoring sprint
-                        <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as any).id)} data-testid={`button-pdf-paid-${(inv as any).id}`}>
+                        <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as Record<string,unknown>).id)} data-testid={`button-pdf-paid-${(inv as Record<string,unknown>).id}`}>
                           <Download className="h-3.5 w-3.5" />
                         </Button>
                       </div>

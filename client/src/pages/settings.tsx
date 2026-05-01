@@ -249,7 +249,7 @@ function ProfileTabContent() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).message || 'Failed to update forwarding email');
+        throw new Error((err as Record<string,unknown>).message || 'Failed to update forwarding email');
       }
       return res.json();
     },
@@ -2043,7 +2043,7 @@ export default function Settings() {
   // Sync forwardEmailValue from workspace data on load
   useEffect(() => {
     if ((workspace as any)?.inboundEmailForwardTo !== undefined) {
-      setForwardEmailValue((workspace as any).inboundEmailForwardTo || '');
+      setForwardEmailValue((workspace as Record<string,unknown>).inboundEmailForwardTo || '');
     }
   }, [workspace]);
 
@@ -2153,7 +2153,7 @@ export default function Settings() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).message || 'Failed to update forwarding email');
+        throw new Error((err as Record<string,unknown>).message || 'Failed to update forwarding email');
       }
       return res.json();
     },
@@ -2433,7 +2433,7 @@ export default function Settings() {
     });
   };
 
-  const quickSaveNotificationPref = (overrides: Record<string, any>) => {
+  const quickSaveNotificationPref = (overrides: Record<string, unknown>) => {
     updateNotificationPrefsMutation.mutate({
       enableEmail: overrides.enableEmail ?? enableEmail,
       enableSms: overrides.enableSms ?? enableSms,
@@ -4399,7 +4399,7 @@ export default function Settings() {
                     const data = await res.json();
                     setMfaSetupData(data);
                     setMfaSetupOpen(true);
-                  } catch (error: any) {
+                  } catch (error: unknown) {
                     toast({ title: "Error", description: error.message || "Failed to start 2FA setup", variant: "destructive" });
                   }
                 }}
@@ -5482,7 +5482,7 @@ function CalendarIntegrationCard() {
         description: data.message || `Imported ${data.result?.eventsImported || 0} events`,
         variant: data.success ? "default" : "destructive",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: error.message || "Failed to import calendar",
