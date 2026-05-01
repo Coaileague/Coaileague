@@ -1,3 +1,4 @@
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 /**
  * ShiftBottomSheet - Compact professional shift creation/editing
  * Sling-inspired design with tight spacing and polished UI
@@ -261,7 +262,7 @@ export function ShiftBottomSheet({
                 </VisuallyHidden>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <LogoMark size="sm" />
+                    <TrinityAnimatedLogo size={24} />
                     <div>
                       <DrawerTitle className="text-base font-semibold">
                         {editingShift ? 'Edit Shift' : 'New Shift'}

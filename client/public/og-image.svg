@@ -16,9 +16,9 @@
   
   <!-- Trinity Logo - 3 converging arrows -->
   <g transform="translate(100, 200)">
-    <polygon points="40,0 50,5 42,30 40,35 38,30 30,5" fill="#3B82F6"/>
-    <polygon points="65,50 60,40 42,38 38,38 38,35 55,30" fill="#8B5CF6"/>
-    <polygon points="15,50 20,40 38,38 42,38 42,35 25,30" fill="#06B6D4"/>
+    
+    
+    
     <circle cx="40" cy="35" r="5" fill="white" opacity="0.9"/>
   </g>
   

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1055,7 +1056,7 @@ export default function FeaturesShowcasePage() {
         <main className="max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-4 sm:space-y-8">
         <div className="text-center space-y-3 sm:space-y-4 py-4 sm:py-8">
           <div className="flex items-center justify-center gap-2 sm:gap-3">
-            <TrinityLogo size={isMobile ? 32 : 48} />
+            <TrinityAnimatedLogo size={isMobile ? 32 : 48} />
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">
               CoAIleague Features
             </h1>

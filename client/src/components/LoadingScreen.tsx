@@ -1,4 +1,3 @@
-import React from "react";
 /**
  * CoAIleague Animated Splash / Loading Screen
  *
@@ -48,7 +47,7 @@ export function LoadingScreen() {
   const [msgIdx, setMsgIdx] = useState(0);
   // loadingEscape
   // Safety escape: if LoadingScreen is somehow stuck for > 8s, force app ready
-  React.useEffect(() => {
+  useEffect(() => {
     const t = setTimeout(() => {
       window.dispatchEvent(new Event("coaileague:force-ready"));
     }, 8000);
@@ -205,9 +204,6 @@ export function LoadingScreen() {
       <style>{`
         @keyframes logoOrbit    { to { transform: rotate(360deg); } }
         @keyframes ringPulse    { 0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.9;transform:scale(1.05)} }
-        @keyframes arrowPulseBlue   { 0%,100%{opacity:1;filter:drop-shadow(0 0 6px #3b82f6)}50%{opacity:.7;filter:drop-shadow(0 0 14px #93c5fd)} }
-        @keyframes arrowPulseOrange { 0%,100%{opacity:1;filter:drop-shadow(0 0 6px #f97316)}50%{opacity:.7;filter:drop-shadow(0 0 14px #fdba74)} }
-        @keyframes arrowPulsePurple { 0%,100%{opacity:1;filter:drop-shadow(0 0 6px #8b5cf6)}50%{opacity:.7;filter:drop-shadow(0 0 14px #c4b5fd)} }
         @keyframes orbGlow      { 0%,100%{opacity:1;filter:drop-shadow(0 0 4px #fff)}50%{opacity:.85;filter:drop-shadow(0 0 10px #e2e8f0)} }
         @keyframes fadeSlideUp  { from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)} }
         @keyframes msgFade      { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }

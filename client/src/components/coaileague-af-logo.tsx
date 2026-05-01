@@ -1,3 +1,4 @@
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { cn } from "@/lib/utils";
 import { logoConfig } from "@/config/logoConfig";
 import { CoAIleagueLogoMark } from "@/components/ui/coaileague-logo-mark";
@@ -56,7 +57,7 @@ export function CoAIleagueAFLogo({
         )}
         data-testid="coaileague-logo-icon"
       >
-        <CoAIleagueLogoMark size={iconSize} />
+        <TrinityAnimatedLogo size={iconSize} />
       </div>
     );
   }
@@ -68,7 +69,7 @@ export function CoAIleagueAFLogo({
       data-testid="coaileague-logo-full"
     >
       <div className="relative inline-flex items-center justify-center shrink-0">
-        <CoAIleagueLogoMark size={iconSize} />
+        <TrinityAnimatedLogo size={iconSize} />
       </div>
 
       <div className="flex flex-col gap-0.5 min-w-0">

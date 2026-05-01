@@ -1,3 +1,4 @@
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { cn } from "@/lib/utils";
 import { CoAIleagueLogoMark } from "@/components/ui/coaileague-logo-mark";
 
@@ -54,7 +55,7 @@ export function CoAIleagueLogo({
   if (onlyIcon) {
     const iconSizeMap = { xs: 20, sm: 24, md: 32, lg: 48, xl: 64 };
     const iconSize = iconSizeMap[getKnotSize()];
-    return <CoAIleagueLogoMark size={iconSize} />;
+    return <TrinityAnimatedLogo size={iconSize} />;
   }
 
   return (
@@ -62,7 +63,7 @@ export function CoAIleagueLogo({
       className={cn("flex items-center gap-2 md:gap-3", className)}
       style={{ width: typeof width === 'number' ? `${width}px` : width }}
     >
-      <CoAIleagueLogoMark size={getKnotSize()} />
+      <TrinityAnimatedLogo size={getKnotSize()} />
 
       {showWordmark && (
         <div className="flex flex-col min-w-0">

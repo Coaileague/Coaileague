@@ -563,15 +563,13 @@ function AppContent() {
   const { isAuthenticated, isLoading: authLoading, user, orgInactive, isOwner, paymentRequired } = useAuth();
 
   // Watchdog: if auth loading takes > 6s, force-resolve to prevent eternal spinner.
-  // This guards against network hangs, session errors, or auth service timeouts.
-  const [loadingTimedOut, setLoadingTimedOut] = React.useState(false);
-  React.useEffect(() => {
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  useEffect(() => {
     if (!authLoading) { setLoadingTimedOut(false); return; }
     const t = setTimeout(() => setLoadingTimedOut(true), 6000);
     return () => clearTimeout(t);
   }, [authLoading]);
-  // Also respond to force-ready from LoadingScreen escape hatch
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = () => setLoadingTimedOut(true);
     window.addEventListener("coaileague:force-ready", handler);
     return () => window.removeEventListener("coaileague:force-ready", handler);

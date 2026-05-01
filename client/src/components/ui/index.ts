@@ -55,7 +55,6 @@ export * from "./breadcrumb";
 export * from "./pagination";
 
 // Branding & Special
-export * from "./trinity-arrow-spinner";
 export * from "./trinity-animated-logo";
 
 // Utility

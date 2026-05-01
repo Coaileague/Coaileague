@@ -1,3 +1,4 @@
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { cn } from "@/lib/utils";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 
@@ -72,7 +73,7 @@ export function UnifiedBrandLogo({
 
   if (effectiveVariant === "icon") {
     return (
-      <TrinityLogo 
+      <TrinityAnimatedLogo size={32} 
         size={config.logoSize}
         className={cn("shrink-0", className)}
       />
@@ -108,7 +109,7 @@ export function UnifiedBrandLogo({
       )}
       data-testid="brand-logo"
     >
-      <TrinityLogo 
+      <TrinityAnimatedLogo size={32} 
         size={config.logoSize}
         className="shrink-0"
       />

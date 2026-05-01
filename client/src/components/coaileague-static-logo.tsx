@@ -1,3 +1,4 @@
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { cn } from "@/lib/utils";
 import { logoConfig } from "@/config/logoConfig";
 import { TrinityMascotIcon } from "@/components/ui/coaileague-logo-mark";
@@ -48,7 +49,7 @@ export function CoAIleagueStaticLogo({
         )}
         data-testid="coaileague-static-logo-icon"
       >
-        <TrinityMascotIcon 
+        <TrinityAnimatedLogo size={32} 
           size={markSizeMap[size] || "sm"}
         />
       </div>
@@ -58,7 +59,7 @@ export function CoAIleagueStaticLogo({
   return (
     <div className={cn("flex items-center gap-4", className)} data-testid="coaileague-static-logo-full">
       <div className="relative inline-flex items-center justify-center shrink-0">
-        <TrinityMascotIcon 
+        <TrinityAnimatedLogo size={32} 
           size={markSizeMap[size] || "sm"}
         />
       </div>

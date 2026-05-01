@@ -1,9 +1,37 @@
-<svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-  <!-- Trinity Convergence Logo - 3 Arrow Design -->
-  <!-- Blue arrow - top pointing down -->
-  <polygon points="75,15 85,22 77,55 75,60 73,55 65,22" fill="#3B82F6"/>
-  <!-- Purple arrow - bottom right pointing to center -->
-  <polygon points="125,108 122,96 90,76 86,79 88,85 112,115" fill="#8B5CF6"/>
-  <!-- Gold arrow - bottom left pointing to center -->
-  <polygon points="25,108 28,96 60,76 64,79 62,85 38,115" fill="#F59E0B"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="f1" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#93C5FD"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity=".3"/>
+    </linearGradient>
+    <linearGradient id="f2" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FED7AA"/>
+      <stop offset="100%" stop-color="#F97316" stop-opacity=".3"/>
+    </linearGradient>
+    <linearGradient id="f3" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#C4B5FD"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity=".3"/>
+    </linearGradient>
+    <radialGradient id="fc" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#7C3AED" stop-opacity=".6"/>
+    </radialGradient>
+    <filter id="ff"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+  <rect width="100" height="100" rx="22" fill="#0F1729"/>
+  <circle cx="50" cy="50" r="44" fill="none" stroke="#60A5FA" stroke-width="1" stroke-dasharray="7 18" opacity=".35"/>
+  <path d="M50 36 C46 28,44 16,50 5 C56 16,54 28,50 36 Z" fill="url(#f1)"/>
+  <circle cx="50" cy="5" r="3" fill="#93C5FD"/>
+  <g transform="rotate(120 50 50)">
+    <path d="M50 36 C46 28,44 16,50 5 C56 16,54 28,50 36 Z" fill="url(#f2)"/>
+    <circle cx="50" cy="5" r="3" fill="#FED7AA"/>
+  </g>
+  <g transform="rotate(240 50 50)">
+    <path d="M50 36 C46 28,44 16,50 5 C56 16,54 28,50 36 Z" fill="url(#f3)"/>
+    <circle cx="50" cy="5" r="3" fill="#C4B5FD"/>
+  </g>
+  <circle cx="50" cy="50" r="14" fill="url(#fc)"/>
+  <circle cx="50" cy="50" r="6" fill="#ffffff"/>
+  <circle cx="47" cy="47" r="2" fill="#ffffff" opacity=".8"/>
 </svg>

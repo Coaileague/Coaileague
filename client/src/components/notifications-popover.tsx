@@ -1401,7 +1401,7 @@ function NotificationCard({
                   ? 'bg-amber-100 dark:bg-amber-900' 
                   : 'bg-blue-100 dark:bg-blue-900'
               }`}>
-                <TrinityLogo size={compact ? 20 : 24} />
+                <TrinityAnimatedLogo size={compact ? 20 : 24} />
               </div>
               
               {/* Content & Actions - Always stacked in popover to maintain consistent width */}
@@ -1477,7 +1477,7 @@ function NotificationCard({
             <div className={compact ? "flex gap-2" : "flex gap-3"}>
               {/* Trinity AI Icon - Enhanced with glow ring */}
               <div className={`shrink-0 ${compact ? 'w-7 h-7' : 'w-9 h-9'} rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/15 to-blue-500/15 dark:from-cyan-400/20 dark:to-blue-400/20 ring-1 ring-cyan-500/20 dark:ring-cyan-400/25`}>
-                <TrinityLogo size={compact ? 20 : 24} />
+                <TrinityAnimatedLogo size={compact ? 20 : 24} />
               </div>
               
               {/* Content */}

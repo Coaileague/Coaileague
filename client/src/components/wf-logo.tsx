@@ -1,3 +1,4 @@
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 /**
  * WFLogo - Re-exports TrinityLogo for backwards compatibility
  * Single source of truth: trinity-logo.tsx
@@ -12,9 +13,9 @@ interface WFLogoProps {
 }
 
 export function WFLogo({ className = "", size = 24 }: WFLogoProps) {
-  return <TrinityLogo size={size} className={className} />;
+  return <TrinityAnimatedLogo size={32} size={size} className={className} />;
 }
 
 export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
-  return <TrinityLogo size={size} className={cn("shrink-0", className)} />;
+  return <TrinityAnimatedLogo size={32} size={size} className={cn("shrink-0", className)} />;
 }

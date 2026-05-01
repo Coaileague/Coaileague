@@ -369,13 +369,6 @@
         position: relative;
       }
       /* Orbital arc animations (SMIL-driven, no JS needed) */
-      .hl-arc-ring-1 { animation: hl-orbit 8s linear infinite; transform-origin: 60px 60px; }
-      .hl-arc-ring-2 { animation: hl-orbit-ccw 12s linear infinite; transform-origin: 60px 60px; }
-      .hl-arc-ring-3 { animation: hl-orbit 20s linear infinite; transform-origin: 60px 60px; }
-      .hl-core       { animation: hl-orbGlow 4s ease-in-out infinite; }
-      .hl-arm-1      { animation: hl-armPulse 4s ease-in-out infinite; }
-      .hl-arm-2      { animation: hl-armPulse 4s ease-in-out infinite 1.3s; }
-      .hl-arm-3      { animation: hl-armPulse 4s ease-in-out infinite 2.6s; }
 
       /* ── Trinity label ── */
       .hl-trinity-label { text-align: center; animation: hl-fadeUp 0.5s ease both; }
@@ -522,76 +515,83 @@
         <div class="hl-logo-spin">
           <svg viewBox="0 0 120 120" width="120" height="120" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <!-- Gradients for the three arms -->
-              <linearGradient id="hlg-blue" x1="50%" y1="0%" x2="50%" y2="100%">
-                <stop offset="0%" stop-color="#93C5FD" stop-opacity="0.95"/>
-                <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.15"/>
+              <linearGradient id="hlg1" x1="50%" y1="0%" x2="50%" y2="100%">
+                <stop offset="0%"   stop-color="#93C5FD" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.1"/>
               </linearGradient>
-              <linearGradient id="hlg-orange" x1="50%" y1="0%" x2="50%" y2="100%">
-                <stop offset="0%" stop-color="#FED7AA" stop-opacity="0.95"/>
-                <stop offset="100%" stop-color="#F97316" stop-opacity="0.15"/>
+              <linearGradient id="hlg2" x1="50%" y1="0%" x2="50%" y2="100%">
+                <stop offset="0%"   stop-color="#FED7AA" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#F97316" stop-opacity="0.1"/>
               </linearGradient>
-              <linearGradient id="hlg-purple" x1="50%" y1="0%" x2="50%" y2="100%">
-                <stop offset="0%" stop-color="#C4B5FD" stop-opacity="0.95"/>
-                <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.15"/>
+              <linearGradient id="hlg3" x1="50%" y1="0%" x2="50%" y2="100%">
+                <stop offset="0%"   stop-color="#C4B5FD" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.1"/>
               </linearGradient>
-              <radialGradient id="hlg-core" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="40%" stop-color="#A78BFA"/>
+              <radialGradient id="hlgc" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#ffffff"/>
+                <stop offset="40%"  stop-color="#A78BFA"/>
                 <stop offset="100%" stop-color="#7C3AED" stop-opacity="0.5"/>
               </radialGradient>
-              <filter id="hlf-glow" x="-60%" y="-60%" width="220%" height="220%">
+              <filter id="hlfa" x="-60%" y="-60%" width="220%" height="220%">
                 <feGaussianBlur stdDeviation="3" result="b"/>
                 <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
-              <filter id="hlf-core" x="-80%" y="-80%" width="260%" height="260%">
-                <feGaussianBlur stdDeviation="6" result="b"/>
+              <filter id="hlfc" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="7" result="b"/>
                 <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
             </defs>
 
-            <!-- Outer orbital ring (slow CW) -->
-            <g class="hl-arc-ring-1">
-              <circle cx="60" cy="60" r="53" fill="none" stroke="#60A5FA"
-                stroke-width="1" stroke-dasharray="7 22 2 22" opacity="0.25"/>
+            <!-- Outer orbital ring: SMIL spin CW -->
+            <g>
+              <animateTransform attributeName="transform" type="rotate"
+                from="0 60 60" to="360 60 60" dur="8s" repeatCount="indefinite"/>
+              <circle cx="60" cy="60" r="53" fill="none" stroke="#93C5FD"
+                stroke-width="1" stroke-dasharray="7 22 2 22" opacity="0.28"/>
             </g>
-            <!-- Middle ring (CCW) -->
-            <g class="hl-arc-ring-2">
-              <circle cx="60" cy="60" r="46" fill="none" stroke="#FB923C"
-                stroke-width="0.8" stroke-dasharray="4 15" opacity="0.18"/>
-            </g>
-            <!-- Third ring (slow CW) -->
-            <g class="hl-arc-ring-3">
-              <circle cx="60" cy="60" r="40" fill="none" stroke="#A78BFA"
-                stroke-width="0.6" stroke-dasharray="3 20" opacity="0.12"/>
+
+            <!-- Inner orbital ring: SMIL spin CCW -->
+            <g>
+              <animateTransform attributeName="transform" type="rotate"
+                from="360 60 60" to="0 60 60" dur="13s" repeatCount="indefinite"/>
+              <circle cx="60" cy="60" r="45" fill="none" stroke="#FED7AA"
+                stroke-width="0.7" stroke-dasharray="4 16" opacity="0.18"/>
             </g>
 
             <!-- Arm 1 — Blue (12 o'clock) -->
-            <g filter="url(#hlf-glow)" class="hl-arm-1">
-              <path d="M60 43 C55 34,53 19,60 6 C67 19,65 34,60 43 Z" fill="url(#hlg-blue)"/>
-              <circle cx="60" cy="6" r="3.4" fill="#93C5FD" opacity="0.9">
-                <animate attributeName="r" values="2.5;4;2.5" dur="4s" repeatCount="indefinite"/>
-              </circle>
-            </g>
-            <!-- Arm 2 — Orange (4 o'clock) -->
-            <g filter="url(#hlf-glow)" class="hl-arm-2" transform="rotate(120 60 60)">
-              <path d="M60 43 C55 34,53 19,60 6 C67 19,65 34,60 43 Z" fill="url(#hlg-orange)"/>
-              <circle cx="60" cy="6" r="3.4" fill="#FED7AA" opacity="0.9">
-                <animate attributeName="r" values="2.5;4;2.5" dur="4s" begin="1.3s" repeatCount="indefinite"/>
-              </circle>
-            </g>
-            <!-- Arm 3 — Purple (8 o'clock) -->
-            <g filter="url(#hlf-glow)" class="hl-arm-3" transform="rotate(240 60 60)">
-              <path d="M60 43 C55 34,53 19,60 6 C67 19,65 34,60 43 Z" fill="url(#hlg-purple)"/>
-              <circle cx="60" cy="6" r="3.4" fill="#C4B5FD" opacity="0.9">
-                <animate attributeName="r" values="2.5;4;2.5" dur="4s" begin="2.6s" repeatCount="indefinite"/>
+            <g filter="url(#hlfa)">
+              <path d="M60 43 C55 34,53 19,60 6 C67 19,65 34,60 43 Z" fill="url(#hlg1)">
+                <animate attributeName="opacity" values="0.6;1;0.6" dur="4s" repeatCount="indefinite"/>
+              </path>
+              <circle cx="60" cy="6" r="3" fill="#93C5FD" opacity="0.9">
+                <animate attributeName="r" values="2;4;2" dur="4s" repeatCount="indefinite"/>
               </circle>
             </g>
 
-            <!-- Core — radial glow + breathe -->
-            <circle cx="60" cy="60" r="17" fill="url(#hlg-core)" filter="url(#hlf-core)" class="hl-core" opacity="0.85">
-              <animate attributeName="r" values="15;19;15" dur="4s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0.75;0.95;0.75" dur="4s" repeatCount="indefinite"/>
+            <!-- Arm 2 — Orange (4 o'clock): static rotate + SMIL pulse -->
+            <g filter="url(#hlfa)" transform="rotate(120 60 60)">
+              <path d="M60 43 C55 34,53 19,60 6 C67 19,65 34,60 43 Z" fill="url(#hlg2)">
+                <animate attributeName="opacity" values="0.6;1;0.6" dur="4s" begin="0.5s" repeatCount="indefinite"/>
+              </path>
+              <circle cx="60" cy="6" r="3" fill="#FED7AA" opacity="0.9">
+                <animate attributeName="r" values="2;4;2" dur="4s" begin="0.5s" repeatCount="indefinite"/>
+              </circle>
+            </g>
+
+            <!-- Arm 3 — Purple (8 o'clock): static rotate + SMIL pulse -->
+            <g filter="url(#hlfa)" transform="rotate(240 60 60)">
+              <path d="M60 43 C55 34,53 19,60 6 C67 19,65 34,60 43 Z" fill="url(#hlg3)">
+                <animate attributeName="opacity" values="0.6;1;0.6" dur="4s" begin="1s" repeatCount="indefinite"/>
+              </path>
+              <circle cx="60" cy="6" r="3" fill="#C4B5FD" opacity="0.9">
+                <animate attributeName="r" values="2;4;2" dur="4s" begin="1s" repeatCount="indefinite"/>
+              </circle>
+            </g>
+
+            <!-- Core: breathing radial glow -->
+            <circle cx="60" cy="60" r="16" fill="url(#hlgc)" filter="url(#hlfc)" opacity="0.85">
+              <animate attributeName="r"       values="13;19;13"     dur="4s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.7;0.95;0.7" dur="4s" repeatCount="indefinite"/>
             </circle>
             <circle cx="60" cy="60" r="7" fill="#ffffff" opacity="0.92">
               <animate attributeName="opacity" values="0.7;1;0.7" dur="4s" repeatCount="indefinite"/>

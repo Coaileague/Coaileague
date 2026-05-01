@@ -1,7 +1,7 @@
 /**
  * UniversalSpinner — ONE loading spinner, everywhere.
  *
- * Wraps <TrinityArrowMark> (the three-arrow Trinity AI Co-Pilot brand icon)
+ * Wraps <TrinityAnimatedLogo> (the three-arrow Trinity AI Co-Pilot brand icon)
  * and drives a rich CSS-only animation defined in
  * `client/src/styles/universal-spinner.css`.
  *
@@ -40,7 +40,7 @@
 
 import "@/styles/universal-spinner.css";
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
-import { TrinityArrowMark } from "@/components/trinity-logo";
+import { TrinityAnimatedLogo } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 
 export type UniversalSpinnerSize = "sm" | "md" | "lg";
