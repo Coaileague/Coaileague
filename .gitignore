@@ -7,3 +7,15 @@ vite.config.ts.*
 *.tar.gz.parta*
 *.tar.gz.partb*
 workforceos-platform.tar.gz.*
+
+# ACME sandbox simulation outputs (telemetry / payloads / fake artifacts).
+# The harness regenerates these on every run; we only commit one curated
+# dryrun snapshot under artifacts/acme-sandbox/dryrun/ for reviewer eyes.
+artifacts/acme-sandbox/ids/
+artifacts/acme-sandbox/photos/
+artifacts/acme-sandbox/contracts/
+artifacts/acme-sandbox/financials/
+artifacts/acme-sandbox/emails/
+artifacts/acme-sandbox/sms/
+artifacts/acme-sandbox/webhooks/
+artifacts/acme-sandbox/telemetry/

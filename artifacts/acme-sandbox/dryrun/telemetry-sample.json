@@ -1,0 +1,67 @@
+{
+  "workspaceId": "demo-workspace-00000000",
+  "runStamp": "2026-05-01T02:15:29.614Z",
+  "finance": {
+    "totalInvoiced": 26880,
+    "totalCollected": 20160,
+    "outstanding": 6720,
+    "stripeFeeTotal": 779.65,
+    "platformFeeTotal": 806.4,
+    "invoiceCount": 4
+  },
+  "payroll": {
+    "totalEarned": 13440,
+    "totalDisbursed": 10453.32,
+    "overtimePremium": 240,
+    "payrollRunCount": 3,
+    "arrearsAdjustments": 0
+  },
+  "compliance": {
+    "expiredLicenseBlocks": 1,
+    "armedShiftsScheduled": 6,
+    "psychPendingFlags": 1,
+    "killSwitchTriggered": true
+  },
+  "tax": {
+    "estimatedFederal": 1612.8,
+    "estimatedState": 672,
+    "estimatedFICA": 1027.66,
+    "estimatedFUTA": 80.64,
+    "estimatedSUTA": 362.88,
+    "withheldTotal": 3312.46
+  },
+  "network": {
+    "httpErrorCount4xx": 0,
+    "httpErrorCount5xx": 0,
+    "failedWebhooks": 0,
+    "failedEmails": 0,
+    "failedSms": 0
+  },
+  "chaosResults": [
+    {
+      "testCase": "Arrears Math",
+      "systematicResult": "Invoiced=$26880, Payroll=$13440, Margin=50.0%, OT-hours=12.0",
+      "semanticOutcome": "Bi-weekly payroll captured overtime premium correctly",
+      "gapFound": false
+    },
+    {
+      "testCase": "Kill-Switch",
+      "systematicResult": "armed_shifts=6, blocks=1",
+      "semanticOutcome": "Lvl-III commission expired mid-period; Trinity blocked re-assignment",
+      "gapFound": false
+    },
+    {
+      "testCase": "Stripe Webhook",
+      "systematicResult": "declined→open, success→paid",
+      "semanticOutcome": "Synapse mirrored Stripe sandbox state on both decline + retry",
+      "gapFound": false
+    },
+    {
+      "testCase": "AI Triage",
+      "systematicResult": "parsedLevel=TX-Lvl-III, psychPending=true, citations=1",
+      "semanticOutcome": "Trinity refused illegal armed staffing, cited PSP-13",
+      "gapFound": false
+    }
+  ],
+  "verdict": "PRODUCTION_READY"
+}

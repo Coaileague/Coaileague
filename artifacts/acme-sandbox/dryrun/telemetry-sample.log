@@ -1,0 +1,18 @@
+========== HOLISTIC TELEMETRY LOG (DRY-RUN SAMPLE) ==========
+Workspace : demo-workspace-00000000
+Run stamp : 2026-05-01T02:15:29.614Z
+Verdict   : PRODUCTION_READY
+
+[FINANCE]    Invoiced=$26880.00  Collected=$20160.00  Outstanding=$6720.00  Fees=$779.65  N=4
+[PAYROLL]    Earned=$13440.00  Disbursed=$10453.32  OT-premium=$240.00  Runs=3
+[COMPLIANCE] expiredLicenseBlocks=1  armedShiftsScheduled=6  killSwitchTriggered=true
+[TAX]        Fed=$1612.80  State=$672.00  FICA=$1027.66  FUTA=$80.64  SUTA=$362.88  Withheld=$3312.46
+[NETWORK]    4xx=0  5xx=0  webhookFails=0  emailFails=0  smsFails=0
+
+---------- CHAOS TEST TABLE ----------
+| Test Case        | Systematic Result | Semantic Outcome | Gap Found? |
+| :--------------- | :---------------- | :--------------- | :--------- |
+| Arrears Math     | Invoiced=$26880, Payroll=$13440, Margin=50.0%, OT-hours=12.0 | Bi-weekly payroll captured overtime premium correctly | No |
+| Kill-Switch      | armed_shifts=6, blocks=1 | Lvl-III commission expired mid-period; Trinity blocked re-assignment | No |
+| Stripe Webhook   | declined→open, success→paid | Synapse mirrored Stripe sandbox state on both decline + retry | No |
+| AI Triage        | parsedLevel=TX-Lvl-III, psychPending=true, citations=1 | Trinity refused illegal armed staffing, cited PSP-13 | No |
