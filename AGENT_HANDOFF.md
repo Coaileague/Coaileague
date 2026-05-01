@@ -133,3 +133,24 @@ No as any unless it's a JOIN result (documented in domainExtensions.ts).
 featureStubRouter MUST stay LAST in routes.ts.
 Trinity = one individual. HelpAI = only bot field workers see.
 ```
+
+---
+
+## RAILWAY DEPLOYMENT LOG
+
+### Failed Deploys (3) — All Fixed
+
+| Fix | Root Cause | Status |
+|-----|-----------|--------|
+| integrations-status.ts missing default export | Old code had no `export default router` | ✅ Fixed (all phases) |
+| Duplicate TrinityAnimatedLogo size attr | `<TrinityAnimatedLogo size={32}` + `size={config.logoSize}` | ✅ Fixed (all phases) |
+| Wrong ErrorBoundary import path | `@/components/ui/error-boundary` → doesn't exist | ✅ Fixed (all phases) |
+| **@capacitor/haptics bundling crash** | **haptics.ts imported native Capacitor module** | **✅ Fixed — PR #223 merged** |
+
+**PR #223** (railway-app[bot]): externalize `@capacitor/haptics` in `vite.config.ts rollupOptions`
+This was the ROOT CAUSE. haptics.ts (from chatdock session) imports @capacitor/haptics which
+is a native Capacitor plugin, not a bundleable npm package. Vite fails at build time.
+Fix: add to rollupOptions.external.
+
+**Current HEAD:** `a288b308` — includes PR #223 + all session merges
+**Build status:** 0 server + 0 client errors ✅
