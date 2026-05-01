@@ -229,7 +229,9 @@ async function notify(flag: PreShiftFlag, shift: UpcomingShift): Promise<boolean
         workspaceId: shift.workspaceId,
         recipientUserId,
         channel: 'in_app',
-        subject: `Pre-shift flag: ${flag.code.replace(/_/g, ' ')}`,
+        subject: `Pre-shift flag: ${flag.code.replace(/_/g, ' ')
+       
+      }`,
         body: {
           summary,
           shiftId: shift.shiftId,

@@ -497,7 +497,8 @@ async function fanoutInApp(
           entityType: payload.entityType,
           entityId: payload.entityId,
           details: payload.details,
-        },
+       
+      },
         idempotencyKey: `revrisk-${payload.entityType}-${payload.entityId}-${payload.code}-${recipientUserId}`,
       }),
     ),

@@ -190,7 +190,7 @@ export interface SendNotificationPayload {
 }
 
 export class NotificationDeliveryService {
-  private static readonly DEFAULT_DEDUP_WINDOW_MS = 5 * 60 * 1000;
+  private static readonly DEFAULT_DEDUP_WINDOW_MS = 30 * 60 * 1000; // 30 min dedup (was 5 min — prevents spam)
   private static readonly EMPTY_BODY_FALLBACK = 'Notification received. Please log in for details.';
   private static readonly SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -321,6 +321,44 @@ export class NotificationDeliveryService {
         await this.attemptDelivery(rec.id);
       }
       return rec.id;
+    }
+
+
+    // ANTI-SPAM: Per-user push rate limit (max 3/hr, 15/day for non-critical)
+    if (payload.channel === 'push') {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const oneDayAgo  = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const criticalTypes = ['panic_alert','payroll_failure','account_suspended','security_breach','emergency'];
+      const isCritical = criticalTypes.includes(payload.type);
+
+      if (!isCritical) {
+        const [hourRows, dayRows] = await Promise.all([
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(notificationDeliveries)
+            .where(and(
+              eq(notificationDeliveries.recipientUserId, payload.recipientUserId),
+              eq(notificationDeliveries.channel, 'push'),
+              gte(notificationDeliveries.createdAt, oneHourAgo),
+            )),
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(notificationDeliveries)
+            .where(and(
+              eq(notificationDeliveries.recipientUserId, payload.recipientUserId),
+              eq(notificationDeliveries.channel, 'push'),
+              gte(notificationDeliveries.createdAt, oneDayAgo),
+            )),
+        ]);
+        const hCount = (hourRows[0]?.count as number) ?? 0;
+        const dCount = (dayRows[0]?.count as number) ?? 0;
+        if (hCount >= 3) {
+          log.info('[NDS] Push rate-limited (hourly cap 3/hr)', { user: payload.recipientUserId, count: hCount });
+          return `rate_limited:hourly:${payload.recipientUserId}`;
+        }
+        if (dCount >= 15) {
+          log.info('[NDS] Push rate-limited (daily cap 15/day)', { user: payload.recipientUserId, count: dCount });
+          return `rate_limited:daily:${payload.recipientUserId}`;
+        }
+      }
     }
 
     const [record] = await db

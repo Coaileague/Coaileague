@@ -383,7 +383,9 @@ async function notify(a: Anomaly): Promise<boolean> {
         workspaceId: a.workspaceId,
         recipientUserId,
         channel: 'in_app',
-        subject: `Anomaly: ${a.code.replace(/_/g, ' ')}`,
+        subject: `Anomaly: ${a.code.replace(/_/g, ' ')
+       
+      }`,
         body: {
           summary: a.summary,
           code: a.code,

@@ -420,7 +420,9 @@ async function markNoReply(
         recipientUserId,
         channel: 'in_app',
         subject: 'Wellness check: no reply',
-        body: { summary, timeEntryId, employeeId },
+        body: { summary, timeEntryId, employeeId
+       
+      },
         idempotencyKey: `wellness-noreply-${timeEntryId}-${recipientUserId}`,
       }),
     ),
