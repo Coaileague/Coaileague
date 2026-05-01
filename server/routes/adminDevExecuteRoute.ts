@@ -18,7 +18,7 @@
  * strong, randomly-generated ADMIN_SCRIPT_TOKEN.
  */
 
-import { Router } from 'express';
+import { Router, Response} from 'express';
 import { AuthenticatedRequest } from '../rbac';
 import { timingSafeEqual } from 'crypto';
 import { createLogger } from '../lib/logger';
@@ -30,7 +30,7 @@ const router = Router();
 
 // ─── Token middleware ─────────────────────────────────────────────────────────
 
-function requireAdminScriptToken(req: AuthenticatedRequest, res: any, next: unknown): void {
+function requireAdminScriptToken(req: AuthenticatedRequest, res: Response, next: unknown): void {
   const expectedToken = process.env.ADMIN_SCRIPT_TOKEN;
 
   if (!expectedToken) {

@@ -337,7 +337,7 @@ router.get("/commands", requireAuth, async (req: AuthenticatedRequest, res) => {
 // ── HELPERS ─────────────────────────────────────────────────────────────────
 
 async function handleBotCommand(
-  req: AuthenticatedRequest, res: any, roomId: string, content: string, wid: string, uid: string
+  req: AuthenticatedRequest, res: Response, roomId: string, content: string, wid: string, uid: string
 ) {
   const parts = content.trim().split(/\s+/);
   const cmd = parts[0].toLowerCase();

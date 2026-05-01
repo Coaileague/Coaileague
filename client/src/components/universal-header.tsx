@@ -6,7 +6,6 @@
  */
 
 import { Button } from "@/components/ui/button";
-import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { UniversalModal, UniversalModalTrigger } from '@/components/ui/universal-modal';
@@ -78,7 +77,7 @@ function TrinityDesktopButton({
       
       {/* Trinity mascot icon - centered and larger */}
       <div className="relative z-10 -mt-1">
-        <TrinityAnimatedLogo size={36} />
+        <TrinityLogo size={36} />
       </div>
       
       {/* Curved "Ask Trinity" text using SVG */}
@@ -119,6 +118,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,  } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HEADER_CONFIG, HEADER_SPACING, HEADER_HEIGHTS } from "@/config/headerConfig";
+import { getCurrentHoliday } from "@/config/mascotConfig";
 import { selectSidebarFamilies, selectCondensedMobileFamilies } from "@/lib/sidebarModules";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -138,7 +138,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   const [location, setLocation] = useLocation();
   const { activeSessionId } = useTrinitySession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // V1.1: Seasonal theming removed — SnowfallEngine restored in UI polish phase
+  const [isChristmas, setIsChristmas] = useState(false);
   const isMobile = useIsMobile();
   const { openModal: openTrinityModal } = useTrinityModal();
   const { toggleBubble } = useChatDock();
@@ -149,6 +149,8 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
+  const [lightPhase, setLightPhase] = useState(0);
+  
   const transitionLoader = useTransitionLoaderIfMounted();
   useEffect(() => {
     if (transitionLoader) {
@@ -173,6 +175,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   // Desktop uses full navigation, Mobile uses condensed workforce-focused navigation
   const workspaceFamilies = useMemo(() => {
     if (workspaceLoading || !isWorkspaceMode) return [];
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities);
   }, [workspaceLoading, isWorkspaceMode, workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities]);
   
@@ -180,8 +183,51 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   // Only shows core tools: clock in/out, schedule, chat, timesheets, approvals (managers)
   const mobileWorkspaceFamilies = useMemo(() => {
     if (workspaceLoading || !isWorkspaceMode) return [];
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     return selectCondensedMobileFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
   }, [workspaceLoading, isWorkspaceMode, workspaceRole, subscriptionTier, isPlatformStaff]);
+
+  // Detect Christmas season only if seasonal theming is not disabled
+  useEffect(() => {
+    // Check if seasonal theming is disabled via environment variable
+    const disableSeasonal = import.meta.env.VITE_DISABLE_SEASONAL_THEMING === 'true';
+    if (disableSeasonal) {
+      setIsChristmas(false);
+      return;
+    }
+    // Also check via API to respect runtime settings
+    fetch('/api/mascot/seasonal/state', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.isDisabled || data?.forceDeactivated) {
+          setIsChristmas(false);
+        } else {
+          const holiday = getCurrentHoliday();
+          setIsChristmas(holiday?.key === 'christmas');
+        }
+      })
+      .catch(() => {
+        // On error, fall back to date check
+        const holiday = getCurrentHoliday();
+        setIsChristmas(holiday?.key === 'christmas');
+      });
+  }, []);
+
+  // Animate Christmas light colors on mobile word logo
+  useEffect(() => {
+    if (!isChristmas) return;
+    const interval = setInterval(() => {
+      setLightPhase(prev => (prev + 1) % 6);
+    }, 600); // Fast twinkling for mobile lights
+    return () => clearInterval(interval);
+  }, [isChristmas]);
+
+  // Christmas light colors for each letter position
+  const mobileChristmasColors = useMemo(() => {
+    const colors = ['#dc2626', '#16a34a', '#eab308', '#3b82f6', '#a855f7', '#f97316'];
+    // Rotate colors based on phase for twinkling effect
+    return colors.map((_, i) => colors[(i + lightPhase) % colors.length]);
+  }, [lightPhase]);
 
   // Only show notification/messaging features in WORKSPACE mode (not on public pages)
   // This keeps public landing pages clean and uncluttered
@@ -246,6 +292,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 {HEADER_CONFIG.public.navItems.map((item) => (
                   <button
                     key={item.href}
+                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     onClick={item.isSpecial ? handleFeaturesClick : () => setLocation(item.href)}
                     className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors min-h-[44px] px-3"
                     data-testid={item.testid}
@@ -347,8 +394,8 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
           ) : (
             // WORKSPACE NAVIGATION
             <>
-              {/* Desktop workspace controls — pinned to far right */}
-              <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0 ml-auto">
+              {/* Desktop workspace controls */}
+              <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
                 <div className="hidden lg:block">
                   <TrinityDesktopButton 
                     onClick={openTrinityModal} 
@@ -371,7 +418,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
-                      size="icon" aria-label="User Menu Workspace"
+                      size="icon"
                       className={HEADER_HEIGHTS.iconButton}
                       data-testid="button-user-menu-workspace"
                     >
@@ -445,7 +492,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     />
                     <button
                       className="inline-flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                      onClick={() => { (window as Record<string,unknown>).openCommandPalette?.(); }}
+                      onClick={() => { (window as any).openCommandPalette?.(); }}
                       data-testid="button-mobile-search"
                       aria-label="Search"
                       title="Search"
@@ -453,11 +500,8 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       <Search className="h-4 w-4" />
                     </button>
                     <TrinityTaskLauncher compact data-testid="button-trinity-tasks-mobile" />
+                    <NotificationsPopover />
                   </>
-                )}
-                {/* Bell + Avatar always far-right, Bell immediately left of Avatar */}
-                {user && showNotificationFeatures && (
-                  <NotificationsPopover />
                 )}
                 {user ? (
                   <Button

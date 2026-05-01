@@ -2077,7 +2077,7 @@ class SubagentSupervisor {
           .where(eq(aiSubagentDefinitions.name, subagent.name))
           .limit(1);
         if (existing.length === 0) {
-          await db.insert(aiSubagentDefinitions).values({ ...(subagent as any), workspaceId: PLATFORM_WORKSPACE_ID });
+          await db.insert(aiSubagentDefinitions).values({ ...(subagent as Record<string, unknown>), workspaceId: PLATFORM_WORKSPACE_ID });
           log.info(`[SubagentSupervisor] Created subagent: ${subagent.name}`);
         }
         consecutiveFailures = 0;

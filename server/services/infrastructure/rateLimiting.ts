@@ -1,3 +1,4 @@
+import type { Response, Request } from 'express';
 /**
  * Rate Limiting Enhancement Service - Q2 2026 Infrastructure
  * 
@@ -364,7 +365,7 @@ export const rateLimiting = RateLimitingService.getInstance();
  * Express middleware for rate limiting
  */
 export function rateLimitMiddleware(getTenantId: (req: unknown) => string, getPlan?: (req: unknown) => TenantQuota['plan']) {
-  return (req: unknown, res: any, next: unknown) => {
+  return (req: Request, res: Response, next: unknown) => {
     const tenantId = getTenantId(req);
     const plan = getPlan ? getPlan(req) : 'free';
 

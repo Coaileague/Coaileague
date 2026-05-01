@@ -353,7 +353,7 @@ router.get("/compliance-matrix", requireAuth, async (req: AuthenticatedRequest, 
       else if (rec.status === 'expired') emp.expired_count++;
     }
 
-    for (const emp of Object.values(byEmployee) as any[]) {
+    for (const emp of Object.values(byEmployee) as Record<string,unknown>[]) {
       if (emp.expired_count > 0 || emp.missing_count > 0) emp.overall_status = 'non_compliant';
       else if (emp.expiring_soon_count > 0) emp.overall_status = 'expiring_soon';
       else emp.overall_status = 'compliant';

@@ -21,8 +21,8 @@ export function mountSalesRoutes(app: Express): void {
   app.use("/api/public/leads", publicLeadsRouter);
   app.use("/api/testimonials", testimonialsRouter);
   app.use("/api/proposals", requireAuth, ensureWorkspaceAccess, proposalRouter);
-  app.post("/api/ethics/report", (req: AuthenticatedRequest, res: any, next: unknown) => rfpEthicsRouter(req, res, next));
-  app.get("/api/ethics/followup/:token", (req: AuthenticatedRequest, res: any, next: unknown) => rfpEthicsRouter(req, res, next));
+  app.post("/api/ethics/report", (req: AuthenticatedRequest, res: Response, next: unknown) => rfpEthicsRouter(req, res, next));
+  app.get("/api/ethics/followup/:token", (req: AuthenticatedRequest, res: Response, next: unknown) => rfpEthicsRouter(req, res, next));
   app.use("/api", requireAuth, ensureWorkspaceAccess, rfpEthicsRouter);
   app.use("/api/pipeline-deals", requireAuth, ensureWorkspaceAccess, rfpPipelineRouter);
   // Phase 35B — Sales Pipeline / CRM (must mount BEFORE generic /api/sales)

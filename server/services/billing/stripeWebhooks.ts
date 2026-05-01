@@ -726,7 +726,7 @@ export class StripeWebhookService {
             isRead: false,
             createdAt: new Date(),
           }));
-          await db.insert(notifications).values(adminNotifications as any);
+          await db.insert(notifications).values(adminNotifications as Record<string, unknown>);
           log.info('Platform admin notified of payment failure', { workspaceId, adminCount: adminRoleRows.length, attemptCount });
         }
       } catch (adminNotifErr: unknown) {

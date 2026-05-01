@@ -1,3 +1,4 @@
+import type { Response, Request } from 'express';
 /**
  * TRINITY ORCHESTRATION GATEWAY
  * =============================
@@ -912,7 +913,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
  * This middleware should be mounted early in the middleware chain.
  */
 export function trinityOrchestrationMiddleware() {
-  return async (req: unknown, res: any, next: unknown) => {
+  return async (req: Request, res: Response, next: unknown) => {
     const startTime = Date.now();
     const originalEnd = res.end;
     const originalJson = res.json;

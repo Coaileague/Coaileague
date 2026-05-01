@@ -7,7 +7,7 @@
 export function setAppBadge(count: number): void {
   try {
     if ("setAppBadge" in navigator) {
-      (navigator as Record<string,unknown>).setAppBadge(count).catch(() => {});
+      (navigator as any).setAppBadge(count).catch(() => {});
     }
   } catch {
     // Badge API not supported or permission denied — silently ignore
@@ -17,7 +17,7 @@ export function setAppBadge(count: number): void {
 export function clearAppBadge(): void {
   try {
     if ("clearAppBadge" in navigator) {
-      (navigator as Record<string,unknown>).clearAppBadge().catch(() => {});
+      (navigator as any).clearAppBadge().catch(() => {});
     }
   } catch {
     // Badge API not supported — silently ignore

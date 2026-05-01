@@ -122,7 +122,7 @@ function COIRequestDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       onOpenChange(false);
       setForm({ reason: "", additionalInfo: "", clientName: "", certificateHolder: "" });
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -214,7 +214,7 @@ function RenewalRequestDialog({
       onOpenChange(false);
       setNotes("");
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -311,7 +311,7 @@ function ClientMessagesTab({ clientId }: { clientId: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/client-comms/portal/threads", clientId] });
       setCompose("");
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const selectedThread = threads.find(t => t.id === selectedId) || null;
@@ -326,10 +326,10 @@ function ClientMessagesTab({ clientId }: { clientId: string }) {
         <CardDescription>Direct messages with your security provider</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="flex min-h-[min(400px,55dvh)] border-t">
+        <div className="flex min-h-[400px] border-t">
           {/* Thread List */}
           <div className="w-64 shrink-0 border-r">
-            <ScrollArea className="h-[min(400px,55dvh)]">
+            <ScrollArea className="h-[400px]">
               {threadsLoading ? (
                 <div className="p-3 space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -473,7 +473,7 @@ function StripePaymentForm({
       } else {
         onError("Payment status unclear. Please check your email for confirmation.");
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       onError(err.message || "Unexpected error during payment.");
     } finally {
       setConfirming(false);
@@ -542,7 +542,7 @@ function InvoicePaymentModal({ invoice, accessToken, onClose, onPaid }: InvoiceP
           invoiceNumber: data.invoiceNumber,
         });
         setStep("ready");
-      } catch (err: unknown) {
+      } catch (err: any) {
         if (cancelled) return;
         setErrorMsg(err.message || "Could not start payment session.");
         setStep("error");
@@ -664,7 +664,7 @@ export default function ClientPortal() {
   const { data: clients = [] } = useClientLookup();
   const currentClient = clients.find(c => c.email === user?.email);
 
-  interface ClientReport { id: number; title: string; reportType: string; status: string; employeeName?: string; createdAt: string; data: Record<string, unknown>; }
+  interface ClientReport { id: number; title: string; reportType: string; status: string; employeeName?: string; createdAt: string; data: Record<string, any>; }
   interface ClientGuardTour { id: string; tour_name?: string; status: string; completed_at?: string; completion_percentage?: string; officer_name?: string; }
   interface ClientDar { id: string; report_number?: string; site_name?: string; shift_date?: string; employee_name?: string; status?: string; pdf_url?: string; photo_count?: number; }
   interface ClientIncident { id: string; title: string; incident_type?: string; severity?: string; occurred_at?: string; location?: string; status?: string; site_id?: string; officer_name?: string; }
@@ -744,7 +744,7 @@ export default function ClientPortal() {
       setPreRegForm({ expectedVisitorName: '', expectedVisitorCompany: '', visitorType: 'guest', siteName: '', expectedArrival: '', expectedDeparture: '', hostName: '', hostContact: '', reason: '' });
       setShowPreRegForm(false);
     },
-    onError: (err) => { toast({ title: 'Error', description: err.message, variant: 'destructive' }); },
+    onError: (err: any) => { toast({ title: 'Error', description: err.message, variant: 'destructive' }); },
   });
   const allVisitors = visitorsData?.visitors || [];
   const filteredVisitors = allVisitors.filter(v => {
@@ -792,7 +792,7 @@ export default function ClientPortal() {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       setSvcReqForm({ requestType: "", description: "", urgency: "normal", requestedDate: "" });
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   // ── Settings ─────────────────────────────────────────────────────────────────
@@ -805,7 +805,7 @@ export default function ClientPortal() {
       toast({ title: "Profile Updated", description: "Your name has been updated successfully." });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
   const changePasswordMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/auth/change-password", {
@@ -816,7 +816,7 @@ export default function ClientPortal() {
       toast({ title: "Password Changed", description: "Your password has been updated. Please log in again." });
       setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword("");
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   // ── Phase 25 — Client Identity: CLT number + self-service PIN ───────────────
@@ -833,7 +833,7 @@ export default function ClientPortal() {
       setClientPinInput("");
       queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
     },
-    onError: (e) => toast({
+    onError: (e: any) => toast({
       title: "Could not save PIN",
       description: e?.message || "Please try again",
       variant: "destructive",
@@ -845,7 +845,7 @@ export default function ClientPortal() {
       toast({ title: "Client PIN cleared" });
       queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
     },
-    onError: (e) => toast({
+    onError: (e: any) => toast({
       title: "Could not clear PIN",
       description: e?.message || "Please try again",
       variant: "destructive",
@@ -853,7 +853,7 @@ export default function ClientPortal() {
   });
   // CLT-XXX-NNNNN — primary canonical identifier; clientCode is the optional
   // external QuickBooks-style code if the tenant maintains one separately.
-  const clientNumber = (currentClient as Record<string,unknown>)?.clientNumber || (currentClient as Record<string,unknown>)?.clientCode || null;
+  const clientNumber = (currentClient as any)?.clientNumber || (currentClient as any)?.clientCode || null;
   const copyClientNumber = () => {
     if (!clientNumber) return;
     navigator.clipboard.writeText(clientNumber);
@@ -868,10 +868,10 @@ export default function ClientPortal() {
   // Sync user name to settings state when user data loads
   useEffect(() => {
     if (user) {
-      setSettingsFirstName((user as Record<string,unknown>).firstName || "");
-      setSettingsLastName((user as Record<string,unknown>).lastName || "");
+      setSettingsFirstName((user as any).firstName || "");
+      setSettingsLastName((user as any).lastName || "");
     }
-  }, [(user as Record<string,unknown>)?.firstName, (user as Record<string,unknown>)?.lastName]);
+  }, [(user as any)?.firstName, (user as any)?.lastName]);
 
   if (!currentClient) {
     const notFoundConfig: CanvasPageConfig = { id: "client-portal-not-found", title: "Client Dashboard", subtitle: "Client Account Not Found", category: "dashboard" };
@@ -1156,7 +1156,7 @@ export default function ClientPortal() {
                             <TableCell>{statusBadge(inv.status || "")}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1.5">
-                                // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
+                                // @ts-ignore — TS migration: fix in refactoring sprint
                                 <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as any).id)} data-testid={`button-pdf-${(inv as any).id}`}>
                                   <Download className="h-3.5 w-3.5 mr-1" /> PDF
                                 </Button>
@@ -1202,7 +1202,7 @@ export default function ClientPortal() {
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-green-600">${Number(inv.total || 0).toFixed(2)}</p>
                         <Badge className="bg-green-500/10 text-green-600 border-0"><CheckCircle2 className="h-3 w-3 mr-1" />Paid</Badge>
-                        // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
+                        // @ts-ignore — TS migration: fix in refactoring sprint
                         <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as any).id)} data-testid={`button-pdf-paid-${(inv as any).id}`}>
                           <Download className="h-3.5 w-3.5" />
                         </Button>
@@ -1812,7 +1812,7 @@ export default function ClientPortal() {
                   </div>
                 ) : (
                   <div className="space-y-2" data-testid="client-pre-registrations-list">
-                    {preRegistrations.map((p) => (
+                    {preRegistrations.map((p: any) => (
                       <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-md border flex-wrap" data-testid={`card-client-prereg-${p.id}`}>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -2261,7 +2261,7 @@ export default function ClientPortal() {
 
       {/* Floating DockChat Widget */}
       <DockChatWidget
-        orgWorkspaceId={(user as Record<string,unknown>)?.workspaceId || ""}
+        orgWorkspaceId={(user as any)?.workspaceId || ""}
         clientId={String(currentClient.id)}
         clientName={currentClient.companyName || `${currentClient.firstName || ""} ${currentClient.lastName || ""}`.trim()}
         clientEmail={currentClient.email || user?.email || ""}

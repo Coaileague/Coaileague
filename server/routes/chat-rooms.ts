@@ -36,7 +36,7 @@ const router = Router();
 // ── Shared Room Lifecycle Helper (Codex: deduplicated close/reopen) ─────────
 async function handleRoomLifecycleAction(
   req: AuthenticatedRequest,
-  res: any,
+  res: Response,
   action: 'close' | 'reopen',
 ): Promise<void> {
   try {

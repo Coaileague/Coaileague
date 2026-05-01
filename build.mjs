@@ -60,21 +60,17 @@ async function build() {
       format: 'esm',
       outdir: 'dist',
       banner: {
-        // Provides require() for CJS modules bundled into ESM output.
-        // __filename and __dirname are intentionally omitted — esbuild
-        // injects its own var __filename / var __dirname shims when
-        // bundling source files that reference these CJS globals. Having
-        // a const __filename in this banner AND esbuild's var __filename
-        // in the body causes: SyntaxError: Identifier '__filename' has
-        // already been declared (const vs var at module scope in strict ESM).
         js: [
           `import { createRequire as __createRequire } from 'module';`,
+          `import { fileURLToPath as __fileURLToPath } from 'url';`,
+          `import __path from 'path';`,
           `const require = __createRequire(import.meta.url);`,
+          `const __filename = __fileURLToPath(import.meta.url);`,
+          `const __dirname = __path.dirname(__filename);`,
         ].join('\n'),
       },
-      packages: 'external',    // All node_modules resolved at runtime (Railway deploys with node_modules)
       external: [
-        // --- Node built-ins & native addons (still need explicit list for safety) ---
+        // Native / binary modules
         'better-sqlite3',
         'pg-native',
         'sqlite3',
@@ -84,7 +80,18 @@ async function build() {
         'sharp',
         'bcrypt',
         'fsevents',
+        // Dev tooling (never needed at runtime)
         'typescript',
+        // ESM-only packages that cannot be bundled by esbuild CJS bundler
+        'date-fns',
+        'openai',
+        // CJS packages with complex dynamic requires
+        'twilio',
+        // Capacitor native plugins (mobile-only, not available in Node)
+        '@capacitor/haptics',
+        '@capacitor/core',
+        '@capacitor/app',
+        '@capacitor/push-notifications',
       ],
       alias: {
         '@shared': path.resolve(__dirname, 'shared'),

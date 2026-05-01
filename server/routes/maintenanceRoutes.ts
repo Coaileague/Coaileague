@@ -10,7 +10,7 @@
  */
 
 import { sanitizeError } from '../middleware/errorHandler';
-import { Router } from 'express';
+import { Router, Response} from 'express';
 import { z } from 'zod';
 import { maintenanceModeService } from '../services/maintenanceModeService';
 import { trinityMaintenanceOrchestrator, DiagnosticsReport } from '../services/trinityMaintenanceOrchestrator';
@@ -53,7 +53,7 @@ const diagnosticsReportSchema = z.object({
  * Middleware: accept either a valid DIAG_BYPASS_SECRET header (Trinity internal calls)
  * or a fully authenticated platform admin user. Rejects if neither condition is met.
  */
-function requireTrinityOrAdmin(req: AuthenticatedRequest, res: any, next: unknown) {
+function requireTrinityOrAdmin(req: AuthenticatedRequest, res: Response, next: unknown) {
   const diagSecret = process.env.DIAG_BYPASS_SECRET;
   const suppliedSecret = req.headers['x-diagnostics-runner'];
   const trinityActor = req.headers['x-trinity-actor'];

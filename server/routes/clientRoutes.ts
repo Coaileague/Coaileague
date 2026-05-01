@@ -1034,7 +1034,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-function dockChatRateLimit(req: AuthenticatedRequest, res: any, next: unknown) {
+function dockChatRateLimit(req: AuthenticatedRequest, res: Response, next: unknown) {
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
   const now = Date.now();
   const windowMs = 60_000;

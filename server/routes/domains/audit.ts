@@ -211,7 +211,7 @@ export function mountAuditRoutes(app: Express): void {
   app.use("/api/kpi-alerts", kpiAlertRouter);
   app.use("/api/insights", requireAuth, ensureWorkspaceAccess, insightsRouter);
   // Predict & patterns routes have full /api/predict/*, /api/patterns/* paths inside insightsRouter
-  app.use((req: AuthenticatedRequest, res: any, next: unknown) => {
+  app.use((req: AuthenticatedRequest, res: Response, next: unknown) => {
     if (req.path.startsWith("/api/predict") || req.path.startsWith("/api/patterns")) {
       return insightsRouter(req, res, next);
     }

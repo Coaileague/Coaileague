@@ -2,15 +2,31 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, cre
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck, MessageCircle, Trash2, CheckCircle2 } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { 
+  Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
+  Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck,
+  MessageCircle, Trash2, CheckCircle2
+} from "lucide-react";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
-import { Popover, PopoverContent, PopoverTrigger,  } from "@/components/ui/popover";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { UniversalModal, UniversalModalContent } from '@/components/ui/universal-modal'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,  } from "@/components/ui/alert-dialog";
-;
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MobileResponsiveSheet } from "@/components/canvas-hub";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -20,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
+import { deriveTrinityModeFromUser } from "@/hooks/use-business-buddy-tier";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
 import { useChatDock } from "@/contexts/ChatDockContext";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
@@ -152,10 +169,10 @@ interface UNSNotification {
 }
 
 interface NotificationsData {
-  platformUpdates: unknown[];
-  maintenanceAlerts: unknown[];
-  notifications: unknown[];
-  gapFindings?: unknown[];
+  platformUpdates: any[];
+  maintenanceAlerts: any[];
+  notifications: any[];
+  gapFindings?: any[];
   unreadPlatformUpdates: number;
   unreadNotifications: number;
   unreadAlerts: number;
@@ -270,7 +287,7 @@ function usePendingClears() {
     // Check bulk pending IDs
     _pendingBulkIds?.forEach(id => {
       if (confirmedClearedIds.has(id) || !responseIds.has(id)) {
-        _pendingBulkIds?.delete(id);
+        _pendingBulkIds!.delete(id);
         changed = true;
       }
     });
@@ -334,7 +351,7 @@ function canSeeEndUserActions(workspaceRole: string | null | undefined, isAuthen
 }
 
 // Generate simplified inline actions for end users (employees, officers)
-function generateEndUserActions(notif: unknown): UNSNotification['actions'] {
+function generateEndUserActions(notif: any): UNSNotification['actions'] {
   const actions: UNSNotification['actions'] = [];
   const title = (notif.title || '').toLowerCase();
   const type = notif.type || notif.category || '';
@@ -416,7 +433,7 @@ function generateEndUserActions(notif: unknown): UNSNotification['actions'] {
 
 // Generate action buttons based on notification type and content
 function generateTypeBasedActions(
-  notif: unknown,
+  notif: any,
   platformRole: string | null | undefined,
   workspaceRole?: string | null,
   isAuthenticated?: boolean
@@ -616,10 +633,9 @@ function generateTypeBasedActions(
 }
 
 // Generate a correlation key to detect semantic duplicates from different sources
-function generateCorrelationKey(title: string | null | undefined, category: string, createdAt: string): string {
-  // Safely normalize title: handle null/undefined
-  const safeTitle = (title || 'notification').toString();
-  const normalizedTitle = safeTitle.toLowerCase()
+function generateCorrelationKey(title: string, category: string, createdAt: string): string {
+  // Normalize title: lowercase, remove non-alphanumeric, extract key words
+  const normalizedTitle = title.toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .split(/\s+/)
     .filter(word => word.length > 3) // Only keep significant words
@@ -974,7 +990,7 @@ function NotificationDetailModal({
     notification.title,
     notification.message,
     notification.subCategory,
-    notification.metadata as unknown
+    notification.metadata as any
   );
   
   const isCritical = notification.priority === 'critical';
@@ -993,11 +1009,13 @@ function NotificationDetailModal({
             : 'bg-muted'
         }`}>
           <div className="flex items-start gap-2 sm:gap-3">
-            <div className={['shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center', isCritical 
+            <div className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${
+              isCritical 
                 ? 'bg-red-600 dark:bg-red-800' 
                 : isHigh 
                 ? 'bg-amber-100 dark:bg-amber-900' 
-                : 'bg-primary/10'].join(' ')}>
+                : 'bg-primary/10'
+            }`}>
               <TrinityLogo size={20} />
             </div>
             <div className="flex-1 min-w-0">
@@ -1007,14 +1025,18 @@ function NotificationDetailModal({
                 {humanizeTitle(notification.title)}
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className={['text-[10px] px-1.5 sm:px-2 py-0.5', isCritical 
+                <Badge className={`text-[10px] px-1.5 sm:px-2 py-0.5 ${
+                  isCritical 
                     ? 'bg-red-400 text-white border-red-400' 
                     : isHigh 
                     ? 'bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200' 
-                    : 'bg-primary/10 text-primary'].join(' ')}>
+                    : 'bg-primary/10 text-primary'
+                }`}>
                   {(notification.priority ?? 'info').toUpperCase()}
                 </Badge>
-                <span className={['text-[10px] sm:text-xs', isCritical ? 'text-white/70' : isHigh ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground'].join(' ')}>
+                <span className={`text-[10px] sm:text-xs ${
+                  isCritical ? 'text-white/70' : isHigh ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground'
+                }`}>
                   {safeFormatTimestamp(notification.createdAt)}
                 </span>
               </div>
@@ -1071,7 +1093,7 @@ function NotificationDetailModal({
         
         {/* Action Buttons - compact on mobile */}
         <div className="p-3 sm:p-4 pt-0 flex flex-wrap gap-2 border-t mt-2">
-          {hasActions && (notification.actions ?? []).map((action, idx) => (
+          {hasActions && notification.actions!.map((action, idx) => (
             <Button
               key={idx}
               variant={idx === 0 ? 'default' : 'outline'}
@@ -1291,6 +1313,7 @@ function NotificationCard({
   onAction,
   onCardClick,
   onClose,
+  isGuruMode,
   canInteract,
   compact = false,
 }: { 
@@ -1299,6 +1322,7 @@ function NotificationCard({
   onAction: (notification: UNSNotification, action: NonNullable<UNSNotification['actions']>[0]) => void;
   onCardClick: (notification: UNSNotification) => void;
   onClose: () => void; // Closes the notification panel before opening Trinity
+  isGuruMode: boolean;
   canInteract: boolean;
   compact?: boolean;
 }) {
@@ -1369,7 +1393,7 @@ function NotificationCard({
         <Button
           variant="ghost"
           size="icon"
-          className={`absolute ${compact ? 'top-2 right-3 h-5 w-5' : 'top-3 right-4 h-6 w-6'} opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-[hsl(var(--modal-bg))] hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full`}
+          className={`absolute ${compact ? 'top-2 right-3 h-5 w-5' : 'top-3 right-4 h-6 w-6'} opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full`}
           onClick={(e) => {
             e.stopPropagation();
             onDismiss(notification.id);
@@ -1418,7 +1442,7 @@ function NotificationCard({
                 {/* Action Buttons - Right Side */}
                 {hasActions && (
                   <div className={`flex ${compact ? 'flex-row flex-wrap gap-1.5' : 'flex-col gap-2'} shrink-0`}>
-                    {(notification.actions ?? []).map((action, idx) => (
+                    {notification.actions!.map((action, idx) => (
                       <Button
                         key={idx}
                         variant={isCritical ? 'secondary' : 'outline'}
@@ -1514,7 +1538,7 @@ function NotificationCard({
                 {/* Action Buttons */}
                 {hasActions && (
                   <div className={`flex flex-wrap ${compact ? 'gap-1 mt-1.5' : 'gap-2 mt-2'}`}>
-                    {(notification.actions ?? []).map((action, idx) => (
+                    {notification.actions!.map((action, idx) => (
                       <Button
                         key={idx}
                         variant="outline"
@@ -1566,9 +1590,11 @@ function NotificationCard({
             {notification.statusTag && (
               <div className={compact ? "mt-1 ml-9" : "mt-2 ml-12"}>
                 <Badge 
-                  className={[compact ? 'text-[9px] px-1.5 py-0' : 'text-[10px] px-2 py-0.5', 'font-bold', notification.statusTag === 'ACTION REQUIRED' 
+                  className={`${compact ? 'text-[9px] px-1.5 py-0' : 'text-[10px] px-2 py-0.5'} font-bold ${
+                    notification.statusTag === 'ACTION REQUIRED' 
                       ? 'bg-amber-500 text-white' 
-                      : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400'].join(' ')}
+                      : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400'
+                  }`}
                 >
                   {notification.statusTag}
                 </Badge>
@@ -1581,195 +1607,6 @@ function NotificationCard({
   );
 }
 
-
-// ── UNS Command Center — Universal Notification System ────────────────────────
-// Renders the notification command panel inside the bell popover.
-// Full UNS redesign is planned; this renders the existing notification UI.
-interface UNSCommandCenterProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onAskTrinity?: (message: string) => void;
-  platformRole?: string;
-  workspaceRole?: string;
-}
-
-// Notification type → icon + color mapping
-function getNotificationIcon(type: string) {
-  const t = (type || '').toLowerCase();
-  if (t.includes('alert') || t.includes('warn') || t.includes('labor') || t.includes('compliance'))
-    return { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10' };
-  if (t.includes('coverage') || t.includes('shift') || t.includes('scheduling'))
-    return { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-500/10' };
-  if (t.includes('payroll') || t.includes('invoice') || t.includes('billing') || t.includes('pay'))
-    return { icon: Check, color: 'text-green-500', bg: 'bg-green-500/10' };
-  if (t.includes('message') || t.includes('chat') || t.includes('comm'))
-    return { icon: MessageCircle, color: 'text-purple-500', bg: 'bg-purple-500/10' };
-  if (t.includes('security') || t.includes('auth') || t.includes('access'))
-    return { icon: Shield, color: 'text-red-500', bg: 'bg-red-500/10' };
-  if (t.includes('success') || t.includes('approv') || t.includes('complet'))
-    return { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' };
-  if (t.includes('trinity') || t.includes('ai') || t.includes('spark'))
-    return { icon: Sparkles, color: 'text-violet-500', bg: 'bg-violet-500/10' };
-  return { icon: Bell, color: 'text-muted-foreground', bg: 'bg-muted' };
-}
-
-function UNSCommandCenter({ isOpen, onClose, onAskTrinity, platformRole, workspaceRole }: UNSCommandCenterProps) {
-  const queryClient = useQueryClient();
-  const { data: rawData, isLoading } = useQuery<NotificationsData>({
-    queryKey: ["/api/notifications/combined"],
-    enabled: isOpen,
-    staleTime: 0,
-  });
-
-  if (!isOpen) return null;
-
-  const notifications = Array.isArray(rawData?.notifications) 
-    ? rawData.notifications 
-    : [];
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-  const pendingCount = notifications.filter(n => n.actionRequired).length;
-  const shown = notifications.slice(0, 12);
-
-  const handleMarkAllRead = () => {
-    fetch('/api/notifications/mark-all-read', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed');
-        // Invalidate all notification query keys so count badge updates
-        queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
-      })
-      .catch(() => null);
-  };
-
-  return (
-    <div className="flex flex-col h-[460px] max-h-[65vh] w-[400px] max-w-[calc(100vw-1.5rem)]">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 shrink-0">
-        <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-primary" />
-          <span className="font-semibold text-sm">Notifications</span>
-          {unreadCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={handleMarkAllRead}
-              className="h-7 text-[11px] text-muted-foreground hover:text-foreground px-2">
-              Mark all read
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Notification List */}
-      <ScrollArea className="flex-1">
-        {isLoading ? (
-          <div className="flex flex-col gap-2 p-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="flex gap-3 p-2 animate-pulse">
-                <div className="h-8 w-8 rounded-full bg-muted shrink-0" />
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-3 bg-muted rounded w-3/4" />
-                  <div className="h-2.5 bg-muted rounded w-full" />
-                  <div className="h-2 bg-muted rounded w-1/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : shown.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-12 text-muted-foreground gap-3">
-            <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
-              <Bell className="h-6 w-6 opacity-40" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-medium">All caught up</p>
-              <p className="text-xs mt-0.5 opacity-70">No notifications yet</p>
-            </div>
-          </div>
-        ) : (
-          <div>
-            {shown.map((notification, idx) => {
-              const { icon: Icon, color, bg } = getNotificationIcon(notification.type || notification.category || '');
-              const isUnread = !notification.isRead;
-              return (
-                <div
-                  key={notification.id}
-                  className={['group flex gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer relative', idx > 0 ? 'border-t border-border/30' : ''].join(' ')}
-                >
-                  {/* Unread dot */}
-                  {isUnread && (
-                    <div className="absolute left-1.5 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-primary" />
-                  )}
-
-                  {/* Icon */}
-                  <div className={`h-8 w-8 rounded-full ${bg} flex items-center justify-center shrink-0 mt-0.5`}>
-                    <Icon className={`h-3.5 w-3.5 ${color}`} />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm leading-snug ${isUnread ? 'font-semibold' : 'font-medium'} truncate`}>
-                      {notification.title}
-                    </p>
-                    {notification.message && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
-                        {notification.message}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-muted-foreground">
-                        {notification.createdAt ? formatDistanceToNow(parseISO(notification.createdAt), { addSuffix: true }) : ''}
-                      </span>
-                      {notification.actionRequired && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] text-red-500 font-medium">
-                          <AlertTriangle className="h-2.5 w-2.5" />
-                          Action needed
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Arrow on hover */}
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-all mt-2 shrink-0" />
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <ScrollBar orientation="vertical" />
-      </ScrollArea>
-
-      {/* Footer */}
-      <div className="border-t border-border/40 p-2.5 flex gap-2 shrink-0">
-        {pendingCount > 0 && (
-          <Button onClick={onAskTrinity} size="sm" variant="outline" className="flex-1 gap-1 text-xs h-8">
-            <Zap className="h-3 w-3 text-violet-500" />
-            Ask Trinity ({pendingCount} pending)
-          </Button>
-        )}
-        {notifications.length > 12 && (
-          <Button size="sm" variant="ghost" className="flex-1 text-xs h-8 text-muted-foreground">
-            View all {notifications.length}
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
 export function NotificationsPopover() {
   const { user } = useAuth();
   
@@ -1781,7 +1618,7 @@ export function NotificationsPopover() {
   return <NotificationsPopoverInner user={user} />;
 }
 
-function NotificationsPopoverInner({ user }: { user: unknown }) {
+function NotificationsPopoverInner({ user }: { user: any }) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabCategory>('alerts');
   const [subFilter, setSubFilter] = useState<SubFilter>('all');
@@ -1820,15 +1657,15 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
   
   const { toast } = useToast();
   // user is now passed as a prop from NotificationsPopover wrapper
-  const userId = (user as unknown)?.id;
-  const workspaceId = (user as unknown)?.activeWorkspaceId || (user as unknown)?.workspaceId;
-  const userPlatformRole = (user as unknown)?.platformRole as string | null | undefined;
+  const userId = (user as any)?.id;
+  const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
+  const userPlatformRole = (user as any)?.platformRole as string | null | undefined;
   
   // Get workspace role for proper notification filtering in UNS Command Center
   const { workspaceRole, platformRole: accessPlatformRole } = useWorkspaceAccess();
   
   // Derive Trinity mode locally from user — avoids /api/trinity/context fetch on every nav.
-  const isGuruMode = false; // Trinity mode removed — Trinity decides internally
+  const isGuruMode = deriveTrinityModeFromUser(user) === 'guru';
   
   // WebSocket for real-time updates
   const { isConnected } = useNotificationWebSocket(userId, workspaceId);
@@ -2017,8 +1854,8 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
       const cachedData = queryClient.getQueryData(["/api/notifications/combined"]) as NotificationsData | undefined;
       
       // Check each source array to determine which API endpoint to call
-      const isPlatformUpdate = cachedData?.platformUpdates?.some((u: unknown) => u.id === id);
-      const isMaintenanceAlert = cachedData?.maintenanceAlerts?.some((a: unknown) => a.id === id);
+      const isPlatformUpdate = cachedData?.platformUpdates?.some((u: any) => u.id === id);
+      const isMaintenanceAlert = cachedData?.maintenanceAlerts?.some((a: any) => a.id === id);
       
       let response: Response;
       if (isMaintenanceAlert) {
@@ -2042,7 +1879,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
       
       // Optimistic cache update for immediate UI feedback
       const now = new Date().toISOString();
-      queryClient.setQueryData(["/api/notifications/combined"], (old: unknown) => {
+      queryClient.setQueryData(["/api/notifications/combined"], (old: any) => {
         if (!old) return old;
         
         // Find which type the item belongs to and decrement appropriate counter
@@ -2052,10 +1889,10 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
         let unreadGapFindings = old.unreadGapFindings || 0;
         
         // Check each array and decrement the right counter
-        const inNotifications = old.notifications?.some((n: unknown) => n.id === id && !n.clearedAt);
-        const inPlatformUpdates = old.platformUpdates?.some((u: unknown) => u.id === id && !u.isViewed);
-        const inAlerts = old.maintenanceAlerts?.some((a: unknown) => a.id === id && !a.isAcknowledged);
-        const inGapFindings = old.gapFindings?.some((f: unknown) => f.id === id && !f.clearedAt);
+        const inNotifications = old.notifications?.some((n: any) => n.id === id && !n.clearedAt);
+        const inPlatformUpdates = old.platformUpdates?.some((u: any) => u.id === id && !u.isViewed);
+        const inAlerts = old.maintenanceAlerts?.some((a: any) => a.id === id && !a.isAcknowledged);
+        const inGapFindings = old.gapFindings?.some((f: any) => f.id === id && !f.clearedAt);
         
         if (inNotifications) unreadNotifications = Math.max(0, unreadNotifications - 1);
         if (inPlatformUpdates) unreadPlatformUpdates = Math.max(0, unreadPlatformUpdates - 1);
@@ -2064,16 +1901,16 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
         
         return {
           ...old,
-          notifications: old.notifications?.map((n: unknown) => 
+          notifications: old.notifications?.map((n: any) => 
             n.id === id ? { ...n, clearedAt: now, isRead: true, metadata: { ...(n.metadata || {}), wasCleared: true } } : n
           ),
-          platformUpdates: old.platformUpdates?.map((u: unknown) => 
+          platformUpdates: old.platformUpdates?.map((u: any) => 
             u.id === id ? { ...u, isViewed: true, metadata: { ...(u.metadata || {}), wasCleared: true } } : u
           ),
-          maintenanceAlerts: old.maintenanceAlerts?.map((a: unknown) => 
+          maintenanceAlerts: old.maintenanceAlerts?.map((a: any) => 
             a.id === id ? { ...a, isAcknowledged: true, metadata: { ...(a.metadata || {}), wasCleared: true } } : a
           ),
-          gapFindings: old.gapFindings?.map((f: unknown) => 
+          gapFindings: old.gapFindings?.map((f: any) => 
             f.id === id ? { ...f, clearedAt: now, isRead: true, metadata: { ...(f.metadata || {}), wasCleared: true } } : f
           ),
           totalUnread: unreadNotifications + unreadPlatformUpdates + unreadAlerts,
@@ -2094,7 +1931,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
       // Sync across tabs
       syncNotificationRead(id);
     },
-    onError: (_, id, context: unknown) => {
+    onError: (_, id, context: any) => {
       // Remove from pending tracking on error (rollback reactive state)
       pendingClears.rollbackSingle(id);
       // Restore previous cache state
@@ -2152,14 +1989,14 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
       
       // Optimistic cache update for immediate UI feedback + pending set for protection
       // NOTE: Protected categories (hotpatch, system_fix, admin_action) are NOT cleared
-      queryClient.setQueryData(["/api/notifications/combined"], (old: unknown) => {
+      queryClient.setQueryData(["/api/notifications/combined"], (old: any) => {
         // Count how many protected notifications remain unread (not yet cleared)
-        const protectedUnreadCount = old?.notifications?.filter((n: unknown) => 
+        const protectedUnreadCount = old?.notifications?.filter((n: any) => 
           PROTECTED_CATEGORIES.includes(n.category) && !n.clearedAt && !n.isRead
         )?.length || 0;
         
         // Map notifications - mark all as cleared EXCEPT protected categories
-        const updatedNotifications = old?.notifications?.map((n: unknown) => {
+        const updatedNotifications = old?.notifications?.map((n: any) => {
           // Preserve protected notifications (hotpatch, system_fix, admin_action)
           if (PROTECTED_CATEGORIES.includes(n.category)) {
             return n; // Don't modify - these require explicit action
@@ -2175,17 +2012,17 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
         return {
           ...old,
           notifications: updatedNotifications,
-          platformUpdates: old?.platformUpdates?.map((u: unknown) => ({ 
+          platformUpdates: old?.platformUpdates?.map((u: any) => ({ 
             ...u, 
             isViewed: true,
             metadata: { ...(u.metadata || {}), wasCleared: true }
           })) || [],
-          maintenanceAlerts: old?.maintenanceAlerts?.map((a: unknown) => ({ 
+          maintenanceAlerts: old?.maintenanceAlerts?.map((a: any) => ({ 
             ...a, 
             isAcknowledged: true,
             metadata: { ...(a.metadata || {}), wasCleared: true }
           })) || [],
-          gapFindings: old?.gapFindings?.map((f: unknown) => ({
+          gapFindings: old?.gapFindings?.map((f: any) => ({
             ...f,
             isRead: true,
             clearedAt: now,
@@ -2222,7 +2059,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
       // Invalidate internal email unread badge
       queryClient.invalidateQueries({ queryKey: ["/api/internal-email/mailbox/auto-create"] });
     },
-    onError: (error, _, context: unknown) => {
+    onError: (error, _, context: any) => {
       // Reset pending clear tracking on error (reactive state)
       pendingClears.reset();
       if (context?.previousData) {
@@ -2233,7 +2070,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
   });
   
   const orchestrationMutation = useMutation({
-    mutationFn: async (params: { actionCode: string; targetId?: string; metadata?: Record<string, unknown> }) => {
+    mutationFn: async (params: { actionCode: string; targetId?: string; metadata?: Record<string, any> }) => {
       const response = await apiRequest("POST", "/api/quick-fixes/execute", {
         actionCode: params.actionCode,
         targetId: params.targetId,
@@ -2263,7 +2100,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
         toast({ 
           title: "Complete", 
           description: stepsText || "Action executed successfully.",
-          variant: "success" as unknown,
+          variant: "success" as any,
         });
       } else {
         toast({ title: "Action Failed", description: data.error || "Unable to complete action.", variant: "destructive" });
@@ -2317,6 +2154,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
       className="flex flex-col h-full min-h-0"
     >
       {/* UNS Header with Trinity Branding - Polished Gradient */}
+      {/* Skip on mobile since MobileResponsiveSheet already provides header */}
       {!skipHeader && (
       <div className={`${compact ? 'px-3 py-2.5' : 'px-4 py-3'} border-b bg-gradient-to-r from-primary to-primary/85 flex-shrink-0`}>
         <div className="flex items-center justify-between gap-2">
@@ -2486,13 +2324,15 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
             <div className={`flex items-center gap-1.5 min-w-max ${compact ? 'px-2 py-1' : 'px-3 py-1.5'}`}>
               <button
                 onClick={() => setTopicFilter('all')}
-                className={['inline-flex items-center gap-1 rounded-full border text-[10px] font-medium transition-colors px-2.5 py-0.5 whitespace-nowrap', topicFilter === 'all'
+                className={`inline-flex items-center gap-1 rounded-full border text-[10px] font-medium transition-colors px-2.5 py-0.5 whitespace-nowrap ${
+                  topicFilter === 'all'
                     ? 'bg-foreground text-background border-foreground'
-                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:text-foreground hover:border-muted-foreground/60'].join(' ')}
+                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:text-foreground hover:border-muted-foreground/60'
+                }`}
                 data-testid="topic-chip-all"
               >
                 All
-                <span className={[topicFilter === 'all' ? 'bg-white/15 dark:bg-white/10' : 'bg-muted-foreground/15', 'rounded-full px-1 text-[9px]'].join(' ')}>{allCount}</span>
+                <span className={`${topicFilter === 'all' ? 'bg-background/20' : 'bg-muted-foreground/15'} rounded-full px-1 text-[9px]`}>{allCount}</span>
               </button>
               {topicsWithNotifs.map(topic => {
                 const count = tabPool.filter(n => (TOPIC_TYPE_MAP[topic] ?? []).includes(n.subCategory ?? '')).length;
@@ -2501,13 +2341,15 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
                   <button
                     key={topic}
                     onClick={() => setTopicFilter(isActive ? 'all' : topic)}
-                    className={['inline-flex items-center gap-1 rounded-full border text-[10px] font-medium transition-colors px-2.5 py-0.5 whitespace-nowrap', isActive
+                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] font-medium transition-colors px-2.5 py-0.5 whitespace-nowrap ${
+                      isActive
                         ? 'bg-foreground text-background border-foreground'
-                        : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:text-foreground hover:border-muted-foreground/60'].join(' ')}
+                        : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:text-foreground hover:border-muted-foreground/60'
+                    }`}
                     data-testid={`topic-chip-${topic}`}
                   >
                     {TOPIC_LABELS[topic]}
-                    <span className={[isActive ? 'bg-white/15 dark:bg-white/10' : 'bg-muted-foreground/15', 'rounded-full px-1 text-[9px]'].join(' ')}>{count}</span>
+                    <span className={`${isActive ? 'bg-background/20' : 'bg-muted-foreground/15'} rounded-full px-1 text-[9px]`}>{count}</span>
                   </button>
                 );
               })}
@@ -2530,7 +2372,9 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
             <Button
               variant={subFilter === 'all' ? 'default' : 'outline'}
               size="sm"
-              className={['h-7 text-xs px-3 rounded-full whitespace-nowrap', subFilter === 'all' ? '' : 'border-muted-foreground/30'].join(' ')}
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+                subFilter === 'all' ? '' : 'border-muted-foreground/30'
+              }`}
               onClick={() => setSubFilter('all')}
               data-testid="subfilter-all"
             >
@@ -2592,6 +2436,13 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
         ) : sortedNotifications.length > 0 ? (
           <div className="divide-y min-h-0">
             {sortedNotifications.map((notification) => {
+              // Check if this is a broadcast notification
+              const isBroadcast = notification.metadata?.broadcastId;
+              
+              if (isBroadcast) {
+                return null;
+              }
+              
               return enableSwipeDelete ? (
                 <SwipeToDelete
                   key={notification.id}
@@ -2603,6 +2454,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
                     onAction={handleAction}
                     onCardClick={setSelectedNotification}
                     onClose={() => setOpen(false)}
+                    isGuruMode={isGuruMode}
                     canInteract={!!user}
                     compact={compact}
                   />
@@ -2615,6 +2467,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
                   onAction={handleAction}
                   onCardClick={setSelectedNotification}
                   onClose={() => setOpen(false)}
+                  isGuruMode={isGuruMode}
                   canInteract={!!user}
                   compact={compact}
                 />
@@ -2646,7 +2499,7 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
     </div>
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, alertsCount, updatesCount, systemCount, user, allNotifications, visibleNotifications, isMobile, setOpen]);
+  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, alertsCount, updatesCount, systemCount, user, allNotifications, visibleNotifications, isGuruMode, isMobile, setOpen]);
 
   // Create stable component references using the memoized generator
   // Mobile: enable swipe-to-delete for iOS-style notification dismissal
@@ -2716,98 +2569,44 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
     );
   };
 
-  const handleAskTrinityFromUNS = () => {
-    setOpen(false);
-    openTrinityModal();
-  };
-
   if (isMobile) {
     return (
       <>
         {/* Notification Bell Trigger */}
-        <button
-          type="button"
-          aria-label={totalUnread > 0 ? `Notifications — ${totalUnread} unread` : 'Notifications'}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          className="relative inline-flex items-center justify-center w-9 h-9 rounded-full text-foreground hover:bg-accent transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            chatDock?.closeBubble();
-            setOpen(true);
-          }}
-          data-testid="button-notifications-mobile"
+        <div onClick={() => { chatDock?.closeBubble(); setOpen(true); }}>
+          <AnimatedNotificationBell
+            notificationCount={totalUnread}
+            onClick={() => { chatDock?.closeBubble(); setOpen(true); }}
+          />
+        </div>
+        
+        {/* Notifications Sheet - Uses Canvas Hub MobileResponsiveSheet for proper layer management */}
+        {/* No title so we control our own header; showCloseButton=false hides the built-in sheet buttons */}
+        <MobileResponsiveSheet
+          open={open}
+          onOpenChange={setOpen}
+          side="bottom"
+          className="p-0"
+          maxHeight="100dvh"
+          showDragIndicator={true}
+          showCloseButton={false}
         >
-          <Bell className="h-5 w-5" />
-          {totalUnread > 0 && (
-            <span
-              className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center px-1 pointer-events-none"
-              data-testid="badge-mobile-notifications-unread"
-            >
-              {totalUnread > 99 ? '99+' : totalUnread}
-            </span>
-          )}
-        </button>
-
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent
-            side="bottom"
-            className="p-0 flex flex-col"
-            style={{ height: '82dvh', maxHeight: '82dvh' }}
-            data-testid="sheet-notifications-mobile"
+          {/* Full GetSling-style Mobile Notifications */}
+          <div
+            data-testid="notification-sheet-content"
+            data-trinity-avoid="true"
+            className="flex flex-col"
+            style={{ height: 'calc(100dvh - 36px)' }}
           >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Notifications</SheetTitle>
-            </SheetHeader>
-            {/* Notification list header with working buttons */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 shrink-0">
-              <div className="flex items-center gap-2">
-                <Bell className="h-4 w-4 text-primary" />
-                <span className="font-semibold text-sm">Notifications</span>
-                {totalUnread > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold">
-                    {totalUnread > 99 ? '99+' : totalUnread}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {totalUnread > 0 && (
-                  <button
-                    type="button"
-                    className="h-7 text-[11px] text-muted-foreground hover:text-foreground px-2 rounded"
-                    onClick={() => {
-                      fetch('/api/notifications/mark-all-read', {
-                        method: 'POST', credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                      }).then(() => {
-                        queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-                        queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
-                        queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
-                      }).catch(() => null);
-                    }}
-                    data-testid="button-mark-all-read-mobile"
-                  >
-                    Mark all read
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent"
-                  onClick={() => setOpen(false)}
-                  aria-label="Close notifications"
-                  data-testid="button-close-notifications-mobile"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {MobileNotificationsContent}
             </div>
-            {/* Actual notification content with all working actions */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              {renderNotificationsContent({ simplified: false, compact: true, enableSwipeDelete: true, skipHeader: true })}
+            <div className="flex-shrink-0">
+              <Footer compact={true} onAskTrinity={openTrinityModal} />
             </div>
-          </SheetContent>
-        </Sheet>
-
+          </div>
+        </MobileResponsiveSheet>
+        
         {/* Notification Detail Modal - Shows structured breakdown */}
         <NotificationDetailModal
           notification={selectedNotification}
@@ -2821,6 +2620,11 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
     );
   }
 
+  const handleAskTrinityFromUNS = () => {
+    setOpen(false);
+    openTrinityModal();
+  };
+
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
@@ -2832,18 +2636,15 @@ function NotificationsPopoverInner({ user }: { user: unknown }) {
             aria-haspopup="true"
             aria-expanded={open}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!open); } }}
-            className="relative cursor-pointer"
           >
-            <Bell className="h-5 w-5 text-foreground" />
-            {totalUnread > 0 && (
-              <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full shadow-lg">
-                {totalUnread > 99 ? '99+' : totalUnread}
-              </span>
-            )}
+            <AnimatedNotificationBell
+              notificationCount={totalUnread}
+              onClick={() => setOpen(!open)}
+            />
           </div>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-auto p-0 border border-[hsl(var(--modal-border))] bg-[hsl(var(--modal-bg))] shadow-2xl shadow-black/25 dark:shadow-black/60 ring-1 ring-inset ring-white/[0.06] overflow-visible z-50 rounded-2xl" 
+          className="w-auto p-0 border-0 bg-transparent shadow-none overflow-visible" 
           style={{ overflow: 'visible' }}
           align="end"
           sideOffset={8}

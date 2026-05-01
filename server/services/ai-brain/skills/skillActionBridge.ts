@@ -58,7 +58,7 @@ export function registerSkillBridgeActions(): void {
           data: { skills: manifests, count: manifests.length },
           executionTimeMs: Date.now() - start,
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -126,7 +126,7 @@ export function registerSkillBridgeActions(): void {
           data: health,
           executionTimeMs: Date.now() - start,
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           success: false,
           actionId: request.actionId,

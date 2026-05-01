@@ -14,7 +14,7 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('WorkboardRoutes');
 
 
-export function registerWorkboardRoutes(app: Router, requireAuth: (req: AuthenticatedRequest, res: any, next: unknown) => void) {
+export function registerWorkboardRoutes(app: Router, requireAuth: (req: AuthenticatedRequest, res: Response, next: unknown) => void) {
   /**
    * Submit a new task to the AI Brain Workboard
    * Central entry point for all AI orchestration requests

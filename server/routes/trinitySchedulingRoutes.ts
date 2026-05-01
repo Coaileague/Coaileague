@@ -16,7 +16,7 @@ const log = createLogger('TrinitySchedulingRoutes');
 
 const router = Router();
 
-router.get('/insights', async (req: AuthenticatedRequest, res) => {
+router.get('/insights', async (req: any, res) => {
     try {
       const userId: string | undefined = req.user?.id || req.user?.claims?.sub || req.session?.userId;
       
@@ -42,7 +42,7 @@ router.get('/insights', async (req: AuthenticatedRequest, res) => {
           )
         );
       
-      const insights: Array<{id: string; type: string; icon: string; title: string; description: string; actionable?: boolean; actionLabel?: string; actionData?: unknown}> = [];
+      const insights: Array<{id: string; type: string; icon: string; title: string; description: string; actionable?: boolean; actionLabel?: string; actionData?: any}> = [];
       
       const openShifts = weekShifts.filter(s => !s.employeeId);
       if (openShifts.length > 0) {
@@ -104,7 +104,7 @@ router.get('/insights', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-router.post('/auto-fill', requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post('/auto-fill', async (req: any, res) => {
     try {
       const userId = req.user?.id || req.user?.id;
       // Use middleware-resolved workspaceId first, fall back to DB lookup
@@ -195,7 +195,7 @@ router.post('/auto-fill', requireAuth, async (req: AuthenticatedRequest, res) =>
     }
   });
 
-router.post('/ask', async (req: AuthenticatedRequest, res) => {
+router.post('/ask', async (req: any, res) => {
     try {
       const userId: string | undefined = req.user?.id || req.user?.claims?.sub || req.session?.userId;
       
@@ -279,7 +279,7 @@ router.post('/ask', async (req: AuthenticatedRequest, res) => {
  * created. Returns 409 with conflict details + recommended alternative times
  * when the proposed shift falls within an SLA blackout window.
  */
-router.post('/schedule-shift', async (req: AuthenticatedRequest, res) => {
+router.post('/schedule-shift', async (req: any, res) => {
   try {
     const userId: string | undefined = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
@@ -371,13 +371,13 @@ router.get('/pending-approvals', requireAuth, async (req: AuthenticatedRequest, 
     const { eq, and, desc } = await import('drizzle-orm');
     const pending = await db.select().from(trinityProposedActions)
       .where(and(
-        eq((trinityProposedActions as Record<string,unknown>).workspaceId as string, workspaceId),
-        eq((trinityProposedActions as Record<string,unknown>).status, 'pending'),
+        eq((trinityProposedActions as any).workspaceId, workspaceId),
+        eq((trinityProposedActions as any).status, 'pending'),
       ))
-      .orderBy(desc((trinityProposedActions).createdAt))
+      .orderBy(desc((trinityProposedActions as any).createdAt))
       .limit(50);
     res.json({ approvals: pending });
-  } catch (err: unknown) {
+  } catch (err: any) {
     log.error('[TrinityScheduling] pending-approvals GET failed:', err?.message);
     res.json({ approvals: [] }); // graceful empty on schema miss
   }
@@ -395,11 +395,11 @@ router.post('/pending-approvals/:id/approve', requireManager, async (req: Authen
     const { db } = await import('../db');
     const { eq } = await import('drizzle-orm');
     const [updated] = await db.update(trinityProposedActions as any)
-      .set({ status: 'approved', approvedBy: userId, approvedAt: new Date() } as Record<string, unknown>)
-      .where(eq(((trinityProposedActions as {id?: string}).id), id))
+      .set({ status: 'approved', approvedBy: userId, approvedAt: new Date() } as any)
+      .where(eq((trinityProposedActions as any).id, id))
       .returning();
     res.json({ success: true, approval: updated });
-  } catch (err: unknown) {
+  } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -417,64 +417,13 @@ router.post('/pending-approvals/:id/reject', requireManager, async (req: Authent
     const { db } = await import('../db');
     const { eq } = await import('drizzle-orm');
     const [updated] = await db.update(trinityProposedActions as any)
-      .set({ status: 'rejected', rejectedBy: userId, rejectedAt: new Date(), rejectionReason: reason } as Record<string, unknown>)
-      .where(eq(((trinityProposedActions as {id?: string}).id), id))
+      .set({ status: 'rejected', rejectedBy: userId, rejectedAt: new Date(), rejectionReason: reason } as any)
+      .where(eq((trinityProposedActions as any).id, id))
       .returning();
     res.json({ success: true, approval: updated });
-  } catch (err: unknown) {
+  } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-
-/**
- * POST /api/trinity/scheduling/import-schedule
- * Import a schedule CSV — accepts file upload + Trinity learning params.
- * Returns ImportResult shape expected by ScheduleUploadPanel.tsx.
- */
-router.post('/import-schedule', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
-  try {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(400).json({ message: 'Workspace required' });
-
-    // This endpoint accepts multipart/form-data from ScheduleUploadPanel.
-    // File parsing uses multer in bulk-operations; here we return a meaningful
-    // stub that guides the user and fires Trinity's pattern learner async.
-    const learnPatterns = req.body?.learnPatterns === 'true';
-    const createShifts  = req.body?.createShifts  === 'true';
-    
-    // Fire Trinity schedule analysis in background
-    if (learnPatterns) {
-      Promise.resolve().then(async () => {
-        try {
-          const { platformEventBus } = await import('../services/platformEventBus');
-          platformEventBus.publish({
-            type: 'schedule_upload',
-            workspaceId,
-            metadata: { learnPatterns, createShifts, source: 'ScheduleUploadPanel' },
-          }).catch(() => null);
-        } catch (_) { /* non-blocking */ }
-      });
-    }
-
-    // Return stub ImportResult — full CSV parsing requires multipart middleware
-    // which is configured in bulk-operations. Use /api/bulk-operations/import/shifts
-    // for the actual shift creation after pattern analysis.
-    res.json({
-      success: true,
-      message: learnPatterns
-        ? 'Schedule received. Trinity is analyzing patterns. Use Bulk Operations to create shifts from CSV.'
-        : 'Schedule uploaded. No shifts were created (createShifts=false).',
-      shiftsImported: 0,
-      patternsLearned: learnPatterns ? 1 : 0,
-      patterns: [],
-      errors: [],
-    });
-  } catch (error: unknown) {
-    log.error('[TrinityScheduling] import-schedule error:', error);
-    res.status(500).json({ message: 'Schedule import failed' });
-  }
-});
-
 export default router;
-

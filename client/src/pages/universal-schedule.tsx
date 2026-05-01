@@ -18,7 +18,7 @@ import { secureFetch } from "@/lib/csrf";
 import { markCoreActionPerformed } from "@/lib/pushNotifications";
 
 /** Parse compliance / eligibility block errors into a user-readable string */
-function parseScheduleError(error: unknown): string {
+function parseScheduleError(error: any): string {
   if (!error) return 'An unexpected error occurred';
   const raw: string = error.message || String(error);
   // Strip leading "NNN: " status prefix from ApiError
@@ -161,7 +161,9 @@ const DraggableEmployee = ({ employee, isSelected, onSelect, getEmployeeColor }:
       {...listeners}
       {...attributes}
       onClick={onSelect}
-      className={['p-3 rounded-md border cursor-grab active:cursor-grabbing transition-all', isSelected ? 'border-primary bg-primary/10' : 'border-border', isDragging ? 'z-50' : '', 'hover-elevate'].join(' ')}
+      className={`p-3 rounded-md border cursor-grab active:cursor-grabbing transition-all ${
+        isSelected ? 'border-primary bg-primary/10' : 'border-border'
+      } ${isDragging ? 'z-50' : ''} hover-elevate`}
       data-testid={`employee-card-${employee.id}`}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -200,7 +202,9 @@ const DroppableSlot = ({ day, hour, children, onClick }: {
     <div
       ref={setNodeRef}
       onClick={onClick}
-      className={['relative h-16 border-b cursor-pointer transition-all duration-100 group', isOver ? 'bg-primary/12 ring-1 ring-primary/40 ring-inset' : 'hover:bg-muted/40'].join(' ')}
+      className={`relative h-16 border-b cursor-pointer transition-all duration-100 group ${
+        isOver ? 'bg-primary/12 ring-1 ring-primary/40 ring-inset' : 'hover:bg-muted/40'
+      }`}
       data-testid={`grid-cell-${day}-${hour}`}
     >
       {/* GetSling-style: ghost preview when dragging over this cell */}
@@ -426,7 +430,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         duration: 5000,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to toggle automation',
@@ -439,7 +443,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const { data: allShiftsData = [], isLoading: allShiftsLoading } = useQuery<Shift[]>({
     queryKey: ['/api/shifts', workspaceId],
     queryFn: async () => {
-      const response = await secureFetch(`/api/shifts?workspaceId=${workspaceId}`);
+      const response = await fetch(`/api/shifts?workspaceId=${workspaceId}`, { credentials: 'include' });
       if (!response.ok) return [];
       const data = await response.json();
       return Array.isArray(data) ? data : (data.shifts || data.data || []);
@@ -467,7 +471,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
@@ -491,7 +495,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: 'The shift has been removed from the schedule',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to delete shift',
@@ -510,10 +514,10 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
     onMutate: async ({ shiftId, newEmployeeId }) => {
       await queryClient.cancelQueries({ queryKey: ['/api/shifts', workspaceId] });
       const previousQueries = queryClient.getQueriesData<any>({ queryKey: ['/api/shifts', workspaceId] });
-      queryClient.setQueriesData<any>({ queryKey: ['/api/shifts', workspaceId] }, (old) => {
+      queryClient.setQueriesData<any>({ queryKey: ['/api/shifts', workspaceId] }, (old: any) => {
         if (!old) return old;
         const list: any[] = Array.isArray(old) ? old : (old.shifts || old.data || []);
-        const updated = list.map((s) => s.id === shiftId ? { ...s, employeeId: newEmployeeId } : s);
+        const updated = list.map((s: any) => s.id === shiftId ? { ...s, employeeId: newEmployeeId } : s);
         if (Array.isArray(old)) return updated;
         if (old.shifts) return { ...old, shifts: updated };
         if (old.data) return { ...old, data: updated };
@@ -531,7 +535,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
     },
-    onError: (error: unknown, _, context: unknown) => {
+    onError: (error: any, _, context: any) => {
       if (context?.previousQueries) {
         context.previousQueries.forEach(([key, data]: [any, any]) => {
           queryClient.setQueryData(key, data);
@@ -580,7 +584,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: 'All employees have been notified of their shifts',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to publish schedule',
@@ -599,7 +603,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
       return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
@@ -614,7 +618,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: `Trinity AI has optimized the schedule${tokensUsed > 0 ? ` (${tokensUsed} tokens used)` : ''}`,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
@@ -648,7 +652,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const [dragOverCell, setDragOverCell] = useState<{ day: number; hour: number } | null>(null);
   const [draggedShift, setDraggedShift] = useState<Shift | null>(null);
   
-  const handleDragStart = (event) => {
+  const handleDragStart = (event: any) => {
     const data = event.active.data.current;
     if (data?.type === 'inline-shift') {
       setDraggedShiftId(data.shift.id);
@@ -699,7 +703,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       toast({ variant: 'success', title: `${count} shift${count !== 1 ? 's' : ''} saved`, description: 'Schedule updated successfully.' });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Failed to save changes', description: parseScheduleError(error) });
     },
   });
@@ -779,7 +783,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const lastAutoFillRef = useRef<number>(0); // Debounce auto-fill
-  const [schedulingResult, setSchedulingResult] = useState<null>(null);
+  const [schedulingResult, setSchedulingResult] = useState<any>(null);
   const [showSchedulingSummary, setShowSchedulingSummary] = useState(false);
   const [activeOrchestrationId, setActiveOrchestrationId] = useState<string | null>(null);
   const [manualApprovalMode, setManualApprovalMode] = useState(true);
@@ -930,7 +934,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
     queryKey: ['/api/employees', workspaceId],
     queryFn: async () => {
       if (!workspaceId) return { data: [] };
-      const res = await secureFetch(`/api/employees?workspaceId=${workspaceId}&limit=500`);
+      const res = await fetch(`/api/employees?workspaceId=${workspaceId}&limit=500`, { credentials: 'include' });
       if (!res.ok) return { data: [] };
       return res.json();
     },
@@ -1113,7 +1117,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: shiftForm.isOpenShift ? 'Open shift created successfully' : 'Shift created and assigned',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to create shift',
@@ -1132,7 +1136,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
       return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
@@ -1148,7 +1152,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: `Best available employee assigned${tokensUsed > 0 ? ` (${tokensUsed} tokens used)` : ''}`,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
@@ -1176,7 +1180,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: 'Employee has been assigned to the shift',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to assign shift',
@@ -1198,7 +1202,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       const data = await response.json();
       return { ...data, totalOpen: openCount };
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats', workspaceId] });
       queryClient.refetchQueries({ queryKey: ['/api/shifts', workspaceId] });
@@ -1242,7 +1246,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         });
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
@@ -1341,7 +1345,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
       toast({ title: 'Published', description: `${draftShiftIds.length} shifts published` });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
-    } catch (error : unknown) {
+    } catch (error: any) {
       toast({ variant: 'destructive', title: 'Publish Failed', description: error.message });
     }
   }, [shifts, selectedDay, toast]);
@@ -1349,15 +1353,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const handleToolbarAutoFill = useCallback(() => {
     triggerAIFillMutation.mutate();
   }, [triggerAIFillMutation]);
-
-  const handleToolbarOptimizeSchedule = useCallback(() => {
-    triggerSchedulingMutation.mutate('optimize');
-  }, [triggerSchedulingMutation]);
-
-  const handleToolbarFullGenerate = useCallback(() => {
-    triggerSchedulingMutation.mutate('full_generate');
-  }, [triggerSchedulingMutation]);
-
+  
   const handleToolbarToggleAutomation = useCallback(() => {
     toggleAutomationMutation.mutate(!automationEnabled);
   }, [toggleAutomationMutation, automationEnabled]);
@@ -1393,17 +1389,21 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
 
   const duplicateWeekMutation = useMutation({
     mutationFn: async ({ sourceWeekStart, targetWeekStart }: { sourceWeekStart: string; targetWeekStart: string }) => {
-      // V1.1 Feature Flag: duplicate week launches post go-live
-      throw new Error('Schedule duplication is coming in V1.1 — launching shortly after go-live!');
+      return await apiRequest('POST', '/api/scheduling/duplicate-week', {
+        sourceWeekStart,
+        targetWeekStart,
+        skipExisting: true,
+        workspaceId,
+      });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       toast({
         title: 'Week duplicated',
         description: `Copied ${data?.copiedShifts || 0} shifts to the next week`,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to duplicate week',
@@ -1473,7 +1473,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: 'The shift has been copied to the new date',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to duplicate shift',
@@ -1485,7 +1485,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   // Edit shift mutation
   const editShiftMutation = useMutation({
     mutationFn: async ({ shiftId, data }: { shiftId: string; data: Partial<EditShiftFormData> }) => {
-      const payload: Record<string, unknown> = {};
+      const payload: Record<string, any> = {};
       if (data.employeeId !== undefined) payload.employeeId = data.employeeId;
       if (data.title) payload.title = data.title;
       if (data.clientId) payload.clientId = data.clientId;
@@ -1504,7 +1504,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: 'The shift has been updated successfully',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to update shift',
@@ -1533,7 +1533,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: 'Your shift swap request has been submitted for approval',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to request swap',
@@ -1544,9 +1544,8 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   
   // Create recurring pattern mutation
   const createRecurringMutation = useMutation({
-    mutationFn: async (data) => {
-      // V1.1 Feature Flag: recurring schedules launch post go-live
-      throw new Error('Recurring schedules are coming in V1.1 — launching shortly after go-live!');
+    mutationFn: async (data: any) => {
+      return await apiRequest('POST', '/api/scheduling/recurring', { ...data, workspaceId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
@@ -1556,7 +1555,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         description: 'Shifts have been generated according to the pattern',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Failed to create recurring shifts',
@@ -1696,7 +1695,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       return { bg: '#f0fdf4', text: '#15803d', border: '#86efac', dot: '#22c55e', label: 'On Shift' };
     }
     // Overtime warning — amber
-    if ((shift as Record<string,unknown>).isOvertime === true) {
+    if ((shift as any).isOvertime === true) {
       return { bg: '#fffbeb', text: '#d97706', border: '#fcd34d', dot: '#f59e0b', label: 'Overtime' };
     }
     // Draft / pending approval — slate
@@ -1862,8 +1861,6 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
           openShiftsCount={scheduleStats.openShifts}
           automationEnabled={automationEnabled}
           isAutoFilling={triggerAIFillMutation.isPending}
-          isOptimizing={triggerSchedulingMutation.isPending && (triggerSchedulingMutation.variables as any) === 'optimize'}
-          isGenerating={triggerSchedulingMutation.isPending && (triggerSchedulingMutation.variables as any) === 'full_generate'}
           isTogglingAutomation={toggleAutomationMutation.isPending}
           viewMode={viewMode}
           selectedDay={selectedDay}
@@ -1872,8 +1869,6 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
           onCreateShift={handleToolbarCreateShift}
           onPublish={handleToolbarPublish}
           onAutoFill={handleToolbarAutoFill}
-          onOptimizeSchedule={isManager ? handleToolbarOptimizeSchedule : undefined}
-          onFullGenerate={isManager ? handleToolbarFullGenerate : undefined}
           onToggleAutomation={handleToolbarToggleAutomation}
           onOpenTrinityInsights={handleToolbarOpenTrinityInsights}
           onOpenTrinityChat={openTrinityChat}
@@ -1899,28 +1894,8 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
           />
         )}
 
-        {/* Trinity Live Scheduling Status Bar - inline feedback during and after automation */}
-        <TrinityStatusBar
-          session={session}
-          onReview={() => {
-            if (schedulingResult) {
-              setShowSchedulingSummary(true);
-            } else if (completionResult) {
-              setSchedulingResult({
-                success: true,
-                sessionId: completionResult.sessionId,
-                executionId: completionResult.executionId || completionResult.sessionId,
-                totalMutations: completionResult.mutationCount,
-                mutations: completionResult.mutations || [],
-                summary: completionResult.summary,
-                aiSummary: completionResult.aiSummary || '',
-                requiresVerification: completionResult.requiresVerification,
-              });
-              setShowSchedulingSummary(true);
-            }
-          }}
-          onDismiss={clearSession}
-        />
+        {/* Trinity Live Scheduling Status Bar - Shows prominent feedback during automation */}
+        <TrinityStatusBar session={session} />
         
         {/* Trinity Legacy Progress - Uses data from parent hook to avoid duplicate WebSocket */}
         <TrinitySchedulingProgress embedded progressData={activeProgress} />
@@ -2039,7 +2014,9 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                   data-testid={`month-cell-${cellDate.getFullYear()}-${cellDate.getMonth() + 1}-${cellDate.getDate()}`}
                 >
                   <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className={['text-xs font-medium', isToday ? 'text-primary font-bold' : 'text-foreground/80'].join(' ')}>
+                    <span className={`text-xs font-medium ${
+                      isToday ? 'text-primary font-bold' : 'text-foreground/80'
+                    }`}>
                       {cellDate.getDate()}
                     </span>
                     {totalHours > 0 && (
@@ -2060,9 +2037,11 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                       return (
                         <div
                           key={shift.id}
-                          className={['rounded-md px-1.5 py-1 text-[10px] leading-snug cursor-pointer transition-all duration-150 hover:shadow-sm hover:-translate-y-px', isOpen
+                          className={`rounded-md px-1.5 py-1 text-[10px] leading-snug cursor-pointer transition-all duration-150 hover:shadow-sm hover:-translate-y-px ${
+                            isOpen
                               ? 'border border-dashed border-emerald-400 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                              : 'text-white'].join(' ')}
+                              : 'text-white'
+                          }`}
                           style={isOpen ? undefined : { backgroundColor: shiftColor.bg }}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2720,7 +2699,6 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
 
         </div>
 
-        {/* TrinityThinkingPanel removed — TrinityStatusBar above covers review/dismiss; header TrinityThoughtBar shows session status */}
         {/* Trinity Insights Slide-in Panel - hidden when Trinity is actively scheduling to avoid duplicate AI processing */}
         {showTrinityInsights && !trinityWorking && (
           <>
@@ -2919,6 +2897,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedShiftForAction(shift);
+                                  // @ts-expect-error — TS migration: fix in refactoring sprint
                                   setConfirmDeleteDialogOpen(true);
                                 }}
                               >
