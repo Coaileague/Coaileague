@@ -127,7 +127,7 @@ async function ensurePaymentMethod(customerId: string): Promise<string> {
 }
 
 // ── Resolve or create a Stripe customer for a workspace ───────────────────
-async function ensureCustomer(ws: any, email: string): Promise<string> {
+async function ensureCustomer(ws: unknown, email: string): Promise<string> {
   if (ws.stripeCustomerId?.startsWith('cus_')) {
     try {
       const c = await stripe.customers.retrieve(ws.stripeCustomerId);
@@ -234,7 +234,7 @@ async function seedAcme(priceMap: Map<string, string>): Promise<void> {
   await ensurePaymentMethod(customerId);
 
   // Cancel old incorrect subscription if still active
-  const existingSubId = (acme as any).stripeSubscriptionId as string | undefined;
+  const existingSubId = (acme as Record<string,unknown>).stripeSubscriptionId as string | undefined;
   if (existingSubId?.startsWith('sub_')) {
     try {
       const existingSub = await stripe.subscriptions.retrieve(existingSubId);
@@ -279,7 +279,7 @@ async function seedAnvil(priceMap: Map<string, string>): Promise<void> {
   await ensurePaymentMethod(customerId);
 
   let subId: string;
-  const existingSubId = (anvil as any).stripeSubscriptionId as string | undefined;
+  const existingSubId = (anvil as Record<string,unknown>).stripeSubscriptionId as string | undefined;
   if (existingSubId?.startsWith('sub_')) {
     try {
       const existingSub = await stripe.subscriptions.retrieve(existingSubId);

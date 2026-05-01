@@ -270,7 +270,7 @@ export function filterContractorForResponse<T extends Record<string, unknown>>(
 ): T {
   return filterSensitiveFields(contractor, {
     ...context,
-    entityOwnerId: (contractor as any).userId,
+    entityOwnerId: (contractor as Record<string,unknown>).userId,
   });
 }
 
@@ -325,7 +325,7 @@ export function filterClientsForResponse<T extends Record<string, unknown>>(
 /**
  * Create filter context from an Express request object.
  */
-export function createFilterContext(req: any): FilterContext {
+export function createFilterContext(req: unknown): FilterContext {
   return {
     workspaceRole: req.workspaceRole || req.user?.workspaceRole,
     platformRole: req.platformRole || req.user?.platformRole,
@@ -337,7 +337,7 @@ export function createFilterContext(req: any): FilterContext {
 /**
  * Express middleware to attach filter context to the request.
  */
-export function attachFilterContext(req: any, res: any, next: () => void) {
+export function attachFilterContext(req: unknown, res: any, next: () => void) {
   req.filterContext = createFilterContext(req);
   next();
 }

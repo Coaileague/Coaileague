@@ -61,7 +61,7 @@ router.get('/categories', requireAuth, async (req: AuthenticatedRequest, res) =>
 
     res.json(seeded);
   } catch (error: unknown) {
-    log.error('[expenses/categories]', (error as any)?.message);
+    log.error('[expenses/categories]', (error as Record<string,unknown>)?.message);
     res.status(500).json({ message: sanitizeError(error) || 'Failed to fetch expense categories' });
   }
 });

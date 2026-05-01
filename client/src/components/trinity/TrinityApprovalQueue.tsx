@@ -81,7 +81,7 @@ export function TrinityApprovalQueue() {
     onError: () => toast({ title: "Rejection failed", variant: "destructive" }),
   });
 
-  const approvals: PendingApproval[] = (data as any)?.approvals || [];
+  const approvals: PendingApproval[] = (data as Record<string,unknown>)?.approvals || [];
 
   if (isLoading) {
     return (

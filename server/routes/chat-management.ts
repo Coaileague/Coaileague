@@ -611,7 +611,7 @@ router.post(
     try {
       const { id: messageId } = req.params;
       const userId = authReq.user?.id;
-      const workspaceRole = (authReq as any).workspaceRole;
+      const workspaceRole = (authReq as Record<string,unknown>).workspaceRole;
 
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
@@ -694,7 +694,7 @@ router.post(
         )
         .limit(1);
 
-      const workspaceRole = (authReq as any).workspaceRole;
+      const workspaceRole = (authReq as Record<string,unknown>).workspaceRole;
       const isWorkspaceAdmin = workspaceRole && ["org_owner", "co_owner", "manager", "org_manager"].includes(workspaceRole);
 
       if (!currentOwner && !isWorkspaceAdmin) {
@@ -791,7 +791,7 @@ router.post(
         )
         .limit(1);
 
-      const workspaceRole = (authReq as any).workspaceRole;
+      const workspaceRole = (authReq as Record<string,unknown>).workspaceRole;
       const isWorkspaceAdmin = workspaceRole && ["org_owner", "co_owner", "manager", "org_manager"].includes(workspaceRole);
       const isRoomOwnerOrAdmin = requester && ["owner", "admin"].includes(requester.participantRole);
 

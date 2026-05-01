@@ -35,14 +35,14 @@ router.get("/audit-trail", requireManager, async (req: AuthenticatedRequest, res
       .limit(parseInt(limit as string));
     
     if (entityType) {
-      query = (query as any).where(and(
+      query = (query as Record<string,unknown>).where(and(
         eq(auditLogs.workspaceId, workspaceId),
         eq(auditLogs.entityType, entityType as string)
       ));
     }
     
     if (entityId) {
-      query = (query as any).where(and(
+      query = (query as Record<string,unknown>).where(and(
         eq(auditLogs.workspaceId, workspaceId),
         eq(auditLogs.entityId, entityId as string)
       ));

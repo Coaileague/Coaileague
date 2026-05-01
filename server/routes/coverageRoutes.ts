@@ -31,7 +31,7 @@ coverageRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res: Resp
     if (!workspaceId) return res.status(401).json({ error: 'Workspace context required' });
     const status = await coveragePipeline.getCoverageStatus(workspaceId);
     // Return shifts array for marketplace UI
-    const shifts = (status as any)?.pendingOffers ?? (status as any)?.activeRequests ?? [];
+    const shifts = (status as Record<string,unknown>)?.pendingOffers ?? (status as Record<string,unknown>)?.activeRequests ?? [];
     res.json({ shifts, status });
   } catch (e: unknown) {
     log.error('[CoverageRoutes] GET / failed:', e.message);

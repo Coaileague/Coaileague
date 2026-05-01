@@ -155,7 +155,7 @@ router.post("/api/report-templates/:id/toggle", requireOwner, async (req: Authen
     const { id } = req.params;
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     
     const template = await storage.toggleReportTemplateActivation(id, workspaceId);
     res.json(template);
@@ -169,7 +169,7 @@ router.post("/api/report-templates/seed-industry", requireOwner, async (req: Aut
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -192,7 +192,7 @@ router.get("/api/report-submissions", requireAuth, async (req: AuthenticatedRequ
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -213,7 +213,7 @@ router.post("/api/report-submissions", requireAuth, async (req: AuthenticatedReq
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -281,7 +281,7 @@ router.post("/api/report-submissions/:id/send-to-client", requireManager, async 
     const { id } = req.params;
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });

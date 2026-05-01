@@ -132,8 +132,8 @@ class ExchangeRateService {
 
       if (rate) {
         return {
-          fromCurrency: (rate as any).fromCurrency,
-          toCurrency: (rate as any).toCurrency,
+          fromCurrency: (rate as Record<string,unknown>).fromCurrency,
+          toCurrency: (rate as Record<string,unknown>).toCurrency,
           rate: parseFloat(rate.rate),
           source: rate.source,
           fetchedAt: rate.fetchedAt,

@@ -185,7 +185,7 @@ export function registerDelegationTrackerActions() {
       .where(and(eq(orchestrationRuns.id, taskId), eq(orchestrationRuns.category, 'operational_task')))
       .limit(1);
     if (!existing) return { error: `Task ${taskId} not found` };
-    const currentParams = (existing as any).inputParams || {};
+    const currentParams = (existing as Record<string,unknown>).inputParams || {};
     const updatedHistory = [
       ...(currentParams.escalationHistory || []),
       { timestamp: new Date().toISOString(), fromStatus: existing.status, toStatus: newStatus, note: note || '', updatedBy: updatedBy || 'trinity-ai' },
@@ -210,7 +210,7 @@ export function registerDelegationTrackerActions() {
       outputData: { newStatus, updatedBy },
       startedAt: new Date(),
       completedAt: new Date(),
-      workspaceId: workspaceId || (existing as any).workspaceId,
+      workspaceId: workspaceId || (existing as Record<string,unknown>).workspaceId,
       createdAt: new Date(),
       updatedAt: new Date(),
     }).catch(() => null);
@@ -251,7 +251,7 @@ export function registerDelegationTrackerActions() {
       .where(and(eq(orchestrationRuns.id, taskId), eq(orchestrationRuns.category, 'operational_task')))
       .limit(1);
     if (!existing) return { error: `Task ${taskId} not found` };
-    const currentParams = (existing as any).inputParams || {};
+    const currentParams = (existing as Record<string,unknown>).inputParams || {};
     const newLevel = (currentParams.escalationLevel || 0) + 1;
     const escalationEntry = {
       timestamp: new Date().toISOString(),
@@ -267,7 +267,7 @@ export function registerDelegationTrackerActions() {
       })
       .where(eq(orchestrationRuns.id, taskId));
 
-    const ws = workspaceId || (existing as any).workspaceId;
+    const ws = workspaceId || (existing as Record<string,unknown>).workspaceId;
     const escalateToUserId = escalateTo || null;
     const taskDesc = currentParams.description || `Task ${taskId}`;
     const dueBy = currentParams.dueBy ? new Date(currentParams.dueBy).toLocaleDateString() : 'N/A';

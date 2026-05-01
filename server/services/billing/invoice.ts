@@ -336,7 +336,7 @@ export class InvoiceService {
       if (subOrgs.length === 0) return lineItems;
 
       const { BILLING: billingConfig } = await import('../../../shared/billingConfig');
-      const subOrgConfig = (billingConfig as any).subOrgBilling;
+      const subOrgConfig = (billingConfig as Record<string,unknown>).subOrgBilling;
       if (!subOrgConfig) return lineItems;
 
       const basePrice = subOrgConfig.perSubOrgMonthlyPrice || 19900;
@@ -379,7 +379,7 @@ export class InvoiceService {
         if (sub.primaryOperatingState) allStates.add(sub.primaryOperatingState);
       }
 
-      const stateComplianceConfig = (billingConfig as any).stateComplianceFees;
+      const stateComplianceConfig = (billingConfig as Record<string,unknown>).stateComplianceFees;
       if (stateComplianceConfig?.enabled && allStates.size > (stateComplianceConfig.includedStates || 1)) {
         const extraStates = allStates.size - (stateComplianceConfig.includedStates || 1);
         const perStateFee = stateComplianceConfig.perStateComplianceMonitoring || 4900;

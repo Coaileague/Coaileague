@@ -257,7 +257,7 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
   <p><a href="${appUrl}/schedule" style="background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:8px;">View Full Schedule</a></p>
   <p style="color:#9ca3af;font-size:12px;margin-top:24px;">You received this because you are an employee at this organization. Log in to view or request changes.</p>
 </div>`,
-          }).catch((emailErr: any) => log.warn(`Schedule email failed for ${emp.email}:`, emailErr?.message));
+          }).catch((emailErr: unknown) => log.warn(`Schedule email failed for ${emp.email}:`, emailErr?.message));
         }
         log.info(`[SchedulePublish] Sent schedule emails to ${empDetails.filter(e => e.email).length} employees for week ${weekStartFormatted}`);
       } catch (emailErr: unknown) {

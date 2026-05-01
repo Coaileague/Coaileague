@@ -179,7 +179,7 @@ export default function Diagnostics() {
   }
 
   // GATEKEEPER: Microsoft-style access control
-  const platformRole = (user as any)?.platformRole;
+  const platformRole = (user as Record<string,unknown>)?.platformRole;
   const isAuthorized = platformRole === 'root_admin' || platformRole === 'sysop' || platformRole === 'deputy_admin';
 
   // Search users

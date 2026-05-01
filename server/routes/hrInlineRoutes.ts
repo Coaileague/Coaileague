@@ -811,7 +811,7 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
       return res.status(404).json({ message: "Organization no longer exists" });
     }
 
-    const onboardingPosition = employeeDocumentOnboardingService.getPositionFromRole((invite as any).inviteeRole || 'staff');
+    const onboardingPosition = employeeDocumentOnboardingService.getPositionFromRole((invite as Record<string,unknown>).inviteeRole || 'staff');
     const onboardingRequiredDocs = employeeDocumentOnboardingService.getRequiredDocuments(onboardingPosition);
     const onboardingRequiredStepIds = onboardingRequiredDocs.map((doc) => doc.id);
 
@@ -835,7 +835,7 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
         firstName: user.firstName || 'New',
         lastName: user.lastName || 'Employee',
         email: user.email,
-        workspaceRole: (invite as any).inviteeRole || 'staff',
+        workspaceRole: (invite as Record<string,unknown>).inviteeRole || 'staff',
         isActive: true,
         hireDate: new Date().toISOString().split('T')[0],
       }).returning({ id: employees.id });
@@ -952,7 +952,7 @@ router.get("/organizations/managed", requireAuth, async (req: AuthenticatedReque
     const platformRole = req.platformRole || await getUserPlatformRole(userId);
     const isPlatformStaff = platformRole && ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'].includes(platformRole);
 
-    const mapWorkspace = async (workspace: any, isOwner: boolean, canManage: boolean) => {
+    const mapWorkspace = async (workspace: unknown, isOwner: boolean, canManage: boolean) => {
       const emps = await storage.getEmployeesByWorkspace(workspace.id);
       const clientList = await db.select({ id: clients.id }).from(clients).where(eq(clients.workspaceId, workspace.id)).limit(500);
       return {

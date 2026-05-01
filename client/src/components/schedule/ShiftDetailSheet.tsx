@@ -149,7 +149,7 @@ export function ShiftDetailSheet({
     if (client?.address) {
       return client.address;
     }
-    return (shift as any).jobSiteAddress || null;
+    return (shift as Record<string,unknown>).jobSiteAddress || null;
   };
 
   const siteAddress = getSiteAddress();
@@ -175,7 +175,7 @@ export function ShiftDetailSheet({
   };
 
   const getPostOrders = (): string | null => {
-    return (shift as any).postOrders || null;
+    return (shift as Record<string,unknown>).postOrders || null;
   };
 
   const hasPhotoRequirement = site?.requiresPhotoVerification || false;

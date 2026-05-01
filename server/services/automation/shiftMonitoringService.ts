@@ -433,7 +433,7 @@ class ShiftMonitoringService {
     };
   }
 
-  private async handleLateClockIn(shift: any, employee: Record<string, unknown>, minutesLate: number): Promise<void> {
+  private async handleLateClockIn(shift: unknown, employee: Record<string, unknown>, minutesLate: number): Promise<void> {
     const alert: ShiftAlert = {
       type: 'late_clock_in',
       shiftId: shift.id,
@@ -451,7 +451,7 @@ class ShiftMonitoringService {
     await this.notifyFieldManagers(shift.workspaceId, alert);
   }
 
-  private async handleNoCallNoShow(shift: any, employee: Record<string, unknown>, minutesLate: number): Promise<void> {
+  private async handleNoCallNoShow(shift: unknown, employee: Record<string, unknown>, minutesLate: number): Promise<void> {
     const alert: ShiftAlert = {
       type: 'no_call_no_show',
       shiftId: shift.id,
@@ -480,7 +480,7 @@ class ShiftMonitoringService {
     }
   }
 
-  async triggerAutoReplacement(shift: any, reason: 'ncns' | 'call_off'): Promise<{ success: boolean; replacementId?: string; error?: string }> {
+  async triggerAutoReplacement(shift: unknown, reason: 'ncns' | 'call_off'): Promise<{ success: boolean; replacementId?: string; error?: string }> {
     log.info(`[ShiftMonitor] Triggering coverage pipeline for shift ${shift.id} (reason: ${reason})`);
 
     // ─── STAY-LATE FIRST CHECK ───────────────────────────────────────────────
@@ -518,7 +518,7 @@ class ShiftMonitoringService {
             eq(employees.isActive, true)
           ),
         });
-        if (!officer || (officer as any).overtimeEligible === false) continue;
+        if (!officer || (officer as Record<string,unknown>).overtimeEligible === false) continue;
 
         const gapHours = (shiftStart.getTime() - new Date(onSite.endTime).getTime()) / (1000 * 60 * 60);
         const stayLateNote = gapHours <= 0
@@ -603,7 +603,7 @@ class ShiftMonitoringService {
     }
   }
 
-  private async searchPlatformPool(shift: any): Promise<void> {
+  private async searchPlatformPool(shift: unknown): Promise<void> {
     try {
       const poolResult = await pool.query<{
         id: string; first_name: string; last_name: string;
@@ -684,7 +684,7 @@ class ShiftMonitoringService {
     }
   }
 
-  private async handleReplacementFailed(shift: any, reason: string, errorMessage: string): Promise<void> {
+  private async handleReplacementFailed(shift: unknown, reason: string, errorMessage: string): Promise<void> {
     const alert: ShiftAlert = {
       type: 'replacement_failed',
       shiftId: shift.id,

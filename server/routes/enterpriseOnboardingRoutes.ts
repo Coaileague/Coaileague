@@ -649,7 +649,7 @@ router.get('/pipeline/staged-shifts/:workspaceId', async (req, res) => {
     .orderBy(desc(stagedShifts.createdAt))
     .limit(100);
 
-    const shiftsWithEmployees = await Promise.all(shifts.map(async (shift: any) => {
+    const shiftsWithEmployees = await Promise.all(shifts.map(async (shift: unknown) => {
       let assignedEmployeeName = null;
       if (shift.assignedEmployeeId) {
         const [emp] = await db.select({

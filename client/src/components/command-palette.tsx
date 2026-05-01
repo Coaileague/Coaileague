@@ -146,7 +146,7 @@ export function CommandPalette() {
 
   // ── Global open function ───────────────────────────────────────────────────
   useEffect(() => {
-    (window as any).openCommandPalette = () => setOpen(true);
+    (window as Record<string,unknown>).openCommandPalette = () => setOpen(true);
   }, []);
 
   // ── Debounced live search ──────────────────────────────────────────────────

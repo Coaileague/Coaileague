@@ -410,7 +410,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
       // Handle built-in commands
       const commandHandlers: Record<string, () => Promise<unknown>> = {
         'health': async () => {
-          const result = await (helpaiOrchestrator as any).executeAction({
+          const result = await (helpaiOrchestrator as Record<string,unknown>).executeAction({
             actionId: 'health.self_check',
             userId,
             workspaceId,
@@ -445,7 +445,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
           };
         },
         'diagnostics': async () => {
-          const result = await (helpaiOrchestrator as any).executeAction({
+          const result = await (helpaiOrchestrator as Record<string,unknown>).executeAction({
             actionId: 'diagnostics.full_scan',
             userId,
             workspaceId,
@@ -454,7 +454,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
           return { response: result.message, ...result };
         },
         'subagents': async () => {
-          const result = await (helpaiOrchestrator as any).executeAction({
+          const result = await (helpaiOrchestrator as Record<string,unknown>).executeAction({
             actionId: 'diagnostics.list_subagents',
             userId,
             workspaceId,

@@ -347,7 +347,7 @@ export function FinancialHealthPanel() {
     queryFn: () => apiFetch('/api/admin/financial/health', AnyResponse),
   });
 
-  const report = (data as any)?.report as HealthReport | undefined;
+  const report = (data as Record<string,unknown>)?.report as HealthReport | undefined;
 
   const statusConfig = {
     healthy: { icon: <CheckCircle className="h-5 w-5 text-green-500" />, label: "Healthy", badge: "secondary" as const },

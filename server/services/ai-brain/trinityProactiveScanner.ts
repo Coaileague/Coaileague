@@ -266,7 +266,7 @@ class TrinityProactiveScannerService {
     let overdueInvoices = 0;
     try {
       const overdueResult = await checkOverdueInvoices(workspaceId);
-      overdueInvoices = (overdueResult as any)?.overdueCount || 0;
+      overdueInvoices = (overdueResult as Record<string,unknown>)?.overdueCount || 0;
       if (overdueInvoices > 0) {
         alerts.push(`${overdueInvoices} overdue invoice(s) — send reminders via invoice.check_overdue`);
       }
@@ -602,7 +602,7 @@ class TrinityProactiveScannerService {
 
     const hoursThisWeek = await db.select({
       employeeId: timeEntries.employeeId,
-      totalMinutes: sql`SUM(${(timeEntries as any).totalMinutes})`,
+      totalMinutes: sql`SUM(${(timeEntries as Record<string,unknown>).totalMinutes})`,
     })
       .from(timeEntries)
       .where(and(
@@ -799,7 +799,7 @@ class TrinityProactiveScannerService {
         invoiceCycleTriggered ? `Invoices sent to all eligible clients.` : `Invoice cycle failed.`,
         `Open shifts next month: ${parseInt(String((openShiftsNextMonth[0] as any)?.count || 0))}`,
         `Compliance flags: ${parseInt(String((complianceFlags[0] as any)?.count || 0))} cert(s) expiring in 30 days.`,
-        overdueData ? `Overdue invoices: ${(overdueData as any)?.overdueCount || 0}` : '',
+        overdueData ? `Overdue invoices: ${(overdueData as Record<string,unknown>)?.overdueCount || 0}` : '',
         errors.length > 0 ? `Errors requiring attention: ${errors.length}` : 'All cycles completed successfully.',
       ].filter(Boolean).join(' ');
 
@@ -911,7 +911,7 @@ class TrinityProactiveScannerService {
       case 'missed_clock_in':
         if (officerId && shiftId) {
           const emp = await db.query.employees?.findFirst({ where: eq(employees.id, officerId) }).catch(() => null);
-          const userId = (emp as any)?.userId || officerId;
+          const userId = (emp as EmployeeWithStatus)?.userId || officerId;
           await createNotification({
             workspaceId, userId, type: 'missed_clock_in',
             title: 'Missed Clock-In',
@@ -939,7 +939,7 @@ class TrinityProactiveScannerService {
       case 'license_expiry':
         if (officerId && workspaceId) {
           const emp = await db.query.employees?.findFirst({ where: eq(employees.id, officerId) }).catch(() => null);
-          const userId = (emp as any)?.userId || officerId;
+          const userId = (emp as EmployeeWithStatus)?.userId || officerId;
           await createNotification({
             workspaceId, userId, type: 'compliance',
             title: 'License/Certification Expired',
@@ -970,7 +970,7 @@ class TrinityProactiveScannerService {
             ) as any,
           }).catch(() => null);
           if (entry) {
-            const hasIssues = !(entry as unknown).clockOut || (entry as unknown).totalMinutes > 600 || (entry as unknown).totalMinutes < 0;
+            const hasIssues = !(entry as Record<string,unknown>).clockOut || (entry as Record<string,unknown>).totalMinutes > 600 || (entry as Record<string,unknown>).totalMinutes < 0;
             if (!hasIssues) {
               await db.update(timeEntries)
                 .set({ status: 'approved', updatedAt: new Date() } as Record<string, unknown>)
@@ -979,7 +979,7 @@ class TrinityProactiveScannerService {
               return { handled: true, event: 'timesheet_submitted', autoApproved: true };
             } else {
               await db.update(timeEntries)
-                .set({ status: 'flagged', notes: '[AUTO_FLAGGED] Anomaly detected: ' + (!(entry as unknown).clockOut ? 'missing clock-out' : (entry as unknown).totalMinutes > 600 ? 'shift >10 hours' : 'invalid duration'), updatedAt: new Date() } as Record<string, unknown>)
+                .set({ status: 'flagged', notes: '[AUTO_FLAGGED] Anomaly detected: ' + (!(entry as Record<string,unknown>).clockOut ? 'missing clock-out' : (entry as Record<string,unknown>).totalMinutes > 600 ? 'shift >10 hours' : 'invalid duration'), updatedAt: new Date() } as Record<string, unknown>)
                 .where(and(eq(timeEntries.id, payload.timeEntryId), eq(timeEntries.workspaceId, workspaceId)))
                 .catch(() => null);
               return { handled: true, event: 'timesheet_submitted', autoApproved: false, flagged: true };
@@ -1178,8 +1178,8 @@ class TrinityProactiveScannerService {
     // 4. Overdue invoices (with dollar impact)
     try {
       const overdueResult = await checkOverdueInvoices(workspaceId);
-      const overdueCount = (overdueResult as any)?.overdueCount || 0;
-      const overdueAmount = (overdueResult as any)?.totalOverdueAmount || 0;
+      const overdueCount = (overdueResult as Record<string,unknown>)?.overdueCount || 0;
+      const overdueAmount = (overdueResult as Record<string,unknown>)?.totalOverdueAmount || 0;
       if (overdueCount > 0) {
         items.push({ urgency: 'high', title: `${overdueCount} overdue invoice(s)`, detail: `$${parseFloat(String(overdueAmount)).toLocaleString()} in unpaid invoices past due date. Collections follow-up needed.`, actionHint: 'Use invoice.run_cycle to trigger automated reminders', dollarImpact: parseFloat(String(overdueAmount)), score: 65 + Math.min(25, overdueCount * 3) });
       }

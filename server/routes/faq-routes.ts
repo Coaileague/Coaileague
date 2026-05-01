@@ -149,7 +149,7 @@ app.post('/api/helpos/faqs', requirePlatformStaff, async (req: AuthenticatedRequ
         });
         embeddingVector = JSON.stringify(embeddingResponse.data[0].embedding);
         const { tokenManager } = await import('../services/billing/tokenManager');
-        await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Create Embedding', wsId || undefined, req.user?.id);
+        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Create Embedding', wsId || undefined, req.user?.id);
       } catch (embeddingError) {
         log.error('Error generating embedding:', embeddingError);
       }
@@ -212,7 +212,7 @@ app.patch('/api/helpos/faqs/:id', requirePlatformStaff, async (req: Authenticate
         });
         embeddingVector = JSON.stringify(embeddingResponse.data[0].embedding);
         const { tokenManager } = await import('../services/billing/tokenManager');
-        await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Update Embedding', wsId || undefined, req.user?.id);
+        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Update Embedding', wsId || undefined, req.user?.id);
       } catch (embeddingError) {
         log.error('Error generating embedding:', embeddingError);
       }
@@ -359,7 +359,7 @@ app.post('/api/helpos/faqs/search/semantic', readLimiter, requireAuth, async (re
 
     try {
       const { tokenManager } = await import('../services/billing/tokenManager');
-      await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Semantic Search Embedding', wsId || undefined);
+      await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Semantic Search Embedding', wsId || undefined);
     } catch (billingErr: unknown) {
       log.error('[FAQ AI] Support pool deduction failed:', billingErr);
     }
@@ -584,7 +584,7 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
         // Generate embedding
         const embeddingResponse = await bulkEmbeddingClient.embeddings.create({
           model: 'text-embedding-3-small',
-          input: `${(validated as any).question} ${(validated as any).answer}`,
+          input: `${(validated as Record<string,unknown>).question} ${(validated as Record<string,unknown>).answer}`,
         });
 
         // Create FAQ
@@ -605,7 +605,7 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
     if (createdFaqs.length > 0) {
       try {
         const { tokenManager } = await import('../services/billing/tokenManager');
-        await (tokenManager as any).deductSupportPoolCredits('faq_embedding', 'FAQ Bulk Import Embeddings', wsId || undefined);
+        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Bulk Import Embeddings', wsId || undefined);
       } catch (billingErr: unknown) {
         log.error('[FAQ AI] Support pool deduction failed:', billingErr);
       }
@@ -863,7 +863,7 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
     // Bill to shared platform support pool (not individual org)
     try {
       const { tokenManager } = await import('../services/billing/tokenManager');
-      await (tokenManager as any).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || undefined);
+      await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || undefined);
     } catch (billingErr: unknown) {
       log.warn('[FAQ] Support pool billing failed (non-blocking):', billingErr.message);
     }

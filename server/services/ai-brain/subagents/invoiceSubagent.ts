@@ -249,7 +249,7 @@ class InvoiceSubagentService {
 
       for (const entry of billableEntries) {
         const hours = parseFloat(entry.totalHours?.toString() || '0');
-        const rate = parseFloat(entry.hourlyRate?.toString() || (clientData as any).defaultHourlyRate?.toString() || '100');
+        const rate = parseFloat(entry.hourlyRate?.toString() || (clientData as Record<string,unknown>).defaultHourlyRate?.toString() || '100');
         // Integer-cent arithmetic: hundredths_of_hour × cents_per_hour ÷ 100 = cents
         const amountCents = Math.round(Math.round(hours * 100) * Math.round(rate * 100) / 100);
         const amount = amountCents / 100;
@@ -270,7 +270,7 @@ class InvoiceSubagentService {
           issues.push({
             severity: 'warning',
             type: 'rate',
-            description: `Rate variance detected: $${rate}/hr vs contract rate $${(clientData as any).defaultHourlyRate}/hr`,
+            description: `Rate variance detected: $${rate}/hr vs contract rate $${(clientData as Record<string,unknown>).defaultHourlyRate}/hr`,
             potentialRevenue: Math.abs(amount - hours * parseFloat(clientData.defaultHourlyRate?.toString() || '0')),
           });
         }
@@ -299,7 +299,7 @@ class InvoiceSubagentService {
             zeroRateEntries: zeroRateCount,
             zeroHourEntries: zeroHourCount,
             rateVariances: rateVarianceCount,
-            contractRate: (clientData as any).defaultHourlyRate,
+            contractRate: (clientData as Record<string,unknown>).defaultHourlyRate,
             periodStart: billingPeriodStart.toISOString(),
             periodEnd: billingPeriodEnd.toISOString(),
           },
@@ -786,7 +786,7 @@ class InvoiceSubagentService {
         result,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       }).onConflictDoUpdate({
-        target: (idempotencyKeys as any).key,
+        target: (idempotencyKeys as Record<string,unknown>).key,
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {
@@ -905,8 +905,8 @@ Provide 2-3 sentences of executive-level recommendations to recover this revenue
     // (TRINITY.md Section L). 'started' rows are skipped to avoid 2× write
     // amplification; only the terminal state is persisted.
     if (status !== 'started') {
-      const wsId = (details as any)?.workspaceId ?? null;
-      const entityId = (details as any)?.invoiceId ?? null;
+      const wsId = (details as Record<string,unknown>)?.workspaceId ?? null;
+      const entityId = (details as Record<string,unknown>)?.invoiceId ?? null;
       void logActionAudit({
         actionId: action,
         workspaceId: wsId,
@@ -915,7 +915,7 @@ Provide 2-3 sentences of executive-level recommendations to recover this revenue
         success: status === 'completed',
         message: `subagent.${action}.${status}`,
         payload: { traceId, ...details },
-        errorMessage: status === 'failed' ? ((details as any)?.error ?? null) : null,
+        errorMessage: status === 'failed' ? ((details as Record<string,unknown>)?.error ?? null) : null,
       });
     }
   }

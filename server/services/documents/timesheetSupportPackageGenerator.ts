@@ -88,7 +88,7 @@ function employeeName(employee: Record<string, unknown>, fallbackId: string): st
   return name || fallbackId;
 }
 
-function clientName(client: any, fallbackId?: string | null): string {
+function clientName(client: unknown, fallbackId?: string | null): string {
   if (!client) return fallbackId || 'Unassigned';
   return client.companyName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || fallbackId || 'Client';
 }
@@ -198,7 +198,7 @@ export async function generateTimesheetSupportPackage(
 
     const totalHours = rows.reduce((sum, row) => sum + getEntryHours(row.timeEntry as any), 0);
     const totalBillable = formatCurrency(sumFinancialValues(rows.map(row => getBillableAmountValue(row.timeEntry as any))));
-    const workspaceName = (workspace as any)?.companyName || (workspace as any)?.name || workspaceId;
+    const workspaceName = (workspace as Record<string,unknown>)?.companyName || (workspace as Record<string,unknown>)?.name || workspaceId;
     const periodLabel = `${formatDate(periodStart)} – ${formatDate(periodEnd)}`;
 
     const rawBuffer = await buildPdf((doc) => {

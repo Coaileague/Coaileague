@@ -123,7 +123,7 @@ export function registerDrugTestingActions() {
     
     if (!existing) throw new Error(`Drug test record ${testId} not found`);
 
-    const currentParams = (existing as any).inputParams || {};
+    const currentParams = (existing as Record<string,unknown>).inputParams || {};
     const updatedParams = {
       ...currentParams,
       result,

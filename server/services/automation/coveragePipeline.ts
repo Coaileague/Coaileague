@@ -257,7 +257,7 @@ class CoveragePipelineService {
    * Tier 2: Internal qualified pool — available employees with no shift conflict that day.
    * Tier 3: Full platform pool — remaining available employees with lower scores.
    */
-  private async findCandidates(shift: any, excludeEmployeeId?: string): Promise<CoverageCandidate[]> {
+  private async findCandidates(shift: unknown, excludeEmployeeId?: string): Promise<CoverageCandidate[]> {
     const shiftDate = shift.date;
     const shiftStart = new Date(shift.startTime);
     const shiftEnd = new Date(shift.endTime);

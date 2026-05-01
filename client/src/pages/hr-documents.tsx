@@ -1478,11 +1478,11 @@ function DocumentPreviewModal({
     if (!recipient) return;
 
     const recipientName = isClientDoc
-      ? (recipient as any).contactName || (recipient as any).name
-      : `${(recipient as any).firstName} ${(recipient as any).lastName}`;
+      ? (recipient as Record<string,unknown>).contactName || (recipient as Record<string,unknown>).name
+      : `${(recipient as Record<string,unknown>).firstName} ${(recipient as Record<string,unknown>).lastName}`;
     const recipientEmail = isClientDoc
-      ? (recipient as any).contactEmail
-      : (recipient as any).email;
+      ? (recipient as Record<string,unknown>).contactEmail
+      : (recipient as Record<string,unknown>).email;
 
     if (!recipientEmail) {
       toast({ title: "No email on file", description: `${recipientName} has no email address in the system.`, variant: "destructive" });

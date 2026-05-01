@@ -742,7 +742,7 @@ export async function createHumanReviewTicket(
       description: `Execution pipeline exhausted all retries for '${ctx.operationName}' after ${ctx.escalationAttempts} attempts. Human intervention required.`,
       workspaceId: ctx.workspaceId,
       metadata: { ticketId, executionId: ctx.executionId, operationName: ctx.operationName, error: error.message, escalationAttempts: ctx.escalationAttempts, severity: 'critical' },
-    }).catch((dbError: any) => log.error('[ExecutionPipeline] Failed to publish human_review_required:', dbError));
+    }).catch((dbError: unknown) => log.error('[ExecutionPipeline] Failed to publish human_review_required:', dbError));
   } catch (dbError) {
     log.error('[ExecutionPipeline] Failed to create human review ticket:', dbError);
   }

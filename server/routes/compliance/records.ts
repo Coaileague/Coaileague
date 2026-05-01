@@ -180,7 +180,7 @@ router.get("/stats", requireAuth, async (req: AuthenticatedRequest, res: Respons
     ).length;
 
     const stats = {
-      totalEmployees: (records as any).length,
+      totalEmployees: (records as Record<string,unknown>).length,
       compliantEmployees: records.filter((r: unknown) => r.status === 'verified').length,
       pendingReview: records.filter((r: unknown) => r.status === 'pending').length,
       expiringWithin30Days,

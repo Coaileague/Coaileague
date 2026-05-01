@@ -26,7 +26,7 @@ import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityEnhancedModeActions');
 
-export function registerTrinityEnhancedModeActions(orchestrator: any): void {
+export function registerTrinityEnhancedModeActions(orchestrator: unknown): void {
   log.info('[TrinityEnhanced] Registering Enhanced Guru Mode + Business Pro Mode actions...');
 
   // -------------------------------------------------------------------------

@@ -272,7 +272,7 @@ class TrinityHealthContext {
     return `${Math.floor(diffHours / 24)}d ago`;
   }
 
-  private generateSummaryText(status: any, alerts: SentinelAlert[]): string {
+  private generateSummaryText(status: unknown, alerts: SentinelAlert[]): string {
     if (alerts.length === 0) {
       return 'All platform systems are operating normally.';
     }
@@ -289,7 +289,7 @@ class TrinityHealthContext {
     return `Platform has ${parts.join(', ')} active. Health score: ${this.healthScore}%.`;
   }
 
-  private generateConversationalHint(status: any, alerts: SentinelAlert[]): string {
+  private generateConversationalHint(status: unknown, alerts: SentinelAlert[]): string {
     if (alerts.length === 0) {
       return "Everything's running smoothly - I'm here to help!";
     }

@@ -112,7 +112,7 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .orderBy(desc(pulseSurveyTemplates.createdAt));
       
       if (isActive !== undefined) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(pulseSurveyTemplates.workspaceId, workspaceId),
           eq(pulseSurveyTemplates.isActive, isActive === 'true')
         ));
@@ -325,14 +325,14 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .orderBy(desc(pulseSurveyResponses.submittedAt));
       
       if (surveyTemplateId) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(pulseSurveyResponses.workspaceId, workspaceId),
           eq(pulseSurveyResponses.surveyTemplateId, surveyTemplateId as string)
         ));
       }
       
       if (sentimentLabel) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(pulseSurveyResponses.workspaceId, workspaceId),
           eq(pulseSurveyResponses.sentimentLabel, sentimentLabel as string)
         ));
@@ -476,14 +476,14 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .orderBy(desc(employerRatings.submittedAt));
       
       if (ratingType) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employerRatings.workspaceId, workspaceId),
           eq(employerRatings.ratingType, ratingType as string)
         ));
       }
       
       if (targetId) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employerRatings.workspaceId, workspaceId),
           eq(employerRatings.targetId, targetId as string)
         ));
@@ -563,21 +563,21 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .orderBy(desc(anonymousSuggestions.submittedAt));
       
       if (status) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(anonymousSuggestions.workspaceId, workspaceId),
           eq(anonymousSuggestions.status, status as string)
         ));
       }
       
       if (category) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(anonymousSuggestions.workspaceId, workspaceId),
           eq(anonymousSuggestions.category, category as string)
         ));
       }
       
       if (urgencyLevel) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(anonymousSuggestions.workspaceId, workspaceId),
           eq(anonymousSuggestions.urgencyLevel, urgencyLevel as string)
         ));
@@ -724,14 +724,14 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .orderBy(desc(employeeRecognition.createdAt));
       
       if (employeeId) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employeeRecognition.workspaceId, workspaceId),
           eq(employeeRecognition.recognizedEmployeeId, employeeId as string)
         ));
       }
       
       if (isPublic !== undefined) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employeeRecognition.workspaceId, workspaceId),
           eq(employeeRecognition.isPublic, isPublic === 'true')
         ));
@@ -757,21 +757,21 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .orderBy(desc(employeeHealthScores.periodEnd));
       
       if (employeeId) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employeeHealthScores.workspaceId, workspaceId),
           eq(employeeHealthScores.employeeId, employeeId as string)
         ));
       }
       
       if (riskLevel) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employeeHealthScores.workspaceId, workspaceId),
           eq(employeeHealthScores.riskLevel, riskLevel as string)
         ));
       }
       
       if (requiresManagerAction !== undefined) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employeeHealthScores.workspaceId, workspaceId),
           eq(employeeHealthScores.requiresManagerAction, requiresManagerAction === 'true')
         ));
@@ -835,14 +835,14 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .orderBy(desc(employerBenchmarkScores.periodEnd));
       
       if (benchmarkType) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employerBenchmarkScores.workspaceId, workspaceId),
           eq(employerBenchmarkScores.benchmarkType, benchmarkType as string)
         ));
       }
       
       if (targetId) {
-        query = (query as any).where(and(
+        query = (query as Record<string,unknown>).where(and(
           eq(employerBenchmarkScores.workspaceId, workspaceId),
           eq(employerBenchmarkScores.targetId, targetId as string)
         ));

@@ -125,7 +125,7 @@ export default function TrainingCertificationPage() {
   });
 
   const isManager = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager', 'supervisor'].includes(
-    (employee as any)?.workspaceRole || '',
+    (employee as Record<string,unknown>)?.workspaceRole || '',
   );
 
   // Queries

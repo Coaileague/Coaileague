@@ -588,7 +588,7 @@ class ElevatedSessionGuardian {
     }
   }
 
-  private classifyError(error: any): SessionAnomalyCode {
+  private classifyError(error: unknown): SessionAnomalyCode {
     const message = error.message?.toLowerCase() || '';
     
     if (message.includes('signature') || message.includes('hmac')) {

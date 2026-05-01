@@ -315,7 +315,7 @@ export async function generateRecurringShifts(input: GenerateRecurringShiftsInpu
             clientId: template.clientId || null,
             title: template.title,
             description: template.description || null,
-            category: (template as any).category || 'general',
+            category: (template as Record<string,unknown>).category || 'general',
             startTime: shiftStartTime,
             endTime: shiftEndTime,
             billableToClient: template.billableToClient ?? true,

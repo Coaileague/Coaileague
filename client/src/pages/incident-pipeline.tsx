@@ -402,7 +402,7 @@ function DetailView({
                 Photos ({photos.length})
               </h3>
               <div className="grid grid-cols-3 gap-2">
-                {photos.map((photo: any, idx: number) => (
+                {photos.map((photo: unknown, idx: number) => (
                   <div key={idx} className="aspect-square rounded-md bg-muted overflow-hidden" data-testid={`photo-thumbnail-${idx}`}>
                     <img src={photo.url} alt={photo.caption || `Photo ${idx + 1}`} width={300} height={300} className="w-full h-full object-cover" loading="lazy" />
                   </div>
@@ -418,7 +418,7 @@ function DetailView({
                 Trinity Legal Flags ({legalFlags.length})
               </h3>
               <div className="space-y-2">
-                {legalFlags.map((flag: any, idx: number) => (
+                {legalFlags.map((flag: unknown, idx: number) => (
                   <div key={idx} className="p-3 rounded-md bg-muted" data-testid={`legal-flag-${idx}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <AlertCircle className="w-3 h-3" />

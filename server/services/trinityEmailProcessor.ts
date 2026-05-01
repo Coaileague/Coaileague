@@ -208,7 +208,7 @@ export class TrinityEmailProcessor {
     }
   }
 
-  private async handleCareersEmail(email: any, workspace: any, sender: unknown): Promise<void> {
+  private async handleCareersEmail(email: unknown, workspace: any, sender: unknown): Promise<void> {
     log.info(`[careers] New career inquiry from ${email.from_email} to ${workspace.company_name}`);
     try {
       await pool.query(
@@ -223,27 +223,27 @@ export class TrinityEmailProcessor {
     }
   }
 
-  private async handleVerificationEmail(email: any, workspace: any, _sender: unknown): Promise<void> {
+  private async handleVerificationEmail(email: unknown, workspace: any, _sender: unknown): Promise<void> {
     log.info(`[verify] Employment verification request from ${email.from_email} to ${workspace.company_name}`);
     await this._delegateToFullPipeline(email);
   }
 
-  private async handleSupportEmail(email: any, workspace: any, _sender: unknown): Promise<void> {
+  private async handleSupportEmail(email: unknown, workspace: any, _sender: unknown): Promise<void> {
     log.info(`[support] Support request from ${email.from_email} to ${workspace.company_name}`);
     await this._delegateToFullPipeline(email);
   }
 
-  private async handleCalloffEmail(email: any, workspace: any, sender: unknown): Promise<void> {
+  private async handleCalloffEmail(email: unknown, workspace: any, sender: unknown): Promise<void> {
     log.info(`[calloffs] Calloff email from ${email.from_email} to ${workspace.company_name}`);
     await this._delegateToFullPipeline(email);
   }
 
-  private async handleTrinityDirectEmail(email: any, workspace: any, sender: unknown): Promise<void> {
+  private async handleTrinityDirectEmail(email: unknown, workspace: any, sender: unknown): Promise<void> {
     log.info(`[trinity-direct] Direct Trinity message from ${email.from_email} to ${workspace.company_name}`);
     await this._delegateToFullPipeline(email);
   }
 
-  private async handleMainInboxEmail(email: any, workspace: any, sender: unknown): Promise<void> {
+  private async handleMainInboxEmail(email: unknown, workspace: any, sender: unknown): Promise<void> {
     log.info(`[main] Main inbox email from ${email.from_email} to ${workspace.company_name}`);
     await this._delegateToFullPipeline(email);
   }
@@ -253,7 +253,7 @@ export class TrinityEmailProcessor {
    * to the full Trinity inbound pipeline (trinityInboundEmailProcessor.ts).
    * This ensures all stub handlers produce real DB records and acknowledgments.
    */
-  private async _delegateToFullPipeline(email: any): Promise<void> {
+  private async _delegateToFullPipeline(email: unknown): Promise<void> {
     try {
       const parsed: ParsedInboundEmail = {
         messageId: email.message_id || undefined,

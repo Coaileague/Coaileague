@@ -33,7 +33,7 @@ router.get("/suggestions", async (req: Request, res: Response) => {
     // Platform admins can view any workspace via query param, or their own if set
     const isPlatformAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
     const queryWorkspaceId = req.query.workspaceId as string;
-    const workspaceId = (isPlatformAdmin && queryWorkspaceId) || req.workspaceId || (user as any)?.workspaceId;
+    const workspaceId = (isPlatformAdmin && queryWorkspaceId) || req.workspaceId || (user as Record<string,unknown>)?.workspaceId;
     
     if (workspaceId && workspaceId !== req.workspaceId && !isPlatformAdmin) {
       return res.status(403).json({ error: "Unauthorized workspace access" });
@@ -181,7 +181,7 @@ router.get("/suggestions", async (req: Request, res: Response) => {
 router.post("/apply-suggestion", async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    if (!(user as any)?.workspaceId) {
+    if (!(user as Record<string,unknown>)?.workspaceId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -207,7 +207,7 @@ router.post("/apply-suggestion", async (req: Request, res: Response) => {
 router.get("/optimization-report", async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    if (!(user as any)?.workspaceId) {
+    if (!(user as Record<string,unknown>)?.workspaceId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 

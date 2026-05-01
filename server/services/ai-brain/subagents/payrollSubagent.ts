@@ -254,16 +254,16 @@ class DistributedTracer {
     // (TRINITY.md Section L). 'started' rows are skipped to keep durable
     // log volume bounded.
     if (status !== 'started' && action.startsWith('payroll.')) {
-      const wsId = (details as any)?.workspaceId ?? null;
+      const wsId = (details as Record<string,unknown>)?.workspaceId ?? null;
       void logActionAudit({
         actionId: action,
         workspaceId: wsId,
         entityType: 'payroll_run',
-        entityId: (details as any)?.payrollRunId ?? null,
+        entityId: (details as Record<string,unknown>)?.payrollRunId ?? null,
         success: status === 'completed',
         message: `subagent.${action}.${status}`,
         payload: { traceId, spanId, ...details },
-        errorMessage: status === 'failed' ? ((details as any)?.error ?? null) : null,
+        errorMessage: status === 'failed' ? ((details as Record<string,unknown>)?.error ?? null) : null,
         durationMs: typeof details.durationMs === 'number' ? details.durationMs : undefined,
       });
     }
@@ -1000,7 +1000,7 @@ class PayrollSubagentService {
         result,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       }).onConflictDoUpdate({
-        target: (idempotencyKeys as any).key,
+        target: (idempotencyKeys as Record<string,unknown>).key,
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {

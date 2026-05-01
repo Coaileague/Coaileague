@@ -263,8 +263,8 @@ async function extractStructuredData(
     userInput: `${senderName}\n${subject}\n${bodyText.slice(0, 1500)}`,
   };
   const guardResult = await aiGuardRails.validateRequest(guardContext);
-  if (!(guardResult as any).allowed) {
-    throw new Error(`Email content blocked by AI guard rails: ${(guardResult as any).reason}`);
+  if (!(guardResult as Record<string,unknown>).allowed) {
+    throw new Error(`Email content blocked by AI guard rails: ${(guardResult as Record<string,unknown>).reason}`);
   }
 
   const prompts: Record<EmailCategory, string> = {

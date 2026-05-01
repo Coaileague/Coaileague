@@ -2389,7 +2389,7 @@ class PlatformActionHub {
       } catch (preExecErr) {
         // Validator threw — fail CLOSED for mutating/high-risk categories
         const HIGH_RISK = ['payroll','invoicing','billing','scheduling','admin','compliance','tax'];
-        const cat = (handler as any)?.category ?? '';
+        const cat = (handler as Record<string,unknown>)?.category ?? '';
         log.error('[Platform Action Hub] Pre-execution validator threw:', preExecErr);
         if (HIGH_RISK.includes(cat)) {
           return {
@@ -2680,7 +2680,7 @@ class PlatformActionHub {
           missingDataPoints: 0,
           edgeCasesDetected: [],
           hasHistoricalPrecedent: true,
-          financialImpact: (request as any).payload?.amount ?? 0,
+          financialImpact: (request as Record<string,unknown>).payload?.amount ?? 0,
           hasRegulatoryImplications: DUAL_AI_REQUIRED_CATEGORIES.has(handler.category),
           anomalyScore: 0,
           affectsMultipleUsers: 1,

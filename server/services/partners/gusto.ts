@@ -140,7 +140,7 @@ export class GustoService {
    * Gusto requires a company_id for most operations.
    * This is typically stored in the connection metadata.
    */
-  private async getCompanyId(connection: any): Promise<string> {
+  private async getCompanyId(connection: unknown): Promise<string> {
     // If stored in metadata, return it
     if (connection.metadata?.company_id) {
       return connection.metadata.company_id;

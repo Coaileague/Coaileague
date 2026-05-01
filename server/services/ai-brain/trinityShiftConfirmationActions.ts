@@ -44,7 +44,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
 
 async function getEmployeeUserId(employeeId: string): Promise<string | null> {
   const emp = await db.query.employees?.findFirst({ where: eq(employees.id, employeeId) }).catch(() => null);
-  return (emp as any)?.userId || null;
+  return (emp as EmployeeWithStatus)?.userId || null;
 }
 
 export function registerShiftConfirmationActions() {
@@ -68,7 +68,7 @@ export function registerShiftConfirmationActions() {
     const clientData = (shift as Record<string,unknown>).clientId
       ? await db.query.clients?.findFirst({ where: eq(clients.id, (shift as Record<string,unknown>).clientId) }).catch(() => null)
       : null;
-    const siteName = (clientData as any)?.name || 'your assigned site';
+    const siteName = (clientData as Record<string,unknown>)?.name || 'your assigned site';
     const startTime = new Date((shift as Record<string,unknown>).startTime);
     const timeStr = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     const dateStr = startTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
@@ -158,20 +158,20 @@ export function registerShiftConfirmationActions() {
           title: 'Officer Declined Shift — Coverage Needed',
           message: `An officer declined their shift on ${new Date((shift as Record<string,unknown>).startTime).toLocaleDateString()}. Reason: ${reason || 'Not provided'}. Trinity has created an open replacement shift.`,
           priority: 'urgent',
-          metadata: { originalShiftId: shiftId, officerId, replacementShiftId: (replacementShift as any)?.id },
+          metadata: { originalShiftId: shiftId, officerId, replacementShiftId: (replacementShift as Record<string,unknown>)?.id },
           idempotencyKey: `shift_declined_alert-${String(Date.now())}-${mgr.userId}`,
         }).catch(() => null);
       }
 
-      log.info(`[TrinityShiftConfirmation] Shift declined + replacement created: shiftId=${shiftId}, replacementId=${(replacementShift as any)?.id}`);
+      log.info(`[TrinityShiftConfirmation] Shift declined + replacement created: shiftId=${shiftId}, replacementId=${(replacementShift as Record<string,unknown>)?.id}`);
       return {
         confirmed: false,
         shiftId,
         officerId,
         deniedAt: now.toISOString(),
         denialReason: reason || 'Officer declined',
-        replacementShiftCreated: !!(replacementShift as any)?.id,
-        replacementShiftId: (replacementShift as any)?.id || null,
+        replacementShiftCreated: !!(replacementShift as Record<string,unknown>)?.id,
+        replacementShiftId: (replacementShift as Record<string,unknown>)?.id || null,
       };
     }   // close else block
   }));

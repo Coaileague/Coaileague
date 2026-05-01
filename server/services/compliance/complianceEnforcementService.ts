@@ -211,7 +211,7 @@ class ComplianceEnforcementService {
     if (!submitted.includes(docType)) submitted.push(docType);
 
     // Track per-doc approval date for expiry checking
-    const approvalDates: Record<string, string> = { ...((window as any).docApprovalDates as Record<string, string> || {}) };
+    const approvalDates: Record<string, string> = { ...((window as Record<string,unknown>).docApprovalDates as Record<string, string> || {}) };
     approvalDates[docType] = new Date().toISOString();
 
     const required = (window.requiredDocTypes as string[]) || [];
@@ -576,7 +576,7 @@ class ComplianceEnforcementService {
 
     // State-specific requirements (merge over federal)
     for (const stateConfig of Object.values(STATE_COMPLIANCE_CONFIGS)) {
-      for (const doc of (stateConfig as any).requiredDocuments) {
+      for (const doc of (stateConfig as Record<string,unknown>).requiredDocuments) {
         if (doc.expiryPeriodDays) {
           docExpiryMap[doc.id] = doc.expiryPeriodDays;
           // Also map to generic doc type if possible

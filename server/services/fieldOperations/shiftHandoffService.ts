@@ -166,7 +166,7 @@ class ShiftHandoffService {
     handoff.status = 'in_progress';
     
     const scanResult = this.scanKeywords(data.notes);
-    (handoff as any).keywordScan = scanResult;
+    (handoff as Record<string,unknown>).keywordScan = scanResult;
     
     if (scanResult.requiresEscalation) {
       log.info(`[Handoff] ESCALATION REQUIRED - Severity: ${scanResult.severity}, Keywords: ${scanResult.flaggedKeywords.join(', ')}, Categories: ${scanResult.categories.join(', ')}`);

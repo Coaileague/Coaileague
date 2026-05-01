@@ -646,7 +646,7 @@ router.post("/api/auth/login", async (req, res) => {
     // after the victim logs in. Capture pre-auth session values so they survive rotation.
     const priorHrisState = req.session.hrisOAuthState;
     const priorSessionData = { ...req.session };
-    delete (priorSessionData as any).cookie; // Don't copy cookie config
+    delete (priorSessionData as Record<string,unknown>).cookie; // Don't copy cookie config
 
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => {
@@ -740,7 +740,7 @@ router.post("/api/auth/login", async (req, res) => {
           }
         }
       } catch (activeCheckErr: unknown) {
-        log.warn('[Auth] Per-workspace is_active check failed (fail-open):', (activeCheckErr as any)?.message || String(activeCheckErr));
+        log.warn('[Auth] Per-workspace is_active check failed (fail-open):', (activeCheckErr as Record<string,unknown>)?.message || String(activeCheckErr));
       }
     }
 
@@ -877,7 +877,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
     // Create session
     const priorHrisState = req.session.hrisOAuthState;
     const priorSessionData = { ...req.session };
-    delete (priorSessionData as any).cookie;
+    delete (priorSessionData as Record<string,unknown>).cookie;
 
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
@@ -1205,7 +1205,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
   // the DB at all. Return a minimal auth response based on session data so the
   // frontend stays logged-in instead of getting a 500 and being force-signed-out.
   // The _dbDegraded flag triggers an amber degraded-mode banner in the UI.
-  if (isDbCircuitOpen() || (sessionUser as any)._dbDegraded) {
+  if (isDbCircuitOpen() || (sessionUser as Record<string,unknown>)._dbDegraded) {
     const wsId = sessionUser.currentWorkspaceId || req.workspaceId || null;
     log.warn(`[Auth /me] DB circuit open — returning session-based fallback for user ${sessionUser.id}`);
     return res.json({
@@ -1214,7 +1214,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
         email: sessionUser.email || '',
         firstName: sessionUser.firstName ?? null,
         lastName: sessionUser.lastName ?? null,
-        username: (sessionUser as any).username ?? null,
+        username: (sessionUser as Record<string,unknown>).username ?? null,
         role: sessionUser.role ?? 'employee',
         currentWorkspaceId: wsId,
         workspaceRole: null,
@@ -1327,7 +1327,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     
     if (currentEmployeeRecord) {
       employeeId = currentEmployeeRecord.id;
-      organizationalTitle = (currentEmployeeRecord as any).organizationalTitle || null;
+      organizationalTitle = (currentEmployeeRecord as Record<string,unknown>).organizationalTitle || null;
       // Use employee workspaceRole only if not already set as owner
       if (!workspaceRole) {
         workspaceRole = currentEmployeeRecord.workspaceRole || 'staff';
@@ -1484,7 +1484,7 @@ router.patch("/api/user/preferences", requireAuth, async (req, res) => {
     const data = preferencesSchema.parse(req.body);
     
     // Get current workspace to update employee-level preference
-    const workspaceId = req.workspaceId || (sessionUser as any).workspaceId || sessionUser.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (sessionUser as Record<string,unknown>).workspaceId || sessionUser.currentWorkspaceId;
     
     // If viewModePreference is set and we have a workspace, update employee record
     if (data.viewModePreference !== undefined && workspaceId) {
@@ -1541,7 +1541,7 @@ router.patch("/api/user/preferences", requireAuth, async (req, res) => {
 router.get("/api/user/view-mode", requireAuth, async (req, res) => {
   try {
     const sessionUser = req.user as User;
-    const workspaceId = req.workspaceId || (sessionUser as any).workspaceId || sessionUser.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (sessionUser as Record<string,unknown>).workspaceId || sessionUser.currentWorkspaceId;
     
     let effectiveMode: 'simple' | 'pro' = sessionUser.simpleMode ? 'simple' : 'pro';
     let source = 'user_fallback';
@@ -1644,7 +1644,7 @@ router.post("/api/auth/reset-password-request", async (req, res) => {
         }
         log.info(`[Auth] Password reset email sent OK for ${data.email}`);
       } catch (emailError: unknown) {
-        log.error(`[Auth] Password reset email delivery error:`, (emailError as any)?.message || emailError);
+        log.error(`[Auth] Password reset email delivery error:`, (emailError as Record<string,unknown>)?.message || emailError);
         return res.status(500).json({ success: false, error: "email_failed", message: "Could not send reset email. Try again later." });
       }
     }
@@ -1991,7 +1991,7 @@ router.post("/api/auth/sms-otp/verify", async (req, res) => {
 
     // Session fixation protection
     const priorSessionData = { ...req.session };
-    delete (priorSessionData as any).cookie;
+    delete (priorSessionData as Record<string,unknown>).cookie;
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });

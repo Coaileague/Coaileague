@@ -231,8 +231,8 @@ export function RBACRoute({
   // Merge workspace access roles with user object for role checking
   const userWithRoles = {
     ...user,
-    workspaceRole: workspaceRole || (user as any)?.workspaceRole,
-    platformRole: platformRole || (user as any)?.platformRole,
+    workspaceRole: workspaceRole || (user as Record<string,unknown>)?.workspaceRole,
+    platformRole: platformRole || (user as Record<string,unknown>)?.platformRole,
   };
   
   const result = checkAccess(require, userWithRoles, isAuthenticated, positionCapabilities);

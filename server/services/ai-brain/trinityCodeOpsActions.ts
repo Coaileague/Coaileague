@@ -14,7 +14,7 @@ const log = createLogger('trinityCodeOpsActions');
 /**
  * Register Trinity Code Ops actions with the orchestrator
  */
-export function registerTrinityCodeOpsActions(orchestrator: any): void {
+export function registerTrinityCodeOpsActions(orchestrator: unknown): void {
   log.info('[TrinityCodeOps] Registering autonomous coding actions...');
 
   // ============================================================================

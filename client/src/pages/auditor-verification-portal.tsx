@@ -99,7 +99,7 @@ export default function AuditorVerificationPortal() {
   const { user }     = useAuth();
   const { toast }    = useToast();
   const queryClient  = useQueryClient();
-  const workspaceId  = (user as any)?.workspaceId;
+  const workspaceId  = (user as Record<string,unknown>)?.workspaceId;
 
   const [paperworkFile, setPaperworkFile] = useState<File | null>(null);
 

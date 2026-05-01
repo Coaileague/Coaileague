@@ -153,7 +153,7 @@ export function ScheduleToolbar({
         description: 'All employees have been notified of their shifts',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         variant: 'destructive',
         title: 'Publish Failed',
@@ -176,7 +176,7 @@ export function ScheduleToolbar({
         description: 'Schedule is now in draft mode',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         variant: 'destructive',
         title: 'Unpublish Failed',

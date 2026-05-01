@@ -445,7 +445,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     />
                     <button
                       className="inline-flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                      onClick={() => { (window as any).openCommandPalette?.(); }}
+                      onClick={() => { (window as Record<string,unknown>).openCommandPalette?.(); }}
                       data-testid="button-mobile-search"
                       aria-label="Search"
                       title="Search"

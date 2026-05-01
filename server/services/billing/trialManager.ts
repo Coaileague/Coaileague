@@ -299,7 +299,7 @@ export class TrialManager {
       const [owner] = await db.select().from(users).where(eq(users.id, workspace.ownerId)).limit(1);
       if (!owner?.email) return;
 
-      const ownerName = (owner as any).name || (owner as any).firstName || 'there';
+      const ownerName = (owner as Record<string,unknown>).name || (owner as Record<string,unknown>).firstName || 'there';
       
       await sendBilledEmail({
         to: owner.email,
@@ -330,7 +330,7 @@ export class TrialManager {
       const [owner] = await db.select().from(users).where(eq(users.id, workspace.ownerId)).limit(1);
       if (!owner?.email) return;
 
-      const ownerName = (owner as any).name || (owner as any).firstName || 'there';
+      const ownerName = (owner as Record<string,unknown>).name || (owner as Record<string,unknown>).firstName || 'there';
 
       await sendBilledEmail({
         to: owner.email,

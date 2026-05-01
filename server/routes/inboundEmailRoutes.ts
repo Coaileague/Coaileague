@@ -431,7 +431,7 @@ async function resolveFallbackRoute(toEmail: string): Promise<ResolvedFallbackRo
   const orgCode = parseOrgCodeFromEmail(addr);
   if (orgCode) {
     const codeLookup = await lookupWorkspaceByOrgCode(orgCode);
-    if ((codeLookup as any).found && (codeLookup as any).workspaceId) {
+    if ((codeLookup as Record<string,unknown>).found && (codeLookup as Record<string,unknown>).workspaceId) {
       const fn = localPart.replace(/[-+].*/, '');
       const canonical = CANONICAL_PLATFORM_LOCALPARTS[fn];
       return {
@@ -439,10 +439,10 @@ async function resolveFallbackRoute(toEmail: string): Promise<ResolvedFallbackRo
           route_type: 'workspace_inbox',
           process_as: canonical?.processAs || fn,
           auto_process: true,
-          target_workspace_id: (codeLookup as any).workspaceId,
+          target_workspace_id: (codeLookup as Record<string,unknown>).workspaceId,
           target_user_id: null,
         },
-        workspaceId: (codeLookup as any).workspaceId,
+        workspaceId: (codeLookup as Record<string,unknown>).workspaceId,
         targetUserId: null,
         resolution: 'slug_dash',
       };
@@ -493,7 +493,7 @@ async function handleInboundWebhook(
     return;
   }
 
-  let rawParsed: any;
+  let rawParsed: unknown;
   try {
     rawParsed = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
   } catch (parseErr: unknown) {
@@ -547,7 +547,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
     return;
   }
 
-  let rawPayload: any;
+  let rawPayload: unknown;
   try {
     rawPayload = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
   } catch {
@@ -661,7 +661,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
     // Step 5: Route resolution with fallback cascade.
     // When email_routing has no match, try per-org slug, org-code, and
     // canonical platform addresses before silently dropping the message.
-    let route: any;
+    let route: unknown;
     let workspaceId: string | null;
     let targetUserId: string | null;
     let resolvedVia: string = 'email_routing';
@@ -961,7 +961,7 @@ inboundEmailRouter.post('/per-org', async (req: Request, res: Response) => {
     return;
   }
 
-  let rawPerOrg: any;
+  let rawPerOrg: unknown;
   try {
     rawPerOrg = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
   } catch {

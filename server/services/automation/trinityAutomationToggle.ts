@@ -876,8 +876,8 @@ class TrinityAutomationToggleService {
           return {
             summary: `I'll process payroll for ${employeeCount} employee${employeeCount !== 1 ? 's' : ''} — $${totalGross.toLocaleString()} total gross pay${overtimeEmployees > 0 ? ` (${overtimeEmployees} with overtime)` : ''}`,
             details: {
-              periodStart: (payPeriod as any).start.toISOString().split('T')[0],
-              periodEnd: (payPeriod as any).end.toISOString().split('T')[0],
+              periodStart: (payPeriod as Record<string,unknown>).start.toISOString().split('T')[0],
+              periodEnd: (payPeriod as Record<string,unknown>).end.toISOString().split('T')[0],
               employeeCount,
               totalGross,
               overtimeEmployees,
@@ -888,8 +888,8 @@ class TrinityAutomationToggleService {
             previewData: {
               type: 'payroll_preview',
               summary: `${employeeCount} employee${employeeCount !== 1 ? 's' : ''} — $${totalGross.toLocaleString()} gross pay`,
-              periodStart: (payPeriod as any).start.toISOString().split('T')[0],
-              periodEnd: (payPeriod as any).end.toISOString().split('T')[0],
+              periodStart: (payPeriod as Record<string,unknown>).start.toISOString().split('T')[0],
+              periodEnd: (payPeriod as Record<string,unknown>).end.toISOString().split('T')[0],
               employees: employeeBreakdown,
               totalGross,
               overtimeEmployees,
@@ -1067,8 +1067,8 @@ class TrinityAutomationToggleService {
 
           // Use fresh result or fall back to saved checkpoint result (resume case)
           const invoiceSaved = invoiceResult ?? await getSaved('generate_invoices');
-          recordsCreated = invoiceResult?.count ?? (invoiceSaved as any)?.invoiceCount ?? 0;
-          const billingDaysFinal = invoiceResult?.billingDays ?? (invoiceSaved as any)?.billingDays ?? 7;
+          recordsCreated = invoiceResult?.count ?? (invoiceSaved as Record<string,unknown>)?.invoiceCount ?? 0;
+          const billingDaysFinal = invoiceResult?.billingDays ?? (invoiceSaved as Record<string,unknown>)?.billingDays ?? 7;
           summaryDetail = `Generated ${recordsCreated} draft invoice(s) covering ${billingDaysFinal}-day billing period`;
 
           // Step 4: Notify completion
@@ -1135,9 +1135,9 @@ class TrinityAutomationToggleService {
 
           const payrollSaved = payrollResult ?? await getSaved('commit_payroll');
           recordsCreated = 1;
-          recordsUpdated = payrollResult?.timeEntryCount ?? (payrollSaved as any)?.timeEntryCount ?? 0;
-          const grossPay = payrollResult?.totalGrossPay ?? (payrollSaved as any)?.totalGrossPay ?? 0;
-          const empCount = payrollResult?.totalEmployees ?? (payrollSaved as any)?.totalEmployees ?? 0;
+          recordsUpdated = payrollResult?.timeEntryCount ?? (payrollSaved as Record<string,unknown>)?.timeEntryCount ?? 0;
+          const grossPay = payrollResult?.totalGrossPay ?? (payrollSaved as Record<string,unknown>)?.totalGrossPay ?? 0;
+          const empCount = payrollResult?.totalEmployees ?? (payrollSaved as Record<string,unknown>)?.totalEmployees ?? 0;
           summaryDetail = `Processed payroll for ${empCount} employee(s) — gross pay $${Number(grossPay).toFixed(2)}`;
 
           // Step 4: Notify completion
@@ -1176,8 +1176,8 @@ class TrinityAutomationToggleService {
           }, (r) => r);
 
           const schedSaved = schedResult ?? await getSaved('generate_shifts');
-          recordsCreated = schedResult?.shiftsCreated ?? (schedSaved as any)?.shiftsCreated ?? 0;
-          summaryDetail = `Generated ${recordsCreated} shift(s) for week of ${schedResult?.weekStart ?? (schedSaved as any)?.weekStart ?? 'this week'}`;
+          recordsCreated = schedResult?.shiftsCreated ?? (schedSaved as Record<string,unknown>)?.shiftsCreated ?? 0;
+          summaryDetail = `Generated ${recordsCreated} shift(s) for week of ${schedResult?.weekStart ?? (schedSaved as Record<string,unknown>)?.weekStart ?? 'this week'}`;
 
           // Step 3: Notify
           await runStep('notify', async () => {
@@ -1226,7 +1226,7 @@ class TrinityAutomationToggleService {
           }, (r) => ({ approvedCount: r.approvedCount }));
 
           const ttSaved = ttResult ?? await getSaved('approve_entries');
-          recordsUpdated = ttResult?.approvedCount ?? (ttSaved as any)?.approvedCount ?? 0;
+          recordsUpdated = ttResult?.approvedCount ?? (ttSaved as Record<string,unknown>)?.approvedCount ?? 0;
           summaryDetail = `Auto-approved ${recordsUpdated} pending time entries with completed clock-out`;
 
           // Step 3: Notify

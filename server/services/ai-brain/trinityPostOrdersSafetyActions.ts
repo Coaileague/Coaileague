@@ -54,8 +54,8 @@ const getPostOrdersForShift = mkAction('postorders.get_for_shift', async (req) =
     if (orders.length === 0) {
       const shift = await db.query.shifts?.findFirst({ where: eq(shifts.id, shiftId) }).catch(() => null);
       return createResult(req.actionId, true,
-        `No specific post orders on file for shift ${shiftId}. ${(shift as any)?.notes ? 'Shift notes: ' + (shift as Record<string,unknown>).notes : 'Officer should follow general company policy.'} Always call client contact if uncertain about site-specific procedures.`,
-        { shiftId, orders: [], hasOrders: false, shiftNotes: (shift as any)?.notes || null }, start);
+        `No specific post orders on file for shift ${shiftId}. ${(shift as Record<string,unknown>)?.notes ? 'Shift notes: ' + (shift as Record<string,unknown>).notes : 'Officer should follow general company policy.'} Always call client contact if uncertain about site-specific procedures.`,
+        { shiftId, orders: [], hasOrders: false, shiftNotes: (shift as Record<string,unknown>)?.notes || null }, start);
     }
 
     const acks = await db.select().from(shiftOrderAcknowledgments)
@@ -268,7 +268,7 @@ const resolveWelfareCheck = mkAction('safety.resolve_welfare_check', async (req)
   try {
     const { checkId } = req.payload || {};
     if (!checkId) return createResult(req.actionId, false, 'checkId required', null, start);
-    const result = (loneWorkerSafetyService as any).resolveCheck?.(checkId);
+    const result = (loneWorkerSafetyService as Record<string,unknown>).resolveCheck?.(checkId);
     return createResult(req.actionId, true, `Welfare check ${checkId} resolved`, { checkId, resolved: true }, start);
   } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);

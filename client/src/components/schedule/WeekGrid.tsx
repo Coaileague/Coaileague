@@ -160,7 +160,7 @@ export function WeekGrid({
     const statusColor = getShiftStatusColor(shift);
     const isProcessing = isShiftBeingProcessed(shift.id);
     const justAssigned = wasShiftJustAssigned(shift.id);
-    const isTraining = !!(shift as any).isTrainingShift;
+    const isTraining = !!(shift as Record<string,unknown>).isTrainingShift;
     const { leftPercent, widthPercent } = getShiftPosition(shift);
 
     const gapPx = 3;

@@ -68,7 +68,7 @@ export async function verifyOnboardingGate(
 
     if (!clientRecord) return next(); // No client record — pass through
 
-    const status = (clientRecord as any).clientOnboardingStatus;
+    const status = (clientRecord as Record<string,unknown>).clientOnboardingStatus;
 
     // Gate: INVITED status → block all routes, redirect to verification
     if (status && status !== 'active') {

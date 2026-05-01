@@ -1498,12 +1498,12 @@ export class QuickBooksSyncService {
     
     // Map the result to the expected format
     const result = {
-      created: (syncResult as any).created.length,
-      linked: (syncResult as any).linked.length,
-      alreadyExist: (syncResult as any).skipped.length,
+      created: (syncResult as Record<string,unknown>).created.length,
+      linked: (syncResult as Record<string,unknown>).linked.length,
+      alreadyExist: (syncResult as Record<string,unknown>).skipped.length,
       details: [
-        ...(syncResult as any).created.map((e: unknown) => `Created employee record for ${e.role}: ${e.email} (${e.id})`),
-        ...(syncResult as any).linked.map((e: unknown) => `Linked user ${e.email} to existing employee record (${e.firstName} ${e.lastName})`),
+        ...(syncResult as Record<string,unknown>).created.map((e: unknown) => `Created employee record for ${e.role}: ${e.email} (${e.id})`),
+        ...(syncResult as Record<string,unknown>).linked.map((e: unknown) => `Linked user ${e.email} to existing employee record (${e.firstName} ${e.lastName})`),
       ]
     };
     
@@ -2001,10 +2001,10 @@ export class QuickBooksSyncService {
 
     if (!result.success) {
       const error = new Error(result.error || 'CDC poll failed');
-      (error as any).orchestrationId = result.orchestrationId;
-      (error as any).errorCode = result.errorCode;
-      (error as any).remediation = result.remediation;
-      (error as any).retryable = result.retryable;
+      (error as Record<string,unknown>).orchestrationId = result.orchestrationId;
+      (error as Record<string,unknown>).errorCode = result.errorCode;
+      (error as Record<string,unknown>).remediation = result.remediation;
+      (error as Record<string,unknown>).retryable = result.retryable;
       throw error;
     }
     return result.data!;
@@ -2044,11 +2044,11 @@ export class QuickBooksSyncService {
 
       for (const queryResponse of response.CDCResponse || []) {
         const customers: any[] = queryResponse.QueryResponse?.filter((q: unknown) => q.Customer)
-          .flatMap((q: any) => q.Customer) || [];
+          .flatMap((q: unknown) => q.Customer) || [];
         const employees: any[] = queryResponse.QueryResponse?.filter((q: unknown) => q.Employee)
-          .flatMap((q: any) => q.Employee) || [];
+          .flatMap((q: unknown) => q.Employee) || [];
         const invoiceEntities: any[] = queryResponse.QueryResponse?.filter((q: unknown) => q.Invoice)
-          .flatMap((q: any) => q.Invoice) || [];
+          .flatMap((q: unknown) => q.Invoice) || [];
 
         recordsProcessed += customers.length + employees.length + invoiceEntities.length;
 
@@ -2156,9 +2156,9 @@ export class QuickBooksSyncService {
         partnerType: 'quickbooks',
         entityType: item.entityType,
         coaileagueEntityId: selectedCoaileagueEntityId,
-        partnerEntityId: (item as any).partnerEntityId,
-        partnerEntityName: (item as any).partnerEntityName,
-        matchEmail: (item as any).partnerEmail,
+        partnerEntityId: (item as Record<string,unknown>).partnerEntityId,
+        partnerEntityName: (item as Record<string,unknown>).partnerEntityName,
+        matchEmail: (item as Record<string,unknown>).partnerEmail,
         matchConfidence: 1.0,
         syncStatus: 'synced',
         lastSyncAt: new Date(),

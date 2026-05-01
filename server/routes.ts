@@ -528,7 +528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.plan = account === 'root' ? 'enterprise' : 'enterprise';
         
         await new Promise<void>((resolve, reject) => {
-          req.session.save((err: any) => err ? reject(err) : resolve());
+          req.session.save((err: unknown) => err ? reject(err) : resolve());
         });
         
         log.info(`[DevQuickLogin] Logged in as ${email} (${user.id})`);
@@ -566,7 +566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stress test bypass (non-production only)
   const stressTestKey = process.env.STRESS_TEST_KEY || (process.env.NODE_ENV !== "production" ? "stress-test-internal-2026" : "");
   if (process.env.STRESS_TEST_MODE === "true" && stressTestKey) {
-    app.use("/api", (req: any, res: any, next: unknown) => {
+    app.use("/api", (req: unknown, res: any, next: unknown) => {
       if (req.get("x-stress-key") === stressTestKey) {
         req.session.userId = "root-user-00000000";
         req.session.workspaceId = "dev-acme-security-ws";
@@ -623,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // load. The strict authLimiter is applied only to the specific brute-force
   // targets (login, register, password reset) inside registerAuthRoutes().
 
-  app.use("/api", (req: any, res: any, next: unknown) => {
+  app.use("/api", (req: unknown, res: any, next: unknown) => {
     if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
       return mutationLimiter(req, res, next);
     }
@@ -910,11 +910,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/voice', voiceRouter);
   // Twilio SMS webhook aliases — Twilio console expects /api/sms/inbound and
   // /api/sms/status. Forward to voiceRouter's sms-inbound / sms-status handlers.
-  app.post('/api/sms/inbound', (req: any, res: any, next: unknown) => {
+  app.post('/api/sms/inbound', (req: unknown, res: any, next: unknown) => {
     req.url = '/sms-inbound';
     voiceRouter(req, res, next);
   });
-  app.post('/api/sms/status', (req: any, res: any, next: unknown) => {
+  app.post('/api/sms/status', (req: unknown, res: any, next: unknown) => {
     req.url = '/sms-status';
     voiceRouter(req, res, next);
   });
@@ -1154,7 +1154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Only fires for routes that have no real handler registered above.
   app.use("/api", requireAuth, featureStubRouter);
 
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     const status: number = typeof err.statusCode === "number" ? err.statusCode
       : typeof err.status === "number" ? err.status
       : 500;

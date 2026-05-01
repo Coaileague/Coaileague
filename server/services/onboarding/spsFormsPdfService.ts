@@ -42,7 +42,7 @@ export async function generateSpsOnboardingPdf(opts: PdfOptions): Promise<string
     const { db } = await import('../../db');
     const { workspaces } = await import('@shared/schema');
     const { eq } = await import('drizzle-orm');
-    const [ws] = await db.select({ name: workspaces.name, licenseNumber: (workspaces as any).licenseNumber })
+    const [ws] = await db.select({ name: workspaces.name, licenseNumber: (workspaces as Record<string,unknown>).licenseNumber })
       .from(workspaces).where(eq(workspaces.id, workspaceId));
     if (ws?.name) companyName = ws.name;
     if (ws?.licenseNumber) licenseNumber = ws.licenseNumber;

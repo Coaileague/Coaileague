@@ -298,7 +298,7 @@ Provide your plan as JSON:
   "confidence": 0.85
 }`;
 
-    const response = await (aiBrainService as any).query({
+    const response = await (aiBrainService as Record<string,unknown>).query({
       prompt,
       systemPrompt: 'You are an expert planning system. Create comprehensive, actionable plans with clear reasoning.',
       featureId: 'planning_framework',
@@ -379,7 +379,7 @@ Respond as JSON:
   "shouldContinue": true/false
 }`;
 
-    const response = await (aiBrainService as any).query({
+    const response = await (aiBrainService as Record<string,unknown>).query({
       prompt,
       systemPrompt: 'You are an intelligent agent using ReAct reasoning. Think step by step.',
       featureId: 'planning_framework',
@@ -512,7 +512,7 @@ Respond as JSON:
   }
 }`;
 
-    const response = await (aiBrainService as any).query({
+    const response = await (aiBrainService as Record<string,unknown>).query({
       prompt,
       systemPrompt: 'You are an expert multi-path planning system. Explore alternatives thoroughly.',
       featureId: 'planning_framework',
@@ -571,7 +571,7 @@ Respond as JSON:
   "confidence": 0.85
 }`;
 
-    const response = await (aiBrainService as any).query({
+    const response = await (aiBrainService as Record<string,unknown>).query({
       prompt,
       systemPrompt: 'You are an expert at breaking complex goals into manageable subgoals.',
       featureId: 'planning_framework',
@@ -612,7 +612,7 @@ Respond as JSON:
     parsed: any,
     framework: PlanningRequest['framework']
   ): ExecutionPlan {
-    const steps: PlanStep[] = (parsed.steps || []).map((s: any, i: number) => ({
+    const steps: PlanStep[] = (parsed.steps || []).map((s: unknown, i: number) => ({
       stepId: `step-${i + 1}`,
       order: s.order || i + 1,
       action: s.action || 'unknown',

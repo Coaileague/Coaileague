@@ -1082,9 +1082,9 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
     },
   });
 
-  const reactionsMap = (reactionsData as any)?.reactions || {};
-  const pinnedMessages = (pinnedData as any)?.messages || [];
-  const searchHits = (searchResults as any)?.messages || [];
+  const reactionsMap = (reactionsData as Record<string,unknown>)?.reactions || {};
+  const pinnedMessages = (pinnedData as Record<string,unknown>)?.messages || [];
+  const searchHits = (searchResults as Record<string,unknown>)?.messages || [];
   const searchHitIds = new Set(searchHits.map((m: unknown) => m.id));
 
   const parentMessageCache = useMemo(() => {

@@ -53,7 +53,7 @@ export function UniversalConfigProvider({ children }: { children: React.ReactNod
     };
 
     const findAndListenToWs = () => {
-      const existingWs = (window as any).__platformWs || (window as any).__ws;
+      const existingWs = (window as Record<string,unknown>).__platformWs || (window as Record<string,unknown>).__ws;
       if (existingWs && existingWs.readyState === WebSocket.OPEN) {
         existingWs.addEventListener('message', handleWsMessage);
       }

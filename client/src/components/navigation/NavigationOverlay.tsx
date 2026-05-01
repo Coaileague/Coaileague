@@ -242,7 +242,7 @@ export function NavigationOverlay({
                   style={{ width: 28, height: 28, background: familyMeta.bg }}
                 >
                   // @ts-ignore — TS migration: fix in refactoring sprint
-                  {(() => { const Icon = (familyMeta as any).icon; return <Icon className="h-4 w-4" style={{ color: (familyMeta as any).color } as React.CSSProperties} />; })()}
+                  {(() => { const Icon = (familyMeta as Record<string,unknown>).icon; return <Icon className="h-4 w-4" style={{ color: (familyMeta as Record<string,unknown>).color } as React.CSSProperties} />; })()}
                 </div>
                 <span
                   className="uppercase tracking-widest"

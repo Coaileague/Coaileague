@@ -303,7 +303,7 @@ function SwapBoardTab({ isLoading: shiftsLoading }: { isLoading: boolean }) {
     },
   });
 
-  const swapRequests: SwapRequest[] = (swapData as any)?.requests || [];
+  const swapRequests: SwapRequest[] = (swapData as Record<string,unknown>)?.requests || [];
 
   const approveMutation = useMutation({
     mutationFn: async (swapId: string) => {
@@ -442,7 +442,7 @@ function MyRequestsTab() {
     },
   });
 
-  const allRequests: SwapRequest[] = (swapData as any)?.requests || [];
+  const allRequests: SwapRequest[] = (swapData as Record<string,unknown>)?.requests || [];
 
   const myRequests = useMemo(() => {
     if (!currentEmployee?.id) return [];

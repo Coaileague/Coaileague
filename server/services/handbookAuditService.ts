@@ -245,8 +245,8 @@ export async function auditWorkspaceHandbooks(workspaceId: string): Promise<Hand
   // Converted to Drizzle ORM: IN subquery → inArray()
   const resultRows = await db.select({
     id: complianceDocuments.id,
-    title: (complianceDocuments as any).title,
-    content: (complianceDocuments as any).content,
+    title: (complianceDocuments as Record<string,unknown>).title,
+    content: (complianceDocuments as Record<string,unknown>).content,
     documentType: complianceDocuments.documentTypeId,
   })
     .from(complianceDocuments)

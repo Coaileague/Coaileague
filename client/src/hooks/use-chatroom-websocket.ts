@@ -296,7 +296,7 @@ export function useChatroomWebSocket(
         case 'error': {
           const errorMessage = typeof data.message === 'string' ? data.message : 'An error occurred';
 
-          if ((data as any).errorType === 'VOICE_REQUIRED') {
+          if ((data as Record<string,unknown>).errorType === 'VOICE_REQUIRED') {
             setIsSilenced(true);
             toastRef.current({
               title: 'Voice Required',
@@ -313,7 +313,7 @@ export function useChatroomWebSocket(
             errorMessage.includes('Authentication required') ||
             errorMessage.includes('Please log in') ||
             errorMessage.includes('Unauthorized') ||
-            (data as any).requiresAuth === true;
+            (data as Record<string,unknown>).requiresAuth === true;
 
           if (isTransientAuthError) {
             break;
@@ -499,26 +499,26 @@ export function useChatroomWebSocket(
           break;
 
         case 'secure_request':
-          if (onSecureRequestRef.current && (data as any).requestType) {
+          if (onSecureRequestRef.current && (data as Record<string,unknown>).requestType) {
             onSecureRequestRef.current({
-              type: (data as any).requestType,
-              requestedBy: (data as any).requestedBy || 'Support Staff',
-              message: (data as any).message,
+              type: (data as Record<string,unknown>).requestType,
+              requestedBy: (data as Record<string,unknown>).requestedBy || 'Support Staff',
+              message: (data as Record<string,unknown>).message,
             });
           }
           break;
 
         case 'spectator_released':
           setMessages((prev) => [...prev, createSystemMessage(
-            `${(data as any).releasedBy} has released you from hold. You can now chat.`,
+            `${(data as Record<string,unknown>).releasedBy} has released you from hold. You can now chat.`,
             conversationIdRef.current
           )]);
           break;
 
         case 'secure_data_received': {
           if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
-          const secureData = (data as any).data;
-          let secureDataSummary = `🔒 Secure Data from ${(data as any).fromUser}:\n`;
+          const secureData = (data as Record<string,unknown>).data;
+          let secureDataSummary = `🔒 Secure Data from ${(data as Record<string,unknown>).fromUser}:\n`;
           if (secureData.email) secureDataSummary += `📧 Email: ${secureData.email}\n`;
           if (secureData.accountId) secureDataSummary += `🆔 Account ID: ${secureData.accountId}\n`;
           if (secureData.verification) secureDataSummary += `✓ Verification: ${secureData.verification}\n`;

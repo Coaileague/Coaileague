@@ -36,7 +36,7 @@ export default function AuditChatdock() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
 
   const [modifyText, setModifyText] = useState('');
   const [showModifyFor, setShowModifyFor] = useState<string | null>(null);

@@ -85,7 +85,7 @@ platformActionHub.registerAction({
   description: 'Total vehicles and personnel currently on-site today',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { siteId: { type: 'string', description: 'Optional site ID to filter by' } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -118,7 +118,7 @@ platformActionHub.registerAction({
   description: 'Count of flagged vehicles in the last 7 days',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { days: { type: 'integer', description: 'Lookback window in days', default: 7 } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -141,7 +141,7 @@ platformActionHub.registerAction({
   description: 'Total entries today (vehicles + personnel)',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { date: { type: 'string', format: 'date', description: 'Date to query (YYYY-MM-DD), defaults to today' } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {

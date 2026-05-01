@@ -496,7 +496,7 @@ router.post('/api/quickbooks/refresh-token', requireAuth, async (req: Authentica
   }
 });
 
-export function registerIntegrationRoutes(app: any): void {
+export function registerIntegrationRoutes(app: unknown): void {
   app.use(router);
   log.info('[IntegrationRoutes] Registered exception and automation health routes');
 }

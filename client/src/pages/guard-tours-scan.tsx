@@ -37,7 +37,7 @@ interface Checkpoint {
 
 export default function GuardTourScanPage(): JSX.Element {
   const { user } = useAuth();
-  const employeeId = (user as any)?.employeeId || null;
+  const employeeId = (user as Record<string,unknown>)?.employeeId || null;
 
   const [lastScan, setLastScan] = useState<{ checkpointName: string; at: Date } | null>(null);
 

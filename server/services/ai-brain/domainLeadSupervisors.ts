@@ -688,7 +688,7 @@ Provide a JSON response with:
 `;
 
     try {
-      const response = await (aiBrainService as any).processRequest({
+      const response = await (aiBrainService as Record<string,unknown>).processRequest({
         type: 'domain_task_execution',
         prompt,
         context: { domain, action, subagent: subagent.id },

@@ -64,7 +64,7 @@ router.post("/upload", requireAuth, upload.array("files", 10), strictVirusScan, 
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
-    const workspaceId = (authReq as any).user?.workspaceId;
+    const workspaceId = (authReq as Record<string,unknown>).user?.workspaceId;
     
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -104,7 +104,7 @@ router.post("/upload", requireAuth, upload.array("files", 10), strictVirusScan, 
       });
       
       // Get scan result from middleware
-      const scanResult = (file as any).scanResult as ScanResult | undefined;
+      const scanResult = (file as Record<string,unknown>).scanResult as ScanResult | undefined;
 
       uploadedAttachments.push({
         name: file.originalname,

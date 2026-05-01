@@ -235,7 +235,7 @@ emailRouter.post('/send', async (req: AuthenticatedRequest, res) => {
     const { client, fromEmail } = await getUncachableResendClient();
     const sentFrom = addr.display_name ? `${addr.display_name} <${from}>` : from;
 
-    let resendResult: any;
+    let resendResult: unknown;
     try {
       resendResult = await client.emails.send({
         from: sentFrom,
@@ -779,7 +779,7 @@ emailRouter.post('/support-inbox/:emailId/reply', async (req: AuthenticatedReque
       userId,
     ]);
 
-    return res.json({ success: true, resendId: (sent as any).data?.id });
+    return res.json({ success: true, resendId: (sent as Record<string,unknown>).data?.id });
   } catch (err: unknown) {
     log.error('[EmailRoutes] support-inbox reply error:', err);
     return res.status(500).json({ error: 'Failed to send support reply' });

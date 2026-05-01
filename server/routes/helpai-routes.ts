@@ -86,7 +86,7 @@ helpaiRouter.get(
     try {
       const { category, tag, active } = req.query;
 
-      let apis: any;
+      let apis: unknown;
 
       if (category) {
         apis = await helpaiRegistryService.getAPIsByCategory(category as string);
@@ -604,7 +604,7 @@ helpaiRouter.post('/chat', async (req: Request, res: Response) => {
     // Try custom auth first (session-based)
     if (authReq.session?.userId) {
       userId = authReq.session.userId;
-      userName = (authReq as any).session.userName || 'User';
+      userName = (authReq as Record<string,unknown>).session.userName || 'User';
       workspaceId = authReq.session.workspaceId || workspaceId;
     }
     // Try Replit Auth (OIDC)

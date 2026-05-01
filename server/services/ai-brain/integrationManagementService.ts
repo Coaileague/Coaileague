@@ -436,7 +436,7 @@ class IntegrationManagementService {
 
       const status: ServiceHealthStatus = {
         integrationId: conn.integrationId,
-        integrationName: conn.integration?.name || (conn as any).displayName,
+        integrationName: conn.integration?.name || (conn as Record<string,unknown>).displayName,
         isHealthy: conn.isHealthy || false,
         lastChecked: new Date(),
         errorMessage: conn.isHealthy ? undefined : 'Service connectivity issue detected',

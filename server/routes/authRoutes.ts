@@ -352,7 +352,7 @@ router.patch('/profile', mutationLimiter, async (req: AuthenticatedRequest, res)
           .set(employeeSync)
           .where(eq(employees.userId, userId));
       } catch (syncError) {
-        log.warn('[Auth] Name sync to employee records failed (non-fatal):', (syncError as any).message);
+        log.warn('[Auth] Name sync to employee records failed (non-fatal):', (syncError as Record<string,unknown>).message);
       }
     }
 

@@ -58,7 +58,7 @@ platformActionHub.registerAction({
   category: 'automation',
   description: 'Count of draft/in_progress surveys for workspace',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -79,7 +79,7 @@ platformActionHub.registerAction({
   category: 'automation',
   description: 'Surveys with overall_risk_level IN (\'high\',\'critical\')',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -100,7 +100,7 @@ platformActionHub.registerAction({
   category: 'automation',
   description: 'Percentage of completed surveys',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {

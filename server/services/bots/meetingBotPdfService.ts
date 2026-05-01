@@ -78,10 +78,10 @@ class MeetingBotPdfService {
         const { shiftRoomBotOrchestrator } = await import('./shiftRoomBotOrchestrator');
         const botData = shiftRoomBotOrchestrator.getMeetingBotData(conversationId);
         if (botData) {
-          botMotions = (botData as any).motions || [];
-          botVotes = (botData as any).votes || [];
-          botAttendees = (botData as any).attendees || [];
-          meetingType = (botData as any).meetingType;
+          botMotions = (botData as Record<string,unknown>).motions || [];
+          botVotes = (botData as Record<string,unknown>).votes || [];
+          botAttendees = (botData as Record<string,unknown>).attendees || [];
+          meetingType = (botData as Record<string,unknown>).meetingType;
         }
       } catch {
         // Non-blocking — proceed without in-memory data

@@ -784,7 +784,7 @@ You must respond ONLY with valid JSON — no prose, no markdown fencing.`,
 
 export const reinforcementLearningLoop = ReinforcementLearningLoop.getInstance();
 
-function deriveRLActionName(p: any): string {
+function deriveRLActionName(p: unknown): string {
   if (p.automationName) return p.automationName;
   if (p.metadata?.automationName) return p.metadata.automationName;
   const title = (p.title || '') as string;
@@ -793,13 +793,13 @@ function deriveRLActionName(p: any): string {
   return title.replace(/\s+completed\s*$/i, '').trim().toLowerCase().replace(/[\s\-]+/g, '_').replace(/[^a-z0-9_]/g, '') || 'unknown';
 }
 
-function deriveRLDomain(p: any): KnowledgeDomain {
+function deriveRLDomain(p: unknown): KnowledgeDomain {
   if (p.domain && p.domain !== 'undefined') return p.domain as KnowledgeDomain;
   if (p.metadata?.domain) return p.metadata.domain as KnowledgeDomain;
   return 'automation';
 }
 
-platformEventBus.on('automation_completed', (p: any) => {
+platformEventBus.on('automation_completed', (p: unknown) => {
   if (!p) return;
   reinforcementLearningLoop.recordExperience({
     agentId: p.automationType || 'automation',
@@ -811,7 +811,7 @@ platformEventBus.on('automation_completed', (p: any) => {
   });
 });
 
-platformEventBus.on('automation_execution_failed', (p: any) => {
+platformEventBus.on('automation_execution_failed', (p: unknown) => {
   if (!p) return;
   reinforcementLearningLoop.recordExperience({
     agentId: p.automationType || 'automation',

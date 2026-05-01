@@ -284,24 +284,24 @@ class AutomationGovernanceService {
       const updates: Partial<InsertWorkspaceAutomationPolicy> = {};
       
       if (request.currentLevel) updates.currentLevel = request.currentLevel;
-      if (request.handHeldThreshold !== undefined) (updates as any).handHeldThreshold = request.handHeldThreshold;
-      if (request.graduatedThreshold !== undefined) (updates as any).graduatedThreshold = request.graduatedThreshold;
-      if (request.highRiskCategories) (updates as any).highRiskCategories = request.highRiskCategories;
-      if (request.minConfidenceForAutoExecute !== undefined) (updates as any).minConfidenceForAutoExecute = request.minConfidenceForAutoExecute;
+      if (request.handHeldThreshold !== undefined) (updates as Record<string,unknown>).handHeldThreshold = request.handHeldThreshold;
+      if (request.graduatedThreshold !== undefined) (updates as Record<string,unknown>).graduatedThreshold = request.graduatedThreshold;
+      if (request.highRiskCategories) (updates as Record<string,unknown>).highRiskCategories = request.highRiskCategories;
+      if (request.minConfidenceForAutoExecute !== undefined) (updates as Record<string,unknown>).minConfidenceForAutoExecute = request.minConfidenceForAutoExecute;
       
       if (request.orgOwnerConsent !== undefined) {
-        (updates as any).orgOwnerConsent = request.orgOwnerConsent;
+        (updates as Record<string,unknown>).orgOwnerConsent = request.orgOwnerConsent;
         if (request.orgOwnerConsent) {
-          (updates as any).orgOwnerConsentAt = new Date();
-          (updates as any).orgOwnerConsentUserId = request.orgOwnerConsentUserId || null;
+          (updates as Record<string,unknown>).orgOwnerConsentAt = new Date();
+          (updates as Record<string,unknown>).orgOwnerConsentUserId = request.orgOwnerConsentUserId || null;
         }
       }
       
       if (request.waiverAccepted !== undefined) {
-        (updates as any).waiverAccepted = request.waiverAccepted;
+        (updates as Record<string,unknown>).waiverAccepted = request.waiverAccepted;
         if (request.waiverAccepted) {
-          (updates as any).waiverAcceptedAt = new Date();
-          (updates as any).waiverVersion = request.waiverVersion || '1.0';
+          (updates as Record<string,unknown>).waiverAcceptedAt = new Date();
+          (updates as Record<string,unknown>).waiverVersion = request.waiverVersion || '1.0';
         }
       }
 

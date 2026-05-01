@@ -513,9 +513,7 @@ export class TrinityStaffingSkill extends BaseSkill {
    */
   private generateConfirmationEmail(
     request: WorkRequest,
-    employees: EmployeeMatch[],
-    shiftDetails: any
-  ): string {
+    employees: EmployeeMatch[], shiftDetails: unknown): string {
     const date = request.requestedDate.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',

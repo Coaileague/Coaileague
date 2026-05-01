@@ -13,7 +13,7 @@ export interface ActivationResult {
 export const AUTOMATION_GATES: Record<string, string> = {};
 
 export const gamificationActivationAgent = {
-  activateForOrg: async (_params: any): Promise<ActivationResult> => ({
+  activateForOrg: async (_params: unknown): Promise<ActivationResult> => ({
     success: true,
     achievementsCreated: 0,
     automationGatesUnlocked: 0,

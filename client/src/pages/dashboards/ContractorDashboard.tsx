@@ -45,10 +45,10 @@ export default function ContractorDashboard() {
   const isDashboardError = earningsIsError || docsIsError || shiftsIsError;
   const dashboardError = earningsError || docsError || shiftsError;
 
-  const docs: any[] = Array.isArray(docsRes) ? docsRes : (docsRes as any)?.data ?? [];
+  const docs: any[] = Array.isArray(docsRes) ? docsRes : (docsRes as Record<string,unknown>)?.data ?? [];
   const pendingDocs = docs.filter((d) => d.status === "pending" || d.status === "requires_signature");
 
-  const shifts: any[] = Array.isArray(shiftsRes) ? shiftsRes : (shiftsRes as any)?.data ?? [];
+  const shifts: any[] = Array.isArray(shiftsRes) ? shiftsRes : (shiftsRes as Record<string,unknown>)?.data ?? [];
   const upcomingShifts = shifts.filter((s) => {
     if (!s.startTime) return false;
     return new Date(s.startTime) >= new Date();

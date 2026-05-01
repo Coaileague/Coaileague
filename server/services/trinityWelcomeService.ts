@@ -78,7 +78,7 @@ export async function sendTrinityWelcomeEmail(
     });
   } catch (error) {
     log.warn('[TrinityWelcomeService] Welcome email send failed (non-blocking):', {
-      error: (error as any)?.message,
+      error: (error as Record<string,unknown>)?.message,
       userId,
       userType,
     });

@@ -30,7 +30,7 @@ const ICalSubscribeSchema = z.object({
   name: z.string().max(100).optional(),
 });
 
-function parsePeriodParams(query: any): { start: Date; end: Date } {
+function parsePeriodParams(query: unknown): { start: Date; end: Date } {
   const now = new Date();
   const start = query.start ? new Date(query.start as string) : new Date(now.getFullYear(), now.getMonth(), 1);
   const end = query.end ? new Date(query.end as string) : now;

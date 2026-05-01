@@ -977,7 +977,7 @@ class ContractPipelineService {
       workspaceId: contract.workspaceId,
       payload: {
         contractId,
-        clientId: (contract as any).clientId || null,
+        clientId: (contract as Record<string,unknown>).clientId || null,
         clientName: contract.clientName,
         title: contract.title,
       },
@@ -1034,7 +1034,7 @@ class ContractPipelineService {
     try {
       await db.insert(orgDocuments).values({
         workspaceId: contract.workspaceId,
-        uploadedBy: (auditContext as any).userId,
+        uploadedBy: (auditContext as Record<string,unknown>).userId,
         category: 'client_contract',
         fileName: `${contract.title || 'Contract'} - ${contract.clientName || 'Client'}.pdf`,
         filePath: gcsObjectPath ?? `contracts://${contractId}`,
@@ -1085,7 +1085,7 @@ class ContractPipelineService {
             recipientUserId: signer.signerEmail,
             channel: 'email',
             body: { to: signer.signerEmail, subject: execEmail.subject, html: execEmail.html },
-          }).catch((emailErr: any) => log.warn(`[ContractPipeline] Executed copy email failed for ${signer.signerEmail}: ${emailErr?.message}`));
+          }).catch((emailErr: unknown) => log.warn(`[ContractPipeline] Executed copy email failed for ${signer.signerEmail}: ${emailErr?.message}`));
         }
       } catch (emailErr: unknown) {
         log.warn(`[ContractPipeline] Failed to send executed copy emails: ${emailErr.message}`);
@@ -1148,14 +1148,14 @@ class ContractPipelineService {
             description: `Auto-generated from executed contract ${contract.title || contractId}`,
             workspaceId: contract.workspaceId,
             metadata: { invoiceId: invoice?.id, invoiceNumber, contractId, clientId: contract.clientId, amount: total },
-          }).catch((evErr: any) => log.warn(`[ContractPipeline] invoice_created event publish failed: ${evErr?.message}`));
+          }).catch((evErr: unknown) => log.warn(`[ContractPipeline] invoice_created event publish failed: ${evErr?.message}`));
 
           // Ensure the QB customer record exists so the sync run can create
           // the invoice on the QB side without a missing-customer error.
           const [ws] = await db.select().from(workspaces)
             .where(eq(workspaces.id, contract.workspaceId))
             .limit(1);
-          if ((ws as any)?.qbAccessTokenEncrypted) {
+          if ((ws as Record<string,unknown>)?.qbAccessTokenEncrypted) {
             const { ensureQuickBooksRecord } = await import('../integrations/quickbooksLazySync');
             if (contract.clientName && contract.clientId) {
               await ensureQuickBooksRecord('customer', contract.clientId, contract.workspaceId);

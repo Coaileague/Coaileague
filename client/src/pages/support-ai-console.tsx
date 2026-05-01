@@ -803,7 +803,7 @@ export default function SupportAIConsole() {
                   </div>
                 ) : (history?.actions || []).length > 0 ? (
                   <div className="space-y-3">
-                    {(history?.actions || []).map((action: any, i: number) => (
+                    {(history?.actions || []).map((action: unknown, i: number) => (
                       <div
                         key={i}
                         className="p-3 border rounded-lg"

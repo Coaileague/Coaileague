@@ -28,7 +28,7 @@ interface TrinityActivity {
 const DISMISS_KEY = "trinity_activity_bar_dismissed_until";
 const DISMISS_DURATION_MS = 60_000;
 
-function messageFromLog(log: any): TrinityActivity | null {
+function messageFromLog(log: unknown): TrinityActivity | null {
   if (!log) return null;
   const action = log.action || log.actionType || log.title || "";
   const lower = action.toLowerCase();

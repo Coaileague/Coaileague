@@ -178,7 +178,7 @@ export default function AIAuditLogViewer() {
   const [domainFilter, setDomainFilter] = useState<string>('all');
   const [resultFilter, setResultFilter] = useState<string>('all');
 
-  const hasAccess = user && SUPPORT_ROLES.includes((user as any).platformRole || '');
+  const hasAccess = user && SUPPORT_ROLES.includes((user as Record<string,unknown>).platformRole || '');
 
   const { data: logsData, isLoading, refetch } = useQuery<{ success: boolean; data: AiBrainActionLog[] }>({
     queryKey: ['/api/ai/audit-logs', domainFilter],

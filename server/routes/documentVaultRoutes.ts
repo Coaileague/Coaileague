@@ -18,7 +18,7 @@ const OFFICER_ROLES = ['employee', 'contractor'];
 
 const MANAGER_ROLES = ["org_owner", "co_owner", "manager", "department_manager", "supervisor", "root_admin", "sysop"];
 
-function hasManagerRole(req: any): boolean {
+function hasManagerRole(req: unknown): boolean {
   const role = req.workspaceRole || req.session?.workspaceRole || req.user?.platformRole;
   if (MANAGER_ROLES.includes(role)) return true;
   if (process.env.NODE_ENV !== 'production' && req.user?.id?.startsWith("dev-owner")) return true;

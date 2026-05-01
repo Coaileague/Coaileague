@@ -325,7 +325,7 @@ class FormWorkflowService {
       });
     }
 
-    const generalTemplates = (systemFormTemplates as any).general || [];
+    const generalTemplates = (systemFormTemplates as Record<string,unknown>).general || [];
     for (const t of generalTemplates) {
       templates.push({
         id: `system-general-${t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,

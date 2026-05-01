@@ -218,7 +218,7 @@ class LLMJudgeEvaluator {
     
     try {
       // Call AI for evaluation
-      const response = await (aiBrainService as any).query({
+      const response = await (aiBrainService as Record<string,unknown>).query({
         prompt,
         systemPrompt: this.buildSystemPrompt(persona),
         featureId: 'llm_judge',

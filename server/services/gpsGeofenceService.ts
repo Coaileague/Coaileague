@@ -132,7 +132,7 @@ async function notifyManager(workspaceId: string, employeeId: string, message: s
     where: and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)),
   });
 
-  if (!(employee as any)?.supervisorId) {
+  if (!(employee as Record<string,unknown>)?.supervisorId) {
     log.info('[GPS] No supervisor assigned for GPS violation notification');
     return;
   }
@@ -179,7 +179,7 @@ export async function validateClockIn(
     };
   }
 
-  const clientId = currentShift.clientId || (currentShift as any).siteId;
+  const clientId = currentShift.clientId || (currentShift as Record<string,unknown>).siteId;
   if (!clientId) {
     return {
       allowed: true,
@@ -287,7 +287,7 @@ export async function validateClockOut(
     if (employee) {
       const currentShift = await getCurrentShift(employeeId, workspaceId);
       if (currentShift) {
-        const clientId = currentShift.clientId || (currentShift as any).siteId;
+        const clientId = currentShift.clientId || (currentShift as Record<string,unknown>).siteId;
         const site = await getSiteLocation(clientId, workspaceId);
         
         if (site && result.distanceMeters) {

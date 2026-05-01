@@ -432,7 +432,7 @@ router.get("/payment-methods", async (req: AuthenticatedRequest, res) => {
     res.json({ paymentMethods: methods, defaultPaymentMethodId: defaultId });
   } catch (error: unknown) {
     // Stripe customer-not-found (invalid dev/test customer ID) → return empty
-    if (error?.code === "resource_missing" || (error as any)?.statusCode === 404) {
+    if (error?.code === "resource_missing" || (error as Record<string,unknown>)?.statusCode === 404) {
       return res.json({ paymentMethods: [], defaultPaymentMethodId: null });
     }
     log.error("[PaymentMethods] Error listing:", sanitizeError(error));

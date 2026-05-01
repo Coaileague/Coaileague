@@ -138,7 +138,7 @@ function ProposalFormDialog({
   onClose: () => void;
 }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.currentWorkspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.currentWorkspaceId;
   const { toast } = useToast();
 
   const [form, setForm] = useState<ProposalForm>(() => {
@@ -849,7 +849,7 @@ function ProposalCard({
 
 export default function ProposalBuilderPage() {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.currentWorkspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.currentWorkspaceId;
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProposal, setEditingProposal] = useState<null>(null);
@@ -858,7 +858,7 @@ export default function ProposalBuilderPage() {
   const [portalModal, setPortalModal] = useState<{ open: boolean; url: string; contractId: string } | null>(null);
   const [orgSignModal, setOrgSignModal] = useState<{ open: boolean; contract: any } | null>(null);
   const [orgSignerName, setOrgSignerName] = useState("");
-  const [orgSignerEmail, setOrgSignerEmail] = useState(() => (user as any)?.email || "");
+  const [orgSignerEmail, setOrgSignerEmail] = useState(() => (user as Record<string,unknown>)?.email || "");
   const [orgSignerTitle, setOrgSignerTitle] = useState("");
   const [orgTypedSig, setOrgTypedSig] = useState("");
 
@@ -975,7 +975,7 @@ export default function ProposalBuilderPage() {
     won: proposalsList?.filter((p) => p.status === "won").length || 0,
     totalValue: proposalsList
       ?.filter((p) => p.status === "won")
-      .reduce((sum: number, p: any) => sum + (Number(p.totalValue) || 0), 0) || 0,
+      .reduce((sum: number, p: unknown) => sum + (Number(p.totalValue) || 0), 0) || 0,
   };
 
   return (
@@ -1061,7 +1061,7 @@ export default function ProposalBuilderPage() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        setOrgSignerEmail((user as any)?.email || "");
+                        setOrgSignerEmail((user as Record<string,unknown>)?.email || "");
                         setOrgSignModal({ open: true, contract: c });
                       }}
                       data-testid={`button-countersign-${c.id}`}

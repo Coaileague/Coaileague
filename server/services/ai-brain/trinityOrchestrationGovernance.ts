@@ -525,9 +525,7 @@ class AutomationApprovalGate {
   private async notifyApprovers(
     workspaceId: string,
     domain: AutomationDomain,
-    approvalId: string,
-    actionDetails: any
-  ) {
+    approvalId: string, actionDetails: unknown) {
     const approvers = await db.query.employees.findMany({
       where: and(
         eq(employees.workspaceId, workspaceId),

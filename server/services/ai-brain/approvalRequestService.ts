@@ -63,7 +63,7 @@ class ApprovalRequestService {
       await db.update(aiWorkboardTasks)
         .set({
           status: 'awaiting_approval',
-          statusHistory: sql`${(aiWorkboardTasks as any).statusHistory} || ${JSON.stringify([{
+          statusHistory: sql`${(aiWorkboardTasks as Record<string,unknown>).statusHistory} || ${JSON.stringify([{
             status: 'awaiting_approval',
             timestamp: new Date().toISOString(),
             actor: 'system',
@@ -191,7 +191,7 @@ class ApprovalRequestService {
       await db.update(aiWorkboardTasks)
         .set({
           status: newStatus,
-          statusHistory: sql`${(aiWorkboardTasks as any).statusHistory} || ${JSON.stringify([{
+          statusHistory: sql`${(aiWorkboardTasks as Record<string,unknown>).statusHistory} || ${JSON.stringify([{
             status: newStatus,
             timestamp: new Date().toISOString(),
             actor: approverId,

@@ -197,7 +197,7 @@ function MyTeamContent() {
           <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
           <h3 className="font-medium mb-1">Unable to Load Team</h3>
           <p className="text-sm text-muted-foreground">
-            {(error as any)?.message || "Please try again later"}
+            {(error as Record<string,unknown>)?.message || "Please try again later"}
           </p>
         </CardContent>
       </Card>

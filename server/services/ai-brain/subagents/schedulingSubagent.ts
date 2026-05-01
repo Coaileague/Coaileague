@@ -310,7 +310,7 @@ class SchedulingSubagentService {
           ruleId: maxWeekly.id,
           ruleName: 'Maximum Weekly Hours',
           severity: weeklyHours > 60 ? 'critical' : 'warning',
-          description: `${weeklyHours}h exceeds ${(maxWeekly as any).ruleValue}h weekly limit`,
+          description: `${weeklyHours}h exceeds ${(maxWeekly as Record<string,unknown>).ruleValue}h weekly limit`,
           affectedEmployees: [employeeId],
           suggestedFix: 'Reduce scheduled hours or split across multiple employees',
         });
@@ -334,7 +334,7 @@ class SchedulingSubagentService {
               ruleId: restRule.id,
               ruleName: 'Minimum Rest Period',
               severity: 'warning',
-              description: `Only ${restHours.toFixed(1)}h rest between shifts (min: ${(restRule as any).ruleValue}h)`,
+              description: `Only ${restHours.toFixed(1)}h rest between shifts (min: ${(restRule as Record<string,unknown>).ruleValue}h)`,
               affectedEmployees: [employeeId],
               suggestedFix: 'Adjust shift times to ensure adequate rest period',
             });
@@ -810,7 +810,7 @@ Generate a JSON schedule with format:
     return recommendations;
   }
 
-  private detectShiftOverlaps(proposed: any, existingShifts: unknown[]): unknown[] {
+  private detectShiftOverlaps(proposed: unknown, existingShifts: unknown[]): unknown[] {
     return existingShifts.filter(existing => {
       if (existing.employeeId !== proposed.employeeId) return false;
       
@@ -859,9 +859,7 @@ Generate a JSON schedule with format:
   private calculateWeeklyHours(
     employeeId: string,
     date: Date,
-    existingShifts: unknown[],
-    proposed: any
-  ): number {
+    existingShifts: unknown[], proposed: unknown): number {
     const weekStart = new Date(date);
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     
@@ -892,14 +890,14 @@ Generate a JSON schedule with format:
     return hours;
   }
 
-  private parseShiftEndTime(shift: any): Date {
+  private parseShiftEndTime(shift: unknown): Date {
     const date = new Date(shift.date);
     const [h, m] = shift.endTime.split(':').map(Number);
     date.setHours(h, m, 0, 0);
     return date;
   }
 
-  private parseShiftStartTime(shift: any): Date {
+  private parseShiftStartTime(shift: unknown): Date {
     const date = new Date(shift.date);
     const [h, m] = shift.startTime.split(':').map(Number);
     date.setHours(h, m, 0, 0);
@@ -1029,7 +1027,7 @@ Generate a JSON schedule with format:
     }
 
     // Validate through LLM Judge
-    const judgeResult = await (enhancedLLMJudge as any).evaluateAction({
+    const judgeResult = await (enhancedLLMJudge as Record<string,unknown>).evaluateAction({
       actionType: 'schedule_shifts',
       actionDetails: {
         description: `Strategic profit-first schedule: ${parsedResponse.schedule?.length || 0} assignments`,
@@ -1054,7 +1052,7 @@ Generate a JSON schedule with format:
     }
 
     // Log strategic decision for audit
-    await (auditLogger as any).log({
+    await (auditLogger as Record<string,unknown>).log({
       action: 'strategic_schedule_generated',
       resourceType: 'schedule',
       resourceId: workspaceId,
@@ -1096,9 +1094,7 @@ Generate a JSON schedule with format:
   private buildStrategicSchedulingPrompt(
     employees: EmployeeBusinessMetrics[],
     clients: ClientBusinessMetrics[],
-    openShifts: unknown[],
-    summary: any
-  ): string {
+    openShifts: unknown[], summary: unknown): string {
     return `You are Trinity, an AI business strategist optimizing workforce scheduling for maximum profitability and client retention.
 
 🎯 PRIMARY OBJECTIVES (in priority order):

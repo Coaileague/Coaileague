@@ -501,10 +501,10 @@ function FormBuilder({
   const { toast } = useToast();
   const [title, setTitle] = useState(initial?.name || "");
   const [description, setDescription] = useState(initial?.description || "");
-  const [category, setCategory] = useState<string>((initial as any)?.category || "onboarding");
+  const [category, setCategory] = useState<string>((initial as Record<string,unknown>)?.category || "onboarding");
   const [fields, setFields] = useState<FormField[]>((initial?.template as any)?.fields || []);
-  const [approverRole, setApproverRole] = useState<string>((initial as any)?.routingRules?.approverRole || "supervisor");
-  const [requiresApproval, setRequiresApproval] = useState<boolean>((initial as any)?.routingRules?.requiresApproval ?? false);
+  const [approverRole, setApproverRole] = useState<string>((initial as Record<string,unknown>)?.routingRules?.approverRole || "supervisor");
+  const [requiresApproval, setRequiresApproval] = useState<boolean>((initial as Record<string,unknown>)?.routingRules?.requiresApproval ?? false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -1039,7 +1039,7 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
         </Card>
       ) : (
         <div className="space-y-2">
-          {submissions.map((sub: any, idx: number) => (
+          {submissions.map((sub: unknown, idx: number) => (
             <Card
               key={sub.id || idx}
               className="hover-elevate cursor-pointer"
@@ -1105,7 +1105,7 @@ function FormCard({ form, onEdit, onDelete, onDuplicate, onViewSubmissions, anal
       </CardHeader>
       <CardContent className="pt-0 flex-1">
         <div className="flex flex-wrap gap-1.5 mb-3">
-          <Badge variant="outline" className="text-[10px]">{(form as any).category || "general"}</Badge>
+          <Badge variant="outline" className="text-[10px]">{(form as Record<string,unknown>).category || "general"}</Badge>
           <Badge variant="secondary" className="text-[10px]">{fields.length} fields</Badge>
           {requiredCount > 0 && <Badge variant="outline" className="text-[10px]">{requiredCount} required</Badge>}
         </div>
@@ -1135,8 +1135,8 @@ function FormCard({ form, onEdit, onDelete, onDuplicate, onViewSubmissions, anal
             ))}
           </div>
         )}
-        {(form as any).created_at && (
-          <p className="text-[10px] text-muted-foreground">Created {format(new Date((form as any).created_at), "MMM d, yyyy")}</p>
+        {(form as Record<string,unknown>).created_at && (
+          <p className="text-[10px] text-muted-foreground">Created {format(new Date((form as Record<string,unknown>).created_at), "MMM d, yyyy")}</p>
         )}
       </CardContent>
       <div className="px-4 pb-3 flex flex-col gap-2 border-t pt-3">
@@ -1200,7 +1200,7 @@ export default function AdminCustomForms() {
     createMutation.mutate({
       name: form.name + " (copy)",
       description: form.description,
-      category: (form as any).category,
+      category: (form as Record<string,unknown>).category,
       template: form.template,
       isActive: true,
     });

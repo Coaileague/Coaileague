@@ -526,7 +526,7 @@ export async function runStatewideWorkspaceBootstrap(): Promise<void> {
       `);
       log.info('🏢 [StatewideBootstrap] Workspace member record verified (via SELECT guard)');
     } catch (err2) {
-      log.error('🏢 [StatewideBootstrap] Workspace member upsert failed:', (err2 as any)?.message);
+      log.error('🏢 [StatewideBootstrap] Workspace member upsert failed:', (err2 as Record<string,unknown>)?.message);
     }
   }
 
@@ -712,7 +712,7 @@ export async function runProductionDataCleanup(): Promise<void> {
     // (a Drizzle nested transaction). When any statement fails, only that
     // savepoint is rolled back — the outer transaction stays alive and
     // subsequent statements can still run.
-    const savepoint = async (label: string, fn: (sp: any) => Promise<void>): Promise<void> => {
+    const savepoint = async (label: string, fn: (sp: unknown) => Promise<void>): Promise<void> => {
       try {
         await db.transaction(async (sp) => {
           await fn(sp);

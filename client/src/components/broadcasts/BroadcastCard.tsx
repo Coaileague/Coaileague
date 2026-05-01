@@ -195,7 +195,7 @@ export function BroadcastCard({ broadcast, recipient, onDismiss }: BroadcastCard
                     >
                       <CheckCircle className="h-4 w-4 mr-1" />
                       // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
-                      {(broadcast as any).actionConfig?.buttonLabel || 'I Acknowledge'}
+                      {(broadcast as Record<string,unknown>).actionConfig?.buttonLabel || 'I Acknowledge'}
                     </Button>
                   )}
 
@@ -226,7 +226,7 @@ export function BroadcastCard({ broadcast, recipient, onDismiss }: BroadcastCard
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
                       // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
-                      {(broadcast as any).actionConfig?.label || 'Learn More'}
+                      {(broadcast as Record<string,unknown>).actionConfig?.label || 'Learn More'}
                     </Button>
                   )}
                 </div>

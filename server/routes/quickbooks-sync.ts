@@ -555,7 +555,7 @@ router.get('/api/quickbooks/connection-status', requireAuth, async (req: Authent
       status: partnerConnections.status,
       realmId: partnerConnections.realmId,
       lastSyncAt: partnerConnections.lastSyncAt,
-      errorCount: (partnerConnections as any).errorCount,
+      errorCount: (partnerConnections as Record<string,unknown>).errorCount,
       lastError: partnerConnections.lastError,
     })
       .from(partnerConnections)

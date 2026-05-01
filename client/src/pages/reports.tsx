@@ -53,7 +53,7 @@ function ReportSubmissionForm({ template, onSubmit, onCancel, isSubmitting }: Re
   
   const formSchema = z.object(
     fields.reduce((acc, field) => {
-      let validator: any;
+      let validator: unknown;
       
       if (field.type === "number") {
         if (field.required) {

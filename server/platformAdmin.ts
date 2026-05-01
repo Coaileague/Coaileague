@@ -30,7 +30,7 @@ async function safeQuery<T>(fn: () => Promise<T>, label: string): Promise<T | un
 
 
 
-const db = (storage as any).db;
+const db = (storage as Record<string,unknown>).db;
 
 /**
  * Platform Admin - Root Dashboard Statistics
@@ -495,7 +495,7 @@ export async function getPlatformUsers(req: Request, res: Response) {
         platformRole: (platformRoles as any)
       })
       .from(users)
-      .innerJoin((platformRoles as any), eq(users.id, (platformRoles as any).userId))
+      .innerJoin((platformRoles as any), eq(users.id, (platformRoles as Record<string,unknown>).userId))
       .orderBy(desc(users.createdAt));
 
     res.json(platformUsers.map(({ user, platformRole }: unknown) => ({

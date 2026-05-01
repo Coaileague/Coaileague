@@ -528,7 +528,7 @@ export function SupportTeamPanel() {
   const [changeRoleAgent, setChangeRoleAgent] = useState<SupportAgent | null>(null);
   const [pendingAgentAction, setPendingAgentAction] = useState<{ agent: SupportAgent; action: string; message: string } | null>(null);
 
-  const platformRole = (user as any)?.platformRole as string;
+  const platformRole = (user as Record<string,unknown>)?.platformRole as string;
   const isRootAdmin = platformRole === 'root_admin';
   const canManage = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'].includes(platformRole);
 
@@ -711,7 +711,7 @@ export function SupportTeamPanel() {
 
         <div className="space-y-2">
           {agents.map((agent) => {
-            const isSelf = agent.userId === (user as any)?.id;
+            const isSelf = agent.userId === (user as Record<string,unknown>)?.id;
             const initials = `${agent.firstName?.[0] || ''}${agent.lastName?.[0] || ''}`.toUpperCase() || '?';
             return (
               <div key={agent.userId}

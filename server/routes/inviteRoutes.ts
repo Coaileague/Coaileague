@@ -97,7 +97,7 @@ inviteRouter.post('/', requireManager, async (req: AuthenticatedRequest, res) =>
       });
       emailSent = true;
     } catch (emailErr: unknown) {
-      log.warn('[InviteRoutes] Invite email failed (non-blocking):', (emailErr as any)?.message);
+      log.warn('[InviteRoutes] Invite email failed (non-blocking):', (emailErr as Record<string,unknown>)?.message);
     }
 
     await storage.createAuditLog({

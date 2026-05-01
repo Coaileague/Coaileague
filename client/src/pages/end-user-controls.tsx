@@ -169,7 +169,7 @@ export default function EndUserControls() {
 
   useEffect(() => {
     if (!isLoading) {
-      const platformRole = (user as any)?.platformRole;
+      const platformRole = (user as Record<string,unknown>)?.platformRole;
       if (!SUPPORT_ROLES.includes(platformRole)) {
         if (!user) {
           setLocation('/login');

@@ -79,7 +79,7 @@ interface ChatMessage {
   actionId?: string;
   executionTimeMs?: number;
   success?: boolean;
-  data?: any;
+  data?: unknown;
 }
 
 interface OrchestratorAction {
@@ -448,7 +448,7 @@ export default function SupportCommandConsole() {
       };
       setMessages(prev => [...prev, responseMessage]);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       // Add error step and complete the session with error status
       setReasoningSession(prev => {
         if (!prev) return prev;
@@ -1342,7 +1342,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             <div className="mt-2 pt-2 border-t border-border/50">
               {Array.isArray(message.data) ? (
                 <div className="space-y-1">
-                  {message.data.map((item: any, i: number) => (
+                  {message.data.map((item: unknown, i: number) => (
                     <div key={i} className="flex items-center text-xs">
                       {item.isHealthy !== undefined && (
                         item.isHealthy 
@@ -1416,7 +1416,7 @@ function MobileToolsPanel({
             <CardTitle className="text-sm">Service Status</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 px-3 pb-3">
-            {healthStatus?.services?.map((service: any) => (
+            {healthStatus?.services?.map((service: unknown) => (
               <div key={service.serviceName} className="flex items-center justify-between text-xs">
                 <div className="flex items-center space-x-2">
                   {service.isHealthy ? (
@@ -1461,7 +1461,7 @@ function MobileToolsPanel({
                 <RefreshCw className="w-3 h-3" />
               </Button>
             </div>
-            {orchestrationHealth?.services?.slice(0, 5).map((service: any) => (
+            {orchestrationHealth?.services?.slice(0, 5).map((service: unknown) => (
               <div key={service.name} className="flex items-center justify-between p-1.5 rounded-md bg-muted/50 text-xs">
                 <div className="flex items-center space-x-2">
                   {service.status === 'running' ? (
@@ -1495,7 +1495,7 @@ function MobileToolsPanel({
             ) : quickFixData?.actions?.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-2">No fixes available</p>
             ) : (
-              quickFixData?.actions?.slice(0, 4).map((action: any) => (
+              quickFixData?.actions?.slice(0, 4).map((action: unknown) => (
                 <div 
                   key={action.id}
                   className="p-2 rounded-md bg-muted/50 hover-elevate cursor-pointer"
@@ -1523,7 +1523,7 @@ function MobileToolsPanel({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 px-3 pb-3">
-            {testTools?.tools?.slice(0, 4).map((tool: any) => (
+            {testTools?.tools?.slice(0, 4).map((tool: unknown) => (
               <Button
                 key={tool.actionId}
                 variant="outline"

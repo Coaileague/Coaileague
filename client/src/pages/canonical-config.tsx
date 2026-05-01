@@ -138,7 +138,7 @@ function ValueDialog({
     isActive: existing?.is_active ?? true,
   });
 
-  const set = (k: keyof ValueFormData, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof ValueFormData, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
   const createMutation = useMutation({
     mutationFn: (data) => apiRequest("POST", "/api/platform-config/values", data),

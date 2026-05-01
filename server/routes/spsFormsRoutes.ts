@@ -114,7 +114,7 @@ async function audit(
 }
 
 // ── Form-table map: step → Drizzle table ─────────────────────────────────────
-const FORM_TABLES: Record<number, any> = {
+const FORM_TABLES: Record<number, unknown> = {
   1: spsForm1Checklist,
   2: spsForm2OfferLetter,
   3: spsForm3W4,
@@ -359,7 +359,7 @@ spsFormsRouter.get('/:id', async (req, res) => {
       .where(and(eq(spsOnboarding.id, req.params.id), eq(spsOnboarding.workspaceId, workspaceId)));
     if (!session) return res.status(403).json({ error: 'Not found or access denied' });
 
-    const fetchForm = async (table: any) => {
+    const fetchForm = async (table: unknown) => {
       const rows = await db.select().from(table).where(eq(table.onboardingId, session.id));
       return rows[0] ?? null;
     };
@@ -460,7 +460,7 @@ spsFormsRouter.post('/:id/finalize', async (req, res) => {
     if (!session) return res.status(403).json({ error: 'Not found or access denied' });
 
     // Collect all form data for PDF
-    const fetchForm = async (table: any) => {
+    const fetchForm = async (table: unknown) => {
       const rows = await db.select().from(table).where(eq(table.onboardingId, session.id));
       return rows[0] ?? null;
     };

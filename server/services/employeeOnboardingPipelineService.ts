@@ -87,7 +87,7 @@ export class EmployeeOnboardingPipelineService {
     if (!pipeline) throw new Error('Pipeline not found');
 
     const steps = pipeline.steps as any[];
-    const stepIdx = steps.findIndex((s: any) => s.id === stepId);
+    const stepIdx = steps.findIndex((s: unknown) => s.id === stepId);
     if (stepIdx === -1) throw new Error(`Step ${stepId} not found in pipeline`);
 
     steps[stepIdx] = {
@@ -148,7 +148,7 @@ export class EmployeeOnboardingPipelineService {
     return result.rows[0];
   }
 
-  private async triggerActivationIfReady(pipeline: any): Promise<void> {
+  private async triggerActivationIfReady(pipeline: unknown): Promise<void> {
     const existing = await pool.query(
       `SELECT status FROM employees WHERE id = $1`,
       [pipeline.entity_id]

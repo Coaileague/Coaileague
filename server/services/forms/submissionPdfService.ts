@@ -53,7 +53,7 @@ export interface SubmissionSignerInfo {
 
 export interface GenerateSubmissionPdfOptions {
   template: DocumentTemplate;
-  formData: Record<string, any>;
+  formData: Record<string, unknown>;
   signer: SubmissionSignerInfo;
   workspaceId: string;
   workspaceName?: string | null;
@@ -77,7 +77,7 @@ function mask(value: string, kind: 'ssn' | 'masked' | 'plain'): string {
   return value;
 }
 
-function safeString(v: any): string {
+function safeString(v: unknown): string {
   if (v === null || v === undefined) return '';
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);

@@ -33,7 +33,7 @@ const OWNER_ROLES = new Set(['org_owner', 'co_owner']);
 const requireOwnerOrPlatformStaff: RequestHandler = (req, res, next) => {
   const authReq = req as AuthenticatedRequest;
   if (OWNER_ROLES.has(authReq.workspaceRole ?? '')) return next();
-  const platformRole = (authReq as any).platformRole;
+  const platformRole = (authReq as Record<string,unknown>).platformRole;
   if (platformRole && hasPlatformWideAccess(platformRole)) return next();
   return res.status(403).json({ error: 'Only workspace owners or platform staff can edit permissions' });
 };

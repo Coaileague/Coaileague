@@ -853,7 +853,7 @@ export default function ClientPortal() {
   });
   // CLT-XXX-NNNNN — primary canonical identifier; clientCode is the optional
   // external QuickBooks-style code if the tenant maintains one separately.
-  const clientNumber = (currentClient as any)?.clientNumber || (currentClient as any)?.clientCode || null;
+  const clientNumber = (currentClient as Record<string,unknown>)?.clientNumber || (currentClient as Record<string,unknown>)?.clientCode || null;
   const copyClientNumber = () => {
     if (!clientNumber) return;
     navigator.clipboard.writeText(clientNumber);
@@ -868,10 +868,10 @@ export default function ClientPortal() {
   // Sync user name to settings state when user data loads
   useEffect(() => {
     if (user) {
-      setSettingsFirstName((user as any).firstName || "");
-      setSettingsLastName((user as any).lastName || "");
+      setSettingsFirstName((user as Record<string,unknown>).firstName || "");
+      setSettingsLastName((user as Record<string,unknown>).lastName || "");
     }
-  }, [(user as any)?.firstName, (user as any)?.lastName]);
+  }, [(user as Record<string,unknown>)?.firstName, (user as Record<string,unknown>)?.lastName]);
 
   if (!currentClient) {
     const notFoundConfig: CanvasPageConfig = { id: "client-portal-not-found", title: "Client Dashboard", subtitle: "Client Account Not Found", category: "dashboard" };
@@ -2261,7 +2261,7 @@ export default function ClientPortal() {
 
       {/* Floating DockChat Widget */}
       <DockChatWidget
-        orgWorkspaceId={(user as any)?.workspaceId || ""}
+        orgWorkspaceId={(user as Record<string,unknown>)?.workspaceId || ""}
         clientId={String(currentClient.id)}
         clientName={currentClient.companyName || `${currentClient.firstName || ""} ${currentClient.lastName || ""}`.trim()}
         clientEmail={currentClient.email || user?.email || ""}

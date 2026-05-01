@@ -110,8 +110,8 @@ export function HelpDeskProgressHeader({
   const isEscalated = ticketData.status === 'escalated';
   
   const config = LIFECYCLE_PHASE_CONFIG[lifecyclePhase];
-  const isStaffUser = propIsStaff ?? ((user as any)?.platformRole && 
-    ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((user as any).platformRole));
+  const isStaffUser = propIsStaff ?? ((user as Record<string,unknown>)?.platformRole && 
+    ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((user as Record<string,unknown>).platformRole));
   
   const displayLabel = isEscalated 
     ? (isStaffUser ? 'Platform Escalated' : 'Escalated to Senior Support')

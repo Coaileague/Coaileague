@@ -684,7 +684,7 @@ Return JSON with:
 }`;
 
     try {
-      const response = await (aiBrainService as any).processRequest({
+      const response = await (aiBrainService as Record<string,unknown>).processRequest({
         type: 'field_mapping',
         userId: 'system',
         workspaceId, // Billed to org doing the onboarding

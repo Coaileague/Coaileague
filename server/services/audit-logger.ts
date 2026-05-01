@@ -58,7 +58,7 @@ export class AuditLogger {
     }
     return Object.keys(obj)
       .sort()
-      .reduce((sorted: any, key) => {
+      .reduce((sorted: unknown, key) => {
         sorted[key] = this.sortObjectKeys(obj[key]);
         return sorted;
       }, {});

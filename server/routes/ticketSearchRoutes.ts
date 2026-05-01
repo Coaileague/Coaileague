@@ -317,8 +317,8 @@ router.get('/search/by-number/:ticketNumber', requireAuth, attachWorkspaceId, as
     });
 
     let ticket: any = rawTicket;
-    if (rawTicket && (rawTicket as any).workspaceId) {
-      const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, (rawTicket as any).workspaceId) });
+    if (rawTicket && (rawTicket as Record<string,unknown>).workspaceId) {
+      const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, (rawTicket as Record<string,unknown>).workspaceId) });
       ticket = { ...rawTicket, workspace: ws || null };
     }
 

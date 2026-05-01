@@ -63,8 +63,8 @@ async function getQuickBooksClient(workspaceId: string): Promise<any | null> {
   return {
     accessToken: credentials.accessToken,
     refreshToken: credentials.refreshToken,
-    realmId: (credentials as any).realmId || (credentials as any).companyId,
-    expiresAt: (credentials as any).expiresAt,
+    realmId: (credentials as Record<string,unknown>).realmId || (credentials as Record<string,unknown>).companyId,
+    expiresAt: (credentials as Record<string,unknown>).expiresAt,
   };
 }
 

@@ -450,9 +450,7 @@ class SchedulingEnhancementsService {
   async checkCertificationsForShiftAssignment(
     employeeId: string,
     workspaceId: string,
-    shift: any,
-    client: any
-  ): Promise<{ eligible: boolean; reasons: string[] }> {
+    shift: any, client: unknown): Promise<{ eligible: boolean; reasons: string[] }> {
     const requiredCerts: string[] = [];
 
     if (shift.requiredCertifications && Array.isArray(shift.requiredCertifications)) {

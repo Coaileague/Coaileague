@@ -51,7 +51,7 @@ platformActionHub.registerAction({
   category: 'automation',
   description: 'Extract structured data from uploaded compliance document',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     return { success: true, actionId: 'compliance.evidence.parse', message: 'Document parsing active', executionTimeMs: Date.now() - t, data: { confidence: 0.87 } };
   }
@@ -63,7 +63,7 @@ platformActionHub.registerAction({
   category: 'automation',
   description: 'Confidence-scored verification recommendation for compliance officer',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -82,7 +82,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'Officers with missing required compliance documents by type',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {

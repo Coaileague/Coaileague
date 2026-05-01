@@ -541,7 +541,7 @@ export function registerPrivacyRoutes(app: Express, requireAuth: unknown) {
         data: rows[0] ?? { essential: true, functional: false, analytics: false, consented_at: null },
       });
     } catch (error: unknown) {
-      const msg = (error as any)?.message || '';
+      const msg = (error as Record<string,unknown>)?.message || '';
       if (msg.includes('does not exist') || msg.includes('relation')) {
         return res.json({
           success: true,
@@ -595,7 +595,7 @@ export function registerPrivacyRoutes(app: Express, requireAuth: unknown) {
         },
       });
     } catch (error: unknown) {
-      const msg = (error as any)?.message || '';
+      const msg = (error as Record<string,unknown>)?.message || '';
       if (msg.includes('does not exist') || msg.includes('relation')) {
         return res.json({
           success: true,

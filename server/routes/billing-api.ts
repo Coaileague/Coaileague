@@ -369,10 +369,10 @@ billingRouter.get('/credits/balance', async (req: AuthenticatedRequest, res: Res
 
     res.json({
       currentBalance,
-      totalPurchased: (account as any)?.totalPurchased || 0,
-      totalUsed: (account as any)?.totalUsed || 0,
-      monthlyIncludedCredits: (account as any)?.monthlyIncludedCredits || 0,
-      monthlyCreditsUsed: (account as any)?.monthlyCreditsUsed || 0,
+      totalPurchased: (account as Record<string,unknown>)?.totalPurchased || 0,
+      totalUsed: (account as Record<string,unknown>)?.totalUsed || 0,
+      monthlyIncludedCredits: (account as Record<string,unknown>)?.monthlyIncludedCredits || 0,
+      monthlyCreditsUsed: (account as Record<string,unknown>)?.monthlyCreditsUsed || 0,
       monthlyCreditsRemaining: Math.max(0, (account?.monthlyIncludedCredits || 0) - (account?.monthlyCreditsUsed || 0)),
     });
   } catch (error: unknown) {
@@ -1179,7 +1179,7 @@ billingRouter.get('/trinity-credits/status', async (req: AuthenticatedRequest, r
       .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
     const tier = (ws?.subscriptionTier || 'free').toLowerCase();
     const allowance = (TOKEN_ALLOWANCES as Record<string, number | null>)[tier] ?? 5_000_000;
-    const isUnlimited = allowance === null || !!(ws as any)?.founderExemption;
+    const isUnlimited = allowance === null || !!(ws as Record<string,unknown>)?.founderExemption;
 
     // Read current-month token usage
     const now = new Date();
@@ -1277,7 +1277,7 @@ billingRouter.post('/trinity-credits/redeem-code', async (req: AuthenticatedRequ
       code: z.string().min(4),
     }).parse(req.body);
 
-    const result = await (tokenManager as any).redeemUnlockCode(
+    const result = await (tokenManager as Record<string,unknown>).redeemUnlockCode(
       workspaceId,
       input.code,
       userId
@@ -1469,7 +1469,7 @@ billingRouter.post('/trinity-credits/generate-code', async (req: AuthenticatedRe
       maxRedemptions: z.number().optional(),
     }).parse(req.body);
 
-    const code = await (tokenManager as any).generateUnlockCode(
+    const code = await (tokenManager as Record<string,unknown>).generateUnlockCode(
       input.codeType,
       userId,
       input
@@ -1526,7 +1526,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
 
     let upcoming: Stripe.UpcomingInvoice | null = null;
     try {
-      upcoming = await (stripe as any).invoices.retrieveUpcoming({
+      upcoming = await (stripe as Record<string,unknown>).invoices.retrieveUpcoming({
         customer: workspace.stripeCustomerId,
       });
     } catch (stripeErr: unknown) {
@@ -1561,8 +1561,8 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       quantity: line.quantity || 1,
       periodStart: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
       periodEnd: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
-      type: (line as any).type,
-      priceId: (line as any).price?.id,
+      type: (line as Record<string,unknown>).type,
+      priceId: (line as Record<string,unknown>).price?.id,
       metadata: line.metadata || {},
     }));
 
@@ -1570,7 +1570,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       pendingItems: items,
       totalCents: upcoming.total,
       subtotalCents: upcoming.subtotal,
-      taxCents: (upcoming as any).tax || 0,
+      taxCents: (upcoming as Record<string,unknown>).tax || 0,
       nextPaymentDate: upcoming.next_payment_attempt
         ? new Date(upcoming.next_payment_attempt * 1000).toISOString()
         : null,

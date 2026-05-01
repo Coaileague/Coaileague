@@ -202,7 +202,7 @@ async function phase4_subscription_tiers_pricing() {
   ];
 
   for (const exp of expectedTiers) {
-    const tier = (BILLING as any).tiers[exp.id];
+    const tier = (BILLING as Record<string,unknown>).tiers[exp.id];
     record({ name: `${exp.id} Price = $${exp.price / 100}/mo`, phase: 'PRICING', passed: tier?.monthlyPrice === exp.price, details: `Configured: $${(tier?.monthlyPrice || 0) / 100}, expected: $${exp.price / 100}`, severity: 'critical' });
     record({ name: `${exp.id} Credits = ${exp.credits}/mo`, phase: 'PRICING', passed: tier?.monthlyTokens === exp.credits, details: `Configured: ${tier?.monthlyTokens}, expected: ${exp.credits}`, severity: 'critical' });
     record({ name: `${exp.id} MaxEmployees = ${exp.maxEmp}`, phase: 'PRICING', passed: tier?.maxEmployees === exp.maxEmp, details: `Configured: ${tier?.maxEmployees}, expected: ${exp.maxEmp}`, severity: 'critical' });
@@ -390,7 +390,7 @@ async function phase9_db_tables_integrity() {
     WHERE table_schema = 'public' 
     AND table_name = ANY(ARRAY[${sql.raw(billingTables.map(t => `'${t}'`).join(','))}])
   `);
-  const foundTables = (tableCheck as any).rows?.map((r: unknown) => r.table_name) || [];
+  const foundTables = (tableCheck as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || [];
   const missingTables = billingTables.filter(t => !foundTables.includes(t));
   record({ name: 'All 8 Billing Tables Exist', phase: 'DB', passed: missingTables.length === 0, details: missingTables.length === 0 ? 'All billing tables present' : `MISSING: ${missingTables.join(', ')}`, severity: 'critical' });
 
@@ -398,7 +398,7 @@ async function phase9_db_tables_integrity() {
   const credColCheck = await typedQuery(sql`
     SELECT column_name FROM information_schema.columns WHERE table_name = 'workspace_credits' ORDER BY ordinal_position
   `);
-  const credCols = (credColCheck as any).rows?.map((r: unknown) => r.column_name) || [];
+  const credCols = (credColCheck as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || [];
   const requiredCredCols = ['workspace_id', 'current_balance', 'monthly_allocation'];
   record({ name: 'workspace_credits Has Key Columns', phase: 'DB', passed: requiredCredCols.every(c => credCols.includes(c)), details: `Required: ${requiredCredCols.join(', ')} | Found: ${credCols.slice(0, 8).join(', ')}...`, severity: 'critical' });
 
@@ -406,7 +406,7 @@ async function phase9_db_tables_integrity() {
   const txColCheck = await typedQuery(sql`
     SELECT column_name FROM information_schema.columns WHERE table_name = 'credit_transactions' ORDER BY ordinal_position
   `);
-  const txCols = (txColCheck as any).rows?.map((r: unknown) => r.column_name) || [];
+  const txCols = (txColCheck as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || [];
   const requiredTxCols = ['workspace_id', 'amount', 'feature_key', 'transaction_type'];
   record({ name: 'credit_transactions Has Key Columns', phase: 'DB', passed: requiredTxCols.every(c => txCols.includes(c)), details: `Required: ${requiredTxCols.join(', ')} | Found: ${txCols.slice(0, 8).join(', ')}...`, severity: 'critical' });
 
@@ -414,7 +414,7 @@ async function phase9_db_tables_integrity() {
   const subColCheck = await typedQuery(sql`
     SELECT column_name FROM information_schema.columns WHERE table_name = 'subscriptions' ORDER BY ordinal_position
   `);
-  const subCols = (subColCheck as any).rows?.map((r: unknown) => r.column_name) || [];
+  const subCols = (subColCheck as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || [];
   const requiredSubCols = ['workspace_id', 'stripe_subscription_id', 'plan', 'status'];
   record({ name: 'subscriptions Has Key Columns', phase: 'DB', passed: requiredSubCols.every(c => subCols.includes(c)), details: `Required: ${requiredSubCols.join(', ')}`, severity: 'critical' });
 
@@ -422,7 +422,7 @@ async function phase9_db_tables_integrity() {
   const eventColCheck = await typedQuery(sql`
     SELECT column_name FROM information_schema.columns WHERE table_name = 'processed_stripe_events' ORDER BY ordinal_position
   `);
-  const eventCols = (eventColCheck as any).rows?.map((r: unknown) => r.column_name) || [];
+  const eventCols = (eventColCheck as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || [];
   record({ name: 'processed_stripe_events Table Has Columns', phase: 'DB', passed: eventCols.length >= 2, details: `${eventCols.length} columns: ${eventCols.join(', ')}`, severity: 'high' });
 }
 

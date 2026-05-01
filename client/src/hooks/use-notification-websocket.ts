@@ -318,9 +318,9 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
           }
           const countUpdateEvent = new CustomEvent('notification_count_updated', {
             detail: {
-              counts: data.counts || (data as any).notification?.counts || {
-                notifications: (data as any).notification?.notifications || 0,
-                platformUpdates: (data as any).notification?.platformUpdates || 0,
+              counts: data.counts || (data as Record<string,unknown>).notification?.counts || {
+                notifications: (data as Record<string,unknown>).notification?.notifications || 0,
+                platformUpdates: (data as Record<string,unknown>).notification?.platformUpdates || 0,
                 total: data.unreadCount || 0,
                 lastUpdated: new Date().toISOString(),
               },

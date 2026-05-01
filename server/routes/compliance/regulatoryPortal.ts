@@ -507,9 +507,9 @@ router.get('/dashboard/:workspaceId/overview', requireAuditorPortalAuth, async (
         stateLicenseState: ws.stateLicenseState,
         stateLicenseExpiry: ws.stateLicenseExpiry,
         registeredOn: ws.createdAt,
-        employeeBreakdown: ((activeEmpCount as any).rows || (activeEmpCount as any)) ?? [],
-        activeClients: Number(((clientCount as any).rows || (clientCount as any))?.[0]?.count ?? 0),
-        activeSites: Number(((siteCount as any).rows || (siteCount as any))?.[0]?.count ?? 0),
+        employeeBreakdown: ((activeEmpCount as Record<string,unknown>).rows || (activeEmpCount as any)) ?? [],
+        activeClients: Number(((clientCount as Record<string,unknown>).rows || (clientCount as any))?.[0]?.count ?? 0),
+        activeSites: Number(((siteCount as Record<string,unknown>).rows || (siteCount as any))?.[0]?.count ?? 0),
         auditReadinessScore: readinessData?.score ?? 0,
         overallComplianceScore: readinessData?.score ?? 0,
       },
@@ -829,9 +829,9 @@ router.get('/dashboard/:workspaceId/documents', requireAuditorPortalAuth, async 
     const documents = await db.select({
       id: complianceDocuments.id,
       documentType: complianceDocuments.documentTypeId,
-      documentTitle: (complianceDocuments as any).documentTitle,
+      documentTitle: (complianceDocuments as Record<string,unknown>).documentTitle,
       status: complianceDocuments.status,
-      fileUrl: (complianceDocuments as any).fileUrl,
+      fileUrl: (complianceDocuments as Record<string,unknown>).fileUrl,
       employeeId: complianceDocuments.employeeId,
       createdAt: complianceDocuments.createdAt,
       expirationDate: complianceDocuments.expirationDate,
@@ -877,7 +877,7 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
       WHERE wu.workspace_id = ${workspaceId} AND wu.role = 'org_owner'
       LIMIT 1
     `);
-    const owner = ((ownerResult as any).rows || (ownerResult as any))?.[0];
+    const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as any))?.[0];
 
     if (owner) {
       await createNotification({
@@ -1041,8 +1041,8 @@ router.get('/states', async (_req: Request, res: Response) => {
       stateCode: complianceStates.stateCode,
       stateName: complianceStates.stateName,
       regulatoryBody: complianceStates.regulatoryBody,
-      auditorEmailDomain: (complianceStates as any).auditorEmailDomain,
-      fallbackToManualVerification: (complianceStates as any).fallbackToManualVerification,
+      auditorEmailDomain: (complianceStates as Record<string,unknown>).auditorEmailDomain,
+      fallbackToManualVerification: (complianceStates as Record<string,unknown>).fallbackToManualVerification,
     }).from(complianceStates).where(eq(complianceStates.status, 'active'));
 
     return res.json({ success: true, data: states });
@@ -1092,7 +1092,7 @@ async function notifyOrgOwnerOfAuditRequest(
     WHERE wu.workspace_id = ${workspaceId} AND wu.role = 'org_owner'
     LIMIT 1
   `);
-  const owner = ((ownerResult as any).rows || (ownerResult as any))?.[0];
+  const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as any))?.[0];
   if (!owner) return;
 
   await createNotification({
@@ -1185,7 +1185,7 @@ router.post('/complete-report', requireAuditorPortalAuth, async (req: Request, r
       WHERE wu.workspace_id = ${request.workspaceId} AND wu.role = 'org_owner'
       LIMIT 1
     `);
-    const owner = ((ownerResult as any).rows || (ownerResult as any))?.[0];
+    const owner = ((ownerResult as Record<string,unknown>).rows || (ownerResult as any))?.[0];
 
     if (owner) {
       await createNotification({

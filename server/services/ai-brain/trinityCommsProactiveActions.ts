@@ -57,12 +57,12 @@ export function registerCommsProactiveActions() {
     const { workspaceId, officerId, subject, message, priority } = params;
     if (!workspaceId || !officerId || !message) return { error: 'workspaceId, officerId, message required' };
     const emp = await db.query.employees?.findFirst({ where: eq(employees.id, officerId) }).catch(() => null);
-    const userId = (emp as any)?.userId || officerId;
+    const userId = (emp as EmployeeWithStatus)?.userId || officerId;
     await createNotification({ workspaceId, userId, type: 'scheduled_email', title: subject || 'Message from CoAIleague', message, priority: priority || 'normal',
  idempotencyKey: `scheduled_email-${String(Date.now())}-${'system'}`,
         })
       .catch((err: Error) => log.warn(`[TrinityComms] Officer email notification persist failed for user ${userId}:`, err.message));
-    const emailAddr = (emp as any)?.email;
+    const emailAddr = (emp as EmployeeWithStatus)?.email;
     if (emailAddr) {
       await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: userId, channel: 'email', body: { to: emailAddr, subject: subject || 'Message from CoAIleague', html: `<p>${message}</p>` } }).catch(() => null);
     }
@@ -87,8 +87,8 @@ export function registerCommsProactiveActions() {
         })
         .catch((err: Error) => log.warn(`[TrinityComms] Manager email notification persist failed for user ${mgr.userId}:`, err.message));
       const mgrUser = await db.query.users?.findFirst({ where: eq(users.id, mgr.userId) }).catch(() => null);
-      if ((mgrUser as any)?.email) {
-        await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: mgr.userId, channel: 'email', body: { to: (mgrUser as any).email, subject: subject || 'Manager Alert from Trinity', html: `<p>${message}</p>` } }).catch(() => null);
+      if ((mgrUser as Record<string,unknown>)?.email) {
+        await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: mgr.userId, channel: 'email', body: { to: (mgrUser as Record<string,unknown>).email, subject: subject || 'Manager Alert from Trinity', html: `<p>${message}</p>` } }).catch(() => null);
         emailsSent++;
       }
       sent++;
@@ -102,7 +102,7 @@ export function registerCommsProactiveActions() {
     let toEmail = clientEmail;
     if (!toEmail && clientId) {
       const client = await db.query.clients?.findFirst({ where: eq(clients.id, clientId) }).catch(() => null);
-      toEmail = (client as any)?.email || (client as any)?.billingEmail || (client as any)?.pocEmail;
+      toEmail = (client as Record<string,unknown>)?.email || (client as Record<string,unknown>)?.billingEmail || (client as Record<string,unknown>)?.pocEmail;
     }
     if (!toEmail) return { sent: false, error: 'No email address found for client', clientId };
     const notifId = await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: clientId || toEmail, channel: 'email', body: { to: toEmail, subject: subject || 'Update from CoAIleague', html: `<p>${message}</p>` } }).catch(() => null);
@@ -120,10 +120,10 @@ export function registerCommsProactiveActions() {
       createdBy: createdBy || 'trinity-ai',
       sendNow: true,
     } as any);
-    if ((broadcast as any)?.id) {
+    if ((broadcast as Record<string,unknown>)?.id) {
       await broadcastService.deliverBroadcast(((broadcast as {id?: string}).id), workspaceId).catch(() => null);
     }
-    return { posted: true, broadcastId: (broadcast as any)?.id, title };
+    return { posted: true, broadcastId: (broadcast as Record<string,unknown>)?.id, title };
   }));
 
   helpaiOrchestrator.registerAction(mkAction('report.executive_summary', async (params) => {
@@ -162,7 +162,7 @@ export function registerCommsProactiveActions() {
       openShiftsToday: parseInt(String((openShiftsToday[0] as any)?.count || 0)),
       expiringCertsNext7Days: parseInt(String((expiringDocs[0] as any)?.count || 0)),
       pendingPayrollApprovals: parseInt(String((pendingPayroll[0] as any)?.count || 0)),
-      overdueInvoices: overdue.status === 'fulfilled' ? (overdue as any).value?.overdueCount || 0 : 'unavailable',
+      overdueInvoices: overdue.status === 'fulfilled' ? (overdue as Record<string,unknown>).value?.overdueCount || 0 : 'unavailable',
       revenueForecast: forecast.status === 'fulfilled' ? forecast.value : null,
       weeklyScheduleSummary: weeklyReport.status === 'fulfilled' ? weeklyReport.value : null,
     };
@@ -308,8 +308,8 @@ export function registerCommsProactiveActions() {
       .orderBy(employeeDocuments.expirationDate)
       .limit(20)
       .catch(() => []);
-    const payPeriodSchedule = (workspace as any)?.payrollSchedule || 'biweekly';
-    const billingCycle = (workspace as any)?.invoiceSchedule || 'monthly';
+    const payPeriodSchedule = (workspace as Record<string,unknown>)?.payrollSchedule || 'biweekly';
+    const billingCycle = (workspace as Record<string,unknown>)?.invoiceSchedule || 'monthly';
     const nextPayDate = new Date(today);
     nextPayDate.setDate(nextPayDate.getDate() + (payPeriodSchedule === 'weekly' ? 7 : 14));
     const nextBillingDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);

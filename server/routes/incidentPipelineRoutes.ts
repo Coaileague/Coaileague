@@ -29,7 +29,7 @@ async function q(text: string, params: (string | number | boolean | null)[] = []
 }
 
 // GAP 2 converted: generateIncidentNumberInTx now accepts Drizzle tx object (db.transaction session) | FOR UPDATE via tx.execute(sql) | 2026-03-23
-async function generateIncidentNumberInTx(tx: any, workspaceId: string): Promise<string> {
+async function generateIncidentNumberInTx(tx: unknown, workspaceId: string): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `INC-${year}-`;
   const result = await tx.execute(sql`

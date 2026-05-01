@@ -490,8 +490,8 @@ export default function PrivateMessages() {
                     {/* Avatar with online dot */}
                     <div className="relative shrink-0">
                       <Avatar className="h-12 w-12">
-                        {(conv as any).recipientProfileImageUrl && (
-                          <AvatarImage src={(conv as any).recipientProfileImageUrl} alt={conv.recipientName} />
+                        {(conv as Record<string,unknown>).recipientProfileImageUrl && (
+                          <AvatarImage src={(conv as Record<string,unknown>).recipientProfileImageUrl} alt={conv.recipientName} />
                         )}
                         <AvatarFallback className="text-sm font-bold text-white bg-gradient-to-br from-violet-500 to-purple-700">
                           {conv.recipientName.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase()}
@@ -566,8 +566,8 @@ export default function PrivateMessages() {
                 )}
                                 <div className="relative shrink-0">
                   <Avatar className="h-10 w-10">
-                    {(currentConversation as any)?.recipientProfileImageUrl && (
-                      <AvatarImage src={(currentConversation as any).recipientProfileImageUrl} alt={currentConversation?.recipientName} />
+                    {(currentConversation as Record<string,unknown>)?.recipientProfileImageUrl && (
+                      <AvatarImage src={(currentConversation as Record<string,unknown>).recipientProfileImageUrl} alt={currentConversation?.recipientName} />
                     )}
                     <AvatarFallback className="text-sm font-bold text-white bg-gradient-to-br from-violet-500 to-purple-700">
                       {currentConversation?.recipientName.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase()}

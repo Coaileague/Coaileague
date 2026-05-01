@@ -210,7 +210,7 @@ router.post('/', requireSRAAuth, async (req: SRARequest, res: Response) => {
             severity: resolvedSeverity,
             findingDescription: description.slice(0, 500),
           },
-        }).catch((flagErr: any) => log.warn('[SRA Findings] Enforcement action event publish failed:', flagErr?.message));
+        }).catch((flagErr: unknown) => log.warn('[SRA Findings] Enforcement action event publish failed:', flagErr?.message));
       } catch (enfErr) {
         log.error('[SRA Findings] Enforcement action NDS/flag failed (non-fatal):', enfErr);
       }

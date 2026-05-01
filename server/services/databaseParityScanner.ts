@@ -136,7 +136,7 @@ async function fetchTableColumns(tableName: string): Promise<ColumnInfo[]> {
 /**
  * Extract expected columns from Drizzle schema table definition
  */
-function extractSchemaColumns(tableDefinition: any): Map<string, { type: string; nullable: boolean; hasDefault: boolean }> {
+function extractSchemaColumns(tableDefinition: unknown): Map<string, { type: string; nullable: boolean; hasDefault: boolean }> {
   const columns = new Map<string, { type: string; nullable: boolean; hasDefault: boolean }>();
   
   if (!tableDefinition || typeof tableDefinition !== 'object') {

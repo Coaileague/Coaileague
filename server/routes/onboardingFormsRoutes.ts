@@ -96,7 +96,7 @@ router.post("/save-draft", requireAuth, async (req: AuthenticatedRequest, res) =
       updatedAt: new Date(),
     };
 
-    let result: any;
+    let result: unknown;
     if (existing) {
       const [updated] = await db
         .update(customFormSubmissions)
@@ -168,7 +168,7 @@ router.post("/submit", requireAuth, async (req: AuthenticatedRequest, res) => {
       userAgent: req.get("user-agent") || null,
     };
 
-    let result: any;
+    let result: unknown;
     if (existing) {
       const [updated] = await db
         .update(customFormSubmissions)

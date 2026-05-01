@@ -373,7 +373,7 @@ export class AccountStateService {
             }
           }
         } catch (emailError) {
-          log.error('Failed to send overdue email', { invoiceId: invoice.id, error: (emailError as any).message });
+          log.error('Failed to send overdue email', { invoiceId: invoice.id, error: (emailError as Record<string,unknown>).message });
         }
 
         // Emit platform event for the notification engine
@@ -395,7 +395,7 @@ export class AccountStateService {
             },
           });
         } catch (eventError) {
-          log.error('Failed to emit platform event', { invoiceId: invoice.id, error: (eventError as any).message });
+          log.error('Failed to emit platform event', { invoiceId: invoice.id, error: (eventError as Record<string,unknown>).message });
         }
 
         // Log audit event

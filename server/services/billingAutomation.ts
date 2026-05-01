@@ -327,7 +327,7 @@ async function createInvoiceFromBillableSummary(
   // no resolvable rate, refuse to create the invoice so the entries stay
   // claimable on the next run once a rate is configured. Caller treats null as "skipped".
   const allEntriesZeroRate = clientSummary.entries.every(
-    (e: any) => !e.billingRate || Number(e.billingRate) === 0
+    (e: unknown) => !e.billingRate || Number(e.billingRate) === 0
   );
   if (allEntriesZeroRate) {
     const unbilledHours = clientSummary.entries.reduce(
@@ -620,7 +620,7 @@ async function createInvoiceFromBillableSummary(
       eq(clientBillingSettings.isActive, true),
     ))
     .limit(1);
-  const paymentTerms = clientSettings[0]?.paymentTerms || (workspace as any)?.defaultPaymentTerms || 'net_30';
+  const paymentTerms = clientSettings[0]?.paymentTerms || (workspace as Record<string,unknown>)?.defaultPaymentTerms || 'net_30';
   const termsDaysMap: Record<string, number> = {
     'due_on_receipt': 0,
     'net_7': 7,

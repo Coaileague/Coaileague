@@ -196,7 +196,7 @@ async function executeSeasonalCommand(command: SeasonalCommand): Promise<Seasona
         : { success: false, message: `Holiday '${command.holidayId}' not found` };
     }
     default:
-      return { success: false, message: `Unknown action: ${(command as any).action}` };
+      return { success: false, message: `Unknown action: ${(command as Record<string,unknown>).action}` };
   }
 }
 
@@ -1192,7 +1192,7 @@ router.get('/preferences', requireTrinityAccess, async (req, res) => {
   const result = await executeMascotAction('mascot.get_preferences', async () => {
     const dbResult = await db.select().from(userMascotPreferences).where(eq(userMascotPreferences.userId, userId));
     
-    const prefs = (dbResult as any).rows?.[0];
+    const prefs = (dbResult as Record<string,unknown>).rows?.[0];
     
     if (!prefs) {
       // Return default preferences
@@ -2120,10 +2120,10 @@ router.post('/sessions', requireTrinityAccess, async (req, res) => {
       LIMIT 1
     `);
     
-    if ((existingSession as any).rows?.length > 0) {
+    if ((existingSession as Record<string,unknown>).rows?.length > 0) {
       return res.json({ 
         success: true, 
-        session: (existingSession as any).rows[0],
+        session: (existingSession as Record<string,unknown>).rows[0],
         isNew: false
       });
     }
@@ -2567,7 +2567,7 @@ router.get('/sessions/query', requireTrinityAccess, async (req, res) => {
     const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
-    if (!(user as any)?.platformRole || !staffRoles.includes(req.user?.platformRole)) {
+    if (!(user as Record<string,unknown>)?.platformRole || !staffRoles.includes(req.user?.platformRole)) {
       return res.status(403).json({ error: 'Staff access required' });
     }
     
@@ -2588,7 +2588,7 @@ router.get('/sessions/query', requireTrinityAccess, async (req, res) => {
       id: mascotSessions.id,
       startedAt: mascotSessions.startedAt,
       totalInteractions: mascotSessions.totalInteractions,
-      userName: (users as any).fullName,
+      userName: (users as Record<string,unknown>).fullName,
       workspaceName: workspaces.name
     })
       .from(mascotSessions)
@@ -2619,7 +2619,7 @@ router.get('/sessions/:id/interactions', requireTrinityAccess, async (req, res) 
     const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
-    if (!(user as any)?.platformRole || !staffRoles.includes(req.user?.platformRole)) {
+    if (!(user as Record<string,unknown>)?.platformRole || !staffRoles.includes(req.user?.platformRole)) {
       return res.status(403).json({ error: 'Staff access required' });
     }
     
@@ -2654,7 +2654,7 @@ router.get('/analytics', requireTrinityAccess, async (req, res) => {
     const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
-    if (!(user as any)?.platformRole || !staffRoles.includes(req.user?.platformRole)) {
+    if (!(user as Record<string,unknown>)?.platformRole || !staffRoles.includes(req.user?.platformRole)) {
       return res.status(403).json({ error: 'Staff access required' });
     }
     

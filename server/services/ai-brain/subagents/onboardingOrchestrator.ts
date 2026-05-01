@@ -111,7 +111,7 @@ class OnboardingOrchestrator {
       entityId: workspaceId,
       changeType: 'action',
       metadata: { sourceCount: sources.length, skipGamification, skipDataMigration, validateOnly },
-    }).catch((auditErr: any) => {
+    }).catch((auditErr: unknown) => {
       this.log.warn('[Onboarding] Audit log (start) failed:', auditErr?.message);
     });
 
@@ -309,7 +309,7 @@ class OnboardingOrchestrator {
         errorCount: result.errors.length,
         warningCount: result.warnings.length,
       },
-    }).catch((auditErr: any) => {
+    }).catch((auditErr: unknown) => {
       this.log.warn('[Onboarding] Audit log (complete) failed:', auditErr?.message);
     });
 

@@ -812,9 +812,9 @@ class TrinitySelfAwarenessService {
         capabilities.push({
           actionId,
           domain: actionDomain,
-          description: (handler as any).description || 'No description',
-          parameters: Object.keys((handler as any).parameters || {}),
-          requiredRole: (handler as any).requiredRole,
+          description: (handler as Record<string,unknown>).description || 'No description',
+          parameters: Object.keys((handler as Record<string,unknown>).parameters || {}),
+          requiredRole: (handler as Record<string,unknown>).requiredRole,
           isActive: true,
         });
       }

@@ -2036,7 +2036,7 @@ class AIBrainActionRegistry {
         const { expectedUpdatedAt } = request.payload || {};
         if (expectedUpdatedAt && targetShift) {
           const expectedMs = new Date(expectedUpdatedAt).getTime();
-          const currentTs = (targetShift as any).updatedAt;
+          const currentTs = (targetShift as Record<string,unknown>).updatedAt;
           const actualMs = currentTs ? new Date(currentTs).getTime() : 0;
           if (Math.abs(actualMs - expectedMs) > 1000) {
             return createResult(request.actionId, false,
@@ -2078,7 +2078,7 @@ class AIBrainActionRegistry {
         // PROXIMITY_ALERT: Employee address far from site (advisory)
         if (emp) {
           const empZip = (emp as EmployeeWithStatus).zip || (emp as EmployeeWithStatus).zipCode;
-          const siteZip = targetShift ? (targetShift as any).siteZip : null;
+          const siteZip = targetShift ? (targetShift as Record<string,unknown>).siteZip : null;
           // Simple check: if zip codes differ significantly (first 3 digits), flag it
           if (empZip && siteZip && empZip.substring(0, 3) !== siteZip.substring(0, 3)) {
             softWarnings.push(`PROXIMITY_ALERT: Officer may have a long commute to this site. Verify travel time before confirming.`);
@@ -2427,8 +2427,8 @@ class AIBrainActionRegistry {
           await universalNotificationEngine.sendNotification({
             idempotencyKey: `notif-${Date.now()}`,
           type: 'compliance_alert',
-            title: `Compliance Escalation: ${(alert as any).title}`,
-            message: (alert as any).description,
+            title: `Compliance Escalation: ${(alert as Record<string,unknown>).title}`,
+            message: (alert as Record<string,unknown>).description,
             workspaceId: request.workspaceId!,
             severity: alert.severity === 'critical' ? 'high' : 'medium',
             source: 'trinity_compliance_escalation',
@@ -2531,7 +2531,7 @@ class AIBrainActionRegistry {
 
         // Compute deltas (integer cents to avoid float drift)
         let appendedTotalCents = 0;
-        const rows = items.map((it: any, idx: number) => {
+        const rows = items.map((it: unknown, idx: number) => {
           const qty = parseFloat(String(it.quantity ?? '1'));
           const unit = parseFloat(String(it.unitPrice ?? '0'));
           if (!Number.isFinite(qty) || qty <= 0) {
@@ -3662,7 +3662,7 @@ class AIBrainActionRegistry {
         const start = Date.now();
         const { contractPipelineService } = await import('../contracts/contractPipelineService');
         const contracts = await contractPipelineService.getContracts(request.workspaceId!, { status: 'pending_signatures' });
-        return createResult(request.actionId, true, `Found ${(contracts as any).length} contracts awaiting signatures`, { contracts, count: (contracts as any).length }, start);
+        return createResult(request.actionId, true, `Found ${(contracts as Record<string,unknown>).length} contracts awaiting signatures`, { contracts, count: (contracts as Record<string,unknown>).length }, start);
       },
     };
 
@@ -3678,7 +3678,7 @@ class AIBrainActionRegistry {
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         const contracts = await contractPipelineService.getContracts(request.workspaceId!, { expiresBy: thirtyDaysFromNow });
-        return createResult(request.actionId, true, `Found ${(contracts as any).length} contracts expiring in next 30 days`, { contracts, count: (contracts as any).length }, start);
+        return createResult(request.actionId, true, `Found ${(contracts as Record<string,unknown>).length} contracts expiring in next 30 days`, { contracts, count: (contracts as Record<string,unknown>).length }, start);
       },
     };
 
@@ -3721,7 +3721,7 @@ class AIBrainActionRegistry {
         const start = Date.now();
         const { contractPipelineService } = await import('../contracts/contractPipelineService');
         const searchTerm = request.payload?.query || '';
-        const contracts = await contractPipelineService.getContracts(request.workspaceId!, {});        const filtered = (contracts as any).filter(c => 
+        const contracts = await contractPipelineService.getContracts(request.workspaceId!, {});        const filtered = (contracts as Record<string,unknown>).filter(c => 
           c.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           c.title?.toLowerCase().includes(searchTerm.toLowerCase())
         );

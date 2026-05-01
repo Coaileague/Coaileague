@@ -21,7 +21,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
     const isPlatformAdmin = hasPlatformWideAccess(user?.platformRole);
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
+    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || (user as Record<string,unknown>)?.workspaceId || req.workspaceId;
     
     if (!workspaceId) {
       if (isPlatformAdmin) {
@@ -61,7 +61,7 @@ router.get("/summary", requireAuth, async (req: Request, res: Response) => {
     // SECURITY: query param workspaceId is only honoured for platform admins.
     // Non-admin users are always scoped to their session workspace to prevent
     // cross-tenant data leakage via query param injection.
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
+    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || (user as Record<string,unknown>)?.workspaceId || req.workspaceId;
 
     if (!workspaceId) return res.status(400).json({ error: "workspaceId required" });
 
@@ -118,7 +118,7 @@ router.get("/metrics", requireAuth, async (req: Request, res: Response) => {
     
     // Platform admins can view any workspace via query param, or their own if set
     const isPlatformAdmin = hasPlatformWideAccess(user?.platformRole);
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
+    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.currentWorkspaceId || (user as Record<string,unknown>)?.workspaceId || req.workspaceId;
     
     if (!workspaceId) {
       // For platform admins without a workspace context, return aggregate or empty data
@@ -331,7 +331,7 @@ router.get("/worker-earnings", requireAuth, async (req: Request, res: Response) 
     // currentWorkspaceId is the canonical field on the DB user object (set by real login);
     // workspaceId is set on the x-test-key dev bypass user object.
     // req.workspaceId is set by ensureWorkspaceAccess when mounted at /api/dashboard.
-    const workspaceId = user?.currentWorkspaceId || (user as any)?.workspaceId || req.workspaceId;
+    const workspaceId = user?.currentWorkspaceId || (user as Record<string,unknown>)?.workspaceId || req.workspaceId;
     const userId = user?.id;
 
     if (!userId || !workspaceId) {

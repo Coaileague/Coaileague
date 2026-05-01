@@ -83,7 +83,7 @@ router.post('/conversations', async (req: AuthenticatedRequest, res) => {
         req.user?.id ?? req.user?.claims?.sub
       );
     } catch (summonErr: unknown) {
-      log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as any)?.message);
+      log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as Record<string,unknown>)?.message);
     }
 
     res.status(201).json(conversation);
@@ -163,7 +163,7 @@ router.get('/conversations/:id/messages', async (req: AuthenticatedRequest, res)
         return {
           ...msg,
           role: senderRole || 'guest',
-          userType: (userInfo as any)?.userType || 'guest'
+          userType: (userInfo as Record<string,unknown>)?.userType || 'guest'
         };
       }));
 
@@ -196,7 +196,7 @@ router.get('/conversations/:id/messages', async (req: AuthenticatedRequest, res)
       return {
         ...msg,
         role: senderRole || 'guest',
-        userType: (userInfo as any)?.userType || 'guest'
+        userType: (userInfo as Record<string,unknown>)?.userType || 'guest'
       };
     }));
 
@@ -344,7 +344,7 @@ router.get('/main-room/messages', async (req: AuthenticatedRequest, res) => {
       return {
         ...msg,
         role: senderRole || 'guest',
-        userType: (userInfo as any)?.userType || 'guest'
+        userType: (userInfo as Record<string,unknown>)?.userType || 'guest'
       };
     }));
 
@@ -892,8 +892,8 @@ router.post('/conversations/:id/typing', async (req: AuthenticatedRequest, res) 
       return res.status(404).json({ message: "Conversation not found" });
     }
 
-    const isParticipant = (conversation as any).participantIds?.includes(userId);
-    const isCreator = (conversation as any).creatorId === userId;
+    const isParticipant = (conversation as Record<string,unknown>).participantIds?.includes(userId);
+    const isCreator = (conversation as Record<string,unknown>).creatorId === userId;
     let isWorkspaceMember = false;
 
     if (!isParticipant && !isCreator && conversation.workspaceId) {
@@ -956,8 +956,8 @@ router.delete('/conversations/:id/typing', async (req: AuthenticatedRequest, res
       return res.status(404).json({ message: "Conversation not found" });
     }
 
-    const isParticipant = (conversation as any).participantIds?.includes(userId);
-    const isCreator = (conversation as any).creatorId === userId;
+    const isParticipant = (conversation as Record<string,unknown>).participantIds?.includes(userId);
+    const isCreator = (conversation as Record<string,unknown>).creatorId === userId;
     let isWorkspaceMember = false;
 
     if (!isParticipant && !isCreator && conversation.workspaceId) {
@@ -1174,8 +1174,8 @@ router.get('/room/:roomId/motd', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: 'Room not found' });
     }
 
-    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
-    const activeBots = (conversation as any).metadata?.activeBots || [];
+    const roomModes = (conversation as Record<string,unknown>).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as Record<string,unknown>).metadata?.activeBots || [];
     const roomName = conversation.subject || 'Chat Room';
 
     const motd = generateMOTD(roomName, roomModes, activeBots);
@@ -1254,8 +1254,8 @@ router.get('/room/:roomId/bots', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: 'Room not found' });
     }
 
-    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
-    const activeBots = (conversation as any).metadata?.activeBots || [];
+    const roomModes = (conversation as Record<string,unknown>).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as Record<string,unknown>).metadata?.activeBots || [];
 
     const availableBots = new Set<string>();
     for (const mode of roomModes) {

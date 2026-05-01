@@ -66,7 +66,7 @@ export default function ApplicantVisualCompliance() {
   const queryClient = useQueryClient();
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
 
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
 
   const { data: slotsData } = useQuery({
     queryKey: ['/api/audit-suite/visual-compliance/slots'],

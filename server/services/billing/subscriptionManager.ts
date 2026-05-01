@@ -432,7 +432,7 @@ export class SubscriptionManager {
     // Default to the tier-specific seat overage price if not provided
     const tier = workspace.subscriptionTier as SubscriptionTier;
     const pricing = TIER_PRICING[tier];
-    const effectivePriceId = priceId || (pricing as any).seatOveragePriceId;
+    const effectivePriceId = priceId || (pricing as Record<string,unknown>).seatOveragePriceId;
 
     if (!effectivePriceId) {
       log.warn(`[SubscriptionManager] No seat overage price ID configured for ${tier}.`);
@@ -896,8 +896,8 @@ export class SubscriptionManager {
       currentBalance: creditBalance,
       stripeSubscription,
       billingCycle: stripeSubscription?.items.data[0]?.price?.recurring?.interval || 'monthly',
-      currentPeriodEnd: stripeSubscription && (stripeSubscription as any).current_period_end
-        ? new Date((stripeSubscription as any).current_period_end * 1000) 
+      currentPeriodEnd: stripeSubscription && (stripeSubscription as Record<string,unknown>).current_period_end
+        ? new Date((stripeSubscription as Record<string,unknown>).current_period_end * 1000) 
         : null,
       trialEndsAt,
       trialStartedAt,

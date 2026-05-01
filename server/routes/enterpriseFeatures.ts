@@ -79,15 +79,15 @@ enterpriseRouter.post('/branding', async (req: AuthenticatedRequest, res: Respon
     const [ws] = await db.select({ blob: workspaces.brandingBlob }).from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
     const current = ((ws?.blob || {}) as Record<string, unknown>);
     const updated = { ...current, workspaceId: wsId, updatedAt: new Date().toISOString() };
-    if (primaryColor !== undefined) (updated as any).primaryColor = primaryColor;
-    if (secondaryColor !== undefined) (updated as any).secondaryColor = secondaryColor;
-    if (accentColor !== undefined) (updated as any).accentColor = accentColor;
-    if (logoUrl !== undefined) (updated as any).logoUrl = logoUrl;
-    if (faviconUrl !== undefined) (updated as any).faviconUrl = faviconUrl;
-    if (companyName !== undefined) (updated as any).companyName = companyName;
-    if (tagline !== undefined) (updated as any).tagline = tagline;
-    if (fontFamily !== undefined) (updated as any).fontFamily = fontFamily;
-    if (customCss !== undefined) (updated as any).customCss = customCss;
+    if (primaryColor !== undefined) (updated as Record<string,unknown>).primaryColor = primaryColor;
+    if (secondaryColor !== undefined) (updated as Record<string,unknown>).secondaryColor = secondaryColor;
+    if (accentColor !== undefined) (updated as Record<string,unknown>).accentColor = accentColor;
+    if (logoUrl !== undefined) (updated as Record<string,unknown>).logoUrl = logoUrl;
+    if (faviconUrl !== undefined) (updated as Record<string,unknown>).faviconUrl = faviconUrl;
+    if (companyName !== undefined) (updated as Record<string,unknown>).companyName = companyName;
+    if (tagline !== undefined) (updated as Record<string,unknown>).tagline = tagline;
+    if (fontFamily !== undefined) (updated as Record<string,unknown>).fontFamily = fontFamily;
+    if (customCss !== undefined) (updated as Record<string,unknown>).customCss = customCss;
     await db.update(workspaces).set({ brandingBlob: updated }).where(eq(workspaces.id, wsId));
     res.json(updated);
   } catch (err) {
@@ -438,7 +438,7 @@ enterpriseRouter.get('/account-manager', async (req: AuthenticatedRequest, res: 
     const featureStates = ((ws?.blob || {}) as Record<string, unknown>);
     const managers = (featureStates.accountManagers || []) as any[];
     // Enrich with user data if managerUserId present
-    const enriched = await Promise.all(managers.filter(m => m.status === 'active').map(async (m: any) => {
+    const enriched = await Promise.all(managers.filter(m => m.status === 'active').map(async (m: unknown) => {
       if (m.managerUserId) {
         const [u] = await db.select({ firstName: users.firstName, lastName: users.lastName, email: users.email })
           .from(users).where(eq(users.id, m.managerUserId)).limit(1);

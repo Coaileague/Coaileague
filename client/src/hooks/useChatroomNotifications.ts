@@ -40,7 +40,7 @@ export function useChatroomNotifications() {
   useEffect(() => {
     if (!user?.id || !bus) return;
 
-    const workspaceId = (user as any)?.currentWorkspaceId || (user as any)?.workspaceId || (user as any)?.defaultWorkspaceId;
+    const workspaceId = (user as Record<string,unknown>)?.currentWorkspaceId || (user as Record<string,unknown>)?.workspaceId || (user as Record<string,unknown>)?.defaultWorkspaceId;
     if (!workspaceId) return;
 
     const sendJoinNotifications = () => {

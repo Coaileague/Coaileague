@@ -295,7 +295,7 @@ export class TaxFormGeneratorService {
       // Stamp branded header/footer and save to document vault
       const vaultResult = await saveToVault({
         workspaceId,
-        workspaceName: (workspace as any)?.name || workspaceId,
+        workspaceName: (workspace as Record<string,unknown>)?.name || workspaceId,
         documentTitle: `W-2 Wage and Tax Statement`,
         category: 'tax',
         formNumber: 'W-2',
@@ -375,7 +375,7 @@ export class TaxFormGeneratorService {
       // Stamp + save to vault
       const vaultResult1099 = await saveToVault({
         workspaceId,
-        workspaceName: (workspace as any)?.name || workspaceId,
+        workspaceName: (workspace as Record<string,unknown>)?.name || workspaceId,
         documentTitle: '1099-NEC Nonemployee Compensation',
         category: 'tax',
         formNumber: '1099-NEC',
@@ -600,10 +600,10 @@ export class TaxFormGeneratorService {
       const pdfBuffer = await this.generate940PDF(form940Data);
 
       // Stamp + save to vault
-      const workspace940 = await db.query.workspaces?.findFirst?.({ where: (w: any, { eq: e }: any) => e(w.id, workspaceId) });
+      const workspace940 = await db.query.workspaces?.findFirst?.({ where: (w: unknown, { eq: e }: any) => e(w.id, workspaceId) });
       const vaultResult940 = await saveToVault({
         workspaceId,
-        workspaceName: (workspace940 as any)?.name || workspaceId,
+        workspaceName: (workspace940 as Record<string,unknown>)?.name || workspaceId,
         documentTitle: 'Form 940 Employer Annual FUTA Tax Return',
         category: 'tax',
         formNumber: '940',
@@ -909,10 +909,10 @@ export class TaxFormGeneratorService {
       }
 
       // Stamp + save to vault
-      const workspace941 = await db.query.workspaces?.findFirst?.({ where: (w: any, { eq: e }: any) => e(w.id, workspaceId) });
+      const workspace941 = await db.query.workspaces?.findFirst?.({ where: (w: unknown, { eq: e }: any) => e(w.id, workspaceId) });
       const vaultResult941 = await saveToVault({
         workspaceId,
-        workspaceName: (workspace941 as any)?.name || workspaceId,
+        workspaceName: (workspace941 as Record<string,unknown>)?.name || workspaceId,
         documentTitle: `Form 941 Employer Quarterly Federal Tax Return — Q${quarter} ${year}`,
         category: 'tax',
         formNumber: '941',

@@ -229,8 +229,8 @@ declare global {
     Plaid: {
       create: (config: {
         token: string;
-        onSuccess: (publicToken: string, metadata: any) => void;
-        onExit: (err: any, metadata: any) => void;
+        onSuccess: (publicToken: string, metadata: unknown) => void;
+        onExit: (err: unknown, metadata: unknown) => void;
       }) => { open: () => void };
     } | undefined;
   }

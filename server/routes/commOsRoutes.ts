@@ -111,7 +111,7 @@ router.get('/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) =>
           isStaff: u.isStaff,
         })),
         isJoined: connectionData.onlineUsers.some(u => u.id === userId),
-        unreadCount: (connectionData as any).unreadCounts?.[userId] || 0,
+        unreadCount: (connectionData as Record<string,unknown>).unreadCounts?.[userId] || 0,
         lastActivity: room.updatedAt || room.createdAt,
       };
     });

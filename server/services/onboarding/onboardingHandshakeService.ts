@@ -56,7 +56,7 @@ export async function flipInvitedToActive(payload: HandshakePayload): Promise<Ha
   if (new Date() > new Date(invite.expiresAt)) throw new Error('Invitation expired.');
 
   // 3. Load org code from workspace
-  const [workspace] = await db.select({ orgCode: (workspaces as any).orgCode })
+  const [workspace] = await db.select({ orgCode: (workspaces as Record<string,unknown>).orgCode })
     .from(workspaces)
     .where(eq(((workspaces as {id?: string}).id), invite.workspaceId))
     .limit(1);

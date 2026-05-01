@@ -116,7 +116,7 @@ async function scanSingleFile(
     (result.status === 'suspicious' && !options.strict);
 
   // Attach scan result to file for downstream access
-  (file as any).scanResult = result;
+  (file as Record<string,unknown>).scanResult = result;
 
   return { passed, result };
 }

@@ -373,9 +373,9 @@ const getExpiringLicensesAlert = mkAction('hiring.expiring_licenses_alert', asyn
       id: employeeDocuments.id,
       employeeId: employeeDocuments.employeeId,
       documentType: employeeDocuments.documentType,
-      docNumber: (employeeDocuments as any).docNumber,
+      docNumber: (employeeDocuments as Record<string,unknown>).docNumber,
       expirationDate: employeeDocuments.expirationDate,
-      issuingAuthority: (employeeDocuments as any).issuingAuthority,
+      issuingAuthority: (employeeDocuments as Record<string,unknown>).issuingAuthority,
     }).from(employeeDocuments)
       .where(and(
         eq(employeeDocuments.workspaceId, wid),

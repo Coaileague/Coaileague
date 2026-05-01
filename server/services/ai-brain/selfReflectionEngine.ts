@@ -320,7 +320,7 @@ Provide a JSON response with:
 }`;
 
     try {
-      const response = await (aiBrainService as any).query({
+      const response = await (aiBrainService as Record<string,unknown>).query({
         prompt,
         systemPrompt: 'You are an expert code reviewer and quality analyst. Be thorough but fair.',
         featureId: 'self_reflection',

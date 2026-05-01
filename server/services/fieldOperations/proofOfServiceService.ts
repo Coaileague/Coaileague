@@ -401,7 +401,7 @@ class ProofOfServiceService {
   }
 
   private revivePosDates(payload: unknown): ProofOfServicePhoto {
-    const toDate = (v: any) => (v ? new Date(v) : v);
+    const toDate = (v: unknown) => (v ? new Date(v) : v);
     return {
       ...payload,
       capture: {
@@ -498,39 +498,39 @@ class ProofOfServiceService {
   private detectMockLocation(deviceMeta: DeviceInfo): boolean {
     const suspiciousSignals: string[] = [];
 
-    if ((deviceMeta as any).isMockProvider === true) suspiciousSignals.push('explicit_mock_provider');
-    if ((deviceMeta as any).isFromMockProvider === true) suspiciousSignals.push('is_from_mock_provider');
-    if ((deviceMeta as any).locationProvider === 'mock') suspiciousSignals.push('location_provider_mock');
-    if ((deviceMeta as any).mockLocationsEnabled === true) suspiciousSignals.push('mock_locations_enabled');
+    if ((deviceMeta as Record<string,unknown>).isMockProvider === true) suspiciousSignals.push('explicit_mock_provider');
+    if ((deviceMeta as Record<string,unknown>).isFromMockProvider === true) suspiciousSignals.push('is_from_mock_provider');
+    if ((deviceMeta as Record<string,unknown>).locationProvider === 'mock') suspiciousSignals.push('location_provider_mock');
+    if ((deviceMeta as Record<string,unknown>).mockLocationsEnabled === true) suspiciousSignals.push('mock_locations_enabled');
 
-    const model = ((deviceMeta as any).model || '').toLowerCase();
-    const manufacturer = ((deviceMeta as any).manufacturer || '').toLowerCase();
+    const model = ((deviceMeta as Record<string,unknown>).model || '').toLowerCase();
+    const manufacturer = ((deviceMeta as Record<string,unknown>).manufacturer || '').toLowerCase();
     const EMULATOR_PATTERNS = ['sdk_gphone', 'android sdk', 'emulator', 'genymotion', 'bluestacks', 'nox', 'memu', 'ldplayer', 'youwave'];
     if (EMULATOR_PATTERNS.some(p => model.includes(p) || manufacturer.includes(p))) {
       suspiciousSignals.push('known_emulator_device');
     }
 
-    const accuracy = (deviceMeta as any).accuracy;
+    const accuracy = (deviceMeta as Record<string,unknown>).accuracy;
     if (accuracy !== undefined) {
       if (accuracy === 0) suspiciousSignals.push('perfect_zero_accuracy');
-      if (accuracy > 200 && (deviceMeta as any).locationProvider === 'gps') {
+      if (accuracy > 200 && (deviceMeta as Record<string,unknown>).locationProvider === 'gps') {
         suspiciousSignals.push('gps_provider_unrealistic_accuracy');
       }
     }
 
-    const speed = (deviceMeta as any).speed;
+    const speed = (deviceMeta as Record<string,unknown>).speed;
     if (speed !== undefined && speed > 111) {
       suspiciousSignals.push('impossible_velocity');
     }
 
-    const installedApps: string[] = (deviceMeta as any).installedApps || [];
+    const installedApps: string[] = (deviceMeta as Record<string,unknown>).installedApps || [];
     const GPS_SPOOF_PACKAGES = ['com.lexa.fakegps', 'com.incorporateapps.fakegps', 'com.blogspot.newapphorizons.fakegps',
       'com.incorporateapps.fakegpslocation', 'com.rosteam.gpsemulator', 'com.theappninjas.gpsspooferpro'];
     if (installedApps.some(pkg => GPS_SPOOF_PACKAGES.includes(pkg))) {
       suspiciousSignals.push('gps_spoofing_app_detected');
     }
 
-    if ((deviceMeta as any).developerMode === true && (deviceMeta as any).allowMockLocations === true) {
+    if ((deviceMeta as Record<string,unknown>).developerMode === true && (deviceMeta as Record<string,unknown>).allowMockLocations === true) {
       suspiciousSignals.push('developer_mock_locations_active');
     }
 

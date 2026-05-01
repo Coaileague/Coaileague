@@ -650,11 +650,11 @@ export default function PLDashboard() {
     enabled: activeTab === "asc606",
   });
 
-  const recognitionSummary: RecognitionSummary | undefined = (recognitionRes as any)?.data;
-  const forecastData: ForecastResult | undefined = (forecastRes as any)?.data;
-  const historyData: HistoryPeriod[] | undefined = (historyRes as any)?.data?.history;
-  const detailData: { summary: PLDetailSummary } | undefined = (detailRes as any)?.data;
-  const asc606Data: Asc606Report | undefined = (asc606Res as any)?.data;
+  const recognitionSummary: RecognitionSummary | undefined = (recognitionRes as Record<string,unknown>)?.data;
+  const forecastData: ForecastResult | undefined = (forecastRes as Record<string,unknown>)?.data;
+  const historyData: HistoryPeriod[] | undefined = (historyRes as Record<string,unknown>)?.data?.history;
+  const detailData: { summary: PLDetailSummary } | undefined = (detailRes as Record<string,unknown>)?.data;
+  const asc606Data: Asc606Report | undefined = (asc606Res as Record<string,unknown>)?.data;
 
   const isInitialLoading = recogLoading || detailLoading;
 

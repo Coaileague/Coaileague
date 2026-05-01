@@ -16,7 +16,7 @@ platformActionHub.registerAction({
   description: 'Proactively surface officers with perfect attendance or high performance',
   requiredRoles: ['manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { limit: { type: 'integer', description: 'Max officers to return', default: 5 } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -36,7 +36,7 @@ platformActionHub.registerAction({
   description: 'Recognition activity across workspace for a period',
   requiredRoles: ['manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { periodDays: { type: 'integer', description: 'Lookback period in days', default: 30 } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -56,7 +56,7 @@ platformActionHub.registerAction({
   description: 'Process positive client feedback into commendation nomination',
   requiredRoles: ['manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { officerId: { type: 'string', description: 'Officer ID to commend' }, feedbackText: { type: 'string', description: 'Client feedback text' } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     return { success: true, actionId: 'recognition.client_commendation', message: 'Client commendation processing active. Feedback analyzed for positive sentiment.', executionTimeMs: Date.now() - t };
   }

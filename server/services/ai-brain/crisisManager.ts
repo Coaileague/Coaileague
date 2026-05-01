@@ -342,7 +342,7 @@ class CrisisManagerService {
         .select({
           id: aiWorkboardTasks.id,
           status: aiWorkboardTasks.status,
-          actualTokens: (aiWorkboardTasks as any).actualTokens,
+          actualTokens: (aiWorkboardTasks as Record<string,unknown>).actualTokens,
           createdAt: aiWorkboardTasks.createdAt,
         })
         .from(aiWorkboardTasks)

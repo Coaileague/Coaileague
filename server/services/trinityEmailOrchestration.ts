@@ -215,7 +215,7 @@ export class TrinityEmailOrchestration {
   /**
    * Step 3: VALIDATE - Check email validity
    */
-  private async executeValidate(email: any, steps: OrchestrationStep[]): Promise<boolean> {
+  private async executeValidate(email: unknown, steps: OrchestrationStep[]): Promise<boolean> {
     const step: OrchestrationStep = {
       step: 'VALIDATE',
       status: 'in_progress',
@@ -250,7 +250,7 @@ export class TrinityEmailOrchestration {
   /**
    * Step 4: PROCESS - Analyze email with AI-like heuristics
    */
-  private async executeProcess(email: any, steps: OrchestrationStep[]): Promise<EmailAnalysis> {
+  private async executeProcess(email: unknown, steps: OrchestrationStep[]): Promise<EmailAnalysis> {
     const step: OrchestrationStep = {
       step: 'PROCESS',
       status: 'in_progress',
@@ -400,7 +400,7 @@ export class TrinityEmailOrchestration {
    * Analyze email content using keyword-based heuristics
    * In production, this would call Gemini/Claude APIs
    */
-  private analyzeEmail(email: any): EmailAnalysis {
+  private analyzeEmail(email: unknown): EmailAnalysis {
     const content = `${email.subject || ''} ${email.bodyText || ''}`.toLowerCase();
 
     // Determine category
@@ -486,7 +486,7 @@ export class TrinityEmailOrchestration {
     return [...new Set(actionItems)].slice(0, 5); // Dedupe and limit
   }
 
-  private generateSummary(email: any, category: string, sentiment: string): string {
+  private generateSummary(email: unknown, category: string, sentiment: string): string {
     const subjectPrefix = email.subject?.split(' ').slice(0, 3).join(' ') || 'Email';
     const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
     const sentimentLabel = sentiment === 'urgent' ? 'requires immediate attention' :
@@ -570,7 +570,7 @@ export class TrinityEmailOrchestration {
     return [...new Set(amounts)].slice(0, 5);
   }
 
-  private detectSpam(email: any): boolean {
+  private detectSpam(email: unknown): boolean {
     const spamIndicators = [
       'win a prize',
       'click here now',

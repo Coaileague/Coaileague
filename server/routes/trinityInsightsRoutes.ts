@@ -509,14 +509,14 @@ router.get('/fixes/:id/preview', async (req: Request, res: Response) => {
         id: approval.id,
         title: approval.title,
         description: approval.description,
-        endUserSummary: (approval as any).endUserSummary,
-        affectedFiles: (approval as any).affectedFiles,
-        proposedChanges: (approval as any).proposedChanges,
-        rollbackPlan: (approval as any).rollbackPlan,
+        endUserSummary: (approval as Record<string,unknown>).endUserSummary,
+        affectedFiles: (approval as Record<string,unknown>).affectedFiles,
+        proposedChanges: (approval as Record<string,unknown>).proposedChanges,
+        rollbackPlan: (approval as Record<string,unknown>).rollbackPlan,
         riskLevel: approval.riskLevel,
         impactScope: approval.impactScope,
         status: approval.status,
-        requiredRole: (approval as any).requiredRole,
+        requiredRole: (approval as Record<string,unknown>).requiredRole,
         createdAt: approval.createdAt,
         expiresAt: approval.expiresAt,
       },
@@ -583,7 +583,7 @@ router.post('/fixes/:id/rollback', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Fix approval not found' });
     }
     
-    if (!(approval as any).commitHash) {
+    if (!(approval as Record<string,unknown>).commitHash) {
       return res.status(400).json({ success: false, error: 'No commit hash available for rollback' });
     }
     
@@ -594,8 +594,8 @@ router.post('/fixes/:id/rollback', async (req: Request, res: Response) => {
     res.status(409).json({
       success: false,
       error: 'Automated rollback is disabled for safety — perform git revert manually',
-      commitHash: (approval as any).commitHash,
-      instructions: `git revert ${(approval as any).commitHash} && git push origin development`,
+      commitHash: (approval as Record<string,unknown>).commitHash,
+      instructions: `git revert ${(approval as Record<string,unknown>).commitHash} && git push origin development`,
     });
   } catch (error: unknown) {
     log.error('[Trinity Fixes API] Rollback error:', error);

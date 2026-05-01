@@ -167,7 +167,7 @@ async function onIncidentCreated(event: PlatformEvent): Promise<void> {
 
       if (reporter?.supervisorId) {
         const supervisor = await db.query.employees.findFirst({
-          where: eq(employees.id, (reporter as any).supervisorId),
+          where: eq(employees.id, (reporter as Record<string,unknown>).supervisorId),
         });
 
         if (supervisor?.phone) {
@@ -176,10 +176,10 @@ async function onIncidentCreated(event: PlatformEvent): Promise<void> {
             const client = await db.query.clients.findFirst({
               where: eq(clients.id, siteId),
             });
-            siteName = client?.companyName || (client as any)?.name || siteName;
+            siteName = client?.companyName || (client as Record<string,unknown>)?.name || siteName;
           }
 
-          await NotificationDeliveryService.send({ type: 'incident_alert', workspaceId: workspaceId || 'system', recipientUserId: (reporter as any).supervisorId || supervisor.phone, channel: 'sms', body: { to: supervisor.phone, body: `INCIDENT at ${siteName}\nType: ${incidentType}\nGuard: ${reporter.firstName} ${reporter.lastName}\nAction: ${actionTaken || 'Pending'}\nView: ${APP_URL}/incidents/${incidentId}` } });
+          await NotificationDeliveryService.send({ type: 'incident_alert', workspaceId: workspaceId || 'system', recipientUserId: (reporter as Record<string,unknown>).supervisorId || supervisor.phone, channel: 'sms', body: { to: supervisor.phone, body: `INCIDENT at ${siteName}\nType: ${incidentType}\nGuard: ${reporter.firstName} ${reporter.lastName}\nAction: ${actionTaken || 'Pending'}\nView: ${APP_URL}/incidents/${incidentId}` } });
         }
       }
     }
@@ -651,7 +651,7 @@ function generateSlugFromName(name: string): string {
  * Ensure a slug is unique across all workspaces.
  * If taken, appends incrementing digits (e.g., "sps" → "sps2" → "sps3").
  */
-async function ensureUniqueSlug(pool: any, baseSlug: string, currentWorkspaceId: string): Promise<string> {
+async function ensureUniqueSlug(pool: unknown, baseSlug: string, currentWorkspaceId: string): Promise<string> {
   let candidate = baseSlug;
   let suffix = 2;
   const maxAttempts = 20;
@@ -3385,7 +3385,7 @@ export function initializeTrinityEventSubscriptions(): void {
           signalType: 'compliance_cert_expired',
           source: 'compliance_engine',
           priorityScore: 9,
-          signalPayload: { employeeId, certificationType: (metadata as any)?.certificationType, expiredAt: new Date().toISOString() },
+          signalPayload: { employeeId, certificationType: (metadata as Record<string,unknown>)?.certificationType, expiredAt: new Date().toISOString() },
         });
       } catch (err: unknown) {
         log.warn('[TrinityEvents] compliance_cert_expired handler error:', err?.message);

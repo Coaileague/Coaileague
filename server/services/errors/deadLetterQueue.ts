@@ -9,7 +9,7 @@ export interface DeadLetterEntry {
 export class DeadLetterQueue {
   private queue: DeadLetterEntry[] = [];
 
-  enqueue(operation: any, error?: unknown): DeadLetterEntry {
+  enqueue(operation: unknown, error?: unknown): DeadLetterEntry {
     const entry: DeadLetterEntry = {
       id: `dlq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       operation,

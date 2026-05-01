@@ -239,7 +239,7 @@ export async function ensureUserHasEmployeeRecord(
 
   await setupCertificationsForEmployee(newEmployee.id, newEmployee.role || 'Staff');
 
-  (eventBus as any).publish({
+  (eventBus as Record<string,unknown>).publish({
     type: 'employee_hired',
     category: 'automation',
     title: `Employee Record Created — ${userRole}`,

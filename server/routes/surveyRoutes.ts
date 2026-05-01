@@ -64,7 +64,7 @@ platformActionHub.registerAction({
   category: 'automation',
   description: 'Trigger survey delivery for a specific client',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     return { success: true, actionId: 'survey.send', message: 'Survey send triggered', executionTimeMs: Date.now() - t };
   }
@@ -76,7 +76,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'Sentiment summary of recent survey text responses',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     return { success: true, actionId: 'survey.analyze', message: 'Sentiment analysis summary active', executionTimeMs: Date.now() - t };
   }
@@ -88,7 +88,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'Flag clients with declining NPS trend or NPS below 7',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {

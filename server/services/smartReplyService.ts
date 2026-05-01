@@ -156,7 +156,7 @@ Return only valid JSON array, no markdown:`;
       
       try {
         const parsed: unknown = JSON.parse(text.replace(/```json\n?|\n?```/g, ''));
-        return parsed.map((s: any, i: number) => ({
+        return parsed.map((s: unknown, i: number) => ({
           id: `ai-${Date.now()}-${i}`,
           text: s.text,
           category: 'ai_generated' as const,

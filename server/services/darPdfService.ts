@@ -152,20 +152,20 @@ async function q(text: string, params: (string | number | boolean | null)[] = []
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
-function safeFormat(val: any, fmt: string, fallback = 'N/A'): string {
+function safeFormat(val: unknown, fmt: string, fallback = 'N/A'): string {
   if (!val) return fallback;
   try { return format(new Date(val), fmt); } catch { return fallback; }
 }
 
-function safeTime(val: any): string {
+function safeTime(val: unknown): string {
   return safeFormat(val, 'hh:mm a');
 }
 
-function safeFullDate(val: any): string {
+function safeFullDate(val: unknown): string {
   return safeFormat(val, 'MMMM dd, yyyy');
 }
 
-function safeDateTime(val: any): string {
+function safeDateTime(val: unknown): string {
   return safeFormat(val, 'MMM dd, yyyy hh:mm a');
 }
 

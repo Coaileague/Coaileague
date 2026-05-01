@@ -425,11 +425,11 @@ class SchemaOpsSubagent {
     const self = this;
     const actions = [
       { id: 'schema.scan_definitions', name: 'Scan Schema Definitions', desc: 'Scan schema file for table/enum definitions', 
-        fn: async (p: any) => { const c = await self.scanSchemaFile(); if (p?.persist !== false) await persistComponents(c, 'SchemaOps'); return c; } },
+        fn: async (p: unknown) => { const c = await self.scanSchemaFile(); if (p?.persist !== false) await persistComponents(c, 'SchemaOps'); return c; } },
       { id: 'schema.detect_mismatches', name: 'Detect Schema Mismatches', desc: 'Detect mismatches between schema and database', 
-        fn: async (p: any) => { const f = await self.detectSchemaMismatches(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'SchemaOps'); return f; } },
+        fn: async (p: unknown) => { const f = await self.detectSchemaMismatches(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'SchemaOps'); return f; } },
       { id: 'schema.analyze_relationships', name: 'Analyze Relationships', desc: 'Analyze table relationships and find issues', 
-        fn: async (p: any) => { const f = await self.analyzeRelationships(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'SchemaOps'); return f; } },
+        fn: async (p: unknown) => { const f = await self.analyzeRelationships(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'SchemaOps'); return f; } },
     ];
 
     for (const action of actions) {
@@ -614,9 +614,9 @@ Respond in JSON format:
     const self = this;
     const actions = [
       { id: 'logs.analyze_content', name: 'Analyze Log Content', desc: 'Analyze log content for errors and issues', 
-        fn: async (p: any) => { const f = await self.analyzeLogContent(p.content, p.source); if (p.persist !== false && f.length > 0) await persistGapFindings(f, 'LogOps'); return f; } },
-      { id: 'logs.extract_stack_traces', name: 'Extract Stack Traces', desc: 'Extract stack traces from log content', fn: (p: any) => self.extractStackTraces(p.content) },
-      { id: 'logs.ai_analyze', name: 'AI Analyze Logs', desc: 'Use AI to analyze log patterns', fn: (p: any) => self.aiAnalyzeLogs(p.content, p.workspaceId) },
+        fn: async (p: unknown) => { const f = await self.analyzeLogContent(p.content, p.source); if (p.persist !== false && f.length > 0) await persistGapFindings(f, 'LogOps'); return f; } },
+      { id: 'logs.extract_stack_traces', name: 'Extract Stack Traces', desc: 'Extract stack traces from log content', fn: (p: unknown) => self.extractStackTraces(p.content) },
+      { id: 'logs.ai_analyze', name: 'AI Analyze Logs', desc: 'Use AI to analyze log patterns', fn: (p: unknown) => self.aiAnalyzeLogs(p.content, p.workspaceId) },
     ];
 
     for (const action of actions) {
@@ -822,9 +822,9 @@ class HandlerOpsSubagent {
     const self = this;
     const actions = [
       { id: 'handlers.scan_routes', name: 'Scan Routes', desc: 'Scan for all API route handlers', 
-        fn: async (p: any) => { const c = await self.scanRouteHandlers(); if (p?.persist !== false) await persistComponents(c, 'HandlerOps'); return c; } },
+        fn: async (p: unknown) => { const c = await self.scanRouteHandlers(); if (p?.persist !== false) await persistComponents(c, 'HandlerOps'); return c; } },
       { id: 'handlers.detect_missing', name: 'Detect Missing', desc: 'Detect frontend API calls without backend handlers', 
-        fn: async (p: any) => { const f = await self.detectMissingHandlers(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'HandlerOps'); return f; } },
+        fn: async (p: unknown) => { const f = await self.detectMissingHandlers(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'HandlerOps'); return f; } },
     ];
 
     for (const action of actions) {
@@ -1028,9 +1028,9 @@ class HookOpsSubagent {
     const self = this;
     const actions = [
       { id: 'hooks.scan', name: 'Scan Hooks', desc: 'Scan for all React hooks in the codebase', 
-        fn: async (p: any) => { const c = await self.scanHooks(); if (p?.persist !== false) await persistComponents(c, 'HookOps'); return c; } },
+        fn: async (p: unknown) => { const c = await self.scanHooks(); if (p?.persist !== false) await persistComponents(c, 'HookOps'); return c; } },
       { id: 'hooks.detect_issues', name: 'Detect Hook Issues', desc: 'Detect common React hook issues', 
-        fn: async (p: any) => { const f = await self.detectHookIssues(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'HookOps'); return f; } },
+        fn: async (p: unknown) => { const f = await self.detectHookIssues(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'HookOps'); return f; } },
     ];
 
     for (const action of actions) {

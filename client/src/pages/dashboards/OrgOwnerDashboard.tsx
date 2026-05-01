@@ -193,7 +193,7 @@ export default function OrgOwnerDashboard() {
     invoicesError;
 
   const orgCode = workspace?.orgId || workspace?.organizationId || null;
-  const clientList = Array.isArray(clients) ? clients : (clients as any)?.data ?? [];
+  const clientList = Array.isArray(clients) ? clients : (clients as Record<string,unknown>)?.data ?? [];
   const activeClients = clientList.filter(
     (client) => client.status === "active" || !client.status,
   ).length;
@@ -203,7 +203,7 @@ export default function OrgOwnerDashboard() {
     (invoice) => invoice.status === "sent" || invoice.status === "overdue",
   );
   const outstandingTotal = outstandingInvoices.reduce(
-    (sum: number, invoice: any) => sum + (Number(invoice.totalAmount) || Number(invoice.subtotal) || Number(invoice.amount) || 0),
+    (sum: number, invoice: unknown) => sum + (Number(invoice.totalAmount) || Number(invoice.subtotal) || Number(invoice.amount) || 0),
     0,
   );
   const draftInvoices = invoiceList.filter((invoice) => invoice.status === "draft").length;

@@ -99,7 +99,7 @@ router.patch("/tours/:id", async (req: AuthenticatedRequest, res) => {
 
     if (!updated) return res.status(404).json({ error: "Tour not found" });
 
-    if ((updateData as any).status === 'completed') {
+    if ((updateData as Record<string,unknown>).status === 'completed') {
       (async () => {
         try {
           const { reportBotPdfService } = await import('../services/bots/reportBotPdfService');
@@ -132,7 +132,7 @@ router.patch("/tours/:id", async (req: AuthenticatedRequest, res) => {
             scans,
             checkpoints,
             completedAt: new Date(),
-            officerId: (tour as any).assignedEmployeeId || null,
+            officerId: (tour as Record<string,unknown>).assignedEmployeeId || null,
           });
         } catch (e: unknown) {
           log.warn('[GuardTour] PDF generation failed:', e?.message || String(e));

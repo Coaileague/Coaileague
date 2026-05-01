@@ -248,9 +248,7 @@ async function finalizeWorkflow(
  */
 async function lockReportRecord(
   submissionId: string,
-  workspaceId: string,
-  submission: any
-): Promise<void> {
+  workspaceId: string, submission: unknown): Promise<void> {
   // Get full submission data with all related records
   const employee = submission.employeeId 
     ? await storage.getEmployeeById(submission.employeeId) 
@@ -302,9 +300,7 @@ async function lockReportRecord(
  */
 async function sendReportToClient(
   submissionId: string,
-  workspaceId: string,
-  workflow: any
-): Promise<void> {
+  workspaceId: string, workflow: unknown): Promise<void> {
   const submission = await storage.getReportSubmissionById(submissionId);
   if (!submission || !submission.clientId) {
     throw new Error('No client associated with this report');

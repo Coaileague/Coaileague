@@ -78,7 +78,7 @@ function SiteSelector({ workspaceId, onSelect }: { workspaceId: string | undefin
     ? allSites.filter(s => `${s.name} ${s.client_name} ${s.city} ${s.state}`.toLowerCase().includes(search.toLowerCase()))
     : allSites;
 
-  function handleSelect(site: any) {
+  function handleSelect(site: unknown) {
     setSelected(site);
     onSelect(site);
     setOpen(false);
@@ -528,7 +528,7 @@ export default function RMSHub() {
       if (quickTemplate) applyTemplate(quickTemplate);
     }, []);
 
-    function applySite(site: any) {
+    function applySite(site: unknown) {
       setSelectedSite(site);
       setF(p => ({
         ...p,
@@ -1582,7 +1582,7 @@ export default function RMSHub() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  {auditTrailDetail.data?.trail?.map((entry: any, i: number) => (
+                  {auditTrailDetail.data?.trail?.map((entry: unknown, i: number) => (
                     <div key={entry.id || i} data-testid={`row-audit-${entry.id}`} className="flex gap-3">
                       <div className="flex flex-col items-center">
                         <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

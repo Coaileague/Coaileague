@@ -178,7 +178,7 @@ async function fetchOrgData(workspaceId: string): Promise<OrgRawData> {
   const totalRevenue = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount || '0'), 0);
   const unpaidTotal = unpaidInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount || '0'), 0);
 
-  const overtimeHours = (context as any)?.overtimeHoursThisMonth || 0;
+  const overtimeHours = (context as Record<string,unknown>)?.overtimeHoursThisMonth || 0;
   const openShiftsCount = Number(openShiftsResult[0]?.count || 0);
 
   return {

@@ -16,7 +16,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'Current coverage summary, active policies, and gaps',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -35,7 +35,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'Policies expiring in next 90 days sorted by urgency',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -54,7 +54,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'State minimum coverage compliance across all operating states',
   requiredRoles: ['manager', 'owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {

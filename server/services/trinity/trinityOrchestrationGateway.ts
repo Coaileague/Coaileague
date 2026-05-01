@@ -912,7 +912,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
  * This middleware should be mounted early in the middleware chain.
  */
 export function trinityOrchestrationMiddleware() {
-  return async (req: any, res: any, next: unknown) => {
+  return async (req: unknown, res: any, next: unknown) => {
     const startTime = Date.now();
     const originalEnd = res.end;
     const originalJson = res.json;

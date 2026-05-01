@@ -79,28 +79,28 @@ export async function runStaffingPipelineStressTest(): Promise<{
   // ── 1. emailService methods exist ─────────────────────────────────────────
   await test('emailService.sendStaffingInitialGreeting exists', async () => {
     const { emailService } = await import('../services/emailService');
-    if (typeof (emailService as any).sendStaffingInitialGreeting !== 'function') {
+    if (typeof (emailService as Record<string,unknown>).sendStaffingInitialGreeting !== 'function') {
       throw new Error('sendStaffingInitialGreeting not found on emailService');
     }
   });
 
   await test('emailService.sendOfficerShiftOffer exists', async () => {
     const { emailService } = await import('../services/emailService');
-    if (typeof (emailService as any).sendOfficerShiftOffer !== 'function') {
+    if (typeof (emailService as Record<string,unknown>).sendOfficerShiftOffer !== 'function') {
       throw new Error('sendOfficerShiftOffer not found on emailService');
     }
   });
 
   await test('emailService.sendStaffingCompletionOrgSummary exists', async () => {
     const { emailService } = await import('../services/emailService');
-    if (typeof (emailService as any).sendStaffingCompletionOrgSummary !== 'function') {
+    if (typeof (emailService as Record<string,unknown>).sendStaffingCompletionOrgSummary !== 'function') {
       throw new Error('sendStaffingCompletionOrgSummary not found on emailService');
     }
   });
 
   await test('emailService.sendClientPortalInvitation exists', async () => {
     const { emailService } = await import('../services/emailService');
-    if (typeof (emailService as any).sendClientPortalInvitation !== 'function') {
+    if (typeof (emailService as Record<string,unknown>).sendClientPortalInvitation !== 'function') {
       throw new Error('sendClientPortalInvitation not found on emailService');
     }
   });

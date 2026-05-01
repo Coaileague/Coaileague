@@ -54,7 +54,7 @@ router.patch("/policy/:workspaceId", requireAuth, async (req: AuthenticatedReque
     logActionAudit({
       actionId: 'governance.update_policy',
       workspaceId,
-      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      userId: typeof userId === 'string' ? userId : (userId as Record<string,unknown>)?.id,
       entityType: 'automation_governance_policy',
       entityId: workspaceId,
       success: true,
@@ -84,9 +84,9 @@ router.post("/consent", requireAuth, async (req: AuthenticatedRequest, res) => {
     logActionAudit({
       actionId: 'governance.grant_user_consent',
       workspaceId,
-      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      userId: typeof userId === 'string' ? userId : (userId as Record<string,unknown>)?.id,
       entityType: 'automation_user_consent',
-      entityId: (consent as any)?.id,
+      entityId: (consent as Record<string,unknown>)?.id,
       success: true,
       message: `User consent granted: ${consentType}`,
       payload: { consentType, waiverVersion },
@@ -132,7 +132,7 @@ router.post("/org-consent", requireAuth, async (req: AuthenticatedRequest, res) 
     logActionAudit({
       actionId: 'governance.grant_org_consent',
       workspaceId,
-      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      userId: typeof userId === 'string' ? userId : (userId as Record<string,unknown>)?.id,
       entityType: 'automation_governance_policy',
       entityId: workspaceId,
       success: true,
@@ -206,7 +206,7 @@ router.post("/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedReq
     logActionAudit({
       actionId: 'governance.approve_action',
       workspaceId: entry.workspaceId,
-      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      userId: typeof userId === 'string' ? userId : (userId as Record<string,unknown>)?.id,
       entityType: 'automation_action_ledger',
       entityId: ledgerEntryId,
       success: !!success,
@@ -242,7 +242,7 @@ router.post("/reject/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequ
     logActionAudit({
       actionId: 'governance.reject_action',
       workspaceId: entry.workspaceId,
-      userId: typeof userId === 'string' ? userId : (userId as any)?.id,
+      userId: typeof userId === 'string' ? userId : (userId as Record<string,unknown>)?.id,
       entityType: 'automation_action_ledger',
       entityId: ledgerEntryId,
       success: !!success,

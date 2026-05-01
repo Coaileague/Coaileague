@@ -231,7 +231,7 @@ function SupportDashboard() {
               </div>
               {searchResults && searchResults.length > 0 && (
                 <div className="divide-y border rounded-md">
-                  {searchResults.map((r: any, i) => (
+                  {searchResults.map((r: unknown, i) => (
                     <div
                       key={`${r.entity_type}-${r.id}-${i}`}
                       className="flex items-center gap-3 p-3 hover-elevate cursor-pointer"
@@ -610,7 +610,7 @@ function WorkspaceDeepDive({ workspaceId, data, isLoading, onExecuteAction }: {
           </CardHeader>
           <CardContent>
             <div className="space-y-1.5">
-              {(data.trinityActivity ?? []).slice(0, 5).map((a: any, i: number) => (
+              {(data.trinityActivity ?? []).slice(0, 5).map((a: unknown, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-xs">
                   <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${a.success !== false ? 'bg-green-500' : 'bg-red-500'}`} />
                   <div className="flex-1">

@@ -405,7 +405,7 @@ export default function InsurancePage() {
               ) : (
                 <div className="space-y-6">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-primary mb-1">{(compliance as any)?.complianceScore}%</div>
+                    <div className="text-4xl font-bold text-primary mb-1">{(compliance as Record<string,unknown>)?.complianceScore}%</div>
                     <div className="text-sm text-muted-foreground">Compliance Score</div>
                   </div>
                   <div className="space-y-3">

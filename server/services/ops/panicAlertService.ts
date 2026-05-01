@@ -204,7 +204,7 @@ class PanicAlertService {
       const [existing] = await db.select().from(panicAlerts)
         .where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId))).limit(1);
       if (!existing) throw Object.assign(new Error('Alert not found'), { code: 'NOT_FOUND' });
-      throw Object.assign(new Error(`Alert already ${(existing as any).status}`), { code: 'CONFLICT' });
+      throw Object.assign(new Error(`Alert already ${(existing as Record<string,unknown>).status}`), { code: 'CONFLICT' });
     }
     const alert = updated as unknown as PanicAlert;
 
@@ -236,8 +236,8 @@ class PanicAlertService {
       const [existing] = await db.select().from(panicAlerts)
         .where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId))).limit(1);
       if (!existing) throw Object.assign(new Error('Alert not found'), { code: 'NOT_FOUND' });
-      if ((existing as any).status === 'resolved') return existing as unknown as PanicAlert; // idempotent
-      throw Object.assign(new Error(`Cannot resolve alert with status: ${(existing as any).status}`), { code: 'CONFLICT' });
+      if ((existing as Record<string,unknown>).status === 'resolved') return existing as unknown as PanicAlert; // idempotent
+      throw Object.assign(new Error(`Cannot resolve alert with status: ${(existing as Record<string,unknown>).status}`), { code: 'CONFLICT' });
     }
     const alert = updated as unknown as PanicAlert;
 

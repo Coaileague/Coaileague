@@ -142,7 +142,7 @@ class ExceptionQueueProcessor {
   /**
    * Process a single exception
    */
-  private async processException(exception: any): Promise<ExceptionResolution> {
+  private async processException(exception: unknown): Promise<ExceptionResolution> {
     const exceptionType = exception.exceptionType as ExceptionType;
     const rule = AUTO_RESOLUTION_RULES[exceptionType] || { canAutoResolve: false, maxAge: 48 };
     const ageHours = (Date.now() - new Date(exception.createdAt).getTime()) / (1000 * 60 * 60);
@@ -175,7 +175,7 @@ class ExceptionQueueProcessor {
   /**
    * Attempt auto-resolution based on exception type
    */
-  private async attemptAutoResolution(exception: any, action: string): Promise<ExceptionResolution> {
+  private async attemptAutoResolution(exception: unknown, action: string): Promise<ExceptionResolution> {
     log.info('Attempting auto-resolution', { action, exceptionId: exception.id });
 
     try {
@@ -236,7 +236,7 @@ class ExceptionQueueProcessor {
   /**
    * Escalate exception to human review
    */
-  private async escalateException(exception: any): Promise<ExceptionResolution> {
+  private async escalateException(exception: unknown): Promise<ExceptionResolution> {
     await db.update(exceptionTriageQueue)
       .set({ status: 'escalated', escalatedAt: new Date() })
       .where(eq(exceptionTriageQueue.id, exception.id));
@@ -431,7 +431,7 @@ class ExceptionQueueProcessor {
       requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { exceptionId, action, notes } = request.payload;
-        const result = await self.resolveManually(exceptionId, (request as any).context?.userId || 'system', { action, notes });
+        const result = await self.resolveManually(exceptionId, (request as Record<string,unknown>).context?.userId || 'system', { action, notes });
         return { success: result.success, actionId: request.actionId, message: result.message, data: result };
       },
     });

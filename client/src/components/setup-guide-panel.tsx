@@ -101,7 +101,7 @@ export function SetupGuidePanel({
     return false;
   });
   const { user } = useAuth();
-  const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.activeWorkspaceId || (user as Record<string,unknown>)?.workspaceId;
   // Derive Trinity mode locally to avoid /api/trinity/context fetch on every nav.
 
   const { data: guideData, isLoading } = useQuery<SetupGuideData>({

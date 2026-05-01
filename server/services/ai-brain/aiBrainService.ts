@@ -359,8 +359,8 @@ export class AIBrainService {
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         const timeoutError = new Error(`Job execution timeout after ${JOB_TIMEOUT_MS}ms`);
-        (timeoutError as any).code = 'ETIMEDOUT';
-        (timeoutError as any).isTimeout = true;
+        (timeoutError as Record<string,unknown>).code = 'ETIMEDOUT';
+        (timeoutError as Record<string,unknown>).isTimeout = true;
         reject(timeoutError);
       }, JOB_TIMEOUT_MS);
     });

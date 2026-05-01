@@ -1220,7 +1220,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
       const res = await fetch(`/api/trinity/chat/session/${sessionId}/messages`, { credentials: 'include' });
       if (!res.ok) return;
       const data = await res.json();
-      const loaded = (data.messages || []).map((m: any, i: number) => ({
+      const loaded = (data.messages || []).map((m: unknown, i: number) => ({
         id: `hist-${sessionId}-${i}`,
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content || m.message || '',
@@ -1278,7 +1278,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
   };
 
   // Mobile swipe gesture handling
-  const handleDragEnd = (_: any, info: PanInfo) => {
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
     const velocity = info.velocity.y;
     const offset = info.offset.y;
 
@@ -1342,7 +1342,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
     const heightMap = TRINITY_MOBILE_CONFIG.heights;
 
     // Handle swipe gestures - tuned for smooth touch response
-    const handleDragEnd = (_: any, info: PanInfo) => {
+    const handleDragEnd = (_: unknown, info: PanInfo) => {
       const { offset, velocity } = info;
       // Use config thresholds with sensible defaults
       const swipeThreshold = TRINITY_MOBILE_CONFIG.swipe?.threshold || 50;

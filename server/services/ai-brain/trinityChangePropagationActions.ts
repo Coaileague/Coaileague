@@ -142,7 +142,7 @@ export function registerChangePropagationActions() {
     const rateChangePct = oldRateNum > 0 ? ((rateChange / oldRateNum) * 100).toFixed(1) : 'N/A';
 
     const emp = await db.query.employees?.findFirst({ where: eq(employees.id, employeeId) }).catch(() => null);
-    const empName = `${(emp as any)?.firstName || ''} ${(emp as any)?.lastName || ''}`.trim() || employeeId;
+    const empName = `${(emp as EmployeeWithStatus)?.firstName || ''} ${(emp as EmployeeWithStatus)?.lastName || ''}`.trim() || employeeId;
 
     // ── STEP 1: Find all draft/pending payroll runs for this workspace ──
     const draftPayrolls = await db.select({
@@ -414,8 +414,8 @@ export function registerChangePropagationActions() {
     tomorrow.setHours(0, 0, 0, 0);
 
     const emp = await db.query.employees?.findFirst({ where: eq(employees.id, employeeId) }).catch(() => null);
-    const empName = `${(emp as any)?.firstName || ''} ${(emp as any)?.lastName || ''}`.trim() || employeeId;
-    const userId = (emp as any)?.userId;
+    const empName = `${(emp as EmployeeWithStatus)?.firstName || ''} ${(emp as EmployeeWithStatus)?.lastName || ''}`.trim() || employeeId;
+    const userId = (emp as EmployeeWithStatus)?.userId;
 
     const futureShifts = await db.select({ id: shifts.id, startTime: shifts.startTime, clientId: shifts.clientId, title: shifts.title })
       .from(shifts)

@@ -436,11 +436,11 @@ class QuotaEnforcementService {
         .limit(1);
       
       const usage: UsageRecord = {
-        aiCreditsUsed: (workspace as any)?.aiCreditsUsed || 0,
-        emailsSent: (workspace as any)?.emailsSentThisMonth || 0,
-        smsSent: (workspace as any)?.smsSentThisMonth || 0,
-        storageUsedBytes: (workspace as any)?.storageUsedBytes || 0,
-        lastReset: (workspace as any)?.usageResetDate || new Date(),
+        aiCreditsUsed: (workspace as Record<string,unknown>)?.aiCreditsUsed || 0,
+        emailsSent: (workspace as Record<string,unknown>)?.emailsSentThisMonth || 0,
+        smsSent: (workspace as Record<string,unknown>)?.smsSentThisMonth || 0,
+        storageUsedBytes: (workspace as Record<string,unknown>)?.storageUsedBytes || 0,
+        lastReset: (workspace as Record<string,unknown>)?.usageResetDate || new Date(),
       };
       
       this.usageCache.set(workspaceId, usage);

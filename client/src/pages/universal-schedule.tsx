@@ -531,7 +531,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
     },
-    onError: (error: any, _, context: any) => {
+    onError: (error: unknown, _, context: unknown) => {
       if (context?.previousQueries) {
         context.previousQueries.forEach(([key, data]: [any, any]) => {
           queryClient.setQueryData(key, data);
@@ -1696,7 +1696,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       return { bg: '#f0fdf4', text: '#15803d', border: '#86efac', dot: '#22c55e', label: 'On Shift' };
     }
     // Overtime warning — amber
-    if ((shift as any).isOvertime === true) {
+    if ((shift as Record<string,unknown>).isOvertime === true) {
       return { bg: '#fffbeb', text: '#d97706', border: '#fcd34d', dot: '#f59e0b', label: 'Overtime' };
     }
     // Draft / pending approval — slate

@@ -128,7 +128,7 @@ export default function HRISManagementPage() {
   const summaryCards = [
     { label: "Connected", value: connections.length.toString(), icon: Link2, color: "text-green-500" },
     { label: "Last Sync", value: connections.length > 0 && connections[0]?.lastSync ? new Date(connections[0].lastSync).toLocaleDateString() : "Never", icon: Clock, color: "text-blue-500" },
-    { label: "Synced", value: connections.reduce((sum: number, c: any) => sum + (c.employeeCount || 0), 0).toString(), icon: Users, color: "text-purple-500" },
+    { label: "Synced", value: connections.reduce((sum: number, c: unknown) => sum + (c.employeeCount || 0), 0).toString(), icon: Users, color: "text-purple-500" },
     { label: "Health", value: connections.every((c) => c.status === "healthy" || c.status === "connected") ? "Healthy" : connections.length === 0 ? "--" : "Issues", icon: ShieldCheck, color: "text-orange-500" },
   ];
 

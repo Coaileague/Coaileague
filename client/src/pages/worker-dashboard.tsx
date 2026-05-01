@@ -779,7 +779,7 @@ function WorkerDashboardInner() {
 
   const notifications: Notification[] = Array.isArray(notificationsData)
     ? notificationsData
-    : (notificationsData as any)?.notifications || (notificationsData as any)?.items || [];
+    : (notificationsData as Record<string,unknown>)?.notifications || (notificationsData as Record<string,unknown>)?.items || [];
   const isDashboardError =
     authUserIsError ||
     clockIsError ||
@@ -829,7 +829,7 @@ function WorkerDashboardInner() {
       }
       return { queued: false, action };
     },
-    onSuccess: (result: any, action) => {
+    onSuccess: (result: unknown, action) => {
       if (result?.queued) {
         toast({
           title: "Saved Offline",

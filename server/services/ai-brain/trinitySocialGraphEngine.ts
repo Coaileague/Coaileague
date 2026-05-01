@@ -164,7 +164,7 @@ class TrinitySocialGraphEngine {
     });
   }
 
-  private extractInsights(emp: any, profile: Partial<SocialEntityProfile>): SocialInsight[] {
+  private extractInsights(emp: unknown, profile: Partial<SocialEntityProfile>): SocialInsight[] {
     const insights: SocialInsight[] = [];
     const name = `${emp.first_name} ${emp.last_name}`;
 

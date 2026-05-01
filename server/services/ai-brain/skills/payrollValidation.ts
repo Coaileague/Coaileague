@@ -453,9 +453,7 @@ Provide 2-3 sentences of actionable insights. Be specific and direct.`;
 
   private generateRecommendations(
     issues: ValidationIssue[],
-    summary: any,
-    gapAnalysis: any
-  ): string[] {
+    summary: any, gapAnalysis: unknown): string[] {
     const recommendations: string[] = [];
 
     if (summary.criticalIssues > 0) {
@@ -484,9 +482,7 @@ Provide 2-3 sentences of actionable insights. Be specific and direct.`;
 
   private calculateConfidence(
     issues: ValidationIssue[],
-    summary: any,
-    gapAnalysis: any
-  ): number {
+    summary: any, gapAnalysis: unknown): number {
     let confidence = 1.0;
 
     // Deduct for critical issues

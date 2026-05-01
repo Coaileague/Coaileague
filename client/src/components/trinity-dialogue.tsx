@@ -195,7 +195,7 @@ export function TrinityDialogue({
     onMutate: () => {
       setIsTyping(true);
     },
-    onSuccess: (response: any) => {
+    onSuccess: (response: unknown) => {
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -207,7 +207,7 @@ export function TrinityDialogue({
       setMessages((prev) => [...prev, assistantMessage]);
       setIsTyping(false);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Message failed',
         description: error.message || 'Could not reach Trinity. Please try again.',

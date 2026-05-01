@@ -79,7 +79,7 @@ router.post('/create-ticket', async (req, res) => {
     }
     else if (authReq.requireAuth?.() && authReq.user?.id) {
       userId = authReq.user.id;
-      userEmail = (authReq as any).user?.claims?.email || userEmail;
+      userEmail = (authReq as Record<string,unknown>).user?.claims?.email || userEmail;
     }
 
     const { PLATFORM_WORKSPACE_ID } = await import('../services/billing/billingConstants');
@@ -107,7 +107,7 @@ router.post('/create-ticket', async (req, res) => {
     res.json({
       success: true,
       ticketId: ticket.id,
-      ticketNumber: (ticket as any).ticketNumber || ticket.id
+      ticketNumber: (ticket as Record<string,unknown>).ticketNumber || ticket.id
     });
   } catch (error) {
     log.error('[CoAIleague AI] Error creating support ticket:', error);
@@ -564,7 +564,7 @@ router.get('/priority-queue', requirePlatformStaff, async (req: AuthenticatedReq
       const workspace = ticket.workspace;
       const tier = (workspace?.subscriptionTier || 'free').toLowerCase();
       const tierWeight = tierWeights[tier] || 10;
-      const isVIP = (workspace as any)?.isVip || false;
+      const isVIP = (workspace as Record<string,unknown>)?.isVip || false;
       const vipBonus = isVIP ? 25 : 0;
 
       const createdAt = new Date(ticket.createdAt);

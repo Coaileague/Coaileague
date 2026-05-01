@@ -424,7 +424,7 @@ router.get('/credit-status', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'workspaceId is required' });
     }
 
-    const account = await (tokenManager as any).getCreditsAccountWithStatus(
+    const account = await (tokenManager as Record<string,unknown>).getCreditsAccountWithStatus(
       workspaceId as string,
       userId
     );

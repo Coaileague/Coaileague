@@ -821,7 +821,7 @@ class HRISIntegrationService {
   // HELPER METHODS
   // ============================================================================
 
-  private async fetchRemoteRecords(connection: any, entityType: EntityType): Promise<any[]> {
+  private async fetchRemoteRecords(connection: unknown, entityType: EntityType): Promise<any[]> {
     const provider = connection.partnerType as HRISProvider;
     const config = HRIS_PROVIDERS[provider];
     
@@ -878,7 +878,7 @@ class HRISIntegrationService {
     return [];
   }
 
-  private mapRemoteToLocal(remoteRecord: any, mappings: FieldMapping[], provider: HRISProvider): Record<string, unknown> {
+  private mapRemoteToLocal(remoteRecord: unknown, mappings: FieldMapping[], provider: HRISProvider): Record<string, unknown> {
     const result: Record<string, unknown> = {};
 
     for (const mapping of mappings) {
@@ -1041,7 +1041,7 @@ class HRISIntegrationService {
     }
   }
 
-  private async updateRemoteRecord(connection: any, entityType: EntityType, remoteId: string, localRecord: unknown): Promise<void> {
+  private async updateRemoteRecord(connection: unknown, entityType: EntityType, remoteId: string, localRecord: unknown): Promise<void> {
     log.info(`[HRISIntegration] Would update remote ${entityType} ${remoteId} with local data`);
   }
 

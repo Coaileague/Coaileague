@@ -406,7 +406,7 @@ class GrowthStrategistService {
         WHERE workspace_id = ${workspaceId}
           AND timestamp >= ${subDays(new Date(), 30).toISOString()}
       `);
-      const monthlyCredits = Number((creditUsage as any)?.rows?.[0]?.totalCredits ?? 0);
+      const monthlyCredits = Number((creditUsage as Record<string,unknown>)?.rows?.[0]?.totalCredits ?? 0);
 
       if (monthlyCredits > 5000) {
         cards.push({

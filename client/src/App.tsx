@@ -489,7 +489,7 @@ function MailHeaderButton({ onClick }: { onClick: () => void }) {
     refetchInterval: 60000,
   });
   
-  const unreadCount = ((mailboxData as any)?.mailbox as any)?.unreadCount || 0;
+  const unreadCount = ((mailboxData as Record<string,unknown>)?.mailbox as any)?.unreadCount || 0;
   
   return (
     <Tooltip>
@@ -550,11 +550,11 @@ function AppUtilityCluster({ setLocation }: any) {
 function LanguageSync() {
   const { user } = useAuth();
   useEffect(() => {
-    const lang = (user as any)?.preferredLanguage;
+    const lang = (user as Record<string,unknown>)?.preferredLanguage;
     if (lang === 'en' || lang === 'es') {
       setLanguage(lang);
     }
-  }, [(user as any)?.preferredLanguage]);
+  }, [(user as Record<string,unknown>)?.preferredLanguage]);
   return null;
 }
 
@@ -603,7 +603,7 @@ function AppContent() {
   useTrinityNotificationRouting({
     enabled: !!user,
     userId: user?.id,
-    workspaceId: (user as any)?.workspaceId,
+    workspaceId: (user as Record<string,unknown>)?.workspaceId,
   });
 
   // Query onboarding status for authenticated users
@@ -615,7 +615,7 @@ function AppContent() {
 
   // Automatically show onboarding wizard for new users with pending status
   useEffect(() => {
-    if ((onboardingStatus as any)?.status === 'pending') {
+    if ((onboardingStatus as Record<string,unknown>)?.status === 'pending') {
       setShowOnboarding(true);
     }
   }, [onboardingStatus]);
@@ -650,7 +650,7 @@ function AppContent() {
       setLocation('/org-management');
     }
     // Client users must land in the client portal, not the main app dashboard
-    if (!isLoading && user && (user as any).role === 'client' && location !== '/client/portal' && !location.startsWith('/client/')) {
+    if (!isLoading && user && (user as Record<string,unknown>).role === 'client' && location !== '/client/portal' && !location.startsWith('/client/')) {
       setLocation('/client/portal');
     }
   }, [orgInactive, paymentRequired, isOwner, isLoading, location, setLocation, user]);
@@ -873,7 +873,7 @@ function AppContent() {
   }
 
   // Check if user is Root Admin (platform-level access)
-  const isRootAdmin = (user as any)?.platformRole === 'root_admin' || (user as any)?.platformRole === 'sysop';
+  const isRootAdmin = (user as Record<string,unknown>)?.platformRole === 'root_admin' || (user as Record<string,unknown>)?.platformRole === 'sysop';
 
   // If the HTML pre-React splash already ran this session, suppress the
   // React LoadingScreen — the splash covered the loading state visually.
@@ -883,7 +883,7 @@ function AppContent() {
   }
 
   // Expose tutorial function globally for sidebar access
-  (window as any).setShowOnboarding = setShowOnboarding;
+  (window as Record<string,unknown>).setShowOnboarding = setShowOnboarding;
 
   // Sidebar width configuration
   const sidebarStyle = {

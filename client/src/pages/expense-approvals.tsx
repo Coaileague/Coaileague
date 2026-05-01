@@ -107,7 +107,7 @@ export default function ExpenseApprovalsPage() {
     },
   });
 
-  const handleReview = (expense: any, action: 'approve' | 'reject') => {
+  const handleReview = (expense: unknown, action: 'approve' | 'reject') => {
     setSelectedExpense(expense);
     setSelectedExpenseId(expense.id);
     setReviewAction(action);
@@ -394,7 +394,7 @@ export default function ExpenseApprovalsPage() {
                   Receipts ({expenseDetails.receipts.length})
                 </label>
                 <div className="mt-2 space-y-2">
-                  {expenseDetails.receipts.map((receipt: any, index: number) => (
+                  {expenseDetails.receipts.map((receipt: unknown, index: number) => (
                     <div
                       key={receipt.id}
                       className="flex items-center justify-between gap-2 p-2 border rounded hover-elevate"

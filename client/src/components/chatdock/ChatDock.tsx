@@ -1462,7 +1462,7 @@ function ConversationList({ onSelectRoom, isFullPage }: { onSelectRoom: (roomId:
 
   const renderRoomItem = (room: typeof rooms[0]) => {
     const hasUnread = room.unreadCount > 0;
-    const isOnline = (room as any).isOnline;
+    const isOnline = (room as Record<string,unknown>).isOnline;
     const isDM = isDMType(room.type);
     const isSupport = isSupportType(room.type);
     const isShift = isShiftType(room.type);
@@ -1758,9 +1758,9 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
     },
   });
 
-  const reactionsMap = (reactionsData as any)?.reactions || {};
-  const pinnedMessages = (pinnedData as any)?.messages || [];
-  const searchHits = (searchResults as any)?.messages || [];
+  const reactionsMap = (reactionsData as Record<string,unknown>)?.reactions || {};
+  const pinnedMessages = (pinnedData as Record<string,unknown>)?.messages || [];
+  const searchHits = (searchResults as Record<string,unknown>)?.messages || [];
   const searchHitIds = new Set(searchHits.map((m) => m.id));
 
   const parentMessageCache = useMemo(() => {

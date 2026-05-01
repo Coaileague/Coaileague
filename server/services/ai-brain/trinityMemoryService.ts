@@ -1535,7 +1535,7 @@ export async function connectTrinityMemoryToEventBus(): Promise<void> {
   try {
     const { platformEventBus } = await import('../platformEventBus');
 
-    platformEventBus.on('automation_completed', (p: any) => {
+    platformEventBus.on('automation_completed', (p: unknown) => {
       if (!p?.workspaceId || !p?.domain) return;
       
       const domainToCategoryMap: Record<string, OrgActionCategory> = {
@@ -1573,7 +1573,7 @@ export async function connectTrinityMemoryToEventBus(): Promise<void> {
       }).catch(err => log.warn('[TrinityMemory] Failed to record automation success:', err?.message));
     });
     
-    platformEventBus.on('automation_execution_failed', (p: any) => {
+    platformEventBus.on('automation_execution_failed', (p: unknown) => {
       if (!p?.workspaceId || !p?.domain) return;
       
       const domainToCategoryMap: Record<string, OrgActionCategory> = {

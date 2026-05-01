@@ -35,7 +35,7 @@ export async function runInviteReaper(): Promise<void> {
         AND is_used = false
         AND COALESCE(invite_status, 'invited') NOT IN ('active', 'expired', 'locked')
     `, [cutoff]);
-    reaped += (clientResult as any).rowCount || 0;
+    reaped += (clientResult as Record<string,unknown>).rowCount || 0;
   } catch (err) {
     log.warn('[Reaper] client_portal_invite_tokens sweep failed (non-fatal):', err);
   }
@@ -49,7 +49,7 @@ export async function runInviteReaper(): Promise<void> {
         status IN ('pending', 'invited')
         AND sent_at < ${cutoff}
     `);
-    reaped += (orgResult as any).rowCount || 0;
+    reaped += (orgResult as Record<string,unknown>).rowCount || 0;
   } catch (err) {
     log.warn('[Reaper] org_invitations sweep failed (non-fatal):', err);
   }
@@ -63,7 +63,7 @@ export async function runInviteReaper(): Promise<void> {
         invite_status IN ('pending', 'invited')
         AND created_at < ${cutoff}
     `);
-    reaped += (empResult as any).rowCount || 0;
+    reaped += (empResult as Record<string,unknown>).rowCount || 0;
   } catch (err) {
     log.warn('[Reaper] employee_invitations sweep failed (non-fatal):', err);
   }
@@ -83,7 +83,7 @@ export async function runInviteReaper(): Promise<void> {
          AND (u.email_slug IS NULL OR u.email_slug = '')
          AND u.password_hash IS NOT NULL
     `, [cutoff]);
-    orphans = (orphanResult as any).rowCount || 0;
+    orphans = (orphanResult as Record<string,unknown>).rowCount || 0;
     if (orphans > 0) {
       log.info(`[Reaper] Vacuumed ${orphans} orphan users (no membership, no email slug, > 7 days old)`);
     }

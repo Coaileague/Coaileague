@@ -46,7 +46,7 @@ export default function CitationResolve() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
 
   const [moneyOrderFile, setMoneyOrderFile]   = useState<File | null>(null);
   const [trackingNumber, setTrackingNumber]   = useState('');

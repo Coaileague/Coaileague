@@ -649,7 +649,7 @@ class WeeklyBillingRunServiceImpl {
           }
         }
       } catch (overageErr: unknown) {
-        const msg = `Seat overage charge exception: ${(overageErr as any).message}`;
+        const msg = `Seat overage charge exception: ${(overageErr as Record<string,unknown>).message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
       }
@@ -718,7 +718,7 @@ class WeeklyBillingRunServiceImpl {
           }
         }
       } catch (tokenOverageErr: unknown) {
-        const msg = `AI token overage charge exception: ${(tokenOverageErr as any)?.message}`;
+        const msg = `AI token overage charge exception: ${(tokenOverageErr as Record<string,unknown>)?.message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
       }
@@ -948,7 +948,7 @@ class WeeklyBillingRunServiceImpl {
       const { exceptionQueueProcessor } = await import('./exceptionQueueProcessor');
       
       for (const error of errors) {
-        await (exceptionQueueProcessor as any).addException({
+        await (exceptionQueueProcessor as Record<string,unknown>).addException({
           workspaceId: error.workspaceId,
           exceptionType: 'billing_generation_error',
           description: error.error || 'Unknown billing error',

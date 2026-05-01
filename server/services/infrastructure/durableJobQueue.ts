@@ -385,7 +385,7 @@ class DurableJobQueueService {
     }
   }
 
-  private async processJob(jobRow: any): Promise<void> {
+  private async processJob(jobRow: unknown): Promise<void> {
     const jobId = jobRow.id;
     const jobType = jobRow.type;
     const now = new Date();

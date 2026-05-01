@@ -229,7 +229,7 @@ export interface ConversationHistory {
 // TRINITY_MASTER_SYSTEM_PROMPT — this block is CONTEXT ONLY, not re-declaration.
 // (Formerly "buildBusinessModePrompt" — mode concept retired. Trinity knows how
 //  to operate across business, personal, and technical domains internally.)
-const buildWorkspaceContextBlock = (workspaceContext: any, userName: string = 'there') => {
+const buildWorkspaceContextBlock = (workspaceContext: unknown, userName: string = 'there') => {
   const ctx = workspaceContext || {};
   const formatCurrency = (val: number) => `$${val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   const formatHours = (val: number) => `${val.toFixed(1)}`;
@@ -508,7 +508,7 @@ class TrinityChatService {
     let thalamicSignal: unknown = null;
     try {
       // Determine trust tier from request context
-      const trustTier = (request as any).trustTier || 'officer';
+      const trustTier = (request as Record<string,unknown>).trustTier || 'officer';
       thalamicSignal = await trinityThalamus.processChat(message, userId, workspaceId, trustTier);
       if (thalamicSignal?.signalId) {
         trinityGlobalWorkspace.broadcast({
@@ -766,7 +766,7 @@ class TrinityChatService {
             totalCredits: 25,
             balanceRemaining,
             unlimitedCredits: false,
-            tier: (workspaceContext as any)?.subscriptionTier || 'starter',
+            tier: (workspaceContext as Record<string,unknown>)?.subscriptionTier || 'starter',
             monthlyAllowance: 0,
             actions: [{ model: 'gemini-3-pro-preview', tokens: 0, credits: 25 }],
           },
@@ -781,7 +781,7 @@ class TrinityChatService {
       }
     }
 
-    const resolvedWsId = workspaceId || (workspaceContext as any)?.id || '';
+    const resolvedWsId = workspaceId || (workspaceContext as Record<string,unknown>)?.id || '';
     if (resolvedWsId && !trinityOrgIntelligenceService.getCachedHierarchyContext(resolvedWsId)) {
       try {
         const hCtx = await trinityOrgIntelligenceService.getOrgHierarchyContext(resolvedWsId);
@@ -1487,11 +1487,11 @@ Do NOT skip steps — decompose fully before concluding.`;
     if (trinityHypothesisEngine.isDiagnosticQuestion(message)) {
       try {
         const workspaceDataForHypothesis = {
-          overtimeRate: (workspaceContext as any)?.overtimeHoursThisMonth && (workspaceContext as any)?.totalHoursThisMonth
-            ? (workspaceContext as any).overtimeHoursThisMonth / (workspaceContext as any).totalHoursThisMonth : undefined,
-          avgReliabilityScore: (workspaceContext as any)?.avgReliabilityScore,
-          atRiskEmployees: (workspaceContext as any)?.atRiskCount,
-          overdueInvoices: (workspaceContext as any)?.overdueInvoiceCount,
+          overtimeRate: (workspaceContext as Record<string,unknown>)?.overtimeHoursThisMonth && (workspaceContext as Record<string,unknown>)?.totalHoursThisMonth
+            ? (workspaceContext as Record<string,unknown>).overtimeHoursThisMonth / (workspaceContext as Record<string,unknown>).totalHoursThisMonth : undefined,
+          avgReliabilityScore: (workspaceContext as Record<string,unknown>)?.avgReliabilityScore,
+          atRiskEmployees: (workspaceContext as Record<string,unknown>)?.atRiskCount,
+          overdueInvoices: (workspaceContext as Record<string,unknown>)?.overdueInvoiceCount,
         };
         const hypothesisResult = await trinityHypothesisEngine.runHypothesisLoop(
           message, workspaceId, session.id, workspaceDataForHypothesis,
@@ -1743,7 +1743,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         actionType: 'chat_response',
         workspaceId,
         userId,
-        trustTier: (request as any).trustTier || 'officer',
+        trustTier: (request as Record<string,unknown>).trustTier || 'officer',
         intendedOutput: aiResponse.text,
         expectedDurationMs: 5000,
         actualDurationMs: timeMs,
@@ -2157,9 +2157,9 @@ Do NOT skip steps — decompose fully before concluding.`;
         ),
       ]);
 
-      const latest = (latestRun as any).rows?.[0] || null;
-      const pendingApproval = parseInt((pendingCount as any).rows?.[0]?.c || '0', 10);
-      const drafts = parseInt((draftCount as any).rows?.[0]?.c || '0', 10);
+      const latest = (latestRun as Record<string,unknown>).rows?.[0] || null;
+      const pendingApproval = parseInt((pendingCount as Record<string,unknown>).rows?.[0]?.c || '0', 10);
+      const drafts = parseInt((draftCount as Record<string,unknown>).rows?.[0]?.c || '0', 10);
 
       return {
         payrollLatestStatus: latest?.status || null,
@@ -2367,9 +2367,7 @@ Do NOT skip steps — decompose fully before concluding.`;
    */
   private async buildProactiveInsights(
     workspaceId: string,
-    orgPatterns: unknown[],
-    workspaceContext: any
-  ): Promise<string | null> {
+    orgPatterns: unknown[], workspaceContext: unknown): Promise<string | null> {
     const alerts: string[] = [];
     const ctx = workspaceContext || {};
 
@@ -2708,7 +2706,7 @@ Do NOT skip steps — decompose fully before concluding.`;
       const contradictionInsights = recentInsights.filter((ins: unknown) => ins.insightType === 'contradiction');
       if (contradictionInsights.length > 0) {
         basePrompt += `\n\nCRITICAL — DETECTED CONTRADICTIONS IN THIS CONVERSATION:\n`;
-        contradictionInsights.forEach((ins: any, i: number) => {
+        contradictionInsights.forEach((ins: unknown, i: number) => {
           basePrompt += `${i + 1}. ${ins.insightContent}\n`;
         });
         basePrompt += `\nIMPORTANT RULE: Before executing ANY action or making ANY change, you MUST explicitly surface these contradictions to the user and ask them to clarify before proceeding. Do not silently resolve contradictions — always ask.\n`;
@@ -2717,7 +2715,7 @@ Do NOT skip steps — decompose fully before concluding.`;
       const nonContradictionInsights = recentInsights.filter((ins: unknown) => ins.insightType !== 'contradiction');
       if (nonContradictionInsights.length > 0) {
         basePrompt += `\n\nRECENT INSIGHTS YOU'VE NOTICED ABOUT THIS USER:\n`;
-        nonContradictionInsights.forEach((insight: any, i: number) => {
+        nonContradictionInsights.forEach((insight: unknown, i: number) => {
           basePrompt += `${i + 1}. [${insight.insightType}] ${insight.insightContent}\n`;
         });
         basePrompt += `\nBring these up naturally if relevant to the conversation.\n`;
@@ -3369,7 +3367,7 @@ If no significant insight, respond with:
 
       const lines: string[] = [];
 
-      const officerRows = (watchedOfficers as any).rows as any[];
+      const officerRows = (watchedOfficers as Record<string,unknown>).rows as any[];
       for (const row of officerRows) {
         const name = `${row.first_name} ${row.last_name}`.trim();
         if (row.narrative_summary) {
@@ -3385,7 +3383,7 @@ If no significant insight, respond with:
         }
       }
 
-      const vitalsRow = ((vitals as any).rows || [])[0] || {};
+      const vitalsRow = ((vitals as Record<string,unknown>).rows || [])[0] || {};
       const uncovered = parseInt(String(vitalsRow.uncovered_soon ?? 0), 10);
       const overdue = parseInt(String(vitalsRow.overdue_invoices ?? 0), 10);
       if (uncovered > 0) lines.push(`${uncovered} shift(s) uncovered in the next 24 hours.`);

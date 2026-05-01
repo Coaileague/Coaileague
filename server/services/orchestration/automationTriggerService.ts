@@ -1146,7 +1146,7 @@ class AutomationTriggerService {
       let scheduleRecovered = 0;
 
       for (const gate of pendingGates) {
-        const triggerId = (gate.payload?.triggerId ?? (gate as any).metadata?.triggerId) as string | undefined;
+        const triggerId = (gate.payload?.triggerId ?? (gate as Record<string,unknown>).metadata?.triggerId) as string | undefined;
         if (gate.category === 'payroll' && gate.workspaceId) {
           this.pendingPayrollGates.set(gate.id, { workspaceId: gate.workspaceId, triggerId: triggerId ?? '' });
           payrollRecovered++;

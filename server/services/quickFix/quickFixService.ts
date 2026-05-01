@@ -511,7 +511,7 @@ class QuickFixService {
 
         case 'restart_service':
           result = await this.executeRestartService(request.payloadJson);
-          changesSummary = `Service restarted: ${(request as any).payloadJson?.serviceName || 'unknown'}`;
+          changesSummary = `Service restarted: ${(request as Record<string,unknown>).payloadJson?.serviceName || 'unknown'}`;
           break;
 
         case 'refresh_connections':
@@ -521,7 +521,7 @@ class QuickFixService {
 
         case 'force_logout_user':
           result = await this.executeForceLogout(request.payloadJson);
-          changesSummary = `User sessions invalidated: ${(request as any).payloadJson?.targetUserId}`;
+          changesSummary = `User sessions invalidated: ${(request as Record<string,unknown>).payloadJson?.targetUserId}`;
           break;
 
         default:

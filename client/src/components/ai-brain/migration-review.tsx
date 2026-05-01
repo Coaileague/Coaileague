@@ -47,7 +47,7 @@ export function MigrationReview({
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       onImportSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Import Failed",
         description: error.message,

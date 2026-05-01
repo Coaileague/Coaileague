@@ -234,7 +234,7 @@ export async function ensureOrgIdentifiers(
   }
   
   // Otherwise start own transaction (backward compatible)
-  return await db.transaction(async (tx: any) => {
+  return await db.transaction(async (tx: unknown) => {
     return ensureOrgIdentifiersInTx(tx, orgId, orgName);
   });
 }
@@ -362,7 +362,7 @@ export async function attachEmployeeExternalId(
   
   // Otherwise start own transaction (backward compatible)
   try {
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx: unknown) => {
       return attachEmployeeExternalIdInTx(tx, employeeId, orgId);
     });
   } catch (error : unknown) {
@@ -481,7 +481,7 @@ export async function attachClientExternalId(
   
   // Otherwise start own transaction (backward compatible)
   try {
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx: unknown) => {
       return attachClientExternalIdInTx(tx, clientId, orgId);
     });
   } catch (error : unknown) {
@@ -655,7 +655,7 @@ export async function migrateEmployeeIdsToNewOrgCode(
   log.info(`[Identity] Migrating employee IDs for workspace ${workspaceId} to new org code: ${normalizedCode}`);
   
   try {
-    await db.transaction(async (tx: any) => {
+    await db.transaction(async (tx: unknown) => {
       // Get all employees for this workspace with their external IDs
       const empList = await tx
         .select({
@@ -703,7 +703,7 @@ export async function migrateEmployeeIdsToNewOrgCode(
           
           if (extRecord) {
             // Extract sequence number from existing ID (EMP-XXXX-00001 -> 00001)
-            const parts = (extRecord as any).externalId.split('-');
+            const parts = (extRecord as Record<string,unknown>).externalId.split('-');
             const seqNumber = parts.length === 3 ? parts[2] : '00001';
             const newExternalId = `EMP-${normalizedCode}-${seqNumber}`;
             
@@ -724,7 +724,7 @@ export async function migrateEmployeeIdsToNewOrgCode(
               .set({ employeeNumber: newExternalId })
               .where(eq(employees.id, emp.employeeId));
             
-            log.info(`[Identity] Migrated ${(extRecord as any).externalId} -> ${newExternalId}`);
+            log.info(`[Identity] Migrated ${(extRecord as Record<string,unknown>).externalId} -> ${newExternalId}`);
             migratedCount++;
             migratedEmployeeIds.push(emp.employeeId);
           }

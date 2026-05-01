@@ -148,7 +148,7 @@ export async function initiatePayrollAchTransfer(params: {
     .from(plaidTransferAttempts)
     .where(and(
       eq(plaidTransferAttempts.workspaceId, workspaceId),
-      eq((plaidTransferAttempts as any).idempotencyKey, idempotencyKey)
+      eq((plaidTransferAttempts as Record<string,unknown>).idempotencyKey, idempotencyKey)
     ))
     .limit(1)
     .catch(() => []);

@@ -378,7 +378,7 @@ export async function aggregatePayrollHours(params: {
         totalPay,
         rateSource: resolved.rateSource,
         manuallyEdited: timeEntry.manuallyEdited || false,
-        manualEditReason: (timeEntry as any).manualEditReason || null,
+        manualEditReason: (timeEntry as Record<string,unknown>).manualEditReason || null,
       });
 
       employeeTotalHours += totalHours;

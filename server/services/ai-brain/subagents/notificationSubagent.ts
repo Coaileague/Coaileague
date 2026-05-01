@@ -618,7 +618,7 @@ class NotificationSubagentService {
       .map(e => ({ id: e.userId!, role: e.workspaceRole || 'employee' }));
   }
 
-  private isOutsideWorkHours(preferences: any): boolean {
+  private isOutsideWorkHours(preferences: unknown): boolean {
     if (!preferences?.quietHoursEnabled) return false;
     
     const now = new Date();
@@ -661,11 +661,11 @@ class NotificationSubagentService {
     let bundledCount = 0;
 
     for (const n of notifs) {
-      const priority = (n as any).metadata?.priority as NotificationPriority;
+      const priority = (n as Record<string,unknown>).metadata?.priority as NotificationPriority;
       if (priority && byPriority[priority] !== undefined) {
         byPriority[priority]++;
       }
-      if ((n as any).metadata?.isBundled) bundledCount++;
+      if ((n as Record<string,unknown>).metadata?.isBundled) bundledCount++;
     }
 
     return {

@@ -97,7 +97,7 @@ const KIND_WEIGHT: Record<TaskKind, number> = {
 export function useTrinityTasks() {
   const { isAuthenticated, user } = useAuth();
   // Platform support staff don't have workspace onboarding; skip that fetch.
-  const isPlatformStaff = isSupportTeamRole(String((user as any)?.platformRole || ''));
+  const isPlatformStaff = isSupportTeamRole(String((user as Record<string,unknown>)?.platformRole || ''));
 
   const approvalsQuery = useQuery<ApprovalRequest[]>({
     queryKey: ["/api/approvals", { decision: ["pending"], scope: "employee", limit: 25 }],

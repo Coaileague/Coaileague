@@ -329,7 +329,7 @@ router.post('/dar/:darId/approve', async (req: AuthenticatedRequest, res) => {
     // Notify officer
     if (dar.employeeId) {
       try {
-        const [emp] = await db.select({ userId: (darReports as any).employeeId }).from(darReports).where(eq(darReports.id, dar.id)).limit(1);
+        const [emp] = await db.select({ userId: (darReports as Record<string,unknown>).employeeId }).from(darReports).where(eq(darReports.id, dar.id)).limit(1);
       } catch { /* non-blocking */ }
     }
 

@@ -146,7 +146,7 @@ export async function requireHuman(
 
   if (!result.isHuman) {
     const error = new Error('Suspicious activity detected. Please try again.');
-    (error as any).statusCode = 429;
+    (error as Record<string,unknown>).statusCode = 429;
     throw error;
   }
 }

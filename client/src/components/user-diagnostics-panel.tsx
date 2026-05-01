@@ -243,7 +243,7 @@ export function UserDiagnosticsPanel({
             {userContext.chatHistory && userContext.chatHistory.length > 0 ? (
               <ScrollArea className="h-32 pl-6">
                 <div className="space-y-2">
-                  {userContext.chatHistory.slice(0, 5).map((msg: any, idx: number) => (
+                  {userContext.chatHistory.slice(0, 5).map((msg: unknown, idx: number) => (
                     <div key={idx} className="text-xs p-2 bg-card rounded border">
                       <div className="flex items-center justify-between gap-1 mb-1">
                         <span className="font-medium">{msg.roomSlug || 'main'}</span>

@@ -47,7 +47,7 @@ export const aiBrainRouter: Router = express.Router();
 aiBrainRouter.get('/health', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const metrics = await aiBrainService.getHealthMetrics(workspaceId);
     
@@ -66,7 +66,7 @@ aiBrainRouter.get('/health', requireAuth, async (req: Request, res: Response) =>
 aiBrainRouter.get('/logs', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
 
     const limit = Math.min(Number(req.query.limit) || 20, 100);
@@ -180,7 +180,7 @@ aiBrainRouter.get('/skills', requireAuth, async (req: Request, res: Response) =>
 aiBrainRouter.get('/approvals', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const approvals = await aiBrainService.getPendingApprovals(workspaceId);
     
@@ -197,7 +197,7 @@ aiBrainRouter.get('/approvals', requireAuth, async (req: Request, res: Response)
 aiBrainRouter.get('/patterns', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     // Query AI Brain jobs to identify patterns
@@ -244,7 +244,7 @@ aiBrainRouter.get('/patterns', requireAuth, async (req: Request, res: Response) 
 aiBrainRouter.get('/jobs/recent', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const limitVal = Math.min(parseInt(req.query.limit as string) || 10, 50);
@@ -283,7 +283,7 @@ aiBrainRouter.post('/jobs', requireAuth, async (req: Request, res: Response) => 
     const { skill, input, priority } = req.body;
     
     const result = await aiBrainService.enqueueJob({
-      workspaceId: authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId,
+      workspaceId: authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId,
       userId: authReq.user?.id,
       skill,
       input,
@@ -303,7 +303,7 @@ aiBrainRouter.post('/jobs', requireAuth, async (req: Request, res: Response) => 
 aiBrainRouter.get('/checkpoints', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
     }
@@ -597,7 +597,7 @@ aiBrainRouter.post('/diagnose', requireAuth, async (req: Request, res: Response)
     }
     
     const result = await aiBrainService.enqueueJob({
-      workspaceId: authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId,
+      workspaceId: authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId,
       userId: authReq.user?.id,
       skill: 'issue_diagnosis',
       input: {
@@ -622,7 +622,7 @@ aiBrainRouter.post('/diagnose', requireAuth, async (req: Request, res: Response)
 aiBrainRouter.get('/feature-status', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace required' });
@@ -667,7 +667,7 @@ aiBrainRouter.post('/platform-awareness', requireAuth, async (req: Request, res:
     }
     
     const result = await aiBrainService.enqueueJob({
-      workspaceId: authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId,
+      workspaceId: authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId,
       userId: authReq.user?.id,
       skill: 'platform_awareness',
       input: {
@@ -700,7 +700,7 @@ aiBrainRouter.post('/feature-event', requireAuth, async (req: Request, res: Resp
       return res.status(400).json({ error: 'featureId and eventType are required' });
     }
     
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace required' });
     }
@@ -761,7 +761,7 @@ aiBrainRouter.get('/confidence/subagent/:subagentId', requireAuth, async (req: R
   try {
     const authReq = req as AuthenticatedRequest;
     const { subagentId } = req.params;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace required' });
@@ -786,7 +786,7 @@ aiBrainRouter.get('/confidence/subagent/:subagentId', requireAuth, async (req: R
 aiBrainRouter.get('/confidence/org', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace required' });
@@ -811,7 +811,7 @@ aiBrainRouter.get('/confidence/org', requireAuth, async (req: Request, res: Resp
 aiBrainRouter.get('/confidence/graduation', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace required' });
@@ -831,7 +831,7 @@ aiBrainRouter.get('/confidence/graduation', requireAuth, async (req: Request, re
 aiBrainRouter.post('/confidence/graduate', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     const userId = authReq.user?.id;
     
     if (!workspaceId || !userId) {
@@ -852,7 +852,7 @@ aiBrainRouter.post('/confidence/graduate', requireAuth, async (req: Request, res
 aiBrainRouter.get('/confidence/suggestions', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace required' });
@@ -872,7 +872,7 @@ aiBrainRouter.get('/confidence/suggestions', requireAuth, async (req: Request, r
 aiBrainRouter.get('/confidence/trinity-summary', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace required' });
@@ -970,7 +970,7 @@ aiBrainRouter.post('/routing/classify', requireAuth, async (req: Request, res: R
 aiBrainRouter.post('/routing/execute', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = authReq.workspaceId || (authReq as any).user?.workspaceId || authReq.user?.currentWorkspaceId;
+    const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.workspaceId || authReq.user?.currentWorkspaceId;
     const userId = authReq.user?.id;
     
     if (!workspaceId) {

@@ -106,8 +106,8 @@ export function OperationVisibilityPanel({
 
   if (!orchestrationId || !stepsData) return null;
 
-  const steps = (stepsData as any)?.steps || [];
-  const status = (stepsData as any)?.status || 'unknown';
+  const steps = (stepsData as Record<string,unknown>)?.steps || [];
+  const status = (stepsData as Record<string,unknown>)?.status || 'unknown';
   const completedSteps = steps.filter((s) => s.status === 'completed').length;
 
   return (

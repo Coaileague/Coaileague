@@ -83,7 +83,7 @@ async function loadProfileFromDB(workspaceId: string): Promise<WorkspaceConfiden
     const workspace = await db.query.workspaces.findFirst({
       where: eq(workspaces.id, workspaceId),
     });
-    const prefs = (workspace as any)?.billingPreferences as any;
+    const prefs = (workspace as Record<string,unknown>)?.billingPreferences as any;
     if (prefs?.financialPipelineConfidence) {
       const saved = prefs.financialPipelineConfidence;
       return {
@@ -110,7 +110,7 @@ async function persistProfileToDB(profile: WorkspaceConfidenceProfile): Promise<
     const workspace = await db.query.workspaces.findFirst({
       where: eq(workspaces.id, profile.workspaceId),
     });
-    const existingPrefs = ((workspace as any)?.billingPreferences as any) || {};
+    const existingPrefs = ((workspace as Record<string,unknown>)?.billingPreferences as any) || {};
     await db.update(workspaces)
       .set({
         billingPreferences: {
@@ -413,7 +413,7 @@ export async function onInvoiceApproved(invoiceId: string, workspaceId: string, 
       let clientName = `Invoice-${invoiceId.slice(0, 8)}`;
       if (inv?.clientId) {
         const client = await db.query.clients.findFirst({ where: eq(clients.id, inv.clientId) });
-        clientName = client?.companyName || (client as any)?.name || clientName;
+        clientName = client?.companyName || (client as Record<string,unknown>)?.name || clientName;
       }
       await quickbooksReceiptService.createInvoiceReceipt({
         workspaceId,

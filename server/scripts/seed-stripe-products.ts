@@ -376,7 +376,7 @@ async function seedProducts() {
   );
 
   for (const [key, pack] of Object.entries(BILLING.creditPacks)) {
-    const tokens = (pack as any).tokens ?? (pack as any).credits ?? 0;
+    const tokens = (pack as Record<string,unknown>).tokens ?? (pack as Record<string,unknown>).credits ?? 0;
     const priceId = await createOneTimePrice(
       creditProductId,
       pack.price,

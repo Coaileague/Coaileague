@@ -237,9 +237,9 @@ export default function CompanyReports() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(reportData as any)?.totalPayroll?.toFixed(2) || '0.00'}</div>
+            <div className="text-2xl font-bold">${(reportData as Record<string,unknown>)?.totalPayroll?.toFixed(2) || '0.00'}</div>
             <p className="text-xs text-muted-foreground">
-              {(reportData as any)?.payrollCount || 0} employees paid
+              {(reportData as Record<string,unknown>)?.payrollCount || 0} employees paid
             </p>
           </CardContent>
         </Card>
@@ -250,9 +250,9 @@ export default function CompanyReports() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(reportData as any)?.totalRevenue?.toFixed(2) || '0.00'}</div>
+            <div className="text-2xl font-bold">${(reportData as Record<string,unknown>)?.totalRevenue?.toFixed(2) || '0.00'}</div>
             <p className="text-xs text-muted-foreground">
-              {(reportData as any)?.invoiceCount || 0} invoices
+              {(reportData as Record<string,unknown>)?.invoiceCount || 0} invoices
             </p>
           </CardContent>
         </Card>
@@ -263,10 +263,10 @@ export default function CompanyReports() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(reportData as any)?.totalHours?.toFixed(1) || '0.0'}</div>
+            <div className="text-2xl font-bold">{(reportData as Record<string,unknown>)?.totalHours?.toFixed(1) || '0.0'}</div>
             <p className="text-xs text-muted-foreground">
               // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
-              Across {(reportData as any)?.activeEmployees || 0} employees
+              Across {(reportData as Record<string,unknown>)?.activeEmployees || 0} employees
             </p>
           </CardContent>
         </Card>
@@ -277,7 +277,7 @@ export default function CompanyReports() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(reportData as any)?.profitMargin?.toFixed(1) || '0.0'}%</div>
+            <div className="text-2xl font-bold">{(reportData as Record<string,unknown>)?.profitMargin?.toFixed(1) || '0.0'}%</div>
             <p className="text-xs text-muted-foreground">
               Revenue minus labor costs
             </p>
@@ -298,7 +298,7 @@ export default function CompanyReports() {
             <div className="text-center py-8 text-muted-foreground">Loading report data...</div>
           ) : reportData?.details ? (
             <div className="space-y-4">
-              {reportData.details.map((item: any, index: number) => (
+              {reportData.details.map((item: unknown, index: number) => (
                 <div key={index} className="flex items-center justify-between gap-2 p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">{item.name || item.description}</p>

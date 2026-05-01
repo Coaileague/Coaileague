@@ -148,7 +148,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any, atta
         res.json({ success: true, data: updated });
       } catch (sendError: unknown) {
         await db.update(externalEmailsSent)
-          .set({ status: 'failed', errorMessage: (sendError as any)?.message ?? 'Unknown error' })
+          .set({ status: 'failed', errorMessage: (sendError as Record<string,unknown>)?.message ?? 'Unknown error' })
           .where(eq(externalEmailsSent.id, id));
 
         res.status(500).json({ error: "Failed to send email" });

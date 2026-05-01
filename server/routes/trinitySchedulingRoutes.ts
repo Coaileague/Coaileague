@@ -372,7 +372,7 @@ router.get('/pending-approvals', requireAuth, async (req: AuthenticatedRequest, 
     const pending = await db.select().from(trinityProposedActions)
       .where(and(
         eq((trinityProposedActions as Record<string,unknown>).workspaceId as string, workspaceId),
-        eq((trinityProposedActions as any).status, 'pending'),
+        eq((trinityProposedActions as Record<string,unknown>).status, 'pending'),
       ))
       .orderBy(desc((trinityProposedActions).createdAt))
       .limit(50);

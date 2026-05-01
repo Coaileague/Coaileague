@@ -490,7 +490,7 @@ export async function getUncachableResendClient() {
     return {
       client: {
         emails: {
-          send: async (params: any) => {
+          send: async (params: unknown) => {
             if (isProd) {
               log.error(`[EMAIL] PRODUCTION ERROR: Cannot send email to ${params.to} - Resend not configured. Subject: ${params.subject}`);
               throw new Error('Email delivery unavailable: Resend is not configured in production');

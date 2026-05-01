@@ -100,7 +100,7 @@ const router = Router();
           userId
         );
       } catch (summonErr: unknown) {
-        log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as any)?.message);
+        log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as Record<string,unknown>)?.message);
       }
 
       res.status(201).json(conversation);
@@ -710,7 +710,7 @@ const router = Router();
     } catch (error: unknown) {
       log.error("Error creating chat macro:", error);
       if (error instanceof Error && error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid macro data", errors: (error as any).errors });
+        return res.status(400).json({ message: "Invalid macro data", errors: (error as Record<string,unknown>).errors });
       }
       res.status(500).json({ message: "Failed to create chat macro" });
     }
@@ -784,8 +784,8 @@ const router = Router();
       }
       
       // SECURITY: Verify user is a participant or workspace member
-      const isParticipant = (conversation as any).participantIds?.includes(userId);
-      const isCreator = (conversation as any).creatorId === userId;
+      const isParticipant = (conversation as Record<string,unknown>).participantIds?.includes(userId);
+      const isCreator = (conversation as Record<string,unknown>).creatorId === userId;
       let isWorkspaceMember = false;
       
       if (!isParticipant && !isCreator && conversation.workspaceId) {
@@ -913,7 +913,7 @@ const router = Router();
             // For now, just track in memory
             addedParticipants.push({
               id: participant.id,
-              name: (participant as any).displayName || participant.email,
+              name: (participant as Record<string,unknown>).displayName || participant.email,
               email: participant.email
             });
           }
@@ -963,7 +963,7 @@ const router = Router();
           userId
         );
       } catch (summonErr: unknown) {
-        log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as any)?.message);
+        log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as Record<string,unknown>)?.message);
       }
       
       res.json({
@@ -990,7 +990,7 @@ const router = Router();
       const user = req.user!;
       // Support staff authorization
       const userRole = user.role;
-      const platformRole = (user as any)?.platformRole;
+      const platformRole = (user as Record<string,unknown>)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
@@ -1074,7 +1074,7 @@ const router = Router();
       const user = req.user!;
       // Support staff authorization
       const userRole = user.role;
-      const platformRole = (user as any)?.platformRole;
+      const platformRole = (user as Record<string,unknown>)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
@@ -1160,7 +1160,7 @@ const router = Router();
       const user = req.user!;
       // Support staff authorization (only platform_admin or support_staff can export encrypted DMs)
       const userRole = user.role;
-      const platformRole = (user as any)?.platformRole;
+      const platformRole = (user as Record<string,unknown>)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
@@ -1441,8 +1441,8 @@ router.get("/api/chat/room/:roomId/motd", requireAnyAuth, async (req: Authentica
       return res.status(404).json({ message: "Room not found" });
     }
     
-    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
-    const activeBots = (conversation as any).metadata?.activeBots || [];
+    const roomModes = (conversation as Record<string,unknown>).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as Record<string,unknown>).metadata?.activeBots || [];
     const roomName = conversation.subject || "Chat Room";
     
     const motd = generateMOTD(roomName, roomModes, activeBots);
@@ -1527,8 +1527,8 @@ router.get("/api/chat/room/:roomId/bots", requireAnyAuth, async (req: Authentica
       return res.status(404).json({ message: "Room not found" });
     }
     
-    const roomModes = (conversation as any).metadata?.modes || [RoomMode.ORG];
-    const activeBots = (conversation as any).metadata?.activeBots || [];
+    const roomModes = (conversation as Record<string,unknown>).metadata?.modes || [RoomMode.ORG];
+    const activeBots = (conversation as Record<string,unknown>).metadata?.activeBots || [];
     
     const availableBots = new Set<string>();
     for (const mode of roomModes) {

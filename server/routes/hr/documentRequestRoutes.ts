@@ -327,7 +327,7 @@ router.post('/send', requireAuth, requireManager, async (req: AuthenticatedReque
       return res.status(402).json({
         error: 'Insufficient credits',
         creditsRequired: totalCredits,
-        creditsAvailable: (creditCheck as any).remaining ?? 0,
+        creditsAvailable: (creditCheck as Record<string,unknown>).remaining ?? 0,
         message: `Sending ${empList.length} employee(s) × ${input.documentTypes.length} document type(s) requires ${totalCredits} credits.`,
       });
     }
@@ -387,7 +387,7 @@ router.post('/send', requireAuth, requireManager, async (req: AuthenticatedReque
           results.push({ employeeId: emp.id, employeeName: `${emp.firstName} ${emp.lastName}`, docType, success: true });
         } catch (innerErr: unknown) {
           log.error(`[DocRequests] Send error for ${emp.id}/${docType}:`, innerErr);
-          results.push({ employeeId: emp.id, employeeName: `${emp.firstName} ${emp.lastName}`, docType, success: false, error: (innerErr as any)?.message });
+          results.push({ employeeId: emp.id, employeeName: `${emp.firstName} ${emp.lastName}`, docType, success: false, error: (innerErr as Record<string,unknown>)?.message });
         }
       }
     }

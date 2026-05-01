@@ -68,5 +68,5 @@ export async function sendEmail(opts: {
     };
   }
 
-  return { id: (result as any)?.data?.id, success: true };
+  return { id: (result as Record<string,unknown>)?.data?.id, success: true };
 }

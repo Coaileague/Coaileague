@@ -25,7 +25,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -81,11 +81,11 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     let complianceData: unknown = null;
     
     try {
-      complianceData = detectComplianceCategory(data.reason, (data as any).type);
+      complianceData = detectComplianceCategory(data.reason, (data as Record<string,unknown>).type);
       aiAnalysis = await analyzeDispute(
         data.title,
         data.reason,
-        (data as any).type,
+        (data as Record<string,unknown>).type,
         data.requestedOutcome || null,
         data.evidence || null
       );
@@ -189,7 +189,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
         details: {
           title: data.title,
           type: data.disputeType,
-          amount: (data as any).amountDisputed,
+          amount: (data as Record<string,unknown>).amountDisputed,
           filedBy: employee.firstName,
         },
       });
@@ -208,7 +208,7 @@ router.get('/', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -235,7 +235,7 @@ router.get('/my-disputes', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -252,7 +252,7 @@ router.get('/target/:targetType/:targetId', async (req: AuthenticatedRequest, re
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -270,7 +270,7 @@ router.get('/pending-review', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -282,7 +282,7 @@ router.get('/pending-review', async (req: AuthenticatedRequest, res) => {
 
     const { analyzeDispute, detectComplianceCategory } = await import('../services/disputeAI');
     
-    const disputesWithAI = await Promise.all(disputes.map(async (dispute: any) => {
+    const disputesWithAI = await Promise.all(disputes.map(async (dispute: unknown) => {
       if (!dispute.aiSummary) {
         try {
           const aiAnalysis = await analyzeDispute(
@@ -326,7 +326,7 @@ router.get('/disputeable-items', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -368,7 +368,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -401,7 +401,7 @@ router.patch('/:id/assign', async (req: AuthenticatedRequest, res) => {
     }
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -436,7 +436,7 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
     }
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -461,7 +461,7 @@ router.post('/:id/resolve', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -496,7 +496,7 @@ router.post('/:id/apply-changes', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -539,7 +539,7 @@ router.post('/:id/review', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -673,7 +673,7 @@ router.get('/:id/investigation-context', async (req: AuthenticatedRequest, res) 
     res.json({
       dispute: {
         id: dispute.id,
-        type: (dispute as any).type,
+        type: (dispute as Record<string,unknown>).type,
         title: dispute.title,
         reason: dispute.reason,
         filedAt: dispute.createdAt,
@@ -720,16 +720,16 @@ router.post('/:id/ai-analysis', async (req: AuthenticatedRequest, res) => {
     const aiAnalysis = await analyzeDispute(
       dispute.title,
       dispute.reason,
-      (dispute as any).disputeType,
+      (dispute as Record<string,unknown>).disputeType,
       dispute.requestedOutcome,
       dispute.evidence
     );
 
-    const compliance = detectComplianceCategory(dispute.reason, (dispute as any).disputeType);
+    const compliance = detectComplianceCategory(dispute.reason, (dispute as Record<string,unknown>).disputeType);
 
     let sentimentResult = null;
     try {
-      sentimentResult = await (sentimentAnalyzer as any).analyze(dispute.reason);
+      sentimentResult = await (sentimentAnalyzer as Record<string,unknown>).analyze(dispute.reason);
     } catch (sentError) {
       log.error('Sentiment analysis failed:', sentError);
     }

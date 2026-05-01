@@ -362,7 +362,7 @@ class TrinityBusinessIntelligence {
 
     for (const p of patterns) {
       try {
-        (sharedKnowledgeGraph as any).storeEntity({
+        (sharedKnowledgeGraph as Record<string,unknown>).storeEntity({
           id: `invoice-pattern-${p.clientId}`,
           type: 'insight',
           domain: 'invoicing',
@@ -632,7 +632,7 @@ class TrinityBusinessIntelligence {
     learningApplied.push('Calculated per-client labor cost vs revenue margins');
 
     try {
-      (sharedKnowledgeGraph as any).storeEntity({
+      (sharedKnowledgeGraph as Record<string,unknown>).storeEntity({
         id: `payroll-pattern-${workspaceId}`,
         type: 'insight',
         domain: 'payroll',
@@ -780,7 +780,7 @@ class TrinityBusinessIntelligence {
     learningApplied.push('Detected shift duration categories per site for pattern matching');
 
     try {
-      (sharedKnowledgeGraph as any).storeEntity({
+      (sharedKnowledgeGraph as Record<string,unknown>).storeEntity({
         id: `schedule-pattern-${workspaceId}`,
         type: 'insight',
         domain: 'scheduling',
@@ -982,14 +982,14 @@ export function registerBusinessIntelligenceActions(): void {
       if (!request.workspaceId) {
         return { success: false, actionId: request.actionId, message: 'Workspace context required for analysis', executionTimeMs: Date.now() - startTime };
       }
-      const analysisType = request.payload?.type || (request as any).params?.type;
+      const analysisType = request.payload?.type || (request as Record<string,unknown>).params?.type;
 
       try {
         // type=search → search invoices
         if (analysisType === 'search') {
           const result = await trinityBusinessIntelligence.searchInvoices(
             request.workspaceId,
-            request.payload || (request as any).params || {}
+            request.payload || (request as Record<string,unknown>).params || {}
           );
           return {
             success: true, actionId: request.actionId, data: result,
@@ -1012,7 +1012,7 @@ export function registerBusinessIntelligenceActions(): void {
         if (analysisType === 'payroll_patterns') {
           const result = await trinityBusinessIntelligence.scanPayrollPatterns(
             request.workspaceId,
-            request.payload?.periodMonths || (request as any).params?.periodMonths || 3
+            request.payload?.periodMonths || (request as Record<string,unknown>).params?.periodMonths || 3
           );
           return {
             success: true, actionId: request.actionId, data: result,
@@ -1025,7 +1025,7 @@ export function registerBusinessIntelligenceActions(): void {
         if (analysisType === 'schedule_patterns') {
           const result = await trinityBusinessIntelligence.scanSchedulePatterns(
             request.workspaceId,
-            request.payload?.weeksBack || (request as any).params?.weeksBack || 4
+            request.payload?.weeksBack || (request as Record<string,unknown>).params?.weeksBack || 4
           );
           return {
             success: true, actionId: request.actionId, data: result,
@@ -1048,8 +1048,8 @@ export function registerBusinessIntelligenceActions(): void {
         // Default: type=deep (or no type) → deep analysis
         const result = await trinityBusinessIntelligence.deepAnalysis(
           request.workspaceId,
-          request.payload?.domain || (request as any).params?.domain || 'all',
-          request.payload?.question || (request as any).params?.question
+          request.payload?.domain || (request as Record<string,unknown>).params?.domain || 'all',
+          request.payload?.question || (request as Record<string,unknown>).params?.question
         );
         return {
           success: true, actionId: request.actionId, data: result,

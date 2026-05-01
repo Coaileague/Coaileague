@@ -266,7 +266,7 @@ export default function LearningManagement() {
 
   const categories = Array.from(new Set(courses.map((c) => c.category)));
 
-  const isAdmin = (user as any)?.workspaceRole === "org_owner" || (user as any)?.platformRole === "root_admin";
+  const isAdmin = (user as Record<string,unknown>)?.workspaceRole === "org_owner" || (user as Record<string,unknown>)?.platformRole === "root_admin";
 
   const createCourseButton = isAdmin ? (
     <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-course">

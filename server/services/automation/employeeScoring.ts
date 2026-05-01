@@ -249,7 +249,7 @@ export async function scoreEmployeesForShift(
         clientLon
       );
       
-      const maxDist = requirements.maxDistance || (metrics as any).preferredMaxDistance || 50;
+      const maxDist = requirements.maxDistance || (metrics as Record<string,unknown>).preferredMaxDistance || 50;
       if (distanceMiles > maxDist) {
         continue; // Skip - too far
       }

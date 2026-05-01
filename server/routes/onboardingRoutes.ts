@@ -359,7 +359,7 @@ onboardingRouter.get('/create-org/progress', async (req: AuthenticatedRequest, r
     
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     
-    const metadata = (user as any)?.metadata || {};
+    const metadata = (user as Record<string,unknown>)?.metadata || {};
     const progress = metadata[ONBOARDING_PROGRESS_KEY] || null;
 
     res.json({

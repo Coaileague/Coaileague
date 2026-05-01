@@ -62,7 +62,7 @@ async function phase1_guard_tour_tables() {
     AND table_name IN ('guard_tours', 'guard_tour_checkpoints', 'guard_tour_scans')
     ORDER BY table_name
   `);
-  const tableNames = (tables as any).rows?.map((r: unknown) => r.table_name) || tables.map?.((r: any) => r.table_name) || [];
+  const tableNames = (tables as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || tables.map?.((r: unknown) => r.table_name) || [];
   
   record({
     name: 'Guard Tour Tables Exist',
@@ -77,7 +77,7 @@ async function phase1_guard_tour_tables() {
     SELECT column_name FROM information_schema.columns 
     WHERE table_name = 'guard_tours' ORDER BY ordinal_position
   `);
-  const colNames = (cols as any).rows?.map((r: unknown) => r.column_name) || cols.map?.((r: any) => r.column_name) || [];
+  const colNames = (cols as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || cols.map?.((r: unknown) => r.column_name) || [];
   const required = ['id', 'workspace_id', 'name', 'status', 'interval_minutes', 'days_of_week'];
   const hasAll = required.every(c => colNames.includes(c));
   
@@ -94,7 +94,7 @@ async function phase1_guard_tour_tables() {
     SELECT column_name FROM information_schema.columns 
     WHERE table_name = 'guard_tour_checkpoints' ORDER BY ordinal_position
   `);
-  const cpColNames = (cpCols as any).rows?.map((r: unknown) => r.column_name) || cpCols.map?.((r: any) => r.column_name) || [];
+  const cpColNames = (cpCols as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || cpCols.map?.((r: unknown) => r.column_name) || [];
   const cpRequired = ['id', 'tour_id', 'name', 'latitude', 'longitude', 'qr_code', 'nfc_tag_id'];
   const cpHasAll = cpRequired.every(c => cpColNames.includes(c));
   
@@ -111,7 +111,7 @@ async function phase1_guard_tour_tables() {
     SELECT column_name FROM information_schema.columns 
     WHERE table_name = 'guard_tour_scans' ORDER BY ordinal_position
   `);
-  const scanColNames = (scanCols as any).rows?.map((r: unknown) => r.column_name) || scanCols.map?.((r: any) => r.column_name) || [];
+  const scanColNames = (scanCols as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || scanCols.map?.((r: unknown) => r.column_name) || [];
   const scanRequired = ['id', 'tour_id', 'checkpoint_id', 'employee_id', 'workspace_id', 'status', 'scan_method'];
   const scanHasAll = scanRequired.every(c => scanColNames.includes(c));
   
@@ -168,7 +168,7 @@ async function phase2_equipment_tables() {
     AND table_name IN ('equipment_items', 'equipment_assignments', 'equipment_maintenance_logs')
     ORDER BY table_name
   `);
-  const tableNames = (tables as any).rows?.map((r: unknown) => r.table_name) || tables.map?.((r: any) => r.table_name) || [];
+  const tableNames = (tables as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || tables.map?.((r: unknown) => r.table_name) || [];
   
   record({
     name: 'Equipment Tracking Tables Exist',
@@ -183,7 +183,7 @@ async function phase2_equipment_tables() {
     SELECT column_name FROM information_schema.columns 
     WHERE table_name = 'equipment_items' ORDER BY ordinal_position
   `);
-  const colNames = (cols as any).rows?.map((r: unknown) => r.column_name) || cols.map?.((r: any) => r.column_name) || [];
+  const colNames = (cols as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || cols.map?.((r: unknown) => r.column_name) || [];
   const required = ['id', 'workspace_id', 'name', 'serial_number', 'category', 'status'];
   const hasAll = required.every(c => colNames.includes(c));
   
@@ -200,7 +200,7 @@ async function phase2_equipment_tables() {
     SELECT column_name FROM information_schema.columns 
     WHERE table_name = 'equipment_assignments' ORDER BY ordinal_position
   `);
-  const assignColNames = (assignCols as any).rows?.map((r: unknown) => r.column_name) || assignCols.map?.((r: any) => r.column_name) || [];
+  const assignColNames = (assignCols as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || assignCols.map?.((r: unknown) => r.column_name) || [];
   const assignRequired = ['id', 'equipment_item_id', 'employee_id', 'checkout_date', 'condition'];
   const assignHasAll = assignRequired.every(c => assignColNames.includes(c));
   
@@ -255,7 +255,7 @@ async function phase3_post_orders() {
     WHERE table_schema = 'public' 
     AND table_name = 'post_order_templates'
   `);
-  const tableNames = (tables as any).rows?.map((r: unknown) => r.table_name) || tables.map?.((r: any) => r.table_name) || [];
+  const tableNames = (tables as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || tables.map?.((r: unknown) => r.table_name) || [];
   
   record({
     name: 'Post Order Templates Table Exists',
@@ -347,7 +347,7 @@ async function phase4_document_signing() {
     AND table_name IN ('org_documents', 'org_document_signatures', 'org_document_access')
     ORDER BY table_name
   `);
-  const sigTableNames = (sigTables as any).rows?.map((r: unknown) => r.table_name) || sigTables.map?.((r: any) => r.table_name) || [];
+  const sigTableNames = (sigTables as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || sigTables.map?.((r: unknown) => r.table_name) || [];
   
   record({
     name: 'Document Signing DB Tables',
@@ -599,7 +599,7 @@ async function phase13_contract_pipeline() {
     AND (table_name LIKE 'contract%' OR table_name LIKE 'contractor%')
     ORDER BY table_name
   `);
-  const contractTableNames = (contractTables as any).rows?.map((r: unknown) => r.table_name) || contractTables.map?.((r: any) => r.table_name) || [];
+  const contractTableNames = (contractTables as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || contractTables.map?.((r: unknown) => r.table_name) || [];
   
   record({
     name: 'Contract Pipeline Tables',
@@ -635,7 +635,7 @@ async function phase14_shift_swap_lifecycle() {
     WHERE table_schema = 'public' 
     AND table_name = 'shift_swap_requests'
   `);
-  const hasSwapTable = ((swapTables as any).rows?.length || (swapTables as any).length || 0) > 0;
+  const hasSwapTable = ((swapTables as Record<string,unknown>).rows?.length || (swapTables as Record<string,unknown>).length || 0) > 0;
   
   record({
     name: 'Shift Swap Request Table',
@@ -722,7 +722,7 @@ async function phase18_gamification() {
     AND table_name LIKE '%gamif%' OR table_name LIKE '%leaderboard%' OR table_name LIKE '%badge%' OR table_name LIKE '%achievement%'
     ORDER BY table_name
   `);
-  const gameTableNames = (gameTables as any).rows?.map((r: unknown) => r.table_name) || gameTables.map?.((r: any) => r.table_name) || [];
+  const gameTableNames = (gameTables as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || gameTables.map?.((r: unknown) => r.table_name) || [];
   
   record({
     name: 'Gamification Tables',

@@ -63,7 +63,7 @@ async function alreadySeeded(): Promise<boolean> {
 }
 
 // ─── QB payload builders ──────────────────────────────────────────────────────
-function buildQBInvoicePayload(inv: any, qbCustomerId: string): object {
+function buildQBInvoicePayload(inv: unknown, qbCustomerId: string): object {
   const amount = Number(inv.total ?? 0);
   return {
     CustomerRef: { value: qbCustomerId },

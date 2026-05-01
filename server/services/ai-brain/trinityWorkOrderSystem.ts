@@ -371,7 +371,7 @@ Return JSON:
         complexity: parsed.complexity || 'moderate',
         summary: parsed.summary || rawRequest.substring(0, 100),
         affectedAreas: parsed.affectedAreas || [],
-        successCriteria: (parsed.successCriteria || []).map((c: any, i: number) => ({
+        successCriteria: (parsed.successCriteria || []).map((c: unknown, i: number) => ({
           id: `sc-${i}`,
           description: c.description,
           testable: c.testable !== false,
@@ -382,7 +382,7 @@ Return JSON:
         riskLevel: parsed.riskLevel || 'medium',
         riskFactors: parsed.riskFactors || [],
         requiresApproval: parsed.riskLevel === 'high' || parsed.riskLevel === 'critical',
-        ambiguities: (parsed.ambiguities || []).map((a: any, i: number) => ({
+        ambiguities: (parsed.ambiguities || []).map((a: unknown, i: number) => ({
           id: `amb-${i}`,
           question: a.question,
           context: a.context || '',
@@ -563,7 +563,7 @@ Order tasks logically: understand -> plan -> implement -> test -> commit`;
 
       const tasksData = this.extractJSONArray(response.text);
       
-      const tasks: TaskNode[] = tasksData.map((t: any, i: number) => ({
+      const tasks: TaskNode[] = tasksData.map((t: unknown, i: number) => ({
         id: t.id || `task-${i + 1}`,
         workOrderId: workOrder.id,
         parentId: undefined,
@@ -1097,7 +1097,7 @@ class ConfidentCommitProtocol {
     // Run actual tests using AI Brain Test Runner
     try {
       log.info('[CommitProtocol] Running test suite...');
-      const testResults = await (aiBrainTestRunner as any).runAll('Commit Validation');
+      const testResults = await (aiBrainTestRunner as Record<string,unknown>).runAll('Commit Validation');
       decision.testsPass = testResults.summary.failed === 0;
       
       if (!decision.testsPass) {

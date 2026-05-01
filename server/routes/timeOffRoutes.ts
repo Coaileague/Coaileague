@@ -204,7 +204,7 @@ router.patch("/api/pto/:id/deny", requireAuth, async (req: AuthenticatedRequest,
     // Notify the employee their PTO was denied
     (async () => {
       try {
-        const employee = await storage.getEmployee((denied as any).employeeId, workspaceId);
+        const employee = await storage.getEmployee((denied as Record<string,unknown>).employeeId, workspaceId);
         if (employee?.userId) {
           await universalNotificationEngine.sendNotification({
             workspaceId: workspaceId,

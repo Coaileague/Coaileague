@@ -160,7 +160,7 @@ export function registerComplianceIncidentActions() {
     if (!workspaceId || !incidentId) return { error: 'workspaceId and incidentId required' };
     if (clientId) {
       const client = await db.query.clients?.findFirst({ where: eq(clients.id, clientId) }).catch(() => null);
-      const clientUserId = typeof (client as any)?.userId === 'string' ? (client as ClientWithExtras).userId : undefined;
+      const clientUserId = typeof (client as Record<string,unknown>)?.userId === 'string' ? (client as ClientWithExtras).userId : undefined;
       if (client && (client as ClientWithExtras).email && clientUserId) {
         await createNotification({
           workspaceId,
@@ -295,9 +295,9 @@ export function registerComplianceIncidentActions() {
     const { clientContracts } = await import('../../../shared/schema').catch(() => ({ clientContracts: null }));
     if (!clientContracts) return { error: 'Client contracts schema not available' };
     const where = clientId
-      ? and(eq((clientContracts as Record<string,unknown>).workspaceId as string, workspaceId), eq((clientContracts as any).clientId, clientId))
+      ? and(eq((clientContracts as Record<string,unknown>).workspaceId as string, workspaceId), eq((clientContracts as Record<string,unknown>).clientId, clientId))
       : eq((clientContracts as Record<string,unknown>).workspaceId as string, workspaceId);
-    const contracts = await db.select().from(clientContracts as any).where(where).limit(50).catch(() => []);
+    const contracts = await db.select().from(clientContracts as Record<string,unknown>).where(where).limit(50).catch(() => []);
     return { clientId: clientId ?? 'all', contractCount: contracts.length, contracts };
   }));
 
@@ -354,7 +354,7 @@ export function registerComplianceIncidentActions() {
     const { workspaceId, employeeId, startDate } = params;
     if (!workspaceId || !employeeId) return { error: 'workspaceId and employeeId required' };
     const emp = await db.query.employees?.findFirst({ where: eq(employees.id, employeeId) }).catch(() => null);
-    const memberId = (emp as any)?.userId || employeeId;
+    const memberId = (emp as EmployeeWithStatus)?.userId || employeeId;
     await createNotification({
       workspaceId,
       userId: memberId,

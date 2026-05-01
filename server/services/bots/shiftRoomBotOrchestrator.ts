@@ -2581,7 +2581,7 @@ class ShiftRoomBotOrchestrator {
 
         // Find their shift room
         const [room] = await db
-          .select({ id: chatConversations.id, metadata: (chatConversations as any).metadata })
+          .select({ id: chatConversations.id, metadata: (chatConversations as Record<string,unknown>).metadata })
           .from(chatConversations)
           .where(and(
             eq(chatConversations.shiftId, entry.shiftId),
@@ -2593,7 +2593,7 @@ class ShiftRoomBotOrchestrator {
         if (!room) continue;
 
         // Don't spam — check if we already sent a 12h warning this hour
-        const meta = (room as any).metadata || {};
+        const meta = (room as Record<string,unknown>).metadata || {};
         const warningKey = `clockout12h_${format(now, 'yyyy-MM-dd-HH')}`;
         if (meta[warningKey]) continue;
 
@@ -2650,7 +2650,7 @@ class ShiftRoomBotOrchestrator {
           if (now < shiftStart || now > shiftEnd) continue;
 
           // Only send once per overnight window (check metadata flag)
-          const meta = (room as any).metadata || {};
+          const meta = (room as Record<string,unknown>).metadata || {};
           const briefKey = `overnightBrief_${format(now, 'yyyy-MM-dd-HH')}`;
           if (meta[briefKey]) continue;
 
@@ -2740,7 +2740,7 @@ class ShiftRoomBotOrchestrator {
         const shiftEnd = new Date(shift.endTime);
         // Trigger end-of-shift message when shift end is within the 5-minute window
         if (shiftEnd >= fiveMinAgo && shiftEnd <= fiveMinFuture) {
-          const meta = (room as any).metadata || {};
+          const meta = (room as Record<string,unknown>).metadata || {};
           if (meta.endOfShiftFired) continue;
 
           await sendBotMessage({

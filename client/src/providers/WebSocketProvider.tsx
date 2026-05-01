@@ -205,7 +205,7 @@ class WebSocketBusImpl implements WebSocketBus {
     };
   }
 
-  send(message: any) {
+  send(message: unknown) {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
     } else {

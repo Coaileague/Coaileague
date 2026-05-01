@@ -516,7 +516,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
           lng: contractor.homeLongitude ? parseFloat(contractor.homeLongitude) : params.shiftLocation.lng,
         };
 
-        const cRating = parseFloat((contractor as any).reliabilityScore || (contractor as any).rating || '0');
+        const cRating = parseFloat((contractor as Record<string,unknown>).reliabilityScore || (contractor as Record<string,unknown>).rating || '0');
         const normalizedRating = cRating > 10 ? Math.min(1, cRating / 100) : (cRating > 0 ? Math.min(1, cRating / 5) : 0);
 
         candidates.push({
@@ -524,7 +524,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
           employeeName: `${contractor.firstName} ${contractor.lastName}`,
           reliabilityRating: normalizedRating > 0 ? normalizedRating : 0.55,
           skills: contractorSkillSet,
-          attendanceRate: (contractor as any).isActive ? 0.65 : 0.4,
+          attendanceRate: (contractor as Record<string,unknown>).isActive ? 0.65 : 0.4,
           performanceRating: normalizedRating > 0 ? normalizedRating : 0.5,
           homeLocation,
           previousShiftsWithClient: 0,

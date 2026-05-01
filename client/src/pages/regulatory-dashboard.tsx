@@ -737,7 +737,7 @@ export default function RegulatoryDashboard() {
                     <div className="p-3 rounded-md bg-slate-800 border border-slate-700">
                       <p className="text-slate-300 text-sm font-medium mb-2">State Minimum Coverage Requirements</p>
                       <div className="space-y-1">
-                        {(insuranceQuery.data?.data?.stateMinimumCoverage ?? []).map((req: any, i: number) => (
+                        {(insuranceQuery.data?.data?.stateMinimumCoverage ?? []).map((req: unknown, i: number) => (
                           <div key={i} className="flex justify-between text-sm">
                             <span className="text-slate-400">{req.type?.replace(/_/g, " ")}</span>
                             <span className="text-white font-medium">${req.minimumAmount?.toLocaleString()}</span>
@@ -906,7 +906,7 @@ export default function RegulatoryDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(shiftsQuery.data.data.shifts.slice(0, 100)).map((shift: any, i: number) => (
+                      {(shiftsQuery.data.data.shifts.slice(0, 100)).map((shift: unknown, i: number) => (
                         <TableRow key={shift.id ?? i} data-testid={`row-shift-${shift.id ?? i}`} className="border-slate-700">
                           <TableCell className="text-slate-300 text-sm">{shift.start_time ? new Date(shift.start_time).toLocaleDateString() : "—"}</TableCell>
                           <TableCell className="text-white text-sm">{shift.officer_name ?? "—"}</TableCell>

@@ -37,10 +37,10 @@ export function checkFeaturePermission(featureKey: string): RequestHandler {
     const authReq = req as AuthenticatedRequest;
 
     // --- Trinity Bot bypass ---
-    if ((authReq as any).isTrinityBot) return next();
+    if ((authReq as Record<string,unknown>).isTrinityBot) return next();
 
     // --- Platform-wide role bypass ---
-    const platformRole = (authReq as any).platformRole;
+    const platformRole = (authReq as Record<string,unknown>).platformRole;
     if (platformRole && hasPlatformWideAccess(platformRole)) return next();
 
     const role = authReq.workspaceRole;

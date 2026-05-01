@@ -308,7 +308,7 @@ router.patch("/interviews/:id/complete", requireAuth, async (req: AuthenticatedR
     if (!hasManagerAccess(req.workspaceRole || '')) return res.status(403).json({ error: "Manager access required" });
     const { rating, recommendation, notes } = req.body;
     const pgClient3 = await db.$client.connect();
-    let interviewRow: any;
+    let interviewRow: unknown;
     try {
       await pgClient3.query('BEGIN');
       await pgClient3.query(
@@ -382,7 +382,7 @@ router.post("/offers/:id/accept", requireAuth, async (req: AuthenticatedRequest,
     const wid = req.workspaceId!;
     if (!hasManagerAccess(req.workspaceRole || '')) return res.status(403).json({ error: "Manager access required" });
     const pgClient5 = await db.$client.connect();
-    let offerRow: any;
+    let offerRow: unknown;
     try {
       await pgClient5.query('BEGIN');
       await pgClient5.query(

@@ -37,7 +37,7 @@ export interface ChatroomUIConfig {
 export interface FilterConfig {
   id: string;
   label: string;
-  filter: (room: any, options: { isParticipant?: boolean }) => boolean;
+  filter: (room: unknown, options: { isParticipant?: boolean }) => boolean;
 }
 
 export const ROOM_TYPES: Record<RoomType, RoomTypeConfig> = {
@@ -261,7 +261,7 @@ export function getRoomTypeConfig(type?: string, conversationType?: string): Roo
   }
 }
 
-export function getRoomOwnership(room: any): RoomOwnership {
+export function getRoomOwnership(room: unknown): RoomOwnership {
   if (room.isPlatformOwned || room.createdBy === 'platform' || room.type === 'platform') {
     return 'platform';
   }

@@ -179,7 +179,7 @@ class TrinityPerformanceCalculator {
   private async calcReportScores(workspaceId: string, employeeId: string, start: Date, end: Date) {
     // Converted to Drizzle ORM: CASE WHEN → sql fragment
     const reportStats = await db.select({
-      avgQuality: sql<number>`avg(case when ${(dailyActivityReports as any).qualityScore} is not null then ${(dailyActivityReports as any).qualityScore} else 75 end)`,
+      avgQuality: sql<number>`avg(case when ${(dailyActivityReports as Record<string,unknown>).qualityScore} is not null then ${(dailyActivityReports as Record<string,unknown>).qualityScore} else 75 end)`,
       submitted: sql<number>`count(*)::int`
     })
     .from(dailyActivityReports)

@@ -80,8 +80,8 @@ export async function snapshotAndMonitor(workspaceId: string): Promise<SnapshotR
      LIMIT 1 OFFSET 1
   `);
   const previousScore: number | null =
-    (prevRes as any).rows?.[0]?.score !== undefined
-      ? Number((prevRes as any).rows[0].score)
+    (prevRes as Record<string,unknown>).rows?.[0]?.score !== undefined
+      ? Number((prevRes as Record<string,unknown>).rows[0].score)
       : null;
 
   const delta = previousScore === null ? null : current.score - previousScore;

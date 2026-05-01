@@ -867,7 +867,7 @@ Only include arrays that have data. If no data found for a category, omit that a
         });
       
       case 'manual':
-        return (this as any).extractFromManualEntry({
+        return (this as Record<string,unknown>).extractFromManualEntry({
           workspaceId,
           entryType: rawData.entryType || 'employee',
           formData: rawData.manualData || {},

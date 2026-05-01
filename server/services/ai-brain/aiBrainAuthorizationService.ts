@@ -447,7 +447,7 @@ class AIBrainAuthorizationService {
       }
 
       const userRecord = user[0];
-      const role = (userRecord as any).platformRole as string;
+      const role = (userRecord as Record<string,unknown>).platformRole as string;
       
       if (!SUPPORT_ROLES.includes(role)) {
         return {

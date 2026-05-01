@@ -866,7 +866,7 @@ class WorkboardService {
           source: 'voice_sync', 
           platform: 'mobile', 
           inputMethod: 'voice',
-          routedCategory: (routingResult as any).category
+          routedCategory: (routingResult as Record<string,unknown>).category
         },
         statusHistory: [{ status: 'in_progress', timestamp: new Date().toISOString(), actor: 'voice_command_sync' }],
         notifyVia: ['websocket'],
@@ -958,7 +958,7 @@ class WorkboardService {
         taskId,
         response: responseMessage,
         assignedAgent: routingResult.assignedAgent,
-        actionExecuted: (routingResult as any).category,
+        actionExecuted: (routingResult as Record<string,unknown>).category,
         tokensUsed: result.data?.tokensUsed || routingResult.estimatedTokens,
         error: result.success ? undefined : result.error
       };

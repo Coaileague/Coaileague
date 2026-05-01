@@ -30,7 +30,7 @@ const dateRangeSchema = z.object({
   endDate: z.string().optional(),
 });
 
-function parseDateRange(query: any): { startDate: Date; endDate: Date; error?: string } {
+function parseDateRange(query: unknown): { startDate: Date; endDate: Date; error?: string } {
   const now = new Date();
   let startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
   let endDate = now;
@@ -662,7 +662,7 @@ router.get("/workers-comp", async (req: AuthenticatedRequest, res) => {
         AND clock_in <= ${endDate}
       GROUP BY employee_id
     `);
-    const hoursByEmployee = (wcResult as any).rows as Array<{ employeeId: string; totalHours: string; regularHours: string; overtimeHours: string }>;
+    const hoursByEmployee = (wcResult as Record<string,unknown>).rows as Array<{ employeeId: string; totalHours: string; regularHours: string; overtimeHours: string }>;
 
     const rows = [];
     for (const row of hoursByEmployee) {

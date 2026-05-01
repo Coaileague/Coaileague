@@ -181,7 +181,7 @@ class FaultTolerantStore extends session.Store {
   private readonly CACHE_TTL_MS = 15 * 60 * 1000;
   private readonly CACHE_MAX = 1000;
 
-  constructor(inner: any, timeoutMs = 1500) {
+  constructor(inner: unknown, timeoutMs = 1500) {
     super();
     this.inner = inner;
     this.timeoutMs = timeoutMs;
@@ -211,8 +211,8 @@ class FaultTolerantStore extends session.Store {
   }
 
   private withTimeout<T>(
-    fn: (cb: (err: any, result?: T) => void) => void,
-    cb: (err: any, result?: T) => void
+    fn: (cb: (err: unknown, result?: T) => void) => void,
+    cb: (err: unknown, result?: T) => void
   ): void {
     let done = false;
     const timer = setTimeout(() => {
@@ -231,7 +231,7 @@ class FaultTolerantStore extends session.Store {
     });
   }
 
-  get(sid: string, cb: (err: any, session?: session.SessionData | null) => void): void {
+  get(sid: string, cb: (err: unknown, session?: session.SessionData | null) => void): void {
     this.withTimeout<session.SessionData | null>(
       (done) => this.inner.get(sid, done),
       (err, result) => {
@@ -884,7 +884,7 @@ export const requireSupportStaff: RequestHandler = async (req, res, next) => {
 };
 
 // Dual auth middleware: Supports both session-based AND Replit OAuth
-export const requireAnyAuth: RequestHandler = async (req: any, res, next) => {
+export const requireAnyAuth: RequestHandler = async (req: unknown, res, next) => {
   // Try session-based auth first
   if (req.session?.userId) {
     const [user] = await db.select().from(users).where(eq(users.id, req.session.userId)).limit(1);

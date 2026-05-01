@@ -207,7 +207,7 @@ async function phase3_subscription_tiers() {
   ];
 
   for (const expected of expectedTiers) {
-    const tier = (BILLING as any).tiers[expected.id];
+    const tier = (BILLING as Record<string,unknown>).tiers[expected.id];
     const priceMatch = tier?.monthlyPrice === expected.price;
     const creditMatch = tier?.monthlyTokens === expected.credits;
     const empMatch = tier?.maxEmployees === expected.maxEmp;
@@ -482,7 +482,7 @@ async function phase8_credit_persistence_tables() {
     ORDER BY table_name
   `);
 
-  const foundTables = (tableCheck as any).rows?.map((r: unknown) => r.table_name) || [];
+  const foundTables = (tableCheck as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || [];
   const missingTables = requiredTables.filter(t => !foundTables.includes(t));
 
   record({
@@ -500,7 +500,7 @@ async function phase8_credit_persistence_tables() {
     SELECT column_name FROM information_schema.columns 
     WHERE table_name = 'workspace_credits' ORDER BY ordinal_position
   `);
-  const credColNames = (wsCredCols as any).rows?.map((r: unknown) => r.column_name) || [];
+  const credColNames = (wsCredCols as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || [];
   const requiredCols = ['workspace_id', 'current_balance', 'monthly_allocation'];
   const hasAllCols = requiredCols.every(c => credColNames.includes(c));
 
@@ -517,7 +517,7 @@ async function phase8_credit_persistence_tables() {
     SELECT column_name FROM information_schema.columns 
     WHERE table_name = 'credit_transactions' ORDER BY ordinal_position
   `);
-  const txColNames = (txCols as any).rows?.map((r: unknown) => r.column_name) || [];
+  const txColNames = (txCols as Record<string,unknown>).rows?.map((r: unknown) => r.column_name) || [];
   const txRequired = ['workspace_id', 'amount', 'feature_key', 'transaction_type'];
   const txHasAll = txRequired.every(c => txColNames.includes(c));
 
@@ -877,7 +877,7 @@ async function phase13_tier_escalation_paths() {
 
   for (const tier of tiers) {
     const monthlyCredits = TIER_TOKEN_ALLOCATIONS[tier];
-    const tierConfig = (BILLING as any).tiers[tier];
+    const tierConfig = (BILLING as Record<string,unknown>).tiers[tier];
     record({
       name: `${tier} Credits Match Between Sources`,
       phase: 'TIER_ESCALATION',

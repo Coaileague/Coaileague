@@ -19,7 +19,7 @@ import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityFrontierActions');
 
-export function registerTrinityFrontierActions(orchestrator: any): void {
+export function registerTrinityFrontierActions(orchestrator: unknown): void {
   log.info('[TrinityFrontier] Registering 4 guru.* frontier capability actions (3 duplicates removed)...');
 
   orchestrator.registerAction({

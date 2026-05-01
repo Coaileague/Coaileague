@@ -928,9 +928,7 @@ class ShiftChatroomWorkflowService {
   private async runDARQualityReview(
     content: string,
     messages: unknown[],
-    employeeName: string,
-    shift: any
-  ): Promise<{
+    employeeName: string, shift: unknown): Promise<{
     flaggedForReview: boolean;
     forceUsed: boolean;
     reviewNotes: string;

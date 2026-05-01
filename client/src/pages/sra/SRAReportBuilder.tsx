@@ -82,7 +82,7 @@ export default function SRAReportBuilder() {
     refetchInterval: false,
   });
 
-  const sections: ReportSection[] = (sectionsData?.sections || []).map((s: any, i: number) => ({ ...s, index: i }));
+  const sections: ReportSection[] = (sectionsData?.sections || []).map((s: unknown, i: number) => ({ ...s, index: i }));
   const verifiedCount = sections.filter(s => s.verified).length;
   const allVerified = sections.length > 0 && verifiedCount === sections.length;
 

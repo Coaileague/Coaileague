@@ -150,7 +150,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
           .catch((err: unknown) => log.warn(`[Workspace Create] Email provisioning failed (non-blocking):`, (err as any)?.message))
       ).catch((err: unknown) => log.warn(`[Workspace Create] Email provisioning import failed:`, (err as any)?.message));
     } catch (slugErr: unknown) {
-      log.warn(`[Workspace Create] Email slug setup failed (non-blocking):`, (slugErr as any)?.message);
+      log.warn(`[Workspace Create] Email slug setup failed (non-blocking):`, (slugErr as Record<string,unknown>)?.message);
     }
 
     // Atomically create owner employee record and link workspace to user.
@@ -197,7 +197,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       }).onConflictDoNothing();
       log.info(`[Workspace Create] Trial subscription record created for workspace ${workspace.id}, expires ${trialEndsAt.toISOString()}`);
     } catch (subErr: unknown) {
-      log.error(`[Workspace Create] Trial subscription record creation failed (non-blocking):`, (subErr as any)?.message);
+      log.error(`[Workspace Create] Trial subscription record creation failed (non-blocking):`, (subErr as Record<string,unknown>)?.message);
     }
 
     // Initialize interaction tracking row for new workspace (2026 fair-use billing)
@@ -238,7 +238,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
         // Token balance managed by tokenManager — no manual credit_balances insert needed
       }
     } catch (provError: unknown) {
-      log.warn(`[Workspace Create] Provisioning failed (non-blocking):`, (provError as any)?.message);
+      log.warn(`[Workspace Create] Provisioning failed (non-blocking):`, (provError as Record<string,unknown>)?.message);
     }
 
     try {
@@ -279,7 +279,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
           size,
         },
       }).catch((eventError: unknown) => {
-        log.error(`[Workspace Create] Event publish failed (non-blocking):`, (eventError as any)?.message);
+        log.error(`[Workspace Create] Event publish failed (non-blocking):`, (eventError as Record<string,unknown>)?.message);
       });
 
       // D2-GAP-FIX: Publish onboarding_completed so Trinity can start the post-onboarding
@@ -296,17 +296,17 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
           completedAt: new Date().toISOString(),
         },
       }).catch((eventError: unknown) => {
-        log.error(`[Workspace Create] onboarding_completed event failed (non-blocking):`, (eventError as any)?.message);
+        log.error(`[Workspace Create] onboarding_completed event failed (non-blocking):`, (eventError as Record<string,unknown>)?.message);
       });
     } catch (eventError: unknown) {
-      log.error(`[Workspace Create] Event publish failed (non-blocking):`, (eventError as any)?.message);
+      log.error(`[Workspace Create] Event publish failed (non-blocking):`, (eventError as Record<string,unknown>)?.message);
     }
 
     // Welcome notification bundle (in-platform) — fires immediately on workspace creation
     try {
       await sendWelcomeOrgNotification(workspace.id, userId, workspace.name);
     } catch (notifError: unknown) {
-      log.error(`[Workspace Create] Welcome notification failed (non-blocking):`, (notifError as any)?.message);
+      log.error(`[Workspace Create] Welcome notification failed (non-blocking):`, (notifError as Record<string,unknown>)?.message);
     }
 
     // Welcome email — fetch owner email and send
@@ -320,7 +320,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
         log.info(`[Workspace Create] Welcome email sent to ${ownerEmail} for workspace ${workspace.id}`);
       }
     } catch (emailError: unknown) {
-      log.error(`[Workspace Create] Welcome email failed (non-blocking):`, (emailError as any)?.message);
+      log.error(`[Workspace Create] Welcome email failed (non-blocking):`, (emailError as Record<string,unknown>)?.message);
     }
 
     res.status(201).json({
@@ -333,10 +333,10 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       },
     });
   } catch (error: unknown) {
-    log.error('Error creating workspace:', (error as any)?.message || error);
-    log.error('Error stack:', (error as any)?.stack);
-    log.error('Error code:', (error as any)?.code);
-    log.error('Error detail:', (error as any)?.detail);
+    log.error('Error creating workspace:', (error as Record<string,unknown>)?.message || error);
+    log.error('Error stack:', (error as Record<string,unknown>)?.stack);
+    log.error('Error code:', (error as Record<string,unknown>)?.code);
+    log.error('Error detail:', (error as Record<string,unknown>)?.detail);
     res.status(500).json({ message: 'Failed to create organization' });
   }
 });

@@ -51,11 +51,11 @@ export default function SupervisorDashboard() {
 
   const shifts: any[] = Array.isArray(shiftsRes)
     ? shiftsRes
-    : (shiftsRes as any)?.data ?? [];
+    : (shiftsRes as Record<string,unknown>)?.data ?? [];
 
   const incidents: any[] = Array.isArray(incidentsRes)
     ? incidentsRes
-    : (incidentsRes as any)?.data ?? [];
+    : (incidentsRes as Record<string,unknown>)?.data ?? [];
 
   const today = new Date();
   const todayShifts = shifts.filter((s) => {

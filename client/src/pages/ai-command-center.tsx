@@ -142,7 +142,7 @@ const TASK_STATUS_COLORS: Record<string, string> = {
 
 export default function AICommandCenter() {
   const { user } = useAuth();
-  const workspaceRole = (user as any)?.workspaceRole || '';
+  const workspaceRole = (user as Record<string,unknown>)?.workspaceRole || '';
 
   const isFullAccess = ['org_owner', 'co_owner'].includes(workspaceRole);
   const isManagement = ['org_owner', 'co_owner', 'department_manager'].includes(workspaceRole);

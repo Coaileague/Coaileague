@@ -552,7 +552,7 @@ export default function EmployeePortal() {
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Required Documents</p>
                         <div className="space-y-2">
-                          {onboardingProgress.documentStatuses.map((doc: any, i: number) => (
+                          {onboardingProgress.documentStatuses.map((doc: unknown, i: number) => (
                             <div
                               key={i}
                               className="flex items-center gap-3 p-3 rounded-md bg-muted/30"

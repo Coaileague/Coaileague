@@ -68,12 +68,12 @@ export function PanicButton({
       const coords = coordsRef.current;
       const nameForServer =
         employeeName ||
-        (user as any)?.fullName ||
-        (user as any)?.email ||
+        (user as Record<string,unknown>)?.fullName ||
+        (user as Record<string,unknown>)?.email ||
         "Unknown Officer";
       const result = await fetchWithOfflineFallback("/api/safety/panic", "POST", {
         employeeName: nameForServer,
-        employeeId: (user as any)?.employeeId || null,
+        employeeId: (user as Record<string,unknown>)?.employeeId || null,
         siteId: siteId || null,
         siteName: siteName || null,
         latitude: coords?.latitude ?? null,
@@ -95,7 +95,7 @@ export function PanicButton({
       }
 
       const alert = result.response ? await result.response.json() : null;
-      const alertNumber = (alert as any)?.alert_number || (alert as any)?.alertNumber || null;
+      const alertNumber = (alert as Record<string,unknown>)?.alert_number || (alert as Record<string,unknown>)?.alertNumber || null;
       setLastAlertNumber(alertNumber);
       toast({
         title: alertNumber ? `Alert sent — ${alertNumber}` : "Alert sent",

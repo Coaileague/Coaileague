@@ -121,7 +121,7 @@ To execute an action, respond with JSON in format:
     const systemPrompt = `${conv[0].content}\n\n${actionContext}`;
 
     try {
-      const response = await (aiBrain as any).chat(message, {
+      const response = await (aiBrain as Record<string,unknown>).chat(message, {
         contextMessages,
         systemPrompt,
         temperature: 0.7,

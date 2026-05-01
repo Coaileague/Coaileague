@@ -307,8 +307,8 @@ class TrinityOrgContextBuilder {
       id: workspaceId,
       name: ws?.name || 'Unknown',
       companyName: ws?.companyName || null,
-      industry: (ws as any)?.industry || null,
-      subscriptionTier: (ws as any)?.subscriptionTier || null,
+      industry: (ws as Record<string,unknown>)?.industry || null,
+      subscriptionTier: (ws as Record<string,unknown>)?.subscriptionTier || null,
       metadata: wsMeta,
       lastLLCComplianceMeeting: lastLLCDate || null,
     };

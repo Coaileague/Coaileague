@@ -433,7 +433,7 @@ router.get('/documents/:employeeId/packet', requireAuth, requireHRManager, async
     const fetchFileAsBuffer = (url: string): Promise<Buffer> => {
       return new Promise((resolve, reject) => {
         const protocol = url.startsWith('https') ? https : http;
-        protocol.get(url, (response: any) => {
+        protocol.get(url, (response: unknown) => {
           const chunks: (string | number | boolean | null)[] = [];
           response.on('data', (chunk: unknown) => chunks.push(chunk));
           response.on('end', () => resolve(Buffer.concat(chunks)));
@@ -478,7 +478,7 @@ router.get('/documents/:employeeId/packet', requireAuth, requireHRManager, async
     doc.moveDown();
     doc.fontSize(11).font('Helvetica');
 
-    documents.forEach((document: any, index: number) => {
+    documents.forEach((document: unknown, index: number) => {
       doc.text(`${index + 1}. ${document.documentName} (${document.documentType})`);
       doc.fontSize(9).fillColor('#666666');
       doc.text(`   Status: ${document.status} | Uploaded: ${new Date(document.uploadedAt).toLocaleDateString()}`, { indent: 20 });
@@ -486,7 +486,7 @@ router.get('/documents/:employeeId/packet', requireAuth, requireHRManager, async
       doc.moveDown(0.5);
     });
 
-    documents.forEach((document: any, index: number) => {
+    documents.forEach((document: unknown, index: number) => {
       doc.addPage();
       
       doc.fontSize(16).font('Helvetica-Bold').text(`Document ${index + 1}: ${document.documentName}`, { underline: true });
@@ -782,7 +782,7 @@ router.post('/documents/purge-request', requireManager, async (req: Authenticate
         reason,
         requestType,
         documentType: document.documentType,
-        documentName: (document as any).title || (document as any).fileName,
+        documentName: (document as Record<string,unknown>).title || (document as Record<string,unknown>).fileName,
         requiresSupportReview: isUnderRetention,
         retentionEnd: retentionEnd?.toISOString() || null,
         requestedAt: new Date().toISOString(),

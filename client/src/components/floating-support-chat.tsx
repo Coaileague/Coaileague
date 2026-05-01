@@ -85,7 +85,7 @@ export function FloatingSupportChat() {
   // Real IDs from auth system
   const workId = employee?.employeeNumber || 'GUEST';
   const orgId = employee?.workspaceId || 'N/A';
-  const platformRole = (employee as any)?.platformRole || null;
+  const platformRole = (employee as Record<string,unknown>)?.platformRole || null;
   const workspaceRole = employee?.workspaceRole || null;
   
   // UNIVERSAL: Hide for ALL authenticated users - this widget is ONLY for guests on public pages

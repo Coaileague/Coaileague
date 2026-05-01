@@ -30,7 +30,7 @@ interface GuardTourScannerProps {
 // Feature-detect the native BarcodeDetector.
 function hasBarcodeDetector(): boolean {
   try {
-    return typeof (window as any).BarcodeDetector === "function";
+    return typeof (window as Record<string,unknown>).BarcodeDetector === "function";
   } catch {
     return false;
   }
@@ -95,7 +95,7 @@ export function GuardTourScanner({
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-      detectorRef.current = new (window as any).BarcodeDetector({
+      detectorRef.current = new (window as Record<string,unknown>).BarcodeDetector({
         formats: ["qr_code", "code_128", "code_39"],
       });
       setScanning(true);

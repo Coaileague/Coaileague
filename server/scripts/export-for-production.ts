@@ -18,7 +18,7 @@ import { users, platformRoles, workspaces, employees } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import * as fs from "fs";
 
-function escapeSQL(value: any): string {
+function escapeSQL(value: unknown): string {
   if (value === null || value === undefined) {
     return "NULL";
   }

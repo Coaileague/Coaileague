@@ -162,7 +162,7 @@ function DeactivatedClientsView({ workspaceId }: { workspaceId?: string }) {
                       disabled={isAnyClientMutationPending}
                       data-testid={`button-reactivate-${client.id}`}
                     >
-                      {(reactivateMutation as any).isPending && reactivatingId === (client as any).id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+                      {(reactivateMutation as Record<string,unknown>).isPending && reactivatingId === (client as Record<string,unknown>).id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
                       {reactivateMutation.isPending && reactivatingId === client.id ? 'Reactivating...' : 'Reactivate'}
                     </Button>
                   </AlertDialogTrigger>
@@ -1043,7 +1043,7 @@ export default function Clients() {
                   disabled={isAnyClientMutationPending}
                   data-testid="button-save-client"
                 >
-                  {(createMutation as any).isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                  {(createMutation as Record<string,unknown>).isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                   {createMutation.isPending ? "Saving..." : `Save ${qb.entity('client')}`}
                 </Button>
               </UniversalModalFooter>

@@ -332,9 +332,9 @@ export async function generateBreakComplianceReport(
     const mealBreaks = breaks.filter(b => b.breakType === 'meal');
     const restBreaks = breaks.filter(b => b.breakType === 'rest');
 
-    const requiredMealBreakMinutes = (laborRules as any)?.mealBreakMinutes || 30;
-    const requiredRestBreakMinutes = (laborRules as any)?.restBreakMinutes || 10;
-    const mealBreakThresholdHours = (laborRules as any)?.mealBreakAfterHours ? parseFloat(laborRules.mealBreakAfterHours) : 5;
+    const requiredMealBreakMinutes = (laborRules as Record<string,unknown>)?.mealBreakMinutes || 30;
+    const requiredRestBreakMinutes = (laborRules as Record<string,unknown>)?.restBreakMinutes || 10;
+    const mealBreakThresholdHours = (laborRules as Record<string,unknown>)?.mealBreakAfterHours ? parseFloat(laborRules.mealBreakAfterHours) : 5;
 
     if (shiftDurationHours >= mealBreakThresholdHours && mealBreaks.length === 0) {
       violations.push({

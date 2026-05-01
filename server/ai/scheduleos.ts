@@ -445,9 +445,7 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
    */
   private buildValidationPrompt(
     employees: EmployeeIntelligence[],
-    shifts: ScheduleRequest['shiftRequirements'],
-    solution: any
-  ): string {
+    shifts: ScheduleRequest['shiftRequirements'], solution: unknown): string {
     return `Validate this workforce schedule:
 
 SHIFTS REQUIRED: ${shifts.length}

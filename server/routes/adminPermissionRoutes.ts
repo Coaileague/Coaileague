@@ -245,7 +245,7 @@ router.patch('/workspaces/:wsId/users/:userId/role', requireSupportManager, asyn
     if (target.workspaceRole === 'org_owner') {
       const [ws] = await db.select({ ownerId: workspaces.ownerId }).from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
       if (ws?.ownerId === target.userId) {
-        const actorPlatRole = (authReq as any).platformRole as string | undefined;
+        const actorPlatRole = (authReq as Record<string,unknown>).platformRole as string | undefined;
         const { PLATFORM_ROLE_HIERARCHY } = await import('../lib/rbac/roleDefinitions');
         const actorLevel = PLATFORM_ROLE_HIERARCHY[actorPlatRole ?? ''] ?? 0;
         if (actorLevel < 5) { // sysop (5) minimum

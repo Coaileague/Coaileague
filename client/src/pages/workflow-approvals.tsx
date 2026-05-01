@@ -47,14 +47,14 @@ export default function WorkflowApprovals() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [proposalType, setProposalType] = useState<ProposalType>('schedule');
 
-  const handleApprove = (proposal: any, type: ProposalType) => {
+  const handleApprove = (proposal: unknown, type: ProposalType) => {
     setSelectedProposal(proposal);
     setProposalType(type);
     setApprovalAction('approve');
     setShowApprovalSheet(true);
   };
 
-  const handleReject = (proposal: any, type: ProposalType) => {
+  const handleReject = (proposal: unknown, type: ProposalType) => {
     setSelectedProposal(proposal);
     setProposalType(type);
     setApprovalAction('reject');

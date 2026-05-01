@@ -148,7 +148,7 @@ class AutonomousFixPipelineService {
   /**
    * Create fix specification from finding data
    */
-  private async createSpecFromFinding(finding: any): Promise<FixSpecification | null> {
+  private async createSpecFromFinding(finding: unknown): Promise<FixSpecification | null> {
     const gapType = finding.gapType || '';
     const filePath = finding.filePath;
     const lineNumber = finding.lineNumber;
@@ -226,7 +226,7 @@ class AutonomousFixPipelineService {
   /**
    * Generate TypeScript error fix patch
    */
-  private async generateTypeScriptFix(finding: any, fileContent: string): Promise<PatchOperation | null> {
+  private async generateTypeScriptFix(finding: unknown, fileContent: string): Promise<PatchOperation | null> {
     if (!finding.filePath || !fileContent) return null;
 
     const errorCode = finding.title?.match(/TS\d+/)?.[0];
@@ -339,7 +339,7 @@ class AutonomousFixPipelineService {
     // Only target function parameters - look for arrow functions or function declarations
     if (!line.includes('=>') && !line.includes('function')) return line;
     
-    // Pattern: (param) -> (param: any) but only for single-word params without existing types
+    // Pattern: (param) -> (param: unknown) but only for single-word params without existing types
     return line.replace(/\(([a-zA-Z_$][a-zA-Z0-9_$]*)\)/g, (match, param) => {
       // Don't modify if it already has a type annotation nearby
       if (line.includes(`${param}:`)) return match;
@@ -350,7 +350,7 @@ class AutonomousFixPipelineService {
   /**
    * Generate import fix patch
    */
-  private generateImportFix(finding: any, fileContent: string): PatchOperation | null {
+  private generateImportFix(finding: unknown, fileContent: string): PatchOperation | null {
     if (!finding.filePath || !fileContent) return null;
 
     const missingImport = finding.title?.match(/Cannot find.*'(\w+)'/)?.[1];
@@ -380,7 +380,7 @@ class AutonomousFixPipelineService {
   /**
    * Generate removal fix patch
    */
-  private generateRemovalFix(finding: any, fileContent: string): PatchOperation | null {
+  private generateRemovalFix(finding: unknown, fileContent: string): PatchOperation | null {
     if (!finding.filePath || !fileContent || !finding.lineNumber) return null;
 
     const lines = fileContent.split('\n');
@@ -655,7 +655,7 @@ class AutonomousFixPipelineService {
       }
 
       // Get the proposed changes
-      const proposedChanges = (approval as any).proposedChanges as PatchOperation[] | undefined;
+      const proposedChanges = (approval as Record<string,unknown>).proposedChanges as PatchOperation[] | undefined;
       
       if (!proposedChanges || !Array.isArray(proposedChanges)) {
         return {
@@ -675,9 +675,9 @@ class AutonomousFixPipelineService {
         title: approval.title,
         approach: approval.description,
         patches: proposedChanges,
-        affectedFiles: (approval as any).affectedFiles || [],
-        rollbackPlan: (approval as any).rollbackPlan || 'Git revert',
-        riskLevel: (approval as any).riskLevel || 'medium',
+        affectedFiles: (approval as Record<string,unknown>).affectedFiles || [],
+        rollbackPlan: (approval as Record<string,unknown>).rollbackPlan || 'Git revert',
+        riskLevel: (approval as Record<string,unknown>).riskLevel || 'medium',
         confidence: 1.0, // Approved = full confidence
         requiresApproval: false,
         estimatedImpact: `Approved fix for ${approval.title}`,
@@ -774,7 +774,7 @@ class AutonomousFixPipelineService {
       findingId,
       finding.description,
       finding.filePath ? [finding.filePath] : [],
-      async (attempt: any, suggestedApproach: any, revisedPatches: unknown) => {
+      async (attempt: unknown, suggestedApproach: any, revisedPatches: unknown) => {
         // Rollback previous attempt if it exists
         if (lastOperationId) {
           await trinityCodeOps.rollbackOperation(lastOperationId);
@@ -892,7 +892,7 @@ class AutonomousFixPipelineService {
     }
     
     // Run internal approval gate (validates code is still clean)
-    const internalApproval = await this.runInternalApprovalGate(findingId, (validatedSpec as any).affectedFiles);
+    const internalApproval = await this.runInternalApprovalGate(findingId, (validatedSpec as Record<string,unknown>).affectedFiles);
     if (!internalApproval.approved) {
       log.info(`[AutonomousFix] Internal approval gate rejected: ${internalApproval.reason}`);
       if (lastOperationId) {
@@ -915,8 +915,8 @@ class AutonomousFixPipelineService {
     const commitResult = await trinityCodeOps.commitChanges({
       workspaceId: 'system',
       userId: 'trinity',
-      files: (validatedSpec as any).affectedFiles,
-      message: `[Trinity AutoFix] ${(validatedSpec as any).title}\n\nApproach: ${(validatedSpec as any).approach.substring(0, 200)}...\(nConfidence as any): ${(validatedSpec.confidence * 100).toFixed(0)}%\nAttempts: ${iterationResult.attempts.length}`,
+      files: (validatedSpec as Record<string,unknown>).affectedFiles,
+      message: `[Trinity AutoFix] ${(validatedSpec as Record<string,unknown>).title}\n\nApproach: ${(validatedSpec as Record<string,unknown>).approach.substring(0, 200)}...\(nConfidence as any): ${(validatedSpec.confidence * 100).toFixed(0)}%\nAttempts: ${iterationResult.attempts.length}`,
       author: this.config.commitAuthor,
     });
     
@@ -1053,7 +1053,7 @@ class AutonomousFixPipelineService {
   // HELPER METHODS
   // ==========================================================================
 
-  private assessRiskLevel(finding: any, patches: PatchOperation[]): 'low' | 'medium' | 'high' | 'critical' {
+  private assessRiskLevel(finding: unknown, patches: PatchOperation[]): 'low' | 'medium' | 'high' | 'critical' {
     // Critical files
     const criticalPatterns = ['schema.ts', 'auth', 'payment', 'stripe', 'db.ts', 'index.ts'];
     const hasCriticalFile = patches.some(p => 
@@ -1232,9 +1232,9 @@ class AutonomousFixPipelineService {
   registerActions(): void {
     const self = this;
     const actions = [
-      { id: 'autofix.generate_spec', name: 'Generate Fix Spec', desc: 'Generate a fix specification from a gap finding', fn: (p: any) => self.generateFixSpecification(p.findingId) },
+      { id: 'autofix.generate_spec', name: 'Generate Fix Spec', desc: 'Generate a fix specification from a gap finding', fn: (p: unknown) => self.generateFixSpecification(p.findingId) },
       { id: 'autofix.execute', name: 'Execute Fix', desc: 'Generate and execute a fix for a gap finding', 
-        fn: async (p: any) => {
+        fn: async (p: unknown) => {
           const spec = await self.generateFixSpecification(p.findingId);
           if (!spec) return { success: false, message: 'Could not generate fix specification' };
           return self.executeFix(spec, { dryRun: p.dryRun, skipApproval: p.skipApproval, autoCommit: p.autoCommit });
@@ -1242,11 +1242,11 @@ class AutonomousFixPipelineService {
       },
       { id: 'autofix.execute_with_reflection', name: 'Execute With Reflection', 
         desc: 'Execute fix with iterative self-correction using Agent-Architect pattern (up to 3 retries)', 
-        fn: (p: any) => self.executeFixWithReflection(p.findingId, { maxRetries: p.maxRetries, skipUserProposal: p.skipUserProposal }) 
+        fn: (p: unknown) => self.executeFixWithReflection(p.findingId, { maxRetries: p.maxRetries, skipUserProposal: p.skipUserProposal }) 
       },
-      { id: 'autofix.execute_approved', name: 'Execute Approved', desc: 'Execute a fix that has been approved', fn: (p: any) => self.executeApprovedFix(p.approvalId) },
-      { id: 'autofix.internal_approval_gate', name: 'Internal Approval Gate', desc: 'Validate fix before proposing to user', fn: (p: any) => self.runInternalApprovalGate(p.findingId, p.affectedFiles || []) },
-      { id: 'autofix.validate', name: 'Validate Changes', desc: 'Validate changes in specified files', fn: (p: any) => self.validateChanges(p.files || []) },
+      { id: 'autofix.execute_approved', name: 'Execute Approved', desc: 'Execute a fix that has been approved', fn: (p: unknown) => self.executeApprovedFix(p.approvalId) },
+      { id: 'autofix.internal_approval_gate', name: 'Internal Approval Gate', desc: 'Validate fix before proposing to user', fn: (p: unknown) => self.runInternalApprovalGate(p.findingId, p.affectedFiles || []) },
+      { id: 'autofix.validate', name: 'Validate Changes', desc: 'Validate changes in specified files', fn: (p: unknown) => self.validateChanges(p.files || []) },
       { id: 'autofix.restart_workflows', name: 'Restart Workflows', desc: 'Trigger workflow restart after fixes', fn: () => self.restartWorkflows() },
       { id: 'autofix.get_active', name: 'Get Active Fixes', desc: 'Get currently active fix operations', 
         fn: () => Array.from(self.getActiveFixes().entries()).map(([id, info]) => ({ findingId: id, ...info })) 
@@ -1264,7 +1264,7 @@ class AutonomousFixPipelineService {
         category: 'automation',
         description: action.desc,
         requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-        handler: async (request: any) => {
+        handler: async (request: unknown) => {
           const startTime = Date.now();
           const result = await action.fn(request.payload || {});
           return {

@@ -459,7 +459,7 @@ export class ChatParityService {
         .where(eq(workspaces.id, targetOrgId))
         .limit(1);
 
-      if (targetWorkspace && (targetWorkspace as any).parentOrgId === userOrgId) {
+      if (targetWorkspace && (targetWorkspace as Record<string,unknown>).parentOrgId === userOrgId) {
         return true;
       }
 

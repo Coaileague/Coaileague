@@ -92,7 +92,7 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-function buildInboundBodyFallback(inboundEmail: any): { html: string; text: string } {
+function buildInboundBodyFallback(inboundEmail: unknown): { html: string; text: string } {
   const rawHtml = String(inboundEmail?.html || '').trim();
   const rawText = String(inboundEmail?.text || '').trim();
   const textFromHtml = rawHtml ? stripHtml(rawHtml) : '';

@@ -318,7 +318,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
       return res.status(402).json({ message: aiResult.error || "Insufficient credits" });
     }
 
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(aiResult.content || "{}");
     } catch {
@@ -669,7 +669,7 @@ router.get("/api/user/role", requireAuth, async (req: AuthenticatedRequest, res)
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     res.json({
       role: user?.role || "user",
-      platformRole: (user as any)?.platformRole || null,
+      platformRole: (user as Record<string,unknown>)?.platformRole || null,
     });
   } catch (error: unknown) {
     log.error("Error fetching user role:", error);
@@ -687,7 +687,7 @@ router.get("/api/device/profile", requireAuth, async (req: AuthenticatedRequest,
     res.json({
       userId: user?.id,
       email: user?.email,
-      displayName: (user as any)?.displayName || `${user?.firstName} ${user?.lastName}`.trim(),
+      displayName: (user as Record<string,unknown>)?.displayName || `${user?.firstName} ${user?.lastName}`.trim(),
       preferences: {},
     });
   } catch (error: unknown) {
@@ -706,7 +706,7 @@ router.get("/api/identity/me", requireAuth, async (req: AuthenticatedRequest, re
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user.currentWorkspaceId;
     let employee: unknown = null;
     let workspace: unknown = null;
     if (workspaceId) {
@@ -1448,7 +1448,7 @@ router.get("/api/my-team", requireAuth, async (req: AuthenticatedRequest, res) =
       return res.status(400).json({ message: "No workspace selected" });
     }
 
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user.currentWorkspaceId;
 
     const allEmployees = await storage.getEmployeesByWorkspace(workspaceId);
     const currentEmployee = allEmployees.find((e) => e.userId === userId);

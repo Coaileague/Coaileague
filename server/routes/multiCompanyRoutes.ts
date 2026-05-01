@@ -21,7 +21,7 @@ platformActionHub.registerAction({
   description: 'Consolidated performance across all subsidiaries',
   requiredRoles: ['owner', 'root_admin'],
   inputSchema: { type: 'object', properties: {} },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -38,7 +38,7 @@ platformActionHub.registerAction({
   description: 'Compliance score comparison across subsidiaries',
   requiredRoles: ['owner', 'root_admin'],
   inputSchema: { type: 'object', properties: {} },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     return { success: true, actionId: 'multi_company.compliance', message: 'Compliance data aggregation active', executionTimeMs: Date.now() - t };
   }
@@ -51,7 +51,7 @@ platformActionHub.registerAction({
   description: 'Inter-subsidiary staffing opportunities and coverage gaps',
   requiredRoles: ['owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { limit: { type: 'integer', description: 'Max officers to return', default: 20 } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {

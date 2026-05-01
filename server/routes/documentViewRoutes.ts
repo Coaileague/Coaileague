@@ -118,7 +118,7 @@ ${content}
 
 // ── Document template generators ─────────────────────────────────────────────
 
-function genEmploymentApplication(emp: any, ws: unknown): string {
+function genEmploymentApplication(emp: unknown, ws: unknown): string {
   const street = emp.address || MISSING;
   const city = emp.city || MISSING;
   const state = emp.state || 'TX';
@@ -204,7 +204,7 @@ function genEmploymentApplication(emp: any, ws: unknown): string {
 </div>`);
 }
 
-function genGovernmentID(emp: any, ws: unknown): string {
+function genGovernmentID(emp: unknown, ws: unknown): string {
   const name = emp.fullLegalName || `${emp.firstName} ${emp.lastName}`;
   const hireDate = emp.hireDate ? fmtShort(emp.hireDate) : '01/10/2024';
   const dlNum = MISSING;
@@ -268,7 +268,7 @@ function genGovernmentID(emp: any, ws: unknown): string {
 </div>`);
 }
 
-function genSSNAcknowledgment(emp: any, ws: unknown): string {
+function genSSNAcknowledgment(emp: unknown, ws: unknown): string {
   const name = emp.fullLegalName || `${emp.firstName} ${emp.lastName}`;
   const hireDate = emp.hireDate ? fmtShort(emp.hireDate) : '01/10/2024';
   const ssn4 = emp.ssnLast4 || MISSING;
@@ -324,7 +324,7 @@ function genSSNAcknowledgment(emp: any, ws: unknown): string {
 </div>`);
 }
 
-function genI9(emp: any, ws: unknown): string {
+function genI9(emp: unknown, ws: unknown): string {
   const name = emp.fullLegalName || `${emp.firstName} ${emp.lastName}`;
   const hireDate = emp.hireDate ? fmtShort(emp.hireDate) : '01/10/2024';
   const dob = emp.dateOfBirth ? fmtShort(emp.dateOfBirth) : MISSING;
@@ -398,7 +398,7 @@ function genI9(emp: any, ws: unknown): string {
 </div>`);
 }
 
-function genW4(emp: any, ws: unknown): string {
+function genW4(emp: unknown, ws: unknown): string {
   const name = emp.fullLegalName || `${emp.firstName} ${emp.lastName}`;
   const hireDate = emp.hireDate ? fmtShort(emp.hireDate) : '01/10/2024';
   const ssn4 = emp.ssnLast4 || MISSING;
@@ -502,7 +502,7 @@ function genW4(emp: any, ws: unknown): string {
 </div>`);
 }
 
-function genDrugFree(emp: any, ws: unknown): string {
+function genDrugFree(emp: unknown, ws: unknown): string {
   const name = emp.fullLegalName || `${emp.firstName} ${emp.lastName}`;
   const hireDate = emp.hireDate ? fmtShort(emp.hireDate) : '01/10/2024';
   const effectiveDate = '01/01/2024';
@@ -555,7 +555,7 @@ function genDrugFree(emp: any, ws: unknown): string {
 </div>`);
 }
 
-function genBackgroundCheck(emp: any, ws: unknown): string {
+function genBackgroundCheck(emp: unknown, ws: unknown): string {
   const name = emp.fullLegalName || `${emp.firstName} ${emp.lastName}`;
   const hireDate = emp.hireDate ? fmtShort(emp.hireDate) : '01/10/2024';
   const authDate = subtractDays(emp.hireDate, 7);
@@ -616,7 +616,7 @@ function genBackgroundCheck(emp: any, ws: unknown): string {
 </div>`);
 }
 
-function genGuardCard(emp: any, ws: unknown): string {
+function genGuardCard(emp: unknown, ws: unknown): string {
   const name = emp.fullLegalName || `${emp.firstName} ${emp.lastName}`;
   const guardNum = emp.guardCardNumber || MISSING;
   const issueDate = emp.guardCardIssueDate ? fmtShort(emp.guardCardIssueDate) : (emp.hireDate ? fmtShort(emp.hireDate) : '01/10/2024');

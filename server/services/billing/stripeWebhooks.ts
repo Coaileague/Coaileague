@@ -546,7 +546,7 @@ export class StripeWebhookService {
     await this.sendSubscriptionEmail(workspaceId, 'payment_succeeded', {
       amount: amountPaid,
       invoiceNumber: invoice.number,
-    }).catch((emailErr: any) => log.warn('Email failed on invoice.payment_succeeded', { error: emailErr.message }));
+    }).catch((emailErr: unknown) => log.warn('Email failed on invoice.payment_succeeded', { error: emailErr.message }));
 
     // 4. In-platform notification
     try {
@@ -1224,7 +1224,7 @@ export class StripeWebhookService {
         await this.sendSubscriptionEmail(workspaceId, 'subscription_created', {
           tier,
           billingCycle: session.metadata?.billingCycle || 'monthly',
-        }).catch((emailErr: any) =>
+        }).catch((emailErr: unknown) =>
           log.warn('Welcome email failed on checkout.session.completed', { error: emailErr.message })
         );
 

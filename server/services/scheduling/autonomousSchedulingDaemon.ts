@@ -278,7 +278,7 @@ class AutonomousSchedulingDaemonService {
   /**
    * Process a single workspace
    */
-  private async processWorkspace(workspace: any, windowCtx?: ShiftWindowContext): Promise<{
+  private async processWorkspace(workspace: unknown, windowCtx?: ShiftWindowContext): Promise<{
     shiftsAutoFilled: number;
     templatesApplied: number;
     alertsSent: number;

@@ -116,10 +116,10 @@ export class HelpaiAuditService {
 
     // Add optional filters
     if (options?.action) {
-      query = (query as any).where(eq(helpaiAuditLog.action, options.action as any));
+      query = (query as Record<string,unknown>).where(eq(helpaiAuditLog.action, options.action as any));
     }
     if (options?.status) {
-      query = (query as any).where(eq(helpaiAuditLog.status, options.status));
+      query = (query as Record<string,unknown>).where(eq(helpaiAuditLog.status, options.status));
     }
 
     // Execute query
@@ -349,7 +349,7 @@ export class HelpaiAuditService {
     }
     return Object.keys(obj)
       .sort()
-      .reduce((sorted: any, key) => {
+      .reduce((sorted: unknown, key) => {
         sorted[key] = this.sortObjectKeys(obj[key]);
         return sorted;
       }, {});

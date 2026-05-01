@@ -305,7 +305,7 @@ export async function aggregateBillableHours(params: {
         amount: totalAmount,
         rateSource: resolved.rateSource,
         manuallyEdited: timeEntry.manuallyEdited || false,
-        manualEditReason: (timeEntry as any).manualEditReason || null,
+        manualEditReason: (timeEntry as Record<string,unknown>).manualEditReason || null,
       });
     }
   }
@@ -395,8 +395,8 @@ export async function aggregateBillableHours(params: {
         billingRate: entry.billingRate,
         amount: entry.amount,
         rateSource: entry.rateSource,
-        manuallyEdited: (entry as unknown).manuallyEdited || false,
-        manualEditReason: (entry as unknown).manualEditReason || null,
+        manuallyEdited: (entry as Record<string,unknown>).manuallyEdited || false,
+        manualEditReason: (entry as Record<string,unknown>).manualEditReason || null,
       };
     });
 

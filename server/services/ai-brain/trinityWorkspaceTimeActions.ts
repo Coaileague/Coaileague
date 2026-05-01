@@ -38,8 +38,8 @@ export function registerWorkspaceTimeActions() {
       industry: (workspace as Record<string, unknown>).industry,
       size: (workspace as Record<string, unknown>).size,
       activeEmployees: empCount?.count || 0,
-      subscriptionTier: (subscription as any)?.tier || 'free',
-      subscriptionStatus: (subscription as any)?.status || 'active',
+      subscriptionTier: (subscription as Record<string,unknown>)?.tier || 'free',
+      subscriptionStatus: (subscription as Record<string,unknown>)?.status || 'active',
       createdAt: (workspace as Record<string, unknown>).createdAt,
     };
   }));
@@ -65,11 +65,11 @@ export function registerWorkspaceTimeActions() {
     if (!subscription) return { workspaceId, tier: 'free', status: 'active', credits: null };
     return {
       workspaceId,
-      tier: (subscription as any).tier,
-      status: (subscription as any).status,
-      currentPeriodEnd: (subscription as any).currentPeriodEnd,
-      cancelAtPeriodEnd: (subscription as any).cancelAtPeriodEnd,
-      stripeSubscriptionId: (subscription as any).stripeSubscriptionId,
+      tier: (subscription as Record<string,unknown>).tier,
+      status: (subscription as Record<string,unknown>).status,
+      currentPeriodEnd: (subscription as Record<string,unknown>).currentPeriodEnd,
+      cancelAtPeriodEnd: (subscription as Record<string,unknown>).cancelAtPeriodEnd,
+      stripeSubscriptionId: (subscription as Record<string,unknown>).stripeSubscriptionId,
     };
   }));
 
@@ -86,7 +86,7 @@ export function registerWorkspaceTimeActions() {
     if (employeeId) conditions.push(eq(timeEntries.employeeId, employeeId));
     const entries = await db.select({
       employeeId: timeEntries.employeeId,
-      totalMinutes: (timeEntries as any).totalMinutes,
+      totalMinutes: (timeEntries as Record<string,unknown>).totalMinutes,
       status: timeEntries.status,
       clockIn: timeEntries.clockIn,
     })
@@ -117,7 +117,7 @@ export function registerWorkspaceTimeActions() {
       employeeId: timeEntries.employeeId,
       clockIn: timeEntries.clockIn,
       clockOut: timeEntries.clockOut,
-      totalMinutes: (timeEntries as any).totalMinutes,
+      totalMinutes: (timeEntries as Record<string,unknown>).totalMinutes,
       status: timeEntries.status,
     })
       .from(timeEntries)
@@ -166,7 +166,7 @@ export function registerWorkspaceTimeActions() {
     weekStart.setHours(0, 0, 0, 0);
     const weekEntries = await db.select({
       employeeId: timeEntries.employeeId,
-      totalMinutes: (timeEntries as any).totalMinutes,
+      totalMinutes: (timeEntries as Record<string,unknown>).totalMinutes,
     })
       .from(timeEntries)
       .where(and(eq(timeEntries.workspaceId, workspaceId), gte(timeEntries.clockIn, weekStart)))
@@ -192,7 +192,7 @@ export function registerWorkspaceTimeActions() {
       employeeId: timeEntries.employeeId,
       clockIn: timeEntries.clockIn,
       clockOut: timeEntries.clockOut,
-      totalMinutes: (timeEntries as any).totalMinutes,
+      totalMinutes: (timeEntries as Record<string,unknown>).totalMinutes,
       status: timeEntries.status,
     }).from(timeEntries).where(and(
       eq(timeEntries.workspaceId, workspaceId),
@@ -238,7 +238,7 @@ export function registerWorkspaceTimeActions() {
     const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
     const entries = await db.select({
       employeeId: timeEntries.employeeId,
-      totalMinutes: (timeEntries as any).totalMinutes,
+      totalMinutes: (timeEntries as Record<string,unknown>).totalMinutes,
       status: timeEntries.status,
     }).from(timeEntries).where(and(
       eq(timeEntries.workspaceId, workspaceId),

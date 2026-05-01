@@ -247,7 +247,7 @@ export function ScheduleFilters({
                 <Target className="w-4 h-4" />
                 Position Category
               </div>
-              <ChevronDown className={`w-4 h-4 transition-transform ${(expandedSections as any).positionCategories ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 transition-transform ${(expandedSections as Record<string,unknown>).positionCategories ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2 pt-2">
               {POSITION_CATEGORIES.map(cat => (
@@ -287,7 +287,7 @@ export function ScheduleFilters({
                 <Shield className="w-4 h-4" />
                 Armed Status
               </div>
-              <ChevronDown className={`w-4 h-4 transition-transform ${(expandedSections as any).armedStatus ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 transition-transform ${(expandedSections as Record<string,unknown>).armedStatus ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2 pt-2">
               <div className="flex items-center space-x-2">

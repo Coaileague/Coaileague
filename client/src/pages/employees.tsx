@@ -199,8 +199,8 @@ function getRoleDot(workspaceRole: string | null | undefined, isArmed: boolean |
             <div className="flex items-center gap-3 flex-1 min-w-0 px-4 py-3">
               {/* Avatar — large, with photo support */}
               <Avatar className="h-11 w-11 shrink-0 ring-2 ring-background">
-                {(employee as any).profileImageUrl && (
-                  <AvatarImage src={(employee as any).profileImageUrl} alt={`${employee.firstName} ${employee.lastName}`} />
+                {(employee as Record<string,unknown>).profileImageUrl && (
+                  <AvatarImage src={(employee as Record<string,unknown>).profileImageUrl} alt={`${employee.firstName} ${employee.lastName}`} />
                 )}
                 <AvatarFallback
                   className="text-sm font-bold text-white"
@@ -214,8 +214,8 @@ function getRoleDot(workspaceRole: string | null | undefined, isArmed: boolean |
                 {/* Name row */}
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span
-                    className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${getRoleDot(employee.workspaceRole, (employee as any).isArmed)}`}
-                    title={(employee as any).isArmed ? 'Armed' : 'Unarmed'}
+                    className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${getRoleDot(employee.workspaceRole, (employee as Record<string,unknown>).isArmed)}`}
+                    title={(employee as Record<string,unknown>).isArmed ? 'Armed' : 'Unarmed'}
                     data-testid={`dot-role-${employee.id}`}
                   />
                   <span className="font-semibold text-[15px] text-foreground truncate">

@@ -164,9 +164,9 @@ export function registerPortalActions(): void {
     const pendingDocs = await db.select({
       id: employeeDocuments.id,
       documentType: employeeDocuments.documentType,
-      title: (employeeDocuments as any).title,
+      title: (employeeDocuments as Record<string,unknown>).title,
       status: employeeDocuments.status,
-      dueDate: (employeeDocuments as any).dueDate,
+      dueDate: (employeeDocuments as Record<string,unknown>).dueDate,
     }).from(employeeDocuments)
       .where(and(
         eq(employeeDocuments.workspaceId, workspaceId),
@@ -294,7 +294,7 @@ export function registerPortalActions(): void {
         recipientId: client.id,
         email: client.email,
         portalUrl,
-        expiresAt: (portalAccess as any).expiresAt,
+        expiresAt: (portalAccess as Record<string,unknown>).expiresAt,
       };
     }
 

@@ -270,7 +270,7 @@ class TrinityHelpAICommandBus {
     item: typeof commandBusTable.$inferSelect
   ): Promise<void> {
     const payload = item.payload as AlertPayload | EscalationPayload;
-    const workspaceId = (payload as any)?.workspace_id;
+    const workspaceId = (payload as Record<string,unknown>)?.workspace_id;
 
     if (workspaceId) {
       await universalNotificationEngine.sendNotification({
@@ -316,7 +316,7 @@ class TrinityHelpAICommandBus {
       alert.severity === 'watch' ? 'high' : 'normal';
 
     await this.send({
-      workspaceId: (alert as any).workspace_id,
+      workspaceId: (alert as Record<string,unknown>).workspace_id,
       direction: 'helpai_to_trinity',
       messageType: 'alert',
       priority,

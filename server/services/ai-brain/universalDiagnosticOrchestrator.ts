@@ -881,7 +881,7 @@ export const universalDiagnosticOrchestrator = UniversalDiagnosticOrchestrator.g
 // This function is called from server/index.ts to avoid circular dependencies
 // ============================================================================
 
-export async function registerUniversalDiagnosticActions(orchestrator: any): Promise<void> {
+export async function registerUniversalDiagnosticActions(orchestrator: unknown): Promise<void> {
   // Full platform diagnostic scan
   orchestrator.registerAction({
     actionId: 'diagnostics.full_scan',
@@ -889,7 +889,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     description: 'Run full platform diagnostic scan using Gemini 3 deep analysis',
     category: 'system',
     requiredRoles: ['support_agent', 'sysop', 'root_admin'],
-    handler: async (request: any) => {
+    handler: async (request: unknown) => {
       const userId = request.userId || 'system';
       const platformRole = request.metadata?.platformRole || 'support_agent';
       const report = await universalDiagnosticOrchestrator.runFullDiagnostic(userId, platformRole);
@@ -909,7 +909,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     description: 'Run diagnostic on a specific domain',
     category: 'system',
     requiredRoles: ['support_agent', 'sysop', 'root_admin'],
-    handler: async (request: any) => {
+    handler: async (request: unknown) => {
       const domain = request.params?.domain || request.payload?.domain;
       if (!domain) {
         return { success: false, message: 'Domain parameter required' };
@@ -931,7 +931,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     description: 'Analyze logs with Gemini 3 for root cause analysis',
     category: 'system',
     requiredRoles: ['support_agent', 'sysop', 'root_admin'],
-    handler: async (request: any) => {
+    handler: async (request: unknown) => {
       const logs = request.params?.logs || request.payload?.logs || '';
       const domain = request.params?.domain || request.payload?.domain;
       const analysis = await universalDiagnosticOrchestrator.analyzeLogsForIssues(logs, domain);
@@ -951,7 +951,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     description: 'Execute a suggested hotpatch with RBAC validation. Destructive operations require two-code approval.',
     category: 'system',
     requiredRoles: ['sysop', 'root_admin'],
-    handler: async (request: any) => {
+    handler: async (request: unknown) => {
       const hotpatch = request.params?.hotpatch || request.payload?.hotpatch;
       const userId = request.userId || 'system';
       const platformRole = request.metadata?.platformRole || 'sysop';
@@ -984,7 +984,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     description: 'Get RBAC permissions for a specific role regarding diagnostics and hotpatches',
     category: 'security',
     requiredRoles: ['support_agent', 'sysop', 'root_admin'],
-    handler: async (request: any) => {
+    handler: async (request: unknown) => {
       const role = request.params?.role || request.payload?.role || request.metadata?.platformRole || 'support_agent';
       const permissions = universalDiagnosticOrchestrator.getRBACPermissions(role);
       return {
@@ -1003,7 +1003,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     description: 'List all specialized diagnostic subagents and their domains',
     category: 'system',
     requiredRoles: ['admin', 'support_agent', 'sysop', 'root_admin'],
-    handler: async (request: any) => {
+    handler: async (request: unknown) => {
       const subagents = DOMAIN_SUBAGENTS.map(s => ({
         domain: s.domain,
         name: s.name,
@@ -1026,7 +1026,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     description: 'Get history of hotpatch executions for audit trail',
     category: 'security',
     requiredRoles: ['sysop', 'root_admin'],
-    handler: async (request: any) => {
+    handler: async (request: unknown) => {
       const history = universalDiagnosticOrchestrator.getExecutionHistory();
       return {
         success: true,

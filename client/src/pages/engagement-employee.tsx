@@ -265,7 +265,7 @@ function PulseSurveyForm({ survey, onSubmit, isSubmitting }: any) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-4">
-        {survey.questions && survey.questions.map((q: any, idx: number) => (
+        {survey.questions && survey.questions.map((q: unknown, idx: number) => (
           <div key={idx} className="space-y-2">
             <Label>{q.question}</Label>
             {q.type === 'text' && (

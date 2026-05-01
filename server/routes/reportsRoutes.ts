@@ -89,7 +89,7 @@ router.post('/generate', requireManager, async (req: AuthenticatedRequest, res) 
           totalHours: timeEntries.reduce((sum, e) => sum + parseFloat(e.totalHours?.toString() || '0'), 0),
           activeEmployees: new Set(timeEntries.map(e => e.employeeId)).size,
           details: Object.entries(
-            timeEntries.reduce((acc: any, e) => {
+            timeEntries.reduce((acc: unknown, e) => {
               if (!acc[e.employeeId]) acc[e.employeeId] = { hours: 0, count: 0 };
               acc[e.employeeId].hours += parseFloat(e.totalHours?.toString() || '0');
               acc[e.employeeId].count++;

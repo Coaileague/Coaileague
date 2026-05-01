@@ -332,7 +332,7 @@ class CDNCachingService {
    * Cache middleware for Express routes
    */
   cacheMiddleware(ttl?: number) {
-    return (req: any, res: any, next: unknown) => {
+    return (req: unknown, res: any, next: unknown) => {
       const cacheKey = `route:${req.method}:${req.originalUrl}`;
       const cached = this.get(cacheKey);
       

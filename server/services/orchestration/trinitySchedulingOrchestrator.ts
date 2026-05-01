@@ -266,7 +266,7 @@ class TrinitySchedulingOrchestratorService {
     if (!mutations || mutations.length === 0) {
       const execution = await automationExecutionTracker.getExecution(executionId);
       if (execution?.outputPayload?.pendingMutations) {
-        const storedMutations = (execution as any).outputPayload.pendingMutations as SchedulingMutation[];
+        const storedMutations = (execution as Record<string,unknown>).outputPayload.pendingMutations as SchedulingMutation[];
         return this.applyMutationsToDatabase(storedMutations, executionId);
       }
       return { success: true, appliedCount: 0, inserted: 0, updated: 0, deleted: 0, skipped: 0, errors: [] };
@@ -293,7 +293,7 @@ class TrinitySchedulingOrchestratorService {
     // Never trust per-mutation data for the workspace scope — pull it from the
     // authoritative execution record so every write is tenant-locked.
     const execution = await automationExecutionTracker.getExecution(executionId);
-    const workspaceId: string | undefined = (execution as any)?.workspaceId;
+    const workspaceId: string | undefined = (execution as Record<string,unknown>)?.workspaceId;
 
     if (!workspaceId) {
       const msg = `Cannot apply mutations: workspaceId not found on execution ${executionId}`;
@@ -611,7 +611,7 @@ class TrinitySchedulingOrchestratorService {
           startTime: new Date(openShift.startTime),
           endTime: new Date(openShift.endTime),
           estimatedHours: shiftHours,
-          estimatedCost: shiftHours * (selectedEmployee.hourlyRate || (selectedEmployee as any).payRate || 15),
+          estimatedCost: shiftHours * (selectedEmployee.hourlyRate || (selectedEmployee as Record<string,unknown>).payRate || 15),
           reason: `${selectedEmployee.firstName} has lowest workload at ${(employeeWorkload.get(selectedEmployee.id) || 0) - shiftHours}h/week`,
           dbOperation: {
             table: 'shifts',
@@ -693,7 +693,7 @@ class TrinitySchedulingOrchestratorService {
               startTime,
               endTime,
               estimatedHours: 8,
-              estimatedCost: 8 * (availableEmployee.hourlyRate || (availableEmployee as any).payRate || 15),
+              estimatedCost: 8 * (availableEmployee.hourlyRate || (availableEmployee as Record<string,unknown>).payRate || 15),
               reason: `Client ${client.companyName} has no coverage for ${format(shiftDate, 'EEEE')}`,
               dbOperation: {
                 table: 'shifts',

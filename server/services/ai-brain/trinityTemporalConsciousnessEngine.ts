@@ -279,7 +279,7 @@ class TrinityTemporalConsciousnessEngine {
     };
   }
 
-  private assessOfficerState(emp: any, metrics: OfficerMetrics, daysBack = 0): string {
+  private assessOfficerState(emp: unknown, metrics: OfficerMetrics, daysBack = 0): string {
     const timeRef = daysBack > 0 ? `${daysBack} days ago` : 'currently';
     const score = metrics.avgPerformanceScore;
     const calloffs = metrics.recentCalloffs;
@@ -314,7 +314,7 @@ class TrinityTemporalConsciousnessEngine {
     return hasScores ? 75 : 45;
   }
 
-  private buildOfficerNarrative(emp: any, metrics: OfficerMetrics, trajectory: Trajectory, attention: AttentionLevel): string {
+  private buildOfficerNarrative(emp: unknown, metrics: OfficerMetrics, trajectory: Trajectory, attention: AttentionLevel): string {
     const name = `${emp.first_name} ${emp.last_name}`;
     const score = metrics.avgPerformanceScore ? ` Performance average: ${Math.round(metrics.avgPerformanceScore)}/100.` : '';
     const calloffs = metrics.recentCalloffs > 0 ? ` ${metrics.recentCalloffs} calloff(s) in the past 30 days.` : ' Consistent attendance.';

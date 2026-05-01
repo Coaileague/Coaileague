@@ -201,7 +201,7 @@ export default function SupportConsoleWorkspacePage() {
             {orgState.threatSignals?.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">Active Threats</p>
-                {orgState.threatSignals.slice(0, 3).map((t: any, i: number) => (
+                {orgState.threatSignals.slice(0, 3).map((t: unknown, i: number) => (
                   <div key={i} className="flex items-start gap-2 text-xs" data-testid={`threat-signal-${i}`}>
                     <AlertTriangle className={`w-3 h-3 mt-0.5 shrink-0 ${
                       t.severity === 'critical' ? 'text-red-500' :
@@ -431,7 +431,7 @@ export default function SupportConsoleWorkspacePage() {
               <p className="text-sm text-muted-foreground">No Trinity activity recorded yet.</p>
             ) : (
               <div className="space-y-2">
-                {trinityLog.map((entry: any, i: number) => (
+                {trinityLog.map((entry: unknown, i: number) => (
                   <div key={i} className="flex items-start gap-3 p-3 rounded-md border text-sm"
                     data-testid={`row-trinity-log-${i}`}>
                     <Activity className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />

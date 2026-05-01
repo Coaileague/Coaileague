@@ -440,9 +440,9 @@ export default function MileagePage() {
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const workspaceId = (user as any)?.currentWorkspaceId || (user as any)?.workspaceId || "";
-  const role = (user as any)?.workspaceRole || (user as any)?.role || "";
-  const platformRole = (user as any)?.platformRole || "";
+  const workspaceId = (user as Record<string,unknown>)?.currentWorkspaceId || (user as Record<string,unknown>)?.workspaceId || "";
+  const role = (user as Record<string,unknown>)?.workspaceRole || (user as Record<string,unknown>)?.role || "";
+  const platformRole = (user as Record<string,unknown>)?.platformRole || "";
   const isManager = ["manager", "department_manager", "org_manager", "co_owner", "org_owner", "supervisor"].includes(role)
     || ["root_admin", "deputy_admin", "sysop", "support_manager"].includes(platformRole);
 

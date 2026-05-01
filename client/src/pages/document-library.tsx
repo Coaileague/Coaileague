@@ -914,7 +914,7 @@ export default function DocumentLibrary() {
                 </SelectContent>
               </Select>
               // @ts-ignore — TS migration: fix in refactoring sprint
-              {(contractStats as any)?.stats && (
+              {(contractStats as Record<string,unknown>)?.stats && (
                 <span className="text-xs text-muted-foreground ml-auto" data-testid="text-contract-count">
                   {allContracts.length} total contracts
                 </span>

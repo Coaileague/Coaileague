@@ -823,11 +823,11 @@ export default function Billing() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold" data-testid="text-next-invoice-date">
-                  {(workspace as any)?.nextBillingDate ? format(new Date((workspace as any).nextBillingDate), "MMM d, yyyy") : "Not scheduled"}
+                  {(workspace as Record<string,unknown>)?.nextBillingDate ? format(new Date((workspace as Record<string,unknown>).nextBillingDate), "MMM d, yyyy") : "Not scheduled"}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Billing cycle: {(subscriptionDetails as any)?.billingInterval
-                    ? (subscriptionDetails as any).billingInterval.charAt(0).toUpperCase() + (subscriptionDetails as any).billingInterval.slice(1)
+                  Billing cycle: {(subscriptionDetails as Record<string,unknown>)?.billingInterval
+                    ? (subscriptionDetails as Record<string,unknown>).billingInterval.charAt(0).toUpperCase() + (subscriptionDetails as Record<string,unknown>).billingInterval.slice(1)
                     : "Monthly"}
                 </p>
               </CardContent>
@@ -930,7 +930,7 @@ export default function Billing() {
 
           {/* Seat Hard Cap Setting — org_owner only */}
           {canManageBilling && (
-            <HardCapToggleCard workspaceId={(workspace as any)?.id} />
+            <HardCapToggleCard workspaceId={(workspace as Record<string,unknown>)?.id} />
           )}
 
           {/* Billing Cycle Toggle */}
@@ -1144,7 +1144,7 @@ export default function Billing() {
                   {(() => {
                     const seatCount = subscriptionDetails?.limits?.maxEmployees || 5;
                     const planLimit = seatCount * 20000;
-                    const totalUsed = (usageData as any)?.totalTokens || 0;
+                    const totalUsed = (usageData as Record<string,unknown>)?.totalTokens || 0;
                     const usagePercent = Math.min(100, (totalUsed / planLimit) * 100);
                     const isOverage = totalUsed > planLimit;
                     const overageAmount = Math.max(0, totalUsed - planLimit);
@@ -1234,7 +1234,7 @@ export default function Billing() {
                         <Brain className="h-4 w-4" />
                         AI Records™
                       </div>
-                      <div className="text-2xl font-bold">{formatNumber((usageData as any)?.recordOSTokens || 0)}</div>
+                      <div className="text-2xl font-bold">{formatNumber((usageData as Record<string,unknown>)?.recordOSTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                     <div className="p-4 rounded-md border mobile-compact-p">
@@ -1242,7 +1242,7 @@ export default function Billing() {
                         <TrendingUp className="h-4 w-4" />
                         AI Analytics™
                       </div>
-                      <div className="text-2xl font-bold">{formatNumber((usageData as any)?.insightOSTokens || 0)}</div>
+                      <div className="text-2xl font-bold">{formatNumber((usageData as Record<string,unknown>)?.insightOSTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                     <div className="p-4 rounded-md border mobile-compact-p">
@@ -1250,7 +1250,7 @@ export default function Billing() {
                         <Calendar className="h-4 w-4" />
                         Trinity Schedule
                       </div>
-                      <div className="text-2xl font-bold">{formatNumber((usageData as any)?.scheduleOSTokens || 0)}</div>
+                      <div className="text-2xl font-bold">{formatNumber((usageData as Record<string,unknown>)?.scheduleOSTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                     <div className="p-4 rounded-md border mobile-compact-p">
@@ -1258,7 +1258,7 @@ export default function Billing() {
                         <Zap className="h-4 w-4" />
                         Total
                       </div>
-                      <div className="text-2xl font-bold text-primary">{formatNumber((usageData as any)?.totalTokens || 0)}</div>
+                      <div className="text-2xl font-bold text-primary">{formatNumber((usageData as Record<string,unknown>)?.totalTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                   </div>

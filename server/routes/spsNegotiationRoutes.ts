@@ -292,8 +292,8 @@ spsNegotiationRouter.post('/:id/convert-to-contract', async (req: AuthenticatedR
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 14);
 
-    const agreedTerms = (thread as any).agreedTerms || {};
-    const proposalData = (thread as any).proposalData || {};
+    const agreedTerms = (thread as Record<string,unknown>).agreedTerms || {};
+    const proposalData = (thread as Record<string,unknown>).proposalData || {};
 
     const [doc] = await db.transaction(async (tx) => {
       const [newDoc] = await tx.insert(spsDocuments).values({

@@ -527,16 +527,16 @@ class AlertService {
       .orderBy(desc(alertHistory.createdAt));
 
     if (options?.alertType) {
-      query = (query as any).where(eq(alertHistory.alertType, options.alertType as string));
+      query = (query as Record<string,unknown>).where(eq(alertHistory.alertType, options.alertType as string));
     }
     if (options?.severity) {
-      query = (query as any).where(eq(alertHistory.severity, options.severity as any));
+      query = (query as Record<string,unknown>).where(eq(alertHistory.severity, options.severity as any));
     }
     if (options?.acknowledged !== undefined) {
-      query = (query as any).where(eq(alertHistory.isAcknowledged, options.acknowledged));
+      query = (query as Record<string,unknown>).where(eq(alertHistory.isAcknowledged, options.acknowledged));
     }
     if (options?.resolved !== undefined) {
-      query = (query as any).where(eq(alertHistory.isResolved, options.resolved));
+      query = (query as Record<string,unknown>).where(eq(alertHistory.isResolved, options.resolved));
     }
     if (options?.limit) {
       query = query.limit(options.limit);

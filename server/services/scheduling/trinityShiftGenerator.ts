@@ -64,7 +64,7 @@ function parseHourFromTime(timeStr: string | null | undefined): number | null {
   return h;
 }
 
-function buildCoverageProfile(client: any): ClientCoverageProfile {
+function buildCoverageProfile(client: unknown): ClientCoverageProfile {
   const contractRate = parseFloat(client.contractRate || '0');
   const clientName = client.companyName || `${client.firstName} ${client.lastName}`;
   const guardsPerShift = Math.max(1, client.minimumStaffing || DEFAULT_GUARDS_PER_SHIFT);

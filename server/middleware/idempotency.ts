@@ -215,7 +215,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
 
       // action === 'proceed' — capture response via ALL terminal paths
       let finalized = false;
-      let capturedBody: any;
+      let capturedBody: unknown;
       let capturedSc: number;
 
       // Primary capture: res.json (covers all JSON responses from these routes)

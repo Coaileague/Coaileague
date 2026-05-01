@@ -130,7 +130,7 @@ function FacilityEditor({ label, icon: Icon, value, onChange }: { label: string;
 
 function BriefingForm({ briefing, onClose }: { briefing?: SiteBriefing; onClose: () => void }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const { toast } = useToast();
   const [form, setForm] = useState(() => {
     if (briefing) {
@@ -332,7 +332,7 @@ const Icon = ({ name, className }: any) => <span className={className}>●</span
 
 export default function SiteBriefingPage() {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBriefing, setEditingBriefing] = useState<SiteBriefing | undefined>();

@@ -51,9 +51,9 @@ async function getWorkspaceBranding(workspaceId: string | null | undefined): Pro
   }
   try {
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    const name = (ws as any)?.name || 'Your security company';
-    const license = (ws as any)?.licenseNumber || (ws as any)?.metadata?.licenseNumber || null;
-    const state = (ws as any)?.state || (ws as any)?.metadata?.state || 'TX';
+    const name = (ws as Record<string,unknown>)?.name || 'Your security company';
+    const license = (ws as Record<string,unknown>)?.licenseNumber || (ws as Record<string,unknown>)?.metadata?.licenseNumber || null;
+    const state = (ws as Record<string,unknown>)?.state || (ws as Record<string,unknown>)?.metadata?.state || 'TX';
     const legalNotice = license
       ? `${name}, LIC#${license}. This is an automated message, please do not reply.`
       : `${name}. This is an automated message, please do not reply.`;

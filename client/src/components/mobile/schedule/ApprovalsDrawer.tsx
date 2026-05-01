@@ -65,7 +65,7 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       toast({ title: 'Shift approved' });
     },
-    onError: (_err, _vars, context: any) => {
+    onError: (_err, _vars, context: unknown) => {
       if (context?.prev) queryClient.setQueryData(['/api/shifts'], context.prev);
       toast({ 
         title: 'Failed to approve shift',

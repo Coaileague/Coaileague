@@ -80,9 +80,7 @@ export function checkIdempotency<T>(
 
 export function storeIdempotencyResult(
   workspaceId: string,
-  idempotencyKey: string,
-  result: any
-): void {
+  idempotencyKey: string, result: unknown): void {
   const cacheKey = `${workspaceId}:${idempotencyKey}`;
   idempotencyCache.set(cacheKey, {
     result,
@@ -94,8 +92,8 @@ export function storeIdempotencyResult(
  * Express middleware factory: enforces idempotency key on mutation routes.
  * If X-Idempotency-Key header present and matches a cached result, return 200 immediately.
  */
-export function idempotencyMiddleware(workspaceIdExtractor?: (req: any) => string | undefined) {
-  return (req: any, res: any, next: unknown) => {
+export function idempotencyMiddleware(workspaceIdExtractor?: (req: unknown) => string | undefined) {
+  return (req: unknown, res: any, next: unknown) => {
     const idempotencyKey = req.headers['x-idempotency-key'] as string | undefined;
     if (!idempotencyKey) { next(); return; }
 

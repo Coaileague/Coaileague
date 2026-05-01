@@ -70,7 +70,7 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
         const delibCtx = {
           requestType: 'terminate_employee' as const,
           requestedBy: req.user?.id || 'unknown',
-          requestedByRole: (result as any)?.workspace?.role || '',
+          requestedByRole: (result as Record<string,unknown>)?.workspace?.role || '',
           workspaceId: workspace.id,
           targetId: validated.employeeId || undefined,
           targetType: 'employee' as const,
@@ -137,7 +137,7 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
                 AND status NOT IN ('completed','cancelled','no_show')
                 AND (date >= CURRENT_DATE OR start_time >= NOW())`
         );
-        const shiftsCancelled = (cancelledShifts as any).rowCount || 0;
+        const shiftsCancelled = (cancelledShifts as Record<string,unknown>).rowCount || 0;
 
         // 3. Trinity audit — Who/What/Where/When/Why (must succeed or rollback)
         const { auditLogs } = await import('@shared/schema');
@@ -155,7 +155,7 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
             when: new Date().toISOString(),
             why: validated.reason || 'Termination',
             shiftsCancelled,
-            terminationType: (validated as any).terminationType || 'involuntary',
+            terminationType: (validated as Record<string,unknown>).terminationType || 'involuntary',
           },
           ipAddress: req.ip,
           userAgent: req.headers['user-agent'] || null,
@@ -174,8 +174,8 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
       // Invalidate employee's auth tokens via authService
       try {
         const { authService } = await import('./authService');
-        if ((authService as any).revokeAllSessionsForUser) {
-          await (authService as any).revokeAllSessionsForUser(employeeId);
+        if ((authService as Record<string,unknown>).revokeAllSessionsForUser) {
+          await (authService as Record<string,unknown>).revokeAllSessionsForUser(employeeId);
         }
       } catch (revokeErr) {
         log.warn('[Termination] Session revocation failed (non-fatal):', revokeErr);

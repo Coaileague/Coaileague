@@ -205,7 +205,7 @@ class QuickBooksOrchestrationService {
         orchestrationId,
         'VALIDATE',
         async () => {
-          const canProceed = await (quickbooksRateLimiter as any).canMakeRequest(params.workspaceId);
+          const canProceed = await (quickbooksRateLimiter as Record<string,unknown>).canMakeRequest(params.workspaceId);
           if (!canProceed) {
             return {
               success: false,
@@ -422,7 +422,7 @@ class QuickBooksOrchestrationService {
           }
           
           const error = new Error(errorMessage);
-          (error as any).status = response.status;
+          (error as Record<string,unknown>).status = response.status;
           throw error;
         }
 
@@ -454,8 +454,8 @@ class QuickBooksOrchestrationService {
       realmId: (connection as Record<string, unknown>).partnerAccountId,
       environment,
       apiBase: environment === 'production'
-        ? (INTEGRATIONS as any).quickbooks.apiBaseUrl
-        : (INTEGRATIONS as any).quickbooks.sandboxApiBaseUrl,
+        ? (INTEGRATIONS as Record<string,unknown>).quickbooks.apiBaseUrl
+        : (INTEGRATIONS as Record<string,unknown>).quickbooks.sandboxApiBaseUrl,
     };
   }
 
@@ -521,7 +521,7 @@ class QuickBooksOrchestrationService {
   /**
    * Categorize error into known error codes
    */
-  private categorizeError(error: any): string {
+  private categorizeError(error: unknown): string {
     const message = ((error instanceof Error ? error.message : String(error)) || '').toLowerCase();
     const status = error.status;
 

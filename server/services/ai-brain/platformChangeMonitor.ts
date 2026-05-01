@@ -1134,7 +1134,7 @@ Respond ONLY with valid JSON:
 
       // Ensure title is never empty - this was causing 0 notifications
       if (!summary.title || summary.title.trim().length < 3) {
-        const moduleNames = (summary as any).affectedModules || [];
+        const moduleNames = (summary as Record<string,unknown>).affectedModules || [];
         const moduleName = moduleNames[0] ? this.formatModuleName(moduleNames[0]) : 'Platform';
         summary.title = `${moduleName} Updated`;
         log.warn(`[PlatformChangeMonitor] Empty title detected, using fallback: ${summary.title}`);

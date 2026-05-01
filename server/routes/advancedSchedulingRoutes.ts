@@ -106,7 +106,7 @@ async function getEmployeeId(userId: string, workspaceId: string): Promise<strin
 advancedSchedulingRouter.post('/recurring/:patternId/generate', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -166,7 +166,7 @@ advancedSchedulingRouter.post('/recurring/:patternId/generate', requireManager, 
 advancedSchedulingRouter.post('/swap-requests', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     if (!workspaceId || !userId) return res.status(400).json({ error: 'No workspace context' });
 
@@ -208,7 +208,7 @@ advancedSchedulingRouter.post('/swap-requests', requireAuth, async (req: Request
 advancedSchedulingRouter.get('/swap-requests', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -238,7 +238,7 @@ advancedSchedulingRouter.get('/swap-requests', requireAuth, async (req: Request,
 advancedSchedulingRouter.post('/swap-requests/:swapId/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -275,7 +275,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/approve', requireAuth, asy
     const { eq, and } = await import('drizzle-orm');
     const [updated] = await db.update(shiftSwapRequests)
       .set({ status: 'approved', updatedAt: new Date() } as Record<string, unknown>)
-      .where(and(eq(shiftSwapRequests.id, swapId), (shiftSwapRequests as any).workspaceId ? eq((shiftSwapRequests as Record<string,unknown>).workspaceId as string, workspaceId) : undefined))
+      .where(and(eq(shiftSwapRequests.id, swapId), (shiftSwapRequests as Record<string,unknown>).workspaceId ? eq((shiftSwapRequests as Record<string,unknown>).workspaceId as string, workspaceId) : undefined))
       .returning();
     if (!updated) return res.status(404).json({ error: 'Swap request not found' });
     res.json({ success: true, swapRequest: updated });
@@ -296,7 +296,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/reject', requireAuth, asyn
     const { eq, and } = await import('drizzle-orm');
     const [updated] = await db.update(shiftSwapRequests)
       .set({ status: 'rejected', updatedAt: new Date(), ...(reason ? { rejectionReason: reason } : {}) } as any)
-      .where(and(eq(shiftSwapRequests.id, swapId), (shiftSwapRequests as any).workspaceId ? eq((shiftSwapRequests as Record<string,unknown>).workspaceId as string, workspaceId) : undefined))
+      .where(and(eq(shiftSwapRequests.id, swapId), (shiftSwapRequests as Record<string,unknown>).workspaceId ? eq((shiftSwapRequests as Record<string,unknown>).workspaceId as string, workspaceId) : undefined))
       .returning();
     if (!updated) return res.status(404).json({ error: 'Swap request not found' });
     res.json({ success: true, swapRequest: updated });
@@ -314,7 +314,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/reject', requireAuth, asyn
 advancedSchedulingRouter.post('/duplicate-week', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -351,7 +351,7 @@ advancedSchedulingRouter.post('/duplicate-week', requireManager, async (req: Req
 advancedSchedulingRouter.delete('/templates/:templateId', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });

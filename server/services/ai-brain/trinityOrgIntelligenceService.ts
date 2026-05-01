@@ -366,7 +366,7 @@ class TrinityOrgIntelligenceService {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const sessions = await db.select({
-        subject: (helpaiSessions as any).subject,
+        subject: (helpaiSessions as Record<string,unknown>).subject,
         wasResolved: helpaiSessions.wasResolved,
         wasEscalated: helpaiSessions.wasEscalated,
       })

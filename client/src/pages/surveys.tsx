@@ -200,7 +200,7 @@ export default function ClientSurveysPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[200px] flex items-end justify-between gap-2 pt-4">
-                    {analytics?.recentNpsScores?.map((score: any, i: number) => (
+                    {analytics?.recentNpsScores?.map((score: unknown, i: number) => (
                       <div key={i} className="flex-1 flex flex-col items-center gap-2">
                         <div 
                           className="w-full bg-primary rounded-t" 

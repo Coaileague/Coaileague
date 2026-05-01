@@ -185,7 +185,7 @@ pool.on('connect', (client) => {
 // so the circuit breaker applies to every DB operation, not just withRetry().
 // Note: recordDbSuccess() is NOT called here — only query-level success matters.
 const _originalConnect = pool.connect.bind(pool);
-(pool as any).connect = async function circuitBreakerConnect(...args: unknown[]) {
+(pool as Record<string,unknown>).connect = async function circuitBreakerConnect(...args: unknown[]) {
   if (isDbCircuitOpen()) {
     throw new Error('[CircuitBreaker] DB circuit is open — skipping connection attempt');
   }

@@ -540,7 +540,7 @@ class PolicyDecisionPoint {
     return regex.test(resourceId);
   }
 
-  private matchesSubjectConditions(conditions: any, subject: AccessSubject, attributes: Record<string, unknown>): boolean {
+  private matchesSubjectConditions(conditions: unknown, subject: AccessSubject, attributes: Record<string, unknown>): boolean {
     if (!conditions || Object.keys(conditions).length === 0) return true;
 
     for (const [key, value] of Object.entries(conditions)) {
@@ -556,7 +556,7 @@ class PolicyDecisionPoint {
     return true;
   }
 
-  private matchesContextConditions(conditions: any, context: AccessContext): boolean {
+  private matchesContextConditions(conditions: unknown, context: AccessContext): boolean {
     if (!conditions || Object.keys(conditions).length === 0) return true;
 
     if (conditions.riskScore?.max && (context.riskScore || 0) > conditions.riskScore.max) {

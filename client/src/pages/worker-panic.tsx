@@ -13,7 +13,7 @@ import { AlertTriangle } from "lucide-react";
 
 export default function WorkerPanicPage(): JSX.Element {
   const { user } = useAuth();
-  const name = (user as any)?.fullName || (user as any)?.email || null;
+  const name = (user as Record<string,unknown>)?.fullName || (user as Record<string,unknown>)?.email || null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-red-50 to-white dark:from-red-950/40 dark:to-background">

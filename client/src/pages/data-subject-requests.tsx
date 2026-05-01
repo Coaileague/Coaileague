@@ -353,7 +353,7 @@ function DSRCard({ dsr, canEdit }: { dsr: DataSubjectRequest; canEdit: boolean }
 
 export default function DataSubjectRequests() {
   const { user } = useAuth();
-  const role = (user as any)?.role ?? (user as any)?.workspaceRole ?? "officer";
+  const role = (user as Record<string,unknown>)?.role ?? (user as Record<string,unknown>)?.workspaceRole ?? "officer";
   const isStaff = ["platform_admin", "platform_staff"].includes(role);
   const isManager = ["org_owner", "manager", "compliance_officer"].includes(role) || isStaff;
 

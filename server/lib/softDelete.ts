@@ -60,7 +60,7 @@ export async function softDelete(params: SoftDeleteParams): Promise<void> {
       metadata: {
         reason: reason ?? null,
         // Store SQL string for replay/debugging — Drizzle SQL toString() exposes the parameterized form.
-        whereSql: (where as any).toString?.() ?? null,
+        whereSql: (where as Record<string,unknown>).toString?.() ?? null,
       },
       createdAt: new Date(),
     } as any);

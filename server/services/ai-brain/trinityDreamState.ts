@@ -212,7 +212,7 @@ class TrinityDreamState {
 
       const stats = await hebbianGetConnectomeStats();
       return {
-        edgesDecayed: (stats as any).weakEdges || 0,
+        edgesDecayed: (stats as Record<string,unknown>).weakEdges || 0,
         edgesStrengthened: stats.strongEdges || 0,
         totalEdges: stats.totalEdges || 0,
       };

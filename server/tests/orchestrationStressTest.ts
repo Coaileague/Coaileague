@@ -40,7 +40,7 @@ function fileExists(relPath: string): boolean {
   return fs.existsSync(path.join(process.cwd(), relPath));
 }
 
-function extractRows(result: any): unknown[] {
+function extractRows(result: unknown): unknown[] {
   if (Array.isArray(result)) return result;
   if (result?.rows && Array.isArray(result.rows)) return result.rows;
   return [];

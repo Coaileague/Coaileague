@@ -582,7 +582,7 @@ router.post(
             .where(eq(chatConversations.id, conversation.id));
         }
       } catch (botErr: unknown) {
-        log.error('[BotDeploy] Auto-deploy failed (non-blocking):', (botErr as any)?.message);
+        log.error('[BotDeploy] Auto-deploy failed (non-blocking):', (botErr as Record<string,unknown>)?.message);
       }
 
       // Summon HelpAI bot for conversations where Trinity assistance is appropriate
@@ -594,7 +594,7 @@ router.post(
           userId
         );
       } catch (summonErr: unknown) {
-        log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as any)?.message);
+        log.warn('[BotSummon] HelpAI summon failed (non-fatal):', (summonErr as Record<string,unknown>)?.message);
       }
 
       // Create audit event
@@ -2293,7 +2293,7 @@ router.post(
 
       const user = authReq.user;
       const { hasManagerAccess } = await import('../rbac');
-      const workspaceRole = (authReq as any).workspaceRole || req.user?.workspaceRole || 'employee';
+      const workspaceRole = (authReq as Record<string,unknown>).workspaceRole || req.user?.workspaceRole || 'employee';
       const platformRole = req.user?.platformRole || user.role;
       const { hasPlatformWideAccess } = await import('../rbac');
 
@@ -2375,7 +2375,7 @@ router.post(
 
       const user = authReq.user;
       const { hasManagerAccess } = await import('../rbac');
-      const workspaceRole = (authReq as any).workspaceRole || req.user?.workspaceRole || 'employee';
+      const workspaceRole = (authReq as Record<string,unknown>).workspaceRole || req.user?.workspaceRole || 'employee';
       const platformRole = req.user?.platformRole || user.role;
       const { hasPlatformWideAccess } = await import('../rbac');
 
@@ -2481,9 +2481,9 @@ router.get(
       const rooms = await db
         .select({
           id: organizationChatRooms.id,
-          name: (organizationChatRooms as any).name,
+          name: (organizationChatRooms as Record<string,unknown>).name,
           workspaceId: organizationChatRooms.workspaceId,
-          roomType: (organizationChatRooms as any).roomType,
+          roomType: (organizationChatRooms as Record<string,unknown>).roomType,
           createdAt: organizationChatRooms.createdAt,
         })
         .from(organizationChatRooms)
@@ -2630,7 +2630,7 @@ router.get(
         exportedAt: new Date().toISOString(),
         exportedBy: authReq.user,
         roomId,
-        roomName: (room as any)?.name || 'Unknown Room',
+        roomName: (room as Record<string,unknown>)?.name || 'Unknown Room',
         messageCount: messages.length,
         messages: messages.map(m => ({
           id: m.id,

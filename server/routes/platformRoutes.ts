@@ -218,7 +218,7 @@ router.get('/master-keys/organizations', async (req: AuthenticatedRequest, res) 
   } catch (error: unknown) {
     log.error("Error fetching organizations:", error);
     if (error instanceof Error && error.name === 'ZodError') {
-      return res.status(400).json({ error: "Invalid query parameters", details: (error as any).errors });
+      return res.status(400).json({ error: "Invalid query parameters", details: (error as Record<string,unknown>).errors });
     }
     res.status(500).json({ error: "Failed to fetch organizations" });
   }
@@ -465,7 +465,7 @@ router.patch('/master-keys/organizations/:id', async (req: AuthenticatedRequest,
   } catch (error: unknown) {
     log.error("Error updating organization:", error);
     if (error instanceof Error && error.name === 'ZodError') {
-      return res.status(400).json({ error: "Invalid request data", details: (error as any).errors });
+      return res.status(400).json({ error: "Invalid request data", details: (error as Record<string,unknown>).errors });
     }
     res.status(500).json({ error: "Failed to update organization" });
   }
@@ -546,7 +546,7 @@ router.post('/master-keys/organizations/:id/reset', async (req: AuthenticatedReq
   } catch (error: unknown) {
     log.error("Error resetting organization:", error);
     if (error instanceof Error && error.name === 'ZodError') {
-      return res.status(400).json({ error: "Invalid request data", details: (error as any).errors });
+      return res.status(400).json({ error: "Invalid request data", details: (error as Record<string,unknown>).errors });
     }
     res.status(500).json({ error: "Failed to reset organization" });
   }
@@ -833,7 +833,7 @@ router.patch('/users/:userId', async (req: AuthenticatedRequest, res) => {
           .set({ email: email, updatedAt: new Date() })
           .where(eq(clients.userId, userId));
       } catch (syncError) {
-        log.warn('[Auth] Admin email sync failed (non-fatal):', (syncError as any).message);
+        log.warn('[Auth] Admin email sync failed (non-fatal):', (syncError as Record<string,unknown>).message);
       }
     }
 
@@ -1361,14 +1361,14 @@ router.get('/team', async (req: AuthenticatedRequest, res) => {
       .select({
         userId: platformRoles.userId,
         role: platformRoles.role,
-        grantedAt: (platformRoles as any).grantedAt,
+        grantedAt: (platformRoles as Record<string,unknown>).grantedAt,
         grantedBy: platformRoles.grantedBy,
         revokedAt: platformRoles.revokedAt,
         email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
-        isSuspended: (users as any).isSuspended,
-        lastActiveAt: (users as any).lastActiveAt,
+        isSuspended: (users as Record<string,unknown>).isSuspended,
+        lastActiveAt: (users as Record<string,unknown>).lastActiveAt,
       })
       .from(platformRoles)
       .innerJoin(users, eq(users.id, platformRoles.userId))

@@ -76,7 +76,7 @@ async function trinityReason(
 /**
  * Register Core Subagent actions with Platform Action Hub
  */
-export function registerCoreSubagentActions(orchestrator: any): void {
+export function registerCoreSubagentActions(orchestrator: unknown): void {
   // ============================================================================
   // SCHEDULING SUBAGENT ACTIONS
   // ============================================================================

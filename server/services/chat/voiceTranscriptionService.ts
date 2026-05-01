@@ -59,7 +59,7 @@ export async function transcribeVoiceMessage(audioUrl: string): Promise<string |
 
     const text = typeof transcription === 'string'
       ? transcription
-      : ((transcription as any)?.text || null);
+      : ((transcription as Record<string,unknown>)?.text || null);
 
     return text && text.trim().length > 0 ? text.trim() : null;
   } catch (err: unknown) {

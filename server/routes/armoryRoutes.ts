@@ -336,7 +336,7 @@ router.post('/ammo/:id/transaction', async (req: Request, res: Response) => {
           AND (quantity_on_hand + ${delta}) >= 0
         RETURNING quantity_on_hand
       `);
-      const updated = (updateResult as any).rows?.[0];
+      const updated = (updateResult as Record<string,unknown>).rows?.[0];
       if (!updated) {
         throw new Error('Inventory not found for workspace, or would go negative');
       }
@@ -459,7 +459,7 @@ router.get('/summary', async (req: Request, res: Response) => {
     res.json({
       expiringQualifications: expiringQuals,
       inspectionsOverdue: inspectionsDue,
-      lowAmmo: (lowAmmo as any).rows || [],
+      lowAmmo: (lowAmmo as Record<string,unknown>).rows || [],
     });
   } catch (err) {
     log.error('armory summary failed', err);
@@ -505,7 +505,7 @@ router.get('/audit-trail', async (req: Request, res: Response) => {
        LIMIT ${limit}
     `);
 
-    res.json({ rows: (rows as any).rows || [] });
+    res.json({ rows: (rows as Record<string,unknown>).rows || [] });
   } catch (err) {
     log.error('armory audit-trail failed', err);
     res.status(500).json({ error: 'Failed to load armory audit trail' });

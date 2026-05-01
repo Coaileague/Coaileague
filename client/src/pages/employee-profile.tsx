@@ -152,11 +152,11 @@ export default function EmployeeProfile() {
 
   // Sync preferred language from user profile
   useEffect(() => {
-    const lang = (currentUser as any)?.user?.preferredLanguage;
+    const lang = (currentUser as Record<string,unknown>)?.user?.preferredLanguage;
     if (lang === 'en' || lang === 'es') {
       setPreferredLanguage(lang);
     }
-  }, [(currentUser as any)?.user?.preferredLanguage]);
+  }, [(currentUser as Record<string,unknown>)?.user?.preferredLanguage]);
 
   // Language preference mutation
   const updateLanguageMutation = useMutation({
@@ -1028,7 +1028,7 @@ export default function EmployeeProfile() {
                 <div>
                   <Button
                     onClick={() => updateLanguageMutation.mutate(preferredLanguage)}
-                    disabled={updateLanguageMutation.isPending || preferredLanguage === ((currentUser as any)?.user?.preferredLanguage ?? 'en')}
+                    disabled={updateLanguageMutation.isPending || preferredLanguage === ((currentUser as Record<string,unknown>)?.user?.preferredLanguage ?? 'en')}
                     data-testid="button-save-language"
                   >
                     {updateLanguageMutation.isPending ? (

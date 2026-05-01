@@ -180,7 +180,7 @@ export async function extractScheduleFromFile(
     const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
 
     await aiTokenGateway.finalizeBilling(
-      (authResult as any).effectiveWorkspaceId,
+      (authResult as Record<string,unknown>).effectiveWorkspaceId,
       request.userId,
       'ai_migration',
       totalTokens,

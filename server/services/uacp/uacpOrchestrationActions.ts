@@ -25,7 +25,7 @@ export interface UACPActionContext {
 /**
  * Register UACP actions with Platform Action Hub
  */
-export function registerUACPActions(orchestrator: any): void {
+export function registerUACPActions(orchestrator: unknown): void {
   // ============================================================================
   // ACCESS AUTHORIZATION ACTIONS
   // ============================================================================

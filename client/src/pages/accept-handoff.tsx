@@ -236,7 +236,7 @@ export default function AcceptHandoff() {
           {isAuthenticated ? (
             <div className="space-y-3">
               <p className="text-sm text-center text-muted-foreground">
-                Signed in as <strong>{(user as any)?.email}</strong>
+                Signed in as <strong>{(user as Record<string,unknown>)?.email}</strong>
               </p>
               <Button
                 className="w-full"

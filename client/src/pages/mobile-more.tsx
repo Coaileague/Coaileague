@@ -174,7 +174,7 @@ export default function MobileMorePage() {
           data-testid="more-menu-profile-header"
         >
           <Avatar className="h-10 w-10 ring-2 ring-primary/20 shrink-0">
-            <AvatarImage src={(user as any)?.profileImageUrl || ''} alt={userDisplayName} />
+            <AvatarImage src={(user as Record<string,unknown>)?.profileImageUrl || ''} alt={userDisplayName} />
             <AvatarFallback className="bg-primary/15 text-primary text-sm font-bold">
               {userInitials}
             </AvatarFallback>

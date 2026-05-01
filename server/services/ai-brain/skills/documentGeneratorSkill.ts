@@ -174,8 +174,8 @@ class DocumentGeneratorSkill extends BaseSkill {
         const siteList = await db.select({
           id: sites.id,
           name: sites.name,
-          address: (sites as any).address,
-          isActive: (sites as any).isActive,
+          address: (sites as Record<string,unknown>).address,
+          isActive: (sites as Record<string,unknown>).isActive,
         }).from(sites).where(eq(sites.workspaceId, wsId)).limit(100);
         data.sites = siteList;
         logs.push(`Gathered ${siteList.length} sites for workspace`);

@@ -258,11 +258,11 @@ class WorkspaceContextServiceImpl {
     const context: WorkspaceContext = {
       workspace: {
         id: ws.id,
-        name: (ws as any).companyName || ws.name,
-        companyName: (ws as any).companyName,
-        industry: (ws as any).industryDescription || null,
-        subscriptionTier: (ws as any).subscriptionTier || null,
-        createdAt: (ws as any).createdAt || null,
+        name: (ws as Record<string,unknown>).companyName || ws.name,
+        companyName: (ws as Record<string,unknown>).companyName,
+        industry: (ws as Record<string,unknown>).industryDescription || null,
+        subscriptionTier: (ws as Record<string,unknown>).subscriptionTier || null,
+        createdAt: (ws as Record<string,unknown>).createdAt || null,
       },
       workforce: {
         totalEmployees: Number(employeeStats?.total) || 0,

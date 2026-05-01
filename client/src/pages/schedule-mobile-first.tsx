@@ -76,7 +76,7 @@ function getShiftStatusStyling(shift: Shift): {
     endTime: shift.endTime,
     officerId: shift.employeeId,
     isPublished: shift.status === 'published' || shift.status === 'scheduled',
-    clockedIn: (shift as any).clockedIn || false,
+    clockedIn: (shift as Record<string,unknown>).clockedIn || false,
     status: shift.status || undefined,
   });
   
@@ -860,7 +860,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                   const emp = employees.find(e => e.id === shift.employeeId);
                   // Use enriched clientName from API response, fallback to client lookup for backwards compatibility
-                  const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                  const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                   
                   const pendingStatusStyle = getShiftStatusStyling(shift);
                   const positionColor = getPositionColor(shift.title);
@@ -958,7 +958,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                         const start = new Date(shift.startTime);
                         const end = new Date(shift.endTime);
                         const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                        const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                        const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                         const statusStyle = getShiftStatusStyling(shift);
                         const positionColor = getPositionColor(shift.title);
                         
@@ -1083,7 +1083,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                           const start = new Date(shift.startTime);
                           const end = new Date(shift.endTime);
                           const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                          const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                          const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                           
                           const isOpenBeingProcessed = isShiftBeingProcessed(shift.id);
                           const wasOpenJustAssigned = wasShiftJustAssigned(shift.id);
@@ -1131,7 +1131,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                           const end = new Date(shift.endTime);
                           const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                           const emp = employees.find(e => e.id === shift.employeeId);
-                          const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                          const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                           const statusStyle = getShiftStatusStyling(shift);
                           const positionColor = getPositionColor(shift.title);
                           const isBeingProcessed = isShiftBeingProcessed(shift.id);
@@ -1394,7 +1394,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
             totalHoursScheduled: trinityCompletionResult.summary?.totalHoursScheduled || 0,
             estimatedLaborCost: trinityCompletionResult.summary?.estimatedLaborCost || 0,
           },
-          aiSummary: (trinityCompletionResult as any).aiSummary || `Trinity filled ${trinityCompletionResult.summary?.openShiftsFilled || 0} shifts.`,
+          aiSummary: (trinityCompletionResult as Record<string,unknown>).aiSummary || `Trinity filled ${trinityCompletionResult.summary?.openShiftsFilled || 0} shifts.`,
           requiresVerification: false,
         } : null}
         workspaceId={workspaceId || ''}

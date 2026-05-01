@@ -1734,7 +1734,7 @@ class AIBrainMasterOrchestrator {
               
               // Check for missing break (>6 hours without break)
               // Using breakDurationMinutes from schema (cast to any for optional field access)
-              const breakDuration = (entry as unknown).breakDurationMinutes || 0;
+              const breakDuration = (entry as Record<string,unknown>).breakDurationMinutes || 0;
               if (hours > 6 && !breakDuration) {
                 violations.push({
                   type: 'missing_break',
@@ -3945,7 +3945,7 @@ class AIBrainMasterOrchestrator {
           }
 
           // Add credits used to request metadata for logging
-          (request as any).creditsUsed = consumeResult.creditsUsed;
+          (request as Record<string,unknown>).creditsUsed = consumeResult.creditsUsed;
         }
       }
 
@@ -5183,7 +5183,7 @@ Return the complete component code with all imports.`,
           
           switch (operation) {
             case 'store':
-              await (trinityMemoryService as any).storeMemory(
+              await (trinityMemoryService as Record<string,unknown>).storeMemory(
                 request.workspaceId!,
                 request.userId!,
                 namespace || 'default',
@@ -5193,7 +5193,7 @@ Return the complete component code with all imports.`,
               result = { stored: true, key };
               break;
             case 'retrieve':
-              result = await (trinityMemoryService as any).retrieveMemory(
+              result = await (trinityMemoryService as Record<string,unknown>).retrieveMemory(
                 request.workspaceId!,
                 request.userId!,
                 namespace || 'default',
@@ -5201,7 +5201,7 @@ Return the complete component code with all imports.`,
               );
               break;
             case 'build_context':
-              result = await (trinityMemoryService as any).buildContext(
+              result = await (trinityMemoryService as Record<string,unknown>).buildContext(
                 request.workspaceId!,
                 request.userId!,
                 { maxTokens: 4000 }
@@ -5404,7 +5404,7 @@ Provide your analysis in the following format:
         }
         
         try {
-          const result = await (trinityExecutionFabric as any).executeWithPipeline(
+          const result = await (trinityExecutionFabric as Record<string,unknown>).executeWithPipeline(
             task,
             request.workspaceId,
             request.userId
@@ -5438,7 +5438,7 @@ Provide your analysis in the following format:
         const payload = request.payload || {};
         
         try {
-          const testResults = await (trinityExecutionFabric as any).runTests(
+          const testResults = await (trinityExecutionFabric as Record<string,unknown>).runTests(
             payload.category || 'all',
             payload.testIds
           );
@@ -5493,16 +5493,16 @@ Provide your analysis in the following format:
           let result: unknown;
           switch (operation) {
             case 'read':
-              result = await (trinityExecutionFabric as any).readFile(path);
+              result = await (trinityExecutionFabric as Record<string,unknown>).readFile(path);
               break;
             case 'write':
-              result = await (trinityExecutionFabric as any).writeFile(path, content || '');
+              result = await (trinityExecutionFabric as Record<string,unknown>).writeFile(path, content || '');
               break;
             case 'edit':
-              result = await (trinityExecutionFabric as any).editFile(path, oldContent || '', newContent || '');
+              result = await (trinityExecutionFabric as Record<string,unknown>).editFile(path, oldContent || '', newContent || '');
               break;
             case 'search':
-              result = await (trinityExecutionFabric as any).searchFiles(pattern || '', path);
+              result = await (trinityExecutionFabric as Record<string,unknown>).searchFiles(pattern || '', path);
               break;
             default:
               throw new Error(`Unknown file operation: ${operation}`);

@@ -456,7 +456,7 @@ router.get('/dev/pipeline-status', async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM payroll_runs WHERE workspace_id = ${workspaceId} AND status = 'completed') AS completed_payroll_runs,
         (SELECT COALESCE(SUM(total_gross_pay::numeric), 0) FROM payroll_runs WHERE workspace_id = ${workspaceId} AND status = 'pending') AS pending_payroll_total
     `);
-    const status = ((statusResult as any).rows ?? [])[0];
+    const status = ((statusResult as Record<string,unknown>).rows ?? [])[0];
 
     res.json({ success: true, workspaceId, pipeline: status });
   } catch (err: unknown) {

@@ -357,7 +357,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
 
   const { user } = useAuth();
   const { workspaceRole, platformRole: accessPlatformRole } = useWorkspaceAccess();
-  const userPlatformRole = (user as any)?.platformRole || (user as any)?.platform_role;
+  const userPlatformRole = (user as Record<string,unknown>)?.platformRole || (user as Record<string,unknown>)?.platform_role;
   const effectivePlatformRole = accessPlatformRole || userPlatformRole;
   const BROADCAST_ALLOWED_PLATFORM = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'];
   const BROADCAST_ALLOWED_WORKSPACE = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager'];
@@ -619,7 +619,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   };
   
   // API returns 'notifications' not 'userNotifications' - fix the mapping
-  const userNotifications = (notificationsData as any)?.notifications || (notificationsData as any)?.userNotifications || [];
+  const userNotifications = (notificationsData as Record<string,unknown>)?.notifications || (notificationsData as Record<string,unknown>)?.userNotifications || [];
   const platformUpdates = notificationsData?.platformUpdates || [];
   const allNotifications: UserNotification[] = [
     ...userNotifications.map((n) => ({
@@ -648,7 +648,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   
   // API returns 'totalUnread' not 'unreadCount'
-  const unreadCount = (notificationsData as any)?.totalUnread || (notificationsData as any)?.unreadCount || 0;
+  const unreadCount = (notificationsData as Record<string,unknown>)?.totalUnread || (notificationsData as Record<string,unknown>)?.unreadCount || 0;
   
   // Filter notifications based on active filter
   const filteredNotifications = allNotifications.filter(n => {

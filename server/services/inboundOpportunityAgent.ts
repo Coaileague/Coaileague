@@ -1703,9 +1703,7 @@ Consider: qualifications match, reliability history, preference match, availabil
   private async getAiApproval(
     workspaceId: string,
     employee: Record<string, unknown>,
-    shift: Record<string, unknown>,
-    behaviorScore: any
-  ): Promise<{ decision: 'APPROVE' | 'REVIEW' | 'REJECT'; confidence: number; reasoning: string; tokensUsed?: number }> {
+    shift: Record<string, unknown>, behaviorScore: unknown): Promise<{ decision: 'APPROVE' | 'REVIEW' | 'REJECT'; confidence: number; reasoning: string; tokensUsed?: number }> {
     try {
       const prompt = `Evaluate if this employee is a good match for this shift.
 

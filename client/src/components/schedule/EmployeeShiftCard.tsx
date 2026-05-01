@@ -242,7 +242,7 @@ function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap
     endTime: shift.endTime,
     officerId: shift.employeeId,
     isPublished: shift.status === 'published',
-    clockedIn: (shift as any).clockedIn || false,
+    clockedIn: (shift as Record<string,unknown>).clockedIn || false,
     status: shift.status || undefined,
   });
   const isActive = shiftStatus.key === 'active';

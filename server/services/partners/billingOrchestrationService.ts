@@ -488,8 +488,8 @@ class BillingStateManagerAgent {
         stateChangedAt: new Date(),
         stateChangedBy: options?.userId,
         stateHistory,
-        qboInvoiceId: options?.qboInvoiceId || (lifecycle as any).qboInvoiceId,
-        qboDocNumber: options?.qboDocNumber || (lifecycle as any).qboDocNumber,
+        qboInvoiceId: options?.qboInvoiceId || (lifecycle as Record<string,unknown>).qboInvoiceId,
+        qboDocNumber: options?.qboDocNumber || (lifecycle as Record<string,unknown>).qboDocNumber,
         updatedAt: new Date(),
       })
       .where(eq(invoiceLifecycleStates.id, lifecycle.id));
@@ -936,7 +936,7 @@ export const auditPackAgent = new AuditPackAgent();
 export const weeklyInvoiceOrchestrator = new WeeklyInvoiceOrchestrator();
 
 export function registerBillingOrchestrationActions() {
-  (helpaiOrchestrator as any).registerAction({
+  (helpaiOrchestrator as Record<string,unknown>).registerAction({
     actionId: 'billing.run_weekly_invoice',
     name: 'Run Weekly Invoice Workflow',
     category: 'invoicing',
@@ -951,7 +951,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator as any).registerAction({
+  (helpaiOrchestrator as Record<string,unknown>).registerAction({
     actionId: 'billing.check_identity_mappings',
     name: 'Check Identity Mappings',
     category: 'invoicing',
@@ -966,7 +966,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator as any).registerAction({
+  (helpaiOrchestrator as Record<string,unknown>).registerAction({
     actionId: 'billing.evaluate_risk',
     name: 'Evaluate Invoice Risk',
     category: 'invoicing',
@@ -999,7 +999,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator as any).registerAction({
+  (helpaiOrchestrator as Record<string,unknown>).registerAction({
     actionId: 'billing.transition_state',
     name: 'Transition Invoice State',
     category: 'invoicing',
@@ -1016,7 +1016,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator as any).registerAction({
+  (helpaiOrchestrator as Record<string,unknown>).registerAction({
     actionId: 'billing.get_exception_queue',
     name: 'Get Exception Queue',
     category: 'invoicing',
@@ -1034,7 +1034,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator as any).registerAction({
+  (helpaiOrchestrator as Record<string,unknown>).registerAction({
     actionId: 'billing.resolve_exception',
     name: 'Resolve Exception',
     category: 'invoicing',
@@ -1050,7 +1050,7 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  (helpaiOrchestrator as any).registerAction({
+  (helpaiOrchestrator as Record<string,unknown>).registerAction({
     actionId: 'billing.generate_audit_pack',
     name: 'Generate Audit Pack',
     category: 'invoicing',

@@ -725,7 +725,7 @@ export class EnterpriseOnboardingOrchestrator {
             .where(eq(workspaces.id, workspaceId))
             .limit(1);
           
-          return (org as any)?.status === 'active';
+          return (org as Record<string,unknown>)?.status === 'active';
         },
         
         // STEP 7: NOTIFY

@@ -239,7 +239,7 @@ router.post(
           : storagePath;
         
         // Get scan result from middleware (attached to file object)
-        const scanResult = (file as any).scanResult;
+        const scanResult = (file as Record<string,unknown>).scanResult;
 
         // Save to database with ORIGINAL filename for audit trail
         const [uploadRecord] = await db
@@ -316,7 +316,7 @@ router.post(
             ).catch(() => []);
             const chatroomRows = Array.isArray(chatroomResult)
               ? chatroomResult
-              : ((chatroomResult as any)?.rows || []);
+              : ((chatroomResult as Record<string,unknown>)?.rows || []);
             const isShiftChatroom = chatroomRows.length > 0;
             const shiftChatroom = isShiftChatroom ? chatroomRows[0] : null;
 
@@ -352,8 +352,8 @@ router.post(
                 const messageId = insertedMessageRows?.rows?.[0]?.id;
 
                 // Persist GPS-tagged photo evidence to shift_proof_photos (critical durability).
-                const gpsLatRaw = (gpsData as any)?.lat ?? (gpsData as any)?.latitude;
-                const gpsLngRaw = (gpsData as any)?.lng ?? (gpsData as any)?.longitude;
+                const gpsLatRaw = (gpsData as Record<string,unknown>)?.lat ?? (gpsData as Record<string,unknown>)?.latitude;
+                const gpsLngRaw = (gpsData as Record<string,unknown>)?.lng ?? (gpsData as Record<string,unknown>)?.longitude;
                 const gpsLat = gpsLatRaw !== undefined && gpsLatRaw !== null ? Number(gpsLatRaw) : NaN;
                 const gpsLng = gpsLngRaw !== undefined && gpsLngRaw !== null ? Number(gpsLngRaw) : NaN;
                 if (
@@ -491,7 +491,7 @@ router.post(
               },
             }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
           } catch (evtErr: unknown) {
-            log.warn('[ChatUploads] Image event emission failed (non-blocking):', (evtErr as any)?.message);
+            log.warn('[ChatUploads] Image event emission failed (non-blocking):', (evtErr as Record<string,unknown>)?.message);
           }
         }
       }

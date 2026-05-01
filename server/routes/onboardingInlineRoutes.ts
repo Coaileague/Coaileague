@@ -428,7 +428,7 @@ router.get('/setup-guide', requireAuth, async (req: AuthenticatedRequest, res) =
     if (!workspaceId) return res.status(400).json({ message: 'Workspace required' });
 
     // Derive completion from workspace state
-    const [workspace] = await db.select().from(workspaces as any).where(((workspaces as {id?: string}).id) ? eq(((workspaces as {id?: string}).id), workspaceId) : sql`false`).limit(1).catch(() => [null]);
+    const [workspace] = await db.select().from(workspaces as Record<string,unknown>).where(((workspaces as {id?: string}).id) ? eq(((workspaces as {id?: string}).id), workspaceId) : sql`false`).limit(1).catch(() => [null]);
     
     // Build a sensible guide based on what exists
     const guideData = {

@@ -49,7 +49,7 @@ const PRIORITY_CONFIG: Record<string, { label: string; className: string; icon: 
 
 function PostOrderForm({ order, onClose }: { order?: unknown; onClose: () => void }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const { toast } = useToast();
   const [form, setForm] = useState({
     title: order?.title ?? "",
@@ -262,9 +262,9 @@ function AcknowledgmentDialog({ order, onClose }: { order: any; onClose: () => v
   const [signature, setSignature] = useState({ agreed: false, signatureName: "", signedAt: "" });
   const [notes, setNotes] = useState("");
 
-  const employeeId = (user as any)?.employeeId || (user as any)?.id;
+  const employeeId = (user as Record<string,unknown>)?.employeeId || (user as Record<string,unknown>)?.id;
 
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
 
   const mutation = useMutation({
     mutationFn: (data) => apiRequest("POST", "/api/post-orders/acknowledge", data),
@@ -450,7 +450,7 @@ function AcknowledgmentTrackingPanel({ order, onClose }: { order: any; onClose: 
 
 function TrackingTab() {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const [selectedOrder, setSelectedOrder] = useState<null>(null);
 
   const { data: trackingData = [], isLoading } = useQuery<any[]>({
@@ -459,7 +459,7 @@ function TrackingTab() {
   });
 
   const totalOrders = trackingData.length;
-  const totalAcks = trackingData.reduce((sum: number, o: any) => sum + (Number(o.ackCount) || 0), 0);
+  const totalAcks = trackingData.reduce((sum: number, o: unknown) => sum + (Number(o.ackCount) || 0), 0);
   const pendingOrders = trackingData.filter((o) => Number(o.ackCount) === 0).length;
 
   return (
@@ -563,7 +563,7 @@ function TrackingTab() {
 
 export default function PostOrdersPage() {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const [showForm, setShowForm] = useState(false);
   const [editOrder, setEditOrder] = useState<null>(null);
   const [filterPriority, setFilterPriority] = useState("all");

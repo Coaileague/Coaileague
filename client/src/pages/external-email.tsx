@@ -107,7 +107,7 @@ export default function ExternalEmail() {
 
   const sendEmailMutation = useMutation({
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    mutationFn: (data: any) => apiRequest("/api/external-emails", { 
+    mutationFn: (data: unknown) => apiRequest("/api/external-emails", { 
       method: "POST", 
       body: JSON.stringify(data), 
       headers: { "Content-Type": "application/json" } 
@@ -122,14 +122,14 @@ export default function ExternalEmail() {
       resetForm();
       toast({ title: "Email sent successfully" });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({ title: "Failed to send email", description: error.message, variant: "destructive" });
     },
   });
 
   const saveDraftMutation = useMutation({
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    mutationFn: (data: any) => apiRequest("/api/external-emails/drafts", { 
+    mutationFn: (data: unknown) => apiRequest("/api/external-emails/drafts", { 
       method: "POST", 
       body: JSON.stringify(data), 
       headers: { "Content-Type": "application/json" } 
@@ -142,12 +142,12 @@ export default function ExternalEmail() {
 
   const enhanceMutation = useMutation({
     // @ts-expect-error — TS migration: fix in refactoring sprint
-    mutationFn: (data: any) => apiRequest("/api/external-emails/enhance", { 
+    mutationFn: (data: unknown) => apiRequest("/api/external-emails/enhance", { 
       method: "POST", 
       body: JSON.stringify(data), 
       headers: { "Content-Type": "application/json" } 
     }),
-    onSuccess: (res: any) => {
+    onSuccess: (res: unknown) => {
       if (res.data?.body) {
         setOriginalBody(body);
         setBody(res.data.body);
@@ -416,7 +416,7 @@ export default function ExternalEmail() {
             ) : sentEmails.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">No sent emails yet</div>
             ) : (
-              sentEmails.map((email: any) => (
+              sentEmails.map((email: unknown) => (
                 <EmailRow key={email.email.id} email={email} onClick={() => setSelectedEmail(email.email)} />
               ))
             )}

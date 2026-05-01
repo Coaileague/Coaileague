@@ -45,7 +45,7 @@ platformActionHub.registerAction({
   description: 'Count of active lone worker sessions',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: {} },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     try {
       const { rows } = await pool.query(
@@ -66,7 +66,7 @@ platformActionHub.registerAction({
   description: 'SOS events in last 24h',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: { hours: { type: 'integer', description: 'Lookback window in hours', default: 24 } } },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     try {
       const { rows } = await pool.query(
@@ -87,7 +87,7 @@ platformActionHub.registerAction({
   description: 'Sessions where next check-in is overdue',
   requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
   inputSchema: { type: 'object', properties: {} },
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     try {
       const { rows } = await pool.query(

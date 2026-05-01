@@ -48,7 +48,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'API usage metrics and top consumers for workspace',
   requiredRoles: ['owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {
@@ -64,7 +64,7 @@ platformActionHub.registerAction({
   category: 'analytics',
   description: 'Active API keys, their scopes, and recent usage',
   requiredRoles: ['owner', 'root_admin'],
-  handler: async (request: any) => {
+  handler: async (request: unknown) => {
     const t = Date.now();
     const ws = request.workspaceId;
     try {

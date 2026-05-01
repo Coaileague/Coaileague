@@ -243,7 +243,7 @@ export function getIntegrationApiKey(name: keyof typeof INTEGRATIONS): string | 
  */
 export function getEnabledIntegrations(): string[] {
   return Object.entries(INTEGRATIONS)
-    .filter(([_, config]) => (config as any).enabled)
+    .filter(([_, config]) => (config as Record<string,unknown>).enabled)
     .map(([name]) => name);
 }
 
@@ -253,7 +253,7 @@ export function getEnabledIntegrations(): string[] {
  */
 export function getIntegrationForFeature(feature: string): string | null {
   for (const [name, config] of Object.entries(INTEGRATIONS)) {
-    const features = (config as any).features;
+    const features = (config as Record<string,unknown>).features;
     if (features && features[feature]) {
       return name;
     }

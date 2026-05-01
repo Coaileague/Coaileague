@@ -143,7 +143,7 @@ function ForecastDashboard() {
                 <XAxis dataKey="month" tickFormatter={fmtMonth} tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={fmt} tick={{ fontSize: 11 }} width={60} />
                 <Tooltip
-                  formatter={(v: any, name: string) => [fmt(Number(v)), name === 'revenue' ? 'Revenue' : name === 'laborCost' ? 'Labor Cost' : 'Profit']}
+                  formatter={(v: unknown, name: string) => [fmt(Number(v)), name === 'revenue' ? 'Revenue' : name === 'laborCost' ? 'Labor Cost' : 'Profit']}
                   labelFormatter={fmtMonth}
                   contentStyle={{ fontSize: 12 }}
                 />

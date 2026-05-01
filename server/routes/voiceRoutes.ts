@@ -2056,7 +2056,7 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
     if (callerNumber && callerNumber.trim().length >= 10) {
       try {
         const { sendSMS } = await import('../services/smsService');
-        const orgName = (workspace as any)?.name || 'your organization';
+        const orgName = (workspace as Record<string,unknown>)?.name || 'your organization';
         const smsBody = lang === 'es'
           ? `Hola${callerName ? ` ${callerName.split(' ')[0]}` : ''}, su caso de soporte fue creado: ${supportCase.case_number}. Un especialista de ${orgName} le dará seguimiento pronto. Responda STOP para dejar de recibir mensajes.`
           : `Hi${callerName ? ` ${callerName.split(' ')[0]}` : ''}, your support case has been created: ${supportCase.case_number}. A specialist from ${orgName} will follow up with you shortly. Reply STOP to unsubscribe.`;
@@ -2740,7 +2740,7 @@ async function runTrinityTalkTurn(params: {
         [sessionId]
       );
       const meta = (r.rows[0]?.metadata ?? {}) as Record<string, unknown>;
-      const hist = Array.isArray((meta as any).talkHistory) ? (meta as any).talkHistory : [];
+      const hist = Array.isArray((meta as Record<string,unknown>).talkHistory) ? (meta as Record<string,unknown>).talkHistory : [];
       priorTurns = hist.slice(-5);
       if (priorTurns.length > 0) {
         const last3 = priorTurns.slice(-3);

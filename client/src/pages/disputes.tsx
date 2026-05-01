@@ -511,7 +511,7 @@ function DisputeDetailDialog({
                 ) : (
                   <div className="flex space-x-2">
                     <Button 
-                      onClick={() => assignMutation.mutate((user as any)?.id)}
+                      onClick={() => assignMutation.mutate((user as Record<string,unknown>)?.id)}
                       disabled={assignMutation.isPending}
                       data-testid="button-assign-to-me"
                     >

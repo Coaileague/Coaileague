@@ -216,7 +216,7 @@ class AutomationRollbackService {
         sql`SELECT id, workspace_id FROM ${table} WHERE id = ${entityId} LIMIT 1`
       );
 
-      const existingRow = (existingRows as any).rows?.[0] || (existingRows as Record<string,unknown>[])[0];
+      const existingRow = (existingRows as Record<string,unknown>).rows?.[0] || (existingRows as Record<string,unknown>[])[0];
       if (!existingRow) {
         return {
           success: false,

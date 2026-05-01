@@ -109,9 +109,9 @@ rootRouter.get('/health', async (_req: Request, res: Response) => {
     features: [],
     dependencies: {},
     pool: {
-      total: (pool as any).totalCount ?? 0,
-      idle: (pool as any).idleCount ?? 0,
-      waiting: (pool as any).waitingCount ?? 0,
+      total: (pool as Record<string,unknown>).totalCount ?? 0,
+      idle: (pool as Record<string,unknown>).idleCount ?? 0,
+      waiting: (pool as Record<string,unknown>).waitingCount ?? 0,
     },
   };
 
@@ -249,7 +249,7 @@ apiHealthRouter.get('/ai-status', async (req: Request, res: Response) => {
   try {
     const gatewayHealth = await getGatewayHealth();
     const geminiHealth = await checkGeminiAI();
-    const gatewayStatus = (gatewayHealth as any)?.status;
+    const gatewayStatus = (gatewayHealth as Record<string,unknown>)?.status;
     const geminiOk = geminiHealth?.status === 'operational';
     const aiHealthy = gatewayStatus === 'operational' || gatewayStatus === 'healthy' || geminiOk;
     const overall = aiHealthy ? 'full' : 'partial';
@@ -617,7 +617,7 @@ supportRouter.post(
         return res.status(403).json({ error: 'No workspace selected' });
       }
 
-      const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
+      const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user.currentWorkspaceId;
 
       // Parse and validate request body
       let reportData: ServiceIncidentReportPayload;
@@ -760,7 +760,7 @@ export default router;
 // ============================================================================
 // LEGACY EXPORT (for backward compatibility with registerHealthRoutes)
 // ============================================================================
-export function registerHealthRoutes(app: any, requireAuth: unknown) {
+export function registerHealthRoutes(app: unknown, requireAuth: unknown) {
   // Mount the router at root level
   app.use(router);
 }

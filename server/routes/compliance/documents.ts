@@ -472,8 +472,8 @@ router.patch("/:documentId", requireAuth, async (req: Request, res: Response) =>
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     
     for (const field of allowedUpdates) {
-      if ((updateParsed as any).data[field] !== undefined) {
-        updates[field] = (updateParsed as any).data[field];
+      if ((updateParsed as Record<string,unknown>).data[field] !== undefined) {
+        updates[field] = (updateParsed as Record<string,unknown>).data[field];
       }
     }
     
@@ -635,7 +635,7 @@ router.post("/validate-requirements", requireAuth, async (req: Request, res: Res
           requiresColor: type.requiresColor,
           requiresFrontSide: type.requiresFrontImage,
           requiresBackSide: type.requiresBackImage,
-          description: (type as any).validationRules
+          description: (type as Record<string,unknown>).validationRules
         }
       });
     }

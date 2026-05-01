@@ -155,7 +155,7 @@ export async function getRatingTrends(
   let query = db
     .select({
       period: sql`DATE_TRUNC('${sql.raw(granularity)}', ${employerRatings.submittedAt})`,
-      avgRating: sql`AVG(CAST(${(employerRatings as any).overallRating} AS FLOAT))`,
+      avgRating: sql`AVG(CAST(${(employerRatings as Record<string,unknown>).overallRating} AS FLOAT))`,
       count: sql`COUNT(*)`,
     })
     .from(employerRatings)
@@ -197,13 +197,13 @@ export async function identifyAtRiskManagers(
   const managerRatings = await db
     .select({
       managerId: employerRatings.targetId,
-      avgRating: sql`AVG(CAST(${(employerRatings as any).overallRating} AS FLOAT))`,
+      avgRating: sql`AVG(CAST(${(employerRatings as Record<string,unknown>).overallRating} AS FLOAT))`,
       count: sql`COUNT(*)`,
     })
     .from(employerRatings)
     .where(eq(employerRatings.workspaceId, workspaceId))
     .groupBy(employerRatings.targetId)
-    .having(sql`AVG(CAST(${(employerRatings as any).overallRating} AS FLOAT)) < ${threshold}`)
+    .having(sql`AVG(CAST(${(employerRatings as Record<string,unknown>).overallRating} AS FLOAT)) < ${threshold}`)
     .orderBy(sql`AVG(CAST(${(employerRatings).overallRating} AS FLOAT)) ASC`);
 
   return managerRatings.map(r => ({

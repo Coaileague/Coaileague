@@ -469,7 +469,7 @@ function PayrollReport({ startDate, endDate }: { startDate: Date; endDate: Date 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {report.data.map((row: any, idx: number) => (
+                {report.data.map((row: unknown, idx: number) => (
                   <TableRow key={idx} data-testid={`row-payroll-${idx}`}>
                     <TableCell className="font-medium">{row.employeeName || 'N/A'}</TableCell>
                     <TableCell>{row.regularHours?.toFixed(1) || '0.0'}</TableCell>
@@ -546,7 +546,7 @@ function ClientSummaryReport({ startDate, endDate }: { startDate: Date; endDate:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {report.data.map((row: any, idx: number) => (
+                {report.data.map((row: unknown, idx: number) => (
                   <TableRow key={idx} data-testid={`row-client-${idx}`}>
                     <TableCell className="font-medium">{row.clientName || 'N/A'}</TableCell>
                     <TableCell>{row.totalHours?.toFixed(1) || '0.0'}</TableCell>
@@ -626,7 +626,7 @@ function EmployeeActivityReport({ startDate, endDate }: { startDate: Date; endDa
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {report.data.map((row: any, idx: number) => (
+                {report.data.map((row: unknown, idx: number) => (
                   <TableRow key={idx} data-testid={`row-activity-${idx}`}>
                     <TableCell className="font-medium">{row.employeeName || 'N/A'}</TableCell>
                     <TableCell>{row.totalHours?.toFixed(1) || '0.0'}</TableCell>
@@ -706,7 +706,7 @@ function AuditTrailReport({ startDate, endDate }: { startDate: Date; endDate: Da
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {report.data.map((row: any, idx: number) => (
+                {report.data.map((row: unknown, idx: number) => (
                   <TableRow key={idx} data-testid={`row-audit-${idx}`}>
                     <TableCell className="font-medium">
                       {row.timestamp ? format(new Date(row.timestamp), 'MMM d, HH:mm') : 'N/A'}

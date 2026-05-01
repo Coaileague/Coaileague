@@ -108,7 +108,7 @@ router.post('/application', publicFormLimiter, async (req, res) => {
         status: 'in_progress',
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
-        position: (invite as any).position || applicationData.position || null,
+        position: (invite as Record<string,unknown>).position || applicationData.position || null,
         ...applicationData,
       } as any);
     });
@@ -514,7 +514,7 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
       if (application.emergencyContactPhone) employeeUpdate.emergencyContactPhone = application.emergencyContactPhone;
       if (application.emergencyContactRelation) employeeUpdate.emergencyContactRelation = application.emergencyContactRelation;
       if (application.dateOfBirth) employeeUpdate.dateOfBirth = application.dateOfBirth;
-      if ((application as any).position) employeeUpdate.position = (application as any).position;
+      if ((application as Record<string,unknown>).position) employeeUpdate.position = (application as Record<string,unknown>).position;
       // Propagate payroll classification defaults from application tax data
       if (application.taxClassification) {
         if (application.taxClassification === 'w2') {

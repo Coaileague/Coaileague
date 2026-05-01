@@ -29,7 +29,7 @@ export default function AuditorDashboard() {
     staleTime: 60000,
   });
 
-  const docs: any[] = Array.isArray(docsRes) ? docsRes : (docsRes as any)?.data ?? [];
+  const docs: any[] = Array.isArray(docsRes) ? docsRes : (docsRes as Record<string,unknown>)?.data ?? [];
   const orgName = workspace?.name ?? "Your Organization";
 
   if (workspaceIsError || docsIsError) {

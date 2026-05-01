@@ -150,7 +150,7 @@ router.get('/pay-stubs/:id/pdf', requireAuth, attachWorkspaceId, async (req: Req
     if (!data) return res.status(404).json({ error: 'Pay stub data unavailable' });
 
     const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
-    const buffer = await paystubService.generatePDF(data, (ws as any)?.name);
+    const buffer = await paystubService.generatePDF(data, (ws as Record<string,unknown>)?.name);
 
     writeHardenedPdfHeaders(res, { filename, size: buffer.length });
     return res.send(buffer);

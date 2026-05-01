@@ -42,7 +42,7 @@ export async function broadcastSettingsUpdated(
   // 1. Tell every WS client in the parent workspace to invalidate.
   try {
     broadcastToWorkspace(workspaceId, payload);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[SettingsSync] websocket broadcast failed for ${workspaceId}: ${err?.message}`);
   }
 
@@ -72,7 +72,7 @@ export async function broadcastSettingsUpdated(
       }
       frontier = next;
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[SettingsSync] sub-tenant fan-out failed for ${workspaceId}: ${err?.message}`);
   }
 
@@ -86,7 +86,7 @@ export async function broadcastSettingsUpdated(
       workspaceId,
       metadata: { scope, changedFields, updatedAt },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[SettingsSync] event bus publish failed for ${workspaceId}: ${err?.message}`);
   }
 }

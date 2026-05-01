@@ -213,7 +213,7 @@ function ACCDashboardPanel({ workspaceId }: { workspaceId: string }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {stats.openUnresolved.map((conflict: any, i: number) => (
+            {stats.openUnresolved.map((conflict: unknown, i: number) => (
               <div
                 key={conflict.conflictId}
                 className="rounded-md border p-3 space-y-1"
@@ -374,7 +374,7 @@ function ThalamicDashboardPanel({ workspaceId }: { workspaceId: string }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-1.5">
-              {stats.recentSignals.slice(0, 10).map((sig: any, i: number) => (
+              {stats.recentSignals.slice(0, 10).map((sig: unknown, i: number) => (
                 <div
                   key={sig.signalId}
                   className="flex items-center justify-between text-xs py-1 border-b last:border-0 gap-2"

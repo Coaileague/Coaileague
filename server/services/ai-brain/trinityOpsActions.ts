@@ -230,7 +230,7 @@ export function registerOpsActions() {
     const { workspaceId, startDate, endDate } = params;
     const entries = await db.select({
       employeeName: sql<string>`${employees.firstName} || ' ' || ${employees.lastName}`,
-      date: (timeEntries as any).date,
+      date: (timeEntries as Record<string,unknown>).date,
       clockIn: timeEntries.clockIn,
       clockOut: timeEntries.clockOut,
       hours: timeEntries.totalHours,
@@ -287,20 +287,20 @@ export function registerOpsActions() {
 
     const checks = {
       org: {
-        ein: !!(ws as any).taxId,
-        companyName: !!(ws as any).companyName || !!(ws as any).name,
-        address: !!(ws as any).address,
-        stateLicense: !!(ws as any).stateLicenseNumber,
+        ein: !!(ws as Record<string,unknown>).taxId,
+        companyName: !!(ws as Record<string,unknown>).companyName || !!(ws as Record<string,unknown>).name,
+        address: !!(ws as Record<string,unknown>).address,
+        stateLicense: !!(ws as Record<string,unknown>).stateLicenseNumber,
       },
       invoice: {
-        billingEmail: !!(ws as any).billingEmail,
-        invoicePrefix: !!(ws as any).invoicePrefix,
-        paymentTerms: !!((ws as any).paymentTermsDays),
-        clientsBillingReady: Number((clientRows as any)?.missingEmail || 0) === 0,
-        clientsRateReady: Number((clientRows as any)?.missingRate || 0) === 0,
+        billingEmail: !!(ws as Record<string,unknown>).billingEmail,
+        invoicePrefix: !!(ws as Record<string,unknown>).invoicePrefix,
+        paymentTerms: !!((ws as Record<string,unknown>).paymentTermsDays),
+        clientsBillingReady: Number((clientRows as Record<string,unknown>)?.missingEmail || 0) === 0,
+        clientsRateReady: Number((clientRows as Record<string,unknown>)?.missingRate || 0) === 0,
       },
       payroll: {
-        payrollSchedule: !!(ws as any).payrollSchedule,
+        payrollSchedule: !!(ws as Record<string,unknown>).payrollSchedule,
         employeesHaveBank: Number(pr.missing_bank || 0) === 0,
         employeesHaveW4: Number(pr.missing_w4 || 0) === 0,
         employeesHaveI9: Number(pr.missing_i9 || 0) === 0,

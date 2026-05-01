@@ -310,7 +310,7 @@ export class QuickBooksIntegration {
     return { success: errors.length === 0, synced, errors };
   }
   
-  private mapInvoiceToQuickBooks(invoice: any): any {
+  private mapInvoiceToQuickBooks(invoice: unknown): any {
     return {
       Line: [{
         Amount: parseFloat(invoice.total),
@@ -616,9 +616,9 @@ export class QuickBooksIntegration {
     const credentials: QuickBooksCredentials = {
       workspaceId,
       accessToken,
-      refreshToken: (conn as any).refreshToken || '',
+      refreshToken: (conn as Record<string,unknown>).refreshToken || '',
       realmId: conn.realmId,
-      expiresAt: (conn as any).expiresAt || new Date(),
+      expiresAt: (conn as Record<string,unknown>).expiresAt || new Date(),
     };
 
     const result = await this.syncInvoicesToQuickBooks(credentials, [{

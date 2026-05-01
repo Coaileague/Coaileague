@@ -389,7 +389,7 @@ export const requireManagerOrPlatformStaff: RequestHandler = async (req, res, ne
   const authReq = req as AuthenticatedRequest;
   
   // Check for test mode - crawlers get full access
-  if ((authReq as any).isTestMode) {
+  if ((authReq as Record<string,unknown>).isTestMode) {
     authReq.platformRole = "root_admin";
     return next();
   }
@@ -421,7 +421,7 @@ export const requireManagerOrPlatformStaff: RequestHandler = async (req, res, ne
   // MANDATORY SECURITY: For non-platform staff, workspace context MUST come from req.user
   // or req.session. We ignore req.body/query/params to prevent parameter pollution
   // and cross-tenant ID injection attacks.
-  const requestedWorkspaceId = authReq.user.currentWorkspaceId || (authReq as any).session?.workspaceId;
+  const requestedWorkspaceId = authReq.user.currentWorkspaceId || (authReq as Record<string,unknown>).session?.workspaceId;
   const resolved = await resolveWorkspaceForUser(userId, requestedWorkspaceId as string | undefined);
   
   if (!resolved.workspaceId || !resolved.role) {
@@ -551,7 +551,7 @@ export const attachWorkspaceId: RequestHandler = async (req, res, next) => {
   // MANDATORY SECURITY: For non-platform staff, workspace context MUST come from req.user
   // or req.session. We ignore req.body/query/params to prevent parameter pollution
   // and cross-tenant ID injection attacks.
-  const requestedWorkspaceId = authReq.user.currentWorkspaceId || (authReq as any).session?.workspaceId;
+  const requestedWorkspaceId = authReq.user.currentWorkspaceId || (authReq as Record<string,unknown>).session?.workspaceId;
   
   // Check platform role first - platform staff can specify workspace via query
   const platformRole = await getUserPlatformRole(userId);
@@ -639,7 +639,7 @@ export const attachWorkspaceIdOptional: RequestHandler = async (req, res, next) 
   // MANDATORY SECURITY: For non-platform staff, workspace context MUST come from req.user
   // or req.session. We ignore req.body/query/params to prevent parameter pollution
   // and cross-tenant ID injection attacks.
-  const requestedWorkspaceId = authReq.user.currentWorkspaceId || (authReq as any).session?.workspaceId;
+  const requestedWorkspaceId = authReq.user.currentWorkspaceId || (authReq as Record<string,unknown>).session?.workspaceId;
   
   const platformRole = await getUserPlatformRole(userId);
   
@@ -1066,7 +1066,7 @@ export const enforcePaymentStatus: RequestHandler = async (req, res, next) => {
   }
 
   // No workspace context - skip (some routes don't need workspace)
-  const workspaceId = authReq.workspaceId || (authReq as any).user?.defaultWorkspaceId;
+  const workspaceId = authReq.workspaceId || (authReq as Record<string,unknown>).user?.defaultWorkspaceId;
   if (!workspaceId) {
     return next();
   }

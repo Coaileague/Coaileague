@@ -65,7 +65,7 @@ function generateQrCode(): string {
 
 function TourForm({ tour, onClose }: { tour?: unknown; onClose: () => void }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const { toast } = useToast();
   const [form, setForm] = useState({
     name: tour?.name ?? "",
@@ -175,7 +175,7 @@ function TourForm({ tour, onClose }: { tour?: unknown; onClose: () => void }) {
 
 function CheckpointForm({ tourId, checkpoint, onClose }: { tourId: string; checkpoint?: unknown; onClose: () => void }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const { toast } = useToast();
   const [form, setForm] = useState({
     name: checkpoint?.name ?? "",
@@ -257,7 +257,7 @@ function CheckpointForm({ tourId, checkpoint, onClose }: { tourId: string; check
 
 function ScanSimulator({ tourId, checkpoints }: { tourId: string; checkpoints: unknown[] }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const { toast } = useToast();
   const [scanInput, setScanInput] = useState("");
 
@@ -284,7 +284,7 @@ function ScanSimulator({ tourId, checkpoints }: { tourId: string; checkpoints: u
       tourId,
       checkpointId: match.id,
       workspaceId,
-      employeeId: (user as any)?.employeeId || (user as any)?.id,
+      employeeId: (user as Record<string,unknown>)?.employeeId || (user as Record<string,unknown>)?.id,
       scannedAt: new Date().toISOString(),
       status: "completed",
       notes: "",
@@ -352,7 +352,7 @@ function ScanSimulator({ tourId, checkpoints }: { tourId: string; checkpoints: u
 
 function CheckpointList({ tourId }: { tourId: string }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const { toast } = useToast();
   const [showCpForm, setShowCpForm] = useState(false);
   const [editCp, setEditCp] = useState<null>(null);
@@ -400,7 +400,7 @@ function CheckpointList({ tourId }: { tourId: string }) {
         </Card>
       ) : (
         <div className="space-y-2">
-          {checkpoints.map((cp: any, idx: number) => (
+          {checkpoints.map((cp: unknown, idx: number) => (
             <Card key={cp.id} data-testid={`card-checkpoint-${cp.id}`}>
               <CardContent className="p-3">
                 <div className="flex items-center gap-3">
@@ -645,7 +645,7 @@ function PatrolReport({ tourId }: { tourId: string }) {
 
 function TourDetail({ tour, onBack }: { tour: any; onBack: () => void }) {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const [activeTab, setActiveTab] = useState("checkpoints");
 
   const { data: checkpoints = [] } = useQuery<any[]>({
@@ -792,7 +792,7 @@ function TourCard({ tour, onEdit, onView }: { tour: any; onEdit: (t) => void; on
 
 export default function GuardTourPage() {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const [showForm, setShowForm] = useState(false);
   const [editTour, setEditTour] = useState<null>(null);
   const [selectedTour, setSelectedTour] = useState<null>(null);

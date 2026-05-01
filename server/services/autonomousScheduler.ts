@@ -2254,7 +2254,7 @@ async function runPaymentReminderCheck() {
 
             if (existingReminders.length > 0) {
               const lastReminder = existingReminders[existingReminders.length - 1];
-              const meta = (lastReminder as any).metadata;
+              const meta = (lastReminder as Record<string,unknown>).metadata;
               const emailFailed = meta && meta.emailSent === false && meta.emailError;
               if (!emailFailed) continue;
               await db.delete(paymentReminders).where(eq(paymentReminders.id, lastReminder.id));
@@ -2750,7 +2750,7 @@ export function startAutonomousScheduler() {
             )
         `);
 
-        const rows = (expired as any).rows ?? (expired as any);
+        const rows = (expired as Record<string,unknown>).rows ?? (expired as any);
         let unassigned = 0;
         for (const row of rows ?? []) {
           try {
@@ -2792,7 +2792,7 @@ export function startAutonomousScheduler() {
             AND e.user_id IS NOT NULL
         `);
 
-        const rows: any[] = (expired as any).rows || [];
+        const rows: any[] = (expired as Record<string,unknown>).rows || [];
         log.info('[TerminationExpiry] Processing expired document access', { count: rows.length });
 
         for (const row of rows) {
@@ -3273,7 +3273,7 @@ export function startAutonomousScheduler() {
 
           processedDocs.add(docId);
           try {
-            const result = await (documentSigningService as any).sendDocumentReminders(docId);
+            const result = await (documentSigningService as Record<string,unknown>).sendDocumentReminders(docId);
             remindersSent += result.sent;
           } catch (err) {
             // Skip individual failures

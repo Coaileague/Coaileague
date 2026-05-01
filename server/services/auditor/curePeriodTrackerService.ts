@@ -245,7 +245,7 @@ async function sendReminderStrike(
 
 // ─── Auto-FAIL conversion ─────────────────────────────────────────────────────
 
-async function convertToAutoFail(timer: any): Promise<void> {
+async function convertToAutoFail(timer: unknown): Promise<void> {
   const { pool } = await import('../../db');
 
   // Convert verdict

@@ -253,7 +253,7 @@ export async function loadTenantLogo(
     const { eq } = await import('drizzle-orm');
     const [ws] = await db.select().from(workspaces)
       .where(eq(workspaces.id, workspaceId)).limit(1);
-    const logoUrl: string | undefined = (ws as any)?.logoUrl ?? (ws as any)?.logo_url;
+    const logoUrl: string | undefined = (ws as Record<string,unknown>)?.logoUrl ?? (ws as Record<string,unknown>)?.logo_url;
     if (!logoUrl) return null;
 
     const { downloadFileFromObjectStorage } = await import('../objectStorage');

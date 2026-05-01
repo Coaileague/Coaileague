@@ -52,7 +52,7 @@ export const orgIsolationMiddleware: RequestHandler = async (req: Request, res: 
       requestedWorkspaceId: requestedWs,
       path: req.path,
       userId: authReq.user?.id,
-      requestId: (authReq as any).requestId,
+      requestId: (authReq as Record<string,unknown>).requestId,
     });
     // SECURITY: regenerate session on workspace switch attempt/spoofing
     if (req.session) {
@@ -66,7 +66,7 @@ export const orgIsolationMiddleware: RequestHandler = async (req: Request, res: 
     res.status(403).json({
       error: 'Access denied: requested workspace does not match your session',
       code: 'ORG_ISOLATION_VIOLATION',
-      requestId: (authReq as any).requestId,
+      requestId: (authReq as Record<string,unknown>).requestId,
       timestamp: new Date().toISOString(),
     });
     return;

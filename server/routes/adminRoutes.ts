@@ -661,7 +661,7 @@ router.get('/support/sessions', async (req: AuthenticatedRequest, res) => {
   try {
     const sessions = await (storage as Record<string, unknown>).getAllSupportSessions();
     
-    const enrichedSessions = await Promise.all(sessions.map(async (session: any) => {
+    const enrichedSessions = await Promise.all(sessions.map(async (session: unknown) => {
       const workspace = await storage.getWorkspace(session.targetOrgId);
       const staffUser = await storage.getUser(session.staffUserId);
       const auditLogsList = await storage.getSupportAuditLogs({ sessionId: session.id });
@@ -1014,7 +1014,7 @@ router.post('/support/delete-user', async (req: AuthenticatedRequest, res) => {
     const { userId, workspaceId, reason } = req.body;
     const adminUserId = req.user?.id;
     
-    const employee = await (storage as any).getEmployee(userId);
+    const employee = await (storage as Record<string,unknown>).getEmployee(userId);
     if (!employee || employee.workspaceId !== workspaceId) {
       return res.status(404).json({ message: "Employee not found in specified workspace" });
     }
@@ -1029,7 +1029,7 @@ router.post('/support/delete-user', async (req: AuthenticatedRequest, res) => {
       }
     }
     
-    await (storage as any).deleteEmployee(userId);
+    await (storage as Record<string,unknown>).deleteEmployee(userId);
     
     res.json({ 
       success: true, 
@@ -1048,7 +1048,7 @@ router.post('/support/change-user-role', async (req: AuthenticatedRequest, res) 
     const { userId, newRole, workspaceId } = req.body;
     const adminUserId = req.user?.id;
     
-    const employee = await (storage as any).getEmployee(userId);
+    const employee = await (storage as Record<string,unknown>).getEmployee(userId);
     if (!employee || employee.workspaceId !== workspaceId) {
       return res.status(404).json({ message: "Employee not found in specified workspace" });
     }
@@ -1060,7 +1060,7 @@ router.post('/support/change-user-role', async (req: AuthenticatedRequest, res) 
       return res.status(403).json({ message: "Only deputy admins and above can change roles of organization owners or admins" });
     }
     
-    await (storage as any).updateEmployee(userId, { role: newRole });
+    await (storage as Record<string,unknown>).updateEmployee(userId, { role: newRole });
     
     res.json({ 
       success: true, 

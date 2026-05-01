@@ -106,7 +106,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res) => {
     if (!existing) return res.status(404).json({ error: "Site briefing not found" });
 
     const updateData = insertSiteBriefingSchema.partial().parse(req.body);
-    delete (updateData as any).workspaceId;
+    delete (updateData as Record<string,unknown>).workspaceId;
 
     const [updated] = await db
       .update(siteBriefings)

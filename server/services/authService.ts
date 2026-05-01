@@ -872,7 +872,7 @@ export class AuthService {
         await db.update(employees).set({ email: newEmail, updatedAt: new Date() }).where(eq(employees.userId, user.id));
         await db.update(clients).set({ email: newEmail, updatedAt: new Date() }).where(eq(clients.userId, user.id));
       } catch (syncErr) {
-        log.warn('[AuthService] Email sync to employee/client failed (non-fatal):', (syncErr as any).message);
+        log.warn('[AuthService] Email sync to employee/client failed (non-fatal):', (syncErr as Record<string,unknown>).message);
       }
 
       // SECURITY: Invalidate all active sessions so any pre-change session

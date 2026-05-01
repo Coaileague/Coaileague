@@ -207,7 +207,7 @@ class E2ECrawlRunner {
       }
     };
 
-    const requestFailedHandler = (request: any) => {
+    const requestFailedHandler = (request: unknown) => {
       const failure = request.failure();
       if (failure) {
         networkErrors.push(`${failure.errorText}: ${request.url()}`);

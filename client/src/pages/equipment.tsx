@@ -53,7 +53,7 @@ const VALID_CONDITIONS = ["new", "excellent", "good", "fair", "poor", "damaged"]
 function EquipmentForm({ item, onClose }: { item?: unknown; onClose: () => void }) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const [form, setForm] = useState({
     name: item?.name ?? "",
     serialNumber: item?.serialNumber ?? "",
@@ -646,7 +646,7 @@ function LowInventoryBanner({ workspaceId }: { workspaceId: string }) {
               The following categories have low available equipment:
             </p>
             <div className="flex gap-2 mt-2 flex-wrap">
-              {lowInventory.map((item: any, idx: number) => (
+              {lowInventory.map((item: unknown, idx: number) => (
                 <Badge
                   key={idx}
                   variant="secondary"
@@ -666,7 +666,7 @@ function LowInventoryBanner({ workspaceId }: { workspaceId: string }) {
 
 export default function EquipmentPage() {
   const { user } = useAuth();
-  const workspaceId = (user as any)?.workspaceId;
+  const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<null>(null);
   const [filterStatus, setFilterStatus] = useState("all");

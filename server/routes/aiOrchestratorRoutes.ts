@@ -66,7 +66,7 @@ const ConfidenceScoreRequestSchema = z.object({
 router.post("/process", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -99,7 +99,7 @@ router.post("/process", requireAuth, async (req: Request, res: Response) => {
       featureName: `AI Orchestrator: ${taskType || 'general'}`,
       description: task.substring(0, 120),
       amountOverride: creditInfo.amount,
-    }).catch((billErr: unknown) => { log.error('[AI Orchestrator] Credit deduction failed (non-blocking):', (billErr as any)?.message); });
+    }).catch((billErr: unknown) => { log.error('[AI Orchestrator] Credit deduction failed (non-blocking):', (billErr as Record<string,unknown>)?.message); });
 
     // TRINITY.md §S: tenant-facing response must not expose which
     // internal reasoning path handled the request. primaryAi / supportAi
@@ -129,7 +129,7 @@ router.post("/process", requireAuth, async (req: Request, res: Response) => {
 router.post("/consult", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -141,7 +141,7 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Task is required" });
     }
 
-    const result = await (claudeService as any).execute({
+    const result = await (claudeService as Record<string,unknown>).execute({
       task,
       sessionId: randomUUID(),
       userId: user?.id,
@@ -159,7 +159,7 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
       featureName: `AI Consult: ${inferredTaskType}`,
       description: task.substring(0, 120),
       amountOverride: consultCreditInfo.amount,
-    }).catch((billErr: unknown) => { log.error('[AI Orchestrator Consult] Billing failed:', (billErr as any)?.message); });
+    }).catch((billErr: unknown) => { log.error('[AI Orchestrator Consult] Billing failed:', (billErr as Record<string,unknown>)?.message); });
 
     return res.json({
       success: true,
@@ -178,7 +178,7 @@ router.post("/consult", requireAuth, async (req: Request, res: Response) => {
 router.post("/verify", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -306,7 +306,7 @@ router.post("/score-confidence", requireAuth, async (req: Request, res: Response
 router.get("/logs", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -322,7 +322,7 @@ router.get("/logs", requireAuth, async (req: Request, res: Response) => {
       endDate,
     } = req.query;
 
-    const logs = await (aiActionLogger as any).getLogs({
+    const logs = await (aiActionLogger as Record<string,unknown>).getLogs({
       workspaceId,
       limit: Number(limit),
       offset: Number(offset),
@@ -352,7 +352,7 @@ router.get("/logs", requireAuth, async (req: Request, res: Response) => {
 router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });
@@ -360,7 +360,7 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
 
     const { period = '24h' } = req.query;
 
-    const stats = await (aiActionLogger as any).getStats({
+    const stats = await (aiActionLogger as Record<string,unknown>).getStats({
       workspaceId,
       period: period as string,
     });

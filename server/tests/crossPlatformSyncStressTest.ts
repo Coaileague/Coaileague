@@ -224,7 +224,7 @@ async function phase3_pricing_display_sync() {
   ];
 
   for (const ec of employeeCounts) {
-    const configValue = (BILLING as any).tiers[ec.tier].maxEmployees;
+    const configValue = (BILLING as Record<string,unknown>).tiers[ec.tier].maxEmployees;
     record({
       name: `${ec.tier} Employee Limit Sync`,
       phase: 'PRICE_SYNC',
@@ -740,7 +740,7 @@ async function phase11_db_reflects_config() {
     WHERE table_schema = 'public'
     ORDER BY table_name
   `);
-  const allTables = (tableCheck as any).rows?.map((r: unknown) => r.table_name) || [];
+  const allTables = (tableCheck as Record<string,unknown>).rows?.map((r: unknown) => r.table_name) || [];
 
   for (const [feature, table] of Object.entries(featureTables)) {
     const exists = allTables.includes(table);
@@ -1085,7 +1085,7 @@ async function phase16_data_path_tracing() {
   });
 
   const allTiersInMatrix = [...matrixFeatureIds].every(id => {
-    const entry = (BILLING as any).featureMatrix[id];
+    const entry = (BILLING as Record<string,unknown>).featureMatrix[id];
     return entry.free !== undefined && entry.starter !== undefined && entry.professional !== undefined && entry.enterprise !== undefined;
   });
 

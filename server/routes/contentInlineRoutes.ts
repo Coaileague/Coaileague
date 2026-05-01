@@ -59,7 +59,7 @@ router.get("/client-reports", requireAuth, async (req: AuthenticatedRequest, res
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -103,7 +103,7 @@ router.get("/client-reports", requireAuth, async (req: AuthenticatedRequest, res
        WHERE workspace_id = ${workspaceId}
          AND client_id = ${clientId}
     `);
-    const clientSiteIds: string[] = ((siteRows as any).rows || []).map((r: unknown) => r.id);
+    const clientSiteIds: string[] = ((siteRows as Record<string,unknown>).rows || []).map((r: unknown) => r.id);
 
     // Helper: produce a SQL array literal for inArray-style filters without
     // dropping down to the dynamic drizzle `inArray` builder.
@@ -214,7 +214,7 @@ router.get("/locked-reports", requireAuth, async (req: AuthenticatedRequest, res
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }
@@ -255,7 +255,7 @@ router.get("/report-analytics", requireAuth, async (req: AuthenticatedRequest, r
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
-    const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || (user as Record<string,unknown>)?.workspaceId || user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(403).json({ message: "No workspace selected" });
     }

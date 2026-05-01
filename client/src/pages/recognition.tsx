@@ -32,7 +32,7 @@ export default function RecognitionPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isNominateModalOpen, setIsNominateModalOpen] = useState(false);
-  const employeeId = (user as any)?.employeeId as string | undefined;
+  const employeeId = (user as Record<string,unknown>)?.employeeId as string | undefined;
 
   const { data: awards, isLoading: isLoadingAwards } = useQuery<any[]>({
     queryKey: ["/api/recognition/wall"],

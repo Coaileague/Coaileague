@@ -89,7 +89,7 @@ export function useWorkspaceAccess() {
     retryDelay: 500,
   });
 
-  const employeePosition = data?.employeePosition || (user as any)?.position as string | undefined;
+  const employeePosition = data?.employeePosition || (user as Record<string,unknown>)?.position as string | undefined;
   const positionCapabilities = deriveCapabilitiesFromPosition(employeePosition);
 
   return {

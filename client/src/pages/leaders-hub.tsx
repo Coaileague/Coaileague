@@ -482,7 +482,7 @@ export default function LeadersHub() {
                     </div>
                     {commandCenter.activeAlerts?.missedClockIns?.length > 0 ? (
                       <div className="mt-2 space-y-1">
-                        {commandCenter.activeAlerts.missedClockIns.slice(0, 3).map((m: any, i: number) => (
+                        {commandCenter.activeAlerts.missedClockIns.slice(0, 3).map((m: unknown, i: number) => (
                           <p key={i} className="text-xs text-muted-foreground">
                             Site: {m.siteName || 'Unknown'} — <span className="text-destructive">{m.minutesLate}m late</span>
                           </p>
@@ -506,7 +506,7 @@ export default function LeadersHub() {
                     </div>
                     {commandCenter.activeAlerts?.openIncidents?.length > 0 ? (
                       <div className="mt-2 space-y-1">
-                        {commandCenter.activeAlerts.openIncidents.slice(0, 3).map((inc: any, i: number) => (
+                        {commandCenter.activeAlerts.openIncidents.slice(0, 3).map((inc: unknown, i: number) => (
                           <p key={i} className="text-xs text-muted-foreground truncate">
                             {inc.title}
                             {inc.severity && <Badge variant="outline" className="ml-1 text-xs">{inc.severity}</Badge>}
@@ -533,7 +533,7 @@ export default function LeadersHub() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {commandCenter.trinityBrief.items.map((item: any, i: number) => (
+                    {commandCenter.trinityBrief.items.map((item: unknown, i: number) => (
                       <div key={i} className="flex items-start gap-2.5 text-sm" data-testid={`trinity-brief-item-${i}`}>
                         <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                         <div>
@@ -562,7 +562,7 @@ export default function LeadersHub() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-1.5">
-                      {commandCenter.todayShifts.officers.slice(0, 10).map((officer: any, i: number) => (
+                      {commandCenter.todayShifts.officers.slice(0, 10).map((officer: unknown, i: number) => (
                         <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/40 text-xs" data-testid={`officer-row-${i}`}>
                           <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full shrink-0 ${officer.clockedIn ? 'bg-emerald-500' : officer.missedAlert ? 'bg-destructive' : 'bg-muted-foreground'}`} />

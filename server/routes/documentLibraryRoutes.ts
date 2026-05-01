@@ -52,7 +52,7 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
       const userId = (req.user)?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-      const pending = await (documentSigningService as any).getMyPendingSignatures(userId, workspaceId);
+      const pending = await (documentSigningService as Record<string,unknown>).getMyPendingSignatures(userId, workspaceId);
       res.json({ success: true, data: pending });
     } catch (error: unknown) {
       log.error('[DocumentLibrary] Operation error:', error);
@@ -426,7 +426,7 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
   router.get("/:id/signature-status", requireAuth, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const status = await (documentSigningService as any).getSignatureStatus(id);
+      const status = await (documentSigningService as Record<string,unknown>).getSignatureStatus(id);
       res.json({ success: true, data: status });
     } catch (error: unknown) {
       log.error('[DocumentLibrary] Operation error:', error);
@@ -437,7 +437,7 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, at
   router.post("/:id/send-reminders", requireAuth, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const result = await (documentSigningService as any).sendDocumentReminders(id);
+      const result = await (documentSigningService as Record<string,unknown>).sendDocumentReminders(id);
       res.json({ success: true, data: result });
     } catch (error: unknown) {
       log.error('[DocumentLibrary] Operation error:', error);

@@ -175,7 +175,7 @@ export const AtomicFinancialLockService = {
       WHERE te.id = ${timeEntryId}
       LIMIT 1
     `);
-    const row = (rows as any).rows?.[0] as
+    const row = (rows as Record<string,unknown>).rows?.[0] as
       | { invoice_id: string | null; invoice_status: string | null; payroll_run_id: string | null; payroll_status: string | null }
       | undefined;
     if (!row) return { locked: false };

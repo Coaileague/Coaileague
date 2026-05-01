@@ -838,7 +838,7 @@ router.post('/connect-dashboard', flexAuth, async (req: AuthenticatedRequest, re
     res.json({ url: loginLink.url });
   } catch (error: unknown) {
     log.error("Error creating Connect dashboard link:", error);
-    if (error?.type === 'StripeInvalidRequestError' && (error as any)?.message?.includes('standard')) {
+    if (error?.type === 'StripeInvalidRequestError' && (error as Record<string,unknown>)?.message?.includes('standard')) {
       const dashboardUrl = `https://dashboard.stripe.com`;
       return res.json({ url: dashboardUrl, note: 'Standard accounts use the main Stripe Dashboard' });
     }

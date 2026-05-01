@@ -51,7 +51,7 @@ async function checkIsBanned(workspaceId: string, visitorName: string, _visitorC
 }
 
 // ── Overstay check helper ─────────────────────────────────────────────────────
-function isOverstay(log: any, thresholdHours = 8): boolean {
+function isOverstay(log: unknown, thresholdHours = 8): boolean {
   if (log.checked_out_at) return false;
   const sinceCheckIn = (Date.now() - new Date(log.checked_in_at).getTime()) / 3_600_000;
   if (log.expected_departure) {
@@ -470,7 +470,7 @@ export function registerVisitorActions(): void {
       description: 'Get currently checked-in visitors at a specified post/site',
       requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
       inputSchema: { type: 'object', properties: { siteId: { type: 'string', description: 'Filter by site ID' }, siteName: { type: 'string', description: 'Filter by site name' } } },
-      handler: async (request: any) => {
+      handler: async (request: unknown) => {
         const startTime = Date.now();
         const { siteId, siteName, workspaceId: payloadWs } = request.payload || {};
         const ws = request.workspaceId || payloadWs;
@@ -509,7 +509,7 @@ export function registerVisitorActions(): void {
       description: 'Get visitors past their expected departure time or on-site beyond threshold',
       requiredRoles: ['guard', 'supervisor', 'manager', 'owner', 'root_admin'],
       inputSchema: { type: 'object', properties: { thresholdHours: { type: 'number', description: 'Hours on-site before flagging as overstay', default: 8 } } },
-      handler: async (request: any) => {
+      handler: async (request: unknown) => {
         const startTime = Date.now();
         const { thresholdHours = 8, workspaceId: payloadWs } = request.payload || {};
         const ws = request.workspaceId || payloadWs;

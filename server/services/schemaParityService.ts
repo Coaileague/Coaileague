@@ -54,7 +54,7 @@ interface ParityReport {
 }
 
 // Map Drizzle column types to PostgreSQL types
-function drizzleTypeToPgType(columnDef: any): string {
+function drizzleTypeToPgType(columnDef: unknown): string {
   const dataType = columnDef.dataType;
   const columnType = columnDef.columnType;
   
@@ -144,13 +144,13 @@ class SchemaParityService {
           
           for (const [colKey, colDef] of Object.entries(drizzleColumns)) {
             // Get the actual column name
-            const actualColName = (colDef as any).name || toSnakeCase(colKey);
+            const actualColName = (colDef as Record<string,unknown>).name || toSnakeCase(colKey);
             columnsChecked++;
             
             if (!pgColumns.has(actualColName)) {
               // Determine if this column has a default value (makes it safer to add)
-              const hasDefault = (colDef as any).hasDefault === true;
-              const isNullable = (colDef as any).notNull !== true;
+              const hasDefault = (colDef as Record<string,unknown>).hasDefault === true;
+              const isNullable = (colDef as Record<string,unknown>).notNull !== true;
               
               this.issues.push({
                 type: 'missing_column',
@@ -353,7 +353,7 @@ class SchemaParityService {
   /**
    * Create a missing table from Drizzle schema definition
    */
-  private resolveColumnPgType(col: any): string {
+  private resolveColumnPgType(col: unknown): string {
     const columnType = col.columnType || '';
     const dataType = col.dataType || '';
 
@@ -379,7 +379,7 @@ class SchemaParityService {
     return drizzleTypeToPgType(col);
   }
 
-  private resolveArrayPgType(col: any): string {
+  private resolveArrayPgType(col: unknown): string {
     const columnType = col.columnType || '';
     if (columnType.includes('PgText')) return 'text[]';
     if (columnType.includes('PgVarchar')) return 'character varying[]';
@@ -389,7 +389,7 @@ class SchemaParityService {
     return 'text[]';
   }
 
-  private resolveDefaultValue(col: any): string {
+  private resolveDefaultValue(col: unknown): string {
     if (col.hasDefault && col.default !== undefined) {
       if (typeof col.default === 'string') return ` DEFAULT '${col.default.replace(/'/g, "''")}'`;
       if (typeof col.default === 'number') return ` DEFAULT ${col.default}`;

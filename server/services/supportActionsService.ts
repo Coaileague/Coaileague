@@ -728,9 +728,9 @@ class SupportActionsService {
       }
 
       // Get workspace info
-      const workspace = (targetUser as any).workspaceId
+      const workspace = (targetUser as Record<string,unknown>).workspaceId
         ? await db.query.workspaces.findFirst({
-            where: eq(workspaces.id, (targetUser as any).workspaceId),
+            where: eq(workspaces.id, (targetUser as Record<string,unknown>).workspaceId),
           })
         : null;
 
@@ -740,10 +740,10 @@ class SupportActionsService {
         userId: targetUser.id,
         email: targetUser.email,
         name: `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || 'N/A',
-        isActive: (targetUser as any).isActive,
-        lockedAt: (targetUser as any).lockedAt,
-        lockReason: (targetUser as any).lockReason,
-        workspaceId: (targetUser as any).workspaceId,
+        isActive: (targetUser as Record<string,unknown>).isActive,
+        lockedAt: (targetUser as Record<string,unknown>).lockedAt,
+        lockReason: (targetUser as Record<string,unknown>).lockReason,
+        workspaceId: (targetUser as Record<string,unknown>).workspaceId,
         workspaceName: workspace?.name || 'N/A',
         createdAt: targetUser.createdAt,
         lastLoginAt: targetUser.lastLoginAt,

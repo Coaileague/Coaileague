@@ -924,7 +924,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
       });
 
       if (businessRuleResponse(res, [
-        validateInvoiceAmount((rawValidated as any).totalAmount ?? req.body.totalAmount, 'totalAmount'),
+        validateInvoiceAmount((rawValidated as Record<string,unknown>).totalAmount ?? req.body.totalAmount, 'totalAmount'),
       ])) return;
 
       const validated = enforceAttribution('invoices', rawValidated, req.attribution || {
@@ -959,7 +959,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         });
 
         // Create revenue recognition schedule (Issue #5: invoice-to-revenue linking)
-        const recognitionMethod = (createdInvoice as any).recognitionMethod ?? 'cash';
+        const recognitionMethod = (createdInvoice as Record<string,unknown>).recognitionMethod ?? 'cash';
         const invoiceTotal = parseFloat(String(createdInvoice.total || validated.totalAmount || 0));
         if (invoiceTotal > 0 && createdInvoice.clientId) {
           try {
@@ -1097,7 +1097,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
       // GAP-32 FIX: Added 'refunded' — a refunded invoice is a closed accounting record
       // and must not be mutated via PATCH. Issue a new credit memo to correct it.
       const CLOSED_STATUSES = ['paid', 'cancelled', 'void', 'refunded', 'disputed'] as const;
-      if (CLOSED_STATUSES.includes((frozenCheck as any).status)) {
+      if (CLOSED_STATUSES.includes((frozenCheck as Record<string,unknown>).status)) {
         return res.status(409).json({
           message: `Invoice ${frozenCheck.invoiceNumber || id} has status '${frozenCheck.status}' and cannot be modified. To correct a paid invoice, issue a credit memo or adjustment.`,
           code: 'INVOICE_CLOSED',
@@ -2357,7 +2357,7 @@ router.get('/portal/:accessToken', async (req, res) => {
         eq(clients.workspaceId, portal.workspaceId),
       ));
 
-    const resolvedClientName = (client as any)?.companyName || [`${(client as any)?.firstName || ''}`, `${(client as any)?.lastName || ''}`].filter(Boolean).join(' ').trim() || 'Client';
+    const resolvedClientName = (client as Record<string,unknown>)?.companyName || [`${(client as Record<string,unknown>)?.firstName || ''}`, `${(client as Record<string,unknown>)?.lastName || ''}`].filter(Boolean).join(' ').trim() || 'Client';
     res.json({
       portalName: portal.portalName || `${resolvedClientName} — Billing Portal`,
       logoUrl: portal.logoUrl,

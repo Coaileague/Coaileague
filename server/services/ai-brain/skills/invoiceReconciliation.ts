@@ -501,9 +501,7 @@ Provide 2-3 sentences of actionable revenue optimization insights. Focus on reco
 
   private generateRecommendations(
     issues: ReconciliationIssue[],
-    summary: any,
-    gapAnalysis: any
-  ): string[] {
+    summary: any, gapAnalysis: unknown): string[] {
     const recommendations: string[] = [];
 
     if (summary.unbilledRevenue > 500) {
@@ -532,9 +530,7 @@ Provide 2-3 sentences of actionable revenue optimization insights. Focus on reco
 
   private calculateConfidence(
     issues: ReconciliationIssue[],
-    summary: any,
-    gapAnalysis: any
-  ): number {
+    summary: any, gapAnalysis: unknown): number {
     let confidence = 1.0;
 
     // Deduct for critical issues

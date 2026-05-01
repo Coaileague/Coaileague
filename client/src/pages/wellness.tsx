@@ -315,11 +315,11 @@ export default function WellnessPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1">
               <Label className="text-muted-foreground">Default Interval</Label>
-              <div className="text-lg font-medium" data-testid="text-config-interval">{(config as any)?.default_interval_minutes || 30} Minutes</div>
+              <div className="text-lg font-medium" data-testid="text-config-interval">{(config as Record<string,unknown>)?.default_interval_minutes || 30} Minutes</div>
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground">Escalation Threshold</Label>
-              <div className="text-lg font-medium" data-testid="text-config-threshold">{(config as any)?.escalation_threshold_minutes || 15} Minutes</div>
+              <div className="text-lg font-medium" data-testid="text-config-threshold">{(config as Record<string,unknown>)?.escalation_threshold_minutes || 15} Minutes</div>
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground">Supervisor Notifications</Label>
@@ -327,7 +327,7 @@ export default function WellnessPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground">Emergency Contact Protocol</Label>
-              <div className="text-lg font-medium" data-testid="text-config-emergency">{(config as any)?.emergency_contact_enabled ? "Enabled" : "Disabled"}</div>
+              <div className="text-lg font-medium" data-testid="text-config-emergency">{(config as Record<string,unknown>)?.emergency_contact_enabled ? "Enabled" : "Disabled"}</div>
             </div>
           </div>
         </CardContent>

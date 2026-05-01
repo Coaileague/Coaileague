@@ -247,8 +247,8 @@ export default function ModuleLearningPage() {
 
   // Auto-start attempt when employee is known
   useEffect(() => {
-    if (employee && !attemptId && !startAttempt.isPending && (employee as any)?.id) {
-      startAttempt.mutate((employee as any).id);
+    if (employee && !attemptId && !startAttempt.isPending && (employee as Record<string,unknown>)?.id) {
+      startAttempt.mutate((employee as Record<string,unknown>).id);
     }
   }, [employee]);
 
@@ -373,8 +373,8 @@ export default function ModuleLearningPage() {
                     setShowExamResult(false);
                     setFinalResult(null);
                     setAttemptId(null);
-                    if (employee && (employee as any)?.id) {
-                      startAttempt.mutate((employee as any).id);
+                    if (employee && (employee as Record<string,unknown>)?.id) {
+                      startAttempt.mutate((employee as Record<string,unknown>).id);
                     }
                   }}
                 >

@@ -418,7 +418,7 @@ router.get('/health', requireAuth, async (req: AuthenticatedRequest, res) => {
       
       res.json({
         quickbooks: {
-          connected: !!(qbConnection?.status === 'connected' || (workspace as any)?.quickbooksRealmId),
+          connected: !!(qbConnection?.status === 'connected' || (workspace as Record<string,unknown>)?.quickbooksRealmId),
           companyName: (qbConnection?.metadata as Record<string,unknown>)?.companyName || null,
         },
         stripe: {

@@ -304,7 +304,7 @@ export default function InboundOpportunitiesPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {tiers.map((tier: any, idx: number) => (
+                {tiers.map((tier: unknown, idx: number) => (
                   <Card key={idx} data-testid={`card-escalation-tier-${idx}`}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between gap-3 flex-wrap">

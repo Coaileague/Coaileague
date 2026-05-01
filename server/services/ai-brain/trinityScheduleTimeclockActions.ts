@@ -31,7 +31,7 @@ export function registerScheduleTimeclockActions() {
   helpaiOrchestrator.registerAction(mkAction('scheduling.auto_fill_shift', async (params) => {
     const { workspaceId, mode = 'current_week' } = params;
     if (!workspaceId) return { error: 'workspaceId required' };
-    const result = await autonomousSchedulingDaemon.triggerManualRun(workspaceId, mode as any);
+    const result = await autonomousSchedulingDaemon.triggerManualRun(workspaceId, mode as string);
     return result;
   }));
 
@@ -329,9 +329,9 @@ export function registerScheduleTimeclockActions() {
     const clientData = shift.clientId ? await db.query.clients?.findFirst({
       where: eq(clients.id, shift.clientId)
     }).catch(() => null) : null;
-    const siteLat = (clientData as any)?.latitude;
-    const siteLng = (clientData as any)?.longitude;
-    const geofenceRadius = (clientData as any)?.geofenceRadius || 200;
+    const siteLat = (clientData as Record<string,unknown>)?.latitude;
+    const siteLng = (clientData as Record<string,unknown>)?.longitude;
+    const geofenceRadius = (clientData as Record<string,unknown>)?.geofenceRadius || 200;
     if (!siteLat || !siteLng) return { verified: true, note: 'No geofence configured for site' };
     const R = 6371000;
     const dLat = (lat - siteLat) * Math.PI / 180;
@@ -461,8 +461,8 @@ export function registerScheduleTimeclockActions() {
         shiftId: sql`time_entries.shift_id`,
       }).from(timeEntries).where(eq(timeEntries.id, clockEntryId)).limit(1).catch(() => []);
 
-      if (entry && (entry as unknown).clockIn) {
-        const clockInTime = new Date((entry as unknown).clockIn);
+      if (entry && (entry as Record<string,unknown>).clockIn) {
+        const clockInTime = new Date((entry as Record<string,unknown>).clockIn);
         const window2min = new Date(clockInTime.getTime() - 2 * 60000);
         const window2minAfter = new Date(clockInTime.getTime() + 2 * 60000);
 
@@ -476,7 +476,7 @@ export function registerScheduleTimeclockActions() {
           .where(and(
             eq(timeEntries.workspaceId, workspaceId),
             ne(timeEntries.id, clockEntryId),
-            ne(timeEntries.employeeId, (entry as unknown).employeeId),
+            ne(timeEntries.employeeId, (entry as Record<string,unknown>).employeeId),
             gte(timeEntries.clockIn, window2min),
             lte(timeEntries.clockIn, window2minAfter),
           ))
@@ -487,15 +487,15 @@ export function registerScheduleTimeclockActions() {
           riskLevel = 'HIGH';
           flags.push(`${nearbyClockIns.length} other officer(s) clocked in within 2 minutes of this entry`);
           for (const n of nearbyClockIns) {
-            if ((n as any).employeeId && !affectedOfficers.includes((n as any).employeeId)) {
-              affectedOfficers.push((n as any).employeeId);
+            if ((n as Record<string,unknown>).employeeId && !affectedOfficers.includes((n as Record<string,unknown>).employeeId)) {
+              affectedOfficers.push((n as Record<string,unknown>).employeeId);
             }
-            const sameDevice = (entry as unknown).deviceId && (n as any).deviceId && (entry as unknown).deviceId === (n as any).deviceId;
+            const sameDevice = (entry as Record<string,unknown>).deviceId && (n as Record<string,unknown>).deviceId && (entry as Record<string,unknown>).deviceId === (n as Record<string,unknown>).deviceId;
             if (sameDevice) {
               flags.push(`Same device ID used to clock in two different officers — high buddy punch indicator`);
             }
           }
-          if ((entry as unknown).employeeId) affectedOfficers.push((entry as unknown).employeeId);
+          if ((entry as Record<string,unknown>).employeeId) affectedOfficers.push((entry as Record<string,unknown>).employeeId);
         }
       }
     } else {
@@ -619,7 +619,7 @@ export function registerScheduleTimeclockActions() {
 
     // 4. Supervisor approval required if either officer is on a key post (check client.requires_supervisor_approval or shift.category)
     const [clientA] = await db.select().from(clients).where(eq(clients.id, shiftA.clientId || '')).limit(1);
-    if ((clientA as any)?.requiresSupervisorApproval || shiftA.category === 'emergency') {
+    if ((clientA as Record<string,unknown>)?.requiresSupervisorApproval || shiftA.category === 'emergency') {
       requiresSupervisorApproval = true;
     }
 

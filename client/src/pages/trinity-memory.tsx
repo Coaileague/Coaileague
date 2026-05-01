@@ -236,19 +236,19 @@ export default function TrinityMemoryPage() {
                 </Card>
 
                 // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
-                {(knowledge as any).topCategories && (knowledge as any).topCategories.length > 0 && (
+                {(knowledge as Record<string,unknown>).topCategories && (knowledge as Record<string,unknown>).topCategories.length > 0 && (
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base">Top Categories</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
                       // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
-                      {(knowledge as any).topCategories.map((cat: any, idx: number) => (
+                      {(knowledge as Record<string,unknown>).topCategories.map((cat: unknown, idx: number) => (
                         <div key={idx} className="flex items-center justify-between gap-3" data-testid={`row-category-${idx}`}>
                           <span className="text-sm truncate min-w-0">{cat.name}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
-                            <Progress value={(cat.count / ((knowledge as any).totalEntities || 1)) * 100} className="w-24 sm:w-32" />
+                            <Progress value={(cat.count / ((knowledge as Record<string,unknown>).totalEntities || 1)) * 100} className="w-24 sm:w-32" />
                             <Badge variant="secondary">{cat.count}</Badge>
                           </div>
                         </div>
@@ -291,7 +291,7 @@ export default function TrinityMemoryPage() {
                 ) : (
                   <div className="space-y-3">
                     {diagnosticResults.checks && Array.isArray(diagnosticResults.checks) ? (
-                      diagnosticResults.checks.map((check: any, idx: number) => (
+                      diagnosticResults.checks.map((check: unknown, idx: number) => (
                         <div key={idx} className="flex items-center justify-between gap-3 p-3 rounded-md border" data-testid={`diagnostic-check-${idx}`}>
                           <div className="flex items-center gap-2 min-w-0">
                             {check.status === "pass" || check.status === "ok" ? (
