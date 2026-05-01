@@ -1759,6 +1759,44 @@ class ChatServerHubClass {
       // in the conversation transcript.
     }
 
+    // ── @Trinity plain-text mention orchestration ───────────────────────────
+    // Universal Trinity trigger: any client (web, mobile, iOS PWA, native)
+    // that posts "@Trinity ..." gets a Trinity reply broadcast back over the
+    // WS. Mirrors the @HelpAI path above so the platform's two AIs respond
+    // consistently. The 30s dedup window is shared so a "Hey @HelpAI and
+    // @Trinity" mention won't duplicate-fire either bot.
+    const trinityMentionMatch = message.match(/@Trinity\b/i);
+    if (trinityMentionMatch && !this.isHelpAIDeduplicated(params.conversationId, 'trinity_mention')) {
+      try {
+        const stripped = message.replace(/@Trinity/gi, '').trim() || 'How can you help?';
+        const { trinityChatService } = await import('./ai-brain/trinityChatService');
+        const result = await trinityChatService.chat({
+          userId: params.userId,
+          workspaceId: params.workspaceId || PLATFORM_WORKSPACE_ID,
+          message: stripped,
+          mode: 'business',
+          sessionId: `chatdock-mention-${params.conversationId}-${params.userId}`,
+        } as any);
+
+        if (result?.response && this.wsBroadcaster) {
+          this.wsBroadcaster({
+            type: 'bot_reply',
+            conversationId: params.conversationId,
+            workspaceId: params.workspaceId,
+            payload: {
+              message: `🟣 **Trinity:** ${result.response}`,
+              senderName: 'Trinity',
+              senderType: 'bot',
+              triggeredBy: 'mention',
+            },
+          });
+        }
+      } catch (err: any) {
+        log.warn('[ChatServerHub] @Trinity mention handler failed (non-fatal):', err?.message);
+      }
+      // Continue with standard delivery — original message stays in the transcript.
+    }
+
     // DETECT SAFETY CODES (####-## pattern)
     const safetyCodeMatch = message.match(/^(\d{4}-\d{2})$/);
     if (safetyCodeMatch) {

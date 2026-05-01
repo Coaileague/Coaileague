@@ -1,0 +1,95 @@
+[1] Lazy-import targets (App.tsx + main.tsx)
+[2] Frontend API calls vs backend route registry
+[3] No-op button handlers
+[4] Stub / placeholder markers
+[5] Unmounted server route files
+[6] Local imports with missing targets
+
+═══════════════════════════════════════════════════════════════
+  Deep Audit:  FATAL=280  WARN=25  INFO=1
+═══════════════════════════════════════════════════════════════
+
+[ghost-endpoint]  total=253  fatal=253
+  FATAL  client/src/components/PDFFieldPlacer.tsx:65 → PUT /api/documents/:p/signature-fields
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/chatdock/TrinityThoughtBar.tsx:129 → GET /api/trinity/chat/thought-stream:p
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/chatdock/TrinityThoughtBar.tsx:155 → GET /api/trinity/active-operations
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/clients-table.tsx:600 → POST /api/clients/:p/collections/start
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/clients-table.tsx:617 → POST /api/clients/:p/collections/decline
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/command-palette.tsx:97 → POST /api/search/log-click
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/command-palette.tsx:170 → GET /api/search
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/consent-manager.tsx:87 → POST /api/privacy/cookie-consent
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/email/EmailHubCanvas.tsx:2564 → POST /api/external-emails/enhance
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/email/EmailHubCanvas.tsx:3719 → PATCH /api/external-emails/:p
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/email/EmailHubCanvas.tsx:3740 → DELETE /api/external-emails/:p
+         Frontend calls but no server route matches.
+  FATAL  client/src/components/email/EmailHubCanvas.tsx:3823 → POST /api/external-emails
+         Frontend calls but no server route matches.
+  ... 241 more
+
+[stub-marker]  total=1  fatal=0
+  INFO  client/src/pages/analytics-reports.tsx
+         1 TODO/FIXME/STUB markers
+
+[unmounted-router]  total=25  fatal=0
+  WARN  server/routes/auditSuiteRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/auditorRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/bootstrapRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/email/emailRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/financialReporting/revenueRecognitionRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/hr/documentRequestRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/inboundEmailRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/interviewChatroomRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/legalConsentRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/legalRoutes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/mascot-routes.ts
+         File looks like a router but no domain mount imports it.
+  WARN  server/routes/notificationPreferenceRoutes.ts
+         File looks like a router but no domain mount imports it.
+  ... 13 more
+
+[missing-import]  total=27  fatal=27
+  FATAL  server/extract-and-create.mjs:13
+         import "../replitAuth" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js
+  FATAL  server/extract-and-create.mjs:14
+         import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+  FATAL  server/extract-and-create.mjs:27
+         import "../replitAuth" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js
+  FATAL  server/extract-and-create.mjs:28
+         import "../rbac" — none of: rbac, rbac.ts, rbac.tsx, rbac.js
+  FATAL  server/extract-and-create.mjs:29
+         import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+  FATAL  server/extract-and-create.mjs:30
+         import "../db" — none of: db, db.ts, db.tsx, db.js
+  FATAL  server/extract-and-create.mjs:42
+         import "../services/emailService" — none of: services/emailService, services/emailService.ts, services/emailService.tsx, services/emailService.js
+  FATAL  server/extract-and-create.mjs:55
+         import "../auth" — none of: auth, auth.ts, auth.tsx, auth.js
+  FATAL  server/extract-and-create.mjs:56
+         import "../replitAuth" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js
+  FATAL  server/extract-and-create.mjs:57
+         import "../rbac" — none of: rbac, rbac.ts, rbac.tsx, rbac.js
+  FATAL  server/extract-and-create.mjs:58
+         import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+  FATAL  server/extract-and-create.mjs:59
+         import "../db" — none of: db, db.ts, db.tsx, db.js
+  ... 15 more

@@ -141,6 +141,21 @@ import trainingCertificationRouter from './routes/trainingCertificationRoutes';
 import alertConfigRouter from './routes/alertConfigRoutes';
 import { trinityThoughtStatusRouter } from './routes/trinityThoughtStatusRoutes';
 import { platformConfigValuesRouter } from './routes/platformConfigValuesRoutes';
+// Deep-audit fix — 9 routers that were authored but never mounted, leaving
+// the frontend to 404 every call. Each was confirmed to use real DB tables
+// (no stubs), proper auth (requireAuth + ensureWorkspaceAccess), and
+// matches a feature in CoAIleague's stated scope: compliance, training,
+// gamification, GPS, holidays, scheduler ops, token usage, workflow
+// runtime, workflow config.
+import complianceRoutesRouter from './routes/complianceRoutes';
+import trainingRoutesRouter from './routes/trainingRoutes';
+import gpsRoutesRouter from './routes/gpsRoutes';
+import gamificationRoutesRouter from './routes/gamificationRoutes';
+import holidayRoutesRouter from './routes/holidayRoutes';
+import schedulerRoutesRouter from './routes/schedulerRoutes';
+import tokenRoutesRouter from './routes/tokenRoutes';
+import workflowRoutesRouter from './routes/workflowRoutes';
+import workflowConfigRoutesRouter from './routes/workflowConfigRoutes';
 import { ensureWorkspaceAccess } from './middleware/workspaceScope';
 import { createLogger } from './lib/logger';
 import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
@@ -1082,6 +1097,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/training-certification', ensureWorkspaceAccess, trainingCertificationRouter);
   app.use('/api/alert-configs', ensureWorkspaceAccess, alertConfigRouter);
   app.use('/api/platform-config', platformConfigValuesRouter);
+
+  // ── 9 routers that were authored but never mounted (deep-audit fix) ──
+  // Each pulls from real Drizzle tables and applies its own auth chain
+  // internally; mounting them here makes every endpoint that already
+  // existed actually reachable from the frontend.
+  app.use('/api/compliance', complianceRoutesRouter);
+  app.use('/api/training', trainingRoutesRouter);
+  app.use('/api/gps', gpsRoutesRouter);
+  app.use('/api/gamification', gamificationRoutesRouter);
+  app.use('/api/holidays', holidayRoutesRouter);
+  app.use('/api/scheduler', schedulerRoutesRouter);
+  app.use('/api/tokens', tokenRoutesRouter);
+  app.use('/api/workflow', workflowRoutesRouter);
+  app.use('/api/workflow-config', workflowConfigRoutesRouter);
 
   // ── Marketing: Enterprise Inquiry (public, inline — no domain file needed) ─
   app.post("/api/marketing/enterprise-inquiry", async (req, res) => {

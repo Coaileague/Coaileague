@@ -8,7 +8,7 @@ import { logger as log } from '../lib/logger';
 
 const router = express.Router();
 
-router.post('/intake/start', requireAuth, async (req, res, next) => {
+router.post('/start', requireAuth, async (req, res, next) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     const userId = req.user?.id;
@@ -62,7 +62,7 @@ router.post('/intake/start', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/intake/:sessionId/respond', requireAuth, async (req, res, next) => {
+router.post('/:sessionId/respond', requireAuth, async (req, res, next) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     const { sessionId } = req.params;
@@ -170,7 +170,7 @@ router.post('/intake/:sessionId/respond', requireAuth, async (req, res, next) =>
   }
 });
 
-router.post('/intake/:sessionId/abandon', requireAuth, async (req, res, next) => {
+router.post('/:sessionId/abandon', requireAuth, async (req, res, next) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });
@@ -184,7 +184,7 @@ router.post('/intake/:sessionId/abandon', requireAuth, async (req, res, next) =>
   }
 });
 
-router.get('/intake/sessions', requireAuth, async (req, res, next) => {
+router.get('/sessions', requireAuth, async (req, res, next) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace context required' });

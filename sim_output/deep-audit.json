@@ -1,0 +1,1846 @@
+{
+  "ranAt": "2026-05-01T17:07:05.267Z",
+  "summary": {
+    "FATAL": 280,
+    "WARN": 25,
+    "INFO": 1
+  },
+  "findings": [
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/PDFFieldPlacer.tsx:65 → PUT /api/documents/:p/signature-fields",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/chatdock/TrinityThoughtBar.tsx:129 → GET /api/trinity/chat/thought-stream:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/chatdock/TrinityThoughtBar.tsx:155 → GET /api/trinity/active-operations",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/clients-table.tsx:600 → POST /api/clients/:p/collections/start",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/clients-table.tsx:617 → POST /api/clients/:p/collections/decline",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/command-palette.tsx:97 → POST /api/search/log-click",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/command-palette.tsx:170 → GET /api/search",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/consent-manager.tsx:87 → POST /api/privacy/cookie-consent",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/email/EmailHubCanvas.tsx:2564 → POST /api/external-emails/enhance",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/email/EmailHubCanvas.tsx:3719 → PATCH /api/external-emails/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/email/EmailHubCanvas.tsx:3740 → DELETE /api/external-emails/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/email/EmailHubCanvas.tsx:3823 → POST /api/external-emails",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/email/EmailHubCanvas.tsx:3837 → POST /api/external-emails/:p/send",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/employee-edit-dialog.tsx:331 → GET /api/manager-assignments/employee/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/quick-incident-report.tsx:125 → POST /api/rms/incidents",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/schedule/ScheduleUploadPanel.tsx:62 → POST /api/trinity/import-schedule",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/session-timeout-warning.tsx:39 → POST /api/auth/logout",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/session-timeout-warning.tsx:106 → POST /api/auth/extend-session",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/setup-guide-panel.tsx:125 → POST /api/onboarding/complete-task/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/support/SupportTeamPanel.tsx:223 → POST /api/platform/team/bots/:p/query",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/support/SupportTeamPanel.tsx:330 → POST /api/platform/team/agents",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/support/SupportTeamPanel.tsx:388 → POST /api/platform/team/bots",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/support/SupportTeamPanel.tsx:448 → POST /api/platform/team/agents/:p/action",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/support/SupportTeamPanel.tsx:541 → POST /api/platform/team/bots/:p/action",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/terms-acceptance-gate.tsx:50 → POST /api/privacy/terms-acceptance",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/trinity/TrinityActionHistoryPanel.tsx:86 → POST /api/ai-brain/retry/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/components/trinity-chat-modal.tsx:1167 → POST /api/trinity/chat/with-file",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/use-push-notifications.ts:47 → POST /api/push/subscribe",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/use-push-notifications.ts:73 → DELETE /api/push/unsubscribe",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/use-push-notifications.ts:93 → POST /api/push/test",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/use-push-notifications.ts:209 → GET /api/push/vapid-public-key",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useApprovals.ts:91 → POST /api/approvals/:p/decision",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useApprovals.ts:116 → POST /api/approvals/:p/cancel",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:105 → POST /api/broadcasts",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:133 → POST /api/broadcasts/platform",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:159 → POST /api/broadcasts/:p/read",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:176 → POST /api/broadcasts/:p/acknowledge",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:202 → POST /api/broadcasts/:p/dismiss",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:226 → POST /api/broadcasts/:p/feedback",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:254 → PATCH /api/broadcasts/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useBroadcasts.ts:282 → DELETE /api/broadcasts/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useWorkboard.ts:121 → POST /api/workboard/submit",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useWorkboard.ts:140 → POST /api/workboard/tasks/:p/cancel",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/hooks/useWorkboard.ts:160 → POST /api/workboard/tasks/:p/retry",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/lib/ai-status/fallback-intelligence.ts:106 → POST /api/helpai/v2/command-bus",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/lib/ai-status/fallback-intelligence.ts:127 → POST /api/helpai/clock-:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/lib/ai-status/fallback-intelligence.ts:186 → POST /api/notifications/management-alert",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/lib/ai-status/fallback-intelligence.ts:244 → GET /api/helpai/cache/schedule",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/lib/ai-status/fallback-intelligence.ts:245 → GET /api/helpai/cache/faqs",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/lib/ai-status/status-engine.ts:246 → GET /api/health/ai-status",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/lib/queryClient.ts:164 → POST /api/platform/audit-event",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/HelpDesk.tsx:770 → POST /api/helpdesk/room/helpdesk/status",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/HelpDesk.tsx:566 → GET /api/helpdesk/room/helpdesk",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/accounting-integrations.tsx:140 → POST /api/integrations/connection-request",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-helpai.tsx:958 → POST /api/clients/dockchat/reports/:p/acknowledge",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-helpai.tsx:977 → POST /api/clients/dockchat/reports/:p/resolve",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-security.tsx:57 → GET /api/security-admin/overrides",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-security.tsx:58 → GET /api/security-admin/auditor-allowlist",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-security.tsx:75 → POST /api/security-admin/overrides",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-security.tsx:87 → DELETE /api/security-admin/overrides/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-security.tsx:94 → POST /api/security-admin/auditor-allowlist",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/admin-security.tsx:105 → DELETE /api/security-admin/auditor-allowlist/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/alert-configuration.tsx:144 → PUT /api/alerts/config/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/alert-configuration.tsx:159 → PATCH /api/alerts/config/:p/toggle",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/alert-configuration.tsx:176 → POST /api/alerts/:p/acknowledge",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/alert-configuration.tsx:194 → POST /api/alerts/test",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/applicant-visual-compliance.tsx:73 → GET /api/audit-suite/visual-compliance/slots",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/applicant-visual-compliance.tsx:79 → GET /api/audit-suite/visual-compliance/:p/summary",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/applicant-visual-compliance.tsx:88 → GET /api/audit-suite/visual-compliance/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/applicant-visual-compliance.tsx:100 → POST /api/audit-suite/visual-compliance/upload",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/audit-chatdock.tsx:46 → GET /api/audit-suite/audits/:p/safe-status",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/audit-chatdock.tsx:53 → GET /api/audit-suite/audits/:p/packets",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/audit-chatdock.tsx:59 → POST /api/audit-suite/audits/:p/generate-packet",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/audit-chatdock.tsx:69 → POST /api/audit-suite/audits/:p/packets/:p/approve",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/audit-chatdock.tsx:79 → POST /api/audit-suite/audits/:p/packets/:p/reject",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/auditor-login.tsx:33 → POST /api/enforcement/auditor/login",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/auditor-verification-portal.tsx:115 → GET /api/audit-suite/audits/:p/cure-status",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/auditor-verification-portal.tsx:126 → POST /api/audit-suite/audits/:p/submit-paperwork",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/background-checks.tsx:134 → POST /api/enterprise-features/background-checks/:p/cancel",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/cad-console.tsx:315 → POST /api/cad/units",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/cad-console.tsx:322 → POST /api/cad/calls/:p/dispatch",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/cad-console.tsx:328 → POST /api/cad/calls/:p/on-scene",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/cad-console.tsx:335 → POST /api/cad/calls/:p/resolve",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/cad-console.tsx:342 → PATCH /api/cad/units/:p/status",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/cad-console.tsx:349 → POST /api/cad/geofence-departures/:p/acknowledge",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/citation-resolve.tsx:72 → POST /api/audit-suite/citations/:p/payment-proof",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/client-communications.tsx:390 → POST /api/trinity/execute-action",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/client-portal.tsx:534 → POST /api/portal/:p/invoice/:p/create-payment-intent",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/client-portal.tsx:811 → POST /api/auth/change-password",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/client-profitability.tsx:154 → GET /api/analytics/client-profitability:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/client-status-lookup.tsx:59 → POST /api/client-status/:p/clicked",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/clients.tsx:283 → GET /api/organizations/managed",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/co-auditor-claim.tsx:28 → POST /api/auditor/claim",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/co-auditor-dashboard.tsx:120 → POST /api/auditor/nda/accept",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/co-auditor-dashboard.tsx:239 → POST /api/auditor/flag/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/co-auditor-dashboard.tsx:495 → POST /api/auditor/audits",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/co-auditor-dashboard.tsx:514 → POST /api/auditor/logout",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/co-auditor-login.tsx:21 → POST /api/auditor/login",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/company-reports.tsx:70 → POST /api/reports/export",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/compliance/approvals.tsx:71 → POST /api/security-compliance/approvals/:p/decide",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/compliance/employee-detail.tsx:129 → POST /api/security-compliance/records",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/compliance/employee-detail.tsx:154 → POST /api/security-compliance/documents",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/compliance/employee-detail.tsx:176 → POST /api/security-compliance/records/:p/lock-vault",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/compliance/enforcement-status.tsx:104 → POST /api/enforcement/appeal",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/compliance/regulator-access.tsx:89 → POST /api/security-compliance/regulator",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/compliance/regulator-access.tsx:110 → POST /api/security-compliance/regulator/:p/revoke",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/contract-signing-portal.tsx:269 → POST /api/contracts/portal/:p/sign",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/contract-signing-portal.tsx:291 → POST /api/contracts/portal/:p/accept",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/contract-signing-portal.tsx:312 → POST /api/contracts/portal/:p/decline",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/contract-signing-portal.tsx:335 → POST /api/contracts/portal/:p/request-changes",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/data-subject-requests.tsx:117 → PATCH /api/privacy/requests/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/data-subject-requests.tsx:187 → POST /api/privacy/requests",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:106 → POST /api/contracts",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:219 → POST /api/contracts/:p/send",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:412 → POST /api/documents/${doc",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:608 → POST /api/documents",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:624 → POST /api/documents/:p/sign",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:1125 → POST /api/contracts/:p/signers",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:564 → GET /api/contracts",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:571 → GET /api/contracts/stats",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-library.tsx:576 → GET /api/documents/${selectedDoc",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/document-signing-portal.tsx:262 → POST /api/documents/external/sign/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/employee-file-cabinet.tsx:320 → POST /api/documents/:p/sign-internal",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/employee-profile.tsx:93 → GET /api/hr/manager-assignments/employee/${employee",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/employee-profile.tsx:101 → POST /api/hr/manager-assignments",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/employee-profile.tsx:164 → PATCH /api/auth/language-preference",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/employees.tsx:495 → GET /api/manager-assignments",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/ethics-hotline.tsx:53 → POST /api/ethics/report",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/ethics-hotline.tsx:59 → PATCH /api/ethics/reports/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/ethics-hotline.tsx:70 → GET /api/ethics/followup/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/finance-hub.tsx:145 → PATCH /api/finance-settings",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/fleet-compliance.tsx:83 → PATCH /api/vehicles/${vehicle",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/flex-staffing.tsx:202 → POST /api/flex/gigs",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/flex-staffing.tsx:219 → PATCH /api/flex/applications/:p/review",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/flex-staffing.tsx:187 → GET /api/flex/gigs",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/flex-staffing.tsx:192 → GET /api/flex/contractors",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/flex-staffing.tsx:198 → GET /api/flex/gigs/${selectedGig",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/go-live.tsx:95 → POST /api/import/:p/preview",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/go-live.tsx:107 → POST /api/import/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/help.tsx:191 → POST /api/helpai/session/:p/message",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hiring-pipeline.tsx:257 → POST /api/hiring/applicants/:p/verify-license",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hiring-pipeline.tsx:267 → POST /api/hiring/applicants/:p/score-interview",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hiring-pipeline.tsx:276 → POST /api/hiring/applicants/:p/assess",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hiring-pipeline.tsx:560 → POST /api/hiring/postings/:p/draft-approve",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hiring-pipeline.tsx:706 → PATCH /api/hiring/applicants/:p/stage",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hiring-pipeline.tsx:248 → GET /api/hiring/applicants/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hr-terminations.tsx:66 → POST /api/terminations",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hr-terminations.tsx:91 → PATCH /api/terminations/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hris-management.tsx:82 → POST /api/hris/sync/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hris-management.tsx:102 → DELETE /api/hris/disconnect/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/hris-management.tsx:63 → GET /api/hris/auth/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/inbound-opportunities.tsx:79 → POST /api/trinity-staffing/workflows/:p/cancel",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/incident-pipeline.tsx:130 → PATCH /api/incident-reports/:p/status",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/integrations-page.tsx:291 → POST /api/integrations/:p/connect",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/integrations-page.tsx:319 → POST /api/integrations/:p/disconnect",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/integrations-page.tsx:347 → POST /api/integrations/:p/refresh",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/invoices.tsx:707 → POST /api/invoices/:p/send-with-pdf",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/invoices.tsx:739 → POST /api/invoices/:p/void",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/invoices.tsx:892 → POST /api/invoices/bulk-resend",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/invoices.tsx:902 → POST /api/invoices/send-all-drafts",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/leaders-hub.tsx:280 → POST /api/leaders/reset-password",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/leaders-hub.tsx:295 → POST /api/leaders/unlock-account",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/leaders-hub.tsx:310 → PATCH /api/leaders/update-contact",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/leaders-hub.tsx:326 → POST /api/leaders/escalate",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/mileage.tsx:171 → PATCH /api/mileage/${initial",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/onboarding-start.tsx:24 → POST /api/invites/accept",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/onboarding.tsx:302 → POST /api/onboarding/tasks/:p/complete",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/onboarding.tsx:322 → POST /api/onboarding/rewards/reward/apply",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/org-management.tsx:235 → PATCH /api/employees/:p/role",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/org-management.tsx:252 → PATCH /api/employees/:p/access",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/org-management.tsx:274 → PATCH /api/organizations/:p/status",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/oversight-hub.tsx:66 → PATCH /api/oversight/:p/approve",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/oversight-hub.tsx:88 → PATCH /api/oversight/:p/reject",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/performance.tsx:247 → PATCH /api/performance/disciplinary/:p/acknowledge",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/performance.tsx:259 → PATCH /api/performance/disciplinary/:p/appeal",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/performance.tsx:437 → PATCH /api/performance/reviews/:p/acknowledge",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/performance.tsx:657 → POST /api/performance/disciplinary",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/performance.tsx:821 → POST /api/performance/reviews",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/policies.tsx:56 → POST /api/policies",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/policies.tsx:71 → PATCH /api/policies/:p/publish",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/policies.tsx:84 → POST /api/policies/:p/acknowledge",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/policies.tsx:40 → GET /api/policies",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/post-orders.tsx:69 → PATCH /api/post-orders/templates/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/post-orders.tsx:576 → GET /api/post-orders/templates",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/proposal-builder.tsx:196 → PATCH /api/proposals/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/proposal-builder.tsx:908 → POST /api/contracts/:p/sign",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/proposal-builder.tsx:929 → DELETE /api/proposals/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/proposal-builder.tsx:955 → POST /api/proposals/:p/generate-pdf",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/regulatory-dashboard.tsx:74 → GET /api/compliance/regulatory-portal/dashboard/:p/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/resolution-inbox.tsx:131 → POST /api/exceptions/:p/resolve",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/resolution-inbox.tsx:148 → POST /api/exceptions/:p/retry",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rfp-manager.tsx:51 → POST /api/rfp",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rfp-manager.tsx:57 → POST /api/rfp/:p/generate-proposal",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rfp-manager.tsx:68 → PATCH /api/rfp/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:389 → POST /api/rms/visitors/:p/checkout",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:401 → DELETE /api/rms/visitors/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:425 → POST /api/rms/key-control/:p/return",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:449 → PATCH /api/rms/bolo/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:467 → POST /api/rms/evidence/:p/transfer",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:473 → POST /api/rms/dars/:p/submit",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:485 → POST /api/rms/dars/:p/send-to-client",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/rms-hub.tsx:498 → POST /api/rms/reports/:p/track",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/root-admin-dashboard.tsx:170 → GET /api/platform/stats",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/root-admin-dashboard.tsx:267 → GET /api/platform/personal-data",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-crm.tsx:159 → POST /api/crm",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-crm.tsx:171 → PATCH /api/crm/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-crm.tsx:186 → POST /api/crm/deals",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-crm.tsx:145 → GET /api/crm",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-crm.tsx:150 → GET /api/crm/deals",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-crm.tsx:155 → GET /api/crm/pipeline/stats",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-pipeline.tsx:83 → POST /api/sales/pipeline/leads",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-pipeline.tsx:158 → POST /api/sales/pipeline/leads/:p/advance",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sales-pipeline.tsx:168 → POST /api/sales/pipeline/proposals/generate",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/schedule-mobile-first.tsx:485 → POST /api/shifts/:p/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/settings/EmailManagement.tsx:175 → PUT /api/email/addresses/:p/settings",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/settings/EmailManagement.tsx:361 → POST /api/email/addresses/:p/activate",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/settings/EmailManagement.tsx:375 → POST /api/email/addresses/:p/deactivate",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/settings/EmailManagement.tsx:389 → POST /api/email/activate-all",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/settings-data-privacy.tsx:37 → POST /api/exports/tenant-takeout",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/settings.tsx:2211 → POST /api/invites/create",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/shift-trading.tsx:137 → POST /api/shift-trading/availability",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/shift-trading.tsx:215 → POST /api/shift-trading/trades/:p/manager-approve",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/shift-trading.tsx:224 → POST /api/shift-trading/trades/:p/manager-reject",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/shift-trading.tsx:239 → POST /api/shift-trading/trades/:p/accept",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/shift-trading.tsx:248 → DELETE /api/shift-trading/availability/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sra/SRAApply.tsx:39 → POST /api/sra/auth/apply",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sra/SRALogin.tsx:34 → POST /api/sra/auth/login",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sra/SRALogin.tsx:48 → POST /api/sra/auth/verify-totp",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/sra/SRAPortalLayout.tsx:46 → POST /api/sra/auth/logout",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/tax-center.tsx:77 → GET /api/payroll/tax-center",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-certification/index.tsx:152 → PATCH /api/training/certification/interventions/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-certification/index.tsx:200 → POST /api/training/certification/seed-modules",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-certification/module-learning.tsx:213 → POST /api/training/certification/attempts",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-certification/module-learning.tsx:226 → PATCH /api/training/certification/attempts/:p/section",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-certification/module-learning.tsx:235 → POST /api/training/certification/attempts/:p/final-exam",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-certification/module-learning.tsx:208 → GET /api/training/certification/modules/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-os.tsx:211 → POST /api/training/courses",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training-os.tsx:242 → POST /api/training/courses/:p/enroll",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training.tsx:136 → POST /api/training/sessions/:p/checkin",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training.tsx:216 → POST /api/training/sessions/:p/register",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training.tsx:227 → POST /api/training/sessions/:p/complete",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training.tsx:239 → PATCH /api/training/sessions/:p",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/training.tsx:843 → POST /api/training/sessions",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/trinity-memory.tsx:47 → POST /api/ai-brain/diagnostic/run-fast",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/universal-schedule.tsx:1519 → POST /api/scheduling/shifts/:p/swap-request",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/verify-email.tsx:20 → POST /api/auth/verify-email",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/verify-email.tsx:39 → POST /api/auth/resend-verification",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/work-orders.tsx:66 → POST /api/work-orders",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/work-orders.tsx:164 → POST /api/work-orders/:p/activate",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/work-orders.tsx:170 → POST /api/work-orders/:p/complete",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/work-orders.tsx:177 → GET /api/work-orders/:p/evidence",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/worker-dashboard.tsx:776 → GET /api/shift-handoff/pending",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "FATAL",
+      "group": "ghost-endpoint",
+      "name": "client/src/pages/workspace-onboarding.tsx:240 → POST /api/quickbooks/flow/:p/retry",
+      "detail": "Frontend calls but no server route matches."
+    },
+    {
+      "severity": "INFO",
+      "group": "stub-marker",
+      "name": "client/src/pages/analytics-reports.tsx",
+      "detail": "1 TODO/FIXME/STUB markers"
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/auditSuiteRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/auditorRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/bootstrapRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/email/emailRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/financialReporting/revenueRecognitionRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/hr/documentRequestRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/inboundEmailRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/interviewChatroomRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/legalConsentRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/legalRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/mascot-routes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/notificationPreferenceRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/platformFeedbackRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/platformFormsRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/publicHiringRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/publicOnboardingRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/securityAdminRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/sra/sraAuthRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/sra/sraCompanyRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/sra/sraDataRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/sra/sraFindingsRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/sra/sraTrinityRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/statusRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/voiceRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "WARN",
+      "group": "unmounted-router",
+      "name": "server/routes/webhookRoutes.ts",
+      "detail": "File looks like a router but no domain mount imports it."
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:13",
+      "detail": "import \"../replitAuth\" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:14",
+      "detail": "import \"../storage\" — none of: storage, storage.ts, storage.tsx, storage.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:27",
+      "detail": "import \"../replitAuth\" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:28",
+      "detail": "import \"../rbac\" — none of: rbac, rbac.ts, rbac.tsx, rbac.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:29",
+      "detail": "import \"../storage\" — none of: storage, storage.ts, storage.tsx, storage.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:30",
+      "detail": "import \"../db\" — none of: db, db.ts, db.tsx, db.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:42",
+      "detail": "import \"../services/emailService\" — none of: services/emailService, services/emailService.ts, services/emailService.tsx, services/emailService.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:55",
+      "detail": "import \"../auth\" — none of: auth, auth.ts, auth.tsx, auth.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:56",
+      "detail": "import \"../replitAuth\" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:57",
+      "detail": "import \"../rbac\" — none of: rbac, rbac.ts, rbac.tsx, rbac.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:58",
+      "detail": "import \"../storage\" — none of: storage, storage.ts, storage.tsx, storage.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:59",
+      "detail": "import \"../db\" — none of: db, db.ts, db.tsx, db.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:74",
+      "detail": "import \"../auth\" — none of: auth, auth.ts, auth.tsx, auth.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:75",
+      "detail": "import \"../rbac\" — none of: rbac, rbac.ts, rbac.tsx, rbac.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:76",
+      "detail": "import \"../storage\" — none of: storage, storage.ts, storage.tsx, storage.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:77",
+      "detail": "import \"../db\" — none of: db, db.ts, db.tsx, db.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:94",
+      "detail": "import \"../auth\" — none of: auth, auth.ts, auth.tsx, auth.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:95",
+      "detail": "import \"../rbac\" — none of: rbac, rbac.ts, rbac.tsx, rbac.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:96",
+      "detail": "import \"../middleware/rateLimiter\" — none of: middleware/rateLimiter, middleware/rateLimiter.ts, middleware/rateLimiter.tsx, middleware/rateLimiter.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:97",
+      "detail": "import \"../storage\" — none of: storage, storage.ts, storage.tsx, storage.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:161",
+      "detail": "import \"../services/shiftChatroomWorkflowService\" — none of: services/shiftChatroomWorkflowService, services/shiftChatroomWorkflowService.ts, services/shiftChatroomWorkflowService.tsx, services/shiftChatroomWorkflowService.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:162",
+      "detail": "import \"../objectStorage\" — none of: objectStorage, objectStorage.ts, objectStorage.tsx, objectStorage.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:164",
+      "detail": "import \"../services/emailService\" — none of: services/emailService, services/emailService.ts, services/emailService.tsx, services/emailService.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:165",
+      "detail": "import \"../services/ptoAccrual\" — none of: services/ptoAccrual, services/ptoAccrual.ts, services/ptoAccrual.tsx, services/ptoAccrual.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:166",
+      "detail": "import \"../services/performanceReviewReminders\" — none of: services/performanceReviewReminders, services/performanceReviewReminders.ts, services/performanceReviewReminders.tsx, services/performanceReviewReminders.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/extract-and-create.mjs:167",
+      "detail": "import \"../email\" — none of: email, email.ts, email.tsx, email.js"
+    },
+    {
+      "severity": "FATAL",
+      "group": "missing-import",
+      "name": "server/services/ai-brain/tools/trinityAgentParityLayer.ts:29",
+      "detail": "import \"../../../spec-index.json\" — none of: server/spec-index.json, server/spec-index.json.ts, server/spec-index.json.tsx, server/spec-index.json.js"
+    }
+  ]
+}

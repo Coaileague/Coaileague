@@ -1,0 +1,306 @@
+FATAL	ghost-endpoint	client/src/components/PDFFieldPlacer.tsx:65 → PUT /api/documents/:p/signature-fields	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/chatdock/TrinityThoughtBar.tsx:129 → GET /api/trinity/chat/thought-stream:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/chatdock/TrinityThoughtBar.tsx:155 → GET /api/trinity/active-operations	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/clients-table.tsx:600 → POST /api/clients/:p/collections/start	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/clients-table.tsx:617 → POST /api/clients/:p/collections/decline	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/command-palette.tsx:97 → POST /api/search/log-click	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/command-palette.tsx:170 → GET /api/search	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/consent-manager.tsx:87 → POST /api/privacy/cookie-consent	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/email/EmailHubCanvas.tsx:2564 → POST /api/external-emails/enhance	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/email/EmailHubCanvas.tsx:3719 → PATCH /api/external-emails/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/email/EmailHubCanvas.tsx:3740 → DELETE /api/external-emails/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/email/EmailHubCanvas.tsx:3823 → POST /api/external-emails	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/email/EmailHubCanvas.tsx:3837 → POST /api/external-emails/:p/send	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/employee-edit-dialog.tsx:331 → GET /api/manager-assignments/employee/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/quick-incident-report.tsx:125 → POST /api/rms/incidents	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/schedule/ScheduleUploadPanel.tsx:62 → POST /api/trinity/import-schedule	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/session-timeout-warning.tsx:39 → POST /api/auth/logout	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/session-timeout-warning.tsx:106 → POST /api/auth/extend-session	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/setup-guide-panel.tsx:125 → POST /api/onboarding/complete-task/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/support/SupportTeamPanel.tsx:223 → POST /api/platform/team/bots/:p/query	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/support/SupportTeamPanel.tsx:330 → POST /api/platform/team/agents	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/support/SupportTeamPanel.tsx:388 → POST /api/platform/team/bots	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/support/SupportTeamPanel.tsx:448 → POST /api/platform/team/agents/:p/action	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/support/SupportTeamPanel.tsx:541 → POST /api/platform/team/bots/:p/action	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/terms-acceptance-gate.tsx:50 → POST /api/privacy/terms-acceptance	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/trinity/TrinityActionHistoryPanel.tsx:86 → POST /api/ai-brain/retry/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/components/trinity-chat-modal.tsx:1167 → POST /api/trinity/chat/with-file	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/use-push-notifications.ts:47 → POST /api/push/subscribe	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/use-push-notifications.ts:73 → DELETE /api/push/unsubscribe	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/use-push-notifications.ts:93 → POST /api/push/test	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/use-push-notifications.ts:209 → GET /api/push/vapid-public-key	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useApprovals.ts:91 → POST /api/approvals/:p/decision	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useApprovals.ts:116 → POST /api/approvals/:p/cancel	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:105 → POST /api/broadcasts	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:133 → POST /api/broadcasts/platform	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:159 → POST /api/broadcasts/:p/read	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:176 → POST /api/broadcasts/:p/acknowledge	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:202 → POST /api/broadcasts/:p/dismiss	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:226 → POST /api/broadcasts/:p/feedback	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:254 → PATCH /api/broadcasts/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useBroadcasts.ts:282 → DELETE /api/broadcasts/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useWorkboard.ts:121 → POST /api/workboard/submit	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useWorkboard.ts:140 → POST /api/workboard/tasks/:p/cancel	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/hooks/useWorkboard.ts:160 → POST /api/workboard/tasks/:p/retry	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/lib/ai-status/fallback-intelligence.ts:106 → POST /api/helpai/v2/command-bus	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/lib/ai-status/fallback-intelligence.ts:127 → POST /api/helpai/clock-:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/lib/ai-status/fallback-intelligence.ts:186 → POST /api/notifications/management-alert	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/lib/ai-status/fallback-intelligence.ts:244 → GET /api/helpai/cache/schedule	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/lib/ai-status/fallback-intelligence.ts:245 → GET /api/helpai/cache/faqs	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/lib/ai-status/status-engine.ts:246 → GET /api/health/ai-status	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/lib/queryClient.ts:164 → POST /api/platform/audit-event	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/HelpDesk.tsx:770 → POST /api/helpdesk/room/helpdesk/status	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/HelpDesk.tsx:566 → GET /api/helpdesk/room/helpdesk	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/accounting-integrations.tsx:140 → POST /api/integrations/connection-request	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-helpai.tsx:958 → POST /api/clients/dockchat/reports/:p/acknowledge	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-helpai.tsx:977 → POST /api/clients/dockchat/reports/:p/resolve	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-security.tsx:57 → GET /api/security-admin/overrides	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-security.tsx:58 → GET /api/security-admin/auditor-allowlist	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-security.tsx:75 → POST /api/security-admin/overrides	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-security.tsx:87 → DELETE /api/security-admin/overrides/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-security.tsx:94 → POST /api/security-admin/auditor-allowlist	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/admin-security.tsx:105 → DELETE /api/security-admin/auditor-allowlist/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/alert-configuration.tsx:144 → PUT /api/alerts/config/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/alert-configuration.tsx:159 → PATCH /api/alerts/config/:p/toggle	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/alert-configuration.tsx:176 → POST /api/alerts/:p/acknowledge	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/alert-configuration.tsx:194 → POST /api/alerts/test	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/applicant-visual-compliance.tsx:73 → GET /api/audit-suite/visual-compliance/slots	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/applicant-visual-compliance.tsx:79 → GET /api/audit-suite/visual-compliance/:p/summary	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/applicant-visual-compliance.tsx:88 → GET /api/audit-suite/visual-compliance/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/applicant-visual-compliance.tsx:100 → POST /api/audit-suite/visual-compliance/upload	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/audit-chatdock.tsx:46 → GET /api/audit-suite/audits/:p/safe-status	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/audit-chatdock.tsx:53 → GET /api/audit-suite/audits/:p/packets	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/audit-chatdock.tsx:59 → POST /api/audit-suite/audits/:p/generate-packet	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/audit-chatdock.tsx:69 → POST /api/audit-suite/audits/:p/packets/:p/approve	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/audit-chatdock.tsx:79 → POST /api/audit-suite/audits/:p/packets/:p/reject	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/auditor-login.tsx:33 → POST /api/enforcement/auditor/login	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/auditor-verification-portal.tsx:115 → GET /api/audit-suite/audits/:p/cure-status	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/auditor-verification-portal.tsx:126 → POST /api/audit-suite/audits/:p/submit-paperwork	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/background-checks.tsx:134 → POST /api/enterprise-features/background-checks/:p/cancel	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/cad-console.tsx:315 → POST /api/cad/units	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/cad-console.tsx:322 → POST /api/cad/calls/:p/dispatch	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/cad-console.tsx:328 → POST /api/cad/calls/:p/on-scene	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/cad-console.tsx:335 → POST /api/cad/calls/:p/resolve	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/cad-console.tsx:342 → PATCH /api/cad/units/:p/status	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/cad-console.tsx:349 → POST /api/cad/geofence-departures/:p/acknowledge	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/citation-resolve.tsx:72 → POST /api/audit-suite/citations/:p/payment-proof	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/client-communications.tsx:390 → POST /api/trinity/execute-action	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/client-portal.tsx:534 → POST /api/portal/:p/invoice/:p/create-payment-intent	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/client-portal.tsx:811 → POST /api/auth/change-password	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/client-profitability.tsx:154 → GET /api/analytics/client-profitability:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/client-status-lookup.tsx:59 → POST /api/client-status/:p/clicked	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/clients.tsx:283 → GET /api/organizations/managed	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/co-auditor-claim.tsx:28 → POST /api/auditor/claim	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/co-auditor-dashboard.tsx:120 → POST /api/auditor/nda/accept	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/co-auditor-dashboard.tsx:239 → POST /api/auditor/flag/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/co-auditor-dashboard.tsx:495 → POST /api/auditor/audits	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/co-auditor-dashboard.tsx:514 → POST /api/auditor/logout	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/co-auditor-login.tsx:21 → POST /api/auditor/login	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/company-reports.tsx:70 → POST /api/reports/export	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/compliance/approvals.tsx:71 → POST /api/security-compliance/approvals/:p/decide	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/compliance/employee-detail.tsx:129 → POST /api/security-compliance/records	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/compliance/employee-detail.tsx:154 → POST /api/security-compliance/documents	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/compliance/employee-detail.tsx:176 → POST /api/security-compliance/records/:p/lock-vault	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/compliance/enforcement-status.tsx:104 → POST /api/enforcement/appeal	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/compliance/regulator-access.tsx:89 → POST /api/security-compliance/regulator	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/compliance/regulator-access.tsx:110 → POST /api/security-compliance/regulator/:p/revoke	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/contract-signing-portal.tsx:269 → POST /api/contracts/portal/:p/sign	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/contract-signing-portal.tsx:291 → POST /api/contracts/portal/:p/accept	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/contract-signing-portal.tsx:312 → POST /api/contracts/portal/:p/decline	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/contract-signing-portal.tsx:335 → POST /api/contracts/portal/:p/request-changes	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/data-subject-requests.tsx:117 → PATCH /api/privacy/requests/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/data-subject-requests.tsx:187 → POST /api/privacy/requests	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:106 → POST /api/contracts	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:219 → POST /api/contracts/:p/send	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:412 → POST /api/documents/${doc	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:608 → POST /api/documents	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:624 → POST /api/documents/:p/sign	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:1125 → POST /api/contracts/:p/signers	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:564 → GET /api/contracts	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:571 → GET /api/contracts/stats	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-library.tsx:576 → GET /api/documents/${selectedDoc	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/document-signing-portal.tsx:262 → POST /api/documents/external/sign/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/employee-file-cabinet.tsx:320 → POST /api/documents/:p/sign-internal	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/employee-profile.tsx:93 → GET /api/hr/manager-assignments/employee/${employee	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/employee-profile.tsx:101 → POST /api/hr/manager-assignments	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/employee-profile.tsx:164 → PATCH /api/auth/language-preference	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/employees.tsx:495 → GET /api/manager-assignments	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/ethics-hotline.tsx:53 → POST /api/ethics/report	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/ethics-hotline.tsx:59 → PATCH /api/ethics/reports/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/ethics-hotline.tsx:70 → GET /api/ethics/followup/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/finance-hub.tsx:145 → PATCH /api/finance-settings	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/fleet-compliance.tsx:83 → PATCH /api/vehicles/${vehicle	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/flex-staffing.tsx:202 → POST /api/flex/gigs	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/flex-staffing.tsx:219 → PATCH /api/flex/applications/:p/review	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/flex-staffing.tsx:187 → GET /api/flex/gigs	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/flex-staffing.tsx:192 → GET /api/flex/contractors	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/flex-staffing.tsx:198 → GET /api/flex/gigs/${selectedGig	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/go-live.tsx:95 → POST /api/import/:p/preview	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/go-live.tsx:107 → POST /api/import/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/help.tsx:191 → POST /api/helpai/session/:p/message	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hiring-pipeline.tsx:257 → POST /api/hiring/applicants/:p/verify-license	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hiring-pipeline.tsx:267 → POST /api/hiring/applicants/:p/score-interview	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hiring-pipeline.tsx:276 → POST /api/hiring/applicants/:p/assess	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hiring-pipeline.tsx:560 → POST /api/hiring/postings/:p/draft-approve	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hiring-pipeline.tsx:706 → PATCH /api/hiring/applicants/:p/stage	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hiring-pipeline.tsx:248 → GET /api/hiring/applicants/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hr-terminations.tsx:66 → POST /api/terminations	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hr-terminations.tsx:91 → PATCH /api/terminations/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hris-management.tsx:82 → POST /api/hris/sync/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hris-management.tsx:102 → DELETE /api/hris/disconnect/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/hris-management.tsx:63 → GET /api/hris/auth/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/inbound-opportunities.tsx:79 → POST /api/trinity-staffing/workflows/:p/cancel	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/incident-pipeline.tsx:130 → PATCH /api/incident-reports/:p/status	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/integrations-page.tsx:291 → POST /api/integrations/:p/connect	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/integrations-page.tsx:319 → POST /api/integrations/:p/disconnect	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/integrations-page.tsx:347 → POST /api/integrations/:p/refresh	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/invoices.tsx:707 → POST /api/invoices/:p/send-with-pdf	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/invoices.tsx:739 → POST /api/invoices/:p/void	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/invoices.tsx:892 → POST /api/invoices/bulk-resend	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/invoices.tsx:902 → POST /api/invoices/send-all-drafts	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/leaders-hub.tsx:280 → POST /api/leaders/reset-password	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/leaders-hub.tsx:295 → POST /api/leaders/unlock-account	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/leaders-hub.tsx:310 → PATCH /api/leaders/update-contact	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/leaders-hub.tsx:326 → POST /api/leaders/escalate	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/mileage.tsx:171 → PATCH /api/mileage/${initial	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/onboarding-start.tsx:24 → POST /api/invites/accept	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/onboarding.tsx:302 → POST /api/onboarding/tasks/:p/complete	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/onboarding.tsx:322 → POST /api/onboarding/rewards/reward/apply	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/org-management.tsx:235 → PATCH /api/employees/:p/role	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/org-management.tsx:252 → PATCH /api/employees/:p/access	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/org-management.tsx:274 → PATCH /api/organizations/:p/status	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/oversight-hub.tsx:66 → PATCH /api/oversight/:p/approve	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/oversight-hub.tsx:88 → PATCH /api/oversight/:p/reject	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/performance.tsx:247 → PATCH /api/performance/disciplinary/:p/acknowledge	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/performance.tsx:259 → PATCH /api/performance/disciplinary/:p/appeal	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/performance.tsx:437 → PATCH /api/performance/reviews/:p/acknowledge	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/performance.tsx:657 → POST /api/performance/disciplinary	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/performance.tsx:821 → POST /api/performance/reviews	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/policies.tsx:56 → POST /api/policies	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/policies.tsx:71 → PATCH /api/policies/:p/publish	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/policies.tsx:84 → POST /api/policies/:p/acknowledge	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/policies.tsx:40 → GET /api/policies	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/post-orders.tsx:69 → PATCH /api/post-orders/templates/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/post-orders.tsx:576 → GET /api/post-orders/templates	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/proposal-builder.tsx:196 → PATCH /api/proposals/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/proposal-builder.tsx:908 → POST /api/contracts/:p/sign	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/proposal-builder.tsx:929 → DELETE /api/proposals/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/proposal-builder.tsx:955 → POST /api/proposals/:p/generate-pdf	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/regulatory-dashboard.tsx:74 → GET /api/compliance/regulatory-portal/dashboard/:p/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/resolution-inbox.tsx:131 → POST /api/exceptions/:p/resolve	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/resolution-inbox.tsx:148 → POST /api/exceptions/:p/retry	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rfp-manager.tsx:51 → POST /api/rfp	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rfp-manager.tsx:57 → POST /api/rfp/:p/generate-proposal	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rfp-manager.tsx:68 → PATCH /api/rfp/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:389 → POST /api/rms/visitors/:p/checkout	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:401 → DELETE /api/rms/visitors/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:425 → POST /api/rms/key-control/:p/return	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:449 → PATCH /api/rms/bolo/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:467 → POST /api/rms/evidence/:p/transfer	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:473 → POST /api/rms/dars/:p/submit	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:485 → POST /api/rms/dars/:p/send-to-client	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/rms-hub.tsx:498 → POST /api/rms/reports/:p/track	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/root-admin-dashboard.tsx:170 → GET /api/platform/stats	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/root-admin-dashboard.tsx:267 → GET /api/platform/personal-data	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-crm.tsx:159 → POST /api/crm	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-crm.tsx:171 → PATCH /api/crm/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-crm.tsx:186 → POST /api/crm/deals	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-crm.tsx:145 → GET /api/crm	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-crm.tsx:150 → GET /api/crm/deals	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-crm.tsx:155 → GET /api/crm/pipeline/stats	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-pipeline.tsx:83 → POST /api/sales/pipeline/leads	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-pipeline.tsx:158 → POST /api/sales/pipeline/leads/:p/advance	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sales-pipeline.tsx:168 → POST /api/sales/pipeline/proposals/generate	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/schedule-mobile-first.tsx:485 → POST /api/shifts/:p/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/settings/EmailManagement.tsx:175 → PUT /api/email/addresses/:p/settings	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/settings/EmailManagement.tsx:361 → POST /api/email/addresses/:p/activate	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/settings/EmailManagement.tsx:375 → POST /api/email/addresses/:p/deactivate	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/settings/EmailManagement.tsx:389 → POST /api/email/activate-all	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/settings-data-privacy.tsx:37 → POST /api/exports/tenant-takeout	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/settings.tsx:2211 → POST /api/invites/create	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/shift-trading.tsx:137 → POST /api/shift-trading/availability	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/shift-trading.tsx:215 → POST /api/shift-trading/trades/:p/manager-approve	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/shift-trading.tsx:224 → POST /api/shift-trading/trades/:p/manager-reject	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/shift-trading.tsx:239 → POST /api/shift-trading/trades/:p/accept	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/shift-trading.tsx:248 → DELETE /api/shift-trading/availability/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sra/SRAApply.tsx:39 → POST /api/sra/auth/apply	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sra/SRALogin.tsx:34 → POST /api/sra/auth/login	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sra/SRALogin.tsx:48 → POST /api/sra/auth/verify-totp	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/sra/SRAPortalLayout.tsx:46 → POST /api/sra/auth/logout	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/tax-center.tsx:77 → GET /api/payroll/tax-center	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-certification/index.tsx:152 → PATCH /api/training/certification/interventions/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-certification/index.tsx:200 → POST /api/training/certification/seed-modules	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-certification/module-learning.tsx:213 → POST /api/training/certification/attempts	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-certification/module-learning.tsx:226 → PATCH /api/training/certification/attempts/:p/section	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-certification/module-learning.tsx:235 → POST /api/training/certification/attempts/:p/final-exam	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-certification/module-learning.tsx:208 → GET /api/training/certification/modules/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-os.tsx:211 → POST /api/training/courses	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training-os.tsx:242 → POST /api/training/courses/:p/enroll	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training.tsx:136 → POST /api/training/sessions/:p/checkin	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training.tsx:216 → POST /api/training/sessions/:p/register	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training.tsx:227 → POST /api/training/sessions/:p/complete	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training.tsx:239 → PATCH /api/training/sessions/:p	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/training.tsx:843 → POST /api/training/sessions	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/trinity-memory.tsx:47 → POST /api/ai-brain/diagnostic/run-fast	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/universal-schedule.tsx:1519 → POST /api/scheduling/shifts/:p/swap-request	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/verify-email.tsx:20 → POST /api/auth/verify-email	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/verify-email.tsx:39 → POST /api/auth/resend-verification	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/work-orders.tsx:66 → POST /api/work-orders	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/work-orders.tsx:164 → POST /api/work-orders/:p/activate	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/work-orders.tsx:170 → POST /api/work-orders/:p/complete	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/work-orders.tsx:177 → GET /api/work-orders/:p/evidence	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/worker-dashboard.tsx:776 → GET /api/shift-handoff/pending	Frontend calls but no server route matches.
+FATAL	ghost-endpoint	client/src/pages/workspace-onboarding.tsx:240 → POST /api/quickbooks/flow/:p/retry	Frontend calls but no server route matches.
+INFO	stub-marker	client/src/pages/analytics-reports.tsx	1 TODO/FIXME/STUB markers
+WARN	unmounted-router	server/routes/auditSuiteRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/auditorRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/bootstrapRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/email/emailRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/financialReporting/revenueRecognitionRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/hr/documentRequestRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/inboundEmailRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/interviewChatroomRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/legalConsentRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/legalRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/mascot-routes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/notificationPreferenceRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/platformFeedbackRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/platformFormsRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/publicHiringRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/publicOnboardingRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/securityAdminRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/sra/sraAuthRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/sra/sraCompanyRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/sra/sraDataRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/sra/sraFindingsRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/sra/sraTrinityRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/statusRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/voiceRoutes.ts	File looks like a router but no domain mount imports it.
+WARN	unmounted-router	server/routes/webhookRoutes.ts	File looks like a router but no domain mount imports it.
+FATAL	missing-import	server/extract-and-create.mjs:13	import "../replitAuth" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js
+FATAL	missing-import	server/extract-and-create.mjs:14	import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+FATAL	missing-import	server/extract-and-create.mjs:27	import "../replitAuth" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js
+FATAL	missing-import	server/extract-and-create.mjs:28	import "../rbac" — none of: rbac, rbac.ts, rbac.tsx, rbac.js
+FATAL	missing-import	server/extract-and-create.mjs:29	import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+FATAL	missing-import	server/extract-and-create.mjs:30	import "../db" — none of: db, db.ts, db.tsx, db.js
+FATAL	missing-import	server/extract-and-create.mjs:42	import "../services/emailService" — none of: services/emailService, services/emailService.ts, services/emailService.tsx, services/emailService.js
+FATAL	missing-import	server/extract-and-create.mjs:55	import "../auth" — none of: auth, auth.ts, auth.tsx, auth.js
+FATAL	missing-import	server/extract-and-create.mjs:56	import "../replitAuth" — none of: replitAuth, replitAuth.ts, replitAuth.tsx, replitAuth.js
+FATAL	missing-import	server/extract-and-create.mjs:57	import "../rbac" — none of: rbac, rbac.ts, rbac.tsx, rbac.js
+FATAL	missing-import	server/extract-and-create.mjs:58	import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+FATAL	missing-import	server/extract-and-create.mjs:59	import "../db" — none of: db, db.ts, db.tsx, db.js
+FATAL	missing-import	server/extract-and-create.mjs:74	import "../auth" — none of: auth, auth.ts, auth.tsx, auth.js
+FATAL	missing-import	server/extract-and-create.mjs:75	import "../rbac" — none of: rbac, rbac.ts, rbac.tsx, rbac.js
+FATAL	missing-import	server/extract-and-create.mjs:76	import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+FATAL	missing-import	server/extract-and-create.mjs:77	import "../db" — none of: db, db.ts, db.tsx, db.js
+FATAL	missing-import	server/extract-and-create.mjs:94	import "../auth" — none of: auth, auth.ts, auth.tsx, auth.js
+FATAL	missing-import	server/extract-and-create.mjs:95	import "../rbac" — none of: rbac, rbac.ts, rbac.tsx, rbac.js
+FATAL	missing-import	server/extract-and-create.mjs:96	import "../middleware/rateLimiter" — none of: middleware/rateLimiter, middleware/rateLimiter.ts, middleware/rateLimiter.tsx, middleware/rateLimiter.js
+FATAL	missing-import	server/extract-and-create.mjs:97	import "../storage" — none of: storage, storage.ts, storage.tsx, storage.js
+FATAL	missing-import	server/extract-and-create.mjs:161	import "../services/shiftChatroomWorkflowService" — none of: services/shiftChatroomWorkflowService, services/shiftChatroomWorkflowService.ts, services/shiftChatroomWorkflowService.tsx, services/shiftChatroomWorkflowService.js
+FATAL	missing-import	server/extract-and-create.mjs:162	import "../objectStorage" — none of: objectStorage, objectStorage.ts, objectStorage.tsx, objectStorage.js
+FATAL	missing-import	server/extract-and-create.mjs:164	import "../services/emailService" — none of: services/emailService, services/emailService.ts, services/emailService.tsx, services/emailService.js
+FATAL	missing-import	server/extract-and-create.mjs:165	import "../services/ptoAccrual" — none of: services/ptoAccrual, services/ptoAccrual.ts, services/ptoAccrual.tsx, services/ptoAccrual.js
+FATAL	missing-import	server/extract-and-create.mjs:166	import "../services/performanceReviewReminders" — none of: services/performanceReviewReminders, services/performanceReviewReminders.ts, services/performanceReviewReminders.tsx, services/performanceReviewReminders.js
+FATAL	missing-import	server/extract-and-create.mjs:167	import "../email" — none of: email, email.ts, email.tsx, email.js
+FATAL	missing-import	server/services/ai-brain/tools/trinityAgentParityLayer.ts:29	import "../../../spec-index.json" — none of: server/spec-index.json, server/spec-index.json.ts, server/spec-index.json.tsx, server/spec-index.json.js

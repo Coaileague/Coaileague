@@ -42,6 +42,53 @@ interface AuthenticatedRequest extends Request {
 export const aiBrainRouter: Router = express.Router();
 
 /**
+ * POST /api/ai-brain/chat — End-user @Trinity mention path.
+ *
+ * ChatDock fires this whenever a user types "@Trinity ..." in any room.
+ * Previously a ghost endpoint: the call landed on a 404 and the result
+ * was silently swallowed by `.catch(() => null)`, meaning every @Trinity
+ * mention from a logged-in user disappeared into the void. This handler
+ * routes through trinityChatService (the canonical Trinity entry point
+ * the rest of the platform uses) and returns the response in the shape
+ * ChatDock already expects.
+ */
+aiBrainRouter.post('/chat', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const workspaceId = authReq.workspaceId || authReq.user?.currentWorkspaceId;
+    const { message, context: ctx } = req.body ?? {};
+
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'message (string) is required' });
+    }
+
+    const { trinityChatService } = await import('../services/ai-brain/trinityChatService');
+    const result = await trinityChatService.chat({
+      userId,
+      workspaceId: workspaceId || undefined,
+      message: String(message),
+      mode: ctx?.mode === 'guru' ? 'guru' : 'business',
+      sessionId: ctx?.sessionId || `chatdock-${ctx?.roomId || 'inline'}-${userId}`,
+    } as any);
+
+    return res.json({
+      success: true,
+      response: result?.response ?? '',
+      sessionId: (result as any)?.sessionId,
+      source: ctx?.source || 'chatdock',
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: 'Trinity chat failed',
+      message: err?.message || 'unknown',
+    });
+  }
+});
+
+/**
  * GET /api/ai-brain/health - Get AI Brain health metrics
  * Uses requireAuth to support both session-based and Replit OAuth auth
  */

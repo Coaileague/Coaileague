@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-05-01T16:47:09.539Z",
+  "ranAt": "2026-05-01T17:04:00.760Z",
   "database": "postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox",
   "passed": 35,
   "failed": 0,
@@ -21,13 +21,13 @@
       "name": "POST /api/chat/manage/dm/create returns 200 + conversationId",
       "pass": true,
       "status": 200,
-      "detail": "conversationId=a4373e45-1bce-4761-8fc3-bd8a9d7d2cd3"
+      "detail": "conversationId=ba9580f5-f22f-494d-b8e3-cc9ddad1e928"
     },
     {
       "name": "Group room creation returns conversationId",
       "pass": true,
       "status": 200,
-      "detail": "conversationId=c2f454bc-3166-4576-a77b-5f73c3d82032 participantCount=4"
+      "detail": "conversationId=e5a75c5a-68b9-4723-974e-0d69deafcaff participantCount=4"
     },
     {
       "name": "Participants endpoint returns all 3 seeded users",
@@ -53,7 +53,7 @@
     {
       "name": "Two DM messages persisted via Drizzle",
       "pass": true,
-      "detail": "manager_msg=1a30e3ab-1f65-4b99-bb10-ad1cf2961395 peer_msg=3da66b37-8774-4dc4-95a6-a183c5761fdb"
+      "detail": "manager_msg=69b62e84-e5fa-49bd-b2b9-52b1530ec924 peer_msg=19d0f825-463b-4cb9-8d15-2131a9e43a91"
     },
     {
       "name": "POST reactions returns 2xx",
@@ -121,7 +121,7 @@
     {
       "name": "After hide, bystander's room list excludes the hidden room",
       "pass": true,
-      "detail": "room_count=0 hiddenRoom=c2f454bc-3166-4576-a77b-5f73c3d82032"
+      "detail": "room_count=0 hiddenRoom=e5a75c5a-68b9-4723-974e-0d69deafcaff"
     },
     {
       "name": "POST mark-as-read returns 2xx",
@@ -155,7 +155,7 @@
       "name": "POST forward returns 2xx",
       "pass": true,
       "status": 200,
-      "detail": "{\"success\":true,\"forwardedMessageId\":\"90d7e4fd-c2ef-4969-a882-0b307cdfb8b4\"}"
+      "detail": "{\"success\":true,\"forwardedMessageId\":\"15685f96-3c61-4887-a38e-6ff006b7f8aa\"}"
     },
     {
       "name": "Forwarded message lands in the group room",
@@ -183,13 +183,13 @@
       "name": "POST /api/helpai/message returns a HelpAI reply (no longer a ghost endpoint)",
       "pass": true,
       "status": 200,
-      "detail": "reply=\"I hit a small snag. Let's try that again in just a second.…\""
+      "detail": "reply=\"Oops! Something didn't work right. Let me try again if you resend that.…\""
     },
     {
       "name": "POST trinity-react returns 2xx (no longer a ghost endpoint)",
       "pass": true,
       "status": 200,
-      "detail": "{\"success\":true,\"reacted\":true,\"messageId\":\"1820b4cc-8233-4459-837d-01d6925f3989\",\"emoji\":\"✅\"}"
+      "detail": "{\"success\":true,\"reacted\":true,\"messageId\":\"1eb9c8f2-6661-49f9-a7bb-b52c7c924298\",\"emoji\":\"✅\"}"
     },
     {
       "name": "Trinity ✅ reaction persisted on the user's message",
@@ -200,7 +200,7 @@
       "name": "Manager's room list contains the DM and the group room",
       "pass": true,
       "status": 200,
-      "detail": "rooms=2 ids=c2f454bc-3166-4576-a77b-5f73c3d82032,a4373e45-1bce-4761-8fc3-bd8a9d7d2cd3"
+      "detail": "rooms=2 ids=e5a75c5a-68b9-4723-974e-0d69deafcaff,ba9580f5-f22f-494d-b8e3-cc9ddad1e928"
     }
   ]
 }

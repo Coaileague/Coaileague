@@ -51,6 +51,7 @@ const ROUTE_FILES = [
   { prefix: '/api/chat',        file: 'server/routes/chatInlineRoutes.ts' },
   { prefix: '',                 file: 'server/routes/chat.ts' },
   { prefix: '/api/helpai',      file: 'server/routes/helpai-routes.ts' },
+  { prefix: '/api/ai-brain',    file: 'server/routes/ai-brain-routes.ts' },
   { prefix: '',                 file: 'server/routes/trinityChatRoutes.ts' },
 ];
 
