@@ -38,7 +38,7 @@ const log = createLogger('onboardingPipelineService');
 // Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (TRINITY.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
-    return (getStripe() as any)[prop];
+    return (getStripe() as unknown)[prop];
   },
 });
 
@@ -420,7 +420,7 @@ class OnboardingPipelineService {
 
         stripeCouponId = coupon.id;
 
-        const promoCode = await (stripe.promotionCodes.create as any)({
+        const promoCode = await (stripe.promotionCodes.create as unknown)({
           coupon: coupon.id,
           code: `WELCOME10-${workspaceId.substring(0, 8).toUpperCase()}`,
           metadata: { workspaceId },

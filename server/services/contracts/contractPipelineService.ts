@@ -124,7 +124,7 @@ async function persistSignerToDB(signer: ContractSigner): Promise<void> {
         notifiedAt: signer.notifiedAt || null,
         viewedAt: signer.viewedAt || null,
         accessToken: signer.accessToken || null,
-      } as any,
+      } as unknown,
     });
 }
 
@@ -1067,7 +1067,7 @@ class ContractPipelineService {
             order: 0,
             status: 'signed',
             reminderCount: 0,
-          } as any);
+          } as unknown);
         }
         const { buildContractExecutedEmail } = await import('../emailTemplateBase');
         const executionDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });

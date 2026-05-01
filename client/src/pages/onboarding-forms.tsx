@@ -999,7 +999,7 @@ function OfferLetterForm({ data, onChange, employeeName }: {
             <Checkbox
               id={key}
               checked={!!data[key]}
-              onCheckedChange={(c) => onChange({ [key]: !!c } as any)}
+              onCheckedChange={(c) => onChange({ [key]: !!c } as unknown)}
               data-testid={testId}
             />
             <Label htmlFor={key} className="font-normal cursor-pointer leading-snug">

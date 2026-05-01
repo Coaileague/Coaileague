@@ -584,9 +584,9 @@ router.get('/platform/invitations', async (req: AuthenticatedRequest, res) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const offset = parseInt(req.query.offset as string) || 0;
 
-    let statusCondition = eq(employeeInvitations.inviteStatus, status as any);
+    let statusCondition = eq(employeeInvitations.inviteStatus, status as unknown);
     if (status === 'all') {
-      statusCondition = sql`1=1` as any;
+      statusCondition = sql`1=1` as unknown;
     }
 
     const invitations = await db.select({
@@ -2157,7 +2157,7 @@ router.post('/compliance/notify-pending', async (req: AuthenticatedRequest, res)
         relatedEntityType: 'compliance',
         metadata: { pendingCount: count, reason: 'post_email_fix_notification', notifiedAt: new Date().toISOString() },
         createdBy: req.user.id,
-        idempotencyKey: `system-${Date.now()}-${owner.userId}`
+        idempotencyKey: `system-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.userId}`
       });
       notified++;
     }

@@ -18,6 +18,7 @@
  *   - All other types: 2 credits/employee/document
  */
 
+import React from 'react';
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

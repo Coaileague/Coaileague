@@ -119,7 +119,7 @@ async function fireWebhook(event: object): Promise<void> {
 
 // ── Create/find a test payment method via tok_visa ─────────────────────────
 async function ensurePaymentMethod(customerId: string): Promise<string> {
-  const pm = await stripe.paymentMethods.create({ type: 'card', card: { token: 'tok_visa' } as any });
+  const pm = await stripe.paymentMethods.create({ type: 'card', card: { token: 'tok_visa' } as unknown });
   await stripe.paymentMethods.attach(pm.id, { customer: customerId });
   await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: pm.id } });
   log(`Payment method attached`, { pmId: pm.id, brand: pm.card?.brand, last4: pm.card?.last4 });
@@ -424,7 +424,7 @@ async function printSummary(priceMap: Map<string, string>): Promise<void> {
 
   const ws = await db.select().from(workspaces);
   for (const w of ws) {
-    const any = w as any;
+    const any = w as unknown;
     if (!['dev-acme-security-ws', 'dev-anvil-security-ws'].includes(any.id)) continue;
     console.log(`\n  ${any.name} (${any.id})`);
     console.log(`    Tier:           ${any.subscriptionTier}`);

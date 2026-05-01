@@ -4,6 +4,7 @@
  * Settings persist to DB and Trinity reads them for all scheduled operations.
  */
 
+import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';

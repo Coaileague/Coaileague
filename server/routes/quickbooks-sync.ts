@@ -430,7 +430,7 @@ router.post('/api/admin/quickbooks/sync-staffing-clients', requireAuth, requireM
           },
           ipAddress: req.ip,
           userAgent: req.headers['user-agent'] || null,
-        } as any);
+        } as unknown);
 
         results.push({ email: newClient.fromEmail, name: newClient.fromName || 'Unknown', action: 'created' });
       } catch (insertErr: unknown) {

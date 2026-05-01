@@ -315,7 +315,7 @@ router.post("/actions/execute", requireAuth, workspaceTrinityLimiter, async (req
     const name = nameParts.join('.') || actionId;
     const result = await helpaiOrchestrator.executeAction({
       actionId,
-      category: category as any,
+      category: category as unknown,
       name,
       payload: { ...payload, workspaceId },
       userId,

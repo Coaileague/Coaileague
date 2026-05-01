@@ -4,6 +4,7 @@
  * Handles different types, priorities, and actions
  */
 
+import React from 'react';
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';

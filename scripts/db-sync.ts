@@ -45,7 +45,7 @@ async function syncSchema() {
       const exists = await db.execute(sql.raw(
         `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${table.name}') as exists`
       ));
-      const tableExists = (exists as Record<string, unknown>).rows?.[0]?.exists === true || (exists as any)[0]?.exists === true;
+      const tableExists = (exists as Record<string, unknown>).rows?.[0]?.exists === true || (exists as unknown)[0]?.exists === true;
 
       if (tableExists) {
         console.log(`  [SKIP] ${table.name} — already exists`);

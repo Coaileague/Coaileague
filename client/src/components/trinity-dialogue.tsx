@@ -6,6 +6,7 @@
  * See: docs/trinity-platform-consciousness-roadmap.md
  */
 
+import React from 'react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";

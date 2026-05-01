@@ -302,7 +302,7 @@ export class SandboxQuickBooksSimulator {
         dueDate: new Date(inv.dueDate!),
         totalAmount: parseFloat(inv.total || '0'),
         balance: parseFloat(inv.total || '0') - parseFloat(inv.amountPaid || '0'),
-        status: inv.status as any,
+        status: inv.status as unknown,
         lineItems: lineItems.map(li => ({
           description: li.description,
           quantity: parseFloat(li.quantity),
@@ -359,7 +359,7 @@ export class SandboxQuickBooksSimulator {
         totalNet: parseFloat(run.totalNetPay || '0'),
         totalTaxes: parseFloat(run.totalFederalTax || '0') + parseFloat(run.totalStateTax || '0') + parseFloat(run.totalFicaTax || '0'),
         employeeCount: entries.length,
-        status: run.status as any,
+        status: run.status as unknown,
         entries: entryDetails,
         syncStatus: (run as Record<string, unknown>).quickbooksPayrollId ? 'synced' : 'pending',
       });

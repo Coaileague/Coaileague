@@ -381,7 +381,7 @@ router.post('/send', requireAuth, requireManager, async (req: AuthenticatedReque
             expiresAt,
           });
 
-          await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
+          await NotificationDeliveryService.send({ idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'document_notification', workspaceId: workspaceId || 'system', recipientUserId: emp.id || emp.email, channel: 'email', body: { to: emp.email, subject: doc.emailSubject, html } });
 
           results.push({ employeeId: emp.id, employeeName: `${emp.firstName} ${emp.lastName}`, docType, success: true });

@@ -353,7 +353,7 @@ class ProofOfServiceService {
    * so callers still get a usable object.
    */
   private rowToPos(row: typeof shiftProofPhotos.$inferSelect): ProofOfServicePhoto | undefined {
-    const deviceMeta = row.deviceMeta as any;
+    const deviceMeta = row.deviceMeta as unknown;
     const full = deviceMeta?.fullPayload;
     if (full) {
       // Dates arrive as ISO strings from jsonb — revive them.

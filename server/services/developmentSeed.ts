@@ -873,7 +873,7 @@ export async function ensurePhase0Seed(): Promise<void> {
       userId: 'dev-emp-marcus-r',
       role: 'employee',
       createdAt: new Date(),
-    }) as any).where(notExists(
+    }) as unknown).where(notExists(
       db.select()
         .from(workspaceMembers)
         .where(and(

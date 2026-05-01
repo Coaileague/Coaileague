@@ -471,7 +471,7 @@ export function registerComplianceIncidentActions() {
       userId: null,
       type: 'compliance_violation',
       title: `Compliance Alert: ${violationType}`,
-      idempotencyKey: `compliance_violation-${Date.now()}-${null}`,
+      idempotencyKey: `compliance_violation-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${null}`,
       message: description || `A ${severity} compliance violation (${violationType}) was detected for ${officerLabel}. Immediate review required.`,
       priority: severity === 'critical' ? 'urgent' : 'high',
       targetRole: 'compliance_officer',

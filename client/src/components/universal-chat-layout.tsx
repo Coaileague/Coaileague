@@ -9,6 +9,7 @@
  * - Responsive styling for all screen sizes
  */
 
+import React from 'react';
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

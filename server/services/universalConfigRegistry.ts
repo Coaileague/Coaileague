@@ -119,7 +119,7 @@ export class UniversalConfigRegistry {
   async set(
     domain: string,
     key: string,
-    value: any,
+    value: unknown,
     options: {
       workspaceId?: string;
       description?: string;

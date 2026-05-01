@@ -112,12 +112,12 @@ export function registerExternalIntelligenceActions() {
       if (siteId) {
         const [site] = await db.select({ name: sites.name, latitude: sites.latitude, longitude: sites.longitude })
           .from(sites).where(and(eq(sites.workspaceId, workspaceId), eq(sites.id, siteId))).limit(1);
-        if (site) { lat = site.latitude as any; lon = site.longitude as any; locationName = site.name || locationName; }
+        if (site) { lat = site.latitude as unknown; lon = site.longitude as unknown; locationName = site.name || locationName; }
       }
       if ((!lat || !lon) && clientId) {
         const [client] = await db.select({ name: clients.companyName, latitude: clients.latitude, longitude: clients.longitude })
           .from(clients).where(and(eq(clients.workspaceId, workspaceId), eq(clients.id, clientId))).limit(1);
-        if (client) { lat = client.latitude as any; lon = client.longitude as any; locationName = client.name || locationName; }
+        if (client) { lat = client.latitude as unknown; lon = client.longitude as unknown; locationName = client.name || locationName; }
       }
     }
 

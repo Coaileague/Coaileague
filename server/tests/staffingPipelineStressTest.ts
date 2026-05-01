@@ -146,7 +146,7 @@ export async function runStaffingPipelineStressTest(): Promise<{
         payRate: 22.50,
         testCleanup: true,
       },
-    } as any);
+    } as unknown);
 
     // Cleanup
     await db.delete(notifications).where(and(

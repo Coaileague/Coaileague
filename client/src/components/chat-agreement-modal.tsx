@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from "react";
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { Button } from "@/components/ui/button";

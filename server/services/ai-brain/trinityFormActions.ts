@@ -199,7 +199,7 @@ export function registerFormActions() {
       });
 
       // Notify the approver if routing rules exist
-      const routingRules = (form?.routingRules as any) || {};
+      const routingRules = (form?.routingRules as unknown) || {};
       if (routingRules?.approverUserId) {
         try {
           await NotificationDeliveryService.send({

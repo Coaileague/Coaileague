@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";

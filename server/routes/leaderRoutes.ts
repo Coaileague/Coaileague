@@ -563,7 +563,7 @@ router.patch("/leaders/escalations/:id/status", requireAuth, async (req: Authent
       workspaceId: existingTicket.workspaceId,
       leaderId: staffId,
       leaderEmail: req.user?.email || '',
-      leaderRole: staffRole.role as any,
+      leaderRole: staffRole.role as unknown,
       action: 'platform_update_escalation',
       targetEntityType: 'escalation_ticket',
       targetEntityId: id,

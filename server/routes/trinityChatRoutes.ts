@@ -238,7 +238,7 @@ router.patch('/settings', attachWorkspaceId, requireTrinityAccess, async (req: R
       return res.status(400).json({ error: 'Workspace context required' });
     }
 
-    const settings = await trinityChatService.updateBuddySettings(userId, workspaceId, parsed.data as any);
+    const settings = await trinityChatService.updateBuddySettings(userId, workspaceId, parsed.data as unknown);
     return res.json(settings);
   } catch (error: unknown) {
     log.error('[TrinityChat] Settings update error:', error);

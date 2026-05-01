@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from "react";
 import { LogIn, Zap, Shield, Crown } from "lucide-react";
 import { LOADING_MESSAGES, getRandomLoadingMessage } from "@/config/loading-messages";

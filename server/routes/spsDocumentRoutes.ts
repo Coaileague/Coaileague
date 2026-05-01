@@ -339,7 +339,7 @@ spsDocumentRouter.post('/:id/send', async (req: AuthenticatedRequest, res) => {
       }
 
       if (subject && html) {
-        await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
+        await NotificationDeliveryService.send({ idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'sps_document', workspaceId: workspaceId || 'system', recipientUserId: doc.recipientEmail, channel: 'email', body: { to: doc.recipientEmail, subject, html } });
       }
     } catch (emailErr) {

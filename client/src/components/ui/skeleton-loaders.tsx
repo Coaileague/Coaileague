@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Skeleton Loaders - Content-aware loading placeholders
  * Replace spinners with skeletons that match final content layout

@@ -69,7 +69,7 @@ function UserSessionsViewer({ userId }: { userId: string }) {
             </Badge>
             <span className="text-muted-foreground">{s.ipAddress || 'Unknown IP'}</span>
           </div>
-          <div className="text-muted-foreground truncate">{(s.deviceInfo as any)?.browser || s.userAgent?.slice(0, 60) || 'Unknown device'}</div>
+          <div className="text-muted-foreground truncate">{(s.deviceInfo as unknown)?.browser || s.userAgent?.slice(0, 60) || 'Unknown device'}</div>
           <div className="flex gap-4 text-muted-foreground">
             <span>Last active: {s.lastActivityAt ? format(new Date(s.lastActivityAt), 'MMM d, h:mm a') : '—'}</span>
             <span>Expires: {s.expiresAt ? format(new Date(s.expiresAt), 'MMM d') : '—'}</span>

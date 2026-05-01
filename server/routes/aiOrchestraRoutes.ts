@@ -129,7 +129,7 @@ router.get('/task-types', requireAuth, async (req: Request, res: Response) => {
       // For premium task types, verify workspace has required subscription tier or credits
       const accessCheck = canAccessFeature(
         `ai_task_${t.taskType}`,
-        workspace.subscriptionTier as any,
+        workspace.subscriptionTier as unknown,
         0, // currentUsage - not tracked per task type
         availableCredits,
         1, // requestedUnits

@@ -39,7 +39,7 @@ const directGenAI = new Proxy({} as GoogleGenerativeAI, {
   get(_t, prop) {
     const inst = getDirectGenAI();
     if (!inst) return undefined;
-    return (inst as any)[prop];
+    return (inst as unknown)[prop];
   },
 }) as GoogleGenerativeAI | null;
 

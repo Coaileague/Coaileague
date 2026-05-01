@@ -1026,7 +1026,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
       }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       notificationHelpers.createInvoiceCreatedNotification(
-        { storage: storage as any },
+        { storage: storage as unknown },
         {
           workspaceId: workspace.id,
           userId,
@@ -2775,7 +2775,7 @@ router.post('/portal/:accessToken/invoice/:invoiceId/dispute', async (req, res) 
               source: 'client_portal',
               action: 'Review invoice and contact client within 48 hours.',
             },
-            idempotencyKey: `client_portal_dispute-${invoiceId}-${Date.now()}`,
+            idempotencyKey: `client_portal_dispute-${invoiceId}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           });
         }
       } catch (notifyErr: unknown) {

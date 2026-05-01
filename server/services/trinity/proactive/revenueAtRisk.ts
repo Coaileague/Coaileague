@@ -225,7 +225,7 @@ export async function runRevenueAtRiskForWorkspace(workspaceId: string): Promise
         `$${tally.totalAtRiskDollars.toFixed(2)} at risk.`,
       severity: tally.totalAtRiskDollars > 10000 ? 'high' : 'medium',
       metadata: { workflow: WORKFLOW_NAME, ...tally },
-    } as any);
+    } as unknown);
   } catch (err: unknown) {
     log.warn('[revenueAtRisk] event publish failed (non-fatal):', err?.message);
   }

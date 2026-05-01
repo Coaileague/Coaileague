@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useMemo } from "react";
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { useQuery, useMutation } from "@tanstack/react-query";

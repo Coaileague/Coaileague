@@ -14,6 +14,7 @@
  * the very small set of helpers in chatdock-helpers.ts (currently just
  * useMobileKeyboardOffset) which the bubble shell also needs.
  */
+import React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, type TouchEvent as ReactTouchEvent } from "react";
 import { StatusBadge } from '@/components/ui/status-badge';
 import { createPortal } from "react-dom";

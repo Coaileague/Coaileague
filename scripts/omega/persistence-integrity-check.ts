@@ -50,7 +50,7 @@ async function main() {
 
     await db
       .update(workspaces)
-      .set({ subscriptionTier: workspaceBefore?.subscriptionTier || 'free', updatedAt: new Date() } as any)
+      .set({ subscriptionTier: workspaceBefore?.subscriptionTier || 'free', updatedAt: new Date() } as unknown)
       .where(eq(workspaces.id, workspaceA));
 
     const [invoiceSettingsAfter] = await db

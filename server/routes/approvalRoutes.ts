@@ -109,7 +109,7 @@ router.get("/pending", async (req, res) => {
     const scope = isAdmin ? 'admin' : isManager ? 'manager' : 'employee';
 
     const approvals = await approvalRequestService.getApprovalRequests(user.id, workspaceId, {
-      decision: ['pending'] as any,
+      decision: ['pending'] as unknown,
       limit: 100,
       offset: 0,
       scope,

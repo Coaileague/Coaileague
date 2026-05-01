@@ -59,10 +59,9 @@ timesheetInvoiceRouter.get('/', requireManager, async (req: Request, res: Respon
           or(
             eq(invoices.status, 'overdue'),
             and(eq(invoices.status, 'sent'), lte(invoices.dueDate, now))
-          ) as any
-        );
+          ) as unknown);
       } else {
-        conditions.push(eq(invoices.status, status as any));
+        conditions.push(eq(invoices.status, status as unknown));
       }
     }
 

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Send, CheckCircle, Circle, FileDown, RefreshCw, Bot, User } from "lucide-react";

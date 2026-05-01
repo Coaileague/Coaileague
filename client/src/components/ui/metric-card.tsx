@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * MetricCard — Unified data card component
  *

@@ -573,7 +573,7 @@ class LoneWorkerSafetyService {
           await universalNotificationEngine.sendNotification({
             workspaceId: check.workspaceId,
             userId: recipient.userId,
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'issue_detected',
             title: `Lone Worker Alert: ${check.employeeName}`,
             message: messageMap[level],

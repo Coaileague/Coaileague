@@ -202,7 +202,7 @@ export class AlertManager {
    * Format alert message for display
    */
   private formatAlertMessage(alert: AiProactiveAlert): string {
-    const payload = alert.payload as any;
+    const payload = alert.payload as unknown;
     
     switch (alert.alertType) {
       case 'credential_expiry':

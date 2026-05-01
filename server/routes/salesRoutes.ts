@@ -160,8 +160,7 @@ export function registerSalesRoutes(app: Express, requireAuth: any, attachWorksp
       const stage = req.params.stage;
       const prospects = await trinityOutreachService.getProspectsByStage(
         user?.id,
-        stage === 'all' ? undefined : stage as any
-      );
+        stage === 'all' ? undefined : stage as unknown);
 
       res.json({ success: true, data: prospects });
     } catch (error: unknown) {

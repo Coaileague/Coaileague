@@ -43,7 +43,7 @@ async function autoExecute(
   try {
     const request: ActionRequest = {
       actionId,
-      category: (actionId.split('.')[0] || 'system') as any,
+      category: (actionId.split('.')[0] || 'system') as unknown,
       name: actionId,
       payload: { ...payload, workspaceId },
       workspaceId,

@@ -588,7 +588,7 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
         message: `${application.firstName} ${application.lastName} has completed onboarding and is awaiting your approval.`,
         actionUrl: '/employees',
         priority: 'high',
-        idempotencyKey: `approval_required-${Date.now()}-${managerId}`
+        idempotencyKey: `approval_required-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${managerId}`
       }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
     }
 
@@ -829,7 +829,7 @@ router.post('/workspace-invite/register', async (req, res) => {
           const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
           for (const owner of owners) {
             await NotificationDeliveryService.send({
-              idempotencyKey: `notif-${Date.now()}`,
+              idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'staffing_status_update',
               workspaceId: invite.workspaceId,
               recipientUserId: owner.user_id,
@@ -893,7 +893,7 @@ router.post('/workspace-invite/register', async (req, res) => {
         if (ws?.ownerId) {
           const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'staffing_status_update',
             workspaceId: invite.workspaceId,
             recipientUserId: ws.ownerId,
@@ -1030,7 +1030,7 @@ router.post('/workspace-invite/accept-existing', async (req, res) => {
         if (ws?.ownerId && ws.ownerId !== userId) {
           const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'staffing_status_update',
             workspaceId: invite.workspaceId,
             recipientUserId: ws.ownerId,

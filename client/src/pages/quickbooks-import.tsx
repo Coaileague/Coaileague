@@ -1,3 +1,4 @@
+import React from 'react';
 import { secureFetch } from "@/lib/csrf";
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";

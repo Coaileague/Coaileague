@@ -50,7 +50,7 @@ executionTrackerRouter.get('/executions', requireAuth, async (req: Request, res:
     }
 
     const executions = await automationExecutionTracker.getWorkspaceExecutions(workspaceId, {
-      status: status as any,
+      status: status as unknown,
       actionType,
       limit,
       since,

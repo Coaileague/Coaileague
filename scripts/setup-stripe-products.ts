@@ -555,7 +555,7 @@ async function ensurePrice(productId: string, def: PriceDef): Promise<string> {
       usage_type: def.usageType || 'licensed',
     };
     if (def.usageType === 'metered' && def.aggregateUsage) {
-      (priceParams.recurring as any).aggregate_usage = def.aggregateUsage;
+      (priceParams.recurring as unknown).aggregate_usage = def.aggregateUsage;
     }
     priceParams.billing_scheme = 'per_unit';
     priceParams.unit_amount = def.amount!;

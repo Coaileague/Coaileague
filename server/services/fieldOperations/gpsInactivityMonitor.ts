@@ -175,7 +175,7 @@ class GPSInactivityMonitorService {
               userId: mgr.userId,
               type: 'issue_detected',
               title: 'Guard GPS Inactivity Alert',
-              idempotencyKey: `issue_detected-${Date.now()}-${mgr.userId}`,
+              idempotencyKey: `issue_detected-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`,
               message: `${employeeName} has had no GPS activity for ${Math.round(minutesSinceLastPing)} minutes${siteName ? ` at ${siteName}` : ''}${clientName ? ` (${clientName})` : ''}. Immediate attention may be required.`,
               actionUrl: '/time-tracking',
               relatedEntityType: 'time_entry',

@@ -1746,7 +1746,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
       // brittle across the Drizzle DSL). Instead we cover the three
       // real-world cases: literal scalar, sql`...` template, and none.
       let defaultClause = '';
-      const anyCol = col as any;
+      const anyCol = col as unknown;
       if (anyCol.hasDefault) {
         const def = anyCol.default;
         if (def && typeof def === 'object' && typeof def.queryChunks !== 'undefined') {
@@ -1754,7 +1754,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
           try {
             const chunks = def.queryChunks as unknown[];
             const raw = chunks
-              .map((c) => (typeof c === 'string' ? c : (c as any)?.value?.[0] ?? ''))
+              .map((c) => (typeof c === 'string' ? c : (c as unknown)?.value?.[0] ?? ''))
               .join('')
               .trim();
             if (raw) defaultClause = ` DEFAULT ${raw}`;

@@ -351,7 +351,7 @@ export function registerScheduleTimeclockActions() {
     // GAP-21 FIX: workspaceId added to WHERE so a Trinity action cannot annotate a foreign workspace's time entry.
     if (!timeEntryId || !workspaceId) return { error: 'timeEntryId and workspaceId required' };
     await db.update(timeEntries)
-      .set({ notes: `[PHOTO_REVIEW_FLAG] ${flagReason || 'Manual review requested'}` } as any)
+      .set({ notes: `[PHOTO_REVIEW_FLAG] ${flagReason || 'Manual review requested'}` } as unknown)
       .where(and(eq(timeEntries.id, timeEntryId), eq(timeEntries.workspaceId, workspaceId)));
     return { flagged: true, timeEntryId, reason: flagReason || 'Manual review requested' };
   }));
@@ -696,7 +696,7 @@ export function registerScheduleTimeclockActions() {
       title: 'Shift Deleted',
       description: `Shift ${shiftId} deleted${reason ? `: ${reason}` : ''}`,
       metadata: { shiftId, employeeId: shift.employeeId, reason },
-    } as any);
+    } as unknown);
 
     return { success: true, shiftId, status: 'cancelled', employeeId: shift.employeeId };
   }));

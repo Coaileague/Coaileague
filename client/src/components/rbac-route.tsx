@@ -11,6 +11,7 @@
  * <RBACRoute require={["owner", "platform_staff"]}>...</RBACRoute>
  */
 
+import React from 'react';
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";

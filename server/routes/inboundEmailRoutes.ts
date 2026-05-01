@@ -791,7 +791,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
         // NDS: trinity processed
         if (workspaceId && targetUserId) {
           await NotificationDeliveryService.send({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'trinity_email_processed',
             workspaceId,
             recipientUserId: targetUserId,

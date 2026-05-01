@@ -654,7 +654,7 @@ class ReportBotPdfService {
             scope: 'workspace',
             category: 'schedule',
             title: `Shift Report Ready — ${siteName}`,
-            idempotencyKey: `system-${Date.now()}-${mgr.userId}`,
+            idempotencyKey: `system-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`,
             message: `Shift report for ${siteName} on ${dateStr} (Officer: ${officerName}) is ready. View or send to client.`,
             relatedEntityType: 'org_document',
             relatedEntityId: docId,

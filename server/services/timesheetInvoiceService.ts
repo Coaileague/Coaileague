@@ -722,7 +722,7 @@ export async function sendInvoiceWithEmail(input: SendInvoiceEmailInput): Promis
           },
         ],
       },
-      idempotencyKey: `invoice-send-${invoiceId}-${Date.now()}`,
+      idempotencyKey: `invoice-send-${invoiceId}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
     });
 
     // Log email event (NDS does its own logging, but we keep this for legacy compatibility)

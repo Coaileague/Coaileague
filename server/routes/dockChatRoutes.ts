@@ -270,7 +270,7 @@ router.post("/rooms/:roomId/broadcast", requireManager, async (req: Authenticate
         message: content.slice(0, 100),
         type: "broadcast",
         actionUrl: `/dock-chat?room=${roomId}`,
-        idempotencyKey: `broadcast-${Date.now()}-${m.user_id}`
+        idempotencyKey: `broadcast-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${m.user_id}`
       }).catch(() => null);
     }
     res.status(201).json(rows[0]);

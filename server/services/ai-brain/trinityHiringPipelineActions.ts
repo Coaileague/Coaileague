@@ -83,7 +83,7 @@ const createHiringRecord = mkAction('hiring.create_record', async (req) => {
       await createNotification({
         workspaceId, userId: mgr.userId, type: 'info',
         title: 'New Hire Record Created',
-        idempotencyKey: `info-${Date.now()}-${mgr.userId}`,
+        idempotencyKey: `info-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`,
         message: `Trinity created a hiring record for ${firstName} ${lastName} (${email}). Next step: background check initiation. PERC/Guard Card pipeline started.`,
         priority: 'normal',
       }).catch(() => null);

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from "react";
 import { secureFetch } from "@/lib/csrf";
 import { useRoute } from "wouter";

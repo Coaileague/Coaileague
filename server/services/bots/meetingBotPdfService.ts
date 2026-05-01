@@ -271,7 +271,7 @@ class MeetingBotPdfService {
             message: `MeetingBot generated a meeting summary for "${conv.subject || 'Meeting'}". ${items.filter(i => i.type === 'action').length} action items, ${items.filter(i => i.type === 'decision').length} decisions.`,
             metadata: { documentId: docId, conversationId, category: 'meetings' },
             priority: 'normal',
-            idempotencyKey: `document-${Date.now()}-${mgr.id}`
+            idempotencyKey: `document-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.id}`
           });
         }
       } catch {

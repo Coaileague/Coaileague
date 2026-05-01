@@ -451,7 +451,7 @@ router.post('/request/:id/grant', requireAuth, async (req: Request, res: Respons
             <p style="font-size:12px;color:#64748b">Navigate to your platform's regulatory portal to begin your audit review.</p>
           </div>
         </div>`;
-    await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
+    await NotificationDeliveryService.send({ idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'regulatory_notification', workspaceId: request.workspaceId, recipientUserId: request.auditorEmail!, channel: 'email', body: { to: request.auditorEmail!, subject: `${PLATFORM.name} Regulatory Portal — Audit Access Granted`, html: _auditGrantHtml } })
       .catch((err: unknown) => {
         log.warn('[RegulatoryPortal] Credentials email to auditor failed:', (err as Record<string,unknown>)?.message);
@@ -887,7 +887,7 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
         title: 'Regulatory Audit Report Uploaded',
         message: `Your regulatory audit has been completed. Outcome: ${auditOutcome ?? 'See report'}. Trinity has generated a corrective action plan for you.`,
         metadata: { reportUrl, auditOutcome, requestId },
-        idempotencyKey: `audit_report_uploaded-${Date.now()}-${owner.id}`
+        idempotencyKey: `audit_report_uploaded-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.id}`
       }).catch ((err: unknown) => {
         log.warn('[RegulatoryPortal] In-app audit report notification failed (non-fatal):', (err as Record<string,unknown>)?.message);
       });
@@ -967,7 +967,7 @@ router.post(
         .where(and(
           eq(employeeDocuments.workspaceId, workspaceId),
           eq(employeeDocuments.employeeId, 'company'),
-          eq(employeeDocuments.documentType, docKey as any),
+          eq(employeeDocuments.documentType, docKey as unknown),
         ))
         .limit(1);
 
@@ -992,7 +992,7 @@ router.post(
           id: crypto.randomUUID(),
           workspaceId,
           employeeId: 'company',
-          documentType: docKey as any,
+          documentType: docKey as unknown,
           documentName: docLabel || docKey,
           fileUrl,
           fileSize: req.file.size,
@@ -1122,7 +1122,7 @@ async function notifyOrgOwnerOfAuditRequest(
           <p style="font-size:12px;color:#64748b;margin-top:16px">Request ID: ${info.requestId}</p>
         </div>
       </div>`;
-  await NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
+  await NotificationDeliveryService.send({ idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'regulatory_notification', workspaceId: (info as Record<string,unknown>).workspaceId, recipientUserId: owner.id, channel: 'email', body: { to: owner.email, subject: `[ACTION REQUIRED] State Regulatory Audit Access Requested for ${orgName}`, html: _auditRequestHtml } })
     .catch((err: unknown) => {
       log.warn('[RegulatoryPortal] Org owner audit notification email failed (non-fatal):', (err as Record<string,unknown>)?.message);
@@ -1195,7 +1195,7 @@ router.post('/complete-report', requireAuditorPortalAuth, async (req: Request, r
         title: 'Regulatory Audit Report Submitted',
         message: `A regulatory audit has been completed. Outcome: ${auditOutcome}. ${correctiveActions ? 'Corrective actions have been noted.' : ''} Review the report in your Audit Readiness dashboard.`,
         metadata: { requestId, reportUrl, auditOutcome },
-        idempotencyKey: `audit_report_uploaded-${Date.now()}-${owner.id}`
+        idempotencyKey: `audit_report_uploaded-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.id}`
       }).catch ((err: unknown) => {
         log.warn('[RegulatoryPortal] In-app audit submitted notification failed (non-fatal):', (err as Record<string,unknown>)?.message);
       });

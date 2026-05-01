@@ -154,7 +154,7 @@ export async function handleOfficerDeactivation(
             : `${officerName} was ${reason.replace(/_/g, ' ')}. ${result.shiftsUnassigned} future shift(s) unassigned and coverage pipeline triggered for each.`,
           data: { employeeId, reason, shiftsAffected: result.shiftsUnassigned, clientId },
           workspaceId,
-          idempotencyKey: `staffing_escalation-${Date.now()}-${owner.userId}`
+          idempotencyKey: `staffing_escalation-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.userId}`
         });
         result.ownersNotified++;
       } catch (notifErr) {

@@ -530,7 +530,7 @@ class AlertService {
       query = (query as Record<string,unknown>).where(eq(alertHistory.alertType, options.alertType as string));
     }
     if (options?.severity) {
-      query = (query as Record<string,unknown>).where(eq(alertHistory.severity, options.severity as any));
+      query = (query as Record<string,unknown>).where(eq(alertHistory.severity, options.severity as unknown));
     }
     if (options?.acknowledged !== undefined) {
       query = (query as Record<string,unknown>).where(eq(alertHistory.isAcknowledged, options.acknowledged));

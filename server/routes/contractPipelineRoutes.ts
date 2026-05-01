@@ -124,8 +124,8 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const filters = {
-      status: req.query.status as any,
-      docType: req.query.docType as any,
+      status: req.query.status as unknown,
+      docType: req.query.docType as unknown,
       clientId: req.query.clientId as string,
       search: req.query.search as string,
       limit: Math.min(Math.max(1, req.query.limit ? parseInt(req.query.limit as string) : 50), 500),

@@ -1159,7 +1159,7 @@ class ChatServerHubClass {
           subscribeToRoomBroadcasts((event: Record<string, unknown>) => {
             // Incoming from another replica — broadcast to our local WS clients
             if (this.wsBroadcaster && event) {
-              this.wsBroadcaster(event as any);
+              this.wsBroadcaster(event as unknown);
             }
           });
           log.info('[ChatServerHub] Redis pub/sub active — multi-replica broadcast enabled');
@@ -1397,7 +1397,7 @@ class ChatServerHubClass {
         await universalNotificationEngine.sendNotification({
           workspaceId: event.metadata.workspaceId,
           userId: event.metadata.targetUserId,
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: engineType,
           title: event.title,
           message: event.description,

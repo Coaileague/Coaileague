@@ -9,6 +9,7 @@
  * TRINITY.md §H — Mobile-first rendering.
  */
 
+import React from 'react';
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";

@@ -907,7 +907,7 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
           stepsRemaining: ['profile_photo', 'government_id', 'guard_card', 'ssn_card',
             'employment_application', 'i9_verification', 'tax_withholding', 'direct_deposit',
             'background_check', 'drug_free_policy', 'handbook_acknowledgment',
-            'sop_acknowledgment', 'emergency_contact', 'equipment_issuance', 'references'] as any,
+            'sop_acknowledgment', 'emergency_contact', 'equipment_issuance', 'references'] as unknown,
         }).onConflictDoNothing();
 
         // Send welcome email with portal link — employee_onboarding_welcome

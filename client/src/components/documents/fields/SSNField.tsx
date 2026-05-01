@@ -2,6 +2,7 @@
  * SSNField — Masked SSN input: shows XXX-XX-XXXX while typing.
  * Only last 4 visible after completion. Never logged in plain text.
  */
+import React from 'react';
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

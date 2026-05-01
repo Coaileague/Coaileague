@@ -1354,7 +1354,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                 <p>Open the staffing queue to review pending staged shifts and assign personnel manually.</p>
               </div>`,
             },
-            idempotencyKey: `stage-b-escalate-${workspaceId}-${referenceNumber || 'na'}-${Date.now()}`,
+            idempotencyKey: `stage-b-escalate-${workspaceId}-${referenceNumber || 'na'}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           });
         } catch (mgrErr: unknown) {
           log.warn(`[InboundOpportunityAgent] Manager escalation email failed for ${manager.email}: ${mgrErr?.message}`);

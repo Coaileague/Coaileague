@@ -234,7 +234,7 @@ export async function updateEmployeeRate(employeeId: string, hourlyRate: number,
         delta: (hourlyRate - parseFloat(String(previousRate || '0'))).toFixed(2),
       },
       ipAddress: 'system',
-    } as any);
+    } as unknown);
   });
 
   // Notify the employee their pay rate was updated
@@ -246,7 +246,7 @@ export async function updateEmployeeRate(employeeId: string, hourlyRate: number,
         await universalNotificationEngine.sendNotification({
           workspaceId: employee.workspaceId!,
           userId: employee.userId!,
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'pay_rate_change',
           title: 'Your Pay Rate Has Been Updated',
           message: `Your hourly pay rate has been ${direction} to $${hourlyRate.toFixed(2)}/hr. This will apply to your next pay period.`,

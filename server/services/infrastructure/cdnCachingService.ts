@@ -133,7 +133,7 @@ class CDNCachingService {
    */
   set(
     key: string,
-    value: any,
+    value: unknown,
     options: {
       ttl?: number;
       contentType?: string;

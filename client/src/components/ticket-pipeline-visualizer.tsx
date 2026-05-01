@@ -5,6 +5,7 @@
  * NO HARDCODED VALUES - All configuration from ticketWorkflow.ts
  */
 
+import React from 'react';
 import { cn } from "@/lib/utils";
 import { 
   TICKET_PIPELINE_STEPS, 

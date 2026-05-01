@@ -14,6 +14,7 @@
  * - Desktop: max-width 800px content column
  */
 
+import React from 'react';
 import { Shield, FileText, Printer, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

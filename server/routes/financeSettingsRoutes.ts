@@ -84,7 +84,7 @@ router.patch("/finance-settings", requireOwner, async (req: AuthenticatedRequest
         eventType: 'finance_settings_updated',
         actorType: 'user',
         actorId: req.user?.id,
-        idempotencyKey: `finance-settings-${workspaceId}-${Date.now()}`,
+        idempotencyKey: `finance-settings-${workspaceId}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
         newState: parsed.data,
       }).onConflictDoNothing();
     });

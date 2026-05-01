@@ -10,6 +10,7 @@
  *   <UserIdentitySheet query="EMP-ACME-00001" trigger={<Badge>EMP-ACME-00001</Badge>} />
  */
 
+import React from 'react';
 import { useState, useRef, useCallback, type ReactNode } from "react";
 import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

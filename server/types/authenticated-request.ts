@@ -5,7 +5,7 @@ import type { Response } from 'express';
  *
  * This is the ONLY import location for AuthenticatedRequest.
  * All authenticated route handlers import from here.
- * Never use (req as any) on request objects — permanently retired.
+ * Never use (req as unknown) on request objects — permanently retired.
  *
  * Architecture Canon (replit.md): AuthenticatedRequest is the required type
  * for every authenticated route handler. req as any on request objects is

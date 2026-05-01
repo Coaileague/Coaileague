@@ -1233,7 +1233,7 @@ No action needed on your part.`,
         severity: 'info',
         source: 'inbound_staffing_pipeline',
         idempotencyKey: `staffing-email-${logId}`,
-      } as any);
+      } as unknown);
     } catch (notifErr: unknown) {
       log.warn('[processStaffing] Notification failed (non-fatal):', notifErr?.message);
     }

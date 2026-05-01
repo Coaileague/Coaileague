@@ -160,7 +160,7 @@ router.get("/script/:type", async (req: AuthenticatedRequest, res) => {
     if (!validTypes.includes(type)) {
       return res.status(400).json({ success: false, error: "Invalid crisis type" });
     }
-    const script = crisisManager.getCrisisScript(type as any, context);
+    const script = crisisManager.getCrisisScript(type as unknown, context);
     res.json({ success: true, script, type });
   } catch (error: unknown) {
     res.status(500).json({ success: false, error: sanitizeError(error) });

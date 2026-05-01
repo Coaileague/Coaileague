@@ -3,6 +3,7 @@
  * Each command is a visual box with logo, controls, and actions
  */
 
+import React from 'react';
 import { UniversalModal, UniversalModalTitle, UniversalModalClose, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

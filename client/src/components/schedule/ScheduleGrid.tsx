@@ -4,6 +4,7 @@
  * Desktop-only drag-and-drop with screen-width guards
  */
 
+import React from 'react';
 import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
 import { format, addHours, startOfDay, differenceInMinutes, isSameDay } from 'date-fns';
 import { cn, formatRoleDisplay } from '@/lib/utils';
@@ -103,7 +104,7 @@ function getShiftStatus(shift: Shift): ShiftStatus {
 }
 
 function resolveEmployeePosition(employee: Employee): PositionDefinition | undefined {
-  const emp = employee as any;
+  const emp = employee as unknown;
   if (emp.position) {
     const byId = getPositionById(emp.position);
     if (byId) return byId;

@@ -1,3 +1,4 @@
+import React from 'react';
 import { parseLocalDate, formatDate } from "@/lib/dates";
 import { useEffect, useState, useMemo, memo, useCallback } from "react";
 import { secureFetch } from "@/lib/csrf";

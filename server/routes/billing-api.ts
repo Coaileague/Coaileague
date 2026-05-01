@@ -34,7 +34,7 @@ import '../types';
 // Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing.
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
-    return (getStripe() as any)[prop];
+    return (getStripe() as unknown)[prop];
   },
 });
 
@@ -59,7 +59,7 @@ billingRouter.use(async (req, res, next) => {
   const authReq = req as AuthenticatedRequest;
   const runMiddleware = (mw: RequestHandler) =>
     new Promise<void>((resolve, reject) => {
-      (mw as any)(req, res, (err: unknown) => (err ? reject(err) : resolve()));
+      (mw as unknown)(req, res, (err: unknown) => (err ? reject(err) : resolve()));
     });
 
   try {
@@ -670,7 +670,7 @@ billingRouter.post('/create-checkout-session', async (req: AuthenticatedRequest,
     // retried server-side; the user clicks the button once. We use a timestamp-scoped key so
     // same-minute duplicate clicks from the UI are deduplicated, but we still get a fresh
     // session per real checkout attempt (not the same 24h-stale session on reload).
-    const session = await stripe.checkout.sessions.create(sessionConfig, { idempotencyKey: `checkout-${workspaceId}-${Date.now()}` });
+    const session = await stripe.checkout.sessions.create(sessionConfig, { idempotencyKey: `checkout-${workspaceId}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}` });
 
     res.json({ sessionId: session.id });
   } catch (error: unknown) {
@@ -702,7 +702,7 @@ billingRouter.post('/create-payment-intent', async (req: AuthenticatedRequest, r
       },
     // GAP-58 FIX: User-initiated PaymentIntent — timestamp scoped to deduplicate same-second
     // double-clicks without locking the user into the same 24h stale PI on every request.
-    }, { idempotencyKey: `pi-purchase-${workspaceId}-${Date.now()}` });
+    }, { idempotencyKey: `pi-purchase-${workspaceId}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}` });
 
     res.json({ 
       clientSecret: intent.client_secret,

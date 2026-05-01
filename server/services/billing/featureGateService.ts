@@ -570,7 +570,7 @@ class FeatureGateService {
     if (!workspace) return false;
 
     // Check if addons are stored in workspace metadata
-    const metadata = (workspace as Record<string, unknown>).metadata as any;
+    const metadata = (workspace as Record<string, unknown>).metadata as unknown;
     if (metadata?.activeAddons?.includes(addonKey)) {
       return true;
     }
@@ -621,7 +621,7 @@ class FeatureGateService {
             category: 'billing',
             priority: 'high',
             actionUrl: '/billing',
-            idempotencyKey: `error-${Date.now()}-${ws.ownerId}`
+            idempotencyKey: `error-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`
           }).catch((notifErr: Error) => {
             log.warn('[FeatureGate] Failed to send credit-depleted notification:', notifErr?.message);
           });

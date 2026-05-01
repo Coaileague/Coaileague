@@ -5,6 +5,7 @@
  * Fortune 500 standards - Centralized configuration in /constants/scheduling.ts
  */
 
+import React from 'react';
 import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";

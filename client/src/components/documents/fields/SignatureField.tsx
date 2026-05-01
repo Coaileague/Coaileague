@@ -3,6 +3,7 @@
  * Works with mouse on desktop, touch on mobile.
  * Stores as base64 PNG.
  */
+import React from 'react';
 import { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

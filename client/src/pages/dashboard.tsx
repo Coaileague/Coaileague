@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState, Suspense, lazy } from "react";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useAuth } from "@/hooks/useAuth";

@@ -38,7 +38,7 @@ router.post('/generate-alerts', requireManager, async (req: AuthenticatedRequest
 
     const allEmployees = await db
       .select()
-      .from(employees as any)
+      .from(employees as unknown)
       .where(eq((employees as EmployeeWithStatus).workspaceId, workspaceId));
 
     const alerts: (string | number | boolean | null)[] = [];

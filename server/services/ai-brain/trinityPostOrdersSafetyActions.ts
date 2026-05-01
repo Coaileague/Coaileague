@@ -150,7 +150,7 @@ const getUnacknowledgedPostOrders = mkAction('postorders.get_unacknowledged', as
     for (const order of orders) {
       const acks = await db.select({ count: sql`COUNT(*)` }).from(shiftOrderAcknowledgments)
         .where(eq(shiftOrderAcknowledgments.shiftOrderId, order.id)).catch(() => [{ count: 0 }]);
-      const count = parseInt(String((acks[0] as any)?.count || 0));
+      const count = parseInt(String((acks[0] as unknown)?.count || 0));
       if (count === 0) unacked.push({ ...order, acknowledgmentCount: 0 });
     }
 

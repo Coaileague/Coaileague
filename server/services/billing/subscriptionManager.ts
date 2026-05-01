@@ -33,7 +33,7 @@ const log = createLogger('SubscriptionManager');
 // Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing.
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
-    return (getStripe() as any)[prop];
+    return (getStripe() as unknown)[prop];
   },
 });
 
@@ -267,7 +267,7 @@ export class SubscriptionManager {
       // Extract client secret for payment confirmation
       let clientSecret: string | undefined;
       if (subscription.latest_invoice) {
-        const invoice = subscription.latest_invoice as any;
+        const invoice = subscription.latest_invoice as unknown;
         if (invoice.payment_intent && typeof invoice.payment_intent === 'object') {
           clientSecret = invoice.payment_intent.client_secret;
         }

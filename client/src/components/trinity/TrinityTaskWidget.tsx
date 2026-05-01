@@ -18,6 +18,7 @@
  * Open control  :  call `openTrinityTaskWidget()` from anywhere.
  */
 
+import React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useLocation } from "wouter";

@@ -180,7 +180,7 @@ class AIRequestDeduplicator {
   precache(
     key: string,
     prompt: string,
-    result: any,
+    result: unknown,
     tokenCount: number = 0,
     options: {
       workspaceId?: string;

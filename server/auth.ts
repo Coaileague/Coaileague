@@ -351,7 +351,7 @@ export function getSession() {
     // express-session sees the original protocol (HTTPS) and sets secure
     // cookies correctly.
     proxy: inProd,
-  } as any);
+  } as unknown);
 }
 
 // ============================================================================

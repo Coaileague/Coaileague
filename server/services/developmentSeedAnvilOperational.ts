@@ -172,7 +172,7 @@ export async function runAnvilOperationalSeed(): Promise<{ success: boolean; mes
           date: shiftDateStr,
           startTime: sql`${start}::timestamptz`,
           endTime: sql`${end}::timestamptz`,
-          status: status as any,
+          status: status as unknown,
           billableToClient: true,
           createdAt: sql`now()`,
           updatedAt: sql`now()`,

@@ -4,6 +4,7 @@
  * Shows user's submitted support tickets with status tracking
  */
 
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

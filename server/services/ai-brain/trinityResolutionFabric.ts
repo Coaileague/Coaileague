@@ -521,7 +521,7 @@ class TrinityResolutionFabricService {
     try {
       await universalNotificationEngine.sendNotification({
         workspaceId: issue.workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_escalation',
         title: `Trinity needs your attention: ${issue.type.replace(/_/g, ' ')}`,
         message: `${issue.description}\n\n${reason}${ticketId ? `\n\nTicket: ${ticketId}` : ''}`,
@@ -596,7 +596,7 @@ class TrinityResolutionFabricService {
       if (result.rows.length === 0) return [];
       await universalNotificationEngine.sendNotification({
         workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_reminder',
         title: 'Incident Report Needs Completion',
         message: `You have ${result.rows.length} incident report(s) that were started but not completed. Please complete them as soon as possible.`,
@@ -633,7 +633,7 @@ class TrinityResolutionFabricService {
 
       await universalNotificationEngine.sendNotification({
         workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_alert',
         title: 'Officers Have Not Clocked In',
         message: `Trinity detected ${result.rows.length} officer(s) who have not clocked in for their shift (started 20+ minutes ago). Trinity has notified them and alerted their supervisor.`,
@@ -658,10 +658,14 @@ class TrinityResolutionFabricService {
       const count = parseInt(result.rows[0]?.count ?? '0');
       if (count === 0) return [];
 
+      // PERMANENT FIX: idempotency key must use time window (hourly), not milliseconds.
+      // Date.now() changes every ms → every call creates a new record → duplicates.
+      // Window key = deduplicates within the same 6-hour window per workspace.
+      const windowKey = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
       await universalNotificationEngine.sendNotification({
         workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
-          type: 'trinity_compliance',
+        idempotencyKey: `license-renewal-${workspaceId}-${windowKey}`,
+        type: 'trinity_compliance',
         title: 'License Renewal Reminders Sent',
         message: `Trinity sent renewal reminders to ${count} officer(s) whose licenses expire within 30 days. Renewal tracking has been updated.`,
         severity: 'info',
@@ -690,7 +694,7 @@ class TrinityResolutionFabricService {
 
       await universalNotificationEngine.sendNotification({
         workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_client_alert',
         title: 'Client Messages Acknowledged',
         message: `Trinity detected ${count} unread client message(s) and sent auto-acknowledgments. Your account manager has been notified to follow up.`,
@@ -708,7 +712,7 @@ class TrinityResolutionFabricService {
     try {
       await universalNotificationEngine.sendNotification({
         workspaceId: issue.workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_financial_alert',
         title: `Financial Anomaly Flagged: ${issue.type === 'payroll_anomaly' ? 'Payroll' : 'Invoice'}`,
         message: `${issue.description}\n\nTrinity has flagged this for your financial review. A variance report has been queued.`,
@@ -737,7 +741,7 @@ class TrinityResolutionFabricService {
       }
       await universalNotificationEngine.sendNotification({
         workspaceId: issue.workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_sla_alert',
         title: 'SLA Breach Recovery Initiated',
         message: `${issue.description}\n\nTrinity has initiated recovery actions and notified the account manager. Client communication is recommended.`,
@@ -754,7 +758,7 @@ class TrinityResolutionFabricService {
     try {
       await universalNotificationEngine.sendNotification({
         workspaceId: issue.workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_compliance',
         title: 'Compliance Gap — Remediation Initiated',
         message: `${issue.description}\n\nTrinity has flagged this compliance gap and notified the compliance lead. Required documents have been queued for follow-up.`,
@@ -795,7 +799,7 @@ class TrinityResolutionFabricService {
 
       // Emit to RL loop for learning
       platformEventBus.emit('experience_recorded', {
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'trinity_resolution',
         domain: 'resolution_fabric',
         action: issue.type,

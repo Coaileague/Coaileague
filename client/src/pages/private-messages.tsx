@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useRef } from "react";
 import { secureFetch } from "@/lib/csrf";
 import { useAuth } from "@/hooks/useAuth";

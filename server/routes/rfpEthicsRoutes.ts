@@ -42,7 +42,7 @@ rfpEthicsRouter.post("/ethics/report", async (req: AuthenticatedRequest, res: Re
       if (slug) {
         try {
           const wsRows = await q(`SELECT id FROM workspaces WHERE slug = $1 LIMIT 1`, [slug]);
-          if (wsRows.length) workspaceId = (wsRows[0] as any).id;
+          if (wsRows.length) workspaceId = (wsRows[0] as unknown).id;
         } catch { /* fall through to platform queue */ }
       }
     }
@@ -207,7 +207,7 @@ rfpEthicsRouter.post("/coverage-marketplace/:id/claim", requireAuth, ensureWorks
     const { claimedByEmployeeId, claimedByName } = req.body;
     const existing = await q(`SELECT * FROM shift_coverage_claims WHERE id=$1 AND workspace_id=$2`, [req.params.id, wid(req)]);
     if (!existing.length) return res.status(404).json({ error: "Not found" });
-    if ((existing[0] as any).status !== "open") return res.status(409).json({ error: "Shift already claimed" });
+    if ((existing[0] as unknown).status !== "open") return res.status(409).json({ error: "Shift already claimed" });
     await q(`UPDATE shift_coverage_claims SET status='claimed', claimed_by_employee_id=$1, claimed_by_name=$2, claimed_at=NOW(), updated_at=NOW() WHERE id=$3`,
       [claimedByEmployeeId||null, claimedByName||null, req.params.id]);
     const rows = await q(`SELECT * FROM shift_coverage_claims WHERE id=$1`, [req.params.id]);

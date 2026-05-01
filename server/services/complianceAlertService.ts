@@ -179,7 +179,7 @@ export async function scanShiftLicenseConflicts(): Promise<{ conflictsFound: num
             expiresAt: skill.expiresAt,
             shiftDate: shift.startTime,
           },
-          idempotencyKey: `compliance_alert-${Date.now()}-${employee.userId || ''}`
+          idempotencyKey: `compliance_alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${employee.userId || ''}`
         }).catch(err => log.error(`[ComplianceAlerts] Notification error for shift-license conflict:`, err));
       }
     }

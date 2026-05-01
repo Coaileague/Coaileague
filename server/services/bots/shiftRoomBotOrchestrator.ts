@@ -2352,7 +2352,7 @@ class ShiftRoomBotOrchestrator {
           relatedEntityType: 'time_entry',
           metadata: { officerUserId, officerName, count7: c7, count30: c30, managerId, managerName },
           createdBy: 'clockbot',
-          idempotencyKey: `compliance_alert-${Date.now()}-${owner.userId}`
+          idempotencyKey: `compliance_alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.userId}`
         });
       }
     };

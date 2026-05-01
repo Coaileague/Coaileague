@@ -40,7 +40,7 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
   // Session workspace + role are set by the requireAuth bypass — skip all DB lookups.
   if (authReq.isTestMode) {
     authReq.workspaceId = req.session?.workspaceId || 'dev-acme-security-ws';
-    authReq.workspaceRole = (req.session?.workspaceRole as any) || 'org_owner';
+    authReq.workspaceRole = (req.session?.workspaceRole as unknown) || 'org_owner';
     authReq.employeeId = req.session?.employeeId || 'dev-acme-emp-004';
     log.debug('[ensureWorkspaceAccess] TEST MODE - workspace set to', { workspaceId: authReq.workspaceId });
     return next();
@@ -84,7 +84,7 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
 
   if (!requestedWorkspaceId && req.session?.workspaceId && req.session?.workspaceRole) {
     authReq.workspaceId = req.session.workspaceId;
-    authReq.workspaceRole = req.session.workspaceRole as any;
+    authReq.workspaceRole = req.session.workspaceRole as unknown;
     authReq.employeeId = req.session.employeeId || undefined;
 
     log.debug('[ensureWorkspaceAccess] Using session workspace (fast-path)', {

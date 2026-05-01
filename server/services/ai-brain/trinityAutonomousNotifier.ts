@@ -185,7 +185,7 @@ class TrinityAutonomousNotifierService {
     try {
       await db.insert(aiProactiveAlerts).values({
         workspaceId: alert.workspaceId || PLATFORM_WORKSPACE_ID,
-        alertType: alert.category as any,
+        alertType: alert.category as unknown,
         severity: alert.severity,
         status: 'queued',
         dedupeHash: alert.id.substring(0, 32),
@@ -327,7 +327,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
         const { trinityOrchestrationGovernance } = await import('./trinityOrchestrationGovernance');
         // evaluateAutomation(domain, workspaceId, actionDetails) - correct signature
         const evaluation = await trinityOrchestrationGovernance.evaluateAutomation(
-          alert.category as any, // domain
+          alert.category as unknown, // domain
           alert.workspaceId || 'platform', // workspaceId
           {
             type: `hotpatch.${alert.category}`,

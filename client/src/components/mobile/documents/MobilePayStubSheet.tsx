@@ -13,6 +13,7 @@
  * Honors iOS safe area + keyboard inset so action buttons are never
  * clipped under the home-indicator gesture bar.
  */
+import React from 'react';
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {

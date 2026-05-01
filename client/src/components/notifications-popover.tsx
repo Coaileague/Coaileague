@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, createContext, useContext } from "react";
 import { AnimatedNotificationBell } from '@/components/animated-notification-bell';
 import { TrinityArrowMark } from "@/components/trinity-logo";

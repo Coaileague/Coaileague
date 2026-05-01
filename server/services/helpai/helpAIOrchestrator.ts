@@ -740,7 +740,7 @@ class HelpAIOrchestrator {
           category: 'general',
           source: 'helpai_bot',
           isAiHandled: false,
-        } as any).returning({ id: supportTickets.id });
+        } as unknown).returning({ id: supportTickets.id });
         ticketId = ticket.id;
       } catch (e) {
         log.error('[HelpAI Orchestrator] Failed to create escalation ticket:', e);
@@ -753,7 +753,7 @@ class HelpAIOrchestrator {
             description: `[Agent Handoff Summary]\n${agentSummary}\n\n[Escalation Reason]\n${reason}`,
             status: 'open',
             isAiHandled: false,
-          } as any)
+          } as unknown)
           .where(eq(supportTickets.id, ticketId));
       } catch (e) {
         log.warn('[HelpAI Orchestrator] Ticket update failed:', e);
@@ -1630,7 +1630,7 @@ Return ONLY valid JSON:
       await universalNotificationEngine.sendNotification({
         workspaceId,
         userId: 'system',
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'issue_detected',
         title: `Agent Review Required: ${taskType}`,
         message: `HelpAI denied the agent output for "${taskType}" and retries are exhausted. Manual review required.`,
@@ -1644,7 +1644,7 @@ Return ONLY valid JSON:
     await universalNotificationEngine.sendNotification({
       workspaceId,
       userId: 'system',
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'issue_detected',
       title: `Agent Review Required: ${taskType}`,
       message: `Trinity was unable to complete "${taskType}" automatically. HelpAI escalated to management. Manual review required.`,

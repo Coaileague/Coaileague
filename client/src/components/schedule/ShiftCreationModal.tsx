@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect } from 'react';
 import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Button } from '@/components/ui/button';
@@ -166,7 +167,7 @@ export function ShiftCreationModal({
       startTime,
       endTime,
       workspaceId: workspaceId!,
-    } as any);
+    } as unknown);
     onCreateShift();
   });
 

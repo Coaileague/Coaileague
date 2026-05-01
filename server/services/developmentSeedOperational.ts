@@ -686,7 +686,7 @@ Photo 2 — 12:00: Food court incident location — post-incident clear [GPS: 29
         workspaceId: WS,
         title: o.title,
         description: o.desc,
-        priority: o.pri as any,
+        priority: o.pri as unknown,
         requiresAcknowledgment: o.reqAck,
         requiresSignature: o.reqSig,
         requiresPhotos: o.reqPhoto,

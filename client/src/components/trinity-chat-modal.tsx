@@ -11,6 +11,7 @@
  * - Command Palette (CMD+K) support
  */
 
+import React from 'react';
 import { useState, useRef, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@tanstack/react-query';

@@ -140,7 +140,7 @@ async function notifyManager(workspaceId: string, employeeId: string, message: s
   await universalNotificationEngine.sendNotification({
     workspaceId,
     userId: (employee as EmployeeWithStatus).supervisorId,
-    idempotencyKey: `notif-${Date.now()}`,
+    idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'issue_detected',
     title: `GPS Location Violation Detected`,
     message: `Employee location verification failed. ${message}`,

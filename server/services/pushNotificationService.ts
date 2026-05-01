@@ -139,6 +139,32 @@ export async function unregisterPushSubscription(
   }
 }
 
+
+// Convert icon path to absolute URL using APP_BASE_URL
+function absoluteIconUrl(path: string): string {
+  const base = (process.env.APP_BASE_URL || 'https://www.coaileague.com').replace(/\/$/, '');
+  return path.startsWith('http') ? path : `${base}${path}`;
+}
+
+// In-process dedup: prevent Trinity from sending the same notification twice
+// within a 60-minute window. Key = type+workspaceId+userId
+const _notifDedup = new Map<string, number>();
+const _DEDUP_TTL = 60 * 60 * 1000; // 60 minutes
+export function isNotifDuplicate(type: string, workspaceId: string, userId: string): boolean {
+  const key = `${type}:${workspaceId}:${userId}`;
+  const last = _notifDedup.get(key);
+  if (last && Date.now() - last < _DEDUP_TTL) return true;
+  _notifDedup.set(key, Date.now());
+  // Clean up old entries
+  if (_notifDedup.size > 10000) {
+    const cutoff = Date.now() - _DEDUP_TTL;
+    for (const [k, t] of _notifDedup.entries()) {
+      if (t < cutoff) _notifDedup.delete(k);
+    }
+  }
+  return false;
+}
+
 export async function sendPushToUser(
   userId: string,
   payload: PushPayload
@@ -272,8 +298,8 @@ export async function sendUrgentAlert(
   const result = await sendPushToUser(userId, {
     title,
     body,
-    icon: '/icons/alert-192.png',
-    badge: '/icons/badge-72.png',
+    icon: absoluteIconUrl('/icons/notification-icon-192x192.png'),
+    badge: absoluteIconUrl('/icons/badge-72.png'),
     tag: 'urgent-alert',
     data: { ...data, urgent: true },
     requireInteraction: true,
@@ -298,8 +324,8 @@ export async function sendShiftReminder(
   const result = await sendPushToUser(userId, {
     title: 'Upcoming Shift Reminder',
     body: `${shiftTitle} starts in ${minutesBefore} minutes at ${timeStr}`,
-    icon: '/icons/clock-192.png',
-    badge: '/icons/badge-72.png',
+    icon: absoluteIconUrl('/icons/notification-icon-192x192.png'),
+    badge: absoluteIconUrl('/icons/badge-72.png'),
     tag: `shift-reminder-${startTime.getTime()}`,
     data: { type: 'shift_reminder', shiftTitle, startTime: startTime.toISOString() },
     actions: [
@@ -326,8 +352,8 @@ export async function sendApprovalRequest(
   const result = await sendPushToUser(userId, {
     title: titles[requestType],
     body: `${employeeName}: ${details}`,
-    icon: '/icons/approval-192.png',
-    badge: '/icons/badge-72.png',
+    icon: absoluteIconUrl('/icons/notification-icon-192x192.png'),
+    badge: absoluteIconUrl('/icons/badge-72.png'),
     tag: `approval-${requestType}-${Date.now()}`,
     data: { type: 'approval_request', requestType, employeeName },
     actions: [
@@ -349,8 +375,8 @@ export async function sendComplianceAlert(
   const result = await sendPushToUser(userId, {
     title: urgency === 'urgent' ? 'Certification Expiring Soon!' : 'Certification Reminder',
     body: `${certificationName} expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}`,
-    icon: '/icons/warning-192.png',
-    badge: '/icons/badge-72.png',
+    icon: absoluteIconUrl('/icons/notification-icon-192x192.png'),
+    badge: absoluteIconUrl('/icons/badge-72.png'),
     tag: `compliance-${certificationName}`,
     data: { type: 'compliance_alert', certificationName, daysUntilExpiry },
     requireInteraction: urgency === 'urgent',

@@ -456,7 +456,7 @@ export async function getAuditLogsReport(filters: ReportFilters & { action?: str
     conditions.push(lte(auditLogs.createdAt, filters.endDate));
   }
   if (filters.action) {
-    conditions.push(eq(auditLogs.action, filters.action as any));
+    conditions.push(eq(auditLogs.action, filters.action as unknown));
   }
 
   const rawLogs = await db.query.auditLogs.findMany({

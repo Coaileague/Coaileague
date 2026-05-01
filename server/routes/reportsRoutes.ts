@@ -171,7 +171,7 @@ router.post('/share', requireManager, async (req: AuthenticatedRequest, res) => 
         reportTitle: reportType.replace(/_/g, ' ').toUpperCase(),
         clientName: email.split('@')[0],
       });
-      NotificationDeliveryService.send({ idempotencyKey: `notif-${Date.now()}`,
+      NotificationDeliveryService.send({ idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'report_delivery', workspaceId: workspaceId || 'system', recipientUserId: email, channel: 'email', body: _reportEmail })
         .catch(err => log.error(`[REPORT WORKFLOW] Failed to queue report email to ${email}:`, (err instanceof Error ? err.message : String(err))));
       

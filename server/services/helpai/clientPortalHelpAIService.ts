@@ -815,7 +815,7 @@ export class ClientPortalHelpAIService {
         channel: 'in_app',
         subject: params.subject,
         body: params.body,
-        idempotencyKey: `${params.notificationType}-${params.orgWorkspaceId}-${Date.now()}`,
+        idempotencyKey: `${params.notificationType}-${params.orgWorkspaceId}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
       });
     } catch (err: unknown) {
       log.warn('[ClientPortalHelpAI] notifyOrgOwner failed (non-blocking):', (err as Error)?.message);

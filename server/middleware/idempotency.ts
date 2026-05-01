@@ -119,7 +119,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
       // Converted to Drizzle ORM: ON CONFLICT
       const insertResult = await db.insert(idempotencyKeys).values({
         workspaceId,
-        operationType: operationType as any,
+        operationType: operationType as unknown,
         requestFingerprint: fingerprint,
         status: 'processing',
         expiresAt,
@@ -166,7 +166,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
           .set({ createdAt: sql`now()` })
           .where(and(
             eq(idempotencyKeys.workspaceId, workspaceId),
-            eq(idempotencyKeys.operationType, operationType as any),
+            eq(idempotencyKeys.operationType, operationType as unknown),
             eq(idempotencyKeys.requestFingerprint, fingerprint),
             eq(idempotencyKeys.status, 'processing'),
             sql`${idempotencyKeys.createdAt} < now() - interval '30 seconds'`

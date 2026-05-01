@@ -253,7 +253,7 @@ export class NotificationDeliveryService {
         userId: payload.recipientUserId,
         workspaceId: payload.workspaceId,
         notificationType: payload.type,
-        channel: payload.channel as any,
+        channel: payload.channel as unknown,
       });
       if (!allow) {
         log.info(`[NotificationDeliveryService] Skipped delivery: user=${payload.recipientUserId} type=${payload.type} channel=${payload.channel} reason=${reason}`);

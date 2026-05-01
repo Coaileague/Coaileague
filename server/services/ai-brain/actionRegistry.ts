@@ -1480,7 +1480,7 @@ class AIBrainActionRegistry {
         }).returning();
         await universalNotificationEngine.sendNotification({
           workspaceId: request.workspaceId!,
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'client_created',
           title: 'New Client Added',
           message: `${p.companyName || `${p.firstName} ${p.lastName}`} has been created as a client by Trinity.`,
@@ -1513,7 +1513,7 @@ class AIBrainActionRegistry {
         await NotificationDeliveryService.send({ type: 'client_welcome', workspaceId: request.workspaceId || 'system', recipientUserId: p.clientId || p.email, channel: 'email', body: { to: p.email, subject: `You've been invited to the client portal`, html: `<p>Hello ${p.clientName || 'there'},</p><p>You've been set up as a client in our staffing platform. You can access your portal to view schedules, invoices, and service summaries.</p><p>If you have any questions, simply reply to this email and our team will assist you.</p><p>— Trinity, CoAIleague Staffing Intelligence</p>` } });
         await universalNotificationEngine.sendNotification({
           workspaceId: request.workspaceId!,
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'client_invited',
           title: 'Client Portal Invite Sent',
           message: `Portal invitation sent to ${p.email}`,
@@ -1778,7 +1778,7 @@ class AIBrainActionRegistry {
 
         // Route through UniversalNotificationEngine for Trinity AI enrichment and validation
         await universalNotificationEngine.sendNotification({
-          idempotencyKey: `notif-${Date.now()}`,
+          idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: effectiveType,
           title: title,
           message: message,
@@ -2425,7 +2425,7 @@ class AIBrainActionRegistry {
           });
 
           await universalNotificationEngine.sendNotification({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'compliance_alert',
             title: `Compliance Escalation: ${(alert as Record<string,unknown>).title}`,
             message: (alert as Record<string,unknown>).description,

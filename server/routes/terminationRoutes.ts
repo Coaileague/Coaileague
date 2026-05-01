@@ -159,7 +159,7 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
           },
           ipAddress: req.ip,
           userAgent: req.headers['user-agent'] || null,
-        } as any);
+        } as unknown);
 
         log.info(`[Termination] Employee ${employeeId} terminated — ${shiftsCancelled} future shifts cancelled`);
       });

@@ -106,7 +106,7 @@ class BriefingChannelService {
         actionConfig: post.deepLink
           ? { type: 'link', url: post.deepLink }
           : { type: 'none' },
-        richContent: meta as any,
+        richContent: meta as unknown,
         trinityExecutionId: `briefing-${workspaceId}-${Date.now()}`,
       };
 

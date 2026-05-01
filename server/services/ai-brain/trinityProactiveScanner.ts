@@ -812,7 +812,7 @@ class TrinityProactiveScannerService {
           workspaceId,
           userId: owner.userId,
           type: 'monthly_summary',
-          idempotencyKey: `monthly_summary-${Date.now()}-${owner.userId}`,
+          idempotencyKey: `monthly_summary-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.userId}`,
           title: `Trinity Monthly Cycle — ${now.toLocaleString('default', { month: 'long' })} ${now.getFullYear()}`,
           message: summaryLines,
           priority: 'high',
@@ -998,7 +998,7 @@ class TrinityProactiveScannerService {
             await createNotification({
               workspaceId, userId: mgr.userId, type: 'incident',
               title: 'Incident Report Filed',
-              idempotencyKey: `incident-${Date.now()}-${mgr.userId}`,
+              idempotencyKey: `incident-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`,
               message: `An incident report has been filed (ID: ${payload.incidentId}). Please review and take appropriate action.`,
               priority: 'high',
             }).catch(() => null);
@@ -1091,7 +1091,7 @@ class TrinityProactiveScannerService {
             .where(and(eq(workspaceMembers.workspaceId, workspaceId), sql`${workspaceMembers.role} IN ('org_owner', 'co_owner', 'manager')`)).catch(() => []);
           for (const mgr of managers) {
             await createNotification({ workspaceId, userId: mgr.userId, type: 'sla_breach', title: `SLA Breach — ${payload.serviceName}`,
-              idempotencyKey: `sla_breach-${Date.now()}-${mgr.userId}`,
+              idempotencyKey: `sla_breach-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`,
               message: `${payload.serviceName} missed its SLA target: ${payload.breachType || 'performance threshold exceeded'} (target: ${payload.targetValue}, actual: ${payload.actualValue}).`, priority: 'high' }).catch(() => null);
           }
           return { handled: true, event: 'sla_breach', supervisorNotified: true };
@@ -1667,7 +1667,7 @@ class TrinityProactiveScannerService {
             source: 'TrinityProactiveScanner',
             notificationType: `trinity_scan_failure_${scanType}`,
           },
-          idempotencyKey: `scheduler_job_failed-${Date.now()}-${owner.userId}`
+          idempotencyKey: `scheduler_job_failed-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.userId}`
         }).catch((err) => log.warn('[trinityProactiveScanner] Notification failed (non-fatal):', err));
       }
     } catch {

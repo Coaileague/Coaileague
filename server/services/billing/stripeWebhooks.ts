@@ -121,7 +121,7 @@ setInterval(() => {
 // Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing.
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
-    return (getStripe() as any)[prop];
+    return (getStripe() as unknown)[prop];
   },
 });
 
@@ -673,7 +673,7 @@ export class StripeWebhookService {
             workspaceId,
             type: 'subscription_payment_failed',
             title: `Subscription Payment Failed — ${urgencyMsg}`,
-            idempotencyKey: `subscription_payment_failed-${Date.now()}-${ws.ownerId}`,
+            idempotencyKey: `subscription_payment_failed-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`,
             message: `Payment of $${amountDue.toFixed(2)} failed (attempt #${attemptCount}). ${retryMsg}${nextAttemptDate !== 'N/A' ? ` Next retry: ${nextAttemptDate}.` : ''}`,
             metadata: {
               attemptCount,
@@ -1750,7 +1750,7 @@ export class StripeWebhookService {
           workspaceId,
           type: 'trial_ending_soon',
           title: `Trial Ending in ${daysRemaining} Day${daysRemaining !== 1 ? 's' : ''}`,
-          idempotencyKey: `trial_ending_soon-${Date.now()}-${ws.ownerId}`,
+          idempotencyKey: `trial_ending_soon-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`,
           message: `Your free trial expires ${trialEndDate ? `on ${trialEndDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : 'soon'}. Add a payment method to continue using ${PLATFORM.name} without interruption.`,
           metadata: { daysRemaining, trialEnd: trialEndDate?.toISOString(), stripeSubscriptionId: subscription.id },
           actionUrl: '/settings?tab=billing',
@@ -1814,7 +1814,7 @@ export class StripeWebhookService {
           message: 'Your subscription has been paused. The platform is now in read-only mode. Update your payment method to resume full access.',
           metadata: { stripeSubscriptionId: subscription.id },
           actionUrl: '/settings?tab=billing',
-          idempotencyKey: `subscription_suspended-${Date.now()}-${ws.ownerId}`
+          idempotencyKey: `subscription_suspended-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`
         });
       }
     } catch (notifErr: unknown) {
@@ -1872,7 +1872,7 @@ export class StripeWebhookService {
           message: `Your subscription has been resumed. Full access to ${PLATFORM.name} is restored.`,
           metadata: { stripeSubscriptionId: subscription.id },
           actionUrl: '/dashboard',
-          idempotencyKey: `subscription_reactivated-${Date.now()}-${ws.ownerId}`
+          idempotencyKey: `subscription_reactivated-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`
         });
       }
     } catch (notifErr: unknown) {
@@ -1935,7 +1935,7 @@ export class StripeWebhookService {
           message: `Your next subscription invoice of $${amountDue.toFixed(2)} will be charged on ${dueDate}. Ensure your payment method is up to date.`,
           metadata: { amountDue, dueDate, stripeInvoiceId: invoice.id },
           actionUrl: '/settings?tab=billing',
-          idempotencyKey: `invoice_upcoming-${Date.now()}-${ws.ownerId}`
+          idempotencyKey: `invoice_upcoming-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`
         });
       }
     } catch (notifErr: unknown) {

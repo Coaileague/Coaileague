@@ -280,7 +280,7 @@ async function _sendUpsellNotification(
   addonPlan: typeof ADDON_PLANS[string] | null,
 ): Promise<void> {
   try {
-    const meta = event.metadata as any;
+    const meta = event.metadata as unknown;
     const depletionCount = event.depletionCount ?? 0;
 
     let title = `Your team is running out of credits`;

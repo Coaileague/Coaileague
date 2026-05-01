@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { AlertTriangle } from 'lucide-react';

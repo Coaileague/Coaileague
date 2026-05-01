@@ -386,7 +386,7 @@ Return ONLY valid JSON array with this exact structure:
 
       // Send email via NDS — tracked delivery with automatic retry on failure
       const notifId = await NotificationDeliveryService.send({
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
             type: 'sales_outreach',
         workspaceId: req.workspaceId || 'system',
         recipientUserId: toEmail,

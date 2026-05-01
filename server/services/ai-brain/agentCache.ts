@@ -56,7 +56,7 @@ export class AgentCache {
     return entry.value;
   }
 
-  set(key: string, value: any, ttlMs?: number): void {
+  set(key: string, value: unknown, ttlMs?: number): void {
     // Evict if at capacity
     if (this.cache.size >= this.maxSize) {
       this.evictLRU();

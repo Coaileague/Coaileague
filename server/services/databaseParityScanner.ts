@@ -148,7 +148,7 @@ function extractSchemaColumns(tableDefinition: unknown): Map<string, { type: str
   
   for (const [key, value] of columnEntries) {
     if (value && typeof value === 'object' && 'dataType' in value) {
-      const col = value as any;
+      const col = value as unknown;
       columns.set(key, {
         type: col.dataType || 'text',
         nullable: !col.notNull,
@@ -263,7 +263,7 @@ export async function runParityScan(): Promise<ParityScanResult> {
     for (const [key, value] of Object.entries(schema)) {
       if (value && typeof value === 'object' && 'getSQL' in value) {
         // This is a Drizzle table - extract the actual table name
-        const tableDef = value as any;
+        const tableDef = value as unknown;
         const tableName = tableDef._?.name || toSnakeCase(key);
         expectedTables.set(tableName, tableDef);
       }

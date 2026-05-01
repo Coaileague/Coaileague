@@ -324,7 +324,7 @@ export default function AvailabilityPage() {
                 <Select
                   value={newException.requestType}
                   onValueChange={(value) =>
-                    setNewException({ ...newException, requestType: value as any })
+                    setNewException({ ...newException, requestType: value as unknown })
                   }
                 >
                   <SelectTrigger data-testid="select-exception-type">

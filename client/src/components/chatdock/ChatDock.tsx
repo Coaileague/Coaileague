@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, type TouchEvent as ReactTouchEvent } from "react";
 import { StatusBadge } from '@/components/ui/status-badge';
 import { createPortal } from "react-dom";

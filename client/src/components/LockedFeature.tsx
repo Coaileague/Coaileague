@@ -1,3 +1,4 @@
+import React from 'react';
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";

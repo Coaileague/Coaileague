@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from 'wouter';
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { SEO } from '@/components/seo';

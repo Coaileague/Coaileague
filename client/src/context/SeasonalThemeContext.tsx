@@ -209,7 +209,7 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     effectsEnabled,
     
     // Guard: profile.effects may be undefined if API returns malformed shape
-    primaryEffect: (profile?.effects?.primary ?? 'none') as any,
+    primaryEffect: (profile?.effects?.primary ?? 'none') as unknown,
     effectIntensity: profile?.effects?.intensity ?? 0,
     
     seasonalColors: {

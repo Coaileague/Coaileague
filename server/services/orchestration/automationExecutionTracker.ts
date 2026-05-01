@@ -311,7 +311,7 @@ class AutomationExecutionTrackerService {
             actionUrl: '/settings/automations',
             pipelineName: execution.actionType,
             executionId,
-            errorCode: params.failureCode as any,
+            errorCode: params.failureCode as unknown,
             remediationHints,
           }
         ).catch(err =>

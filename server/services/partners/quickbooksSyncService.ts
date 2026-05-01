@@ -471,7 +471,7 @@ export class QuickBooksSyncService {
               title: `QuickBooks Sync ${errorAnalysis.action === 'ABORT' ? 'Permanently Failed' : 'Requires Attention'}`,
               message: `${errorAnalysis.reasoning}${errorAnalysis.suggestedFix ? ` Suggested fix: ${errorAnalysis.suggestedFix}` : ''} Please review your QuickBooks integration settings.`,
               priority: 'urgent',
-              idempotencyKey: `system-${Date.now()}-`
+              idempotencyKey: `system-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-`
             }).catch(() => null)
           ));
         } catch (notifyErr : unknown) {

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useRef, useEffect, useCallback } from "react";
 import { sanitizeRichHtml } from "@/lib/sanitize";
 import { useQuery, useMutation } from "@tanstack/react-query";

@@ -353,7 +353,7 @@ export async function refundInvoice(
     const [inv] = await tx
       .update(invoices)
       .set({
-        status: newStatus as any,
+        status: newStatus as unknown,
         total: newTotalStr,
         notes: `${invoice.notes || ""}\n[REFUND] ${formatCurrency(refundAmountStr)} refunded (${reason}) by ${processedBy}${stripeRefundId ? ` — Stripe refund ${stripeRefundId}` : ' — manual/offline refund (no Stripe PI recorded)'}`,
       })

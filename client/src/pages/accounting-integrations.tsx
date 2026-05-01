@@ -7,6 +7,7 @@
  * - Other providers can be requested from the page and tracked by the platform team
  */
 
+import React from 'react';
 import { useState, type ChangeEvent } from "react";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";

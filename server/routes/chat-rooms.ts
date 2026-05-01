@@ -71,7 +71,7 @@ async function handleRoomLifecycleAction(
     const newStatus = action === 'close' ? 'archived' : 'active';
     await db
       .update(chatRooms)
-      .set({ status: newStatus as any, updatedAt: new Date() })
+      .set({ status: newStatus as unknown, updatedAt: new Date() })
       .where(eq(chatRooms.id, roomId));
 
     res.json({ success: true, roomId, status: newStatus, action });

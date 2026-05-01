@@ -583,7 +583,7 @@ export class TokenManager {
       const used = await this.getPeriodUsage(workspaceId, this.getPeriodStart());
       return this.buildState(workspaceId, allocation, used);
     } catch (err) {
-      log.error({ workspaceId, err } as any, 'tokenManager.getWorkspaceState failed');
+      log.error({ workspaceId, err } as unknown, 'tokenManager.getWorkspaceState failed');
       return null;
     }
   }
@@ -647,7 +647,7 @@ export class TokenManager {
       const used = await this.getPeriodUsage(workspaceId, this.getPeriodStart());
       return { success: true, usageEventId: id, newBalance: allocation - used };
     } catch (err) {
-      log.error({ workspaceId, featureKey, err } as any, 'tokenManager.recordUsage failed');
+      log.error({ workspaceId, featureKey, err } as unknown, 'tokenManager.recordUsage failed');
       return { success: false, usageEventId: null, newBalance: 0, errorMessage: String(err) };
     }
   }

@@ -512,7 +512,7 @@ class WorkflowApprovalService {
           const result = await universalNotificationEngine.sendNotification({
             workspaceId: targetWorkspaceId,
             userId: user.id,
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'ai_approval_needed',
             title,
             message,

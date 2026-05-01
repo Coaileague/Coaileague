@@ -343,8 +343,8 @@ router.post('/close-session', requireSRAAuth, async (req: SRARequest, res: Respo
       .set({
         status: 'closed',
         closedAt: new Date(),
-        complianceRating: complianceRating.toFixed(2) as any,
-        complianceRatingDetail: detail as any,
+        complianceRating: complianceRating.toFixed(2) as unknown,
+        complianceRatingDetail: detail as unknown,
       })
       .where(eq(sraAuditSessions.id, sraSession.sessionId));
 

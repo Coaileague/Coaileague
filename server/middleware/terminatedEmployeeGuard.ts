@@ -70,7 +70,7 @@ export const terminatedEmployeeGuard = async (
 
     // Find employee record for this user in the current workspace
     // (employees.documentAccessExpiresAt tracks grace period end date)
-    const [emp] = await (db as any)
+    const [emp] = await (db as unknown)
       .select({
         id: employees.id,
         isActive: employees.isActive,

@@ -508,7 +508,7 @@ export class AIBrainCodeEditorService {
         if (supportRoles.length > 0) {
           // Route through UNE for Trinity AI enrichment and validation
           await universalNotificationEngine.sendNotification({
-            idempotencyKey: `notif-${Date.now()}`,
+            idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'ai_action_completed',
             title: `Code Change Applied: ${change.title}`,
             message: `Platform code change "${change.title}" has been applied. File: ${change.filePath}`,

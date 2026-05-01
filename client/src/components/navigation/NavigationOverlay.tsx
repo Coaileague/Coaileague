@@ -9,6 +9,7 @@
  * - Responsive: 1 col mobile → 2 col sm → 3 col md → 4 col lg
  */
 
+import React from 'react';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';

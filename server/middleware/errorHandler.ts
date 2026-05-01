@@ -133,7 +133,7 @@ export function globalErrorHandler(
     userId: req.user?.id || req.user?.userId || undefined,
     workspaceId: req.workspaceId,
     requestId: req.requestId,
-    severity: logCtx.severity as any,
+    severity: logCtx.severity as unknown,
     additionalData: logCtx,
   });
 

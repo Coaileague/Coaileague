@@ -4,6 +4,7 @@
  * Uses centralized MOBILE_CONFIG for all sizing and behavior
  */
 
+import React from 'react';
 import { ReactNode, useState, useEffect } from 'react';
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";

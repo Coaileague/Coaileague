@@ -10,6 +10,7 @@
  * - Doesn't block content
  */
 
+import React from 'react';
 import { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
 import { X, Sparkles } from 'lucide-react';

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useCallback, useRef } from "react";
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useQuery, useMutation } from "@tanstack/react-query";

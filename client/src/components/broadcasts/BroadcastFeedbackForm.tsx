@@ -3,6 +3,7 @@
  * Modal form for submitting feedback in response to a feedback_request broadcast
  */
 
+import React from 'react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -260,7 +261,7 @@ export function BroadcastFeedbackForm({
                 <Label>Preferred contact method</Label>
                 <Select
                   value={form.watch('contactMethod') || 'in_app'}
-                  onValueChange={(v) => form.setValue('contactMethod', v as any)}
+                  onValueChange={(v) => form.setValue('contactMethod', v as unknown)}
                 >
                   <SelectTrigger>
                     <SelectValue />

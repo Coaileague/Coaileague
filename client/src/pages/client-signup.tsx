@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';

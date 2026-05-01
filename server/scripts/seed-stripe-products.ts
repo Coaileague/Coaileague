@@ -389,7 +389,7 @@ async function seedProducts() {
   // Legacy ai_credits add-on was retired in the trinity-tokens refactor.
   // Guard with a type cast so the build stays green on environments that
   // still reference the old key; when the key is absent this block no-ops.
-  const legacyAiCredits = (BILLING.addons as any).ai_credits;
+  const legacyAiCredits = (BILLING.addons as unknown).ai_credits;
   if (legacyAiCredits) {
     const aiTokens = legacyAiCredits.tokens ?? legacyAiCredits.credits ?? 0;
     const aiCreditsPackPriceId = await createOneTimePrice(

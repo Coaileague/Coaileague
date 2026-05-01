@@ -102,7 +102,7 @@ export function WeekGrid({
   };
 
   const resolveEmployeePosition = (emp: Employee) => {
-    const e = emp as any;
+    const e = emp as unknown;
     if (e.position) {
       const byId = getPositionById(e.position);
       if (byId) return byId;

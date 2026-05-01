@@ -287,7 +287,7 @@ export async function queueForApproval(
         description: reason,
         workspaceId: context.workspaceId,
         metadata: { actionType: actionId, risk, approvalId: resolvedId },
-      } as any);
+      } as unknown);
     } catch (err: unknown) {
       log.warn('[Dispatcher] pending_approval event publish failed (non-fatal):', err?.message);
     }
@@ -345,7 +345,7 @@ async function executeImmediate(
 ): Promise<ActionResult> {
   const request: ActionRequest = {
     actionId,
-    category: (category || actionId.split('.')[0] || 'system') as any,
+    category: (category || actionId.split('.')[0] || 'system') as unknown,
     name: actionId,
     payload: { ...payload, workspaceId: context.workspaceId },
     workspaceId: context.workspaceId,

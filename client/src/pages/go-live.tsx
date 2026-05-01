@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -632,7 +633,7 @@ export default function GoLivePage() {
             title={step.title}
             description={step.description}
             icon={step.icon}
-            status={step.status as any}
+            status={step.status as unknown}
             expanded={expandedStep === step.id}
             onToggle={() => toggle(step.id)}
             detail={step.detail}

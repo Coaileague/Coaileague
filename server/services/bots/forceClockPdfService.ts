@@ -255,7 +255,7 @@ class ForceClockPdfService {
               message: `Weekly force clock audit complete: ${entries.length} force clocks, ${flaggedCount} flagged patterns detected. Review the report in Documents.`,
               metadata: { documentId: docId, category: 'force_clock_reports', flaggedCount },
               priority: flaggedCount >= 3 ? 'critical' : 'high',
-              idempotencyKey: `compliance_alert-${Date.now()}-${o.userId}`
+              idempotencyKey: `compliance_alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${o.userId}`
             });
           }
         } catch {

@@ -164,7 +164,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
               period: periodLabel,
             },
             actionUrl: '/payroll',
-            idempotencyKey: `payroll_payment_method-${Date.now()}-${emp.userId}`
+            idempotencyKey: `payroll_payment_method-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${emp.userId}`
           });
           notificationsSent++;
         }
@@ -174,7 +174,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
         try {
           const raw = run.workerTypeBreakdown;
           if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-            currentBreakdown = { ...(raw as any) };
+            currentBreakdown = { ...(raw as unknown) };
           }
         } catch { /* leave as {} */ }
 

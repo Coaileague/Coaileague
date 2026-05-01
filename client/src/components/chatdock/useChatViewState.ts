@@ -59,7 +59,7 @@ const EXCLUSIVE_KEYS = new Set<keyof ChatViewState>([
 ]);
 
 type Action =
-  | { type: 'SET'; key: keyof ChatViewState; value: any };
+  | { type: 'SET'; key: keyof ChatViewState; value: unknown };
 
 function reducer(state: ChatViewState, action: Action): ChatViewState {
   if (action.type !== 'SET') return state;

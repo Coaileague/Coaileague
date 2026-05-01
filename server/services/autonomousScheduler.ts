@@ -3855,7 +3855,7 @@ export function startAutonomousScheduler() {
                     scanResults,
                   },
                   createdBy: 'system-coaileague',
-                  idempotencyKey: `system-${Date.now()}-${admin.userId}`
+                  idempotencyKey: `system-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${admin.userId}`
                 });
               } catch (notifError) {
                 log.warn('Failed to notify admin about VQA findings', { adminId: admin.userId, error: notifError instanceof Error ? notifError.message : String(notifError) });
@@ -4076,7 +4076,7 @@ export function startAutonomousScheduler() {
                   criticalCount: report.summary.criticalCount,
                 },
                 createdBy: 'system-coaileague',
-                idempotencyKey: `system-${Date.now()}-${admin.userId}`
+                idempotencyKey: `system-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${admin.userId}`
               });
             } catch (notifError) {
               log.warn('Failed to notify admin about weekly audit', { adminId: admin.userId, error: notifError instanceof Error ? notifError.message : String(notifError) });

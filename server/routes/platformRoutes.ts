@@ -1726,7 +1726,7 @@ router.get('/knowledge/query', async (req: AuthenticatedRequest, res) => {
 // Re-seed static knowledge (root_admin only)
 router.post('/knowledge/reseed', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
   try {
-    const service = trinityKnowledgeService as any;
+    const service = trinityKnowledgeService as unknown;
     service.seeded = false;  // Force re-seed
     await trinityKnowledgeService.seedStaticKnowledge();
     const modules = await trinityKnowledgeService.listStaticModules();

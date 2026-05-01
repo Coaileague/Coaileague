@@ -219,7 +219,7 @@ router.post('/invite', mutationLimiter, idempotencyMiddleware, requireManager, a
       inviteToken,
       expiresAt,
       sentBy: userId,
-    } as any);
+    } as unknown);
 
     // Use APP_URL when set (Railway production); fall back to request host
     const appBase = process.env.APP_URL ||

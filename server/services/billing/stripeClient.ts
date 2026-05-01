@@ -34,7 +34,7 @@ export function getStripe(): Stripe {
   }
 
   _stripe = new Stripe(key, {
-    apiVersion: STRIPE_API_VERSION as any,
+    apiVersion: STRIPE_API_VERSION as unknown,
     timeout: STRIPE_TIMEOUT_MS,
     maxNetworkRetries: STRIPE_MAX_NETWORK_RETRIES,
   });

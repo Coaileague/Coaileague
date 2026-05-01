@@ -791,7 +791,7 @@ class TrinityCodeOpsService {
         action: `trinity_code_ops:${type}`,
         entityType: 'code_ops',
         entityId: data.operationId || crypto.randomUUID(),
-        changes: data as any,
+        changes: data as unknown,
         createdAt: new Date()
       });
     } catch (error) {

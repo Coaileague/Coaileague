@@ -12,6 +12,7 @@
  * - RBAC enforcement (manager/admin create, employees view own)
  */
 
+import React from 'react';
 import '@/styles/smart-schedule.css';
 import { useLocation } from 'wouter';
 import { secureFetch } from "@/lib/csrf";

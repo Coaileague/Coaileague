@@ -1709,7 +1709,7 @@ export function registerClientBillingIntelligenceActions() {
       .from(clientContracts)
       .where(and(eq(clientContracts.workspaceId, workspaceId), ...(clientId ? [eq(clientContracts.clientId, clientId)] : [])));
 
-    const contractMap = new Map(contracts.map(c => [c.clientId, c.billingTerms as any]));
+    const contractMap = new Map(contracts.map(c => [c.clientId, c.billingTerms as unknown]));
 
     const reconciliation = actualHours.map(site => {
       const terms = contractMap.get(site.clientId!) || {};

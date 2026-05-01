@@ -518,7 +518,7 @@ Respond with JSON:
 
         // Update cache
         this.regressionCache.set(patternHash, {
-          ...existing as any,
+          ...existing as unknown,
           failureCount: newCount,
           isBlocked: shouldBlock,
         });

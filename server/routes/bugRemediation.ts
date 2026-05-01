@@ -125,7 +125,7 @@ router.get('/pending', requirePlatformStaff, (async (req: AuthenticatedRequest, 
     log.error('[BugRemediation] Get pending error:', error);
     res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get pending remediations' });
   }
-}) as any);
+}) as unknown);
 
 router.get('/all', requirePlatformStaff, (async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -135,7 +135,7 @@ router.get('/all', requirePlatformStaff, (async (req: AuthenticatedRequest, res:
     log.error('[BugRemediation] Get all error:', error);
     res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get remediations' });
   }
-}) as any);
+}) as unknown);
 
 router.post('/:id/approve', requirePlatformStaff, (async (req: AuthenticatedRequest, res: Response) => {
   try {

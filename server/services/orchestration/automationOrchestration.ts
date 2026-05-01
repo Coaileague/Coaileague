@@ -472,7 +472,7 @@ class AutomationOrchestrationService {
           {
             actionUrl: '/settings/automations',
             pipelineName: params.automationName,
-            errorCode: errorCode as any,
+            errorCode: errorCode as unknown,
             remediationHints: [
               errorInfo.remediation,
               'Check the automation logs in Settings > Automations for more detail.',
@@ -541,7 +541,7 @@ class AutomationOrchestrationService {
 
   private getCurrentStep(ctx: OrchestrationContext): 'TRIGGER' | 'FETCH' | 'VALIDATE' | 'PROCESS' | 'MUTATE' | 'CONFIRM' | 'NOTIFY' {
     const lastStep = ctx.steps[ctx.steps.length - 1];
-    return (lastStep?.step as any) || 'PROCESS';
+    return (lastStep?.step as unknown) || 'PROCESS';
   }
 
   private recordExecution(

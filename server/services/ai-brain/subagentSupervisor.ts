@@ -3291,7 +3291,7 @@ class SubagentSupervisor {
       await universalNotificationEngine.sendNotification({
         workspaceId,
         targetRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager'],
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'system',
         title: `AI Subagent Escalation: ${request.severity.toUpperCase()}`,
         message: request.description,
@@ -3493,7 +3493,7 @@ class SubagentSupervisor {
   private async completeTelemetry(
     telemetryId: string,
     status: SubagentStatus,
-    result: any,
+    result: unknown,
     durationMs: number,
     errorMessage?: string,
     retriesUsed?: number

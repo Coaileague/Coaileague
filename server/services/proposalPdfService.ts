@@ -121,7 +121,7 @@ export async function generateProposalPdf(proposalId: string, workspaceId: strin
   const proposal = rows[0] as unknown as ProposalData;
 
   const wsRows = await q(`SELECT name FROM workspaces WHERE id=$1`, [workspaceId]);
-  const orgName = (wsRows[0] as any)?.name || proposal.company_name || 'CoAIleague';
+  const orgName = (wsRows[0] as unknown)?.name || proposal.company_name || 'CoAIleague';
 
   const tenantLogo = await loadTenantLogo(workspaceId).catch(() => null);
 

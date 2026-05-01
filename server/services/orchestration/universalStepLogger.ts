@@ -796,7 +796,7 @@ class UniversalStepLogger {
             derived?.count ??
             0;
           await tracker.completeExecution(trackerId, {
-            ...(summary as any),
+            ...(summary as unknown),
             itemsProcessed,
           });
         }
@@ -1206,7 +1206,7 @@ export async function executeFullOrchestration<T>(
       return { 
         success: true, 
         orchestrationId: context.orchestrationId,
-        result: { pendingApproval: true, stagedData: mutateResult.data } as any,
+        result: { pendingApproval: true, stagedData: mutateResult.data } as unknown,
       };
     }
 

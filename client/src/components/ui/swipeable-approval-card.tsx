@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * SwipeableApprovalCard - Mobile-optimized approval card with swipe gestures
  * Swipe right to approve, swipe left to deny

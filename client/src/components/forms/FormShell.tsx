@@ -20,6 +20,7 @@
  * Respects TRINITY.md §H (footer dark-by-default, mobile scroll).
  */
 
+import React from 'react';
 import { type ReactNode } from "react";
 import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { Badge } from "@/components/ui/badge";

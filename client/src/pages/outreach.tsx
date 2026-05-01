@@ -177,7 +177,7 @@ export default function OutreachPage() {
                 <CardContent className="p-3 text-center">
                   <p className="text-xs text-muted-foreground">{stage.label}</p>
                   <p className="text-2xl font-bold" data-testid={`text-pipeline-${stage.key}`}>
-                    {pipeline ? (pipeline as any)[stage.key] : 0}
+                    {pipeline ? (pipeline as unknown)[stage.key] : 0}
                   </p>
                 </CardContent>
               </Card>

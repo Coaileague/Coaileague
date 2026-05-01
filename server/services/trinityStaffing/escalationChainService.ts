@@ -467,7 +467,7 @@ class EscalationChainService {
               message: `Request ${state.requestId} has been escalated to management after 45 minutes without full coverage. Please review and assign staff immediately.`,
               data: { requestId: state.requestId, tier: 4, unfilledPositions: state.unfilledPositions },
               workspaceId: state.workspaceId,
-              idempotencyKey: `staffing_escalation-${Date.now()}-${manager.userId}`
+              idempotencyKey: `staffing_escalation-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${manager.userId}`
             });
             notifiedCount++;
           }
@@ -523,7 +523,7 @@ class EscalationChainService {
             message: `Request ${state.requestId} requires immediate attention. After 60 minutes, ${state.unfilledPositions} of ${state.totalPositions} positions remain unfilled despite all escalation attempts.`,
             data: { requestId: state.requestId, tier: 5, unfilledPositions: state.unfilledPositions, totalPositions: state.totalPositions },
             workspaceId: state.workspaceId,
-            idempotencyKey: `staffing_critical_escalation-${Date.now()}-${owner.userId}`
+            idempotencyKey: `staffing_critical_escalation-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${owner.userId}`
           });
           notifiedCount++;
         }

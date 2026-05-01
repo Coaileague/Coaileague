@@ -5,6 +5,7 @@
  * Section-by-section wizard, auto-save draft, restore banner, GPS capture,
  * Trinity validation on submit.
  */
+import React from 'react';
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -333,7 +334,7 @@ function FieldRenderer({
     case "email":
     case "phone":
     default:
-      return <TextField {...common} type={field.type as any} value={value ?? ""} onChange={onChange} placeholder={field.placeholder} helpText={field.helpText} maxLength={field.maxLength} />;
+      return <TextField {...common} type={field.type as unknown} value={value ?? ""} onChange={onChange} placeholder={field.placeholder} helpText={field.helpText} maxLength={field.maxLength} />;
   }
 }
 

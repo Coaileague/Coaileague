@@ -173,7 +173,7 @@ class TrinityRecognitionEngine {
       firstName: e.first_name, lastName: e.last_name,
       compositeScore: String(avgScore), days: String(daysAboveThreshold),
       currentRate: String(currentRate), lowRange: suggestedLow, highRange: suggestedHigh,
-          idempotencyKey: `trinity_recognition-${Date.now()}-${emp[0].user_id}`
+          idempotencyKey: `trinity_recognition-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${emp[0].user_id}`
     }) : `${e.first_name} ${e.last_name} has maintained a ${avgScore} composite score for ${daysAboveThreshold} days. Consider merit review. Current rate: $${currentRate}/hr. Suggested range: $${suggestedLow}-$${suggestedHigh}/hr.`;
 
     // Converted to Drizzle ORM: IN subquery → inArray
@@ -241,7 +241,7 @@ class TrinityRecognitionEngine {
         userId: ownerUserId,
         type: 'trinity_ootm_nomination',
         title: `Officer of the Month Nomination: ${best.first_name} ${best.last_name}`,
-        idempotencyKey: `trinity_ootm_nomination-${Date.now()}-${ownerUserId}`,
+        idempotencyKey: `trinity_ootm_nomination-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ownerUserId}`,
         message: `Trinity nominates ${best.first_name} ${best.last_name} for Officer of the Month (score: ${Math.round(Number(best.composite_score))}). Approve to send the announcement to the team.\n\nMessage:\n"${message}"`,
         priority: 'normal'
       }).catch(() => null);

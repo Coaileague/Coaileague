@@ -13,6 +13,7 @@
  * - Mobile-responsive with view switching
  */
 
+import React from 'react';
 import { secureFetch } from "@/lib/csrf";
 import { sanitizeRichHtml } from "@/lib/sanitize";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";

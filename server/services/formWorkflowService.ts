@@ -410,7 +410,7 @@ class FormWorkflowService {
           message: `Your "${submission.templateName}" has been approved by ${submission.reviewerName}`,
           priority: 'normal',
           actionUrl: '/employees',
-          idempotencyKey: `document-${Date.now()}-${submission.submittedBy}`
+          idempotencyKey: `document-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${submission.submittedBy}`
         });
       }
     } catch (empErr) {

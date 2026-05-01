@@ -3,6 +3,7 @@
  * Provides export, import, and subscription functionality for schedules
  */
 
+import React from 'react';
 import { secureFetch } from "@/lib/csrf";
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -560,7 +561,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
                     <Label>Conflict Resolution</Label>
                     <Select
                       value={conflictResolution}
-                      onValueChange={(v) => setConflictResolution(v as any)}
+                      onValueChange={(v) => setConflictResolution(v as unknown)}
                     >
                       <SelectTrigger data-testid="select-conflict-resolution">
                         <SelectValue />

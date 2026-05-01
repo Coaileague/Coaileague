@@ -4,6 +4,7 @@
  * Works seamlessly on desktop and mobile with horizontal scrolling
  */
 
+import React from 'react';
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

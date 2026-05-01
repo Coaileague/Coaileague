@@ -339,7 +339,7 @@ export default function HRReviews() {
                           <FormField
                             key={field}
                             control={form.control}
-                            name={`${field}Rating` as any}
+                            name={`${field}Rating` as unknown}
                             render={({ field: formField }) => (
                               <FormItem>
                                 <FormLabel className="capitalize">{field}</FormLabel>

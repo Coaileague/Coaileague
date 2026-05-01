@@ -918,7 +918,7 @@ router.post("/calculate-hours", requireAuth, async (req: AuthenticatedRequest, r
 
     // Resolve workspace timezone so day boundaries align with the workspace's
     // local clock — not the host process's. Default to UTC if unknown.
-    const wsId = req.workspaceId || (req.user as any)?.currentWorkspaceId;
+    const wsId = req.workspaceId || (req.user as unknown)?.currentWorkspaceId;
     let timeZone = 'UTC';
     if (wsId) {
       const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, wsId) });

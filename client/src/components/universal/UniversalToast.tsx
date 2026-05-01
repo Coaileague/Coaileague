@@ -1,3 +1,4 @@
+import React from 'react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X, ArrowRight } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';

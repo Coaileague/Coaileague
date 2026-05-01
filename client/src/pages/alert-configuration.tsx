@@ -8,6 +8,7 @@
  * - Test alerts before deployment
  */
 
+import React from 'react';
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";

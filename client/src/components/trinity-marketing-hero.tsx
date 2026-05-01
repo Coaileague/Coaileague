@@ -10,6 +10,7 @@
  * - Works beautifully in both light and dark modes
  */
 
+import React from 'react';
 import { memo, useMemo } from 'react';
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";

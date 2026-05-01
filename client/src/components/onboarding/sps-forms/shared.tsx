@@ -2,6 +2,7 @@
  * Shared UI primitives for the SPS 10-step onboarding wizard.
  * FormSection, SignatureField, FileUploader, DocumentViewer, ProgressBar, FieldError
  */
+import React from 'react';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';

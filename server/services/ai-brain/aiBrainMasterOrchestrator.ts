@@ -168,7 +168,7 @@ class AIBrainMasterOrchestrator {
           isRead: false,
           actionUrl: '/dashboard',
           metadata,
-          idempotencyKey: `notification-${Date.now()}-`
+          idempotencyKey: `notification-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-`
         });
         
         // Broadcast to user's workspace subscription
@@ -2201,7 +2201,7 @@ class AIBrainMasterOrchestrator {
               };
             }
             await universalNotificationEngine.sendNotification({
-              idempotencyKey: `notif-${Date.now()}`,
+              idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: type || 'announcement',
               title,
               message,

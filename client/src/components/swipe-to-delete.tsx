@@ -10,6 +10,7 @@
  * - Horizontal swipes get visual feedback immediately
  */
 
+import React from 'react';
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";

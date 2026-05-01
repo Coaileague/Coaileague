@@ -9,6 +9,7 @@
  * - Canvas-based crisp animations (no blur/glow)
  */
 
+import React from 'react';
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from 'react';
 import { triggerHaptic } from '@/hooks/use-touch-swipe';
 import type { Thought } from '@/lib/mascot/ThoughtManager';

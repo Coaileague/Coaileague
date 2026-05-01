@@ -341,11 +341,11 @@ class PlatformMaintenanceService {
     try {
       await universalNotificationEngine.sendNotification({
         workspaceId: '*', // Platform-wide
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'system',
         title: 'Support Audit',
         message,
-        severity: this.getActionSeverity(event.action) as any,
+        severity: this.getActionSeverity(event.action) as unknown,
         targetRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         metadata: {
           auditEvent: event,

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Calendar, Clock, Menu, Home, CheckCircle, Mail, FileText, MessageCircle, HelpCircle, type LucideIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";

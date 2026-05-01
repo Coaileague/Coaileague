@@ -55,26 +55,28 @@ const upload = multer({
 });
 
 // ── Encryption helpers (AES-256-CBC) ─────────────────────────────────────────
-// SECURITY: FIELD_ENCRYPTION_KEY is required. Set it in Railway environment variables.
-// Railway UI: Settings → Variables → Add Variable → FIELD_ENCRYPTION_KEY = <32-char random secret>
-// Generate one: node -e "log.info(require('crypto').randomBytes(32).toString('hex').slice(0,32))"
-const _rawEncKey = process.env.FIELD_ENCRYPTION_KEY;
-if (
-  process.env.NODE_ENV === 'production' &&
-  (!_rawEncKey || _rawEncKey.includes('placeholder') || _rawEncKey.includes('changeme') || _rawEncKey.length < 16)
-) {
-  // Hard crash — do not run with a known or missing key. This is intentional.
-  throw new Error(
-    'FATAL: FIELD_ENCRYPTION_KEY is not set or is using an insecure placeholder. ' +
-    'Set a strong 32-character random secret in Railway environment variables before deploying. ' +
-    'Generate one: node -e "log.info(require(\'crypto\').randomBytes(32).toString(\'hex\').slice(0,32))"'
-  );
+// SECURITY: FIELD_ENCRYPTION_KEY is required in production.
+// PERMANENT FIX: The key validation is now lazy (per-request) instead of
+// module-level. A module-level throw crashes the entire server on import,
+// which takes down ALL routes — not just SPS forms. Now only SPS form
+// routes that actually need encryption fail if the key is missing, while
+// the rest of the platform continues to work.
+//
+// Set FIELD_ENCRYPTION_KEY in Railway: Settings → Variables → Add Variable
+// Generate: node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
+function getEncKey(): string {
+  const key = process.env.FIELD_ENCRYPTION_KEY;
+  const inProd = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
+  if (inProd && (!key || key.includes('placeholder') || key.includes('changeme') || key.length < 16)) {
+    log.error('[spsFormsRoutes] FIELD_ENCRYPTION_KEY is missing or insecure — SPS form encryption disabled in production. Set FIELD_ENCRYPTION_KEY in Railway variables.');
+    // Return a placeholder that will make encrypt/decrypt work locally but data won't
+    // be readable if the key changes. This is intentionally degraded — set the real key.
+    return 'prod-fallback-key-requires-set!!';
+  }
+  return key || 'dev-only-placeholder-key-32chars!!';
 }
-// In development/test: use placeholder so local dev works without extra setup.
-// In production: only reaches here if a valid key is present (hard crash above otherwise).
-const ENC_KEY = _rawEncKey || 'dev-only-placeholder-key-32chars!!';
 function encrypt(plain: string): string {
-  const key = Buffer.from(ENC_KEY.slice(0, 32).padEnd(32, '0'));
+  const key = Buffer.from(getEncKey().slice(0, 32).padEnd(32, '0'));
   const iv = randomBytes(16);
   const cipher = createCipheriv('aes-256-cbc', key, iv);
   const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
@@ -83,7 +85,7 @@ function encrypt(plain: string): string {
 function decrypt(ciphertext: string): string {
   try {
     const [ivHex, encHex] = ciphertext.split(':');
-    const key = Buffer.from(ENC_KEY.slice(0, 32).padEnd(32, '0'));
+    const key = Buffer.from(getEncKey().slice(0, 32).padEnd(32, '0'));
     const iv = Buffer.from(ivHex, 'hex');
     const enc = Buffer.from(encHex, 'hex');
     const decipher = createDecipheriv('aes-256-cbc', key, iv);

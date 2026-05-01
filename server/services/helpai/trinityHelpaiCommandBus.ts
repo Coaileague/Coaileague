@@ -232,13 +232,13 @@ class TrinityHelpAICommandBus {
             if (payload?.workspace_id) {
               await universalNotificationEngine.sendNotification({
                 workspaceId: payload.workspace_id,
-                idempotencyKey: `notif-${Date.now()}`,
+                idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'emergency',
                 title: 'HelpAI: Critical Item Pending — Trinity Offline',
                 message: `Critical command bus item requires immediate attention: ${(payload as unknown as EscalationPayload).issue_summary || payload.description || 'Review queued items'}`,
                 severity: 'critical',
                 source: 'helpai_command_bus',
-              } as any);
+              } as unknown);
             }
           }
         }
@@ -275,7 +275,7 @@ class TrinityHelpAICommandBus {
     if (workspaceId) {
       await universalNotificationEngine.sendNotification({
         workspaceId,
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'emergency',
         title: 'CRITICAL: HelpAI Command Bus Alert',
         message: (payload as EscalationPayload).issue_summary ||
@@ -283,7 +283,7 @@ class TrinityHelpAICommandBus {
           'Critical item on command bus — immediate review required',
         severity: 'critical',
         source: 'helpai_command_bus',
-      } as any);
+      } as unknown);
     }
 
     await this.markReceived(item.id);
@@ -295,7 +295,7 @@ class TrinityHelpAICommandBus {
       direction: 'helpai_to_trinity',
       messageType: 'escalation',
       priority: escalation.priority,
-      payload: { idempotencyKey: `notif-${Date.now()}`,
+      payload: { idempotencyKey: `notif-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           type: 'escalation', ...escalation },
     });
   }

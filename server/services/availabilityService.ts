@@ -363,7 +363,7 @@ class AvailabilityService {
             dayOfWeek: s.dayOfWeek,
             startTime: s.startTime,
             endTime: s.endTime,
-            status: s.status as any,
+            status: s.status as unknown,
           })),
         };
       }

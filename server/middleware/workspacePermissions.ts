@@ -54,10 +54,10 @@ export function checkFeaturePermission(featureKey: string): RequestHandler {
     if (OWNER_ROLES.has(role)) return next();
 
     // --- Per-request cache ---
-    let cache = (req as any)[PERM_CACHE_KEY] as PermCache | undefined;
+    let cache = (req as unknown)[PERM_CACHE_KEY] as PermCache | undefined;
     if (!cache) {
       cache = {};
-      (req as any)[PERM_CACHE_KEY] = cache;
+      (req as unknown)[PERM_CACHE_KEY] = cache;
     }
     const cacheKey = `${workspaceId}:${role}:${featureKey}`;
     if (cacheKey in cache) {

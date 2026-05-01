@@ -724,7 +724,7 @@ export default function FieldReports() {
     return (
       <CanvasHubPage config={mobilePageConfig}>
         <div>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as unknown)}>
             <TabsList className="w-full mb-4 h-auto p-1">
               <TabsTrigger value="create" className="flex-1 text-xs sm:text-sm py-2 px-2">
                 Create
@@ -832,7 +832,7 @@ export default function FieldReports() {
 
   return (
     <CanvasHubPage config={desktopPageConfig}>
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as unknown)}>
         <TabsList className="mb-4">
           <TabsTrigger value="create">
             <ClipboardCheck className="w-4 h-4 mr-2" />

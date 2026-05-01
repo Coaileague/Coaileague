@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from "react";
 import { SEO } from "@/components/seo";
 import { CONTACTS, DOMAINS } from "@shared/platformConfig";

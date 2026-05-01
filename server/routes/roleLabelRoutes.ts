@@ -102,7 +102,7 @@ router.put('/:role', ensureWorkspaceAccess, requireOwnerRole, async (req: Reques
       .insert(workspaceRoleLabels)
       .values({
         workspaceId,
-        role: role as any,
+        role: role as unknown,
         displayName,
         updatedBy: userId,
         updatedAt: new Date(),
@@ -133,7 +133,7 @@ router.delete('/:role', ensureWorkspaceAccess, requireOwnerRole, async (req: Req
       .where(
         and(
           eq(workspaceRoleLabels.workspaceId, workspaceId),
-          eq(workspaceRoleLabels.role, role as any),
+          eq(workspaceRoleLabels.role, role as unknown),
         ),
       );
 

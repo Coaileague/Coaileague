@@ -269,7 +269,7 @@ router.post('/verify-totp', async (req: Request, res: Response) => {
             message: `${account.fullLegalName} (Badge: ${account.badgeNumber}) from ${account.regulatoryBody} has begun a regulatory audit session for your workspace. Audit period: ${periodStart.toLocaleDateString()} – ${periodEnd.toLocaleDateString()}.`,
             isRead: false,
             createdAt: now,
-          } as any);
+          } as unknown);
         }
       } catch (notifErr) {
         log.error('[SRA Login] NDS notification failed (non-fatal):', notifErr);

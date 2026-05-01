@@ -216,7 +216,7 @@ async function notifyScanFailure(workspaceId: string, scanType: 'Daily' | 'Weekl
         type: 'scheduler_job_failed',
         title: `Trinity ${scanType} Scan Failed`,
         message: `The scheduled ${scanType.toLowerCase()} Trinity intelligence scan did not complete for your organization. Error: ${shortError}`,
-        idempotencyKey: `scheduler_job_failed-${Date.now()}-`
+        idempotencyKey: `scheduler_job_failed-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-`
       }).catch((notifErr: unknown) => {
         log.error(`${SCAN_LABEL} Failed to send scan failure notification to ${userId}: ${notifErr.message}`);
       })

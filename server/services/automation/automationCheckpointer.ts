@@ -297,7 +297,7 @@ export class AutomationCheckpointer {
   private async _persist(checkpoint: AutomationCheckpoint): Promise<void> {
     await db
       .update(trinityAutomationRequests)
-      .set({ checkpointData: checkpoint as any, updatedAt: new Date() })
+      .set({ checkpointData: checkpoint as unknown, updatedAt: new Date() })
       .where(eq(trinityAutomationRequests.id, this.requestId));
   }
 

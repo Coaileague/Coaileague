@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useMemo, useRef } from "react";
 import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -1064,7 +1065,7 @@ export default function TimeTracking() {
                 ...(canApprove && !isSimpleMode ? [{ id: 'reports', label: 'Reports' }] : []),
               ]}
               activeTab={view}
-              onTabChange={(id) => setView(id as any)}
+              onTabChange={(id) => setView(id as unknown)}
             />
           </div>
         </div>

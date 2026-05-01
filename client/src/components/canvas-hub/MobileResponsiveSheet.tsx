@@ -2,6 +2,7 @@
  * MobileResponsiveSheet — Canvas Hub wrapper around shadcn Sheet.
  * Provides a bottom sheet with drag indicator and proper layer management.
  */
+import React from 'react';
 import * as React from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";

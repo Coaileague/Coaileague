@@ -590,7 +590,7 @@ export const attachWorkspaceId: RequestHandler = async (req, res, next) => {
   // Fast path: Use session-cached workspace context when no explicit workspace is requested
   if (!requestedWorkspaceId && req.session?.workspaceId && req.session?.workspaceRole) {
     authReq.workspaceId = req.session.workspaceId;
-    authReq.workspaceRole = req.session.workspaceRole as any;
+    authReq.workspaceRole = req.session.workspaceRole as unknown;
     authReq.employeeId = req.session.employeeId || undefined;
     return next();
   }
@@ -676,7 +676,7 @@ export const attachWorkspaceIdOptional: RequestHandler = async (req, res, next) 
   // Fast path: session-cached workspace context
   if (!requestedWorkspaceId && req.session?.workspaceId && req.session?.workspaceRole) {
     authReq.workspaceId = req.session.workspaceId;
-    authReq.workspaceRole = req.session.workspaceRole as any;
+    authReq.workspaceRole = req.session.workspaceRole as unknown;
     authReq.employeeId = req.session.employeeId || undefined;
     return next();
   }

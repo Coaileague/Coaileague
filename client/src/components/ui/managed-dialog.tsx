@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * ManagedDialog - A Dialog wrapper that enforces modal exclusivity
  * 

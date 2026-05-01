@@ -280,7 +280,7 @@ class ApprovalResumeOrchestrator {
       );
 
     for (const key of pausedKeys) {
-      const metadata = key.resultMetadata as any;
+      const metadata = key.resultMetadata as unknown;
       if (metadata?.governanceApprovalId === approvalId) {
         // Update status to allow retry
         await db.update(idempotencyKeys)
@@ -324,7 +324,7 @@ class ApprovalResumeOrchestrator {
       .where(eq(idempotencyKeys.status, 'pending_approval'));
 
     for (const key of pausedKeys) {
-      const metadata = key.resultMetadata as any;
+      const metadata = key.resultMetadata as unknown;
       if (metadata?.governanceApprovalId === approvalId) {
         await db.update(idempotencyKeys)
           .set({

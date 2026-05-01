@@ -113,7 +113,7 @@ export async function getUpdates(options?: {
     // Build query conditions
     const conditions = [];
     if (options?.category) {
-      conditions.push(eq(platformUpdatesTable.category, options.category as any));
+      conditions.push(eq(platformUpdatesTable.category, options.category as unknown));
     }
     
     // Workspace scoping: show global updates (null workspaceId) + user's workspace updates
@@ -253,8 +253,7 @@ export async function getNewFeatures(userId?: string, userRole?: string, workspa
         or(
           isNull(platformUpdatesTable.workspaceId),
           eq(platformUpdatesTable.workspaceId, workspaceId)
-        ) as any
-      );
+        ) as unknown);
     } else {
       conditions.push(isNull(platformUpdatesTable.workspaceId));
     }

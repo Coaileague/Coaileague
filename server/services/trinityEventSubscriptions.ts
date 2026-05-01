@@ -432,7 +432,7 @@ async function onShiftCancelled(event: PlatformEvent): Promise<void> {
       priority: 'high',
       metadata: { shiftId, employeeId, clientId, startTime, reason, source: 'TrinityEvents' },
       targetRoles: ['org_owner', 'manager', 'supervisor'],
-      idempotencyKey: `shift_cancelled_alert-${Date.now()}-`
+      idempotencyKey: `shift_cancelled_alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-`
     });
 
     // If an officer was assigned, trigger coverage pipeline
@@ -525,7 +525,7 @@ async function onTrainingCertificateExpired(event: PlatformEvent): Promise<void>
         userId: ws.ownerId,
         type: 'compliance_alert',
         title: `Training Certificate Expired: ${officerName}`,
-        idempotencyKey: `compliance_alert-${Date.now()}-${ws.ownerId}`,
+        idempotencyKey: `compliance_alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`,
         message: `${officerName}'s ${moduleTitle} certificate (#${certNumber}) expired ${expiredDaysAgo} day${expiredDaysAgo !== 1 ? 's' : ''} ago. Renewal required before scheduling.`,
         actionUrl: `/training-certification?tab=compliance`,
         isRead: false,
@@ -930,7 +930,7 @@ export function initializeTrinityEventSubscriptions(): void {
                   title: 'QuickBooks Sync Failed',
                   message: `Invoice ${metadata?.invoiceNumber || invoiceId} failed to sync to QuickBooks: ${result.error}. Please sync manually or check your QB connection.`,
                   priority: 'high',
-                  idempotencyKey: `qb_sync_failed-${Date.now()}-${ws.ownerId}`
+                  idempotencyKey: `qb_sync_failed-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`
                 });
               }
             } catch (notifErr: unknown) {
@@ -1021,7 +1021,7 @@ export function initializeTrinityEventSubscriptions(): void {
                   title: 'QuickBooks Payroll Sync Failed',
                   message: `Payroll run ${payrollRunId} (approved) failed to sync to QuickBooks: ${result.error}. Please sync manually or check your QB connection.`,
                   priority: 'high',
-                  idempotencyKey: `qb_payroll_sync_failed-${Date.now()}-${ws.ownerId}`
+                  idempotencyKey: `qb_payroll_sync_failed-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`
                 });
               }
             } catch (notifErr: unknown) {
@@ -1288,7 +1288,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: 'Payroll Funding Account Disconnected',
             message: `${metadata?.priorInstitution || 'Your bank account'} has been disconnected. ACH payroll disbursement is suspended until a funding account is reconnected.`,
             priority: 'urgent',
-            idempotencyKey: `alert-${Date.now()}-${o.userId}`
+            idempotencyKey: `alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${o.userId}`
           }).catch(() => null);
         }
         await db.insert(auditLogs).values({
@@ -1335,7 +1335,7 @@ export function initializeTrinityEventSubscriptions(): void {
               message: `Your payroll payment of $${parseFloat(String(metadata?.amount || 0)).toFixed(2)} has been deposited to your bank account.`,
               priority: 'normal',
               metadata: { payStubId: metadata?.payStubId, transferId: metadata?.transferId },
-              idempotencyKey: `payroll_alert-${Date.now()}-${emp.userId}`
+              idempotencyKey: `payroll_alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${emp.userId}`
             }).catch(() => null);
           }
           // Audit log
@@ -1410,7 +1410,7 @@ export function initializeTrinityEventSubscriptions(): void {
               title: 'ACH Transfer Failed',
               message: `An employee ACH payroll transfer ${metadata?.status}: ${metadata?.failureReason || 'Contact your bank'}. Pay stub ID: ${metadata?.payStubId}.`,
               priority: 'high',
-              idempotencyKey: `payroll_transfer_failed-${Date.now()}-${ws.ownerId}`
+              idempotencyKey: `payroll_transfer_failed-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`
             });
           }
         } catch (err: unknown) {
@@ -1619,7 +1619,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: 'Labor Law Compliance Flag',
             message: `Trinity detected a potential labor law violation: ${violation}. ${employeeId ? `Employee affected.` : ''} Review required before proceeding with this action.`,
             actionUrl: employeeId ? `/employees/${employeeId}` : '/employees',
-            idempotencyKey: `compliance_violation-${Date.now()}-${o.userId}`
+            idempotencyKey: `compliance_violation-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${o.userId}`
           }).catch(() => null);
         }
         await db.insert(auditLogs).values({
@@ -2094,7 +2094,7 @@ export function initializeTrinityEventSubscriptions(): void {
             await createNotification({
               workspaceId: targetWs, userId: o.userId, type: 'scheduler_job_failed',
               title: `Automation Job Failed: ${jobName}`,
-              idempotencyKey: `scheduler_job_failed-${Date.now()}-${o.userId}`,
+              idempotencyKey: `scheduler_job_failed-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${o.userId}`,
               message: `A background automation job (${jobName}) failed with error: ${String(error).substring(0, 150)}. Trinity will attempt retry. If this persists, contact support.`,
               priority: 'high',
               actionUrl: '/settings',
@@ -2260,7 +2260,7 @@ export function initializeTrinityEventSubscriptions(): void {
             await createNotification({
               workspaceId, userId: s.userId, type: 'geofence_override_required',
               title: 'GPS Override Submitted',
-              idempotencyKey: `geofence_override_required-${Date.now()}-${s.userId}`,
+              idempotencyKey: `geofence_override_required-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${s.userId}`,
               message: `An officer submitted a manual GPS/geofence override (${overrideType}): "${reason}". Trinity is monitoring for habitual bypass patterns.`,
               priority: 'normal',
               actionUrl: employeeId ? `/employees/${employeeId}` : '/compliance-scenarios',
@@ -2321,7 +2321,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: event.title || 'Approval Escalated',
             message: event.description || `Approval escalated to level ${payload?.newLevel}`,
             priority: 'urgent',
-            idempotencyKey: `alert-${Date.now()}-${o.userId}`
+            idempotencyKey: `alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${o.userId}`
           }).catch(() => null);
         }
         await db.insert(auditLogs).values({
@@ -2357,7 +2357,7 @@ export function initializeTrinityEventSubscriptions(): void {
             title: event.title || 'Approval Window Expired',
             message: event.description || `Approval for "${payload?.actionName}" expired — operation has been blocked`,
             priority: 'high',
-            idempotencyKey: `alert-${Date.now()}-${o.userId}`
+            idempotencyKey: `alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${o.userId}`
           }).catch(() => null);
         }
         await db.insert(auditLogs).values({
@@ -2393,7 +2393,7 @@ export function initializeTrinityEventSubscriptions(): void {
             workspaceId,
             type: 'alert',
             title: 'Payroll Bank Account Disconnected',
-            idempotencyKey: `alert-${Date.now()}-${ownerEmp.userId}`,
+            idempotencyKey: `alert-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ownerEmp.userId}`,
             message: `Your organization's funding bank account (${metadata?.priorInstitution || 'Bank'} ending ...${metadata?.priorMask || '????'}) has been disconnected. Automatic ACH payroll disbursement is suspended until you reconnect a bank account in Payroll Settings.`,
             priority: 'urgent',
             actionUrl: '/settings',
@@ -3441,7 +3441,7 @@ export function initializeTrinityEventSubscriptions(): void {
             message: event.description || 'An officer training certification expires soon.',
             actionUrl: '/training-compliance',
             priority: 'normal',
-            idempotencyKey: `deadline_approaching-${Date.now()}-${mgr.userId}`
+            idempotencyKey: `deadline_approaching-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`
           });
         }
       } catch (err: unknown) {
@@ -3598,7 +3598,7 @@ export function initializeTrinityEventSubscriptions(): void {
             message: 'Your CoAIleague subscription has been canceled. Access continues until the billing period ends.',
             actionUrl: '/billing',
             priority: 'high',
-            idempotencyKey: `subscription_cancelled-${Date.now()}-${mgr.userId}`
+            idempotencyKey: `subscription_cancelled-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`
           });
         }
 
@@ -3672,7 +3672,7 @@ export function initializeTrinityEventSubscriptions(): void {
             message: 'Your free trial is ending soon. Upgrade to keep your data and features.',
             actionUrl: '/billing',
             priority: 'high',
-            idempotencyKey: `trial_expiry_warning-${Date.now()}-${mgr.userId}`
+            idempotencyKey: `trial_expiry_warning-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`
           });
         }
       } catch (err: unknown) {
@@ -3699,7 +3699,7 @@ export function initializeTrinityEventSubscriptions(): void {
             message: 'A bank account has been successfully connected for payroll direct deposit.',
             actionUrl: '/payroll-dashboard',
             priority: 'normal',
-            idempotencyKey: `payroll_payment_method-${Date.now()}-${mgr.userId}`
+            idempotencyKey: `payroll_payment_method-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${mgr.userId}`
           });
         }
       } catch (err: unknown) {

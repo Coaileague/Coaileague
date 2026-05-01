@@ -93,7 +93,7 @@ export async function flipInvitedToActive(payload: HandshakePayload): Promise<Ha
         serviceHours: payload.serviceHours,
         statusFlip: 'invited → active',
       },
-    } as any);
+    } as unknown);
   });
 
   log.info(`[Handshake] Client ${invite.clientId} flipped INVITED→ACTIVE for workspace ${invite.workspaceId}`);
