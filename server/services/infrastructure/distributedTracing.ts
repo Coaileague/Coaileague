@@ -417,7 +417,7 @@ export const distributedTracing = DistributedTracingService.getInstance();
  * Express middleware for automatic tracing
  */
 export function tracingMiddleware(serviceName = 'coaileague-api') {
-  return (req: unknown, res: any, next: unknown) => {
+  return (req: unknown, res: import("express").Response, next: import("express").NextFunction) => {
     const { traceId, spanId } = distributedTracing.parseHeaders(req.headers);
     
     const context = distributedTracing.startTrace(`${req.method} ${req.path}`, {
