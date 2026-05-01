@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import { FeatureUnavailable, isFeatureUnavailable } from "@/components/ui/feature-unavailable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -403,7 +404,7 @@ interface AuditRow {
 }
 
 function ArmoryAuditTrail(): JSX.Element {
-  const { data, isLoading } = useQuery<{ rows: AuditRow[] }>({
+  const { data, isLoading, error} = useQuery<{ rows: AuditRow[] }>({
     queryKey: ["/api/armory/audit-trail"],
   });
   const rows = data?.rows ?? [];
@@ -477,6 +478,10 @@ export default function ArmoryCompliancePage(): JSX.Element {
     inspectionsOverdue: [],
     lowAmmo: [],
   };
+
+  if (isFeatureUnavailable(error)) {
+    return <FeatureUnavailable feature="Armory Compliance" eta="Q4 2026" />;
+  }
 
   return (
     <CanvasHubPage config={pageConfig}>

@@ -8,13 +8,14 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import { shifts } from '../schema/domains/scheduling';
 
-export type Shift = InferSelectModel<typeof shifts>;
+/** Internal Shift base type from Drizzle schema */
+type ShiftBase = InferSelectModel<typeof shifts>;
 
 /**
  * Shift with fields from JOINs and computed values.
  * Used when querying shifts with associated employee, client, and site data.
  */
-export interface ShiftWithJoins extends Shift {
+export interface ShiftWithJoins extends ShiftBase {
   // Employee JOIN fields
   employeeName?: string | null;
   employeeFirstName?: string | null;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FeatureUnavailable, isFeatureUnavailable } from "@/components/ui/feature-unavailable";
 import { secureFetch } from "@/lib/csrf";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -193,6 +194,10 @@ export default function AcceptHandoff() {
   }
 
   const workspace = tokenData.workspace!;
+
+  if (isFeatureUnavailable(error)) {
+    return <FeatureUnavailable feature="Contractor Handoff" eta="Q3 2026" />;
+  }
 
   return (
     <CanvasHubPage config={mainConfig}>

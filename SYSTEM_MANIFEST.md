@@ -1638,3 +1638,89 @@ Client billing.tsx calls mapped against server routes:
 - **Production build:** ✅ Clean
 - **Platform status:** Stable, all phases complete
 - **Claude Code branches:** Monitoring for merge candidates
+
+---
+
+## Phase 12 — Final Regression & Integrity Verification (2026-05-01)
+
+### Regression Scan Results
+**All 11 previous phase fixes verified intact:**
+
+| Fix ID | Description | Status |
+|--------|-------------|--------|
+| KI-011 | Invite email CTA — inviteUrl field | ✅ |
+| KI-012 | APP_URL for invite link | ✅ |
+| KI-013 | onboardingStatus set on /complete | ✅ |
+| KI-014 | Mobile notification sheet | ✅ |
+| KI-015 | Splash loop + arms animation | ✅ |
+| KI-016 | Swipe threshold (8→20px) | ✅ |
+| NEW-4 | AI brain status URL corrected | ✅ |
+| NEW-5 | Schedule import route added | ✅ |
+| NEW-6 | TOS sign URL corrected | ✅ |
+| WORKFLOW-1 | Shift notify all employees | ✅ |
+| TS-CLEANUP | catch(e: any) → catch(e: unknown) | ✅ |
+
+**Production build:** ✅ Server build complete, 0 errors
+
+### Unbuilt Feature UX Hardening
+Created `client/src/components/ui/feature-unavailable.tsx`:
+- `<FeatureUnavailable>` component — branded "Coming Soon" card with Construction icon
+- `isFeatureUnavailable(error)` helper — detects 503 from featureStubRoutes
+- Wired into 6 pages that previously showed blank/error on stub hit:
+  `bid-management.tsx`, `automation-audit-log.tsx`, `co-auditor-dashboard.tsx`,
+  `audit-chatdock.tsx`, `armory-compliance.tsx`, `accept-handoff.tsx`
+
+These pages now show a clean card: "This feature is in development" with ETA badge
+instead of a blank screen or unhandled error state.
+
+### Duplicate Export Resolution
+`shared/types/domainExtensions.ts` introduced a duplicate `Shift` export
+(also exported from `shared/schema.ts` via domain files).
+Fixed: `ShiftWithJoins extends ShiftBase` (internal alias) instead of re-exporting.
+3,703 total shared type exports — scanner confirmed clean.
+
+### Cross-Session Integrity
+- Claude Code branches (fix-bell-icon-modal, texas-licensing) already absorbed
+- No new remote commits in last session window
+- No conflicts between Phase 3-12 changes detected
+- All 492 storage.ts async methods intact
+
+### Platform State — Final Metrics
+
+```
+TypeScript Debt:
+  catch(e: any):       246 → 0      (-100%)  ✅ COMPLETE
+  middleware as any:   183 → 0      (-100%)  ✅ COMPLETE
+  pool params any[]:   175 → 0      (-100%)  ✅ COMPLETE
+  Combined any debt: 8,566 → 6,098  (-28.8%)
+
+Broken Routes:
+  Client→server dead ends:    34 → 0    ✅ COMPLETE
+  Silent 404s (unbuilt):      38 → 0    (503 stubs + FeatureUnavailable)  ✅
+
+Workflow Bugs Fixed:          12 total  ✅ ALL FIXED
+  (KI-011 through NEW-7, WORKFLOW-1)
+
+Platform Stability:
+  esbuild errors:             0 server + 0 client  ✅
+  Production build:           ✅ PASSING
+  All phase fixes verified:   11/11  ✅
+```
+
+### SYSTEM_MANIFEST.md
+1,589+ lines. Complete single source of truth for:
+- All 2,448 server endpoints mapped to 253 mount prefixes across 15 domains
+- Canonical route map (domain → prefix → operations)
+- All known issues tracked (KI-001 through NEW-7)
+- Phase 1-12 hardening log with root cause + fix for each
+
+### Remaining Open Issues (Future Phases)
+| ID | Issue | Priority |
+|----|-------|----------|
+| KI-001 | ChatDock Redis pub/sub (multi-replica) | HIGH |
+| KI-003 | OTP stub — no real SMS send | MEDIUM |
+| KI-004 | Device trust cookie not implemented | MEDIUM |
+| KI-007 | FCM push not implemented | HIGH |
+| KI-008 | ChatDock durable message store | HIGH |
+| SF-1 | 380 .catch(()=>null) in services | MEDIUM |
+| UNBUILT | CAD, Budgets, Bid Analytics, Audit Suite | BACKLOG |

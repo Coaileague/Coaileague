@@ -28,6 +28,7 @@
  */
 
 import { useState } from "react";
+import { FeatureUnavailable, isFeatureUnavailable } from "@/components/ui/feature-unavailable";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -214,7 +215,7 @@ function WorkspaceDrawer({
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const { data: score } = useQuery<{ ok: boolean } & ComplianceScore>({
+  const { data: score, error} = useQuery<{ ok: boolean } & ComplianceScore>({
     queryKey: ["/api/auditor/compliance-score", workspaceId],
     enabled: !!workspaceId && open,
   });
@@ -521,6 +522,10 @@ export default function CoAuditorDashboard() {
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
+  }
+
+  if (isFeatureUnavailable(error)) {
+    return <FeatureUnavailable feature="Auditor Portal" eta="Q2 2026" />;
   }
 
   return (

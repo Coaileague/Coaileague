@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FeatureUnavailable, isFeatureUnavailable } from "@/components/ui/feature-unavailable";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,7 +67,7 @@ export default function BidManagementPage() {
   const [stageFilter, setStageFilter] = useState("all");
   const [selected, setSelected] = useState<Proposal | null>(null);
 
-  const { data: proposals = [], isLoading } = useQuery<Proposal[]>({
+  const { data: proposals = [], isLoading, error} = useQuery<Proposal[]>({
     queryKey: ["/api/bid-analytics/proposals", stageFilter],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -202,6 +203,10 @@ export default function BidManagementPage() {
   }
 
   // ── List view ────────────────────────────────────────────────────────────
+  if (isFeatureUnavailable(error)) {
+    return <FeatureUnavailable feature="Bid Analytics" eta="Q3 2026" />;
+  }
+
   return (
     <ModulePageShell
       title="Bid & Proposal Management"

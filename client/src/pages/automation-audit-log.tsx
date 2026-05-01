@@ -4,6 +4,7 @@
  */
 
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { FeatureUnavailable, isFeatureUnavailable } from "@/components/ui/feature-unavailable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,7 +57,7 @@ interface AutomationJob {
 export default function AutomationAuditLog() {
   const { toast } = useToast();
 
-  const { data: eventsData, isLoading: eventsLoading, refetch: refetchEvents } = useQuery<{
+  const { data: eventsData, isLoading: eventsLoading, refetch: refetchEvents, error} = useQuery<{
     success: boolean;
     events: AutomationEvent[];
     count: number;
@@ -158,6 +159,10 @@ export default function AutomationAuditLog() {
     subtitle: 'Real-time visibility into all Trinity™ automation runs',
     category: 'admin',
   };
+
+  if (isFeatureUnavailable(error)) {
+    return <FeatureUnavailable feature="Automation Events" eta="Q3 2026" />;
+  }
 
   return (
     <CanvasHubPage config={pageConfig}>

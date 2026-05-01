@@ -14,6 +14,7 @@
  */
 
 import { useState } from "react";
+import { FeatureUnavailable, isFeatureUnavailable } from "@/components/ui/feature-unavailable";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,7 +42,7 @@ export default function AuditChatdock() {
   const [showModifyFor, setShowModifyFor] = useState<string | null>(null);
 
   // Gate check
-  const { data: safeStatus } = useQuery({
+  const { data: safeStatus, error} = useQuery({
     queryKey: ['/api/audit-suite/audits', auditId, 'safe-status'],
     queryFn: () => apiRequest('GET', `/api/audit-suite/audits/${auditId}/safe-status?workspaceId=${workspaceId}`).then(r => r.json()),
     enabled: !!auditId && !!workspaceId,
@@ -106,6 +107,10 @@ export default function AuditChatdock() {
         </Card>
       </div>
     );
+  }
+
+  if (isFeatureUnavailable(error)) {
+    return <FeatureUnavailable feature="Audit Suite" eta="Q3 2026" />;
   }
 
   return (
