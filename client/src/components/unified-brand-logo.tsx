@@ -73,7 +73,7 @@ export function UnifiedBrandLogo({
 
   if (effectiveVariant === "icon") {
     return (
-      <TrinityAnimatedLogo size={32} 
+      <TrinityAnimatedLogo
         size={config.logoSize}
         className={cn("shrink-0", className)}
       />
@@ -109,7 +109,7 @@ export function UnifiedBrandLogo({
       )}
       data-testid="brand-logo"
     >
-      <TrinityAnimatedLogo size={32} 
+      <TrinityAnimatedLogo
         size={config.logoSize}
         className="shrink-0"
       />

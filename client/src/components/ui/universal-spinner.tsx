@@ -40,7 +40,6 @@
 
 import "@/styles/universal-spinner.css";
 import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
-import { TrinityAnimatedLogo } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 
 export type UniversalSpinnerSize = "sm" | "md" | "lg";

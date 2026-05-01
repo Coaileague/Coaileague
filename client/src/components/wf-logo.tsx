@@ -13,9 +13,9 @@ interface WFLogoProps {
 }
 
 export function WFLogo({ className = "", size = 24 }: WFLogoProps) {
-  return <TrinityAnimatedLogo size={32} size={size} className={className} />;
+  return <TrinityAnimatedLogo size={size} className={className} />;
 }
 
 export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
-  return <TrinityAnimatedLogo size={32} size={size} className={cn("shrink-0", className)} />;
+  return <TrinityAnimatedLogo size={size} className={cn("shrink-0", className)} />;
 }

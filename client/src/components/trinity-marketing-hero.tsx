@@ -180,7 +180,7 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
             <TrinityAnimatedLogo size={24} />
           </Suspense>
         ) : (
-          <TrinityAnimatedLogo size={48} 
+          <TrinityAnimatedLogo
             size={variant === 'badge' ? 24 : variant === 'compact' ? 32 : variant === 'inline' ? 24 : variant === 'hero' ? 64 : 48}
           />
         )}
