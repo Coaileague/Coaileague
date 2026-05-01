@@ -7,3 +7,8 @@ vite.config.ts.*
 *.tar.gz.parta*
 *.tar.gz.partb*
 workforceos-platform.tar.gz.*
+
+# Local-only artifacts (this repo does not commit a lockfile — Railway/Render
+# install fresh per deploy). Keeps Claude audit sessions from tripping the
+# stop-hook untracked-files check after running `npm install` for tsc.
+package-lock.json
