@@ -1823,13 +1823,30 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
       );
     }
 
+    // Optimistic concurrency control: if the client passed expectedUpdatedAt,
+    // require it to match the current row before the UPDATE. Two managers
+    // editing the same entry concurrently → second one gets a 409 instead
+    // of silently overwriting the first one's changes. Clients that don't
+    // pass expectedUpdatedAt fall back to last-write-wins (legacy behaviour).
+    const expectedUpdatedAt = req.body?.expectedUpdatedAt;
     const [updatedEntry] = await db.transaction(async (tx) => {
+      const conditions = [
+        eq(timeEntries.id, id),
+        eq(timeEntries.workspaceId, workspaceId),
+      ];
+      if (expectedUpdatedAt && entry.updatedAt) {
+        const expected = new Date(expectedUpdatedAt).getTime();
+        const actual = new Date(entry.updatedAt as any).getTime();
+        if (!Number.isNaN(expected) && !Number.isNaN(actual) && expected !== actual) {
+          throw Object.assign(
+            new Error('Time entry was modified by someone else. Refresh and try again.'),
+            { statusCode: 409, code: 'TIME_ENTRY_STALE', currentUpdatedAt: entry.updatedAt },
+          );
+        }
+      }
       const [updated] = await tx.update(timeEntries)
         .set(updateData)
-        .where(and(
-          eq(timeEntries.id, id),
-          eq(timeEntries.workspaceId, workspaceId)
-        ))
+        .where(and(...conditions))
         .returning();
       await createAuditEvent({
         workspaceId: workspaceId,
@@ -1894,7 +1911,17 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
       },
       invoiceCascade,
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Surface optimistic-concurrency failures as 409 instead of 500 so
+    // the client can show "this entry was edited by someone else" and
+    // refetch.
+    if (error?.code === 'TIME_ENTRY_STALE') {
+      return res.status(409).json({
+        error: error.message,
+        code: error.code,
+        currentUpdatedAt: error.currentUpdatedAt,
+      });
+    }
     log.error('Error editing time entry:', error);
     res.status(500).json({ error: 'Failed to edit time entry' });
   }

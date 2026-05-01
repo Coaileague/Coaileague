@@ -140,6 +140,29 @@ router.post('/proposals', requireAuth, requireSysop as any, async (req: Request,
       return res.status(400).json({ success: false, error: 'Invalid request', details: parsed.error.flatten() });
     }
 
+    // Tier-aware gate: sysop can propose `config` and `service_logic`
+    // changes, but `core_infrastructure` (db.ts, index.ts, auth.ts) and
+    // `database_schema` (shared/schema.ts, drizzle/) require full
+    // platform-staff. Closes the hole where a sysop could schedule
+    // changes to platform-wide config without owner-staff oversight.
+    const proposedTiers = parsed.data.changes.map((c) => trinitySelfEditGovernance.getPathTier(c.file));
+    const needsPlatformStaff = proposedTiers.some(
+      (t) => t === 'core_infrastructure' || t === 'database_schema',
+    );
+    if (needsPlatformStaff) {
+      const { hasPlatformWideAccess, getUserPlatformRole } = await import('../rbac');
+      const userIdForGate = (req as any).session?.userId || (req as any).user?.id || (req as any).user;
+      const platformRole = userIdForGate ? await getUserPlatformRole(String(userIdForGate)) : undefined;
+      if (!hasPlatformWideAccess(platformRole)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Platform staff required',
+          reason: 'Proposal touches core_infrastructure or database_schema tiers',
+          tiersDetected: Array.from(new Set(proposedTiers)),
+        });
+      }
+    }
+
     const userId = req.session?.userId || req.user;
     const result = await trinitySelfEditGovernance.createChangeProposal({
       ...parsed.data,

@@ -345,6 +345,27 @@ export async function spawnAgent(params: {
     spawnedBy = 'trinity',
   } = params;
 
+  // Step 0: Token budget gate. Calling spawnAgent always consumes AI
+  // tokens downstream; previously the swarm endpoints could spin up
+  // unbounded agents on workspaces over their token cap. preAuthorize
+  // surfaces the same TOKEN_HARD_CAP_REACHED reason the rest of the
+  // platform uses so callers see consistent quota errors.
+  try {
+    const { aiTokenGateway } = await import('../billing/aiTokenGateway');
+    const auth = await aiTokenGateway.preAuthorize(workspaceId, null, `agent_spawn:${agentKey}`);
+    if (!auth.authorized) {
+      const errMsg = `Token budget exceeded for ${agentKey} (${auth.reason})`;
+      log.warn(`[AgentSpawner] ${errMsg} ws=${workspaceId}`);
+      throw Object.assign(new Error(errMsg), { code: auth.reason || 'TOKEN_HARD_CAP_REACHED' });
+    }
+  } catch (gateErr: any) {
+    if (gateErr?.code === 'TOKEN_HARD_CAP_REACHED') throw gateErr;
+    // Gateway service down — fail open so a transient billing outage
+    // doesn't take down all Trinity automation. preAuthorize is logged
+    // either way; downstream metering still records consumption.
+    log.warn(`[AgentSpawner] preAuthorize errored, allowing spawn: ${gateErr?.message}`);
+  }
+
   // Step 1: Look up agent from registry (workspace-scoped first, then global defaults)
   const agentResult = await pool.query<AgentRegistry & Record<string, unknown>>(
     `SELECT id, workspace_id, agent_key, agent_name, domain, system_prompt,

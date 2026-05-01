@@ -1,6 +1,6 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-05-01 18:14 UTC — Claude (self-audit pass — 6 follow-up fixes pre-merge)
+# Last updated: 2026-05-01 19:05 UTC — Claude (deferred-items sweep — all 8 closed, ready to merge)
 
 ---
 
@@ -126,38 +126,60 @@ and patched before merge:
 
 Both `tsc --noEmit` runs still clean.
 
-### DEFERRED ISSUES (open for owner agents — DO NOT silently re-fix)
+### DEFERRED ISSUES — ALL CLOSED 2026-05-01 19:05 UTC
 
-These were flagged by the scan but require infrastructure I didn't want
-to invent without owner-agent buy-in. Pick them up with a comment in this
-file before starting:
+All 8 items from the previous deferred list shipped this turn. Patches:
 
-- **trinityDecisionRoutes.ts:87+** — override endpoint not idempotent.
-  Needs `idempotencyKeys` table integration (executeIdempotencyCheck
-  pattern). OWNER: whoever owns Trinity decisions / execution-tracker.
-- **trinityDecisionLogger.ts:59+** — duplicate decision-log entries
-  possible on retry. Needs UNIQUE constraint OR
-  ON CONFLICT DO NOTHING with a deterministic dedup key.
-- **trinitySwarmRoutes.ts** — agent-spawning consumes AI tokens with no
-  budget gate. Needs `aiTokenGateway.hasTokenBudget` /
-  `aiTokenGateway.consumeTokens` integration before each spawn.
-- **trinitySelfEditRoutes.ts:136+** — sysop can approve `core_infrastructure`
-  / `database_schema` tier proposals. Add `requirePlatformStaff` branch
-  inside the proposal handler when the proposal touches those tiers.
-- **timeEntryRoutes.ts:703** — manual clock-in override INSERT references
-  columns that don't exist in the Drizzle schema (employee_name, site_id,
-  site_name, reason_code, reason_detail). Either add columns to schema
-  or rename to camelCase mirrors. Coordinate with whoever owns the
-  manual_clockin_overrides table.
-- **shiftRoutes.ts:2083+** — open-shift accept race (two officers
-  claiming simultaneously). Mitigated already by `.for('update')` row
-  lock at marketplace pickup (line 1832), but the separate accept route
-  still needs the advisory lock pattern. Verify if this is a duplicate
-  surface before patching.
-- **time-entry-routes.ts (manager edit)** — last-write-wins on time-entry
-  edits. Needs version/updatedAt check returning 409 on conflict.
-- **TRINITY_BOT_TOKEN startup validation** — env var should be validated
-  at boot. Add to server/index.ts startup checks.
+1. ✅ **trinityDecisionRoutes.ts override** — `markHumanOverride` now does
+   a conditional UPDATE (`WHERE humanOverride = false`) and returns
+   `{ alreadyOverridden: bool }`. The route returns
+   `{ success: true, alreadyOverridden: true }` on the second call,
+   making the endpoint idempotent without an idempotencyKeys table.
+2. ✅ **trinityDecisionLogger.ts logDecision** — added 60-second in-memory
+   dedup window keyed on
+   `(workspaceId|triggerEvent|chosenOption|relatedEntityType|relatedEntityId)`.
+   Mirrors the existing `_recentlyPaidRuns` pattern in
+   trinityEventSubscriptions.ts.
+3. ✅ **agentSpawner.ts** — every `spawnAgent()` call now goes through
+   `aiTokenGateway.preAuthorize('agent_spawn:<key>')` first; surfaces
+   the same `TOKEN_HARD_CAP_REACHED` reason the rest of the platform
+   uses; fails open on gateway errors so a transient billing service
+   outage doesn't take down all Trinity automation.
+4. ✅ **trinitySelfEditRoutes.ts /proposals** — sysop can still propose
+   `config` and `service_logic` changes, but proposals touching
+   `core_infrastructure` (db.ts, index.ts, auth.ts) or `database_schema`
+   (shared/schema.ts, drizzle/) now require full platform-staff. Tier
+   computed via `trinitySelfEditGovernance.getPathTier(file)` for each
+   change, then 403'd if any one needs platform-staff and the caller
+   isn't.
+5. ✅ **timeEntryRoutes.ts:703 manual_clockin_overrides** — INSERT
+   rewritten to align with the actual schema: writes to (id, workspace_id,
+   employee_id, shift_id, override_type, reason, metadata) only. Site /
+   officer-name / reason-code detail now lands in `metadata` jsonb.
+6. ✅ **shiftRoutes.ts /:id/accept** — was both racy AND insecure (any
+   officer in the workspace could accept any shift in eligible statuses).
+   Now wraps a SELECT FOR UPDATE → permission check → conditional UPDATE
+   in a single transaction; verifies `shift.employeeId === callingEmployee.id`
+   so only the assigned officer can accept their own shift; returns
+   409 SHIFT_NOT_ACCEPTABLE on stale-state and 403 on identity mismatch.
+7. ✅ **time-entry-routes.ts entries/:id PATCH** — added optimistic
+   concurrency control: clients can pass `expectedUpdatedAt` in the body;
+   if it doesn't match the current row, throw `TIME_ENTRY_STALE` and
+   return 409 with the live `currentUpdatedAt`. Clients without
+   `expectedUpdatedAt` keep the legacy last-write-wins behaviour
+   (backward compatible).
+8. ✅ **validateEnvironment.ts** — TRINITY_BOT_TOKEN now warned about
+   when missing (added to BILLING_VARS-style soft-warn list); checks
+   length (32+) and character set (hex/base64url) and warns on either
+   mismatch. Doesn't fail-fast because some deployments don't run
+   Trinity bot integrations.
+
+### NOT ACTIONABLE THIS BRANCH (CI-environment things)
+
+- **`@types/node` install** — package.json declares it (`^20.19.39`)
+  but the local sandbox doesn't have node_modules populated; CI runs
+  `npm install` before `tsc` so the type check IS effective in CI.
+  No code change needed; flagged so the next agent doesn't re-find it.
 
 Cumulative footprint: ~30 files, ~1,800 insertions. Both `tsc --noEmit -p
 tsconfig.json` and `tsc --noEmit -p tsconfig.server.json` clean.

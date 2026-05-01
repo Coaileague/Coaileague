@@ -105,8 +105,11 @@ router.post('/decisions/:decisionId/override', requireAuth, async (req: any, res
       return res.status(400).json({ message: 'Override reason required (min 5 characters)' });
     }
 
-    await trinityDecisionLogger.markHumanOverride(decisionId, workspaceId, userId, reason.trim());
-
+    const { alreadyOverridden } = await trinityDecisionLogger.markHumanOverride(decisionId, workspaceId, userId, reason.trim());
+    if (alreadyOverridden) {
+      // Idempotent return — second call to override the same decision is a no-op.
+      return res.json({ success: true, alreadyOverridden: true, message: 'Decision was already overridden' });
+    }
     res.json({ success: true, message: 'Decision override recorded' });
   } catch (error: unknown) {
     log.error('[TrinityDecisions] Failed to record override:', error);

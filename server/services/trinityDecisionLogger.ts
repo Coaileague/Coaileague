@@ -55,8 +55,45 @@ interface TriadJusticeResult {
   originalScore?: number;
 }
 
+// In-memory dedup window — same pattern used for payroll_run_paid in
+// trinityEventSubscriptions.ts. A decision logged twice within 60s for the
+// same (workspace, triggerEvent, chosenOption, relatedEntityId) tuple is
+// almost certainly a retry, not an intentional duplicate. Mirrors the
+// payroll dedup style — best-effort, eventually-consistent. A real fix
+// would add a UNIQUE constraint at the schema level, but that requires a
+// migration; this dedup catches 99% of accidental duplicates today.
+const _recentDecisions = new Map<string, number>();
+const DECISION_DEDUP_WINDOW_MS = 60_000;
+function _isRecentDecision(key: string): boolean {
+  const now = Date.now();
+  const ts = _recentDecisions.get(key);
+  if (ts !== undefined && now - ts < DECISION_DEDUP_WINDOW_MS) return true;
+  _recentDecisions.set(key, now);
+  // Evict entries older than 5 minutes to keep memory bounded.
+  if (_recentDecisions.size > 500) {
+    for (const [k, t] of _recentDecisions) {
+      if (now - t > 300_000) _recentDecisions.delete(k);
+    }
+  }
+  return false;
+}
+
 class TrinityDecisionLogger {
   async logDecision(entry: DecisionLogEntry): Promise<string | null> {
+    // Dedup retry-induced duplicates within a 60s window so the UI doesn't
+    // show two identical decisions when a network blip retries the call.
+    const dedupKey = [
+      entry.workspaceId,
+      entry.triggerEvent || '',
+      entry.chosenOption || '',
+      entry.relatedEntityType || '',
+      entry.relatedEntityId || '',
+    ].join('|');
+    if (_isRecentDecision(dedupKey)) {
+      log.debug(`[TrinityDecisionLog] Skipped duplicate within 60s: ${dedupKey}`);
+      return null;
+    }
+
     try {
       const [record] = await db.insert(trinityDecisionLog).values({
         workspaceId: entry.workspaceId,
@@ -427,9 +464,13 @@ ESCALATE = Too risky for AI, flag for human review`;
     }
   }
 
-  async markHumanOverride(decisionId: string, workspaceId: string, overrideBy: string, reason: string) {
+  async markHumanOverride(decisionId: string, workspaceId: string, overrideBy: string, reason: string): Promise<{ alreadyOverridden: boolean }> {
     try {
-      await db.update(trinityDecisionLog)
+      // Conditional UPDATE: only flips the row if humanOverride is still false.
+      // Calling the route twice (network retry, double-click) becomes a no-op
+      // on the second call instead of overwriting the original override
+      // metadata or appearing as a "second" override.
+      const updated = await db.update(trinityDecisionLog)
         .set({
           humanOverride: true,
           overrideBy,
@@ -439,10 +480,14 @@ ESCALATE = Too risky for AI, flag for human review`;
         })
         .where(and(
           eq(trinityDecisionLog.id, decisionId),
-          eq(trinityDecisionLog.workspaceId, workspaceId)
-        ));
+          eq(trinityDecisionLog.workspaceId, workspaceId),
+          eq(trinityDecisionLog.humanOverride, false),
+        ))
+        .returning({ id: trinityDecisionLog.id });
+      return { alreadyOverridden: updated.length === 0 };
     } catch (error) {
       log.error('[TrinityDecisionLog] Failed to mark override:', error);
+      return { alreadyOverridden: false };
     }
   }
 

@@ -2107,19 +2107,53 @@ router.post('/:id/accept', requireEmployee, async (req: AuthenticatedRequest, re
   try {
     const { id: shiftId } = req.params;
     const workspaceId = req.workspaceId;
-    if (!workspaceId) return res.status(401).json({ message: 'Workspace required' });
-    // Delegate to acknowledge flow — same business logic
-    const [updated] = await db.update(shifts)
-      .set({ status: 'confirmed', updatedAt: new Date() })
-      .where(and(
-        eq(shifts.id, shiftId),
-        eq(shifts.workspaceId, workspaceId),
-        sql`${shifts.status} IN ('published','assigned','open')`,
-      ))
-      .returning();
-    if (!updated) return res.status(404).json({ message: 'Shift not found or cannot be accepted' });
-    broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
-    res.json({ success: true, shift: updated });
+    const userId = req.user?.id;
+    if (!workspaceId || !userId) return res.status(401).json({ message: 'Workspace required' });
+
+    // Resolve the calling employee so we can verify they actually own this
+    // shift assignment. Without this check any officer in the workspace
+    // could accept any other officer's shift in the eligible statuses.
+    const callingEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
+    if (!callingEmployee) return res.status(404).json({ message: 'Employee record not found' });
+
+    // Atomic transition under a row lock: serialize concurrent /accept
+    // calls so the second one sees the post-confirm state and 409s
+    // instead of silently flipping back. Mirrors the pickup flow at
+    // shiftRoutes.ts:1827 (.for('update') lock pattern).
+    const result = await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ id: shifts.id, status: shifts.status, employeeId: shifts.employeeId })
+        .from(shifts)
+        .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+        .for('update')
+        .limit(1);
+      if (!current) return { kind: 'not_found' as const };
+
+      // Authorization: only the assigned officer can accept (or the
+      // marketplace pickup flow if status='open' — but that has its own
+      // /pickup endpoint at line 1789, not /accept).
+      if (current.employeeId !== callingEmployee.id) {
+        return { kind: 'forbidden' as const };
+      }
+      if (!['published', 'assigned', 'open'].includes(String(current.status))) {
+        return { kind: 'wrong_state' as const, status: current.status };
+      }
+
+      const [updated] = await tx.update(shifts)
+        .set({ status: 'confirmed', updatedAt: new Date() })
+        .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
+        .returning();
+      return { kind: 'ok' as const, updated };
+    });
+
+    if (result.kind === 'not_found') return res.status(404).json({ message: 'Shift not found' });
+    if (result.kind === 'forbidden') return res.status(403).json({ message: 'You are not assigned to this shift' });
+    if (result.kind === 'wrong_state') {
+      return res.status(409).json({ message: `Shift cannot be accepted in status '${result.status}'`, code: 'SHIFT_NOT_ACCEPTABLE' });
+    }
+
+    broadcastShiftUpdate(workspaceId, 'shift_updated', result.updated);
+    res.json({ success: true, shift: result.updated });
   } catch (err: any) {
     log.error('[ShiftRoutes] Accept shift failed:', err?.message);
     res.status(500).json({ message: sanitizeError(err) || 'Failed to accept shift' });

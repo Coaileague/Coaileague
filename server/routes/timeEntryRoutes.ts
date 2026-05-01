@@ -704,11 +704,22 @@ const router = Router();
       const id = (await import('crypto')).randomUUID();
       const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
 
-      // CATEGORY C — Genuine schema mismatch: employee_name, site_id, site_name, reason_code, reason_detail columns not in Drizzle schema for manual_clockin_overrides
+      // Schema-aligned INSERT: the manual_clockin_overrides table only has
+      // (id, workspace_id, employee_id, shift_id, override_type, reason,
+      //  metadata, created_at, ...). The site/officer-name/reason-code
+      //  detail goes into metadata jsonb instead of nonexistent columns.
+      const overrideMetadata = JSON.stringify({
+        employeeName,
+        siteId: siteId || null,
+        siteName: siteName || null,
+        reasonCode,
+        reasonDetail,
+      });
       await typedPoolExec(
-        `INSERT INTO manual_clockin_overrides (id, workspace_id, employee_id, employee_name, shift_id, site_id, site_name, reason_code, reason_detail, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())`,
-        [id, workspace.id, employee.id, employeeName, shiftId||null, siteId||null, siteName||null, reasonCode, reasonDetail]);
+        `INSERT INTO manual_clockin_overrides
+           (id, workspace_id, employee_id, shift_id, override_type, reason, metadata, created_at)
+         VALUES ($1, $2, $3, $4, 'manual', $5, $6::jsonb, NOW())`,
+        [id, workspace.id, employee.id, shiftId || null, reasonDetail, overrideMetadata]);
       
       const { platformEventBus } = await import('../services/platformEventBus');
       await platformEventBus.publish({

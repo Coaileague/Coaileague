@@ -51,6 +51,19 @@ export function validateEnvironment(): void {
     if (!process.env[v]) warned.push(v);
   }
 
+  // Trinity bot token must be present and well-formed (32+ char hex/base64)
+  // so internal Trinity-orchestrated calls can authenticate. Without this
+  // check, every x-trinity-bot-token request silently 401s and the failure
+  // mode looks like Trinity is "broken" instead of misconfigured.
+  const trinityBotToken = process.env.TRINITY_BOT_TOKEN;
+  if (!trinityBotToken) {
+    warned.push('TRINITY_BOT_TOKEN');
+  } else if (trinityBotToken.length < 32) {
+    console.warn(`WARNING: TRINITY_BOT_TOKEN is only ${trinityBotToken.length} chars; recommend 32+`);
+  } else if (!/^[A-Za-z0-9_+/=\-]+$/.test(trinityBotToken)) {
+    console.warn('WARNING: TRINITY_BOT_TOKEN contains unexpected characters; expected hex or base64url');
+  }
+
   const genericSeatOverage = process.env.STRIPE_PRICE_SEAT_OVERAGE;
   const missingSeatOverageTiers = SEAT_OVERAGE_TIER_VARS.filter((v) => !process.env[v]);
   if (missingSeatOverageTiers.length > 0) {
