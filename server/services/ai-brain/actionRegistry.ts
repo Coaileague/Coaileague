@@ -31,7 +31,6 @@ import {
   clients,
   notifications,
   workspaces,
-  employees,
 } from '@shared/schema';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { broadcastShiftUpdate, broadcastToWorkspace } from '../../websocket';

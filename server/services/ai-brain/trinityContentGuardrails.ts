@@ -124,6 +124,8 @@ const TRINITY_REFUSAL_RESPONSES: Record<ViolationType, string> = {
   self_harm: `I'm concerned about what you've shared. I'm not equipped to help with this, but please reach out to someone who can:\n\n📞 **National Suicide Prevention Lifeline**: 988\n📱 **Crisis Text Line**: Text HOME to 741741\n\nYou matter, and professional help is available.`,
   
   spam: `I couldn't understand that request. I'm Trinity - I help with business operations, scheduling, payroll, and personal growth. What would you like to work on today?`,
+
+  legal_advice: `I can't provide legal advice or make legal determinations on your behalf. I can share compliance reference material and operational guidance, but for questions about liability, contract interpretation, or legal conclusions, please consult qualified legal counsel. Want me to surface the relevant policy or compliance reference instead?`,
 };
 
 const ABUSE_WARNING_MESSAGES = {

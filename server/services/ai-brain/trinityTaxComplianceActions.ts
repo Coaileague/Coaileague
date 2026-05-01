@@ -29,9 +29,9 @@ function mkTaxAction(actionId: string, fn: (params: any) => Promise<any>): Actio
       try {
         // Use req.payload (ActionRequest contract) not req.params
         const data = await fn(req.payload || {});
-        return { success: true, data };
+        return { success: true, data, message: `${actionId} completed` };
       } catch (err: any) {
-        return { success: false, error: err?.message || 'Unknown error' };
+        return { success: false, error: err?.message || 'Unknown error', message: `${actionId} failed` };
       }
     }
   };

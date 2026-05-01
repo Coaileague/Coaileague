@@ -137,7 +137,7 @@ async function phase0_preflight() {
   const [client] = await db.select({ id: clients.id, companyName: clients.companyName })
     .from(clients).where(and(eq(clients.workspaceId, WS_ID), eq(clients.id, CLIENT_ID))).limit(1);
   rec({ name: 'Client Record', phase: 'PREFLIGHT', passed: !!client,
-    details: client ? client.companyName : 'NOT FOUND', severity: 'CRITICAL' });
+    details: client ? (client.companyName ?? 'UNNAMED') : 'NOT FOUND', severity: 'CRITICAL' });
 
   return { officerPool: officerRows.map(o => o.id) };
 }
@@ -197,7 +197,7 @@ async function phase1_schedule(officerPool: string[]) {
   rec({ name: 'Midnight-Crossing PM Shifts', phase: 'SCHEDULE', passed: midnightCrossings === SIM_DAYS,
     details: `${midnightCrossings} PM shifts cross midnight (18:00→06:00)`, severity: 'HIGH', value: midnightCrossings });
 
-  const [blockedCount] = await db.execute(sql`
+  const blockedCount = await db.execute(sql`
     SELECT COUNT(*) as n FROM shifts WHERE workspace_id = ${WS_ID} AND status = 'open'
     AND id LIKE 'sim-shift-%' AND notes LIKE '%BLOCKED%'
   `);

@@ -66,6 +66,12 @@ export interface AccConflictSignal {
   autoBlocked: boolean;
   requiresHumanReview: boolean;
   thalamicSignalId?: string;
+  /**
+   * Short human-readable description for logging/deliberation surfaces.
+   * Some emitters synthesize this from {@link contradictionDescription}; consumers may
+   * read either. Keep optional so older builders don't have to populate both fields.
+   */
+  description?: string;
 }
 
 export interface AccClearance {
@@ -245,12 +251,12 @@ class TrinityACCService {
               workspaceId: action.workspaceId || 'unknown',
               actionType: 'armed_post_assignment',
               actionDescription: `Assigning officer ${officerId} to armed post`,
-              whatIKnow: `Action type: ${action.actionType}. Officer: ${officerId}. Armed license conflict: ${conflict ? 'YES — ' + conflict.description : 'none detected'}.`,
+              whatIKnow: `Action type: ${action.actionType}. Officer: ${officerId}. Armed license conflict: ${conflict ? 'YES — ' + (conflict.description ?? conflict.contradictionDescription) : 'none detected'}.`,
               myOptions: conflict
                 ? 'Block assignment (license expired/missing) OR override with supervisor approval'
                 : 'Approve assignment (license valid) OR flag for manual review',
               myDecision: conflict
-                ? `BLOCKED: ${conflict.description}`
+                ? `BLOCKED: ${conflict.description ?? conflict.contradictionDescription}`
                 : 'APPROVED: Officer license valid for armed post assignment',
               confidenceScore: conflict ? 0.98 : 0.85,
               actionId: action.actionId,
@@ -595,6 +601,7 @@ class TrinityACCService {
       expectedState: details.expected,
       actualState: details.actual,
       contradictionDescription: details.description,
+      description: details.description,
       recommendedResolution: details.resolution,
       autoBlocked: severity === 'BLOCKING',
       requiresHumanReview: severity === 'BLOCKING',

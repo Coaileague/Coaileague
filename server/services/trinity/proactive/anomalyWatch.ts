@@ -58,6 +58,8 @@ export interface Anomaly {
   entityId: string;
   dedupKey: string;
   details?: Record<string, any>;
+  /** Optional short headline for notifications/dashboards. Some anomaly emitters provide a tighter title alongside the longer summary. */
+  title?: string;
 }
 
 export interface AnomalyWatchResult {
