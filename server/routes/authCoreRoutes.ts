@@ -22,11 +22,21 @@ import { isProduction } from '../lib/isProduction';
  */
 function authCookieOptions() {
   const inProd = isProduction();
+  
+  // PERMANENT FIX: Never set .coaileague.com domain when deployed on Railway dev/staging.
+  // Development copies production env vars (including RAILWAY_ENVIRONMENT_NAME=production),
+  // but APP_BASE_URL distinguishes the actual deployment target.
+  // Rule: if the app URL is on .railway.app, omit cookie domain entirely so the
+  // browser accepts the cookie on the Railway subdomain.
+  const appBaseUrl = process.env.APP_BASE_URL || '';
+  const isRailwayDeployment = appBaseUrl.includes('.up.railway.app');
+  
   const domain = process.env.SESSION_COOKIE_DOMAIN
-    || (inProd ? '.coaileague.com' : undefined);
+    || (inProd && !isRailwayDeployment ? '.coaileague.com' : undefined);
+  
   return {
     httpOnly: true,
-    secure: inProd,
+    secure: inProd || appBaseUrl.startsWith('https://'),
     sameSite: 'lax' as const,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
@@ -1184,8 +1194,10 @@ router.post("/api/auth/logout", async (req, res) => {
     // Clear cookies with the same domain they were set with so the
     // browser actually removes them on the production custom domain.
     const inProd = isProduction();
+    const _appBase = process.env.APP_BASE_URL || '';
+    const _onRailway = _appBase.includes('.up.railway.app');
     const domain = process.env.SESSION_COOKIE_DOMAIN
-      || (inProd ? '.coaileague.com' : undefined);
+      || (inProd && !_onRailway ? '.coaileague.com' : undefined);
     res.clearCookie("connect.sid", domain ? { path: '/', domain } : { path: '/' });
     res.clearCookie("auth_token", domain ? { path: '/', domain } : { path: '/' });
     res.json({ message: "Logout successful" });
