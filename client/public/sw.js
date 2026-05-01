@@ -1,5 +1,5 @@
 /**
- * CoAIleague Service Worker v4.8.0
+ * CoAIleague Service Worker v4.10.0
  * APK-ready with IndexedDB offline queue, SW update prompts, and enhanced caching.
  *
  * Canonical registration: navigator.serviceWorker.register('/sw.js').
@@ -21,9 +21,9 @@
  * - Cache versioning with automatic stale data purge on SW update
  */
 
-const CACHE_VERSION = 13;
-const CACHE_NAME = 'coaileague-v4.9';
-const STATIC_CACHE = 'coaileague-static-v4.9';
+const CACHE_VERSION = 14;
+const CACHE_NAME = 'coaileague-v4.10';
+const STATIC_CACHE = 'coaileague-static-v4.10';
 const API_CACHE = 'coaileague-api-v' + CACHE_VERSION;
 const offlineFallbackPage = '/offline.html';
 
@@ -63,6 +63,7 @@ const PRECACHE_ASSETS = [
   '/logo.svg',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
+  '/icons/notification-badge.png',
   // SPA route shells — explicitly precached so React Router can hydrate
   // them offline from the cached root bundle. Officers in parking garages,
   // remote posts, or dead zones get a real UI instead of a white screen.
@@ -105,7 +106,7 @@ function openDB() {
 }
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v4.8.0');
+  console.log('[SW] Installing service worker v4.10.0');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Caching app shell');
@@ -116,7 +117,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v4.8.0 — purging ALL old caches + standalone HTML bypass');
+  console.log('[SW] Activating service worker v4.10.0 — purging ALL old caches + standalone HTML bypass');
   event.waitUntil(
     Promise.all([
       // Delete ALL caches that aren't the current valid set — this purges any stale Vite module caches
@@ -155,7 +156,7 @@ self.addEventListener('activate', (event) => {
           // navigate() forces a full reload, bypassing any stale in-memory modules
           c.navigate(c.url).catch(() => {
             // fallback: postMessage if navigate fails
-            c.postMessage({ type: 'SW_UPDATED', version: 'v4.8.0' });
+            c.postMessage({ type: 'SW_UPDATED', version: 'v4.10.0' });
           });
         });
       });
@@ -502,7 +503,10 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || data.message,
     icon: data.icon || '/icons/icon-192x192.png',
-    badge: data.badge || '/icons/icon-72x72.png',
+    // Android renders the badge from the alpha channel only — a fully-opaque
+    // colored icon shows up as a white square in the status bar. Always fall
+    // back to the dedicated monochrome silhouette.
+    badge: data.badge || '/icons/notification-badge.png',
     image: data.image || undefined,
     vibrate: data.vibrate || getVibrationPattern(data.type),
     data: {
@@ -514,6 +518,8 @@ self.addEventListener('push', (event) => {
     },
     actions: data.actions || getNotificationActions(data.type),
     tag: data.tag || getNotificationTag(data.type, data.id),
+    // renotify=false + a stable tag means Android replaces the previous
+    // notification of the same kind instead of stacking another buzz on top.
     renotify: data.renotify || false,
     requireInteraction: data.requireInteraction || isHighPriority(data.type),
     silent: data.silent || false,
@@ -788,7 +794,7 @@ self.addEventListener('message', (event) => {
   }
 
   if (event.data?.type === 'GET_VERSION') {
-    event.source?.postMessage({ type: 'SW_VERSION', version: 'v4.8.0' });
+    event.source?.postMessage({ type: 'SW_VERSION', version: 'v4.10.0' });
   }
 
   if (event.data?.type === 'CLEAR_ALL_CACHES') {
@@ -825,4 +831,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[SW] Service Worker loaded - v4.8.0 (Unified sw.js + accept/decline/sign/clock_in handlers for NOTIFICATION_ACTION_MAP)');
+console.log('[SW] Service Worker loaded - v4.10.0 (Unified sw.js + accept/decline/sign/clock_in handlers for NOTIFICATION_ACTION_MAP)');

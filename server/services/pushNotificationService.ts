@@ -272,8 +272,8 @@ export async function sendUrgentAlert(
   const result = await sendPushToUser(userId, {
     title,
     body,
-    icon: '/icons/alert-192.png',
-    badge: '/icons/badge-72.png',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/notification-badge.png',
     tag: 'urgent-alert',
     data: { ...data, urgent: true },
     requireInteraction: true,
@@ -298,8 +298,8 @@ export async function sendShiftReminder(
   const result = await sendPushToUser(userId, {
     title: 'Upcoming Shift Reminder',
     body: `${shiftTitle} starts in ${minutesBefore} minutes at ${timeStr}`,
-    icon: '/icons/clock-192.png',
-    badge: '/icons/badge-72.png',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/notification-badge.png',
     tag: `shift-reminder-${startTime.getTime()}`,
     data: { type: 'shift_reminder', shiftTitle, startTime: startTime.toISOString() },
     actions: [
@@ -326,8 +326,8 @@ export async function sendApprovalRequest(
   const result = await sendPushToUser(userId, {
     title: titles[requestType],
     body: `${employeeName}: ${details}`,
-    icon: '/icons/approval-192.png',
-    badge: '/icons/badge-72.png',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/notification-badge.png',
     tag: `approval-${requestType}-${Date.now()}`,
     data: { type: 'approval_request', requestType, employeeName },
     actions: [
@@ -349,8 +349,8 @@ export async function sendComplianceAlert(
   const result = await sendPushToUser(userId, {
     title: urgency === 'urgent' ? 'Certification Expiring Soon!' : 'Certification Reminder',
     body: `${certificationName} expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}`,
-    icon: '/icons/warning-192.png',
-    badge: '/icons/badge-72.png',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/notification-badge.png',
     tag: `compliance-${certificationName}`,
     data: { type: 'compliance_alert', certificationName, daysUntilExpiry },
     requireInteraction: urgency === 'urgent',

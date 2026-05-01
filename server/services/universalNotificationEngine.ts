@@ -27,6 +27,27 @@ import { PLATFORM_NOTIFICATION_EXECUTIVE_ROLES, PLATFORM_NOTIFICATION_MANAGEMENT
 const log = createLogger('universalNotificationEngine');
 
 
+// Short-window in-memory throttle for identical pushes to the same user.
+// Prevents the "5 stacked Trinity buzzes in 30 seconds" spam pattern when
+// upstream events fan-out faster than NDS DB dedup can react.
+const recentPushHashes = new Map<string, number>();
+const PUSH_DEDUP_WINDOW_MS = 60 * 1000;
+
+function pushDedupHit(userId: string, title: string, body: string, type?: string): boolean {
+  const key = `${userId}::${type ?? 'notif'}::${title}::${body}`;
+  const now = Date.now();
+  const last = recentPushHashes.get(key);
+  if (last && now - last < PUSH_DEDUP_WINDOW_MS) return true;
+  recentPushHashes.set(key, now);
+  if (recentPushHashes.size > 1000) {
+    const cutoff = now - PUSH_DEDUP_WINDOW_MS;
+    for (const [k, ts] of recentPushHashes) {
+      if (ts < cutoff) recentPushHashes.delete(k);
+    }
+  }
+  return false;
+}
+
 async function deliverPushNotification(userId: string, title: string, body: string, options?: {
   type?: string;
   url?: string;
@@ -35,6 +56,15 @@ async function deliverPushNotification(userId: string, title: string, body: stri
   workspaceId?: string;
 }) {
   try {
+    if (pushDedupHit(userId, title, body, options?.type)) return;
+
+    // Stable tag: Android replaces a previous notification with the same tag
+    // instead of stacking another one. Keying on type+workspace+user yields a
+    // single rolling "you have N pending things" surface per category — much
+    // less spammy than the per-notification.id tags we used to mint.
+    const stableTag = options?.tag
+      || `coai-${options?.type ?? 'notif'}-${options?.workspaceId ?? 'sys'}-${userId}`;
+
     const { NotificationDeliveryService } = await import('./notificationDeliveryService');
     await NotificationDeliveryService.send({
       type: (options?.type as any) || 'system_alert',
@@ -47,7 +77,7 @@ async function deliverPushNotification(userId: string, title: string, body: stri
         body,
         type: options?.type,
         url: options?.url,
-        tag: options?.tag,
+        tag: stableTag,
         severity: options?.severity,
       }
     });
@@ -488,13 +518,17 @@ export class UniversalNotificationEngine {
           metadata: enrichedMetadata,
         });
         
-        // PUSH NOTIFICATION: Deliver to subscribed devices (non-blocking)
+        // PUSH NOTIFICATION: Deliver to subscribed devices (non-blocking).
+        // Tag is intentionally omitted unless caller provides pushTag — the
+        // delivery layer derives a stable per-(type,workspace,user) tag so
+        // Android replaces the previous notification of the same kind instead
+        // of stacking another buzz on top.
         deliverPushNotification(payload.userId, enrichedTitle, enrichedMessage, {
           type: payload.type,
           url: payload.actionUrl,
           severity: payload.severity,
           workspaceId: payload.workspaceId,
-          tag: payload.pushTag || `notif-${notification.id}`,
+          tag: payload.pushTag,
         });
       } else if (payload.targetRoles && payload.targetRoles.length > 0) {
         // RBAC: Send to all users with specified roles in workspace
@@ -579,7 +613,7 @@ export class UniversalNotificationEngine {
               url: payload.actionUrl,
               severity: payload.severity,
               workspaceId: payload.workspaceId,
-              tag: `notif-${notification.id}`,
+              tag: payload.pushTag,
             });
           }
         }
@@ -657,7 +691,7 @@ export class UniversalNotificationEngine {
               url: payload.actionUrl,
               severity: payload.severity,
               workspaceId: payload.workspaceId,
-              tag: `notif-${notification.id}`,
+              tag: payload.pushTag,
             });
           }
         }
