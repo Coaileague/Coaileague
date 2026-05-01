@@ -59,7 +59,7 @@ _(no other active sessions)_
 
 ### 2026-05-01 · claude-tenant-iso-LjP5K
 **Branch:** `claude/action-wiring-manifest-LjP5K`
-**Commit:** _(pending — will be appended after push)_
+**Commit:** `14e38e4`
 **What changed:** TRINITY.md §G triage — first batch.
 - **§G blockers reduced 55 → 19** (65% reduction).
 - **Files fixed (raw SQL UPDATE/DELETE now atomically tenant-scoped):**
