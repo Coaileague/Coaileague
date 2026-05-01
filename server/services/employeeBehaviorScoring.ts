@@ -204,7 +204,7 @@ export class EmployeeBehaviorScoringService {
   /**
    * Handle shift completed event
    */
-  private async handleShiftCompleted(employeeId: string, data?: any): Promise<void> {
+  private async handleShiftCompleted(employeeId: string, data?: unknown): Promise<void> {
     const [current] = await db.select()
       .from(employeeBehaviorScores)
       .where(eq(employeeBehaviorScores.employeeId, employeeId))
@@ -323,7 +323,7 @@ export class EmployeeBehaviorScoringService {
   /**
    * Handle offer accepted event
    */
-  private async handleOfferAccepted(employeeId: string, data?: any): Promise<void> {
+  private async handleOfferAccepted(employeeId: string, data?: unknown): Promise<void> {
     const [current] = await db.select()
       .from(employeeBehaviorScores)
       .where(eq(employeeBehaviorScores.employeeId, employeeId))

@@ -4855,10 +4855,10 @@ export async function registerAutonomousSchedulingBrainActions(): Promise<void> 
           userRole: request.userRole, platformRole: request.platformRole,
           entityType: 'schedule', entityId: null,
           success: result.success,
-          message: (result as any).summary || 'Historical patterns import complete',
+          message: (result as Record<string, unknown>).summary || 'Historical patterns import complete',
           changesAfter: result as Record<string, unknown>, durationMs: Date.now() - start,
         });
-        return createResult(request.actionId, result.success, (result as any).summary, result, start);
+        return createResult(request.actionId, result.success, (result as Record<string, unknown>).summary, result, start);
       } catch (error: unknown) {
         await logActionAudit({
           actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,

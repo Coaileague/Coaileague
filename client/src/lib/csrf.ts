@@ -68,7 +68,7 @@ export function clearCsrfToken(): void {
 /**
  * Check if a response indicates CSRF token failure
  */
-export function isCsrfError(response: Response, responseBody?: any): boolean {
+export function isCsrfError(response: Response, responseBody?: unknown): boolean {
   if (response.status !== 403) {
     return false;
   }

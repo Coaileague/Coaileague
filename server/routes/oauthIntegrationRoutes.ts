@@ -26,7 +26,7 @@ import { z } from 'zod';
 const log = createLogger('OauthIntegrationRoutes');
 
 
-const processingCallbacks = new Map<string, Promise<any>>();
+const processingCallbacks = new Map<string, Promise<unknown>>();
 
 // QuickBooks environment-aware base URL helper using centralized config
 const getQuickBooksApiBase = () => {

@@ -39,7 +39,7 @@ interface SchemaIssue {
   actual?: string;
   severity: 'critical' | 'warning';
   autoFixable: boolean;
-  drizzleTableRef?: any;
+  drizzleTableRef?: unknown;
 }
 
 interface ParityReport {

@@ -55,7 +55,7 @@ import * as fs from "fs";
 // ============================================================================
 
 const PORT_LOCK_FILE = '/tmp/coaileague-port-5000.lock';
-let serverInstance: any = null;
+let serverInstance: unknown = null;
 let isShuttingDown = false;
 
 // Detect Cloud Run environment - skip ALL port cleanup, bind immediately
@@ -678,7 +678,7 @@ app.use(compression({
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {

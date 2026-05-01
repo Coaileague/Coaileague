@@ -304,7 +304,7 @@ class TrinityDisciplinaryAnalyzer {
   }
 
   private async getIncidentContext(workspaceId: string, employeeId: string, siteId?: string, incidentDate?: string) {
-    const context: any = { wasOnSite: false, siteName: null, supervisorName: null, priorSiteIssues: false };
+    const context: Record<string, unknown> = { wasOnSite: false, siteName: null, supervisorName: null, priorSiteIssues: false };
     if (incidentDate && siteId) {
       // CATEGORY C — Raw SQL retained: LIMIT | Tables: time_entries, shifts | Verified: 2026-03-23
       const { rows } = await typedPool(`

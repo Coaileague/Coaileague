@@ -1243,7 +1243,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
     });
   }
 
-  private async logAction(sessionId: string, type: string, name: string, payload?: any): Promise<void> {
+  private async logAction(sessionId: string, type: string, name: string, payload?: unknown): Promise<void> {
     try {
       const [session] = await db.select().from(helpaiSessions).where(eq(helpaiSessions.id, sessionId)).limit(1);
       await db.insert(helpaiActionLog).values({
@@ -1715,7 +1715,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
     roomId: string,
     executorId: string,
     params?: { reason?: string; message?: string },
-  ): Promise<{ success: boolean; message: string; data?: any }> {
+  ): Promise<{ success: boolean; message: string; data?: unknown }> {
     log.info(`[${HELPAI.name}] Chatroom command: ${command} room=${roomId} executor=${executorId}`);
 
     try {
@@ -1764,7 +1764,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
   async executeCapability(
     capability: string,
     params: { employeeId: string; workspaceId: string; [key: string]: any },
-  ): Promise<{ success: boolean; message: string; data?: any }> {
+  ): Promise<{ success: boolean; message: string; data?: unknown }> {
     const { pool } = await import('../../db');
     const { employeeId, workspaceId } = params;
 

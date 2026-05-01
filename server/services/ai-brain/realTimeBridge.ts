@@ -55,7 +55,7 @@ export interface HelpAIPayload {
   type: 'message' | 'typing' | 'action_result' | 'suggestion';
   content?: string;
   actionId?: string;
-  result?: any;
+  result?: unknown;
   suggestions?: string[];
   timestamp: string;
 }
@@ -64,7 +64,7 @@ export interface SystemPayload {
   type: 'health' | 'alert' | 'maintenance' | 'update';
   severity?: 'info' | 'warning' | 'error' | 'critical';
   message: string;
-  data?: any;
+  data?: unknown;
   timestamp: string;
 }
 
@@ -91,7 +91,7 @@ class RealTimeBridgeService {
   }
 
   private initializeEventListeners() {
-    aiBrainEvents.on('workflow_created', (data: any) => {
+    aiBrainEvents.on('workflow_created', (data: Record<string, unknown>) => {
       this.broadcastWorkflowProgress({
         runId: data.runId,
         actionId: data.actionId,
@@ -101,7 +101,7 @@ class RealTimeBridgeService {
       });
     });
 
-    aiBrainEvents.on('workflow_started', (data: any) => {
+    aiBrainEvents.on('workflow_started', (data: Record<string, unknown>) => {
       this.broadcastWorkflowProgress({
         runId: data.runId,
         actionId: data.actionId,
@@ -112,7 +112,7 @@ class RealTimeBridgeService {
       });
     });
 
-    aiBrainEvents.on('workflow_completed', (data: any) => {
+    aiBrainEvents.on('workflow_completed', (data: Record<string, unknown>) => {
       this.broadcastWorkflowProgress({
         runId: data.runId,
         actionId: data.actionId,
@@ -123,7 +123,7 @@ class RealTimeBridgeService {
       });
     });
 
-    aiBrainEvents.on('workflow_failed', (data: any) => {
+    aiBrainEvents.on('workflow_failed', (data: Record<string, unknown>) => {
       this.broadcastWorkflowProgress({
         runId: data.runId,
         actionId: data.actionId,
@@ -133,7 +133,7 @@ class RealTimeBridgeService {
       });
     });
 
-    aiBrainEvents.on('trinity_command', (data: any) => {
+    aiBrainEvents.on('trinity_command', (data: Record<string, unknown>) => {
       this.broadcastMascot({
         type: data.type || 'command',
         content: data.content,
@@ -143,7 +143,7 @@ class RealTimeBridgeService {
       });
     });
 
-    aiBrainEvents.on('send_notification', (data: any) => {
+    aiBrainEvents.on('send_notification', (data: Record<string, unknown>) => {
       this.broadcastNotification({
         type: 'notification_update',
         notification: {
@@ -168,7 +168,7 @@ class RealTimeBridgeService {
     };
   }
 
-  private broadcast(channel: BroadcastChannel, data: any) {
+  private broadcast(channel: BroadcastChannel, data: Record<string, unknown>) {
     const subscribers = this.subscribers.get(channel);
     if (subscribers) {
       subscribers.forEach(callback => {
@@ -277,7 +277,7 @@ class RealTimeBridgeService {
     });
   }
 
-  sendSystemAlert(severity: 'info' | 'warning' | 'error' | 'critical', message: string, data?: any) {
+  sendSystemAlert(severity: 'info' | 'warning' | 'error' | 'critical', message: string, data?: unknown) {
     this.broadcastSystem({
       type: 'alert',
       severity,

@@ -101,7 +101,7 @@ const rootRouter = Router();
 // GET /health - Simple health check (for monitoring services like Render)
 rootRouter.get('/health', async (_req: Request, res: Response) => {
   const requestStart = Date.now();
-  const health: any = {
+  const health: Record<string, unknown> = {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
@@ -299,7 +299,7 @@ apiHealthRouter.get('/gateway', async (req: Request, res: Response) => {
 });
 
 // In-memory cache for health summary (reduces DB hits on frequently-polled endpoint)
-let healthSummaryCache: { data: any; timestamp: number } | null = null;
+let healthSummaryCache: { data: Record<string, unknown>; timestamp: number } | null = null;
 const HEALTH_CACHE_TTL = 30000; // 30 seconds
 
 // GET /api/health/summary - Overall health summary (all services)

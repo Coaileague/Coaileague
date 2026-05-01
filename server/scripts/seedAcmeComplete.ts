@@ -51,7 +51,7 @@ function dateAgo(days: number): string {
   return ago(days).split('T')[0];
 }
 
-async function q(sql: string, params?: any[]): Promise<void> {
+async function q(sql: string, params?: unknown[]): Promise<void> {
   try {
     await pool.query(sql, params);
   } catch (err: unknown) {

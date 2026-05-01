@@ -791,7 +791,7 @@ Generate a JSON response with this exact structure:
 Focus on: pending approvals that need attention, unsubmitted drafts reminders, rate vs IRS standard gaps, duplicate or unusual trips, high-mileage employees who may need a company vehicle, patterns worth noting.`;
 
       let recommendations: (string | number | boolean | null)[] = [];
-      let aiSummary: any = {};
+      let aiSummary: Record<string, unknown> = {};
       try {
         const aiResponse = await generateWithOpenAI({
           model: 'gpt-4o',

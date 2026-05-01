@@ -718,17 +718,17 @@ export interface IStorage {
   // ========================================================================
   // POLICIOS™ - POLICY & HANDBOOK MANAGEMENT
   // ========================================================================
-  createCompanyPolicy(policy: any): Promise<Record<string,unknown>>;
+  createCompanyPolicy(policy: Record<string, unknown>): Promise<Record<string,unknown>>;
   getCompanyPolicy(id: string, workspaceId: string): Promise<Record<string,unknown> | undefined>;
   getCompanyPolicies(workspaceId: string): Promise<Record<string,unknown>[]>;
   updateCompanyPolicy(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown> | undefined>;
   publishPolicy(id: string, workspaceId: string, publishedBy: string): Promise<Record<string,unknown> | undefined>;
   getPolicyAcknowledgments(policyId: string, workspaceId: string): Promise<Record<string,unknown>[]>;
-  createPolicyAcknowledgment(ack: any): Promise<Record<string,unknown>>;
+  createPolicyAcknowledgment(ack: Record<string, unknown>): Promise<Record<string,unknown>>;
   
   // ReportOS™ Monopolistic Features
   // KPI Alerts
-  createKpiAlert(alert: any): Promise<Record<string,unknown>>;
+  createKpiAlert(alert: Record<string, unknown>): Promise<Record<string,unknown>>;
   getKpiAlerts(workspaceId: string): Promise<Record<string,unknown>[]>;
   updateKpiAlert(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown>>;
   deleteKpiAlert(id: string, workspaceId: string): Promise<boolean>;
@@ -737,18 +737,18 @@ export interface IStorage {
   acknowledgeAlert(triggerId: string, userId: string): Promise<Record<string,unknown>>;
   
   // Benchmark Metrics
-  createBenchmarkMetric(metric: any): Promise<Record<string,unknown>>;
+  createBenchmarkMetric(metric: Record<string, unknown>): Promise<Record<string,unknown>>;
   getBenchmarkMetrics(workspaceId: string, periodType?: string): Promise<Record<string,unknown>[]>;
   
   // ========================================================================
   // TALENTOS™ - INTERNAL TALENT MARKETPLACE
   // ========================================================================
-  createInternalBid(bid: any): Promise<Record<string,unknown>>;
+  createInternalBid(bid: Record<string, unknown>): Promise<Record<string,unknown>>;
   getInternalBidById(id: string): Promise<Record<string,unknown> | undefined>;
   getInternalBids(workspaceId: string, filters?: { status?: string }): Promise<Record<string,unknown>[]>;
   updateInternalBid(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown> | undefined>;
   
-  createBidApplication(application: any): Promise<Record<string,unknown>>;
+  createBidApplication(application: Record<string, unknown>): Promise<Record<string,unknown>>;
   getBidApplication(id: string): Promise<Record<string,unknown> | undefined>;
   getBidApplicationsByBid(bidId: string, workspaceId?: string): Promise<Record<string,unknown>[]>;
   getBidApplicationsByEmployee(employeeId: string, workspaceId: string): Promise<Record<string,unknown>[]>;
@@ -757,17 +757,17 @@ export interface IStorage {
   // ========================================================================
   // TALENTOS™ - PERFORMANCE REVIEWS & CAREER PATHING
   // ========================================================================
-  createPerformanceReview(review: any): Promise<Record<string,unknown>>;
+  createPerformanceReview(review: Record<string, unknown>): Promise<Record<string,unknown>>;
   getPerformanceReview(id: string, workspaceId: string): Promise<Record<string,unknown> | undefined>;
   getPerformanceReviewsByEmployee(employeeId: string, workspaceId: string): Promise<Record<string,unknown>[]>;
   updatePerformanceReview(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown> | undefined>;
   
-  createRoleTemplate(template: any): Promise<Record<string,unknown>>;
+  createRoleTemplate(template: Record<string, unknown>): Promise<Record<string,unknown>>;
   getRoleTemplate(id: string, workspaceId: string): Promise<Record<string,unknown> | undefined>;
   getRoleTemplates(workspaceId: string): Promise<Record<string,unknown>[]>;
   updateRoleTemplate(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown> | undefined>;
   
-  createSkillGapAnalysis(analysis: any): Promise<Record<string,unknown>>;
+  createSkillGapAnalysis(analysis: Record<string, unknown>): Promise<Record<string,unknown>>;
   getSkillGapAnalysis(id: string, workspaceId: string): Promise<Record<string,unknown> | undefined>;
   getSkillGapAnalysesByEmployee(workspaceId: string, employeeId: string): Promise<Record<string,unknown>[]>;
   updateSkillGapAnalysis(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown> | undefined>;
@@ -775,18 +775,18 @@ export interface IStorage {
   // ========================================================================
   // ASSETOS™ - PHYSICAL RESOURCE ALLOCATION
   // ========================================================================
-  createAsset(asset: any): Promise<Record<string,unknown>>;
+  createAsset(asset: Record<string, unknown>): Promise<Record<string,unknown>>;
   getAsset(id: string, workspaceId: string): Promise<Record<string,unknown> | undefined>;
   getAssets(workspaceId: string, filters?: { status?: string }): Promise<Record<string,unknown>[]>;
   updateAsset(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown> | undefined>;
   
-  createAssetSchedule(schedule: any): Promise<Record<string,unknown>>;
+  createAssetSchedule(schedule: Record<string, unknown>): Promise<Record<string,unknown>>;
   getAssetSchedule(id: string, workspaceId: string): Promise<Record<string,unknown> | undefined>;
   getAssetSchedulesByAsset(assetId: string, workspaceId: string, startTime?: Date, endTime?: Date): Promise<Record<string,unknown>[]>;
   getAssetSchedulesByAssetAndDateRange(assetId: string, workspaceId: string, startDate: Date, endDate: Date): Promise<Record<string,unknown>[]>;
   updateAssetSchedule(id: string, workspaceId: string, data: Record<string, unknown>): Promise<Record<string,unknown> | undefined>;
   
-  createAssetUsageLog(log: any): Promise<Record<string,unknown>>;
+  createAssetUsageLog(log: Record<string, unknown>): Promise<Record<string,unknown>>;
   getAssetUsageLog(id: string, workspaceId: string): Promise<Record<string,unknown> | undefined>;
   getAssetUsageLogsByClient(workspaceId: string, clientId: string, startDate: Date, endDate: Date, status?: string): Promise<Record<string,unknown>[]>;
   getAssetUsageLogsByDateRange(workspaceId: string, startDate: Date, endDate: Date): Promise<Record<string,unknown>[]>;
@@ -819,7 +819,7 @@ export interface IStorage {
   // ========================================================================
   // SECURITY INCIDENTS - Mobile Worker Incident Reporting
   // ========================================================================
-  createSecurityIncident(incident: any): Promise<Record<string,unknown>>;
+  createSecurityIncident(incident: Record<string, unknown>): Promise<Record<string,unknown>>;
   getSecurityIncident(id: string): Promise<Record<string,unknown> | undefined>;
   getSecurityIncidentsByWorkspace(workspaceId: string): Promise<Record<string,unknown>[]>;
   getSecurityIncidentsByEmployee(workspaceId: string, employeeId: string): Promise<Record<string,unknown>[]>;
@@ -838,7 +838,7 @@ export interface IStorage {
   // ========================================================================
   // COMMOS™ - ORGANIZATION CHAT ROOMS & CHANNELS
   // ========================================================================
-  createOrganizationChatRoom(room: any): Promise<Record<string,unknown>>;
+  createOrganizationChatRoom(room: Record<string, unknown>): Promise<Record<string,unknown>>;
   getOrganizationChatRoom(id: string): Promise<Record<string,unknown> | undefined>;
   getOrganizationChatRoomsByWorkspace(workspaceId: string): Promise<Record<string,unknown>[]>;
   getAllOrganizationChatRooms(): Promise<Record<string,unknown>[]>; // Support staff only
@@ -847,11 +847,11 @@ export interface IStorage {
   liftOrganizationChatRoomSuspension(id: string): Promise<Record<string,unknown> | undefined>;
   
   // Channel operations
-  createOrganizationChatChannel(channel: any): Promise<Record<string,unknown>>;
+  createOrganizationChatChannel(channel: Record<string, unknown>): Promise<Record<string,unknown>>;
   getOrganizationChatChannelsByRoom(roomId: string): Promise<Record<string,unknown>[]>;
   
   // Room member operations
-  addOrganizationRoomMember(member: any): Promise<Record<string,unknown>>;
+  addOrganizationRoomMember(member: Record<string, unknown>): Promise<Record<string,unknown>>;
   getOrganizationRoomMembers(roomId: string): Promise<Record<string,unknown>[]>;
   removeOrganizationRoomMember(roomId: string, userId: string): Promise<boolean>;
   
@@ -866,7 +866,7 @@ export interface IStorage {
   getSupportConversationForExport(conversationId: string, workspaceId?: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date } | null>;
   
   // Export AI Communications room with messages and members
-  getCommRoomForExport(roomId: string): Promise<{ room: any; messages: ChatMessage[]; members: any[]; exportedAt: Date } | null>;
+  getCommRoomForExport(roomId: string): Promise<{ room: any; messages: ChatMessage[]; members: unknown[]; exportedAt: Date } | null>;
   
   // Export private DM conversation with DECRYPTED messages (requires authorization)
   getPrivateConversationForExport(conversationId: string, userId: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date; auditInfo: any } | null>;
@@ -875,7 +875,7 @@ export interface IStorage {
   // NOTIFICATIONS - REAL-TIME USER NOTIFICATIONS (Dual-Scope Model)
   // ========================================================================
   createNotification(notification: InsertNotification & { idempotencyKey?: string; targetRole?: string }): Promise<Notification>;
-  createUserScopedNotification(userId: string, type: string, title: string, message: string, metadata?: any): Promise<Notification>;
+  createUserScopedNotification(userId: string, type: string, title: string, message: string, metadata?: unknown): Promise<Notification>;
   getNotificationsByUser(userId: string, workspaceId: string, limit?: number, offset?: number): Promise<Notification[]>;
   getAllNotificationsForUser(userId: string, workspaceId?: string, limit?: number, offset?: number): Promise<Notification[]>;
   getUnreadNotificationCount(userId: string, workspaceId: string): Promise<number>;
@@ -1015,7 +1015,7 @@ export interface IStorage {
   getSupportSession(id: string): Promise<SupportSession | undefined>;
   getActiveSupportSessionForWorkspace(workspaceId: string): Promise<SupportSession | undefined>;
   getActiveSupportSessionByAdmin(adminUserId: string): Promise<SupportSession | undefined>;
-  endSupportSession(id: string, actionsSummary?: any[]): Promise<SupportSession | undefined>;
+  endSupportSession(id: string, actionsSummary?: unknown[]): Promise<SupportSession | undefined>;
   setOrgFrozen(workspaceId: string, frozen: boolean, reason?: string): Promise<boolean>;
   isOrgFrozen(workspaceId: string): Promise<{ frozen: boolean; reason?: string; sessionId?: string }>;
 
@@ -1284,12 +1284,12 @@ export class DatabaseStorage implements IStorage {
         SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()
       `);
       
-      if (!(result as any).rows || (result as any).rows.length === 0) {
+      if (!result.rows || result.rows.length === 0) {
         return null;
       }
       
       // The sess column contains the session data as JSON
-      const sessionData = (result as any).rows[0].sess as {passport?: {user?: string}};
+      const sessionData = result.rows[0].sess as {passport?: {user?: string}};
       return sessionData;
     } catch (error) {
       log.error('[SECURITY] Failed to fetch session:', error);
@@ -1389,7 +1389,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Helper method to seed default expense categories — accepts optional tx for atomic workspace creation
-  private async seedDefaultExpenseCategories(workspaceId: string, tx?: any): Promise<void> {
+  private async seedDefaultExpenseCategories(workspaceId: string, tx?: unknown): Promise<void> {
     const dbHandle = tx || db;
     const defaultCategories = [
       { name: 'Mileage', description: 'Vehicle mileage reimbursement' },
@@ -1449,7 +1449,7 @@ export class DatabaseStorage implements IStorage {
       .select({ blob: workspaces.themeConfigBlob })
       .from(workspaces)
       .where(eq(workspaces.id, workspaceId));
-    const blob = (ws?.blob || {}) as Record<string, any>;
+    const blob = (ws?.blob || {}) as Record<string, unknown>;
     if (!blob.mode && !blob.primaryColor) return null;
     return { ...blob, workspaceId } as WorkspaceTheme;
   }
@@ -3808,7 +3808,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMileageLog(id: string, workspaceId: string, data: Partial<InsertMileageLog>): Promise<MileageLog | undefined> {
-    const updateData: any = { ...data, updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
     if (data.miles || data.ratePerMile) {
       const existing = await this.getMileageLog(id, workspaceId);
       const miles = parseFloat(String(data.miles || existing?.miles || 0));
@@ -5106,7 +5106,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateEscalationTicketStatus(id: string, status: string, resolvedBy?: string): Promise<EscalationTicket | undefined> {
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       status: status as any,
       updatedAt: new Date()
     };
@@ -5443,7 +5443,7 @@ export class DatabaseStorage implements IStorage {
   // POLICIOS™ - POLICY & HANDBOOK MANAGEMENT
   // ============================================================================
   
-  async createCompanyPolicy(policy: any) {
+  async createCompanyPolicy(policy: Record<string, unknown>) {
     const { companyPolicies } = await import("@shared/schema");
     const [created] = await db.insert(companyPolicies).values(policy).returning();
     return created;
@@ -5516,7 +5516,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(policyAcknowledgments.acknowledgedAt));
   }
   
-  async createPolicyAcknowledgment(ack: any) {
+  async createPolicyAcknowledgment(ack: Record<string, unknown>) {
     const { policyAcknowledgments } = await import("@shared/schema");
     const [created] = await db.insert(policyAcknowledgments).values(ack).returning();
     return created;
@@ -5527,7 +5527,7 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
   
   // KPI Alerts
-  async createKpiAlert(alert: any): Promise<Record<string,unknown>> {
+  async createKpiAlert(alert: Record<string, unknown>): Promise<Record<string,unknown>> {
     const { kpiAlerts } = await import("@shared/schema");
     const [created] = await db.insert(kpiAlerts).values(alert).returning();
     return created;
@@ -5636,7 +5636,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Benchmark Metrics
-  async createBenchmarkMetric(metric: any): Promise<Record<string,unknown>> {
+  async createBenchmarkMetric(metric: Record<string, unknown>): Promise<Record<string,unknown>> {
     const { benchmarkMetrics } = await import("@shared/schema");
     const [created] = await db.insert(benchmarkMetrics).values(metric).returning();
     return created;
@@ -5716,7 +5716,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Approval Steps
-  async createApprovalStep(step: any): Promise<Record<string,unknown>> {
+  async createApprovalStep(step: Record<string, unknown>): Promise<Record<string,unknown>> {
     const { reportApprovalSteps } = await import("@shared/schema");
     const [created] = await db.insert(reportApprovalSteps).values(step).returning();
     return created;
@@ -5780,13 +5780,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Locked Report Records
-  async createLockedReportRecord(record: any): Promise<Record<string,unknown>> {
+  async createLockedReportRecord(record: Record<string, unknown>): Promise<Record<string,unknown>> {
     const { lockedReportRecords } = await import("@shared/schema");
     const [created] = await db.insert(lockedReportRecords).values(record).returning();
     return created;
   }
   
-  async getLockedReportRecords(workspaceId: string, filters?: any): Promise<Record<string,unknown>[]> {
+  async getLockedReportRecords(workspaceId: string, filters?: unknown): Promise<Record<string,unknown>[]> {
     const { lockedReportRecords } = await import("@shared/schema");
     const conditions = [eq(lockedReportRecords.workspaceId, workspaceId)];
     
@@ -5835,7 +5835,7 @@ export class DatabaseStorage implements IStorage {
   // TALENTOS™ - INTERNAL TALENT MARKETPLACE
   // ============================================================================
   
-  async createInternalBid(bid: any): Promise<Record<string,unknown>> {
+  async createInternalBid(bid: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [created] = await db.insert(internalBids).values(bid).returning();
     return created;
   }
@@ -5874,7 +5874,7 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   
-  async createBidApplication(application: any): Promise<Record<string,unknown>> {
+  async createBidApplication(application: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [created] = await db.insert(bidApplications).values(application).returning();
     return created;
   }
@@ -5925,7 +5925,7 @@ export class DatabaseStorage implements IStorage {
   // TALENTOS™ - ROLE TEMPLATES & CAREER PATHING
   // ============================================================================
   
-  async createRoleTemplate(template: any): Promise<Record<string,unknown>> {
+  async createRoleTemplate(template: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [created] = await db.insert(roleTemplates).values(template).returning();
     return created;
   }
@@ -5956,7 +5956,7 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   
-  async createSkillGapAnalysis(analysis: any): Promise<Record<string,unknown>> {
+  async createSkillGapAnalysis(analysis: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [created] = await db.insert(skillGapAnalyses).values(analysis).returning();
     return created;
   }
@@ -5994,7 +5994,7 @@ export class DatabaseStorage implements IStorage {
   // ASSETOS™ - PHYSICAL RESOURCE ALLOCATION
   // ============================================================================
   
-  async createAsset(asset: any): Promise<Record<string,unknown>> {
+  async createAsset(asset: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [created] = await db.insert(assets).values(asset).returning();
     return created;
   }
@@ -6029,7 +6029,7 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   
-  async createAssetSchedule(schedule: any): Promise<Record<string,unknown>> {
+  async createAssetSchedule(schedule: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [created] = await db.insert(assetSchedules).values(schedule).returning();
     return created;
   }
@@ -6074,7 +6074,7 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   
-  async createAssetUsageLog(log: any): Promise<Record<string,unknown>> {
+  async createAssetUsageLog(log: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [created] = await db.insert(assetUsageLogs).values(log).returning();
     return created;
   }
@@ -6132,7 +6132,7 @@ export class DatabaseStorage implements IStorage {
   // SECURITY INCIDENTS - Mobile Worker Incident Reporting
   // ============================================================================
   
-  async createSecurityIncident(incident: any): Promise<Record<string,unknown>> {
+  async createSecurityIncident(incident: Record<string, unknown>): Promise<Record<string,unknown>> {
     const { securityIncidents } = await import("@shared/schema");
     const [created] = await db
       .insert(securityIncidents)
@@ -6506,7 +6506,7 @@ export class DatabaseStorage implements IStorage {
   // COMMOS™ - ORGANIZATION CHAT ROOMS & CHANNELS
   // ============================================================================
   
-  async createOrganizationChatRoom(room: any): Promise<Record<string,unknown>> {
+  async createOrganizationChatRoom(room: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [result] = await db.insert(organizationChatRooms).values(room).returning();
     return result;
   }
@@ -6565,7 +6565,7 @@ export class DatabaseStorage implements IStorage {
     return room;
   }
   
-  async createOrganizationChatChannel(channel: any): Promise<Record<string,unknown>> {
+  async createOrganizationChatChannel(channel: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [result] = await db.insert(organizationChatChannels).values(channel).returning();
     return result;
   }
@@ -6574,7 +6574,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(organizationChatChannels).where(eq(organizationChatChannels.roomId, roomId));
   }
   
-  async addOrganizationRoomMember(member: any): Promise<Record<string,unknown>> {
+  async addOrganizationRoomMember(member: Record<string, unknown>): Promise<Record<string,unknown>> {
     const [result] = await db.insert(organizationRoomMembers).values(member).returning();
     return result;
   }
@@ -7185,7 +7185,7 @@ export class DatabaseStorage implements IStorage {
 
   async checkDmAccessAuthorization(conversationId: string, userId: string): Promise<{
     authorized: boolean;
-    auditRequest?: any;
+    auditRequest?: unknown;
     reason?: string;
   }> {
     const activeRequest = await db
@@ -7398,7 +7398,7 @@ export class DatabaseStorage implements IStorage {
     type: string,
     title: string,
     message: string,
-    metadata?: any
+    metadata?: unknown
   ): Promise<Notification> {
     const [notification] = await db
       .insert(notifications)
@@ -8911,7 +8911,7 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
-  async endSupportSession(id: string, actionsSummary?: any[]): Promise<SupportSession | undefined> {
+  async endSupportSession(id: string, actionsSummary?: unknown[]): Promise<SupportSession | undefined> {
     const [updated] = await db
       .update(supportSessions)
       .set({
@@ -8992,9 +8992,9 @@ export class DatabaseStorage implements IStorage {
     return rows.map(r => ({
       ...r,
       adminUserId: r.userId,
-      sessionId: (r as any).metadata?.sessionId,
-      severity: (r as any).metadata?.severity,
-      action: (r as any).metadata?.action,
+      sessionId: (r as Record<string, unknown>).metadata?.sessionId,
+      severity: (r as Record<string, unknown>).metadata?.severity,
+      action: (r as Record<string, unknown>).metadata?.action,
       timestamp: r.createdAt,
     })) as any[];
   }

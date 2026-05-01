@@ -234,7 +234,7 @@ async function run() {
       WHERE table_name = ${table}
       AND table_schema = 'public'
     `);
-    const exists = Number(((result as any).rows[0] as Record<string, unknown>).count) > 0;
+    const exists = Number(((result as Record<string, unknown>).rows[0] as Record<string, unknown>).count) > 0;
     console.log(`  ${exists ? '✓' : '✗'} ${table}`);
   }
 
@@ -256,7 +256,7 @@ async function run() {
       AND column_name = ${col}
       AND table_schema = 'public'
     `);
-    const exists = Number(((result as any).rows[0] as Record<string, unknown>).count) > 0;
+    const exists = Number(((result as Record<string, unknown>).rows[0] as Record<string, unknown>).count) > 0;
     console.log(`  ${exists ? '✓' : '✗'} ${table}.${col}`);
   }
 

@@ -70,7 +70,7 @@ interface ScenarioResult {
   scenario: string;
   passed: boolean;
   details: string;
-  data?: any;
+  data?: unknown;
 }
 
 export async function runShiftBotSimulation(): Promise<{

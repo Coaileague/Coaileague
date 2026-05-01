@@ -131,7 +131,7 @@ type WebSocketBroadcaster = (event: {
   conversationId?: string;
   workspaceId?: string;
   userId?: string;
-  payload: any;
+  payload: Record<string, unknown>;
 }) => void;
 
 // ============================================================================
@@ -170,7 +170,7 @@ interface BatchedEvent {
     conversationId?: string;
     workspaceId?: string;
     userId?: string;
-    payload: any;
+    payload: Record<string, unknown>;
   };
   count: number;
   firstAt: number;
@@ -322,7 +322,7 @@ class ChatServerHubClass {
     conversationId?: string;
     workspaceId?: string;
     userId?: string;
-    payload: any;
+    payload: Record<string, unknown>;
   }): void {
     const key = `${event.type}:${event.conversationId || ''}:${event.userId || ''}`;
     const now = Date.now();

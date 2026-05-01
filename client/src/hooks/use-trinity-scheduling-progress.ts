@@ -98,7 +98,7 @@ export interface SchedulingProgressStep {
     name: string;
     score: number;
   };
-  shift?: any;
+  shift?: unknown;
   businessMetrics?: {
     totalRevenue: number;
     totalCost: number;

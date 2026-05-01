@@ -109,7 +109,7 @@ export class GustoService {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     endpoint: string,
     accessToken: string,
-    body?: any,
+    body?: unknown,
     requestId?: string
   ): Promise<T> {
     const url = `${GUSTO_API_BASE}${endpoint}`;

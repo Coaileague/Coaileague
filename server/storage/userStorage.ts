@@ -7,5 +7,5 @@ export const getUser = (id: string) => storage.getUser(id);
 export const getUserByEmail = (email: string) => storage.getUserByEmail(email);
 export const getUserByUsernameOrEmail = (usernameOrEmail: string) =>
   storage.getUserByUsernameOrEmail(usernameOrEmail);
-export const upsertUser = (data: any) => storage.upsertUser(data);
-export const updateUser = (id: string, data: any) => storage.updateUser(id, data);
+export const upsertUser = (data: Record<string, unknown>) => storage.upsertUser(data);
+export const updateUser = (id: string, data: Record<string, unknown>) => storage.updateUser(id, data);

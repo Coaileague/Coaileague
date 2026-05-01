@@ -50,7 +50,7 @@ const CATEGORIES = ["radio", "vehicle", "weapon", "uniform", "tool", "technology
 const STATUSES = ["available", "assigned", "maintenance", "retired", "lost"];
 const VALID_CONDITIONS = ["new", "excellent", "good", "fair", "poor", "damaged"] as const;
 
-function EquipmentForm({ item, onClose }: { item?: any; onClose: () => void }) {
+function EquipmentForm({ item, onClose }: { item?: unknown; onClose: () => void }) {
   const { toast } = useToast();
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;

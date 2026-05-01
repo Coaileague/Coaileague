@@ -372,7 +372,7 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
     log.info(`[TrinityRevenue] Created ${createdEntryIds.length} time entries, skipped ${entriesSkipped}`);
 
     // Run billing for the week period
-    let billingResult: any = null;
+    let billingResult: unknown = null;
     try {
       billingResult = await generateWeeklyInvoices(workspaceId, weekEnd, 7);
     } catch (billErr: unknown) {
@@ -381,7 +381,7 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
     }
 
     // Run payroll for the week period
-    let payrollResult: any = null;
+    let payrollResult: unknown = null;
     try {
       payrollResult = await PayrollAutomationEngine.processAutomatedPayroll(
         workspaceId,

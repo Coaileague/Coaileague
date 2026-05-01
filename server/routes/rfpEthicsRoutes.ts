@@ -85,7 +85,7 @@ rfpEthicsRouter.get("/ethics/reports", requireAuth, ensureWorkspaceAccess, async
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM anonymous_reports WHERE (workspace_id = $1 OR workspace_id IS NULL)`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (status) { query += ` AND status = $2`; params.push(status); }
     query += ` ORDER BY created_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     res.json({ reports: await q(query, params) });
@@ -109,7 +109,7 @@ rfpEthicsRouter.get("/rfp", requireAuth, ensureWorkspaceAccess, async (req: Auth
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM rfp_documents WHERE workspace_id = $1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (status) { query += ` AND status = $2`; params.push(status); }
     query += ` ORDER BY created_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     res.json({ rfps: await q(query, params) });
@@ -181,7 +181,7 @@ rfpEthicsRouter.get("/coverage-marketplace", requireAuth, ensureWorkspaceAccess,
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM shift_coverage_claims WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (status) { query += ` AND status=$2`; params.push(status); }
     query += ` ORDER BY created_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     res.json({ shifts: await q(query, params) });

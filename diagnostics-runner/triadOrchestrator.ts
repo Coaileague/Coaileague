@@ -85,7 +85,7 @@ export class TriadOrchestrator {
     if (this.config.parallel) {
       console.log('[Orchestrator] Running crawlers in PARALLEL mode...');
       
-      const promises: Promise<any>[] = [];
+      const promises: Promise<unknown>[] = [];
       
       if (this.config.mode === 'full-triad' || this.config.mode === 'ui-only') {
         const uiCrawler = new UICrawler({

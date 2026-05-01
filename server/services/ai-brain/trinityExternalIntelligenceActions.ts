@@ -19,7 +19,7 @@ import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityExternalIntelligenceActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,
@@ -133,7 +133,7 @@ export function registerExternalIntelligenceActions() {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,precipitation_probability_max,windspeed_10m_max,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3`;
     const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!resp.ok) throw new Error(`OpenMeteo API error: ${resp.status}`);
-    const data: any = await resp.json();
+    const data: Record<string, unknown> = await resp.json();
 
     const daily = data.daily;
     const days = (daily?.time || []).map((date: string, i: number) => {

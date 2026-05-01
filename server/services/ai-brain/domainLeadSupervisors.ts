@@ -75,7 +75,7 @@ export interface DomainTask {
   workspaceId?: string;
   status: 'pending' | 'assigned' | 'executing' | 'completed' | 'failed' | 'escalated';
   assignedSubagent?: string;
-  result?: any;
+  result?: unknown;
   error?: string;
   createdAt: Date;
   completedAt?: Date;
@@ -83,7 +83,7 @@ export interface DomainTask {
 
 export interface TaskResult {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   escalated?: boolean;
   humanApprovalNeeded?: boolean;
@@ -537,7 +537,7 @@ class DomainLeadSupervisorService {
     domain: SupervisorDomain,
     action: string,
     payload: Record<string, unknown>,
-  ): Promise<{ success: boolean; data?: any; error?: string; confidence?: number } | null> {
+  ): Promise<{ success: boolean; data?: unknown; error?: string; confidence?: number } | null> {
 
     // ── data_ops / generate_faq_suggestion ──────────────────────────────
     if (domain === 'data_ops' && action === 'generate_faq_suggestion') {
@@ -667,7 +667,7 @@ class DomainLeadSupervisorService {
     action: string,
     payload: Record<string, unknown>,
     subagent: SubagentConfig
-  ): Promise<{ success: boolean; data?: any; error?: string; confidence?: number }> {
+  ): Promise<{ success: boolean; data?: unknown; error?: string; confidence?: number }> {
     const prompt = `
 You are the ${subagent.name} subagent operating under the ${domain} domain supervisor.
 

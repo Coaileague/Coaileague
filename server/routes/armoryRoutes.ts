@@ -30,6 +30,7 @@ import { hasManagerAccess, type AuthenticatedRequest } from '../rbac';
 import { logActionAudit } from '../services/ai-brain/actionAuditLogger';
 import { sanitizeError } from '../middleware/errorHandler';
 import { createLogger } from '../lib/logger';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 
 const log = createLogger('ArmoryRoutes');
 

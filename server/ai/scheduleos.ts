@@ -288,8 +288,8 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
   private async constraintSolver(
     employees: EmployeeIntelligence[],
     shiftRequirements: ScheduleRequest['shiftRequirements'],
-    existingShifts: any[],
-    jobSites: any[]
+    existingShifts: unknown[],
+    jobSites: unknown[]
   ): Promise<{
     assignments: Array<{
       employeeId: string;
@@ -350,8 +350,8 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
     employee: EmployeeIntelligence,
     shift: ScheduleRequest['shiftRequirements'][0],
     employeeHours: Map<string, number>,
-    existingShifts: any[],
-    jobSites: any[]
+    existingShifts: unknown[],
+    jobSites: unknown[]
   ): {
     feasible: boolean;
     totalScore: number;
@@ -601,7 +601,7 @@ Analyze the solution quality and provide:
           .where(eq(employeeAvailability.employeeId, emp.id));
 
         // Build availability map with time windows
-        const availabilityMap: any = {
+        const availabilityMap: Record<string, unknown> = {
           monday: { available: false },
           tuesday: { available: false },
           wednesday: { available: false },
@@ -805,7 +805,7 @@ Analyze the solution quality and provide:
   /**
    * GET JOB SITE DATA FOR LOCATION-BASED ASSIGNMENT
    */
-  private async getJobSiteData(clientIds: string[], workspaceId: string): Promise<any[]> {
+  private async getJobSiteData(clientIds: string[], workspaceId: string): Promise<Record<string,unknown>[]> {
     if (clientIds.length === 0) {
       return await db.select().from(clients).where(eq(clients.workspaceId, workspaceId));
     }
@@ -827,8 +827,8 @@ Analyze the solution quality and provide:
   private buildIntelligentSchedulingPrompt(
     employeeIntelligence: EmployeeIntelligence[],
     shiftRequirements: ScheduleRequest['shiftRequirements'],
-    existingShifts: any[],
-    jobSites: any[]
+    existingShifts: unknown[],
+    jobSites: unknown[]
   ): string {
     return `
 You are Trinity Schedule, the world's most advanced AI workforce scheduling system. Generate an optimal schedule using comprehensive employee intelligence data.

@@ -1784,7 +1784,7 @@ export async function amendPayrollEntry(
     netPay?: string;
     reason: string;
   }
-): Promise<{ success: boolean; originalEntry?: any; amendedEntry?: any; error?: string }> {
+): Promise<{ success: boolean; originalEntry?: unknown; amendedEntry?: unknown; error?: string }> {
   try {
     const [entry] = await db.select().from(payrollEntries)
       .where(and(eq(payrollEntries.id, entryId), eq(payrollEntries.workspaceId, workspaceId)))

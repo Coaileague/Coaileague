@@ -44,7 +44,7 @@ export type StepAction =
   | { type: 'file_move'; source: string; dest: string }
   | { type: 'search'; path: string; pattern: string; filePattern?: string }
   | { type: 'shell'; command: string; cwd?: string }
-  | { type: 'http_request'; url: string; method: string; body?: any; headers?: Record<string, string> }
+  | { type: 'http_request'; url: string; method: string; body?: unknown; headers?: Record<string, string> }
   | { type: 'db_query'; query: string; params?: unknown[] }
   | { type: 'notify'; title: string; message: string; type: 'info' | 'success' | 'warning' | 'error' }
   | { type: 'wait'; duration: number }
@@ -55,7 +55,7 @@ export interface StepCondition {
   path?: string;
   envVar?: string;
   stepId?: string;
-  expectedValue?: any;
+  expectedValue?: unknown;
   handler?: string;
 }
 
@@ -65,9 +65,9 @@ export interface StepResult {
   startedAt: Date;
   completedAt?: Date;
   duration?: number;
-  output?: any;
+  output?: unknown;
   error?: string;
-  rollbackData?: any;
+  rollbackData?: unknown;
 }
 
 export interface WorkflowDefinition {
@@ -97,7 +97,7 @@ class AIBrainWorkflowExecutor {
   private static instance: AIBrainWorkflowExecutor;
   private workflows: Map<string, WorkflowDefinition> = new Map();
   private executions: Map<string, WorkflowExecution> = new Map();
-  private customHandlers: Map<string, (params: any, context: any) => Promise<unknown>> = new Map();
+  private customHandlers: Map<string, (params: Record<string, unknown>, context: Record<string, unknown>) => Promise<unknown>> = new Map();
 
   static getInstance(): AIBrainWorkflowExecutor {
     if (!this.instance) {
@@ -136,7 +136,7 @@ class AIBrainWorkflowExecutor {
 
   registerCustomHandler(
     name: string, 
-    handler: (params: any, context: any) => Promise<unknown>
+    handler: (params: Record<string, unknown>, context: Record<string, unknown>) => Promise<unknown>
   ): void {
     this.customHandlers.set(name, handler);
     log.info(`[WorkflowExecutor] Registered custom handler: ${name}`);

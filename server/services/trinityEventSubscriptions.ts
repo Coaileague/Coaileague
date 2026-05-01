@@ -910,7 +910,7 @@ export function initializeTrinityEventSubscriptions(): void {
           const { syncInvoiceToQuickBooks } = await import('./quickbooksClientBillingSync');
           const result = await syncInvoiceToQuickBooks(invoiceId);
           if (result.success) {
-            log.info(`[TrinityEvents] QB invoice sync succeeded — invoiceId=${invoiceId}, qboId=${(result as any).qboId}`);
+            log.info(`[TrinityEvents] QB invoice sync succeeded — invoiceId=${invoiceId}, qboId=${(result as Record<string, unknown>).qboId}`);
           } else {
             log.error(`[TrinityEvents] QB invoice sync failed — invoiceId=${invoiceId}: ${result.error}`);
             // Notify org owner of sync failure (non-blocking)

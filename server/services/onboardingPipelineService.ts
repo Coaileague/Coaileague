@@ -339,7 +339,7 @@ class OnboardingPipelineService {
    * Update pipeline status
    */
   async updatePipelineStatus(workspaceId: string, status: PipelineStatus, reason?: string): Promise<Workspace> {
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       pipelineStatus: status,
       pipelineStatusUpdatedAt: new Date(),
       updatedAt: new Date(),
@@ -712,7 +712,7 @@ Generate personalized onboarding tasks for this organization.`;
   /**
    * Process system events that may auto-complete onboarding tasks
    */
-  async processSystemEvent(workspaceId: string, eventType: string, eventData?: any): Promise<void> {
+  async processSystemEvent(workspaceId: string, eventType: string, eventData?: unknown): Promise<void> {
     const tasks = await db.query.orgOnboardingTasks.findMany({
       where: and(
         eq(orgOnboardingTasks.workspaceId, workspaceId),
@@ -742,7 +742,7 @@ Generate personalized onboarding tasks for this organization.`;
     }
   }
 
-  private validateRule(rule: string, data?: any): boolean {
+  private validateRule(rule: string, data?: unknown): boolean {
     if (!rule || !data) return true;
 
     const match = rule.match(/(\w+)\s*(>=|<=|==|>|<)\s*(\d+)/);

@@ -359,7 +359,7 @@ export class IncidentRoutingService {
     resolvedBy?: string,
     resolutionNotes?: string
   ) {
-    const updateData: any = { status, updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { status, updatedAt: new Date() };
     
     if (status === 'resolved' || status === 'closed') {
       updateData.resolvedAt = new Date();

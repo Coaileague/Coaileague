@@ -33,7 +33,7 @@ const log = createLogger('trinityHiringPipelineActions');
 
 const createResult = (
   actionId: string, success: boolean, message: string,
-  data: any, start: number
+  data: Record<string, unknown>, start: number
 ): ActionResult => ({
   actionId, success, message, data,
   executionTimeMs: Date.now() - start,

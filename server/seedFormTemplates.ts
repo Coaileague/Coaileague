@@ -390,7 +390,7 @@ export const systemFormTemplates = {
 };
 
 // Helper to get templates for a specific business category
-export function getTemplatesForCategory(category: string): any[] {
+export function getTemplatesForCategory(category: string): unknown[] {
   // Always include general templates
   const templates = [...(systemFormTemplates.general || [])];
   

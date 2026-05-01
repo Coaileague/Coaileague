@@ -157,7 +157,7 @@ interface CreateProposalInput {
   content: string;
   templateId?: string;
   services?: unknown[];
-  billingTerms?: any;
+  billingTerms?: unknown;
   totalValue?: number;
   effectiveDate?: string;
   termEndDate?: string;

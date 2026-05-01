@@ -36,7 +36,7 @@ async function generateIncidentNumberInTx(tx: any, workspaceId: string): Promise
     WHERE workspace_id = ${workspaceId} AND incident_number LIKE ${`${prefix}%`}
     ORDER BY incident_number DESC LIMIT 1 FOR UPDATE
   `);
-  const rows = (result as any).rows || [];
+  const rows = (result as Record<string, unknown>).rows || [];
   let seq = 1;
   if (rows.length > 0) {
     const lastNum = rows[0].incident_number;
@@ -204,7 +204,7 @@ incidentPipelineRouter.get("/", requireAuth, ensureWorkspaceAccess, async (req: 
 
     const { status, severity, siteId, limit = 50, offset = 0, search } = req.query;
     let query = `SELECT * FROM incident_reports WHERE workspace_id = $1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
 
     if (status) { query += ` AND status = $${i++}`; params.push(status); }

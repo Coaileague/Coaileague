@@ -3,6 +3,7 @@ import { supportTickets, helposFaqs, users } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import OpenAI from 'openai';
 import { usageMeteringService } from './services/billing/usageMetering';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 
 // Bot conversation states
 export enum BotState {

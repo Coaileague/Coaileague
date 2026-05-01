@@ -742,7 +742,7 @@ class TrinityAutonomousSchedulerService {
   /**
    * Load all employees for workspace
    */
-  private async loadEmployees(workspaceId: string): Promise<any[]> {
+  private async loadEmployees(workspaceId: string): Promise<Record<string,unknown>[]> {
     return db.select()
       .from(employees)
       .where(and(
@@ -754,7 +754,7 @@ class TrinityAutonomousSchedulerService {
   /**
    * Load all clients for workspace
    */
-  private async loadClients(workspaceId: string): Promise<any[]> {
+  private async loadClients(workspaceId: string): Promise<Record<string,unknown>[]> {
     return db.select()
       .from(clients)
       .where(eq(clients.workspaceId, workspaceId));
@@ -785,7 +785,7 @@ class TrinityAutonomousSchedulerService {
    * Analyze historical patterns for learning
    */
   private analyzePatterns(historicalShifts: unknown[]): any {
-    const patterns: any = {
+    const patterns: Record<string, unknown> = {
       dayOfWeek: new Map<number, number>(),
       hourOfDay: new Map<number, number>(),
       clientFrequency: new Map<string, number>(),
@@ -820,7 +820,7 @@ class TrinityAutonomousSchedulerService {
     workspaceId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<any[]> {
+  ): Promise<Record<string,unknown>[]> {
     return db.select()
       .from(shifts)
       .where(and(
@@ -1305,7 +1305,7 @@ class TrinityAutonomousSchedulerService {
    * For runs >20 shifts, only broadcasts every WS_THROTTLE_INTERVAL_MS (200ms).
    * Always broadcasts the final shift and assignment results.
    */
-  private throttledBroadcast(workspaceId: string, sessionId: string, payload: any, isHighVolume: boolean): void {
+  private throttledBroadcast(workspaceId: string, sessionId: string, payload: Record<string, unknown>, isHighVolume: boolean): void {
     if (!isHighVolume) {
       broadcastToWorkspace(workspaceId, payload);
       return;
@@ -1322,7 +1322,7 @@ class TrinityAutonomousSchedulerService {
     }
   }
 
-  private scoringCache = new Map<string, { data: any; expiry: number }>();
+  private scoringCache = new Map<string, { data: Record<string, unknown>; expiry: number }>();
 
   private getCachedOrFetch<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
     const cached = this.scoringCache.get(key);
@@ -2838,7 +2838,7 @@ Respond in JSON format:
       });
       
       // Parse AI response
-      const jsonMatch = (response as any).match(/\{[\s\S]*\}/);
+      const jsonMatch = (response as Record<string, unknown>).match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         const recommendedIndex = parsed.recommendedIndex - 1;
@@ -2914,7 +2914,7 @@ Provide scheduling insights in JSON:
         featureKey: 'trinity_schedule_insights',
       });
       
-      const jsonMatch = (response as any).match(/\{[\s\S]*\}/);
+      const jsonMatch = (response as Record<string, unknown>).match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
@@ -3037,7 +3037,7 @@ export class SchedulerEscalationChainService {
     };
   }
   
-  private async getOvertimeWillingEmployees(workspaceId: string): Promise<any[]> {
+  private async getOvertimeWillingEmployees(workspaceId: string): Promise<Record<string,unknown>[]> {
     return db.select().from(employees)
       .where(and(
         eq(employees.workspaceId, workspaceId),
@@ -3046,7 +3046,7 @@ export class SchedulerEscalationChainService {
       .limit(SCHEDULING.escalationPoolSize);
   }
   
-  private async getOnCallEmployees(workspaceId: string): Promise<any[]> {
+  private async getOnCallEmployees(workspaceId: string): Promise<Record<string,unknown>[]> {
     return db.select().from(employees)
       .where(and(
         eq(employees.workspaceId, workspaceId),

@@ -703,7 +703,7 @@ Return ONLY valid JSON, no markdown.`,
         temperature: 0.1,
       });
 
-      let parsed: any = {};
+      let parsed: Record<string, unknown> = {};
       try {
         parsed = JSON.parse(result.text || '{}');
       } catch {
@@ -766,7 +766,7 @@ Return ONLY valid JSON, no markdown.`,
         temperature: 0.1,
       });
 
-      let parsed: any = {};
+      let parsed: Record<string, unknown> = {};
       try { parsed = JSON.parse(result.text || '{}'); } catch { parsed = {}; }
 
       const now = new Date();

@@ -399,7 +399,7 @@ export async function executeSupportAction(payload: {
   actorType: 'system' | 'support_agent' | 'trinity';
   ticketId?: string;
   correctionData?: Record<string, unknown>;
-}): Promise<{ success: boolean; result?: any; error?: string }> {
+}): Promise<{ success: boolean; result?: unknown; error?: string }> {
   try {
     const { supportActionRegistry } = await import('./supportActionRegistry');
     const result = await supportActionRegistry.execute(payload as any);

@@ -469,7 +469,7 @@ router.patch("/:documentId", requireAuth, async (req: Request, res: Response) =>
     }
     
     const allowedUpdates = ['status', 'reviewNotes', 'documentNumber', 'issuingAuthority'];
-    const updates: any = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     
     for (const field of allowedUpdates) {
       if ((updateParsed as any).data[field] !== undefined) {

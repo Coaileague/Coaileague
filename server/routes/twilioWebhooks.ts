@@ -23,6 +23,7 @@ import { createLogger } from '../lib/logger';
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { PLATFORM } from '../config/platformConfig';
 import { z } from 'zod';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('TwilioWebhooks');
 
 // ── Twilio Signature Validation Middleware ────────────────────────────────────

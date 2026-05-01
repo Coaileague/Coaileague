@@ -408,7 +408,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
       const args = parts.slice(1).join(' ');
 
       // Handle built-in commands
-      const commandHandlers: Record<string, () => Promise<any>> = {
+      const commandHandlers: Record<string, () => Promise<unknown>> = {
         'health': async () => {
           const result = await (helpaiOrchestrator as any).executeAction({
             actionId: 'health.self_check',

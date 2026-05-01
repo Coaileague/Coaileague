@@ -489,7 +489,7 @@ class QuickBooksOrchestrationService {
       success: boolean;
       orchestrationId: string;
       payload?: Record<string, unknown>;
-      result?: any;
+      result?: unknown;
       error?: string;
     }
   ): Promise<void> {

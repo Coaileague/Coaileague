@@ -82,7 +82,7 @@ interface ChatMessage {
   attachment_type: string | null;
   created_at: string;
   user_id: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 interface VisitorRecord {

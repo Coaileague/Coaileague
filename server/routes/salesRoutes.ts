@@ -10,7 +10,7 @@ import { requireAuth, requireManager } from '../rbac';
 import { z } from 'zod';
 import '../types';
 
-export function registerSalesRoutes(app: Express, requireAuth: any, attachWorkspaceId?: any) {
+export function registerSalesRoutes(app: Express, requireAuth: any, attachWorkspaceId?: unknown) {
   const salesRouter = Router();
 
   salesRouter.get("/invitations", requireAuth, async (req: Request, res: Response) => {

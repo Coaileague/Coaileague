@@ -30,7 +30,7 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
     const offset = Number.parseInt(getQueryString(req.query.offset) || "0", 10);
 
     const conditions = ["workspace_id = $1"];
-    const params: any[] = [wid];
+    const params: Record<string, unknown>[] = [wid];
     let p = 2;
     if (status) { conditions.push(`status = $${p++}`); params.push(status); }
     if (clientId) { conditions.push(`client_id = $${p++}`); params.push(clientId); }

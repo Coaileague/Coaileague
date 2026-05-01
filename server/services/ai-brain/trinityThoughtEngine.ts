@@ -515,7 +515,7 @@ class TrinityThoughtEngine {
   /**
    * Get recent thoughts for context
    */
-  async getRecentThoughts(limit: number = AI_BRAIN.recentThoughtsDefault, workspaceId?: string): Promise<any[]> {
+  async getRecentThoughts(limit: number = AI_BRAIN.recentThoughtsDefault, workspaceId?: string): Promise<Record<string,unknown>[]> {
     const conditions = workspaceId
       ? eq(trinityThoughtSignatures.workspaceId, workspaceId)
       : undefined;
@@ -813,7 +813,7 @@ export function registerThoughtEngineActions() {
       id: 'metacognition.think',
       name: 'Record Thought',
       description: 'Record a thought in Trinity\'s inner monologue',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return trinityThoughtEngine.think(
           params.phase,
           params.thoughtType,
@@ -827,7 +827,7 @@ export function registerThoughtEngineActions() {
       id: 'metacognition.reflect',
       name: 'Reflect on Outcome',
       description: 'Analyze and learn from an action outcome',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return trinityThoughtEngine.reflect(
           params.target,
           params.targetId,
@@ -841,7 +841,7 @@ export function registerThoughtEngineActions() {
       id: 'metacognition.perceive_change',
       name: 'Perceive Platform Change',
       description: 'Record awareness of a platform change',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return trinityThoughtEngine.perceiveChange(
           params.changeType,
           params.details
@@ -860,7 +860,7 @@ export function registerThoughtEngineActions() {
       id: 'metacognition.get_confusion_metrics',
       name: 'Get Confusion Metrics',
       description: 'Get Trinity\'s confusion and confidence metrics',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return trinityThoughtEngine.getConfusionMetrics(params.hours || 24);
       },
     },
@@ -868,7 +868,7 @@ export function registerThoughtEngineActions() {
       id: 'metacognition.get_recent_thoughts',
       name: 'Get Recent Thoughts',
       description: 'Get Trinity\'s recent thoughts for context',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return trinityThoughtEngine.getRecentThoughts(
           params.limit || 20,
           params.workspaceId

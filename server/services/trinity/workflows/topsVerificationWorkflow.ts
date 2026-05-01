@@ -160,7 +160,7 @@ Return ONLY the JSON object, no other text.`;
       throw new Error(`Anthropic vision API error: ${response.status}`);
     }
 
-    const data: any = await response.json();
+    const data: Record<string, unknown> = await response.json();
     const rawText = data.content?.[0]?.text || '';
     const clean = rawText.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);

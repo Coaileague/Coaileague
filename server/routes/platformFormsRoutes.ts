@@ -75,7 +75,7 @@ router.get('/invitations', requireAuth, async (req: Request, res: Response) => {
              FROM form_invitations fi
              JOIN platform_forms pf ON pf.id = fi.form_id
              WHERE fi.workspace_id = $1`;
-    const params: any[] = [wid];
+    const params: Record<string, unknown>[] = [wid];
 
     if (status) { q += ` AND fi.status = $${params.length + 1}`; params.push(status); }
     if (formId) { q += ` AND fi.form_id = $${params.length + 1}`; params.push(formId); }

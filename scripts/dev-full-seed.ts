@@ -190,8 +190,8 @@ async function seedACME() {
 // ─── Shift Seeder ─────────────────────────────────────────────────────────────
 async function seedShifts(
   workspaceId: string,
-  officers: any[],
-  clients: any[],
+  officers: unknown[],
+  clients: unknown[],
   historyDays: number,
   futureDays: number
 ) {
@@ -252,7 +252,7 @@ async function seedShifts(
 }
 
 // ─── Invoice Seeder ──────────────────────────────────────────────────────────
-async function seedInvoices(workspaceId: string, clients: any[], ownerId: string) {
+async function seedInvoices(workspaceId: string, clients: unknown[], ownerId: string) {
   const statuses = [
     { status: 'paid', count: 6 },
     { status: 'sent', count: 3 },
@@ -288,7 +288,7 @@ async function seedInvoices(workspaceId: string, clients: any[], ownerId: string
 }
 
 // ─── Payroll Seeder ───────────────────────────────────────────────────────────
-async function seedPayroll(workspaceId: string, employees: any[]) {
+async function seedPayroll(workspaceId: string, employees: unknown[]) {
   const periods = [
     { start: daysAgo(45), end: daysAgo(31), status: 'completed' },
     { start: daysAgo(30), end: daysAgo(16), status: 'completed' },
@@ -347,7 +347,7 @@ async function seedHelpTickets(workspaceId: string, userId: string) {
 }
 
 // ─── Incident Report Seeder ───────────────────────────────────────────────────
-async function seedIncidents(workspaceId: string, officers: any[], clients: any[]) {
+async function seedIncidents(workspaceId: string, officers: unknown[], clients: unknown[]) {
   const incidents = [
     { type: 'theft', title: 'Shoplifting incident — Riverside Mall', severity: 'medium' },
     { type: 'trespass', title: 'Unauthorized access to server room', severity: 'high' },

@@ -71,10 +71,10 @@ export interface LifecycleContext {
 export interface MemorySnapshot {
   id: string;
   createdAt: Date;
-  userProfile?: any;
-  conversationContext?: any;
-  toolUsageStats?: any;
-  learningInsights?: any;
+  userProfile?: unknown;
+  conversationContext?: unknown;
+  toolUsageStats?: unknown;
+  learningInsights?: unknown;
 }
 
 export interface EscalationInfo {
@@ -544,7 +544,7 @@ class UnifiedLifecycleManager {
     workspaceId: string;
     userId: string;
     executionId: string;
-    result?: any;
+    result?: unknown;
     confidenceScore?: number;
     sessionId?: string;
   }): Promise<LifecycleEvent> {

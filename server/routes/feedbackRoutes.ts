@@ -45,7 +45,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { type, status, priority, sortBy, sortOrder, limit, offset, myFeedback } = req.query;
     
-    const filters: any = {
+    const filters: Record<string, unknown> = {
       workspaceId: req.workspaceId!,
     };
     
@@ -121,7 +121,7 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ success: false, error: "Only the author can edit this feedback" });
     }
     
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (title) updateData.title = title;
     if (description) updateData.description = description;
     if (type) updateData.type = type;

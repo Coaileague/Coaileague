@@ -9,7 +9,7 @@ import { quickbooksSyncReceipts } from '@shared/schema/domains/billing/index';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityInfraActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,

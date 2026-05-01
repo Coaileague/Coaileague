@@ -72,7 +72,7 @@ interface Message {
   actionExecuted?: {
     actionId: string;
     success: boolean;
-    result?: any;
+    result?: unknown;
   };
 }
 
@@ -90,7 +90,7 @@ interface TestResult {
   passed: boolean;
   message: string;
   duration?: number;
-  details?: any;
+  details?: unknown;
 }
 
 interface WorkflowStep {

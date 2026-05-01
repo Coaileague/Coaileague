@@ -130,7 +130,7 @@ export async function recordFailedLogin(userId: string): Promise<void> {
   if (!user) return;
 
   const attempts = (user.loginAttempts || 0) + 1;
-  const updates: any = {
+  const updates: Record<string, unknown> = {
     loginAttempts: attempts,
     updatedAt: new Date(),
   };
@@ -246,7 +246,7 @@ class FaultTolerantStore extends session.Store {
     );
   }
 
-  set(sid: string, sess: session.SessionData, cb?: (err?: any) => void): void {
+  set(sid: string, sess: session.SessionData, cb?: (err?: unknown) => void): void {
     // Write to in-memory cache immediately for fast subsequent reads
     this.cacheSet(sid, sess);
     // Persist to DB store — call cb only after the write completes
@@ -260,7 +260,7 @@ class FaultTolerantStore extends session.Store {
     );
   }
 
-  destroy(sid: string, cb?: (err?: any) => void): void {
+  destroy(sid: string, cb?: (err?: unknown) => void): void {
     this.cache.delete(sid);
     this.withTimeout(
       (done) => this.inner.destroy(sid, done),
@@ -686,7 +686,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   // returns _dbDegraded:true so the frontend knows to show the amber banner.
   if (isDbCircuitOpen()) {
     const wsId = req.session?.workspaceId || req.session?.currentWorkspaceId || null;
-    const degradedUser: any = {
+    const degradedUser: Record<string, unknown> = {
       id: authenticatedUserId,
       email: '',
       firstName: null,

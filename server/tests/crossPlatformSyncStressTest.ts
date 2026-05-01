@@ -291,7 +291,7 @@ async function phase5_feature_matrix_tier_access() {
   console.log('PHASE 5: Feature Matrix ↔ Registry Tier Access Alignment');
   console.log('='.repeat(70));
 
-  const fm = BILLING.featureMatrix as Record<string, any>;
+  const fm = BILLING.featureMatrix as Record<string, unknown>;
 
   const featureToMatrixMap: Record<string, string> = {
     'basic_scheduling': 'basic_scheduling',
@@ -537,7 +537,7 @@ async function phase8_credit_packages_purchasing_sync() {
   console.log('PHASE 8: Credit Packages - Purchase Flow Sync');
   console.log('='.repeat(70));
 
-  const billingPacks = BILLING.creditPacks as Record<string, any>;
+  const billingPacks = BILLING.creditPacks as Record<string, unknown>;
   const registryPacks = CREDIT_PACKAGES;
 
   record({
@@ -884,7 +884,7 @@ async function phase14_runtime_api_validation() {
 
   const http = await import('http');
 
-  const apiGet = (path: string): Promise<{ status: number; body: any }> => {
+  const apiGet = (path: string): Promise<{ status: number; body: Record<string, unknown> }> => {
     return new Promise((resolve) => {
       const req = http.request({ hostname: '127.0.0.1', port: 5000, path, method: 'GET', timeout: 5000 }, (res) => {
         let data = '';

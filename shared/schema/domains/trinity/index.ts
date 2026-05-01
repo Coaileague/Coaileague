@@ -2092,7 +2092,7 @@ export const trinityDecisionLog = pgTable("trinity_decision_log", {
     reasoning: string;
   }>>(),
 
-  contextSnapshot: jsonb("context_snapshot").$type<Record<string, any>>(),
+  contextSnapshot: jsonb("context_snapshot").$type<Record<string, unknown>>(),
 
   confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }),
 
@@ -2424,8 +2424,8 @@ export const aiTaskQueue = pgTable("ai_task_queue", {
   taskTypeId: varchar("task_type_id").notNull(),
   
   // Task details
-  inputPayload: jsonb("input_payload").notNull().$type<Record<string, any>>(),
-  context: jsonb("context").$type<Record<string, any>>(),
+  inputPayload: jsonb("input_payload").notNull().$type<Record<string, unknown>>(),
+  context: jsonb("context").$type<Record<string, unknown>>(),
   priority: integer("priority").default(5), // 1=highest, 10=lowest
   
   // Routing
@@ -2437,7 +2437,7 @@ export const aiTaskQueue = pgTable("ai_task_queue", {
   status: aiTaskStatusEnum("status").default('pending'),
   
   // Results
-  outputPayload: jsonb("output_payload").$type<Record<string, any>>(),
+  outputPayload: jsonb("output_payload").$type<Record<string, unknown>>(),
   confidenceScore: decimal("confidence_score", { precision: 5, scale: 4 }), // 0.0000 to 1.0000
   
   // Cost tracking
@@ -2513,7 +2513,7 @@ export const pendingConfigurations = pgTable("pending_configurations", {
   recommendedCreditPackage: integer("recommended_credit_package").default(0),
   
   // Cart details
-  pricingBreakdown: jsonb("pricing_breakdown").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  pricingBreakdown: jsonb("pricing_breakdown").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   
   // Status: 'draft', 'ready_for_payment', 'abandoned', 'completed'
   status: varchar("status", { length: 30 }).notNull().default('draft'),
@@ -2554,7 +2554,7 @@ export const executionPipelineLogs = pgTable("execution_pipeline_logs", {
   step7NotifyStatus: varchar("step7_notify_status", { length: 20 }).default('pending'),
   
   // Step details
-  validationResults: jsonb("validation_results").$type<Record<string, any>>(),
+  validationResults: jsonb("validation_results").$type<Record<string, unknown>>(),
   processingTimeMs: integer("processing_time_ms"),
   tablesAffected: jsonb("tables_affected").$type<string[]>(),
   recordsChanged: integer("records_changed"),
@@ -2573,8 +2573,8 @@ export const executionPipelineLogs = pgTable("execution_pipeline_logs", {
   errorStack: text("error_stack"),
   
   // Payload
-  initialPayload: jsonb("initial_payload").$type<Record<string, any>>(),
-  finalResult: jsonb("final_result").$type<Record<string, any>>(),
+  initialPayload: jsonb("initial_payload").$type<Record<string, unknown>>(),
+  finalResult: jsonb("final_result").$type<Record<string, unknown>>(),
   
   // Timing
   totalExecutionTimeMs: integer("total_execution_time_ms"),

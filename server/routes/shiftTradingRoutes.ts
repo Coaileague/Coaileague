@@ -36,7 +36,7 @@ router.get("/availability", requireAuth, async (req: AuthenticatedRequest, res) 
     const targetOfficerId = officerId || (emp[0]?.id ?? null);
 
     let q = `SELECT * FROM officer_availability WHERE workspace_id=$1`;
-    const params: any[] = [wid];
+    const params: Record<string, unknown>[] = [wid];
     let p = 2;
     if (!isManagerOrAbove && emp[0]) {
       q += ` AND officer_id=$${p++}`; params.push(emp[0].id);
@@ -138,7 +138,7 @@ router.get("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
      LEFT JOIN employees req_emp ON req_emp.id = t.requesting_officer_id
      LEFT JOIN employees tgt_emp ON tgt_emp.id = t.target_officer_id
      WHERE t.workspace_id=$1`;
-    const params: any[] = [wid];
+    const params: Record<string, unknown>[] = [wid];
     let p = 2;
     if (status) { q += ` AND t.status=$${p++}`; params.push(status); }
     if (mine === "true" || !isManagerOrAbove) {

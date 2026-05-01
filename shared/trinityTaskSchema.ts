@@ -267,7 +267,7 @@ export function fromSubagentContext(ctx: {
   actionId: string;
   userId: string;
   workspaceId: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   startedAt: Date;
 }): Partial<TrinityTask> {
   return {
@@ -298,11 +298,11 @@ export function fromAgentExecutionContext(ctx: {
   workspaceId: string;
   userId: string;
   goal: string;
-  plan?: any;
+  plan?: unknown;
   overallConfidence: number;
   currentStep: number;
-  executedSteps: any[];
-  pendingSteps: any[];
+  executedSteps: unknown[];
+  pendingSteps: unknown[];
   reflectionCycles: number;
   relevantFiles: string[];
   relevantComponents: string[];
@@ -379,7 +379,7 @@ export function stepsFromExecutionPlan(plan: {
     action: string;
     description: string;
     subagent?: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
     dependsOn: string[];
     estimatedDurationMs: number;
     estimatedCredits: number;
@@ -417,7 +417,7 @@ export function toSubagentExecutionResult(task: TrinityTask): {
   success: boolean;
   phase: string;
   status: string;
-  result?: any;
+  result?: unknown;
   error?: { code: string; message: string };
   durationMs: number;
   confidenceScore: number;

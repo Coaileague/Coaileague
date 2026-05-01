@@ -304,7 +304,7 @@ class SessionCheckpointService {
     checkpointId: string, 
     eventType: string, 
     eventSource: string,
-    metadata: any
+    metadata: Record<string, unknown>
   ): Promise<void> {
     const entry = JSON.stringify([{ eventType, eventSource, metadata, createdAt: new Date().toISOString() }]);
     await db.update(sessionCheckpoints)

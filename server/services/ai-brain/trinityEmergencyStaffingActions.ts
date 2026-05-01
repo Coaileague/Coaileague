@@ -30,7 +30,7 @@ import { universalNotificationEngine } from '../universalNotificationEngine';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityEmergencyStaffingActions');
 
-function mkAction(actionId: string, fn: (params: any, req: ActionRequest) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>, req: ActionRequest) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,

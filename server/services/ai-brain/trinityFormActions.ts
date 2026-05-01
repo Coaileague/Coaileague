@@ -26,7 +26,7 @@ import { createLogger } from '../../lib/logger';
 
 const log = createLogger('trinityFormActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,
@@ -74,7 +74,7 @@ export function registerFormActions() {
       const prefilled: Record<string, string> = {};
 
       // Resolve employee context
-      let emp: any = null;
+      let emp: unknown = null;
       if (employeeId) {
         const [row] = await db
           .select()
@@ -84,8 +84,8 @@ export function registerFormActions() {
       }
 
       // Resolve shift context
-      let shift: any = null;
-      let client: any = null;
+      let shift: unknown = null;
+      let client: unknown = null;
       if (shiftId) {
         const [shiftRow] = await db
           .select()

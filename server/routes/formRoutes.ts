@@ -294,7 +294,7 @@ router.post("/custom-form-submissions", requireAuth, async (req: AuthenticatedRe
   }
 });
 
-let _formWorkflowService: any = null;
+let _formWorkflowService: unknown = null;
 async function getFormWorkflowService() {
   if (!_formWorkflowService) {
     const mod = await import('../services/formWorkflowService');

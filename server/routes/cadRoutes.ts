@@ -57,7 +57,7 @@ cadRouter.get("/calls", requireAuth, ensureWorkspaceAccess, async (req: Authenti
       FROM cad_calls cc
       LEFT JOIN cad_units cu ON cu.id = cc.primary_unit_id
       WHERE cc.workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
     if (status) { query += ` AND cc.status=$${i++}`; params.push(status); }
     if (priority) { query += ` AND cc.priority=$${i++}`; params.push(priority); }

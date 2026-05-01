@@ -263,7 +263,7 @@ export interface BroadcastRecipient {
   dismissedAt?: string;
   actionTakenAt?: string;
   
-  responseData?: Record<string, any>;
+  responseData?: Record<string, unknown>;
   notificationId?: string;
   
   createdAt: string;

@@ -279,7 +279,7 @@ async function getUserPreferredLanguage(userId: string): Promise<string> {
   }
 }
 
-let twilioClient: any = null;
+let twilioClient: unknown = null;
 
 async function getTwilioClient() {
   if (!twilioClient && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {

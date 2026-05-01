@@ -147,7 +147,7 @@ class AIBrainTestRunner {
             completedAt: new Date(),
             duration: Date.now() - start,
             message: 'Database connection successful',
-            details: { rows: (result as any).length || 0 },
+            details: { rows: (result as Record<string, unknown>).length || 0 },
           };
         } catch (error : unknown) {
           return {

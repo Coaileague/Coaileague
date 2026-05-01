@@ -15,10 +15,10 @@ interface UniversalConfigContextValue {
   config: PlatformConfig;
   isLoading: boolean;
   isError: boolean;
-  getConfigValue: (domain: string, key: string, fallback?: any) => any;
+  getConfigValue: (domain: string, key: string, fallback?: unknown) => any;
   getFeatureFlag: (path: string) => boolean;
   getSeasonalTheme: () => { theme: SeasonalTheme; config: SeasonalThemeConfig; enabled: boolean };
-  getThemeValue: (key: string, fallback?: any) => any;
+  getThemeValue: (key: string, fallback?: unknown) => any;
   invalidate: () => void;
 }
 
@@ -68,7 +68,7 @@ export function UniversalConfigProvider({ children }: { children: React.ReactNod
     };
   }, [queryClient]);
 
-  const getConfigValue = useCallback((domain: string, key: string, fallback?: any) => {
+  const getConfigValue = useCallback((domain: string, key: string, fallback?: unknown) => {
     const domainConfig = config[domain];
     if (domainConfig && key in domainConfig) {
       return domainConfig[key];
@@ -105,7 +105,7 @@ export function UniversalConfigProvider({ children }: { children: React.ReactNod
     };
   }, [getConfigValue]);
 
-  const getThemeValue = useCallback((key: string, fallback?: any) => {
+  const getThemeValue = useCallback((key: string, fallback?: unknown) => {
     return getConfigValue('theme', key, fallback);
   }, [getConfigValue]);
 
@@ -138,14 +138,14 @@ export function useUniversalConfig(): UniversalConfigContextValue {
       config: {},
       isLoading: false,
       isError: false,
-      getConfigValue: (_d: string, _k: string, fallback?: any) => fallback,
+      getConfigValue: (_d: string, _k: string, fallback?: unknown) => fallback,
       getFeatureFlag: (path: string) => isFeatureEnabled(path),
       getSeasonalTheme: () => ({
         theme: 'default' as SeasonalTheme,
         config: getThemeConfig('default'),
         enabled: false,
       }),
-      getThemeValue: (_k: string, fallback?: any) => fallback,
+      getThemeValue: (_k: string, fallback?: unknown) => fallback,
       invalidate: () => {},
     };
   }

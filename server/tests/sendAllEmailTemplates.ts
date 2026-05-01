@@ -60,13 +60,13 @@ async function send(
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const result = await resend.emails.send({ from, to: [TO], subject, html }); // nds
-    if ((result as any).error) {
-      const msg = JSON.stringify((result as any).error);
+    if ((result as Record<string, unknown>).error) {
+      const msg = JSON.stringify((result as Record<string, unknown>).error);
       console.error(`  ❌ [${name}] FAILED: ${msg}`);
       results.push({ name, error: msg });
       failed++;
     } else {
-      const id = (result as any).data?.id ?? '?';
+      const id = (result as Record<string, unknown>).data?.id ?? '?';
       console.log(`  ✅ [${name}] Sent — id=${id}`);
       results.push({ name, id });
       passed++;

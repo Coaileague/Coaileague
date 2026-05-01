@@ -328,7 +328,7 @@ Body: ${bodyText.slice(0, 1500)}`,
       maxOutputTokens: 500,
     });
 
-    const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+    const text = (response as Record<string, unknown>).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
     const parsed = JSON.parse(text);
     return { data: parsed, confidence: Number(parsed.confidence) || 0 };
   } catch (err: unknown) {
@@ -1467,7 +1467,7 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
     unknown: 'inbound.email.query',
   };
 
-  let aiData: any = {};
+  let aiData: Record<string, unknown> = {};
   let confidence = 1.0;
   if (category !== 'careers') {
     const extracted = await extractStructuredData(

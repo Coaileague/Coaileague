@@ -1163,7 +1163,7 @@ export const documentInstances = pgTable("document_instances", {
   status: varchar("status", { length: 50 }).notNull().default('draft'),
   generatedPdfUrl: text("generated_pdf_url"),
   signedPdfUrl: text("signed_pdf_url"),
-  mergeData: jsonb("merge_data").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  mergeData: jsonb("merge_data").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   relatedEntityType: varchar("related_entity_type", { length: 100 }),
   relatedEntityId: varchar("related_entity_id"),
   createdBy: varchar("created_by"),

@@ -3589,7 +3589,7 @@ export function EmailHubCanvas() {
   const [forwardFrom, setForwardFrom] = useState<UnifiedEmail | null>(null);
   const [selectedEmailIds, setSelectedEmailIds] = useState<Set<string>>(new Set());
 
-  const { data: mailboxData } = useQuery<{ mailbox?: any }>({
+  const { data: mailboxData } = useQuery<{ mailbox?: unknown }>({
     queryKey: ['/api/internal-email/mailbox/auto-create'],
   });
 

@@ -46,7 +46,7 @@ export interface ServiceHealth {
   message?: string;
   lastChecked: string; // ISO timestamp
   latencyMs?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface HealthSummary {

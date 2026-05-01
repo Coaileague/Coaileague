@@ -92,7 +92,7 @@ export interface PipelineContext {
   // Results and metadata
   fetchedData?: Record<string, unknown>;
   validationResults?: { field: string; passed: boolean; message?: string }[];
-  processResult?: any;
+  processResult?: unknown;
   mutationDetails?: { tables: string[]; recordsChanged: number };
   confirmationStatus?: 'verified' | 'mismatch';
   notificationsSent?: string[];
@@ -621,7 +621,7 @@ export class ExecutionPipeline {
     ctx: PipelineContext,
     finalStatus: string,
     totalExecutionTimeMs: number,
-    result?: any,
+    result?: unknown,
     error?: Error
   ): Promise<void> {
     try {

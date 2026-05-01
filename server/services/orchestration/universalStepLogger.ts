@@ -32,7 +32,7 @@ const log = createLogger('universalStepLogger');
 
 
 // Import execution tracker dynamically to avoid circular deps
-let executionTracker: any = null;
+let executionTracker: unknown = null;
 const getExecutionTracker = async () => {
   if (!executionTracker) {
     const mod = await import('./automationExecutionTracker');
@@ -127,7 +127,7 @@ export interface StartOrchestrationParams {
 
 export interface StepResult {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   errorCode?: string;
   blockedReason?: string;
@@ -1135,7 +1135,7 @@ export interface FullOrchestrationConfig<T> {
   onValidate: () => Promise<StepResult>;
   onProcess: () => Promise<StepResult>;
   onMutate: () => Promise<StepResult>;
-  onConfirm: (stagedData?: any) => Promise<StepResult>;
+  onConfirm: (stagedData?: unknown) => Promise<StepResult>;
   onNotify: () => Promise<StepResult>;
 }
 

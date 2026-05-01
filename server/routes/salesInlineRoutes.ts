@@ -278,7 +278,7 @@ Return ONLY valid JSON array with this exact structure:
       const { id } = req.params;
       const { leadStatus, notes, nextFollowUpDate, leadScore, estimatedValue } = req.body;
 
-      const updateData: any = { updatedAt: new Date() };
+      const updateData: Record<string, unknown> = { updatedAt: new Date() };
       
       if (leadStatus) updateData.leadStatus = leadStatus;
       if (notes !== undefined) updateData.notes = notes;

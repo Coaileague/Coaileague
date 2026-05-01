@@ -1373,9 +1373,9 @@ async function runWeeklyScheduleGeneration() {
                               availability: availMap.get(e.id) || [],
                               skills: skillMap.get(e.id) || [],
                               // Armed officer attributes for scheduling eligibility
-                              isArmed: (e as Record<string, unknown>).isArmed ?? false,
-                              armedLicenseVerified: (e as Record<string, unknown>).armedLicenseVerified ?? false,
-                              guardCardExpiryDate: (e as Record<string, unknown>).guardCardExpiryDate ?? null,
+                              isArmed: (e as EmployeeWithStatus).isArmed ?? false,
+                              armedLicenseVerified: (e as EmployeeWithStatus).armedLicenseVerified ?? false,
+                              guardCardExpiryDate: (e as EmployeeWithStatus).guardCardExpiryDate ?? null,
                             })),
                             constraints: {
                               weekStart: nextWeekStart.toISOString(),

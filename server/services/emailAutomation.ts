@@ -81,11 +81,11 @@ async function sendRawCampaignEmail(options: EmailOptions): Promise<{ success: b
       headers: options.headers,
     });
 
-    if ((response as any).error) {
-      return { success: false, error: (response as any).error.message };
+    if ((response as Record<string, unknown>).error) {
+      return { success: false, error: (response as Record<string, unknown>).error.message };
     }
 
-    return { success: true, messageId: (response as any).data?.id ?? (response as any).id };
+    return { success: true, messageId: (response as Record<string, unknown>).data?.id ?? (response as Record<string, unknown>).id };
   } catch (error) {
     log.error("[EmailAutomation] Failed to send:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };

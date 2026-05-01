@@ -479,7 +479,7 @@ async function trackTimeseriesMetric(
 
     if (existing.length > 0) {
       // Update existing record
-      let updateFields: any = { updatedAt: new Date() };
+      let updateFields: Record<string, unknown> = { updatedAt: new Date() };
 
       if (delta.messageCount) {
         updateFields.messageCount = sql`${roomAnalyticsTimeseries.messageCount} + ${delta.messageCount}`;

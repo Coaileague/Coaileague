@@ -79,7 +79,7 @@ async function createAuditEvent(params: {
   actorName: string;
   actionType: 'clock_in' | 'clock_out' | 'start_break' | 'end_break' | 'edit_time' | 'approve_time' | 'reject_time' | 'delete_time' | 'manual_entry' | 'system_adjustment';
   description: string;
-  payload?: any;
+  payload?: unknown;
   ipAddress?: string;
   userAgent?: string;
   tx?: AuditEventTx;
@@ -349,13 +349,13 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
     }
 
     // LIFECYCLE STATUS GATE — hard block on suspended or pending officers
-    if ((employee.status as string | null | undefined) === 'suspended') {
+    if ((employee as EmployeeWithStatus).status === 'suspended') {
       return res.status(403).json({
         error: 'EMPLOYEE_SUSPENDED',
         message: 'Your access has been temporarily suspended. Contact your supervisor.',
       });
     }
-    if ((employee.status as string | null | undefined) === 'pending') {
+    if ((employee as EmployeeWithStatus).status === 'pending') {
       return res.status(403).json({
         error: 'EMPLOYEE_PENDING',
         message: 'Your account is pending activation. Contact your administrator.',

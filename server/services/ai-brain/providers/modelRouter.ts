@@ -521,7 +521,7 @@ class ModelRouter {
     totalCalls: number;
     totalFailures: number;
   }> {
-    const out: any = {};
+    const out: Record<string, unknown> = {};
     for (const [name, m] of this.models) {
       out[name] = {
         isAvailable: m.isAvailable,

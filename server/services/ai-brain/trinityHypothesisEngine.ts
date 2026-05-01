@@ -191,7 +191,7 @@ class TrinityHypothesisEngine {
 
   private applyWorkspaceEvidence(
     hypotheses: Hypothesis[],
-    data: any,
+    data: Record<string, unknown>,
     domain: string,
     queries: string[],
   ): void {
@@ -244,7 +244,7 @@ class TrinityHypothesisEngine {
     top: Hypothesis,
     runnerUp: Hypothesis | null,
     converged: boolean,
-    data: any,
+    data: Record<string, unknown>,
   ): string {
     const lines: string[] = [];
 

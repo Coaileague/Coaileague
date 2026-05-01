@@ -63,7 +63,7 @@ function generateQrCode(): string {
   return `QR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 }
 
-function TourForm({ tour, onClose }: { tour?: any; onClose: () => void }) {
+function TourForm({ tour, onClose }: { tour?: unknown; onClose: () => void }) {
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;
   const { toast } = useToast();
@@ -173,7 +173,7 @@ function TourForm({ tour, onClose }: { tour?: any; onClose: () => void }) {
   );
 }
 
-function CheckpointForm({ tourId, checkpoint, onClose }: { tourId: string; checkpoint?: any; onClose: () => void }) {
+function CheckpointForm({ tourId, checkpoint, onClose }: { tourId: string; checkpoint?: unknown; onClose: () => void }) {
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;
   const { toast } = useToast();

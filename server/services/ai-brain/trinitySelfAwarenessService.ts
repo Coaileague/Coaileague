@@ -498,7 +498,7 @@ class TrinitySelfAwarenessService {
         id: 'self.get_fact',
         name: 'Get Self-Awareness Fact',
         description: 'Get a specific self-awareness fact',
-        handler: async (params: any) => {
+        handler: async (params: Record<string, unknown>) => {
           const { category, factKey } = params;
           const fact = await this.getFact(category, factKey);
           return {
@@ -511,7 +511,7 @@ class TrinitySelfAwarenessService {
         id: 'self.query_facts',
         name: 'Query Facts by Category',
         description: 'Query self-awareness facts by category',
-        handler: async (params: any) => {
+        handler: async (params: Record<string, unknown>) => {
           const { category, subcategory } = params;
           const facts = await this.getFactsByCategory(category, subcategory);
           return { facts, count: facts.length };
@@ -529,7 +529,7 @@ class TrinitySelfAwarenessService {
         id: 'self.get_capabilities',
         name: 'Get Capabilities',
         description: 'Get available capabilities, optionally filtered by domain',
-        handler: async (params: any) => {
+        handler: async (params: Record<string, unknown>) => {
           const { domain } = params;
           const capabilities = await this.getCapabilities(domain);
           return { capabilities, count: capabilities.length };
@@ -539,7 +539,7 @@ class TrinitySelfAwarenessService {
         id: 'self.learn_fact',
         name: 'Learn New Fact',
         description: 'Learn and store a new self-awareness fact',
-        handler: async (params: any) => {
+        handler: async (params: Record<string, unknown>) => {
           const fact = await this.upsertFact({
             category: params.category,
             subcategory: params.subcategory,
@@ -564,7 +564,7 @@ class TrinitySelfAwarenessService {
         id: 'self.check_constraint',
         name: 'Check Constraint',
         description: 'Check if an action is allowed given current constraints',
-        handler: async (params: any) => {
+        handler: async (params: Record<string, unknown>) => {
           const { action, context } = params;
           return this.checkConstraint(action, context);
         },

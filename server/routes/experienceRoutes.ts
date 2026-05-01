@@ -36,13 +36,13 @@ interface AuthRequest extends Request {
 }
 
 // WebSocket broadcaster - will be set by routes.ts
-let wsBroadcaster: ((event: string, data: any, workspaceId?: string) => void) | null = null;
+let wsBroadcaster: ((event: string, data: Record<string, unknown>, workspaceId?: string) => void) | null = null;
 
-export function setWebSocketBroadcaster(broadcaster: (event: string, data: any, workspaceId?: string) => void) {
+export function setWebSocketBroadcaster(broadcaster: (event: string, data: Record<string, unknown>, workspaceId?: string) => void) {
   wsBroadcaster = broadcaster;
 }
 
-function broadcastToClients(event: string, data: any, workspaceId?: string) {
+function broadcastToClients(event: string, data: Record<string, unknown>, workspaceId?: string) {
   if (wsBroadcaster) {
     wsBroadcaster(event, data, workspaceId);
   }

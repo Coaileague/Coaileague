@@ -41,7 +41,7 @@ export interface PartnerApiCallInput {
   // Context
   featureKey?: string; // e.g., 'billos_invoice_creation', 'billos_payroll_submission'
   activityType?: string; // e.g., 'invoice_creation', 'customer_sync'
-  metadata?: any;
+  metadata?: unknown;
   
   // Audit trail
   ipAddress?: string;

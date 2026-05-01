@@ -60,7 +60,7 @@ export abstract class BaseSkill {
    * @param context - Execution context (user, workspace, roles, etc.)
    * @param params - Skill-specific parameters
    */
-  abstract execute(context: SkillContext, params: any): Promise<SkillResult>;
+  abstract execute(context: SkillContext, params: Record<string, unknown>): Promise<SkillResult>;
 
   /**
    * Validate skill can execute with given context
@@ -142,7 +142,7 @@ export abstract class BaseSkill {
   /**
    * Health check
    */
-  async healthCheck(): Promise<{ healthy: boolean; details?: any }> {
+  async healthCheck(): Promise<{ healthy: boolean; details?: unknown }> {
     return { healthy: this.config.enabled };
   }
 

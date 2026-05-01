@@ -25,7 +25,7 @@ const log = createLogger('trinityLicenseActions');
 
 const createResult = (
   actionId: string, success: boolean, message: string,
-  data: any, start: number
+  data: Record<string, unknown>, start: number
 ): ActionResult => ({
   actionId, success, message, data,
   executionTimeMs: Date.now() - start,
@@ -105,7 +105,7 @@ async function handleLicenseAlert(req: ActionRequest): Promise<ActionResult> {
       return createResult('license.alert', false, 'employeeId is required for license.alert', null, start);
     }
 
-    let cert: any = null;
+    let cert: unknown = null;
 
     if (certId) {
       cert = await db.query.employeeCertifications.findFirst({

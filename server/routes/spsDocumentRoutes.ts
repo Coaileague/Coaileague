@@ -23,6 +23,7 @@ import { callSpsVisionAI } from './spsAIHelper';
 import { emailService } from "../services/emailService";
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 import { createLogger } from '../lib/logger';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('SpsDocumentRoutes');
 
 
@@ -369,7 +370,7 @@ spsDocumentRouter.post('/:id/id-verify', async (req: AuthenticatedRequest, res) 
     // Call Vision AI for ID verification — branding pulled from workspace
     // (TRINITY.md §6 white-label rule)
     const verifyBranding = await getWorkspaceBranding(workspaceId);
-    let verificationResult: any = null;
+    let verificationResult: unknown = null;
     try {
       const prompt = `You are an ID verification assistant for a licensed security company (${verifyBranding.companyName}).
 Analyze this ${documentType} image and extract the following information.
@@ -557,7 +558,7 @@ spsDocumentSafeRouter.get('/staff-packets', async (req: AuthenticatedRequest, re
 
     const packets = empList.map(emp => {
       const empDocs = allDocs.filter(d => d.employeeId === emp.id);
-      const completeness: Record<string, { present: boolean; doc?: any }> = {};
+      const completeness: Record<string, { present: boolean; doc?: unknown }> = {};
       for (const { key, types } of REGULATORY_DOC_KEYS) {
         const doc = empDocs.find(d => types.includes(d.documentType));
         completeness[key] = { present: !!doc, doc: doc ?? null };
@@ -595,7 +596,7 @@ spsDocumentSafeRouter.get('/staff-packets/:employeeId', async (req: Authenticate
       .where(and(eq(employeeDocuments.employeeId, employeeId), eq(employeeDocuments.workspaceId, workspaceId)))
       .orderBy(desc(employeeDocuments.uploadedAt));
 
-    const completeness: Record<string, { present: boolean; doc?: any }> = {};
+    const completeness: Record<string, { present: boolean; doc?: unknown }> = {};
     for (const { key, types } of REGULATORY_DOC_KEYS) {
       const doc = docs.find(d => types.includes(d.documentType));
       completeness[key] = { present: !!doc, doc: doc ?? null };

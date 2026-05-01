@@ -1108,7 +1108,7 @@ class TrinityOrgIntelligenceService {
     return patterns;
   }
 
-  private async learnSchedulingPattern(workspaceId: string, data: any): Promise<void> {
+  private async learnSchedulingPattern(workspaceId: string, data: Record<string, unknown>): Promise<void> {
     const existing = this.orgPatterns.get(workspaceId) || [];
     const idx = existing.findIndex(p => p.patternType === 'scheduling_rhythm');
     const pattern: OrgPattern = {
@@ -1126,7 +1126,7 @@ class TrinityOrgIntelligenceService {
     this.orgPatterns.set(workspaceId, existing);
   }
 
-  private async learnPayrollCycle(workspaceId: string, data: any): Promise<void> {
+  private async learnPayrollCycle(workspaceId: string, data: Record<string, unknown>): Promise<void> {
     const existing = this.orgPatterns.get(workspaceId) || [];
     const idx = existing.findIndex(p => p.patternType === 'payroll_cycle');
     const pattern: OrgPattern = {
@@ -1226,7 +1226,7 @@ class TrinityOrgIntelligenceService {
     }
   }
 
-  private async handleBotResult(data: any): Promise<void> {
+  private async handleBotResult(data: Record<string, unknown>): Promise<void> {
     if (!data?.sessionId) return;
 
     const matchingTask = Array.from(this.activeTasks.values())

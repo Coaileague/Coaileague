@@ -1531,7 +1531,7 @@ ${proposal.reasoning}`;
       {
         name: 'trinity.self_edit.create_proposal',
         description: 'Create a change proposal for Trinity self-editing',
-        handler: async (params: any) => {
+        handler: async (params: Record<string, unknown>) => {
           return this.createChangeProposal(params);
         },
       },

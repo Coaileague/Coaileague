@@ -13,7 +13,7 @@ export interface OfficerDashboard {
     percentAvailable: number;
     nextAvailableTime?: Date;
   };
-  assignment?: any;
+  assignment?: unknown;
   performance: {
     shiftsCompleted: number;
     avgRating: number;

@@ -30,7 +30,7 @@ export default function SupervisorDashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: clockStatus, isLoading: clockLoading, isError: clockIsError, error: clockError, refetch: refetchClockStatus } = useQuery<{ isClockedIn: boolean; activeTimeEntry?: any }>({
+  const { data: clockStatus, isLoading: clockLoading, isError: clockIsError, error: clockError, refetch: refetchClockStatus } = useQuery<{ isClockedIn: boolean; activeTimeEntry?: unknown }>({
     queryKey: ["/api/time-entries/status"],
     staleTime: 30000,
   });

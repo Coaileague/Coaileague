@@ -552,7 +552,7 @@ Provide 2-3 sentences of actionable revenue optimization insights. Focus on reco
     return Math.max(0.1, Math.min(1.0, confidence));
   }
 
-  async healthCheck(): Promise<{ healthy: boolean; details?: any }> {
+  async healthCheck(): Promise<{ healthy: boolean; details?: unknown }> {
     return {
       healthy: this.config.enabled,
       details: {

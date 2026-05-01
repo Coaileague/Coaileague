@@ -1119,13 +1119,13 @@ Respond with JSON only:
       step: string;
       status: 'completed' | 'failed' | 'skipped';
       duration: number;
-      result?: any;
+      result?: unknown;
     }[];
     finalResult?: MigrationResult;
     error?: string;
   }> {
     const workflowId = `wf-${randomUUID()}`;
-    const steps: { step: string; status: 'completed' | 'failed' | 'skipped'; duration: number; result?: any }[] = [];
+    const steps: { step: string; status: 'completed' | 'failed' | 'skipped'; duration: number; result?: unknown }[] = [];
     
     log.info(`[DataMigrationAgent] Starting 5-step workflow: ${workflowId}`);
 

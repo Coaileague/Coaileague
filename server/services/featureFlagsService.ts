@@ -199,7 +199,7 @@ export const trinityRuntimeFlagsService = {
     actor: { type: ActorType; id?: string },
     reason: string,
     source: string = 'manual',
-    sourceDetails?: any
+    sourceDetails?: unknown
   ): Promise<FlagUpdateResult> {
     const flag = await this.getFlagByKey(key);
     

@@ -21,7 +21,7 @@ interface LedgerWriteParams {
   payrollRunId?: string;
   description: string;
   metadata?: Record<string, unknown>;
-  tx?: any;
+  tx?: unknown;
 }
 
 async function getLastBalance(workspaceId: string, dbHandle: any = db): Promise<number> {

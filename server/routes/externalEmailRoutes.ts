@@ -11,7 +11,7 @@ import { z } from 'zod';
 const log = createLogger('ExternalEmailRoutes');
 
 
-export function registerExternalEmailRoutes(app: Express, requireAuth: any, attachWorkspaceId?: any) {
+export function registerExternalEmailRoutes(app: Express, requireAuth: any, attachWorkspaceId?: unknown) {
   const router = Router();
 
   // ==================== EMAILS ====================

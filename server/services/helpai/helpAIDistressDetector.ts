@@ -207,7 +207,7 @@ export async function notifySupervisorOfDistress(opts: {
   workspaceId: string;
   level: string;
   signals: string[];
-  broadcastToWorkspace: (wsId: string, data: any) => void;
+  broadcastToWorkspace: (wsId: string, data: Record<string, unknown>) => void;
 }): Promise<void> {
   try {
     // Append to working memory so Trinity knows what happened

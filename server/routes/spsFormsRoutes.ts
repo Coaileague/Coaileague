@@ -99,7 +99,7 @@ function resolveWorkspace(req: AuthenticatedRequest): string | null {
 // ── Audit logger ─────────────────────────────────────────────────────────────
 async function audit(
   onboardingId: string, workspaceId: string,
-  action: string, actorId?: string, step?: number, details?: any,
+  action: string, actorId?: string, step?: number, details?: unknown,
 ) {
   try {
     await db.insert(spsOnboardingAuditLog).values({

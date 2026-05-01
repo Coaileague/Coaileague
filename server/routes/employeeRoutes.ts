@@ -28,6 +28,7 @@ import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 const log = createLogger('EmployeeRoutes');
 
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import {
   createFilterContext,
   filterEmployeeForResponse,
@@ -286,7 +287,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     }
 
     // ── REHIRE DETECTION: check if email matches a previously terminated officer ─
-    let priorEmploymentRecord: any = null;
+    let priorEmploymentRecord: unknown = null;
     if (validatedData.email) {
       try {
         const [priorEmp] = await db.select().from(employees)
@@ -862,7 +863,7 @@ router.patch('/me/contact-info', async (req: AuthenticatedRequest, res) => {
     // ── S3: allowedFields no longer includes 'email' ───────────────────────
     const allowedFields = ['phone', 'address', 'addressLine2', 'city', 'state', 'zipCode', 'country',
                            'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelation'];
-    const filteredData: any = {};
+    const filteredData: Record<string, unknown> = {};
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) {
         filteredData[key] = req.body[key];

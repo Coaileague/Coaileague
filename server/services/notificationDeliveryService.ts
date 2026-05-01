@@ -569,7 +569,7 @@ export class NotificationDeliveryService {
     }
 
     if (result && typeof result === 'object' && 'error' in result && result.error) {
-      throw new Error(String((result as any).error));
+      throw new Error(String((result as Record<string, unknown>).error));
     }
   }
 

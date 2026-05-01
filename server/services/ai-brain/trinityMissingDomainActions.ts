@@ -18,7 +18,7 @@ import { pool } from '../../db';
 
 const log = createLogger('TrinityMissingDomainActions');
 
-function ok(actionId: string, message: string, data: any, start: number): ActionResult {
+function ok(actionId: string, message: string, data: Record<string, unknown>, start: number): ActionResult {
   return { success: true, actionId, message, data, executionTimeMs: Date.now() - start };
 }
 function fail(actionId: string, message: string, start: number): ActionResult {
@@ -125,7 +125,7 @@ const formsListSubmissions: ActionHandler = {
         LEFT JOIN platform_forms pf ON pf.id = fs.form_id
         WHERE fs.workspace_id = $1
       `;
-      const params: any[] = [request.workspaceId];
+      const params: Record<string, unknown>[] = [request.workspaceId];
       if (formId) { params.push(formId); query += ` AND fs.form_id = $${params.length}`; }
       if (status) { params.push(status); query += ` AND fs.status = $${params.length}`; }
       params.push(Math.min(limit, 100));
@@ -341,7 +341,7 @@ const proposalList: ActionHandler = {
         FROM proposals
         WHERE workspace_id = $1
       `;
-      const params: any[] = [request.workspaceId];
+      const params: Record<string, unknown>[] = [request.workspaceId];
       if (status) { params.push(status); query += ` AND status = $${params.length}`; }
       params.push(Math.min(limit, 100));
       query += ` ORDER BY created_at DESC LIMIT $${params.length}`;
@@ -538,7 +538,7 @@ export function registerMissingDomainActions(): void {
         coverageQueued: { type: 'boolean' },
       },
     },
-    handler: async (params: any, ctx: any) => {
+    handler: async (params: Record<string, unknown>, ctx: any) => {
       return { callOffId: 'stub', shiftStatus: 'open', coverageQueued: true };
     },
   } as any);
@@ -565,7 +565,7 @@ export function registerMissingDomainActions(): void {
         status:    { type: 'string', enum: ['resolved'] },
       },
     },
-    handler: async (params: any, ctx: any) => {
+    handler: async (params: Record<string, unknown>, ctx: any) => {
       return { callOffId: params.callOffId, status: 'resolved' };
     },
   } as any);

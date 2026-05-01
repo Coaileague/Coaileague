@@ -819,7 +819,7 @@ class AutomationGovernanceService {
   async createAuditTrailEntry(
     context: ActionContext,
     decision: ExecutionDecision,
-    result: { success: boolean; message: string; data?: any }
+    result: { success: boolean; message: string; data?: unknown }
   ): Promise<string | null> {
     try {
       const [auditLog] = await db

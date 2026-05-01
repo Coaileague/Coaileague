@@ -465,7 +465,7 @@ class QuickFixService {
   async executeQuickFix(
     requestId: string,
     executorContext: QuickFixContext
-  ): Promise<{ success: boolean; message: string; result?: any }> {
+  ): Promise<{ success: boolean; message: string; result?: unknown }> {
     try {
       const requests = await db
         .select()

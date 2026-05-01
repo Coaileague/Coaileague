@@ -43,7 +43,7 @@ router.get('/health', async (_req, res) => {
 
 // ============= QUICKBOOKS SYNC SERVICE ROUTES =============
 // Dynamic import to avoid circular dependencies
-let quickbooksSyncService: any = null;
+let quickbooksSyncService: unknown = null;
 
 async function getQuickbooksSyncService() {
   if (!quickbooksSyncService) {

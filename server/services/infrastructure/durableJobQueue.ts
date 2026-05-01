@@ -56,7 +56,7 @@ export interface Job extends JobDefinition {
   updatedAt: Date;
 }
 
-export type JobHandler = (job: Job) => Promise<{ success: boolean; result?: any; error?: string }>;
+export type JobHandler = (job: Job) => Promise<{ success: boolean; result?: unknown; error?: string }>;
 
 // ============================================================================
 // JOB QUEUE SERVICE
@@ -373,7 +373,7 @@ class DurableJobQueueService {
         FOR UPDATE SKIP LOCKED
       `);
 
-      const jobs = ((result as any).rows as any[]) || [];
+      const jobs = ((result as Record<string, unknown>).rows as any[]) || [];
       
       if (jobs.length === 0) return;
 
@@ -432,7 +432,7 @@ class DurableJobQueueService {
     }
   }
 
-  private async markJobCompleted(jobId: string, result?: any): Promise<void> {
+  private async markJobCompleted(jobId: string, result?: unknown): Promise<void> {
     const now = new Date();
     // CATEGORY C — Raw SQL retained: ::jsonb | Tables: durable_job_queue | Verified: 2026-03-23
     await typedExec(sql`
@@ -585,7 +585,7 @@ class DurableJobQueueService {
     
     // CATEGORY C — Raw SQL retained: Infrastructure job queue dead letter retry UPDATE | Tables: durable_job_queue | Verified: 2026-03-23
     const result = await typedQuery(query);
-    const count = (result as any).rowCount || 0;
+    const count = (result as Record<string, unknown>).rowCount || 0;
     
     log.info(`[DurableJobQueue] Retried ${count} dead letter jobs`);
     return count;

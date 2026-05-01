@@ -46,7 +46,7 @@ const log = createLogger('trinityIntelligenceLayers');
 // HELPERS
 // ============================================================================
 
-function mkLayer(layer: string, actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkLayer(layer: string, actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,
@@ -377,7 +377,7 @@ export function registerSchedulingCognitionActions() {
     windowEnd.setDate(windowEnd.getDate() + 7);
 
     // Load client requirements if clientId provided
-    let clientData: any = null;
+    let clientData: unknown = null;
     if (clientId) {
       const [c] = await db.select({
         requiresArmed: (clients as any).requiresArmed,

@@ -42,7 +42,7 @@ interface ContractData {
   clientName?: string;
   clientEmail?: string;
   services?: unknown[];
-  billingTerms?: any;
+  billingTerms?: unknown;
   totalValue?: string;
   status: string;
   effectiveDate?: string;

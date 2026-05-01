@@ -13,7 +13,7 @@ const log = createLogger('trinityExtendedActions');
 
 const taxFormGeneratorService = new TaxFormGeneratorService();
 
-function createResult(actionId: string, success: boolean, message: string, data?: any, startTime?: number): ActionResult {
+function createResult(actionId: string, success: boolean, message: string, data?: unknown, startTime?: number): ActionResult {
   return {
     success,
     actionId,

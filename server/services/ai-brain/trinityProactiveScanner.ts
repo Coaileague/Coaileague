@@ -761,8 +761,8 @@ class TrinityProactiveScannerService {
     }
 
     // STEP 5: Revenue forecast & client health
-    let forecastData: any = null;
-    let overdueData: any = null;
+    let forecastData: unknown = null;
+    let overdueData: unknown = null;
     try {
       [forecastData, overdueData] = await Promise.all([
         getRevenueForecast(workspaceId),
@@ -839,7 +839,7 @@ class TrinityProactiveScannerService {
     };
   }
 
-  async processEvent(eventType: string, payload: any): Promise<unknown> {
+  async processEvent(eventType: string, payload: Record<string, unknown>): Promise<unknown> {
     const { workspaceId, officerId, shiftId, invoiceId, employeeId } = payload;
 
     switch (eventType) {

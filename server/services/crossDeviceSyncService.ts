@@ -341,7 +341,7 @@ class CrossDeviceSyncService {
 
   private async applyChange(
     workspaceId: string,
-    change: { entity: string; action: 'create' | 'update' | 'delete'; data: any; timestamp: Date }
+    change: { entity: string; action: 'create' | 'update' | 'delete'; data: Record<string, unknown>; timestamp: Date }
   ): Promise<{ success: boolean; conflict?: ConflictResolution }> {
     const tables: Record<string, unknown> = {
       employees,
@@ -399,7 +399,7 @@ class CrossDeviceSyncService {
     return { success: true };
   }
 
-  private handleEntityChange(entityType: string, data: any): void {
+  private handleEntityChange(entityType: string, data: Record<string, unknown>): void {
     if (!data.workspaceId) return;
     const wid = data.workspaceId;
 
@@ -444,7 +444,7 @@ class CrossDeviceSyncService {
     }
   }
 
-  private async handleRoleChange(data: any): Promise<void> {
+  private async handleRoleChange(data: Record<string, unknown>): Promise<void> {
     if (!data.userId || !data.workspaceId) return;
 
     await this.pushToAllDevices(data.userId, data.workspaceId, {

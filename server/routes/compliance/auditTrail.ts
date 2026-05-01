@@ -31,7 +31,7 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res: Response) =>
     }
 
     let conditions = ["workspace_id = $1"];
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let idx = 2;
 
     if (entityType) { conditions.push(`entity_type = $${idx++}`); params.push(entityType); }
@@ -71,7 +71,7 @@ router.get("/export", requireAuth, requireManager, async (req: AuthenticatedRequ
       return res.status(400).json({ success: false, error: "Workspace required" });
     }
 
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let idx = 2;
     const conditions = [`workspace_id = $1`];
     if (start) { conditions.push(`created_at >= $${idx++}`); params.push(new Date(String(start))); }

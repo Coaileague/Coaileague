@@ -185,10 +185,10 @@ async function send(to: string, subject: string, html: string, label: string) {
   console.log(`Sending: ${label} → ${to}...`);
   try {
     const result = await resend.emails.send({ from: FROM, to: [to], subject, html }); // nds
-    if ((result as any).error) {
-      console.error(`  ❌ FAILED: ${JSON.stringify((result as any).error)}\n`);
+    if ((result as Record<string, unknown>).error) {
+      console.error(`  ❌ FAILED: ${JSON.stringify((result as Record<string, unknown>).error)}\n`);
     } else {
-      console.log(`  ✅ MessageId: ${(result as any).data?.id ?? JSON.stringify(result)}\n`);
+      console.log(`  ✅ MessageId: ${(result as Record<string, unknown>).data?.id ?? JSON.stringify(result)}\n`);
     }
   } catch (e: unknown) {
     console.error(`  ❌ Exception: ${e.message}\n`);

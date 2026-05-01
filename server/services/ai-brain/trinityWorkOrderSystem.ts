@@ -139,7 +139,7 @@ export interface TaskNode {
   maxAttempts: number;
   
   // Results
-  output?: any;
+  output?: unknown;
   error?: string;
   durationMs?: number;
   
@@ -197,7 +197,7 @@ export interface SolutionAttempt {
   success: boolean;
   confidenceScore: number;
   issues: string[];
-  reflectionResult?: any;
+  reflectionResult?: unknown;
   
   // Decision
   shouldCommit: boolean;
@@ -862,7 +862,7 @@ class SolutionDiscoveryLoop {
   private async executeTask(
     task: TaskNode,
     workOrder: WorkOrder
-  ): Promise<{ success: boolean; output?: any; error?: string; changes?: ChangeRecord[] }> {
+  ): Promise<{ success: boolean; output?: unknown; error?: string; changes?: ChangeRecord[] }> {
     const startTime = Date.now();
     log.info(`[SolutionDiscovery] Executing task: ${task.title} (${task.actionType})`);
     

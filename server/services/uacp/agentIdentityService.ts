@@ -514,8 +514,8 @@ class AgentIdentityService {
     targetId: string;
     workspaceId?: string;
     changeDetails: any;
-    previousState?: any;
-    newState?: any;
+    previousState?: unknown;
+    newState?: unknown;
   }): Promise<void> {
     try {
       await db.insert(accessControlEvents).values({

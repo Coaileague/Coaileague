@@ -46,7 +46,7 @@ const FAST_MODE_CONFIG = {
 
 export interface WorkboardTaskResult {
   success: boolean;
-  data?: any;
+  data?: unknown;
   summary?: string;
   error?: string;
 }
@@ -555,10 +555,10 @@ class WorkboardService {
         featureKey: 'workboard_ai_response',
       });
 
-      if (!(response as any).success || !response.text) {
+      if (!(response as Record<string, unknown>).success || !response.text) {
         return {
           success: false,
-          error: (response as any).error || 'Failed to generate AI response',
+          error: (response as Record<string, unknown>).error || 'Failed to generate AI response',
           data: {
             agentId: routing.assignedAgent,
             processedAt: new Date().toISOString()
@@ -607,7 +607,7 @@ class WorkboardService {
     status: TaskStatus, 
     actor: string
   ): Promise<void> {
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       status,
       statusHistory: sql`${(aiWorkboardTasks as any).statusHistory} || ${JSON.stringify([{
         status,

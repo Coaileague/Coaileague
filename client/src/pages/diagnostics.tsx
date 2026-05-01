@@ -141,7 +141,7 @@ interface AuditLog {
   entityId?: string;
   timestamp: string;
   ipAddress?: string;
-  details?: any;
+  details?: unknown;
 }
 
 interface SessionInfo {

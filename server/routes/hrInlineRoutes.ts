@@ -179,7 +179,7 @@ router.post("/experience/notification-preferences", requireAuth, async (req: Aut
     if (!notifParsed.success) return res.status(400).json({ error: 'Validation failed', details: notifParsed.error.flatten() });
     const { email, push, sms, digest, shiftReminders, shiftReminderTiming, scheduleChangeNotifications, approvalNotifications, quietHoursStart, quietHoursEnd } = notifParsed.data;
 
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (email !== undefined) updateData.enableEmail = email;
     if (push !== undefined) updateData.enablePush = push;
     if (sms !== undefined) updateData.enableSms = sms;

@@ -129,11 +129,11 @@ export interface DraftPayrollResult {
 
 // ─── Helper: result factory ───────────────────────────────────────────────────
 
-function ok(actionId: string, message: string, data: any, start: number): ActionResult {
+function ok(actionId: string, message: string, data: Record<string, unknown>, start: number): ActionResult {
   return { success: true, actionId, message, data, executionTimeMs: Date.now() - start };
 }
 
-function fail(actionId: string, message: string, data: any, start: number): ActionResult {
+function fail(actionId: string, message: string, data: Record<string, unknown>, start: number): ActionResult {
   return { success: false, actionId, message, data, executionTimeMs: Date.now() - start };
 }
 

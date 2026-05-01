@@ -780,7 +780,7 @@ class ShiftChatroomWorkflowService {
     const darId = crypto.randomUUID();
 
     let employeeName = 'Unknown';
-    let employee: any = null;
+    let employee: unknown = null;
     if (shift.employeeId) {
       const [emp] = await db.select()
         .from(employees)
@@ -1119,7 +1119,7 @@ class ShiftChatroomWorkflowService {
   /**
    * Generate chatroom name
    */
-  private generateChatroomName(shift: any, employee?: any): string {
+  private generateChatroomName(shift: any, employee?: unknown): string {
     const dateStr = format(new Date(shift.startTime), 'MMM d');
     const timeStr = format(new Date(shift.startTime), 'h:mma');
     

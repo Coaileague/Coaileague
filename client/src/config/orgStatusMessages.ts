@@ -211,7 +211,7 @@ export interface OrgCustomization {
 export function getCustomizedOrgMessage(
   status: OrgStatusType,
   orgCustomization?: OrgCustomization,
-  context?: any
+  context?: unknown
 ): OrgStatusMessage {
   const baseMessage = getOrgStatusMessage(status, context);
 

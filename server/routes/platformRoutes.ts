@@ -295,7 +295,7 @@ router.patch('/master-keys/organizations/:id', async (req: AuthenticatedRequest,
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       lastAdminAction: validated.actionDescription,
       lastAdminActionBy: rootUserId,
       lastAdminActionAt: new Date()

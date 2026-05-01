@@ -29,7 +29,7 @@ const log = createLogger('TrinityInsightsRoutes');
 // validates the session and sets req.user / req.workspaceId before any route
 // handler runs. These helpers provide a consistent async interface.
 // ---------------------------------------------------------------------------
-async function getAuthenticatedUser(req: AuthenticatedRequest): Promise<any> {
+async function getAuthenticatedUser(req: AuthenticatedRequest): Promise<unknown> {
   return req.user || null;
 }
 
@@ -206,7 +206,7 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
  * 
  * Set TRINITY_DIALOGUE_ENABLED=false to disable AI thought generation (saves tokens during testing)
  */
-const trinityContextCache = new Map<string, { data: any; timestamp: number }>();
+const trinityContextCache = new Map<string, { data: Record<string, unknown>; timestamp: number }>();
 const TRINITY_CONTEXT_CACHE_TTL = 15000; // 15 seconds (polled every 20s)
 
 router.get('/context', async (req: Request, res: Response) => {

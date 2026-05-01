@@ -79,7 +79,7 @@ export interface BusinessInsightRecommendation {
 
 interface OrgRawData {
   workspace: any;
-  context: any;
+  context: Record<string, unknown>;
   employeeList: unknown[];
   clientList: unknown[];
   invoiceList: unknown[];

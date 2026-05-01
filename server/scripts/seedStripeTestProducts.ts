@@ -96,7 +96,7 @@ const OVERAGE_AMOUNT = 2500; // $25 in cents
 function sep(label: string) {
   console.log(`\n${'═'.repeat(64)}\n  ${label}\n${'═'.repeat(64)}`);
 }
-function log(msg: string, data?: any) {
+function log(msg: string, data?: unknown) {
   console.log(`  ${msg}`, data ? JSON.stringify(data, null, 4).split('\n').map(l => '  ' + l).join('\n') : '');
 }
 function ok(msg: string) { console.log(`  ✅ ${msg}`); }

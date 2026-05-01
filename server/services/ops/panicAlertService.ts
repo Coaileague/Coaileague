@@ -255,7 +255,7 @@ class PanicAlertService {
 
   async listAlerts(workspaceId: string, status?: string, limit = 50): Promise<PanicAlert[]> {
     let query = `SELECT * FROM panic_alerts WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (status) { query += ` AND status=$2`; params.push(status); }
     const clampedLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
     query += ` ORDER BY triggered_at DESC LIMIT $${params.length + 1}`;

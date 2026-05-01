@@ -25,7 +25,7 @@ async function q(text: string, params: (string | number | boolean | null)[] = []
   return r.rows;
 }
 
-function broadcast(req: AuthenticatedRequest, event: string, data: any) {
+function broadcast(req: AuthenticatedRequest, event: string, data: Record<string, unknown>) {
   try {
     const wss = req.app?.locals?.wss;
     if (!wss) return;
@@ -47,7 +47,7 @@ safetyRouter.get("/panic", requireAuth, ensureWorkspaceAccess, async (req: Authe
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM panic_alerts WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (status) { query += ` AND status=$2`; params.push(status); }
     query += ` ORDER BY triggered_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     // `notice` bundled for consistency across the panic API — see TRINITY.md Section O.
@@ -166,7 +166,7 @@ safetyRouter.get("/geofences", requireAuth, ensureWorkspaceAccess, async (req: A
     const workspaceId = wid(req);
     const { siteId } = req.query;
     let query = `SELECT * FROM geofence_zones WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (siteId) { query += ` AND site_id=$2`; params.push(siteId); }
     query += ` ORDER BY created_at DESC`;
     res.json({ zones: await q(query, params) });
@@ -238,7 +238,7 @@ safetyRouter.get("/sla", requireAuth, ensureWorkspaceAccess, async (req: Authent
     const workspaceId = wid(req);
     const { clientId, isActive, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM sla_contracts WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
     if (clientId) { query += ` AND client_id=$${i++}`; params.push(clientId); }
     if (isActive !== undefined) { query += ` AND is_active=$${i++}`; params.push(isActive === "true"); }
@@ -303,7 +303,7 @@ safetyRouter.get("/sla-breaches", requireAuth, ensureWorkspaceAccess, async (req
     const workspaceId = wid(req);
     const { slaContractId, limit = 50 } = req.query;
     let query = `SELECT * FROM sla_breach_log WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (slaContractId) { query += ` AND sla_contract_id=$2`; params.push(slaContractId); }
     query += ` ORDER BY detected_at DESC LIMIT ${clampLimit(limit)}`;
     res.json({ breaches: await q(query, params) });
@@ -398,7 +398,7 @@ safetyRouter.post("/lone-worker/checkin", requireAuth, ensureWorkspaceAccess, as
     const workspaceId = wid(req);
     const { sessionId, employeeId, notes } = req.body;
     let query = `UPDATE lone_worker_sessions SET last_checkin_at=NOW(), missed_checkins=0, notes=$1 WHERE workspace_id=$2 AND status='active'`;
-    const params: any[] = [notes||null, workspaceId];
+    const params: Record<string, unknown>[] = [notes||null, workspaceId];
     if (sessionId) { query += ` AND id=$3`; params.push(sessionId); }
     else if (employeeId) { query += ` AND employee_id=$3`; params.push(employeeId); }
     await q(query + ` RETURNING *`, params);
@@ -415,7 +415,7 @@ safetyRouter.post("/lone-worker/end", requireAuth, ensureWorkspaceAccess, async 
     const workspaceId = wid(req);
     const { sessionId, employeeId } = req.body;
     let query = `UPDATE lone_worker_sessions SET status='ended', ended_at=NOW() WHERE workspace_id=$1 AND status='active'`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (sessionId) { query += ` AND id=$2`; params.push(sessionId); }
     else if (employeeId) { query += ` AND employee_id=$2`; params.push(employeeId); }
     await q(query, params);

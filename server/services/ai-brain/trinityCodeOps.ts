@@ -803,7 +803,7 @@ class TrinityCodeOpsService {
   // FAST MODE - PARALLEL EXECUTION
   // ---------------------------------------------------------------------------
 
-  async executeFastMode(operations: Array<{ type: 'search' | 'patch' | 'read'; params: any }>): Promise<any[]> {
+  async executeFastMode(operations: Array<{ type: 'search' | 'patch' | 'read'; params: Record<string, unknown> }>): Promise<Record<string,unknown>[]> {
     log.info(`[TrinityCodeOps] FAST MODE: Executing ${operations.length} operations in parallel`);
     const startTime = Date.now();
 

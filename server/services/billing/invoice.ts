@@ -49,7 +49,7 @@ export interface InvoiceLineItemInput {
   amount: number;
   addonId?: string;
   featureKey?: string;
-  metadata?: any;
+  metadata?: unknown;
 }
 
 export interface GenerateInvoiceInput {
@@ -1212,7 +1212,7 @@ export class InvoiceService {
         notes: notes || `Partial payment of $${effectiveAmount.toFixed(2)}`,
       }).returning();
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         amountPaid: newPaidTotal.toFixed(2),
         updatedAt: new Date(),
       };

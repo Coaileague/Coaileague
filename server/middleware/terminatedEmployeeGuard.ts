@@ -49,7 +49,7 @@ function isGraceAllowed(path: string, method: string): boolean {
 }
 
 export const terminatedEmployeeGuard = async (
-  req: Request & { user?: any; workspaceId?: string; terminatedGracePeriod?: boolean },
+  req: Request & { user?: unknown; workspaceId?: string; terminatedGracePeriod?: boolean },
   res: Response,
   next: NextFunction,
 ): Promise<void> => {

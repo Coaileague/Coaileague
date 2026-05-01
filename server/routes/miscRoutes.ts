@@ -706,8 +706,8 @@ router.get("/api/identity/me", requireAuth, async (req: AuthenticatedRequest, re
       return res.status(404).json({ message: "User not found" });
     }
     const workspaceId = req.workspaceId || (user as any)?.workspaceId || user.currentWorkspaceId;
-    let employee: any = null;
-    let workspace: any = null;
+    let employee: unknown = null;
+    let workspace: unknown = null;
     if (workspaceId) {
       employee = await storage.getEmployeeByUserId(userId, workspaceId);
       const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
@@ -987,7 +987,7 @@ Escalate to human if: there are complaints, billing disputes, legal matters, urg
           { temperature: 0.4 }
         );
 
-        let parsed: any = null;
+        let parsed: unknown = null;
         try {
           const jsonMatch = aiResult.match(/\{[\s\S]*\}/);
           if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);

@@ -1160,7 +1160,7 @@ export const platformConfigRegistry = pgTable("platform_config_registry", {
   isGlobal: boolean("is_global").notNull().default(true),
   isActive: boolean("is_active").notNull().default(true),
   priority: integer("priority").notNull().default(0),
-  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: varchar("updated_by"),
 

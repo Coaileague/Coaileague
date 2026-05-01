@@ -181,7 +181,7 @@ class TrinityContextManager {
   }
 
   // SECURITY: Sanitize data before persistent storage
-  private sanitizeForStorage(data: any, depth = 0): any {
+  private sanitizeForStorage(data: Record<string, unknown>, depth = 0): any {
     if (depth > 10) return '[MAX_DEPTH]'; // Prevent infinite recursion
     if (data === null || data === undefined) return data;
     if (typeof data === 'string') {

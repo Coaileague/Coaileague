@@ -635,7 +635,7 @@ async function applyAutomationUpdate(params: {
         'inboundEmailForwardTo': 'inboundEmailForwardTo',
       };
       
-      const filteredData: any = {};
+      const filteredData: Record<string, unknown> = {};
       for (const [frontendKey, backendKey] of Object.entries(fieldMapping)) {
         if (req.body[frontendKey] !== undefined) {
           filteredData[backendKey] = req.body[frontendKey];

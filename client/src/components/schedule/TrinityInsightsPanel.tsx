@@ -29,7 +29,7 @@ interface TrinityInsight {
   description: string;
   actionable?: boolean;
   actionLabel?: string;
-  actionData?: any;
+  actionData?: unknown;
 }
 
 interface TrinityInsightsPanelProps {

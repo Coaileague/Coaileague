@@ -509,7 +509,7 @@ class PlatformEventBus {
    * Lightweight internal event emitter for service-to-service communication
    * Does NOT persist to database or trigger notifications
    */
-  emit(eventName: string, payload: any) {
+  emit(eventName: string, payload: Record<string, unknown>) {
     const listeners = this.internalListeners.get(eventName) || [];
     for (const listener of listeners) {
       try {

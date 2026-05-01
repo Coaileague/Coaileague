@@ -1053,7 +1053,7 @@ JSON:`;
         }
         
         // Robust JSON repair for AI responses (handles truncation and malformed output)
-        let parsed: any = null;
+        let parsed: unknown = null;
         
         // Helper: Count unescaped quotes to detect unterminated strings
         const countUnescapedQuotes = (s: string): number => {

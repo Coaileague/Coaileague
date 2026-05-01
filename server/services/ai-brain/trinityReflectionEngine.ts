@@ -546,7 +546,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
   // HELPERS
   // ==========================================================================
 
-  private async emitReflectionEvent(eventType: string, data: any): Promise<void> {
+  private async emitReflectionEvent(eventType: string, data: Record<string, unknown>): Promise<void> {
     const event: PlatformEvent = {
       type: eventType as any,
       category: 'automation' as any,

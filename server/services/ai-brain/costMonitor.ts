@@ -619,7 +619,7 @@ class AICostMonitorService {
     workspaceId: string;
     operationType: string;
     timestamp: string;
-    details: any;
+    details: Record<string, unknown>;
   }>> {
     const logs = await db
       .select()
@@ -633,7 +633,7 @@ class AICostMonitorService {
       workspaceId: string;
       operationType: string;
       timestamp: string;
-      details: any;
+      details: Record<string, unknown>;
     }> = [];
 
     for (const log of logs) {

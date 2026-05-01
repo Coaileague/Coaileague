@@ -175,7 +175,7 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
         .where(inArray(employees.id, affectedEmployeeIds));
     }
 
-    const broadcastNotification = (bWorkspaceId: string, bUserId: string, _updateType: string, notification?: any) => {
+    const broadcastNotification = (bWorkspaceId: string, bUserId: string, _updateType: string, notification?: unknown) => {
       broadcastNotificationToUser(bWorkspaceId, bUserId, notification);
     };
 

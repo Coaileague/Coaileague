@@ -980,7 +980,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
           workspaceId
           );
           // @ts-expect-error — TS migration: fix in refactoring sprint
-          if (result.messageId) lastMessageId = (result as any).messageId;
+          if (result.messageId) lastMessageId = (result as Record<string, unknown>).messageId;
         }
 
         externalResult = {

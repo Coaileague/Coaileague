@@ -98,7 +98,7 @@ class ClientReportService {
     postId: string, 
     periodStart: Date, 
     periodEnd: Date,
-    config: any
+    config: Record<string, unknown>
   ): Promise<ClientPOSReportShift[]> {
     return [];
   }

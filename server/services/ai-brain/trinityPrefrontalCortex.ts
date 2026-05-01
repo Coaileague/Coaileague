@@ -966,7 +966,7 @@ export const trinityPrefrontalCortex = TrinityPrefrontalCortex.getInstance();
   ];
   invalidatingEvents.forEach(event => {
     try {
-      platformEventBus.on(event, (data: any) => {
+      platformEventBus.on(event, (data: Record<string, unknown>) => {
         if (data?.workspaceId) {
           trinityPrefrontalCortex.invalidateCache(data.workspaceId);
         }

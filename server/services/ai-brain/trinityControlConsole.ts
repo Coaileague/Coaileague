@@ -167,7 +167,7 @@ class TrinityControlConsoleService {
     });
 
     // Listen for database events posted to AI Brain
-    aiBrainEvents.on('database_event', (data: any) => {
+    aiBrainEvents.on('database_event', (data: Record<string, unknown>) => {
       this.captureAwareness({
         eventType: 'database_operation',
         source: data.source || 'api',
@@ -616,7 +616,7 @@ class TrinityControlConsoleService {
     runId?: string;
     limit?: number;
     since?: Date;
-  }): Promise<any[]> {
+  }): Promise<Record<string,unknown>[]> {
     const conditions = [];
     
     if (options?.sessionId) {
@@ -649,7 +649,7 @@ class TrinityControlConsoleService {
     runId?: string;
     limit?: number;
     since?: Date;
-  }): Promise<any[]> {
+  }): Promise<Record<string,unknown>[]> {
     const conditions = [];
     
     if (options?.sessionId) {
@@ -679,7 +679,7 @@ class TrinityControlConsoleService {
   async getSessionTimeline(sessionId: string, workspaceId: string): Promise<Array<{
     type: 'thought' | 'action';
     timestamp: Date;
-    data: any;
+    data: Record<string, unknown>;
   }>> {
     const [thoughts, actions] = await Promise.all([
       this.getRecentThoughts({ sessionId, workspaceId, limit: 100 }),

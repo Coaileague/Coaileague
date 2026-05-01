@@ -343,7 +343,7 @@ class CDNCachingService {
       // Store original json method
       const originalJson = res.json.bind(res);
       
-      res.json = (data: any) => {
+      res.json = (data: Record<string, unknown>) => {
         this.set(cacheKey, data, { ttl: ttl || this.config.defaultTTL, tags: ['api'] });
         return originalJson(data);
       };

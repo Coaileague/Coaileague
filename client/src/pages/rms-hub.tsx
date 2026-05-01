@@ -494,7 +494,7 @@ export default function RMSHub() {
   });
 
   const trackReportAction = useMutation({
-    mutationFn: (data: { reportId: string; action: string; reportType?: string; metadata?: any }) =>
+    mutationFn: (data: { reportId: string; action: string; reportType?: string; metadata?: unknown }) =>
       apiRequest("POST", `/api/rms/reports/${data.reportId}/track`, { action: data.action, reportType: data.reportType || "dar", metadata: data.metadata, workspaceId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rms/reports/audit-summary", { workspaceId }] });

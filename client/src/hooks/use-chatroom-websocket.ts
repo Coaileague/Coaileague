@@ -89,7 +89,7 @@ interface WebSocketMessage {
   releasedBy?: string;
   fromUser?: string;
   fromUserId?: string;
-  data?: any;
+  data?: unknown;
   bannerMessage?: string;
   staffName?: string;
   commandId?: string;

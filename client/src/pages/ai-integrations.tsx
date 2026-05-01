@@ -68,7 +68,7 @@ interface Connection {
   status: "active" | "inactive" | "error";
   connectedAt: string;
   lastSync?: string;
-  config?: any;
+  config?: unknown;
 }
 
 interface ApiKeyData {

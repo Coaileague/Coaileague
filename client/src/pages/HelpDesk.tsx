@@ -3984,7 +3984,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 }
 
 // Default export for backward compatibility
-function HelpDeskWithBoundary(props?: any) {
+function HelpDeskWithBoundary(props?: unknown) {
   return (
     <ErrorBoundary componentName="HelpDesk">
       <HelpDesk {...props} />

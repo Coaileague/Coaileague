@@ -93,7 +93,7 @@ router.post('/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
       success: true,
       ...result,
       message: difficulty === 'org'
-        ? `Successfully created ${result.shiftsCreated} org-data training shifts from ${(result as any).clientRatesUsed ?? 0} real client contracts`
+        ? `Successfully created ${result.shiftsCreated} org-data training shifts from ${(result as Record<string, unknown>).clientRatesUsed ?? 0} real client contracts`
         : `Successfully created ${result.shiftsCreated} training shifts at ${difficulty} difficulty`,
     });
   } catch (error: unknown) {

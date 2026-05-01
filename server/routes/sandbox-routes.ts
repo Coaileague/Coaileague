@@ -323,7 +323,7 @@ router.post('/run-complete-workflow', sandboxDevBypass, async (req: Request, res
   try {
     log.info('[Sandbox API] Running complete workflow simulation...');
     
-    const results: any = {
+    const results: Record<string, unknown> = {
       steps: [],
       summary: {},
     };
@@ -370,7 +370,7 @@ router.post('/run-complete-workflow', sandboxDevBypass, async (req: Request, res
 router.post('/e2e-quickbooks-test', sandboxDevBypass, async (req: Request, res: Response) => {
   const WORKSPACE_ID = 'sandbox-e2e-quickbooks-workspace-00000000';
   const testLog: (string | number | boolean | null)[] = [];
-  const addLog = (step: string, status: string, data: any) => {
+  const addLog = (step: string, status: string, data: Record<string, unknown>) => {
     testLog.push({ step, status, timestamp: new Date().toISOString(), data });
     log.info(`[E2E-QB] ${step}: ${status}`);
   };
@@ -502,7 +502,7 @@ router.post('/e2e-quickbooks-test', sandboxDevBypass, async (req: Request, res: 
       invoices: dbInvoices.length,
     });
 
-    const qbResults: any = { customers: [], employees: [], invoices: [] };
+    const qbResults: Record<string, unknown> = { customers: [], employees: [], invoices: [] };
     const qbHeaders = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -750,7 +750,7 @@ router.post('/test-lazy-sync', sandboxDevBypass, async (req: Request, res: Respo
 
     const WORKSPACE_ID = 'sandbox-lazy-sync-workspace-00000000';
     const testLog: (string | number | boolean | null)[] = [];
-    const addLog = (step: string, status: string, data: any) => {
+    const addLog = (step: string, status: string, data: Record<string, unknown>) => {
       testLog.push({ step, status, data, timestamp: new Date().toISOString() });
       log.info(`[LazySync-Test] ${step}: ${status}`);
     };

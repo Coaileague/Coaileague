@@ -14,7 +14,7 @@ const log = createLogger('atsRoutes');
 // CATEGORY C — All db.$client.query calls in this file use raw SQL for complex ATS operations | Tables: job_postings, applicants, interview_sessions, interview_session_messages | Verified: 2026-03-23
 const router = Router();
 
-function scoreApplicant(data: any): { score: number; rationale: string } {
+function scoreApplicant(data: Record<string, unknown>): { score: number; rationale: string } {
   let score = 0;
   const reasons: string[] = [];
   if (data.has_guard_card) {

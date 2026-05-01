@@ -365,7 +365,7 @@ router.get("/client-profitability", async (req: AuthenticatedRequest, res) => {
     const dateTo = req.query.dateTo as string | undefined;
 
     let dateFilter = "";
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let paramIdx = 2;
 
     if (dateFrom) {

@@ -76,7 +76,7 @@ function assert(condition: boolean, name: string, detail?: string) {
 function testSchemaHasWorkspaceId() {
   console.log('\n[1] Drizzle schema workspaceId presence checks...');
 
-  const tableChecks: [string, Record<string, any>][] = [
+  const tableChecks: [string, Record<string, unknown>][] = [
     // NOT NULL group (5)
     ['contractorPool', contractorPool as any],
     ['deals', deals as any],

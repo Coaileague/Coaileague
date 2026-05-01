@@ -173,7 +173,7 @@ export class QuickBooksSyncService {
     endpoint: string,
     realmId: string,
     accessToken: string,
-    body?: any,
+    body?: unknown,
     priority: number = 0
   ): Promise<T> {
     const environment = INTEGRATIONS.quickbooks.getEnvironment();
@@ -2379,7 +2379,7 @@ export class QuickBooksSyncService {
     context: {
       operation: string;
       entityType?: string;
-      payload?: any;
+      payload?: unknown;
       retryCount: number;
     }
   ): Promise<{

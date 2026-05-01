@@ -27,7 +27,7 @@ import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityDelegationTrackerActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,
@@ -309,7 +309,7 @@ export function registerDelegationTrackerActions() {
     const ws = workspaceId || (task as any).workspaceId;
     let verified = false;
     let verificationDetails = '';
-    let verificationData: any = {};
+    let verificationData: Record<string, unknown> = {};
 
     switch (taskType) {
       case 'timesheet_approval': {

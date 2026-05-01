@@ -3107,7 +3107,7 @@ const automationEmailTemplates = {
 export async function sendAutomationEmail(params: {
   to: string;
   type: 'approval_required' | 'hotpatch_scheduled';
-  data: any;
+  data: Record<string, unknown>;
 }): Promise<{ success: boolean; error?: string }> {
   const template = automationEmailTemplates[params.type];
   if (!template) {

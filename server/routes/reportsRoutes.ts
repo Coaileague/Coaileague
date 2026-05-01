@@ -45,7 +45,7 @@ router.post('/generate', requireManager, async (req: AuthenticatedRequest, res) 
     }
     const workspaceId = workspace.id;
 
-    let reportData: any = {};
+    let reportData: Record<string, unknown> = {};
 
     switch (reportType) {
       case 'payroll-summary':
@@ -601,7 +601,7 @@ router.get('/company-data', requireAdmin, async (req: AuthenticatedRequest, res)
       return res.json({ report: reportType, data: [], period: { startDate, endDate }, generated: new Date().toISOString() });
     }
 
-    let data: any = {};
+    let data: Record<string, unknown> = {};
 
     if (reportType === 'general') {
       const [employeeCount] = await db

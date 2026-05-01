@@ -16,7 +16,7 @@ const log = createLogger('BugRemediation');
 
 
 interface AuthenticatedRequest extends Request {
-  user?: any;
+  user?: unknown;
   userId?: string;
   workspaceId?: string;
 }

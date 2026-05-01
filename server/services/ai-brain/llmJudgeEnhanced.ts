@@ -655,7 +655,7 @@ Respond with JSON:
     return { violations, action: highestAction, triggeredPolicies };
   }
 
-  private evaluatePolicyConditions(conditions: PolicyCondition[], context: any): boolean {
+  private evaluatePolicyConditions(conditions: PolicyCondition[], context: Record<string, unknown>): boolean {
     return conditions.every(condition => {
       const fieldValue = this.getNestedValue(context, condition.field);
       
@@ -874,7 +874,7 @@ Respond with JSON:
     return RISK_POLICIES.filter(p => p.isActive);
   }
 
-  async getRecentEvaluations(workspaceId: string, limit: number = 50): Promise<any[]> {
+  async getRecentEvaluations(workspaceId: string, limit: number = 50): Promise<Record<string,unknown>[]> {
     try {
       return await db
         .select()

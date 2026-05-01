@@ -540,7 +540,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
     }
   }
 
-  async healthCheck(): Promise<{ healthy: boolean; details?: any }> {
+  async healthCheck(): Promise<{ healthy: boolean; details?: unknown }> {
     return {
       healthy: this.config.enabled,
       details: {

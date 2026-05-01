@@ -72,7 +72,7 @@ async function main() {
     WHERE (table_name = 'clients' AND column_name = 'billable_hourly_rate')
        OR (table_name = 'client_billing_settings' AND column_name = 'tax_rate')
   `) as any;
-  const rows: Array<any> = schemaTypes.rows || schemaTypes;
+  const rows: Array<unknown> = schemaTypes.rows || schemaTypes;
   const nonNumeric = rows.filter((r) => r.data_type !== 'numeric' && r.data_type !== 'decimal');
   if (nonNumeric.length > 0) {
     throw new Error(`Schema check failure: expected decimal/numeric columns, got ${JSON.stringify(nonNumeric)}`);

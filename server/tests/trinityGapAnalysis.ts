@@ -45,7 +45,7 @@ function anyFileContains(dir: string, pattern: RegExp, ...terms: string[]): bool
   });
 }
 
-function extractRows(result: any): any[] {
+function extractRows(result: any): unknown[] {
   if (Array.isArray(result)) return result;
   if (result?.rows && Array.isArray(result.rows)) return result.rows;
   return [];

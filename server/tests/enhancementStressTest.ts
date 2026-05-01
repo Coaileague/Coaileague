@@ -360,7 +360,7 @@ async function phase4_document_signing() {
 
 async function phase5_pwa_manifest() {
   const manifestExists = fs.existsSync('client/public/manifest.json');
-  let manifest: any = {};
+  let manifest: Record<string, unknown> = {};
   if (manifestExists) {
     manifest = JSON.parse(fs.readFileSync('client/public/manifest.json', 'utf-8'));
   }

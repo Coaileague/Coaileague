@@ -3,7 +3,7 @@ import { SQL } from 'drizzle-orm';
 
 export async function typedQuery<T = Record<string, unknown>>(query: SQL): Promise<T[]> {
   const result = await db.execute(query);
-  return (result as any).rows as T[];
+  return (result as Record<string, unknown>).rows as T[];
 }
 
 export async function typedPool<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<{ rows: T[] }> {
@@ -17,7 +17,7 @@ export async function typedPoolExec(text: string, params?: unknown[]): Promise<{
 }
 
 // CATEGORY C — Raw SQL retained: typedClient wrapper forwards raw SQL from transaction callers | Tables: dynamic | Verified: 2026-03-23
-export function typedClient(client: { query: (text: string, params?: unknown[]) => Promise<any> }) {
+export function typedClient(client: { query: (text: string, params?: unknown[]) => Promise<unknown> }) {
   return {
     async query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<T[]> {
       const result = await client.query(text, params);
@@ -38,18 +38,18 @@ export async function typedQueryOne<T = Record<string, unknown>>(query: SQL): Pr
 
 export async function typedCount(query: SQL): Promise<number> {
   const result = await db.execute(query);
-  const row = (result as any).rows[0];
+  const row = (result as Record<string, unknown>).rows[0];
   return parseInt(row?.count ?? row?.total ?? '0', 10);
 }
 
 export async function typedExists(query: SQL): Promise<boolean> {
   const result = await db.execute(query);
-  return (result as any).rows[0]?.exists === true;
+  return (result as Record<string, unknown>).rows[0]?.exists === true;
 }
 
 export async function typedScalar<T = string>(query: SQL): Promise<T | null> {
   const result = await db.execute(query);
-  const row = (result as any).rows[0];
+  const row = (result as Record<string, unknown>).rows[0];
   if (!row) return null;
   const keys = Object.keys(row);
   return keys.length > 0 ? row[keys[0]] as T : null;
@@ -57,5 +57,5 @@ export async function typedScalar<T = string>(query: SQL): Promise<T | null> {
 
 export async function typedExec(query: SQL): Promise<{ rowCount: number }> {
   const result = await db.execute(query);
-  return { rowCount: (result as any).rowCount ?? 0 };
+  return { rowCount: (result as Record<string, unknown>).rowCount ?? 0 };
 }

@@ -61,7 +61,7 @@ export interface APITestCase {
   endpoint: string;
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown;
   expectedStatus: number | number[];
   validateResponse?: (response: any) => boolean;
   requiresAuth: boolean;
@@ -73,7 +73,7 @@ export interface APITestResult {
   success: boolean;
   statusCode: number;
   responseTime: number;
-  responseBody?: any;
+  responseBody?: unknown;
   error?: string;
   timestamp: string;
 }
@@ -92,8 +92,8 @@ export interface IntegrationStep {
   action: 'api-call' | 'ui-action' | 'wait' | 'assert' | 'assert-any' | 'websocket-connect' | 'websocket-message' | 'db-check';
   target?: string;
   targets?: string[]; // For assert-any: check if any of these strings are in the page
-  data?: any;
-  expectedResult?: any;
+  data?: unknown;
+  expectedResult?: unknown;
   timeout?: number;
   description: string;
 }

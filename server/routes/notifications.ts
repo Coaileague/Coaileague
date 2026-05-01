@@ -27,7 +27,7 @@ function broadcastNotification(
   workspaceId: string,
   userId: string,
   updateType: string,
-  notification?: any,
+  notification?: unknown,
   unreadCount?: number
 ) {
   try {
@@ -1040,7 +1040,7 @@ router.post('/api/notifications/:id/action', requireAuth, async (req: Authentica
         return res.status(400).json({ message: 'Action is required' });
       }
       
-      let actionResult: any = { success: true };
+      let actionResult: Record<string, unknown> = { success: true };
       
       switch (action) {
         case 'approve':

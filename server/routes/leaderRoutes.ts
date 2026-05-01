@@ -358,7 +358,7 @@ router.patch("/leaders/update-contact", requireAuth, requireLeader, async (req: 
       address: employee.address,
     };
     
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (email !== undefined) updateData.email = email;
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;

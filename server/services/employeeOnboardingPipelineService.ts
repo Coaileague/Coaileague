@@ -82,7 +82,7 @@ export class EmployeeOnboardingPipelineService {
     return result.rows[0] || null;
   }
 
-  async completeStep(pipelineId: string, stepId: string, data?: any): Promise<unknown> {
+  async completeStep(pipelineId: string, stepId: string, data?: unknown): Promise<unknown> {
     const pipeline = await this.getPipeline(pipelineId);
     if (!pipeline) throw new Error('Pipeline not found');
 

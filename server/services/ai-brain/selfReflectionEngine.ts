@@ -741,7 +741,7 @@ interface AppliedCorrection {
   revisionId: string;
   success: boolean;
   description: string;
-  newOutput?: any;
+  newOutput?: unknown;
   error?: string;
   timestamp: Date;
 }

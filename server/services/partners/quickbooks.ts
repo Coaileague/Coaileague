@@ -116,7 +116,7 @@ export class QuickBooksService {
     endpoint: string,
     realmId: string,
     accessToken: string,
-    body?: any,
+    body?: unknown,
     requestId?: string
   ): Promise<T> {
     const url = `${QBO_API_BASE}/${realmId}${endpoint}`;

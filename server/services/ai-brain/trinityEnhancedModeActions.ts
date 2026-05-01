@@ -152,7 +152,7 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
           actionId: request.actionId,
           message: result.autoExecuted 
             ? `Scenario simulated, mitigation auto-executed (ROI: ${result.roi}x)`
-            : `Scenario simulated: $${result.revenueAtRisk} at risk, ${(result as any).mitigation || 'needs approval'}`,
+            : `Scenario simulated: $${result.revenueAtRisk} at risk, ${(result as Record<string, unknown>).mitigation || 'needs approval'}`,
           data: result,
           executionTimeMs: Date.now() - startTime
         };

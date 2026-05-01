@@ -880,7 +880,7 @@ class AutomationTriggerService {
     );
   }
 
-  private async handleDataSyncComplete(workspaceId: string, payload: any): Promise<void> {
+  private async handleDataSyncComplete(workspaceId: string, payload: Record<string, unknown>): Promise<void> {
     log.info(`[AutomationTriggerService] Data sync complete for workspace ${workspaceId}`);
     
     const trigger = this.findTrigger(workspaceId, 'employee_sync', 'data_sync_complete');
@@ -889,7 +889,7 @@ class AutomationTriggerService {
     }
   }
 
-  private async handleEmployeeImportComplete(workspaceId: string, payload: any): Promise<void> {
+  private async handleEmployeeImportComplete(workspaceId: string, payload: Record<string, unknown>): Promise<void> {
     log.info(`[AutomationTriggerService] Employee import complete for workspace ${workspaceId}`);
     
     const trigger = this.findTrigger(workspaceId, 'schedule_generation', 'employee_import_complete');
@@ -898,7 +898,7 @@ class AutomationTriggerService {
     }
   }
 
-  private async handleSchedulePublished(workspaceId: string, payload: any): Promise<void> {
+  private async handleSchedulePublished(workspaceId: string, payload: Record<string, unknown>): Promise<void> {
     log.info(`[AutomationTriggerService] Schedule published for workspace ${workspaceId}`, payload);
 
     // GAP-C FIX: Ensure invoice + payroll triggers exist for this workspace
@@ -936,7 +936,7 @@ class AutomationTriggerService {
     }
   }
 
-  private async handleTimeEntriesApproved(workspaceId: string, payload: any): Promise<void> {
+  private async handleTimeEntriesApproved(workspaceId: string, payload: Record<string, unknown>): Promise<void> {
     log.info(`[AutomationTriggerService] Time entries approved for workspace ${workspaceId}`);
     
     // Trigger invoice creation automation — auto-create trigger if it was never configured

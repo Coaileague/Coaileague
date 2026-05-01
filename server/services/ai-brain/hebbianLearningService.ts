@@ -139,7 +139,7 @@ export async function runDecayCycle(): Promise<number> {
       sql`(${knowledgeRelationships.updatedAt} IS NULL OR ${knowledgeRelationships.updatedAt} < ${cutoff})`,
       sql`${knowledgeRelationships.strength} > ${STRENGTH_FLOOR}`
     ));
-    const affected = (result as any).rowCount ?? 0;
+    const affected = (result as Record<string, unknown>).rowCount ?? 0;
     log.info(`[Hebbian] Decay cycle complete — ${affected} edges weakened`);
     return affected;
   } catch (err: unknown) {

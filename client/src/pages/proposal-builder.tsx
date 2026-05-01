@@ -134,7 +134,7 @@ function ProposalFormDialog({
   proposal,
   onClose,
 }: {
-  proposal?: any;
+  proposal?: unknown;
   onClose: () => void;
 }) {
   const { user } = useAuth();

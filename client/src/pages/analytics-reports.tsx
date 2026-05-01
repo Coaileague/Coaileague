@@ -674,7 +674,7 @@ function AuditTrailReport({ startDate, endDate }: { startDate: Date; endDate: Da
     );
   }
 
-  const report = data as { data: unknown[]; total: number; filters: any; actionCounts?: any };
+  const report = data as { data: unknown[]; total: number; filters: any; actionCounts?: unknown };
 
   return (
     <Card>

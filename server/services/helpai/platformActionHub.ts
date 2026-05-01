@@ -141,7 +141,7 @@ export interface ActionResult {
   success: boolean;
   actionId?: string;
   message: string;
-  data?: any;
+  data?: unknown;
   error?: string;
   executionTimeMs?: number;
   notificationSent?: boolean;
@@ -1068,7 +1068,7 @@ class PlatformActionHub {
         const { latitude, longitude } = request.payload || {};
         if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
         let query = `SELECT id, unit_identifier, employee_name, current_status, latitude, longitude, last_ping_at FROM cad_units WHERE workspace_id=$1 AND current_status='available'`;
-        const params: any[] = [workspaceId];
+        const params: Record<string, unknown>[] = [workspaceId];
         if (latitude && longitude) {
           const lat = Number(latitude);
           const lng = Number(longitude);
@@ -1122,7 +1122,7 @@ class PlatformActionHub {
         const workspaceId = request.workspaceId;
         if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
         let query = `SELECT id, report_number, category, priority, title, status, occurred_at, reported_by_name, site_name FROM incident_reports WHERE workspace_id=$1`;
-        const params: any[] = [workspaceId];
+        const params: Record<string, unknown>[] = [workspaceId];
         if (siteId) { query += ` AND site_id=$2`; params.push(siteId); }
         else if (siteName) { query += ` AND site_name ILIKE $2`; params.push(`%${siteName}%`); }
         query += ` ORDER BY occurred_at DESC LIMIT ${Number(limit)}`;
@@ -1144,7 +1144,7 @@ class PlatformActionHub {
         const workspaceId = request.workspaceId;
         if (!workspaceId) return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
         let unitQuery = `SELECT u.*, e.first_name, e.last_name FROM cad_units u LEFT JOIN employees e ON e.id = u.employee_id WHERE u.workspace_id=$1`;
-        const params: any[] = [workspaceId];
+        const params: Record<string, unknown>[] = [workspaceId];
         if (employeeId) { unitQuery += ` AND u.employee_id=$2`; params.push(employeeId); }
         else if (employeeName) { unitQuery += ` AND u.employee_name ILIKE $2`; params.push(`%${employeeName}%`); }
         unitQuery += ` LIMIT 1`;
@@ -1255,7 +1255,7 @@ class PlatformActionHub {
           WHERE workspace_id=$1
             AND occurred_at >= NOW() - make_interval(days => $${paramIdx})
         `;
-        const params: any[] = [workspaceId, daysNum];
+        const params: Record<string, unknown>[] = [workspaceId, daysNum];
         paramIdx++;
 
         if (employeeId) {

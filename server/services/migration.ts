@@ -17,7 +17,7 @@ export interface CreateMigrationJobParams {
 
 export interface ExtractedRecord {
   recordType: MigrationType;
-  data: any;
+  data: Record<string, unknown>;
   confidence: number;
   warnings: string[];
 }

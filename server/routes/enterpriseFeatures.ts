@@ -32,7 +32,7 @@ import {
 import { softDelete } from '../lib/softDelete';
 
 interface AuthenticatedRequest extends Request {
-  user?: any;
+  user?: unknown;
   workspaceId?: string;
 }
 

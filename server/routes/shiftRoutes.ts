@@ -72,6 +72,8 @@ import { employeeDocumentOnboardingService } from "../services/employeeDocumentO
 import { checkSchedulingEligibility, checkRequiredCertifications } from "../services/compliance/trinityComplianceEngine";
 import { shiftRoomBotOrchestrator } from "../services/bots/shiftRoomBotOrchestrator";
 import { createLogger } from '../lib/logger';
+import type { ShiftWithJoins } from '@shared/types/domainExtensions';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('ShiftRoutes');
 
 
@@ -104,7 +106,7 @@ function releaseBulkShiftLock(workspaceId: string) {
 }
 
 // Helper function to check shift access authorization
-async function validateShiftAccess(shiftId: string, employeeId: string, workspaceId: string, storageRef: any): Promise<{ authorized: boolean; shift?: any; reason?: string }> {
+async function validateShiftAccess(shiftId: string, employeeId: string, workspaceId: string, storageRef: any): Promise<{ authorized: boolean; shift?: unknown; reason?: string }> {
   const shift = await storageRef.getShift(shiftId, workspaceId);
   if (!shift) {
     return { authorized: false, reason: "Shift not found" };
@@ -477,12 +479,12 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
             ineligibleEmployees.push(`${empName}: Employee is not active (terminated or deactivated)`);
             continue;
           }
-          if ((emp.status as string | null | undefined) === 'pending') {
+          if ((emp as EmployeeWithStatus).status === 'pending') {
             const empName = `${emp.firstName} ${emp.lastName}`;
             ineligibleEmployees.push(`${empName}: Employee is pending activation and cannot be scheduled`);
             continue;
           }
-          if ((emp.status as string | null | undefined) === 'suspended') {
+          if ((emp as EmployeeWithStatus).status === 'suspended') {
             const empName = `${emp.firstName} ${emp.lastName}`;
             ineligibleEmployees.push(`${empName}: Employee is suspended and cannot be scheduled`);
             continue;
@@ -1125,7 +1127,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
       // T004: Atomic shift assignment using transactions with FOR UPDATE
       // Capture before-state for audit trail on manual corrections
-      let shiftBeforeState: any = null;
+      let shiftBeforeState: unknown = null;
       let shift: typeof import('@shared/schema').shifts.$inferSelect | null | undefined;
       try {
         shift = await db.transaction(async (tx) => {
@@ -2251,8 +2253,8 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
               try {
                 // Search for invoice line item by metadata.shiftId for reliability
                 const allInvoices = await storage.getInvoicesByClient(shift.clientId, workspaceId);
-                let deniedShiftLineItem: any = null;
-                let targetInvoice: any = null;
+                let deniedShiftLineItem: unknown = null;
+                let targetInvoice: unknown = null;
 
                 for (const invoice of allInvoices) {
                   if (invoice.status === 'draft') {

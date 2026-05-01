@@ -143,7 +143,7 @@ export async function upsertPlatformFlag(params: {
   rolloutPercentage?: number;
   minimumTier?: string;
   createdBy?: string;
-}): Promise<any> {
+}): Promise<unknown> {
   const { rows } = await pool.query(
     `INSERT INTO platform_feature_flags
        (id, flag_key, description, enabled_globally, enabled_for_workspaces, rollout_percentage, minimum_tier, created_by, updated_at)

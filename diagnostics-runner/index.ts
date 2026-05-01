@@ -33,7 +33,7 @@ import * as path from 'path';
 
 type RunMode = 'crawl' | 'workflows' | 'full' | 'core';
 
-function interpolateWorkflows(workflows: any[]): any[] {
+function interpolateWorkflows(workflows: unknown[]): unknown[] {
   const vars: Record<string, string> = {
     '${BASE_URL}': config.baseUrl,
     '${TEST_USERNAME}': process.env.TEST_USERNAME || '',
@@ -81,7 +81,7 @@ async function loadWorkflows(useCoreFeatures: boolean = false): Promise<any[]> {
   }
 }
 
-function getDefaultWorkflows(): any[] {
+function getDefaultWorkflows(): unknown[] {
   return [
     {
       name: 'Homepage Load',

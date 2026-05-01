@@ -12,7 +12,7 @@ import { calculatePayrollEstimate } from '../payroll/payrollEstimateMath';
 import { AtomicFinancialLockService, FinancialLockConflict } from '../atomicFinancialLockService';
 const log = createLogger('trinityTimesheetPayrollCycleActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>, category: string = 'automation'): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>, category: string = 'automation'): ActionHandler {
   return {
     actionId,
     name: actionId,
@@ -31,11 +31,11 @@ function mkAction(actionId: string, fn: (params: any) => Promise<unknown>, categ
   };
 }
 
-function mkPayrollAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkPayrollAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return mkAction(actionId, fn, 'payroll');
 }
 
-function mkInvoiceAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkInvoiceAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return mkAction(actionId, fn, 'invoicing');
 }
 
@@ -155,7 +155,7 @@ export function registerTimesheetPayrollCycleActions() {
       }
       throw err;
     }
-    const updates: any = { status: 'correction_pending', updatedAt: new Date() };
+    const updates: Record<string, unknown> = { status: 'correction_pending', updatedAt: new Date() };
     if (correctedClockIn) updates.clockIn = new Date(correctedClockIn);
     if (correctedClockOut) updates.clockOut = new Date(correctedClockOut);
     if (correctedClockIn && correctedClockOut) {

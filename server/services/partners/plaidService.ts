@@ -225,7 +225,7 @@ export async function initiateTransfer(opts: {
     throw new Error(`Transfer authorization declined: ${rationale?.description || authorization.decision}`);
   }
 
-  const transferCreateBody: any = {
+  const transferCreateBody: Record<string, unknown> = {
     access_token: opts.accessToken,
     account_id: opts.accountId,
     authorization_id: authorization.id,

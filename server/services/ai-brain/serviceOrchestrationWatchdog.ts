@@ -532,7 +532,7 @@ Respond in JSON format:
    */
   async requestHotpatch(serviceId: string, patchConfig: {
     type: 'config' | 'code' | 'restart';
-    payload: any;
+    payload: Record<string, unknown>;
     requiresApproval: boolean;
   }): Promise<{ success: boolean; message: string }> {
     const service = this.registeredServices.get(serviceId);

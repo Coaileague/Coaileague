@@ -30,7 +30,7 @@ async function backfillBiweeklyAnchors() {
     for (const workspace of allWorkspaces) {
       console.log(`\n📊 Processing workspace: ${workspace.name} (${workspace.id})`);
       
-      const updates: any = {};
+      const updates: Record<string, unknown> = {};
       let hasUpdates = false;
 
       // Check invoice automation

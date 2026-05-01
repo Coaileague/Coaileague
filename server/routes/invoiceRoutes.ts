@@ -1165,7 +1165,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         taxAmount !== undefined ? validateNonNegativeAmount(taxAmount, 'taxAmount') : null,
       ])) return;
 
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (status !== undefined) updateData.status = status;
       if (status === 'void' && bodyParsed.data.voidReason) {
         updateData.voidReason = bodyParsed.data.voidReason;

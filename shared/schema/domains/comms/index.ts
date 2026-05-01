@@ -1496,7 +1496,7 @@ export const contractorCommunications = pgTable("contractor_communications", {
     phone: string;
     qualifications: string[];
   }>(),
-  shiftDetails: jsonb("shift_details").$type<Record<string, any>>(),
+  shiftDetails: jsonb("shift_details").$type<Record<string, unknown>>(),
   
   // AI generation
   aiGenerated: boolean("ai_generated").default(false),
@@ -1645,7 +1645,7 @@ export const channelBridges = pgTable("channel_bridges", {
   workspaceId: varchar("workspace_id").notNull(),
   channelType: varchar("channel_type", { length: 20 }).notNull(),
   displayName: varchar("display_name", { length: 255 }).notNull(),
-  providerConfig: jsonb("provider_config").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  providerConfig: jsonb("provider_config").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   webhookUrl: text("webhook_url"),
   webhookSecret: varchar("webhook_secret", { length: 64 }),
   phoneNumber: varchar("phone_number", { length: 20 }),
@@ -1675,7 +1675,7 @@ export const bridgeConversations = pgTable("bridge_conversations", {
   status: varchar("status", { length: 20 }).notNull().default("active"),
   lastMessageAt: timestamp("last_message_at"),
   messageCount: integer("message_count").notNull().default(0),
-  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   updatedAt: timestamp("updated_at").defaultNow(),
 
   createdAt: timestamp("created_at", { withTimezone: true }).default(sql`now()`),
@@ -1699,7 +1699,7 @@ export const bridgeMessages = pgTable("bridge_messages", {
   messageType: varchar("message_type", { length: 20 }).notNull().default("text"),
   attachmentUrl: text("attachment_url"),
   deliveryStatus: varchar("delivery_status", { length: 20 }).notNull().default("pending"),
-  providerResponse: jsonb("provider_response").$type<Record<string, any>>(),
+  providerResponse: jsonb("provider_response").$type<Record<string, unknown>>(),
   creditsCost: integer("credits_cost").default(0),
   updatedAt: timestamp("updated_at").defaultNow(),
 

@@ -73,6 +73,7 @@ import {
 import { rateLimitMiddleware } from "../services/infrastructure/rateLimiting";
 import { idempotencyMiddleware } from "../middleware/idempotency";
 import { createLogger } from '../lib/logger';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('PayrollRoutes');
 
 const router = Router();
@@ -3517,7 +3518,7 @@ router.get('/period/status', requireAuth, async (req: AuthenticatedRequest, res)
     const { periodStart, periodEnd } = req.query;
     const { pool } = await import('../db');
 
-    const result = await pool.query<{ id: string; created_at: string; metadata: any }>(
+    const result = await pool.query<{ id: string; created_at: string; metadata: Record<string, unknown> }>(
       `SELECT id, created_at, metadata FROM universal_audit_trail
         WHERE workspace_id = $1
           AND action = 'payroll.period_closed'

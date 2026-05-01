@@ -402,7 +402,7 @@ class CoveragePipelineService {
         const shouldNotifyNow = isEmergency || candidate.tier === 1;
         const offerStatus = shouldNotifyNow ? 'pending' : 'queued';
 
-        const offerData: any = {
+        const offerData: Record<string, unknown> = {
           coverageRequestId: request.id,
           employeeId: candidate.employeeId,
           workspaceId: request.workspaceId,

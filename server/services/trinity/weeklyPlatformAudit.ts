@@ -220,8 +220,8 @@ class WeeklyPlatformAuditService {
         });
 
         if (result.analysis?.anomalies) {
-          for (const anomaly of (result as any).analysis.anomalies) {
-            findings.push(this.convertAnomalyToFinding(anomaly, page, (result as any).screenshot?.filePath));
+          for (const anomaly of (result as Record<string, unknown>).analysis.anomalies) {
+            findings.push(this.convertAnomalyToFinding(anomaly, page, (result as Record<string, unknown>).screenshot?.filePath));
           }
         }
 

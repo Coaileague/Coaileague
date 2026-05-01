@@ -162,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STARTUP: SEED ROOT USER AND PLATFORM WORKSPACE (background, non-blocking)
   // ============================================================================
   // Run seeding in the background so port opens immediately even if DB is slow.
-  const seedWithRetry = async (fn: () => Promise<any>, name: string, maxAttempts = 8) => {
+  const seedWithRetry = async (fn: () => Promise<unknown>, name: string, maxAttempts = 8) => {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         await fn();

@@ -251,7 +251,7 @@ spsPublicRouter.post('/:token/id-verify', async (req, res) => {
     const { imageBase64, documentType = 'government_id' } = req.body;
     if (!imageBase64) return res.status(400).json({ error: 'imageBase64 required' });
 
-    let verificationResult: any = {
+    let verificationResult: Record<string, unknown> = {
       verification_confidence: 'low',
       flags: ['AI scan unavailable — manual review required'],
     };

@@ -44,7 +44,7 @@ rmsRouter.get("/incidents", requireAuth, ensureWorkspaceAccess, async (req: Auth
     const workspaceId = wid(req);
     const { status, category, siteId, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM incident_reports WHERE workspace_id = $1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
     if (status) { query += ` AND status = $${i++}`; params.push(status); }
     if (category) { query += ` AND category = $${i++}`; params.push(category); }
@@ -83,7 +83,7 @@ rmsRouter.get("/dars", requireAuth, ensureWorkspaceAccess, async (req: Authentic
     const workspaceId = wid(req);
     const { employeeId, status, siteId, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM daily_activity_reports WHERE workspace_id = $1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
     if (employeeId) { query += ` AND employee_id = $${i++}`; params.push(employeeId); }
     if (status) { query += ` AND status = $${i++}`; params.push(status); }
@@ -272,7 +272,7 @@ rmsRouter.get("/shift-reports", requireAuth, ensureWorkspaceAccess, async (req: 
     const safeLimit = Math.max(1, Math.min(200, Number(limit) || 50));
     const safeOffset = Math.max(0, Number(offset) || 0);
     let query = `SELECT * FROM dar_reports WHERE workspace_id = $1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let paramIdx = 2;
     if (status) { query += ` AND status = $${paramIdx}`; params.push(status); paramIdx++; }
     query += ` ORDER BY created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
@@ -460,7 +460,7 @@ rmsRouter.get("/visitors", requireAuth, ensureWorkspaceAccess, async (req: Authe
     const { status, siteId, search, limit = 50, offset = 0 } = req.query;
     
     let query = `SELECT * FROM visitor_logs WHERE workspace_id = $1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
 
     if (status === 'active') {
@@ -548,7 +548,7 @@ rmsRouter.get("/key-control", requireAuth, ensureWorkspaceAccess, async (req: Au
     const workspaceId = wid(req);
     const { siteId, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM key_control_logs WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (siteId) { query += ` AND site_id=$2`; params.push(siteId); }
     query += ` ORDER BY checked_out_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     res.json({ keys: await q(query, params) });
@@ -575,7 +575,7 @@ rmsRouter.get("/lost-found", requireAuth, ensureWorkspaceAccess, async (req: Aut
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM lost_found_items WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (status) { query += ` AND status=$2`; params.push(status); }
     query += ` ORDER BY found_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     res.json({ items: await q(query, params) });
@@ -603,7 +603,7 @@ rmsRouter.get("/trespass", requireAuth, ensureWorkspaceAccess, async (req: Authe
     const workspaceId = wid(req);
     const { status, siteId, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM trespass_notices WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
     if (status) { query += ` AND status=$${i++}`; params.push(status); }
     if (siteId) { query += ` AND site_id=$${i++}`; params.push(siteId); }
@@ -633,7 +633,7 @@ rmsRouter.get("/cases", requireAuth, ensureWorkspaceAccess, async (req: Authenti
     const workspaceId = wid(req);
     const { status, priority, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM rms_cases WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
     if (status) { query += ` AND status=$${i++}`; params.push(status); }
     if (priority) { query += ` AND priority=$${i++}`; params.push(priority); }
@@ -664,7 +664,7 @@ rmsRouter.get("/bolo", requireAuth, ensureWorkspaceAccess, async (req: Authentic
     const workspaceId = wid(req);
     const { active, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM bolo_alerts WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (active === 'true') { query += ` AND is_active=true AND (expires_at IS NULL OR expires_at > NOW())`; }
     query += ` ORDER BY created_at DESC LIMIT ${clampLimit(limit)} OFFSET ${clampOffset(offset)}`;
     res.json({ bolos: await q(query, params) });
@@ -693,7 +693,7 @@ rmsRouter.get("/evidence", requireAuth, ensureWorkspaceAccess, async (req: Authe
     const workspaceId = wid(req);
     const { caseId, status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT * FROM evidence_items WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let i = 2;
     if (caseId) { query += ` AND case_id=$${i++}`; params.push(caseId); }
     if (status) { query += ` AND status=$${i++}`; params.push(status); }
@@ -828,7 +828,7 @@ const reportAuditTrail: Map<string, Array<{
   id: string; reportId: string; reportType: string; workspaceId: string;
   action: string; actorId: string | null; actorName: string | null;
   actorEmail: string | null; ipAddress: string | null; userAgent: string | null;
-  metadata: any; createdAt: string;
+  metadata: Record<string, unknown>; createdAt: string;
 }>> = new Map();
 
 rmsRouter.get("/reports/:id/audit-trail", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res: any) => {

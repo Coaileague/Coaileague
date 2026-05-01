@@ -377,7 +377,7 @@ class ApprovalResumeOrchestrator {
   /**
    * Get pending approvals for a workspace
    */
-  async getPendingApprovals(workspaceId?: string): Promise<any[]> {
+  async getPendingApprovals(workspaceId?: string): Promise<Record<string,unknown>[]> {
     const conditions = workspaceId
       ? and(
           eq(aiWorkflowApprovals.status, 'pending'),
@@ -440,7 +440,7 @@ export function registerApprovalResumeActions() {
       id: 'resume_approval.request',
       name: 'Request Resume Approval',
       description: 'Request human approval for resuming an interrupted automation workflow',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return approvalResumeOrchestrator.requestApproval(params);
       },
     },
@@ -448,7 +448,7 @@ export function registerApprovalResumeActions() {
       id: 'resume_approval.decide',
       name: 'Process Resume Decision',
       description: 'Process an approval or rejection decision for workflow resumption',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return approvalResumeOrchestrator.processDecision(
           params.approvalId,
           params.approved,
@@ -461,7 +461,7 @@ export function registerApprovalResumeActions() {
       id: 'resume_approval.get_pending',
       name: 'Get Pending Resume Approvals',
       description: 'Get list of pending workflow resume approvals',
-      handler: async (params: any) => {
+      handler: async (params: Record<string, unknown>) => {
         return approvalResumeOrchestrator.getPendingApprovals(params.workspaceId);
       },
     },

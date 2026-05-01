@@ -598,7 +598,7 @@ class AIOrchestrationService {
         .where(eq(aiModelHealth.modelId, modelId));
 
       if (existing) {
-        const updates: any = { updatedAt: new Date() };
+        const updates: Record<string, unknown> = { updatedAt: new Date() };
         
         if (success) {
           updates.lastSuccessAt = new Date();
@@ -723,7 +723,7 @@ export { metaCognitionService };
 
 export async function executeWithMetaCognition(
   request: TaskRequest
-): Promise<{ taskResult: TaskResult; metaCognition?: any }> {
+): Promise<{ taskResult: TaskResult; metaCognition?: unknown }> {
   const taskResult = await aiOrchestrationService.executeTask(request);
   
   // Convert task result to model response format for meta-cognition

@@ -81,8 +81,8 @@ interface AutomationHistoryItem {
   revisionHistory?: Array<{ revisedBy: string; revisedAt: string; notes: string }>;
   trinityReanalysis?: string | null;
   trinityReanalysisAt?: string | null;
-  preview?: any;
-  details?: any;
+  preview?: unknown;
+  details?: unknown;
 }
 
 interface AutomationStatus {

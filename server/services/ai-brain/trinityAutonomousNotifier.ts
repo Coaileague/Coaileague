@@ -23,7 +23,7 @@ const log = createLogger('TrinityAutonomousNotifier');
 
 
 // Lazy-load platformEventBus to avoid circular dependency
-let platformEventBusInstance: any = null;
+let platformEventBusInstance: unknown = null;
 async function getPlatformEventBus() {
   if (!platformEventBusInstance) {
     const module = await import('../platformEventBus');
@@ -54,7 +54,7 @@ export interface SupportStaffConnection {
   userId: string;
   role: string;
   workspaceId: string;
-  socket?: any;
+  socket?: unknown;
 }
 
 export interface HotpatchResult {

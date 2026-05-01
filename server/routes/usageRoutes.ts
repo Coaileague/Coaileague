@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth, type AuthenticatedRequest } from "../rbac";
 import { createLogger } from '../lib/logger';
 import { TOKEN_ALLOWANCES, TOKEN_OVERAGE_RATE_CENTS_PER_100K } from '../../shared/billingConfig';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('CreditRoutes');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ router.get(['/tokens', '/balance'], requireAuth, async (req: AuthenticatedReques
 
     const tier = (workspace.subscriptionTier || 'free').toLowerCase();
     const allowance = getTokenAllowance(tier);
-    const isUnlimited = allowance === null || !!(workspace as any).founderExemption;
+    const isUnlimited = allowance === null || !!(workspace as WorkspaceWithExtras).founderExemption;
     const nextReset = getNextMonthStart();
     const tokenSummary = await getMonthlyTokenSummary(billingWorkspaceId, tier);
 

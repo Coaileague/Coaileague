@@ -30,7 +30,7 @@ interface UserNotification {
   priority?: 'low' | 'normal' | 'high' | 'urgent';
   category?: string;
   actionType?: string;
-  actionData?: any;
+  actionData?: unknown;
 }
 
 interface PlatformUpdate {
@@ -51,7 +51,7 @@ interface NotificationsData {
 
 interface ExpandableNotificationCardProps {
   notification: UserNotification;
-  onAction: (action: string, id: string, data?: any) => void;
+  onAction: (action: string, id: string, data?: unknown) => void;
   onDelete: (id: string) => void;
   isSelected?: boolean;
   onSelect?: (id: string, selected: boolean) => void;
@@ -510,7 +510,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   }, [handleRefresh]);
   
   const actionMutation = useMutation({
-    mutationFn: async ({ action, id, data }: { action: string; id: string; data?: any }) => {
+    mutationFn: async ({ action, id, data }: { action: string; id: string; data?: unknown }) => {
       return apiRequest('POST', `/api/notifications/${id}/action`, { action, data });
     },
     onSuccess: () => {
@@ -602,7 +602,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     },
   });
   
-  const handleAction = (action: string, id: string, data?: any) => {
+  const handleAction = (action: string, id: string, data?: unknown) => {
     actionMutation.mutate({ action, id, data });
   };
   

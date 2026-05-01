@@ -1486,7 +1486,7 @@ export const platformConfigValues = pgTable("platform_config_values", {
   isActive: boolean("is_active").notNull().default(true),
   isSystem: boolean("is_system").notNull().default(true),
   workspaceId: varchar("workspace_id"),
-  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

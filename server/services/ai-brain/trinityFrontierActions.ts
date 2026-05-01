@@ -49,11 +49,11 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
       });
 
       return {
-        success: (result as any).success,
+        success: (result as Record<string, unknown>).success,
         actionId: request.actionId,
-        message: (result as any).success 
-          ? `Agent ${(result as any).assignedAgent?.name} hired successfully` 
-          : (result as any).reason || 'No suitable agent found',
+        message: (result as Record<string, unknown>).success 
+          ? `Agent ${(result as Record<string, unknown>).assignedAgent?.name} hired successfully` 
+          : (result as Record<string, unknown>).reason || 'No suitable agent found',
         data: result,
         executionTimeMs: Date.now() - startTime
       };
@@ -132,7 +132,7 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
     requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
-      const diagnostics: any = {
+      const diagnostics: Record<string, unknown> = {
         timestamp: new Date().toISOString(),
         capabilities: trinityFrontierCapabilities.getCapabilities(),
         checks: []

@@ -67,9 +67,9 @@ export async function executeInvoiceLifecycleWorkflow(
   });
 
   // ── FETCH ──
-  let entry: any = null;
-  let clientRow: any = null;
-  let financeSettings: any = null;
+  let entry: unknown = null;
+  let clientRow: unknown = null;
+  let financeSettings: unknown = null;
   try {
     [entry] = await db
       .select()

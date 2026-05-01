@@ -30,7 +30,7 @@ interface WebhookEvent {
   provider: string;
   eventType: string;
   eventId: string;
-  payload: any;
+  payload: Record<string, unknown>;
   signature: string;
   timestamp: Date;
   workspaceId?: string;
@@ -294,7 +294,7 @@ class WebhookVerifierService {
   private async recordEvent(
     provider: string,
     eventId: string,
-    payload: any,
+    payload: Record<string, unknown>,
     workspaceId?: string
   ): Promise<void> {
     const cacheKey = `${provider}:${eventId}`;

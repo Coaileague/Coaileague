@@ -504,7 +504,7 @@ class TrinityChatService {
 
     // THALAMUS — Universal Sensory Gateway (first organ every signal passes through)
     // Non-blocking for LOW priority; async-logged for background processing
-    let thalamicSignal: any = null;
+    let thalamicSignal: unknown = null;
     try {
       // Determine trust tier from request context
       const trustTier = (request as any).trustTier || 'officer';
@@ -1734,7 +1734,7 @@ Do NOT skip steps — decompose fully before concluding.`;
 
     // ACC — Anterior Cingulate Cortex: conflict check before delivering to caller
     // Catches values violations, trust violations, and anomalies before they reach the user
-    let accConflict: any = null;
+    let accConflict: unknown = null;
     try {
       const executionId = `chat_${session?.id || 'unknown'}_${Date.now()}`;
       const accClearance = await trinityACC.check({
@@ -1780,7 +1780,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     // ── Trinity Action Dispatcher — execute or queue detected actions ─────────
     // Non-blocking: if dispatcher fails, Trinity's text response still returns.
     let dispatchAppend = '';
-    let dispatchMeta: any = null;
+    let dispatchMeta: unknown = null;
     try {
       const { dispatchFromChat } = await import('../trinity/trinityActionDispatcher');
       const dispatchResult = await dispatchFromChat(
@@ -2606,7 +2606,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     userName: string,
     recentInsights: unknown[],
     memoryProfile: any,
-    supportHistory?: any,
+    supportHistory?: unknown,
     workspaceId?: string,
     isSupportMode?: boolean,
     isManagerLevel?: boolean,
@@ -2874,7 +2874,7 @@ Do NOT skip steps — decompose fully before concluding.`;
 
     const turnNumber = (session?.turnCount || 0) + 1;
 
-    const turnData: any = {
+    const turnData: Record<string, unknown> = {
       sessionId,
       turnNumber,
       role,

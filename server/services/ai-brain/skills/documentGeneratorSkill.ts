@@ -27,7 +27,7 @@ interface DocumentSection {
   title: string;
   content: string;
   type: 'text' | 'table' | 'chart_data' | 'key_value' | 'list';
-  data?: any;
+  data?: unknown;
 }
 
 interface GeneratedDocument {

@@ -32,7 +32,7 @@ function requireSupportRole(req: AuthenticatedRequest, res: Response, next: Next
   next();
 }
 
-async function logAdminAction(actorId: string, action: string, details: any, tx?: any) {
+async function logAdminAction(actorId: string, action: string, details: Record<string, unknown>, tx?: unknown) {
   const client = tx ?? db;
   await client.insert(systemAuditLogs).values({
     userId: actorId,

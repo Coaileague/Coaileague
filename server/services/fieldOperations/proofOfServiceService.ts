@@ -296,7 +296,7 @@ class ProofOfServiceService {
     for (let i = 1; i < pos.chainOfCustody.length; i++) {
       const prev = pos.chainOfCustody[i - 1];
       const curr = pos.chainOfCustody[i];
-      const currWithoutSig: any = { ...curr };
+      const currWithoutSig: Record<string, unknown> = { ...curr };
       delete currWithoutSig.signature;
       const expectedSig = this.generateCustodySignature(
         prev.signature || null,

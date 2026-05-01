@@ -70,7 +70,7 @@ export interface DiagnosticReport {
   diagnosis: string;
   fixAttempted: boolean;
   fixSucceeded?: boolean;
-  fixDetails?: any;
+  fixDetails?: unknown;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   recommendations: string[];
   escalationRequired: boolean;
@@ -168,7 +168,7 @@ class ElevatedSessionGuardian {
     }
   }
 
-  async validateElevation(userId: string, sessionId: string): Promise<{ isElevated: boolean; context?: any; anomaly?: SessionAnomalyCode; telemetry: TelemetryEvent }> {
+  async validateElevation(userId: string, sessionId: string): Promise<{ isElevated: boolean; context?: unknown; anomaly?: SessionAnomalyCode; telemetry: TelemetryEvent }> {
     const startTime = Date.now();
 
     try {

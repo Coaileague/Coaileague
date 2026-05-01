@@ -79,7 +79,7 @@ function createQuickCheck(
   id: ServiceKey,
   name: string,
   domain: DiagnosticDomain,
-  checkLogic: () => Promise<{ ok: boolean; message: string; latencyMs?: number; metadata?: any }>,
+  checkLogic: () => Promise<{ ok: boolean; message: string; latencyMs?: number; metadata?: unknown }>,
   options: { isCritical?: boolean; tier?: 'core' | 'essential' | 'extended'; description?: string } = {}
 ): DiagnosticService {
   return {

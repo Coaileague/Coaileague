@@ -15,7 +15,7 @@ import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityDrugTestingActions');
 
-function mkAction(actionId: string, fn: (params: any, request: ActionRequest) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>, request: ActionRequest) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,

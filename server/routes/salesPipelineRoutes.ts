@@ -27,7 +27,7 @@ router.get("/leads", requireAuth, async (req: AuthenticatedRequest, res) => {
     const limit = Number.parseInt(getQueryString(req.query.limit) || "50", 10);
     const offset = Number.parseInt(getQueryString(req.query.offset) || "0", 10);
     const conditions = ["workspace_id = $1"];
-    const params: any[] = [wid];
+    const params: Record<string, unknown>[] = [wid];
     let p = 2;
     if (stage) { conditions.push(`stage = $${p++}`); params.push(stage); }
     if (assignedTo) { conditions.push(`assigned_to = $${p++}`); params.push(assignedTo); }
@@ -417,7 +417,7 @@ export function registerSalesPipelineActions(): void {
       if (!workspaceId) return { success: false, actionId: request.actionId, message: "workspace required", data: null };
       const { stage, minScore } = payload || {};
       let q = `SELECT id, company_name, stage, lead_score, contact_email FROM sales_leads WHERE workspace_id=$1`;
-      const params: any[] = [workspaceId];
+      const params: Record<string, unknown>[] = [workspaceId];
       let p = 2;
       if (stage) { q += ` AND stage=$${p++}`; params.push(stage); }
       if (minScore) { q += ` AND lead_score >= $${p++}`; params.push(parseInt(minScore)); }

@@ -297,7 +297,7 @@ class DocumentPipelineService {
     log.info(`[Pipeline] Document ${doc.id} completed pipeline successfully`);
   }
 
-  private async analyzeContent(doc: PipelineDocument): Promise<any> {
+  private async analyzeContent(doc: PipelineDocument): Promise<unknown> {
     return {
       summary: 'Document content analyzed',
       extractedAt: new Date(),

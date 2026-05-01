@@ -14,7 +14,7 @@ import { z } from 'zod';
 const log = createLogger('DocumentLibraryRoutes');
 
 
-export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, attachWorkspaceId?: any) {
+export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, attachWorkspaceId?: unknown) {
   const router = Router();
 
   // ==================== DOCUMENTS ====================

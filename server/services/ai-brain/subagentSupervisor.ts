@@ -106,7 +106,7 @@ export interface SubagentExecutionResult {
   success: boolean;
   phase: SubagentPhase;
   status: SubagentStatus;
-  result?: any;
+  result?: unknown;
   error?: {
     code: string;
     message: string;
@@ -131,7 +131,7 @@ export interface DiagnosticResult {
   diagnosis: string;
   fixAttempted: boolean;
   fixSucceeded?: boolean;
-  fixDetails?: any;
+  fixDetails?: unknown;
   recommendations: string[];
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
 }
@@ -1485,7 +1485,7 @@ export interface WorkOrderItem {
   dependencies: string[];  // IDs of work orders this depends on
   startedAt?: number;
   completedAt?: number;
-  result?: any;
+  result?: unknown;
   error?: string;
   retryCount: number;
   assignedSubagentId?: string;
@@ -1512,7 +1512,7 @@ export interface WorkOrderBatch {
 export interface CoordinationCheckpoint {
   workOrderId: string;
   phase: SubagentPhase;
-  artifact?: any;
+  artifact?: unknown;
   validationResult?: { valid: boolean; errors: string[] };
   timestamp: number;
 }
@@ -1832,7 +1832,7 @@ export interface WorkboardJobUpdate {
   status: 'scheduled' | 'in_progress' | 'validating' | 'completed' | 'failed';
   progress?: number;
   message?: string;
-  result?: any;
+  result?: unknown;
 }
 
 class WorkboardJobLifecycle {
@@ -2975,7 +2975,7 @@ class SubagentSupervisor {
     // Attempt fix if we have a strategy
     let fixAttempted = false;
     let fixSucceeded = false;
-    let fixDetails: any = null;
+    let fixDetails: unknown = null;
 
     if (matchedPattern && fixStrategies[matchedPattern]) {
       fixAttempted = true;
@@ -3148,7 +3148,7 @@ class SubagentSupervisor {
   }
 
   // Strategy implementation helpers
-  private async handleSchedulingReassign(workspaceId: string, params: any) {
+  private async handleSchedulingReassign(workspaceId: string, params: Record<string, unknown>) {
     // Publish event for scheduling service to handle reassignment
     await platformEventBus.publish({
       type: 'ai_brain_action',
@@ -3161,7 +3161,7 @@ class SubagentSupervisor {
     return { success: true, action: 'reassignment_initiated', result: { workspaceId, params } };
   }
 
-  private async handleOvertimeRedistribution(workspaceId: string, params: any) {
+  private async handleOvertimeRedistribution(workspaceId: string, params: Record<string, unknown>) {
     await platformEventBus.publish({
       type: 'ai_brain_action',
       category: 'ai_brain',
@@ -3173,27 +3173,27 @@ class SubagentSupervisor {
     return { success: true, action: 'hours_redistributed', result: { workspaceId } };
   }
 
-  private async handlePayrollRecalculation(workspaceId: string, params: any) {
+  private async handlePayrollRecalculation(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'payroll_recalculation_queued', result: { workspaceId, params } };
   }
 
-  private async handleDeductionReapply(workspaceId: string, params: any) {
+  private async handleDeductionReapply(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'deductions_reapplied', result: { workspaceId } };
   }
 
-  private async handleInvoiceRateCorrection(workspaceId: string, params: any) {
+  private async handleInvoiceRateCorrection(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'invoice_rate_corrected', result: { workspaceId, params } };
   }
 
-  private async handleMissingTimeEntries(workspaceId: string, params: any) {
+  private async handleMissingTimeEntries(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'missing_entries_flagged', result: { workspaceId } };
   }
 
-  private async handleComplianceRestriction(workspaceId: string, userId: string, params: any) {
+  private async handleComplianceRestriction(workspaceId: string, userId: string, params: Record<string, unknown>) {
     return { success: true, action: 'compliance_restriction_applied', result: { workspaceId, userId } };
   }
 
-  private async handleComplianceFlag(workspaceId: string, params: any) {
+  private async handleComplianceFlag(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'flagged_for_compliance_review', result: { workspaceId } };
   }
 
@@ -3209,19 +3209,19 @@ class SubagentSupervisor {
     return { success: true, action: 'session_restore_initiated', result: { workspaceId, userId } };
   }
 
-  private async handleDataReconciliation(workspaceId: string, params: any) {
+  private async handleDataReconciliation(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'data_reconciliation_started', result: { workspaceId } };
   }
 
-  private async handlePerformanceOptimization(workspaceId: string, params: any) {
+  private async handlePerformanceOptimization(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'optimization_analysis_started', result: { workspaceId } };
   }
 
-  private async handleServiceRestart(workspaceId: string, params: any) {
+  private async handleServiceRestart(workspaceId: string, params: Record<string, unknown>) {
     return { success: true, action: 'service_restart_scheduled', result: { workspaceId, params } };
   }
 
-  private async handleSecurityRevocation(workspaceId: string, userId: string, params: any) {
+  private async handleSecurityRevocation(workspaceId: string, userId: string, params: Record<string, unknown>) {
     await platformEventBus.publish({
       type: 'ai_brain_action',
       category: 'security',
@@ -3906,7 +3906,7 @@ class SubagentSupervisor {
     context?: Record<string, unknown>;
   }): Promise<{
     success: boolean;
-    data?: any;
+    data?: unknown;
     summary?: string;
     error?: string;
   }> {
@@ -4316,7 +4316,7 @@ class SubagentSupervisor {
     
     try {
       // Build input based on skill type for proper schema compatibility
-      let input: any;
+      let input: Record<string, unknown>;
       
       // Map domains to valid insight types (business_insight accepts: sales, finance, operations, automation, growth)
       const insightTypeMapping: Record<string, string> = {
@@ -4382,7 +4382,7 @@ class SubagentSupervisor {
         aiBrainJobId: result.jobId,
         status: result.status,
         output: result.output,
-        tokensUsed: (result as any).tokensUsed || 0,
+        tokensUsed: (result as Record<string, unknown>).tokensUsed || 0,
         modelTier: modelConfig.preferredTier,
         contextBudget: modelConfig.contextBudget,
         executionTimeMs: executionTime,

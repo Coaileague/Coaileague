@@ -211,14 +211,14 @@ export class CostAggregationService {
     description: string;
     amount: number; // In cents
     quantity: number;
-    metadata: any;
+    metadata: Record<string, unknown>;
   }>> {
     const costSummary = await this.calculateMonthlyCosts(workspaceId, year, month);
     const lineItems: Array<{
       description: string;
       amount: number;
       quantity: number;
-      metadata: any;
+      metadata: Record<string, unknown>;
     }> = [];
     
     // ❌ AI Token Usage NOT included - already covered by credit system

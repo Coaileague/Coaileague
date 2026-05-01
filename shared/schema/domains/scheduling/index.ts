@@ -1211,7 +1211,7 @@ export const stagedShifts = pgTable("staged_shifts", {
   pocEmail: varchar("poc_email", { length: 255 }),
   
   // Extraction confidence
-  extractedData: jsonb("extracted_data").$type<Record<string, any>>(),
+  extractedData: jsonb("extracted_data").$type<Record<string, unknown>>(),
   confidenceScores: jsonb("confidence_scores").$type<Record<string, number>>(),
   overallConfidence: decimal("overall_confidence", { precision: 5, scale: 4 }),
   

@@ -926,6 +926,7 @@ export { sessionSyncService };
 // ChatDurability adapter — Redis-backed with in-memory fallback
 // Replaces the in-memory workspaceEventBuffer Map that was lost on restart
 import { pushEvent as pushEventDurable, onBroadcast, initChatDurability } from './services/chat/chatDurabilityAdapter';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 
 const EVENT_BUFFER_MAX = 100;           // Kept for replay logic references
 const EVENT_BUFFER_TTL_MS = 5 * 60 * 1000;
@@ -1014,7 +1015,7 @@ export function broadcastPlatformUpdateGlobal(update: {
   category: string;
   priority?: number;
   learnMoreUrl?: string;
-  metadata?: any;
+  metadata?: unknown;
   workspaceId?: string;
   visibility?: string;
 }): boolean {
@@ -1232,7 +1233,7 @@ export function getLiveRoomConnections() {
   }>();
   
   conversationClients.forEach((clients, conversationId) => {
-    const onlineUsers: Array<any> = [];
+    const onlineUsers: Array<unknown> = [];
     clients.forEach((client) => {
       if (client.userId && client.userName) {
         onlineUsers.push({
@@ -1606,7 +1607,7 @@ export function setupWebSocket(server: Server) {
             }
             
             // Store Trinity subscription on the client
-            (ws as any).trinityConversationId = trinityConversationId;
+            (ws as WorkspaceWithExtras).trinityConversationId = trinityConversationId;
             
             ws.send(JSON.stringify({
               type: 'trinity_agent_subscribed',
@@ -3702,7 +3703,7 @@ export function setupWebSocket(server: Server) {
                   }
                   
                   // Find target user by userId
-                  let targetClient: any = null;
+                  let targetClient: unknown = null;
                   let targetUserName: string = targetUserId;
                   
                   if (clients) {
@@ -3766,7 +3767,7 @@ export function setupWebSocket(server: Server) {
                   }
                   
                   // Find target user by display name or email prefix in this conversation
-                  let privMsgTargetClient: any = null;
+                  let privMsgTargetClient: unknown = null;
                   let privMsgTargetName: string = targetUsername;
                   let privMsgTargetId: string = '';
                   
@@ -4024,7 +4025,7 @@ export function setupWebSocket(server: Server) {
                   const dmMessage = parsedCommand.args.slice(1).join(' ');
                   
                   const dmClients = conversationClients.get(ws.conversationId);
-                  let targetClient: any = null;
+                  let targetClient: unknown = null;
                   if (dmClients) {
                     dmClients.forEach((client) => {
                       if (client.userName === dmTarget || client.userId === dmTarget) {
@@ -5811,7 +5812,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             const threadId = payload.threadId || null; // Session/thread ID for helpdesk DM isolation
 
             // Save message to database (with optional attachment metadata)
-            const messageData: any = {
+            const messageData: Record<string, unknown> = {
               conversationId: ws.conversationId,
               senderId: ws.userId?.startsWith('guest-') ? null : ws.userId,
               senderName: displayName,
@@ -8458,7 +8459,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
       version?: string;
       priority?: number;
       learnMoreUrl?: string;
-      metadata?: any;
+      metadata?: unknown;
       // Enhanced fields for end-user display
       detailedCategory?: string;
       sourceType?: string;
@@ -8559,7 +8560,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
   log.info('Trinity stream event listener registered');
 
   // Subscribe to Trinity scheduling events for real-time visual feedback
-  platformEventBus.on('trinity_scheduling_started', (payload: { workspaceId: string; metadata: any }) => {
+  platformEventBus.on('trinity_scheduling_started', (payload: { workspaceId: string; metadata: Record<string, unknown> }) => {
     if (payload?.workspaceId) {
       broadcastToWorkspace(payload.workspaceId, {
         type: 'trinity_scheduling_started',
@@ -8569,7 +8570,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
     }
   });
 
-  platformEventBus.on('trinity_scheduling_progress', (payload: { workspaceId: string; metadata: any }) => {
+  platformEventBus.on('trinity_scheduling_progress', (payload: { workspaceId: string; metadata: Record<string, unknown> }) => {
     if (payload?.workspaceId) {
       broadcastToWorkspace(payload.workspaceId, {
         type: 'trinity_scheduling_progress',
@@ -8578,7 +8579,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
     }
   });
 
-  platformEventBus.on('trinity_scheduling_completed', (payload: { workspaceId: string; metadata: any }) => {
+  platformEventBus.on('trinity_scheduling_completed', (payload: { workspaceId: string; metadata: Record<string, unknown> }) => {
     if (payload?.workspaceId) {
       broadcastToWorkspace(payload.workspaceId, {
         type: 'trinity_scheduling_completed',

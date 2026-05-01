@@ -69,7 +69,7 @@ export interface PlatformIntent {
   
   // Results
   status: 'pending' | 'routing' | 'executing' | 'completed' | 'failed' | 'timeout' | 'cancelled';
-  result?: any;
+  result?: unknown;
   error?: string;
   
   // Telemetry

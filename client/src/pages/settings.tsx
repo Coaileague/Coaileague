@@ -194,7 +194,7 @@ type SettingsSection = typeof SETTINGS_SECTIONS[number]['id'];
 function ProfileTabContent() {
   const { toast } = useToast();
 
-  const { data: session, isLoading: sessionLoading } = useQuery<{ user?: any }>({
+  const { data: session, isLoading: sessionLoading } = useQuery<{ user?: unknown }>({
     queryKey: ['/api/auth/me'],
     staleTime: 5 * 60 * 1000,
   });

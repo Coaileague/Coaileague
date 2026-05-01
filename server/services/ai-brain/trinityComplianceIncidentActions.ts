@@ -9,7 +9,7 @@ import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityComplianceIncidentActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,
@@ -241,7 +241,7 @@ export function registerComplianceIncidentActions() {
   helpaiOrchestrator.registerAction(mkAction('client.update_billing_settings', async (params) => {
     const { workspaceId, clientId, hourlyBillingRate, invoiceDueNet, invoiceCycle, poNumber } = params;
     if (!clientId) return { error: 'clientId required' };
-    const updates: any = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (hourlyBillingRate !== undefined) updates.hourlyBillingRate = hourlyBillingRate;
     if (invoiceDueNet !== undefined) updates.invoiceDueNet = invoiceDueNet;
     if (invoiceCycle !== undefined) updates.invoiceCycle = invoiceCycle;

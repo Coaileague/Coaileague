@@ -5,7 +5,7 @@ import { eq, and, gte, lte, isNull, ne, sql, count, desc } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinitySchedulingPlatformActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,

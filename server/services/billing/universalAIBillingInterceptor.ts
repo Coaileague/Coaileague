@@ -116,7 +116,7 @@ export async function getMeteredOpenAICompletion(
   }
 
   try {
-    const completionParams: any = {
+    const completionParams: Record<string, unknown> = {
       model,
       messages,
       max_completion_tokens: maxTokens,

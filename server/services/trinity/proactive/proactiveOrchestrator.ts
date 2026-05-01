@@ -129,7 +129,7 @@ export function getProactiveScheduleMetadata(): Array<{
 
 // ─── Trinity action handlers ──────────────────────────────────────────────────
 
-function ok(actionId: string, message: string, data: any, start: number): ActionResult {
+function ok(actionId: string, message: string, data: Record<string, unknown>, start: number): ActionResult {
   return { success: true, actionId, message, data, executionTimeMs: Date.now() - start };
 }
 

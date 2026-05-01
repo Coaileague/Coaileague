@@ -430,7 +430,7 @@ export class SandboxQuickBooksSimulator {
   }
 
   async updateInvoiceStatus(invoiceId: string, status: 'draft' | 'sent' | 'paid'): Promise<void> {
-    const updates: any = { status };
+    const updates: Record<string, unknown> = { status };
     
     if (status === 'paid') {
       const [inv] = await db.select().from(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, this.workspaceId)));
@@ -450,7 +450,7 @@ export class SandboxQuickBooksSimulator {
     await db.delete(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, this.workspaceId)));
   }
 
-  async sendAllDraftInvoices(): Promise<{ success: boolean; message: string; details: any }> {
+  async sendAllDraftInvoices(): Promise<{ success: boolean; message: string; details: Record<string, unknown> }> {
     const draftInvoices = await db.select().from(invoices)
       .where(
         and(
@@ -478,7 +478,7 @@ export class SandboxQuickBooksSimulator {
     };
   }
 
-  async markAllInvoicesPaid(): Promise<{ success: boolean; message: string; details: any }> {
+  async markAllInvoicesPaid(): Promise<{ success: boolean; message: string; details: Record<string, unknown> }> {
     const unpaidInvoices = await db.select().from(invoices)
       .where(
         and(
@@ -512,7 +512,7 @@ export class SandboxQuickBooksSimulator {
   async runAutomation(type: 'schedule' | 'invoice' | 'payroll' | 'sync_all'): Promise<{
     success: boolean;
     message: string;
-    details: any;
+    details: Record<string, unknown>;
   }> {
     switch (type) {
       case 'schedule':
@@ -528,7 +528,7 @@ export class SandboxQuickBooksSimulator {
     }
   }
 
-  private async runScheduleAutomation(): Promise<{ success: boolean; message: string; details: any }> {
+  private async runScheduleAutomation(): Promise<{ success: boolean; message: string; details: Record<string, unknown> }> {
     const allEmployees = await db.select().from(employees)
       .where(and(eq(employees.workspaceId, this.workspaceId), eq(employees.isActive, true)));
     
@@ -581,7 +581,7 @@ export class SandboxQuickBooksSimulator {
     };
   }
 
-  private async runInvoiceAutomation(): Promise<{ success: boolean; message: string; details: any }> {
+  private async runInvoiceAutomation(): Promise<{ success: boolean; message: string; details: Record<string, unknown> }> {
     const allApprovedEntries = await db.select().from(timeEntries)
       .where(
         and(
@@ -663,7 +663,7 @@ export class SandboxQuickBooksSimulator {
     };
   }
 
-  private async runPayrollAutomation(): Promise<{ success: boolean; message: string; details: any }> {
+  private async runPayrollAutomation(): Promise<{ success: boolean; message: string; details: Record<string, unknown> }> {
     const now = new Date();
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() - periodEnd.getDay());
@@ -781,7 +781,7 @@ export class SandboxQuickBooksSimulator {
     };
   }
 
-  private async runQuickBooksSync(): Promise<{ success: boolean; message: string; details: any }> {
+  private async runQuickBooksSync(): Promise<{ success: boolean; message: string; details: Record<string, unknown> }> {
     const [connection] = await db.select().from(partnerConnections)
       .where(
         and(
@@ -852,7 +852,7 @@ export class SandboxQuickBooksSimulator {
     };
   }
 
-  async getTimeEntries(): Promise<any[]> {
+  async getTimeEntries(): Promise<Record<string,unknown>[]> {
     const entries = await db.select().from(timeEntries)
       .where(eq(timeEntries.workspaceId, this.workspaceId))
       .orderBy(desc(timeEntries.clockIn))
@@ -890,7 +890,7 @@ export class SandboxQuickBooksSimulator {
       .where(eq(timeEntries.id, entryId));
   }
 
-  async getShifts(): Promise<any[]> {
+  async getShifts(): Promise<Record<string,unknown>[]> {
     const allShifts = await db.select().from(shifts)
       .where(eq(shifts.workspaceId, this.workspaceId))
       .orderBy(desc(shifts.startTime))

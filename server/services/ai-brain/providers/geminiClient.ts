@@ -320,9 +320,9 @@ export interface GeminiResponse {
   text: string;
   tokensUsed: number;
   confidenceScore?: number;
-  metadata?: any;
-  functionCalls?: Array<{ name: string; args: any }>;
-  structuredOutput?: any;
+  metadata?: unknown;
+  functionCalls?: Array<{ name: string; args: Record<string, unknown> }>;
+  structuredOutput?: unknown;
 }
 
 // Define available AI Brain tools for Gemini
@@ -684,7 +684,7 @@ const AI_BRAIN_TOOLS: FunctionDeclaration[] = [
 
 interface ToolResult {
   success: boolean;
-  data: any;
+  data: Record<string, unknown>;
   error?: string;
 }
 
@@ -1009,7 +1009,7 @@ async function executeGetBusinessInsights(
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
     
-    let insights: any = {};
+    let insights: Record<string, unknown> = {};
     
     switch (args.insightType) {
       case 'sales':
@@ -2203,7 +2203,7 @@ async function executeFinancialAnalysis(
     const laborRatio = revenue > 0 ? ((labor / revenue) * 100).toFixed(1) : '0';
     const revenueChange = prevRev > 0 ? (((revenue - prevRev) / prevRev) * 100).toFixed(1) : 'N/A';
 
-    const analysis: any = {
+    const analysis: Record<string, unknown> = {
       timeframe,
       period: { start: periodStart.toISOString(), end: now.toISOString() },
       revenue: { current: revenue, previous: prevRev, changePercent: revenueChange },
@@ -2248,7 +2248,7 @@ async function executeAnalyzeCrossDomain(
     const requestedDomains = args.domains ? args.domains.split(',').map(d => d.trim()) : ['all'];
     const runAll = requestedDomains.includes('all');
 
-    const results: any = { domains: requestedDomains, focusArea: args.focusArea };
+    const results: Record<string, unknown> = { domains: requestedDomains, focusArea: args.focusArea };
     const allInsights: (string | number | boolean | null)[] = [];
 
     if (runAll || requestedDomains.includes('profitability')) {
@@ -2402,7 +2402,7 @@ async function executeForecastTrends(
 
     const weeksAhead = Math.min(Math.max(args.weeksAhead || 4, 1), 12);
     const forecastType = args.forecastType || 'all';
-    const results: any = { forecastType, weeksAhead };
+    const results: Record<string, unknown> = { forecastType, weeksAhead };
 
     if (forecastType === 'labor_costs' || forecastType === 'all') {
       const laborInsights = await trinityCrossDomainIntelligence.forecastLaborCosts(wsId, weeksAhead);
@@ -2436,7 +2436,7 @@ async function executeGetTemporalTrends(
     const insights = await trinityCrossDomainIntelligence.getTemporalTrends(wsId);
 
     const data = insights.map(i => {
-      const base: any = { title: i.title, summary: i.summary, severity: i.severity, confidence: i.confidence };
+      const base: Record<string, unknown> = { title: i.title, summary: i.summary, severity: i.severity, confidence: i.confidence };
       if (args.includeDetails) {
         base.dataPoints = i.dataPoints;
         base.reasoningChain = i.reasoningChain;
@@ -2739,7 +2739,7 @@ export class UnifiedGeminiClient {
           totalTokensUsed += initialInput + initialOutput;
 
           // STEP 3: Extract function calls if present
-          let functionCalls: Array<{ name: string; args: any }> = [];
+          let functionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
           let candidates = response.candidates;
           
           if (candidates && candidates[0]?.content?.parts) {
@@ -2755,7 +2755,7 @@ export class UnifiedGeminiClient {
 
           // MULTI-TURN LOOP: Execute tools and get final response (Steps 4-7)
           let toolIterations = 0;
-          const allFunctionCalls: Array<{ name: string; args: any; result: any }> = [];
+          const allFunctionCalls: Array<{ name: string; args: Record<string, unknown>; result: any }> = [];
           
           while (functionCalls.length > 0 && toolIterations < maxToolIterations) {
             toolIterations++;
@@ -3005,7 +3005,7 @@ export class UnifiedGeminiClient {
    * Accepts either { prompt, purpose } or raw Google SDK { contents, generationConfig } format.
    */
   async generateContent(
-    requestOrPrompt: string | { prompt?: string; purpose?: string; featureKey?: string; contents?: unknown[]; generationConfig?: any; workspaceId?: string; userId?: string },
+    requestOrPrompt: string | { prompt?: string; purpose?: string; featureKey?: string; contents?: unknown[]; generationConfig?: unknown; workspaceId?: string; userId?: string },
     options?: { temperature?: number; maxTokens?: number; workspaceId?: string; userId?: string; featureKey?: string }
   ): Promise<{ text?: string; response?: { text: () => string }; tokensUsed?: number }> {
     let prompt: string;
@@ -3083,7 +3083,7 @@ export class UnifiedGeminiClient {
     workspaceId: string;
     userId?: string;
     insightType: 'sales' | 'finance' | 'operations' | 'automation' | 'growth';
-    context: any;
+    context: Record<string, unknown>;
   }): Promise<GeminiResponse> {
     const systemPrompt = `You are CoAIleague Business Intelligence AI, an expert business analyst.
     
@@ -3127,7 +3127,7 @@ Provide actionable recommendations with estimated impact.`;
     userId?: string;
     userNeed: string;
     currentPlan?: string;
-    currentUsage?: any;
+    currentUsage?: unknown;
   }): Promise<GeminiResponse> {
     const systemPrompt = `You are CoAIleague Platform Advisor, helping users get the most from the platform.
 

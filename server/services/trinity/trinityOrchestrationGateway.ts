@@ -158,7 +158,7 @@ class TrinityOrchestrationGateway {
   }
 
   private subscribeToEvents(): void {
-    platformEventBus.subscribe('feature_blocked', async (data: any) => {
+    platformEventBus.subscribe('feature_blocked', async (data: Record<string, unknown>) => {
       await this.trackRequest({
         workspaceId: data.workspaceId,
         userId: data.userId,
@@ -179,7 +179,7 @@ class TrinityOrchestrationGateway {
       });
     });
 
-    platformEventBus.subscribe('rate_limit_hit', async (data: any) => {
+    platformEventBus.subscribe('rate_limit_hit', async (data: Record<string, unknown>) => {
       await this.trackRequest({
         workspaceId: data.workspaceId,
         userId: data.userId,
@@ -190,7 +190,7 @@ class TrinityOrchestrationGateway {
       });
     });
 
-    platformEventBus.subscribe('quota_exceeded', async (data: any) => {
+    platformEventBus.subscribe('quota_exceeded', async (data: Record<string, unknown>) => {
       await this.detectUpsellOpportunity({
         workspaceId: data.workspaceId,
         painPointId: `quota_${data.quotaType}`,
@@ -594,7 +594,7 @@ class TrinityOrchestrationGateway {
   /**
    * Get pending recommendations for a workspace
    */
-  async getRecommendations(workspaceId: string): Promise<any[]> {
+  async getRecommendations(workspaceId: string): Promise<Record<string,unknown>[]> {
     return db.query.trinityRecommendations.findMany({
       where: and(
         eq(trinityRecommendations.workspaceId, workspaceId),
@@ -953,7 +953,7 @@ export function trinityOrchestrationMiddleware() {
     }
 
     // Intercept res.json to capture response data
-    res.json = function(data: any) {
+    res.json = function(data: Record<string, unknown>) {
       res.responseData = data;
       return originalJson.call(this, data);
     };

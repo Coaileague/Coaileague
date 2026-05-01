@@ -63,7 +63,7 @@ export const googleCalendar = {
           end: { dateTime: shiftData.end.toISOString() },
         }),
       });
-      const data: any = await resp.json();
+      const data: Record<string, unknown> = await resp.json();
       return data.id ?? null;
     } catch (err: unknown) { log.warn(`[GoogleCalendar] Create event failed: ${err?.message}`); return null; }
   },

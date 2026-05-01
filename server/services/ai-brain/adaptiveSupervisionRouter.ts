@@ -120,7 +120,7 @@ export interface HandoffResult {
   success: boolean;
   
   // Response
-  response?: any;
+  response?: unknown;
   error?: string;
   
   // Metrics

@@ -256,7 +256,7 @@ export class NotificationRuleEngine {
       description?: string;
       conditions: any;
       action: string;
-      actionConfig?: any;
+      actionConfig?: unknown;
       priority?: number;
       workspaceId?: string;
     }

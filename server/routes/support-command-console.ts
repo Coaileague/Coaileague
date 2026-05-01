@@ -33,7 +33,7 @@ function requireSupportRole(req: AuthenticatedRequest, res: Response, next: Next
   next();
 }
 
-function broadcastForceRefresh(type: string, payload: any) {
+function broadcastForceRefresh(type: string, payload: Record<string, unknown>) {
   const message = {
     type: 'force_refresh',
     refreshType: type,

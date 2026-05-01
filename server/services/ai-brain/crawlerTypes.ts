@@ -198,8 +198,8 @@ export interface NetworkLogEntry {
   duration: number;
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
-  requestBody?: any;
-  responseBody?: any;
+  requestBody?: unknown;
+  responseBody?: unknown;
   error?: string;
 }
 
@@ -610,7 +610,7 @@ export interface TrinityActionTest {
   
   // Execution details
   executionTime?: number;
-  resultReturned?: any;
+  resultReturned?: unknown;
   sideEffectsObserved?: string[];
   
   // Results

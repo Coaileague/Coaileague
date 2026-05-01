@@ -12,7 +12,7 @@ interface TestResult {
   passed: boolean;
   message: string;
   durationMs: number;
-  details?: any;
+  details?: unknown;
 }
 
 interface AutomationTestReport {
@@ -25,7 +25,7 @@ interface AutomationTestReport {
   failed: number;
   skipped: number;
   tests: TestResult[];
-  quickbooksSyncResults?: any;
+  quickbooksSyncResults?: unknown;
   summary: string;
 }
 
@@ -374,7 +374,7 @@ export class TrinityAutomationTestRunner {
     }
   }
 
-  private async testQuickBooksSync(): Promise<{ test: TestResult; syncDetails?: any }> {
+  private async testQuickBooksSync(): Promise<{ test: TestResult; syncDetails?: unknown }> {
     const start = Date.now();
     const testName = 'QuickBooks Sync';
 

@@ -23,6 +23,7 @@ import { stripe } from "../routes";
 import { isStripeConfigured } from "../services/billing/stripeClient";
 import * as notificationHelpers from "../notifications";
 import { createLogger } from '../lib/logger';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('ScheduleosRoutes');
 
 const router = Router();
@@ -123,7 +124,7 @@ router.get('/ai/status', requireAuth, async (req: AuthenticatedRequest, res) => 
       const hasSmartScheduleAccess = 
         workspace.subscriptionTier === 'professional' || 
         workspace.subscriptionTier === 'enterprise' ||
-        (workspace as any).enabledAddons?.includes('smart_schedule_ai');
+        (workspace as WorkspaceWithExtras).enabledAddons?.includes('smart_schedule_ai');
 
       if (!hasSmartScheduleAccess) {
         return res.status(402).json({ 
@@ -734,7 +735,7 @@ router.get('/status', async (req: AuthenticatedRequest, res) => {
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const workspace = allWorkspaces[0];
-          const response: any = {
+          const response: Record<string, unknown> = {
             isActivated: !!workspace.scheduleosActivatedAt,
             activatedAt: workspace.scheduleosActivatedAt,
             activatedBy: workspace.scheduleosActivatedBy,
@@ -762,7 +763,7 @@ router.get('/status', async (req: AuthenticatedRequest, res) => {
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      const response: any = {
+      const response: Record<string, unknown> = {
         isActivated: !!workspace.scheduleosActivatedAt,
         activatedAt: workspace.scheduleosActivatedAt,
         activatedBy: workspace.scheduleosActivatedBy,

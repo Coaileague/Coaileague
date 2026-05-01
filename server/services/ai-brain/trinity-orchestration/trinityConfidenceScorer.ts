@@ -21,7 +21,7 @@ export interface TrinityOperation {
   mathematicalComplexity?: 'simple' | 'moderate' | 'complex';
   involvesCurrency?: boolean;
   hasFloatingPointInputs?: boolean;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export interface VerificationRecommendation {
@@ -231,7 +231,7 @@ class TrinityConfidenceScorer {
   buildOperationFromContext(params: {
     type: string;
     workspaceId?: string;
-    data: any;
+    data: Record<string, unknown>;
     missingDataPoints?: number;
     edgeCases?: string[];
     hasHistoricalPrecedent?: boolean;

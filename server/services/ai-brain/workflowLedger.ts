@@ -244,9 +244,9 @@ class WorkflowLedgerService {
     return newStep;
   }
 
-  async updateStepStatus(stepId: string, status: StepStatus, data?: { output?: any; error?: string }): Promise<OrchestrationRunStep | undefined> {
+  async updateStepStatus(stepId: string, status: StepStatus, data?: { output?: unknown; error?: string }): Promise<OrchestrationRunStep | undefined> {
     const now = new Date();
-    const updateData: any = { status };
+    const updateData: Record<string, unknown> = { status };
 
     if (status === 'running') {
       updateData.startedAt = now;

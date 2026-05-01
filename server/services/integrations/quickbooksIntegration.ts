@@ -116,8 +116,8 @@ export class QuickBooksIntegration {
 
   async executeBatch(
     credentials: QuickBooksCredentials,
-    batchItems: Array<{ bId: string; operation: 'create' | 'update' | 'delete' | 'query'; entity: string; payload?: any }>
-  ): Promise<{ success: boolean; responses: Array<{ bId: string; success: boolean; data?: any; error?: string }> }> {
+    batchItems: Array<{ bId: string; operation: 'create' | 'update' | 'delete' | 'query'; entity: string; payload?: unknown }>
+  ): Promise<{ success: boolean; responses: Array<{ bId: string; success: boolean; data?: unknown; error?: string }> }> {
     if (batchItems.length > 30) {
       return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: 'Max 30 items per batch' })) };
     }
@@ -152,7 +152,7 @@ export class QuickBooksIntegration {
       }
 
       const result = await response.json();
-      const responses: Array<{ bId: string; success: boolean; data?: any; error?: string }> = [];
+      const responses: Array<{ bId: string; success: boolean; data?: unknown; error?: string }> = [];
 
       for (const item of result.BatchItemResponse || []) {
         if (item.Fault) {

@@ -55,7 +55,7 @@ interface ShiftMessage {
   attachmentUrl: string | null;
   isBot: boolean;
   createdAt: Date;
-  metadata?: any;
+  metadata?: unknown;
 }
 
 interface HourBlock {

@@ -197,50 +197,50 @@ export async function runStaffingPipelineStressTest(): Promise<{
 
   // ── 6. Feature matrix completeness ───────────────────────────────────────
   await test('featureMatrix contains trinity_staffing', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.trinity_staffing) throw new Error('trinity_staffing missing from featureMatrix');
     if (matrix.trinity_staffing.professional !== true) throw new Error('trinity_staffing should be professional+');
   });
 
   await test('featureMatrix contains contract_analysis', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.contract_analysis) throw new Error('contract_analysis missing from featureMatrix');
     if (matrix.contract_analysis.professional !== true) throw new Error('contract_analysis should be professional+');
   });
 
   await test('featureMatrix contains sms_officer_offers', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.sms_officer_offers) throw new Error('sms_officer_offers missing from featureMatrix');
   });
 
   await test('featureMatrix contains inbound_staffing_pipeline', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.inbound_staffing_pipeline) throw new Error('inbound_staffing_pipeline missing from featureMatrix');
     if (matrix.inbound_staffing_pipeline.enterprise !== true) throw new Error('inbound_staffing_pipeline should be enterprise only');
   });
 
   await test('featureMatrix contains shift_marketplace', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.shift_marketplace) throw new Error('shift_marketplace missing from featureMatrix');
     if (matrix.shift_marketplace.free !== false) throw new Error('shift_marketplace should NOT be free');
     if (matrix.shift_marketplace.professional !== true) throw new Error('shift_marketplace should be professional+');
   });
 
   await test('featureMatrix contains document_signing', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.document_signing) throw new Error('document_signing missing from featureMatrix');
     if (matrix.document_signing.starter !== false) throw new Error('document_signing should NOT be starter');
     if (matrix.document_signing.professional !== true) throw new Error('document_signing should be professional+');
   });
 
   await test('featureMatrix contains client_portal', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.client_portal) throw new Error('client_portal missing from featureMatrix');
     if (matrix.client_portal.professional !== true) throw new Error('client_portal should be professional+');
   });
 
   await test('featureMatrix contains white_label (enterprise only)', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     if (!matrix.white_label) throw new Error('white_label missing from featureMatrix');
     if (matrix.white_label.professional !== false) throw new Error('white_label should NOT be professional');
     if (matrix.white_label.enterprise !== true) throw new Error('white_label should be enterprise');
@@ -248,35 +248,35 @@ export async function runStaffingPipelineStressTest(): Promise<{
 
   // ── 7. Credit cost coverage ───────────────────────────────────────────────
   await test('trinity_staffing has credit cost defined', async () => {
-    const costs = BILLING.creditCosts as Record<string, any>;
+    const costs = BILLING.creditCosts as Record<string, unknown>;
     if (costs.trinity_staffing === undefined) {
       throw new Error('trinity_staffing missing from creditCosts');
     }
   });
 
   await test('shift_marketplace has credit cost defined', async () => {
-    const costs = BILLING.creditCosts as Record<string, any>;
+    const costs = BILLING.creditCosts as Record<string, unknown>;
     if (costs.shift_marketplace === undefined) {
       throw new Error('shift_marketplace missing from creditCosts');
     }
   });
 
   await test('client_portal has credit cost defined', async () => {
-    const costs = BILLING.creditCosts as Record<string, any>;
+    const costs = BILLING.creditCosts as Record<string, unknown>;
     if (costs.client_portal === undefined) {
       throw new Error('client_portal missing from creditCosts');
     }
   });
 
   await test('document_signing_send has credit cost defined', async () => {
-    const costs = BILLING.creditCosts as Record<string, any>;
+    const costs = BILLING.creditCosts as Record<string, unknown>;
     if (costs.document_signing_send === undefined) {
       throw new Error('document_signing_send missing from creditCosts');
     }
   });
 
   await test('client_portal_helpai_session has credit cost defined', async () => {
-    const costs = BILLING.creditCosts as Record<string, any>;
+    const costs = BILLING.creditCosts as Record<string, unknown>;
     if (costs.client_portal_helpai_session === undefined) {
       throw new Error('client_portal_helpai_session missing from creditCosts');
     }
@@ -478,7 +478,7 @@ export async function runStaffingPipelineStressTest(): Promise<{
 
   // ── 13. featureMatrix tier consistency check ──────────────────────────────
   await test('featureMatrix all entries have enterprise=true or enterprise=false (no undefined)', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     const invalid: string[] = [];
     for (const [key, tiers] of Object.entries(matrix)) {
       if (tiers.enterprise === undefined) invalid.push(key);
@@ -487,7 +487,7 @@ export async function runStaffingPipelineStressTest(): Promise<{
   });
 
   await test('featureMatrix free-tier features are not enterprise-only (logical consistency)', async () => {
-    const matrix = BILLING.featureMatrix as Record<string, any>;
+    const matrix = BILLING.featureMatrix as Record<string, unknown>;
     const broken: string[] = [];
     for (const [key, tiers] of Object.entries(matrix)) {
       if (tiers.free === true && tiers.enterprise === false) {

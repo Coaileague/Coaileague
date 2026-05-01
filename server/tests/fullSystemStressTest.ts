@@ -38,7 +38,7 @@ function record(r: TestResult) {
   console.log(`${icon} [${r.phase}] ${r.name}: ${r.details}`);
 }
 
-function extractRows(result: any): any[] {
+function extractRows(result: any): unknown[] {
   if (Array.isArray(result)) return result;
   if (result?.rows && Array.isArray(result.rows)) return result.rows;
   return [];

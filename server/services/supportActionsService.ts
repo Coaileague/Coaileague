@@ -139,7 +139,7 @@ const CONFIRMATION_REQUIRED: SupportActionType[] = ['lock_account', 'reset_passw
 class SupportActionsService {
   private pendingConfirmations = new Map<string, {
     action: SupportActionType;
-    params: any;
+    params: Record<string, unknown>;
     executorId: string;
     expiresAt: Date;
   }>();

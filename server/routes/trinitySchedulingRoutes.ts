@@ -42,7 +42,7 @@ router.get('/insights', async (req: AuthenticatedRequest, res) => {
           )
         );
       
-      const insights: Array<{id: string; type: string; icon: string; title: string; description: string; actionable?: boolean; actionLabel?: string; actionData?: any}> = [];
+      const insights: Array<{id: string; type: string; icon: string; title: string; description: string; actionable?: boolean; actionLabel?: string; actionData?: unknown}> = [];
       
       const openShifts = weekShifts.filter(s => !s.employeeId);
       if (openShifts.length > 0) {

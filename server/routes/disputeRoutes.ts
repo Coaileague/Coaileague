@@ -77,8 +77,8 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     const appealDeadline = new Date();
     appealDeadline.setDate(appealDeadline.getDate() + 14);
 
-    let aiAnalysis: any = null;
-    let complianceData: any = null;
+    let aiAnalysis: unknown = null;
+    let complianceData: unknown = null;
     
     try {
       complianceData = detectComplianceCategory(data.reason, (data as any).type);

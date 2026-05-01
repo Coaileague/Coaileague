@@ -1791,7 +1791,7 @@ router.patch(
       }
 
       // Build update object
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       const changes: string[] = [];
 
       if (subject !== undefined && subject !== null && subject !== conversation.subject) {

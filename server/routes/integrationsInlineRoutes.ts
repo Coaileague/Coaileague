@@ -21,6 +21,7 @@ import {
 import { getIntegrationHealthSummary } from "../services/healthCheck";
 import { createLogger } from '../lib/logger';
 import { z } from 'zod';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('IntegrationsInlineRoutes');
 
 

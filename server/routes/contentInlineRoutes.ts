@@ -26,6 +26,7 @@ import { ObjectStorageService, objectStorageClient } from "../objectStorage";
 import { randomUUID } from "crypto";
 import { createLogger } from '../lib/logger';
 import { contractDocuments } from '@shared/schema';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('ContentInlineRoutes');
 
 
@@ -220,7 +221,7 @@ router.get("/locked-reports", requireAuth, async (req: AuthenticatedRequest, res
 
     const { employeeId, clientId, startDate, endDate } = req.query;
     
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (employeeId) filters.employeeId = employeeId;
     if (clientId) filters.clientId = clientId;
     if (startDate) filters.startDate = new Date(startDate as string);
@@ -261,7 +262,7 @@ router.get("/report-analytics", requireAuth, async (req: AuthenticatedRequest, r
 
     const { employeeId, clientId, startDate, endDate, templateId } = req.query;
     
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (employeeId) filters.employeeId = employeeId;
     if (clientId) filters.clientId = clientId;
     if (templateId) filters.templateId = templateId;

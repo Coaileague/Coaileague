@@ -19,7 +19,7 @@ export interface UsageEventInput {
   unitPrice?: number;
   sessionId?: string;
   activityType?: string;
-  metadata?: any;
+  metadata?: unknown;
   ipAddress?: string;
   userAgent?: string;
   // Control event bus emission - set to false when caller emits its own billing event

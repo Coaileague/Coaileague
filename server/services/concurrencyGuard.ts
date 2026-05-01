@@ -114,7 +114,7 @@ export function idempotencyMiddleware(workspaceIdExtractor?: (req: any) => strin
 
     // Wrap res.json to cache the result
     const originalJson = res.json.bind(res);
-    res.json = (body: any) => {
+    res.json = (body: Record<string, unknown>) => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         storeIdempotencyResult(workspaceId, idempotencyKey, body);
       }

@@ -404,7 +404,7 @@ export const webhookSubscriptions = pgTable("webhook_subscriptions", {
 
   // Event configuration
   events: jsonb("events").$type<string[]>().notNull(), // ['shift.created', 'invoice.paid', 'employee.hired']
-  filters: jsonb("filters").$type<Record<string, any>>(), // Filter conditions: {department: 'sales', status: 'active'}
+  filters: jsonb("filters").$type<Record<string, unknown>>(), // Filter conditions: {department: 'sales', status: 'active'}
 
   // Authentication for outgoing webhooks
   authType: varchar("auth_type"), // 'none', 'basic', 'bearer', 'custom_header'

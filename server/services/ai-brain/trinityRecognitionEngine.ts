@@ -201,7 +201,7 @@ class TrinityRecognitionEngine {
   }
 
   /** OFFICER OF THE MONTH — monthly, highest composite score, owner approves */
-  async nominateOfficerOfMonth(workspaceId: string): Promise<{ nominated: boolean; officer?: any }> {
+  async nominateOfficerOfMonth(workspaceId: string): Promise<{ nominated: boolean; officer?: unknown }> {
     // CATEGORY C — Raw SQL retained: DISTINCT ON | Tables: officer_performance_scores, employees | Verified: 2026-03-23
     const { rows: top } = await typedPool(`
       SELECT DISTINCT ON (ops.employee_id)

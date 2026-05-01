@@ -24,7 +24,7 @@ export const githubClient = {
   },
 
   async getLatestCommit(): Promise<{ sha: string; message: string; author: string } | null> {
-    const data: any = await this.request(`repos/${REPO}/commits/HEAD`);
+    const data: Record<string, unknown> = await this.request(`repos/${REPO}/commits/HEAD`);
     if (!data) return null;
     return { sha: data.sha, message: data.commit?.message?.split('\n')[0], author: data.commit?.author?.name };
   },

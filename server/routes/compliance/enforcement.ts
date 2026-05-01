@@ -301,7 +301,7 @@ router.get("/hiring-score/:employeeId", requireAuth, requireManagerRole, async (
       }
     }
 
-    const anonymizedScore: any = {
+    const anonymizedScore: Record<string, unknown> = {
       success: true,
       accessLevel: hasBackgroundAuth ? 'authorized' : 'anonymized',
       employeeId,

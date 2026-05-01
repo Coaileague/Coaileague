@@ -161,7 +161,7 @@ pool.on('connect', (client) => {
 
   // Phase 39 — Slow query detection: wrap client.query to log queries over 500ms
   const _origQuery = client.query.bind(client);
-  (client as any).query = function slowQueryWrapper(...args: any[]) {
+  (client as any).query = function slowQueryWrapper(...args: unknown[]) {
     const start = Date.now();
     const result = _origQuery(...args);
     const captureSlowQuery = (duration: number) => {
@@ -184,7 +184,7 @@ pool.on('connect', (client) => {
 // so the circuit breaker applies to every DB operation, not just withRetry().
 // Note: recordDbSuccess() is NOT called here — only query-level success matters.
 const _originalConnect = pool.connect.bind(pool);
-(pool as any).connect = async function circuitBreakerConnect(...args: any[]) {
+(pool as any).connect = async function circuitBreakerConnect(...args: unknown[]) {
   if (isDbCircuitOpen()) {
     throw new Error('[CircuitBreaker] DB circuit is open — skipping connection attempt');
   }

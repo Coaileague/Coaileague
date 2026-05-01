@@ -29,6 +29,7 @@ import { notificationEngine } from '../services/universalNotificationEngine';
 import { PLATFORM_SUPPORT_ROLES } from '@shared/platformConfig';
 import { PLATFORM } from '../config/platformConfig';
 import { createLogger } from '../lib/logger';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('SupportRoutes');
 
 

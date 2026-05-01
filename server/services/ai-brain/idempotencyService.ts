@@ -57,7 +57,7 @@ class IdempotencyService {
     actionId?: string;
     workspaceId?: number | string;
     userId?: number | string;
-    payload?: any;
+    payload?: unknown;
     customKey?: string;
   }): string {
     if (params.customKey) {
@@ -272,7 +272,7 @@ export async function withIdempotency<T>(
     actionId: string;
     workspaceId?: number | string;
     userId?: number | string;
-    payload?: any;
+    payload?: unknown;
   },
   operation: () => Promise<T>,
   options?: Partial<IdempotencyOptions>

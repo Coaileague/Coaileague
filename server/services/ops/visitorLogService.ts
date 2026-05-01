@@ -158,7 +158,7 @@ class VisitorLogService {
 
   async listVisitors(workspaceId: string, siteId?: string, onsite = false, limit = 50): Promise<VisitorLog[]> {
     let query = `SELECT * FROM visitor_logs WHERE workspace_id=$1`;
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (siteId) { query += ` AND site_id=$2`; params.push(siteId); }
     if (onsite) query += ` AND checked_out_at IS NULL`;
     query += ` ORDER BY checked_in_at DESC LIMIT ${limit}`;

@@ -26,7 +26,7 @@ const router = Router();
 
 interface AuthenticatedRequest extends Request {
   userId?: string;
-  user?: any;
+  user?: unknown;
   workspaceId?: string;
 }
 

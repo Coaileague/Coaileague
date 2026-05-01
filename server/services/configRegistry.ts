@@ -162,7 +162,7 @@ class ConfigRegistry {
   /**
    * Persist config to TypeScript file
    */
-  async persistConfig(scope: string, config: any): Promise<void> {
+  async persistConfig(scope: string, config: Record<string, unknown>): Promise<void> {
     if (scope !== 'featureToggles') {
       throw new Error(`Unsupported config scope: ${scope}`);
     }

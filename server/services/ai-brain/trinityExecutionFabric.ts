@@ -81,7 +81,7 @@ export interface ExecutionManifest {
   
   // Results
   stepResults: StepResult[];
-  finalResult?: any;
+  finalResult?: unknown;
   
   // Rollback
   rollbackSteps: RollbackStep[];
@@ -105,7 +105,7 @@ export interface ExecutionStep {
   
   // State
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
-  result?: any;
+  result?: unknown;
   error?: string;
   startedAt?: Date;
   completedAt?: Date;

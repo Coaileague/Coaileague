@@ -76,7 +76,7 @@ export interface PricingBreakdown {
 export interface PhaseResult {
   success: boolean;
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 // ============================================================================
@@ -767,8 +767,8 @@ export class EnterpriseOnboardingOrchestrator {
    */
   async getOnboardingStatus(workspaceId: string): Promise<{
     phase: 'signup' | 'configuration' | 'payment' | 'complete';
-    pendingConfig?: any;
-    subscription?: any;
+    pendingConfig?: unknown;
+    subscription?: unknown;
     staffingEmail?: string;
     orgCode?: string;
     setupChecklist?: Record<string, boolean>;

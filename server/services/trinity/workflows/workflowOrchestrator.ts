@@ -41,7 +41,7 @@ import {
 
 const log = createLogger('workflowOrchestrator');
 
-function ok(actionId: string, message: string, data: any, start: number): ActionResult {
+function ok(actionId: string, message: string, data: Record<string, unknown>, start: number): ActionResult {
   return {
     success: true,
     actionId,

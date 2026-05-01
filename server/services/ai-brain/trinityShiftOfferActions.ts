@@ -13,7 +13,7 @@ import { createLogger } from '../../lib/logger';
 
 const log = createLogger('TrinityShiftOfferActions');
 
-function ok(actionId: string, message: string, data: any, start: number): ActionResult {
+function ok(actionId: string, message: string, data: Record<string, unknown>, start: number): ActionResult {
   return { success: true, actionId, message, data, executionTimeMs: Date.now() - start };
 }
 function fail(actionId: string, message: string, start: number): ActionResult {

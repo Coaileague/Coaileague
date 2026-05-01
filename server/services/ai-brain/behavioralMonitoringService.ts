@@ -689,7 +689,7 @@ class BehavioralMonitoringService {
   /**
    * Log behavioral event
    */
-  private async logBehavioralEvent(eventType: string, data: any): Promise<void> {
+  private async logBehavioralEvent(eventType: string, data: Record<string, unknown>): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
         workspaceId: 'system',

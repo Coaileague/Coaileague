@@ -366,9 +366,9 @@ export function stopDecemberHolidayCron(): void {
 export async function getWorkspaceHolidays(
   workspaceId: string,
   year?: number
-): Promise<any[]> {
+): Promise<Record<string,unknown>[]> {
   let query = `SELECT * FROM workspace_holidays WHERE workspace_id = $1`;
-  const params: any[] = [workspaceId];
+  const params: Record<string, unknown>[] = [workspaceId];
   
   if (year) {
     query += ` AND EXTRACT(YEAR FROM date) = $2`;

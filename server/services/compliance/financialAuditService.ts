@@ -204,7 +204,7 @@ class FinancialAuditService {
     invoice: any,
     eventType: 'INVOICE_CREATED' | 'INVOICE_MODIFIED' | 'INVOICE_VOIDED' | 'INVOICE_PAID',
     actor: { id: string; name: string; type: FinancialAuditEntry['actorType'] },
-    before?: any
+    before?: unknown
   ): Promise<string> {
     return this.logFinancialEvent({
       eventType,
@@ -238,7 +238,7 @@ class FinancialAuditService {
     payroll: any,
     eventType: 'PAYROLL_CREATED' | 'PAYROLL_APPROVED' | 'PAYROLL_PROCESSED' | 'PAYROLL_MODIFIED',
     actor: { id: string; name: string; type: FinancialAuditEntry['actorType'] },
-    before?: any
+    before?: unknown
   ): Promise<string> {
     return this.logFinancialEvent({
       eventType,
@@ -276,7 +276,7 @@ class FinancialAuditService {
       entityType: 'INVOICE' | 'PAYMENT' | 'CUSTOMER';
       syncedCount: number;
       failedCount: number;
-      details: any;
+      details: Record<string, unknown>;
     },
     actor: { id: string; name: string; type: FinancialAuditEntry['actorType'] }
   ): Promise<string> {

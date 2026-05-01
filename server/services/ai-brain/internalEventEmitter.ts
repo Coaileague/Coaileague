@@ -8,7 +8,7 @@ const log = createLogger('internalEventEmitter');
  * that doesn't need to go through the platform event bus.
  */
 
-type EventHandler = (data: any) => void;
+type EventHandler = (data: Record<string, unknown>) => void;
 
 class InternalEventEmitter {
   private handlers: Map<string, Set<EventHandler>> = new Map();
@@ -28,7 +28,7 @@ class InternalEventEmitter {
     this.handlers.get(event)?.delete(handler);
   }
 
-  emit(event: string, data?: any): void {
+  emit(event: string, data?: unknown): void {
     const eventHandlers = this.handlers.get(event);
     if (eventHandlers) {
       eventHandlers.forEach(handler => {
@@ -53,7 +53,7 @@ class InternalEventEmitter {
   }
 
   once(event: string, handler: EventHandler): void {
-    const wrapper = (data: any) => {
+    const wrapper = (data: Record<string, unknown>) => {
       this.off(event, wrapper);
       handler(data);
     };

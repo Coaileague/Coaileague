@@ -77,7 +77,7 @@ export interface EmployeeMatch {
 export interface StageResult {
   success: boolean;
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 // ============================================================================
@@ -631,11 +631,11 @@ export class InboundOpportunityAgent {
       // returns immediately, but results are inspected and unfillable shifts
       // are escalated to managers + the original sender. No more silent fail.
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      if (result.result?.contractor?.autoStaffingEnabled && (result as any).result?.extractedShifts?.length > 0) {
-        const senderEmail = (result as any).result?.senderEmail as string | undefined;
-        const senderName = (result as any).result?.senderName as string | undefined;
-        const referenceNumber = (result as any).result?.referenceNumber as string | undefined;
-        const workspaceName = (result as any).result?.workspaceName as string | undefined;
+      if (result.result?.contractor?.autoStaffingEnabled && (result as Record<string, unknown>).result?.extractedShifts?.length > 0) {
+        const senderEmail = (result as Record<string, unknown>).result?.senderEmail as string | undefined;
+        const senderName = (result as Record<string, unknown>).result?.senderName as string | undefined;
+        const referenceNumber = (result as Record<string, unknown>).result?.referenceNumber as string | undefined;
+        const workspaceName = (result as Record<string, unknown>).result?.workspaceName as string | undefined;
 
         scheduleNonBlocking('inbound-opportunity.stage-b-autostaff', async () => {
           const stageBResults = await this.triggerAutoStaffing(workspaceId);
@@ -657,8 +657,8 @@ export class InboundOpportunityAgent {
 
       return {
         success: true,
-        message: (result as any).result?.isShiftRequest
-          ? `Extracted ${(result as any).result.extractedShifts?.length || 0} shifts from email`
+        message: (result as Record<string, unknown>).result?.isShiftRequest
+          ? `Extracted ${(result as Record<string, unknown>).result.extractedShifts?.length || 0} shifts from email`
           : 'Email routed to human inbox for review',
         data: result.result,
       };

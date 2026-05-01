@@ -328,7 +328,7 @@ export function registerPrivacyRoutes(app: Express, requireAuth: any) {
       const validStatuses = ['received', 'under_review', 'approved', 'in_progress', 'completed', 'denied', 'partially_fulfilled'];
 
       const updates: string[] = ['updated_at=now()', 'handled_by=$2'];
-      const params: any[] = [id, authReq.user?.id];
+      const params: Record<string, unknown>[] = [id, authReq.user?.id];
 
       if (status && validStatuses.includes(status)) {
         params.push(status);

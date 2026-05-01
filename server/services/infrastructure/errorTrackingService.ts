@@ -398,7 +398,7 @@ class ErrorTrackingService {
 
     // CATEGORY C — Raw SQL retained: Dynamic query execution for error tracking | Tables: dynamic | Verified: 2026-03-23
     const result = await typedQuery(query);
-    const rows = Array.isArray(result) ? result : ((result as any).rows || []);
+    const rows = Array.isArray(result) ? result : ((result as Record<string, unknown>).rows || []);
     const count = (rows as any[])[0]?.count || 0;
     
     if (rule.condition === 'error_rate') {

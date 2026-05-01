@@ -202,7 +202,7 @@ function isSelf(context: FilterContext): boolean {
  * Filter sensitive fields from an employee record.
  * Pay rates stripped unless requester is owner/authorized role/self.
  */
-export function filterSensitiveFields<T extends Record<string, any>>(
+export function filterSensitiveFields<T extends Record<string, unknown>>(
   record: T,
   context: FilterContext
 ): T {
@@ -228,7 +228,7 @@ export function filterSensitiveFields<T extends Record<string, any>>(
 /**
  * Filter sensitive fields from an array of employee records.
  */
-export function filterSensitiveFieldsArray<T extends Record<string, any>>(
+export function filterSensitiveFieldsArray<T extends Record<string, unknown>>(
   records: T[],
   context: FilterContext
 ): T[] {
@@ -240,7 +240,7 @@ export function filterSensitiveFieldsArray<T extends Record<string, any>>(
  * Filter employee record for API response.
  * Uses employee.userId as entityOwnerId for self-access check.
  */
-export function filterEmployeeForResponse<T extends Record<string, any>>(
+export function filterEmployeeForResponse<T extends Record<string, unknown>>(
   employee: T,
   context: FilterContext
 ): T {
@@ -253,7 +253,7 @@ export function filterEmployeeForResponse<T extends Record<string, any>>(
 /**
  * Filter array of employee records for API response.
  */
-export function filterEmployeesForResponse<T extends Record<string, any>>(
+export function filterEmployeesForResponse<T extends Record<string, unknown>>(
   employees: T[],
   context: FilterContext
 ): T[] {
@@ -264,7 +264,7 @@ export function filterEmployeesForResponse<T extends Record<string, any>>(
 /**
  * Filter contractor records for API response.
  */
-export function filterContractorForResponse<T extends Record<string, any>>(
+export function filterContractorForResponse<T extends Record<string, unknown>>(
   contractor: T,
   context: FilterContext
 ): T {
@@ -285,7 +285,7 @@ export function filterContractorForResponse<T extends Record<string, any>>(
  * Managers retain: name, address, post orders, service type, officers required,
  *   client onboarding status, and all operational scheduling fields.
  */
-export function filterClientForResponse<T extends Record<string, any>>(
+export function filterClientForResponse<T extends Record<string, unknown>>(
   client: T,
   context: FilterContext
 ): T {
@@ -314,7 +314,7 @@ export function filterClientForResponse<T extends Record<string, any>>(
 /**
  * Filter an array of client records for API response.
  */
-export function filterClientsForResponse<T extends Record<string, any>>(
+export function filterClientsForResponse<T extends Record<string, unknown>>(
   clients: T[],
   context: FilterContext
 ): T[] {

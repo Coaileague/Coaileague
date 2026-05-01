@@ -17,7 +17,7 @@ const ROUTE_TO_OPERATION: Record<string, OperationType> = {
 };
 
 // Include userId so DB scope matches L1 scope — prevents cross-user replay within a workspace
-function buildFingerprint(key: string, route: string, body: any, userId: string): string {
+function buildFingerprint(key: string, route: string, body: Record<string, unknown>, userId: string): string {
   try {
     const str = `${key}:${route}:${userId}:${JSON.stringify(body ?? {})}`;
     return crypto.createHash('sha256').update(str).digest('hex').slice(0, 64);
@@ -26,7 +26,7 @@ function buildFingerprint(key: string, route: string, body: any, userId: string)
   }
 }
 
-const inMemory = new Map<string, { status: 'in_progress' | 'completed'; body?: any; statusCode?: number; expiresAt: number }>();
+const inMemory = new Map<string, { status: 'in_progress' | 'completed'; body?: unknown; statusCode?: number; expiresAt: number }>();
 
 setInterval(() => {
   const now = Date.now();
@@ -81,7 +81,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
   inMemory.set(memKey, { status: 'in_progress', expiresAt: Date.now() + TTL_MS });
 
   // Helper to finalize the DB record (used by both json and finish paths)
-  const finalizeRecord = (sc: number, body: any) => {
+  const finalizeRecord = (sc: number, body: Record<string, unknown>) => {
     const isFinal = sc >= 200 && sc < 500;
     const isRetryable = sc >= 500;
 
@@ -113,7 +113,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
   const reserveAndCheck = async (): Promise<
     { action: 'proceed' } |
     { action: 'conflict' } |
-    { action: 'replay'; statusCode: number; body: any }
+    { action: 'replay'; statusCode: number; body: Record<string, unknown> }
   > => {
     try {
       // Converted to Drizzle ORM: ON CONFLICT
@@ -182,7 +182,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
       }
 
       if (existing.status === 'completed' && existing.resultMetadata) {
-        const cached = existing.resultMetadata as { statusCode: number; body: any } | null;
+        const cached = existing.resultMetadata as { statusCode: number; body: Record<string, unknown> } | null;
         if (cached?.statusCode && cached?.body !== undefined) {
           return { action: 'replay', statusCode: cached.statusCode, body: cached.body };
         }
@@ -220,7 +220,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
 
       // Primary capture: res.json (covers all JSON responses from these routes)
       const originalJson = res.json.bind(res);
-      res.json = function (body: any) {
+      res.json = function (body: Record<string, unknown>) {
         if (!finalized) {
           finalized = true;
           capturedBody = body;

@@ -424,7 +424,7 @@ async function findCalloffShift(params: {
   shiftId?: string;
 }) {
   const { pool } = await import('../../../db');
-  const args: any[] = [params.workspaceId, params.employeeId];
+  const args: Record<string, unknown>[] = [params.workspaceId, params.employeeId];
   let sqlText: string;
   if (params.shiftId) {
     args.push(params.shiftId);

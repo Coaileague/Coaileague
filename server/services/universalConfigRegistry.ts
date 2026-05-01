@@ -530,7 +530,7 @@ export class UniversalConfigRegistry {
     }
   }
 
-  async trinityExecute(action: string, params: Record<string, unknown>): Promise<{ success: boolean; message: string; data?: any }> {
+  async trinityExecute(action: string, params: Record<string, unknown>): Promise<{ success: boolean; message: string; data?: unknown }> {
     const source = 'trinity_ai';
     const changedBy = 'trinity';
 

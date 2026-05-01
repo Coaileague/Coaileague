@@ -74,15 +74,15 @@ export interface DryRunChange {
   entityId?: string;
   changeType: 'create' | 'update' | 'delete' | 'read' | 'invoke';
   field?: string;
-  currentValue?: any;
-  newValue?: any;
+  currentValue?: unknown;
+  newValue?: unknown;
   diffPreview?: string;
 }
 
 export interface ToolExecutionResult {
   success: boolean;
   authorized: boolean;
-  result?: any;
+  result?: unknown;
   error?: string;
   durationMs: number;
   toolCall: TrinityToolCall;

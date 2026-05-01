@@ -713,7 +713,7 @@ class WorkflowApprovalService {
     }
   }
 
-  private async emitApprovalEvent(eventType: string, data: any): Promise<void> {
+  private async emitApprovalEvent(eventType: string, data: Record<string, unknown>): Promise<void> {
     // Map internal event types to valid PlatformEventType
     const eventTypeMap: Record<string, string> = {
       'approval_created': 'trinity_fix_proposed',

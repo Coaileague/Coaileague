@@ -50,7 +50,7 @@ interface PipelineResult {
   action: 'auto_approved' | 'pending_review' | 'synced' | 'failed' | 'skipped';
   confidenceScore?: number;
   details?: string;
-  qbSyncResult?: any;
+  qbSyncResult?: unknown;
 }
 
 const CONFIDENCE_THRESHOLDS = {

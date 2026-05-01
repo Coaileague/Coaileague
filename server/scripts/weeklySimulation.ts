@@ -310,7 +310,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
 
   console.log('\nSTEP 3: Running Billable Hours Aggregation...');
 
-  let billableResult: any = null;
+  let billableResult: unknown = null;
   try {
     billableResult = await aggregateBillableHours({
       workspaceId: WORKSPACE_ID,
@@ -438,7 +438,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
 
   console.log('\nSTEP 5: Running Payroll Hours Aggregation...');
 
-  let payrollAggResult: any = null;
+  let payrollAggResult: unknown = null;
   try {
     payrollAggResult = await aggregatePayrollHours({
       workspaceId: WORKSPACE_ID,

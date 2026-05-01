@@ -1048,7 +1048,7 @@ class TrinityAgentParityLayer {
     }
   }
 
-  private async analyzeCode(params: any, context: AgentExecutionContext): Promise<unknown> {
+  private async analyzeCode(params: Record<string, unknown>, context: AgentExecutionContext): Promise<unknown> {
     const files = params.files || context.relevantFiles || [];
     const stepResults = context.executedSteps.filter(s => s.success);
     return {

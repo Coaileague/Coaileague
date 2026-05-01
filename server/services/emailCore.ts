@@ -319,7 +319,7 @@ export interface CanSpamEmailOptions {
  */
 export async function sendCanSpamCompliantEmail(
   options: CanSpamEmailOptions
-): Promise<{ success: boolean; data?: any; error?: any; skipped?: boolean; reason?: string }> {
+): Promise<{ success: boolean; data?: unknown; error?: unknown; skipped?: boolean; reason?: string }> {
   const { to, subject, html, emailType, workspaceId, skipUnsubscribeCheck, tags, replyTo, bcc } = options;
   const isTransactional = isTransactionalEmail(emailType);
 
@@ -426,7 +426,7 @@ async function sendMeteredEmail(
   emailCategory: EmailCategory,
   sendFn: () => Promise<unknown>,
   metadata?: Record<string, unknown>
-): Promise<{ success: boolean; data?: any; error?: any }> {
+): Promise<{ success: boolean; data?: unknown; error?: unknown }> {
   try {
     const result = await sendFn();
     
@@ -492,7 +492,7 @@ export async function getUncachableResendClient() {
     return {
       client: {
         emails: {
-          send: async (params: any) => {
+          send: async (params: Record<string, unknown>) => {
             if (isProd) {
               log.error(`[EMAIL] PRODUCTION ERROR: Cannot send email to ${params.to} - Resend not configured. Subject: ${params.subject}`);
               throw new Error('Email delivery unavailable: Resend is not configured in production');

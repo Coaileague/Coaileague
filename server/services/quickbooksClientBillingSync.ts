@@ -74,7 +74,7 @@ async function qbRequest(
   client: any,
   method: string,
   endpoint: string,
-  body?: any
+  body?: unknown
 ): Promise<unknown> {
   const baseUrl = `${INTEGRATIONS.quickbooks.getCompanyApiBase()}/${client.realmId}`;
   

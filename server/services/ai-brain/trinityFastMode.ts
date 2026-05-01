@@ -70,7 +70,7 @@ export interface OperationResult {
   operationId: string;
   type: string;
   success: boolean;
-  result?: any;
+  result?: unknown;
   error?: string;
   durationMs: number;
   executedAt: Date;

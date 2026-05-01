@@ -227,11 +227,11 @@ export async function updateIdempotencyResult(
     errorMessage?: string;
     errorStack?: string;
   },
-  tx?: any // Transaction client (PgTransaction)
+  tx?: unknown // Transaction client (PgTransaction)
 ): Promise<void> {
   const { idempotencyKeyId, status, resultId, resultMetadata, errorMessage, errorStack } = params;
   
-  const updateData: any = {
+  const updateData: Record<string, unknown> = {
     status,
     completedAt: new Date(),
   };

@@ -14,7 +14,7 @@ const router = Router();
 router.get('/incidents', requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
   try {
     const { status } = req.query;
-    const params: any[] = [req.workspaceId];
+    const params: Record<string, unknown>[] = [req.workspaceId];
     let filter = '';
     if (status) { filter = ' AND di.status = $2'; params.push(status); }
     const { rows } = await pool.query(`

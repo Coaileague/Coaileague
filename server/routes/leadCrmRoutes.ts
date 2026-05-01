@@ -11,7 +11,7 @@ import { z } from 'zod';
 const log = createLogger('LeadCrmRoutes');
 
 
-export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWorkspaceId?: any) {
+export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWorkspaceId?: unknown) {
   const router = Router();
 
   const getWorkspaceId = (req: Request): string | null => {

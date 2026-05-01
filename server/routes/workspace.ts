@@ -34,7 +34,7 @@ interface AuthenticatedRequest extends Request {
     [key: string]: any;
   };
   workspaceId?: string;
-  session?: any;
+  session?: unknown;
   rawBody?: Buffer;
 }
 

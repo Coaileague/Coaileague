@@ -213,7 +213,7 @@ interface FAQUpdateInput {
 interface PlatformRecommendationInput {
   userNeed: string;
   currentPlan?: string;
-  currentUsage?: any;
+  currentUsage?: unknown;
 }
 
 interface PlatformAwarenessInput {
@@ -237,7 +237,7 @@ export interface EnqueueJobRequest {
   workspaceId?: string;
   userId?: string;
   skill: string;
-  input: any;
+  input: Record<string, unknown>;
   priority?: 'low' | 'normal' | 'high' | 'critical';
   // Conversation context for proper chatroom routing
   conversationId?: string;
@@ -247,7 +247,7 @@ export interface EnqueueJobRequest {
 export interface JobResult {
   jobId: string;
   status: string;
-  output?: any;
+  output?: unknown;
   error?: string;
   confidenceScore?: number;
   requiresApproval?: boolean;
@@ -1692,7 +1692,7 @@ ${JSON.stringify(contextData, null, 2)}`;
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    const context: any = { timeframe, workspaceId };
+    const context: Record<string, unknown> = { timeframe, workspaceId };
 
     try {
       if (insightType === 'sales' || insightType === 'finance' || insightType === 'growth') {
@@ -2132,7 +2132,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   /**
    * Enrich employee/org data with human-readable external IDs
    */
-  private async enrichWithExternalIds(data: any, workspaceId?: string): Promise<unknown> {
+  private async enrichWithExternalIds(data: Record<string, unknown>, workspaceId?: string): Promise<unknown> {
     if (!data) return data;
 
     if (workspaceId) {
@@ -2189,7 +2189,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   /**
    * Record platform event for cross-org learning
    */
-  async recordEvent(event: { eventType: string; feature: string; payload: any; rawData?: any }): Promise<void> {
+  async recordEvent(event: { eventType: string; feature: string; payload: Record<string, unknown>; rawData?: unknown }): Promise<void> {
     const fingerprint = this.generateFingerprint(event.eventType, event.feature, event.rawData);
     await this.updateGlobalPatterns(fingerprint, event.eventType, event.feature);
   }
@@ -2197,7 +2197,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   /**
    * Generate anonymized fingerprint for cross-org pattern matching
    */
-  private generateFingerprint(eventType: string, feature: string, rawData?: any): string {
+  private generateFingerprint(eventType: string, feature: string, rawData?: unknown): string {
     const normalized = {
       type: eventType,
       feature,

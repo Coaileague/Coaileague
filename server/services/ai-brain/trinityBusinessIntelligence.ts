@@ -56,7 +56,7 @@ interface MetacognitionResult {
 }
 
 class TrinityBusinessIntelligence {
-  private patternCache = new Map<string, { data: any; expiry: number }>();
+  private patternCache = new Map<string, { data: Record<string, unknown>; expiry: number }>();
   private activeAnalysis = new Map<string, Promise<unknown>>();
   private CACHE_TTL = 5 * 60 * 1000;
 
@@ -67,7 +67,7 @@ class TrinityBusinessIntelligence {
     return null;
   }
 
-  private setCache(key: string, data: any): void {
+  private setCache(key: string, data: Record<string, unknown>): void {
     this.patternCache.set(key, { data, expiry: Date.now() + this.CACHE_TTL });
   }
 

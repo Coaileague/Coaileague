@@ -34,7 +34,7 @@ function sraFetch(path: string) {
   return fetch(path, { headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).then(r => r.json());
 }
 
-function sraRequest(method: string, path: string, body?: any) {
+function sraRequest(method: string, path: string, body?: unknown) {
   const token = localStorage.getItem("sra_session_token");
   return fetch(path, {
     method,

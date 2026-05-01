@@ -226,7 +226,7 @@ async function ensureOrgIdentifiersInTx(
 export async function ensureOrgIdentifiers(
   orgId: string,
   orgName: string,
-  txParam?: any
+  txParam?: unknown
 ): Promise<{ orgCode: string; externalId: string }> {
   // If transaction provided, use it directly
   if (txParam) {
@@ -353,7 +353,7 @@ async function attachEmployeeExternalIdInTx(
 export async function attachEmployeeExternalId(
   employeeId: string,
   orgId: string,
-  txParam?: any
+  txParam?: unknown
 ): Promise<{ externalId: string; localNumber: number }> {
   // If transaction provided, use it directly
   if (txParam) {
@@ -472,7 +472,7 @@ async function attachClientExternalIdInTx(
 export async function attachClientExternalId(
   clientId: string,
   orgId: string,
-  txParam?: any
+  txParam?: unknown
 ): Promise<{ externalId: string; localNumber: number }> {
   // If transaction provided, use it directly
   if (txParam) {

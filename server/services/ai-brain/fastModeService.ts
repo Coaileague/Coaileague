@@ -24,7 +24,7 @@ import { aiWorkboardTasks } from '@shared/schema';
 const log = createLogger('fastModeService');
 
 // WebSocket broadcaster type
-type WebSocketBroadcaster = (event: string, data: any) => void;
+type WebSocketBroadcaster = (event: string, data: Record<string, unknown>) => void;
 let wsBroadcaster: WebSocketBroadcaster | null = null;
 
 export function registerFastModeBroadcaster(broadcaster: WebSocketBroadcaster) {
@@ -415,7 +415,7 @@ class FastModeService {
           return {
             agentId,
             agentName: this.getAgentDisplayName(agentId),
-            result: (result as any).data,
+            result: (result as Record<string, unknown>).data,
             success: result.success,
             tokensUsed: analysisResult.estimatedTokens
           };
@@ -782,7 +782,7 @@ class FastModeService {
     });
 
     // Orchestration updates
-    addListener('orchestration_completed', (data: any) => {
+    addListener('orchestration_completed', (data: Record<string, unknown>) => {
       if (wsBroadcaster) {
         wsBroadcaster('velocity_completed', { taskId, workspaceId, ...data });
       }

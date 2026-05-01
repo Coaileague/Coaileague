@@ -31,7 +31,7 @@ router.get('/templates', requireAuth, async (req: AuthenticatedRequest, res) => 
       WHERE is_active = true
         AND (workspace_id IS NULL OR workspace_id = $1)
     `;
-    const params: any[] = [workspaceId || null];
+    const params: Record<string, unknown>[] = [workspaceId || null];
 
     if (category && (category === 'officer' || category === 'client')) {
       query += ` AND category = $2`;

@@ -209,7 +209,7 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
     }
     
     // Handle different orchestration action types
-    let result: { success: boolean; message: string; data?: any; steps?: string[] };
+    let result: { success: boolean; message: string; data?: unknown; steps?: string[] };
     
     switch (category) {
       case 'workflow':

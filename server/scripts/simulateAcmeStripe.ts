@@ -26,7 +26,7 @@ const TEST_API_KEY = process.env.STRIPE_TEST_API_KEY
   || process.env.TESTING_STRIPE_SECRET_KEY
   || process.env.STRIPE_SECRET_KEY; // fallback (if it happens to be test)
 
-function log(msg: string, data?: any) {
+function log(msg: string, data?: unknown) {
   console.log(`\n[ACME-SIM] ${msg}`, data ? JSON.stringify(data, null, 2) : '');
 }
 

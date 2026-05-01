@@ -493,7 +493,7 @@ class AIAnalyticsEngine {
 
   async analyzePostAction(
     actionContext: ActionContext,
-    actionResult: { success: boolean; data?: any; error?: string },
+    actionResult: { success: boolean; data?: unknown; error?: string },
     role: TrinityRole = 'analyst'
   ): Promise<GeminiDecision | null> {
     if (!this.geminiClient.isAvailable()) {
@@ -774,7 +774,7 @@ Respond with JSON matching the required schema.`;
 
   private buildPostActionPrompt(
     actionContext: ActionContext,
-    actionResult: { success: boolean; data?: any; error?: string },
+    actionResult: { success: boolean; data?: unknown; error?: string },
     context: CategoryContext,
     role: TrinityRole
   ): string {

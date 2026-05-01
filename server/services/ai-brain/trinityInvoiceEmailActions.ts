@@ -24,7 +24,7 @@ const log = createLogger('trinityInvoiceEmailActions');
 let invoiceEmailActionsRegistrationState: 'unregistered' | 'registering' | 'registered' = 'unregistered';
 
 // Helper: result factory
-function createResult(actionId: string, success: boolean, message: string, data?: any, startTime?: number): ActionResult {
+function createResult(actionId: string, success: boolean, message: string, data?: unknown, startTime?: number): ActionResult {
   return {
     success,
     actionId,
@@ -212,7 +212,7 @@ export function registerInvoiceEmailActions() {
         const result = await checkOverdueInvoices(workspaceId);
         
         // Enhance with totals
-        const overdueCount = (result as any).length;
+        const overdueCount = (result as Record<string, unknown>).length;
         // @ts-expect-error — TS migration: fix in refactoring sprint
         const totalOverdueAmount = result.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
 
@@ -320,7 +320,7 @@ export function registerInvoiceEmailActions() {
       if (statusAction === 'overdue_scan') {
         try {
           const result = await checkOverdueInvoices(workspaceId);
-          const overdueCount = (result as any).length;
+          const overdueCount = (result as Record<string, unknown>).length;
           // @ts-expect-error — TS migration: fix in refactoring sprint
           const totalOverdueAmount = result.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
           return createResult(request.actionId, true, `Found ${overdueCount} overdue invoices`, {
@@ -397,7 +397,7 @@ export function registerInvoiceEmailActions() {
 
         return createResult(request.actionId, result.success, result.success ? 'Email sent' : 'Failed to send email', {
           sent: result.success,
-          messageId: (result as any).data?.data?.id
+          messageId: (result as Record<string, unknown>).data?.data?.id
         }, start);
       } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);

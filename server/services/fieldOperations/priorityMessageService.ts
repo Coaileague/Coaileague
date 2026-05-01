@@ -142,7 +142,7 @@ class PriorityMessageService {
     this.escalationChains.set(roomId, chain);
   }
   
-  private getDefaultDeadline(priority: MessagePriority, config: any): number {
+  private getDefaultDeadline(priority: MessagePriority, config: Record<string, unknown>): number {
     const deadlines = config.priorityMessages.defaultAckDeadlines;
     switch (priority) {
       case MessagePriority.IMPORTANT: return deadlines.important;
@@ -153,7 +153,7 @@ class PriorityMessageService {
     }
   }
   
-  private scheduleAckCheck(message: PriorityMessage, config: any): void {
+  private scheduleAckCheck(message: PriorityMessage, config: Record<string, unknown>): void {
     const deadlineMs = (message.ackDeadlineMinutes || 30) * 60 * 1000;
     setTimeout(() => this.checkMessageAck(message.id), deadlineMs);
   }

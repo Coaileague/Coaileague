@@ -47,7 +47,7 @@ const PRIORITY_CONFIG: Record<string, { label: string; className: string; icon: 
   urgent: { label: "Urgent", className: "bg-red-500/10 text-red-700 border-red-200", icon: AlertTriangle },
 };
 
-function PostOrderForm({ order, onClose }: { order?: any; onClose: () => void }) {
+function PostOrderForm({ order, onClose }: { order?: unknown; onClose: () => void }) {
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;
   const { toast } = useToast();

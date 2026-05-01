@@ -55,7 +55,7 @@ interface LaborRule {
   notes: string;
 }
 
-function RuleDetailRow({ label, value, icon: Icon }: { label: string; value: string | number | boolean; icon?: any }) {
+function RuleDetailRow({ label, value, icon: Icon }: { label: string; value: string | number | boolean; icon?: unknown }) {
   return (
     <div className="flex items-center justify-between gap-3 p-2 border-b border-[var(--ds-border)] last:border-0">
       <div className="flex items-center gap-2 min-w-0">

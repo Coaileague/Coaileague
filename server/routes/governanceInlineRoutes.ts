@@ -151,7 +151,7 @@ router.post("/security-compliance/records/:recordId/lock-vault", requireAuth, as
           ${workspaceId ? sql`AND workspace_id = ${workspaceId}` : sql``}
           RETURNING *`
     );
-    const updated = (result as any).rows?.[0];
+    const updated = (result as Record<string, unknown>).rows?.[0];
     if (!updated) return res.status(404).json({ message: 'Compliance record not found' });
     res.json({ success: true, data: updated });
   } catch (error: unknown) {
@@ -174,7 +174,7 @@ router.get("/safety-checks/recent", requireAuth, async (req: AuthenticatedReques
       .limit(20);
     
     const formatted = reports.map(r => {
-      let data: any = {};
+      let data: Record<string, unknown> = {};
       try {
         data = typeof r.summary === 'string' ? JSON.parse(r.summary) : {};
       } catch { data = {}; }

@@ -51,7 +51,7 @@ platformConfigValuesRouter.get('/groups', requireAuth, async (req: Request, res:
       GROUP BY g.id
       ORDER BY g.sort_order ASC, g.label ASC
     `;
-    const params: any[] = [(req.workspaceId) || null];
+    const params: Record<string, unknown>[] = [(req.workspaceId) || null];
     if (domain) params.push(domain as string);
 
     const result = await pool.query(query, params);
@@ -97,7 +97,7 @@ platformConfigValuesRouter.get('/values', requireAuth, async (req: Request, res:
     const showInactive = includeInactive === 'true';
 
     const conditions: string[] = ['(v.workspace_id IS NULL OR v.workspace_id = $1)'];
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let idx = 2;
 
     if (group) {

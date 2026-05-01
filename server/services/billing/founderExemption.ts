@@ -128,7 +128,7 @@ export async function ensureFounderExemption(): Promise<void> {
         maxClients: 999999,
       })
       .where(eq(workspaces.id, GRANDFATHERED_TENANT_ID));
-    if ((result as any).rowCount > 0) {
+    if ((result as Record<string, unknown>).rowCount > 0) {
       log.info('[FounderExemption] Grandfathered tenant exemption verified and enforced');
     }
 

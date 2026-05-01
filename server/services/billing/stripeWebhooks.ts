@@ -768,7 +768,7 @@ export class StripeWebhookService {
 
     log.info('Payment intent succeeded', { paymentIntentId: paymentIntent.id });
 
-    let paidInvoice: any = null;
+    let paidInvoice: unknown = null;
 
     await db.transaction(async (tx) => {
       await tx.update(invoicePayments)
@@ -975,7 +975,7 @@ export class StripeWebhookService {
 
     log.info('Charge succeeded', { chargeId: charge.id, paymentIntentId });
 
-    let paidInvoice: any = null;
+    let paidInvoice: unknown = null;
     let workspaceId: string | null = null;
     let wasAlreadyPaid = false;
 
@@ -1410,7 +1410,7 @@ export class StripeWebhookService {
 
     log.warn('Chargeback received', { disputeId: dispute.id, chargeId, disputeAmount, disputeReason });
 
-    let disputedInvoice: any = null;
+    let disputedInvoice: unknown = null;
     let workspaceId: string | undefined;
 
     // Find the invoice linked to the disputed charge

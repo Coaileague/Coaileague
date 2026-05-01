@@ -524,7 +524,7 @@ class AIBrainAuthorizationService {
     actionId: string;
     category: string;
     parameters?: Record<string, unknown>;
-    result?: any;
+    result?: unknown;
     error?: string;
   }): Promise<void> {
     try {
@@ -758,7 +758,7 @@ class AIBrainAuthorizationService {
     }
   }
 
-  async isApprovalValid(approvalId: string): Promise<{ valid: boolean; approval?: any; reason?: string }> {
+  async isApprovalValid(approvalId: string): Promise<{ valid: boolean; approval?: unknown; reason?: string }> {
     try {
       const [approval] = await db.select().from(governanceApprovals).where(eq(governanceApprovals.id, approvalId)).limit(1);
       
@@ -894,7 +894,7 @@ class AIBrainAuthorizationService {
   async requireApprovalForExecution(actionType: string, approvalId?: string): Promise<{ 
     canExecute: boolean; 
     reason: string;
-    approval?: any;
+    approval?: unknown;
   }> {
     if (!this.isDestructiveAction(actionType)) {
       return { canExecute: true, reason: 'Action does not require approval gate' };

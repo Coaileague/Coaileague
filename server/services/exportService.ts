@@ -337,7 +337,7 @@ export async function exportInvoices(
   workspaceId: string,
   options: ExportOptions
 ): Promise<{ data: string; filename: string }> {
-  const filters: any[] = [eq(invoices.workspaceId, workspaceId)];
+  const filters: Record<string, unknown>[] = [eq(invoices.workspaceId, workspaceId)];
   if (options.startDate) filters.push(gte(invoices.issueDate!, options.startDate));
   if (options.endDate) filters.push(lte(invoices.issueDate!, options.endDate));
 
@@ -387,7 +387,7 @@ export async function exportPaymentRecords(
   workspaceId: string,
   options: ExportOptions
 ): Promise<{ data: string; filename: string }> {
-  const filters: any[] = [eq(paymentRecords.workspaceId, workspaceId)];
+  const filters: Record<string, unknown>[] = [eq(paymentRecords.workspaceId, workspaceId)];
   if (options.startDate) filters.push(gte(paymentRecords.paidAt!, options.startDate));
   if (options.endDate) filters.push(lte(paymentRecords.paidAt!, options.endDate));
 
@@ -436,7 +436,7 @@ export async function exportExpenses(
   workspaceId: string,
   options: ExportOptions
 ): Promise<{ data: string; filename: string }> {
-  const filters: any[] = [eq(expenses.workspaceId, workspaceId)];
+  const filters: Record<string, unknown>[] = [eq(expenses.workspaceId, workspaceId)];
   if (options.startDate) filters.push(gte(expenses.expenseDate, options.startDate));
   if (options.endDate) filters.push(lte(expenses.expenseDate, options.endDate));
 
@@ -647,7 +647,7 @@ export async function exportShiftHistory(
   workspaceId: string,
   options: ExportOptions
 ): Promise<{ data: string; filename: string }> {
-  const filters: any[] = [eq(shifts.workspaceId, workspaceId)];
+  const filters: Record<string, unknown>[] = [eq(shifts.workspaceId, workspaceId)];
   if (options.startDate) filters.push(gte(shifts.startTime, options.startDate));
   if (options.endDate) filters.push(lte(shifts.startTime, options.endDate));
 

@@ -278,7 +278,7 @@ export class A2AProtocolRepository {
     failureCount: number;
   }>): Promise<unknown> {
     try {
-      const updateData: any = { updatedAt: new Date() };
+      const updateData: Record<string, unknown> = { updatedAt: new Date() };
       if (updates.status) updateData.status = updates.status;
       if (updates.trustLevel !== undefined) updateData.trustScore = Number(updates.trustLevel);
       if (updates.lastActive) updateData.lastActiveAt = updates.lastActive;
@@ -292,7 +292,7 @@ export class A2AProtocolRepository {
     }
   }
 
-  async getAllAgents(): Promise<any[]> {
+  async getAllAgents(): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(a2aAgents).orderBy(desc(a2aAgents.createdAt));
     } catch (error : unknown) {
@@ -341,7 +341,7 @@ export class A2AProtocolRepository {
 
   async updateMessageStatus(id: string, status: string, deliveredAt?: Date, acknowledgedAt?: Date): Promise<void> {
     try {
-      const updateData: any = { status };
+      const updateData: Record<string, unknown> = { status };
       if (acknowledgedAt) updateData.processedAt = acknowledgedAt;
       await db.update(a2aMessages).set(updateData).where(eq(a2aMessages.id, id));
     } catch (error : unknown) {
@@ -349,7 +349,7 @@ export class A2AProtocolRepository {
     }
   }
 
-  async getMessagesForAgent(agentId: string, limit = 50): Promise<any[]> {
+  async getMessagesForAgent(agentId: string, limit = 50): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(a2aMessages)
         .where(eq(a2aMessages.toAgent, agentId))
@@ -416,7 +416,7 @@ export class A2AProtocolRepository {
     }
   }
 
-  async getTrustRulesForAgent(agentId: string): Promise<any[]> {
+  async getTrustRulesForAgent(agentId: string): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(a2aTrustRules).where(eq(a2aTrustRules.sourceAgent, agentId));
     } catch (error : unknown) {
@@ -494,7 +494,7 @@ export class RLLoopRepository {
     }
   }
 
-  async getExperiencesForAgent(agentId: string, limit = 100): Promise<any[]> {
+  async getExperiencesForAgent(agentId: string, limit = 100): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(aiLearningEvents)
         .where(and(eq(aiLearningEvents.eventType, 'experience'), eq(aiLearningEvents.agentId, agentId)))
@@ -506,7 +506,7 @@ export class RLLoopRepository {
     }
   }
 
-  async getExperiencesByAction(agentId: string, actionType: string, limit = 50): Promise<any[]> {
+  async getExperiencesByAction(agentId: string, actionType: string, limit = 50): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(aiLearningEvents)
         .where(and(
@@ -522,7 +522,7 @@ export class RLLoopRepository {
     }
   }
 
-  async getAllExperiences(limit = 500): Promise<any[]> {
+  async getAllExperiences(limit = 500): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(aiLearningEvents)
         .where(eq(aiLearningEvents.eventType, 'experience'))
@@ -603,7 +603,7 @@ export class RLLoopRepository {
     }
   }
 
-  async getAllConfidenceModels(): Promise<any[]> {
+  async getAllConfidenceModels(): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(aiLearningEvents)
         .where(eq(aiLearningEvents.eventType, 'confidence_update'))
@@ -657,7 +657,7 @@ export class RLLoopRepository {
     }
   }
 
-  async getAdaptationsForAgent(agentId: string, limit = 20): Promise<any[]> {
+  async getAdaptationsForAgent(agentId: string, limit = 20): Promise<Record<string,unknown>[]> {
     try {
       return await db.select().from(aiLearningEvents)
         .where(and(eq(aiLearningEvents.eventType, 'strategy_adaptation'), eq(aiLearningEvents.agentId, agentId)))
@@ -753,7 +753,7 @@ export class RLLoopRepository {
   /**
    * Look up past corrections for a given action type before making a new decision (T004)
    */
-  async lookupCorrections(agentId: string, actionType: string, workspaceId?: string, limit = 10): Promise<any[]> {
+  async lookupCorrections(agentId: string, actionType: string, workspaceId?: string, limit = 10): Promise<Record<string,unknown>[]> {
     try {
       const conditions: any[] = [
         eq(aiLearningEvents.eventType, 'experience'),

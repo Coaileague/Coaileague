@@ -36,7 +36,7 @@ import { requireTrinityAccess } from '../rbac';
 interface MascotActionResult {
   success: boolean;
   action: string;
-  data?: any;
+  data?: unknown;
   error?: string;
   reportedToSupport?: boolean;
 }
@@ -1429,7 +1429,7 @@ router.delete('/preferences', requireTrinityAccess, async (req, res) => {
  * Get current seasonal profile with theme, effects, and mascot hints
  * Public endpoint - no auth required for theme detection
  */
-let seasonalCache: { data: any; timestamp: number } | null = null;
+let seasonalCache: { data: Record<string, unknown>; timestamp: number } | null = null;
 const SEASONAL_CACHE_TTL = 60000; // 60 seconds (seasonal state changes rarely)
 
 router.get('/seasonal/state', async (req, res) => {
@@ -2175,11 +2175,11 @@ router.get('/sessions/active', requireTrinityAccess, async (req, res) => {
       LIMIT 1
     `);
     
-    if (!(result as any).rows?.length) {
+    if (!(result as Record<string, unknown>).rows?.length) {
       return res.json({ session: null });
     }
     
-    res.json({ session: (result as any).rows[0] });
+    res.json({ session: (result as Record<string, unknown>).rows[0] });
   } catch (error) {
     log.error('[Mascot Sessions] Get active session error:', error);
     res.status(500).json({ error: 'Failed to get session' });
@@ -2509,7 +2509,7 @@ router.get('/generated-tasks', requireTrinityAccess, async (req, res) => {
       LIMIT 20
     `);
     
-    res.json({ tasks: (result as any).rows || [] });
+    res.json({ tasks: (result as Record<string, unknown>).rows || [] });
   } catch (error) {
     log.error('[Mascot Tasks] Get tasks error:', error);
     res.status(500).json({ error: 'Failed to get tasks' });
@@ -2636,7 +2636,7 @@ router.get('/sessions/:id/interactions', requireTrinityAccess, async (req, res) 
     
     res.json({ 
       success: true,
-      interactions: (result as any).rows || [] 
+      interactions: (result as Record<string, unknown>).rows || [] 
     });
   } catch (error) {
     log.error('[Mascot Sessions] Get interactions error:', error);

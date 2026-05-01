@@ -26,9 +26,9 @@ export interface BufferedChatEvent {
 }
 
 // ── Redis client (optional) ───────────────────────────────────────────────────
-let redisClient: any = null;
-let pubClient: any = null;
-let subClient: any = null;
+let redisClient: unknown = null;
+let pubClient: unknown = null;
+let subClient: unknown = null;
 let redisAvailable = false;
 
 // In-memory fallback

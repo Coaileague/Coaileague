@@ -65,7 +65,7 @@ export interface VelocityAgentResult {
   agent: string;
   status: 'completed' | 'failed' | 'needs_review';
   confidence: number;
-  data: any;
+  data: Record<string, unknown>;
   recommendation?: string;
   timeMs: number;
   cached: boolean;

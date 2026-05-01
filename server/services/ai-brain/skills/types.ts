@@ -61,7 +61,7 @@ export interface SkillResult<T = any> {
 export interface SkillEvent {
   skillId: string;
   eventType: string;
-  payload: any;
+  payload: Record<string, unknown>;
   timestamp: Date;
   context: SkillContext;
 }

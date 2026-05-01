@@ -22,7 +22,7 @@ const router = Router();
 // Type for authenticated request
 interface AuthenticatedRequest extends Request {
   workspaceId?: string;
-  user?: any;
+  user?: unknown;
 }
 
 /**

@@ -362,7 +362,7 @@ export async function bridgeComplianceStatusChange(
       empDocStatus = 'uploaded';
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       status: empDocStatus,
       updatedAt: new Date(),
     };

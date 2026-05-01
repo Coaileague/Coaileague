@@ -404,7 +404,7 @@ export interface PanicEvidence {
   audioRecordingUrl?: string;
   photoUrls: string[];
   locationHistory: LocationPing[];
-  chatHistory: any[];
+  chatHistory: unknown[];
 }
 
 export interface PanicResponse {
@@ -456,7 +456,7 @@ export interface HandoffAutoSummary {
   posPhotosSubmitted: number;
   messagesExchanged: number;
   anomaliesDetected: number;
-  highlightedMessages: any[];
+  highlightedMessages: unknown[];
 }
 
 export interface HandoffBriefing {

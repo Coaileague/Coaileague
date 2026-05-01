@@ -83,7 +83,7 @@ const INVOICE_CREATE_ACTIONS = new Set([
 
 export async function validateBeforeExecution(
   actionId: string,
-  payload: any,
+  payload: Record<string, unknown>,
   workspaceId: string,
 ): Promise<ValidationResult> {
   /** Log and return in one step */

@@ -35,7 +35,7 @@ export async function analyzeDispute(
   evidence: string[] | null,
   targetContext?: {
     targetType: string;
-    targetData?: any; // Review data, report data, etc.
+    targetData?: unknown; // Review data, report data, etc.
   },
   billingContext?: {
     workspaceId: string;

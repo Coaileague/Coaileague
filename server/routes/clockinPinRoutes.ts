@@ -152,10 +152,10 @@ clockinPinRouter.post(
       res.json({
         valid: true,
         employee: {
-          id: result.employee!.id,
-          employeeNumber: result.employee!.employeeNumber,
-          firstName: result.employee!.firstName,
-          lastName: result.employee!.lastName,
+          id: result.employee?.id ?? '',
+          employeeNumber: result.employee?.employeeNumber ?? null,
+          firstName: result.employee?.firstName ?? '',
+          lastName: result.employee?.lastName ?? '',
         },
       });
     } catch (err: unknown) {

@@ -85,7 +85,7 @@ export interface OrchestrationTask {
   priority: 'low' | 'normal' | 'high' | 'critical';
   scheduledAt?: Date;
   executedAt?: Date;
-  result?: any;
+  result?: unknown;
   error?: string;
 }
 
@@ -959,7 +959,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: true,
             actionId: request.actionId,
-            message: `Duplicated ${(result as any).shiftsCreated} shifts to new week`,
+            message: `Duplicated ${(result as Record<string, unknown>).shiftsCreated} shifts to new week`,
             data: result,
             executionTimeMs: Date.now() - startTime,
             notificationSent: true

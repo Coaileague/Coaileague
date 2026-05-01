@@ -63,7 +63,7 @@ export interface OrchestratorResponse {
 
 export interface ExecutionResult {
   success: boolean;
-  result?: any;
+  result?: unknown;
   reason?: string;
   details?: string;
   verification?: VerificationResult;

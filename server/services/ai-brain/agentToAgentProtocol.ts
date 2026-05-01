@@ -58,7 +58,7 @@ export interface A2AMessage {
   toAgent: string;
   type: MessageType;
   priority: MessagePriority;
-  payload: any;
+  payload: Record<string, unknown>;
   correlationId?: string;
   replyTo?: string;
   timestamp: Date;
@@ -96,14 +96,14 @@ export interface CollaborationTeam {
   createdAt: Date;
   completedAt?: Date;
   taskId?: string;
-  results?: any;
+  results?: unknown;
 }
 
 export interface TeamMember {
   agentId: string;
   role: string;
   joinedAt: Date;
-  contribution?: any;
+  contribution?: unknown;
   status: 'assigned' | 'working' | 'completed' | 'failed';
 }
 
@@ -254,7 +254,7 @@ class AgentToAgentProtocol {
     from: string;
     to: string;
     type: MessageType;
-    payload: any;
+    payload: Record<string, unknown>;
     priority?: MessagePriority;
     correlationId?: string;
     replyTo?: string;
@@ -370,7 +370,7 @@ class AgentToAgentProtocol {
   async broadcast(params: {
     from: string;
     type: MessageType;
-    payload: any;
+    payload: Record<string, unknown>;
     filter?: {
       domain?: KnowledgeDomain;
       role?: AgentRole;

@@ -41,7 +41,7 @@ type BroadcastFunction = (
   workspaceId: string,
   userId: string,
   updateType: string,
-  data: any,
+  data: Record<string, unknown>,
   unreadCount?: number
 ) => void;
 

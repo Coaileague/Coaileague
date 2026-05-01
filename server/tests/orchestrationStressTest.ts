@@ -40,7 +40,7 @@ function fileExists(relPath: string): boolean {
   return fs.existsSync(path.join(process.cwd(), relPath));
 }
 
-function extractRows(result: any): any[] {
+function extractRows(result: any): unknown[] {
   if (Array.isArray(result)) return result;
   if (result?.rows && Array.isArray(result.rows)) return result.rows;
   return [];
@@ -828,7 +828,7 @@ async function phase13_pwa_manifest() {
   console.log('════════════════════════════════════════');
 
   const manifest = readFile('client/public/manifest.json');
-  let manifestJson: any = {};
+  let manifestJson: Record<string, unknown> = {};
   try { manifestJson = JSON.parse(manifest); } catch (e) { /* ignore */ }
 
   const requiredFields: Array<{ key: string; severity: 'critical' | 'high' | 'medium' }> = [

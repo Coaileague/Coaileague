@@ -83,7 +83,7 @@ visitorManagementRouter.get('/logs', requireAuth, async (req: AuthenticatedReque
     const offset = Number.parseInt(getQueryString(req.query.offset) || '0', 10);
 
     const conditions = ['workspace_id = $1'];
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let p = 2;
 
     if (siteId) { conditions.push(`site_id = $${p++}`); params.push(siteId); }
@@ -119,7 +119,7 @@ visitorManagementRouter.get('/active', requireAuth, async (req: AuthenticatedReq
 
     const { siteId } = req.query;
     const conditions = ['workspace_id = $1', 'checked_out_at IS NULL'];
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     if (siteId) { conditions.push(`site_id = $2`); params.push(siteId); }
 
     const { rows } = await pool.query(
@@ -366,7 +366,7 @@ visitorManagementRouter.get('/pre-registrations', requireAuth, async (req: Authe
     const offset = Number.parseInt(getQueryString(req.query.offset) || '0', 10);
 
     const conditions = ['workspace_id = $1'];
-    const params: any[] = [workspaceId];
+    const params: Record<string, unknown>[] = [workspaceId];
     let p = 2;
 
     if (status) { conditions.push(`status = $${p++}`); params.push(status); }
@@ -477,7 +477,7 @@ export function registerVisitorActions(): void {
         if (!ws) return { success: false, actionId: request.actionId, message: 'Workspace required', executionTimeMs: 0 };
 
         const conditions = ['workspace_id = $1', 'checked_out_at IS NULL'];
-        const params: any[] = [ws];
+        const params: Record<string, unknown>[] = [ws];
         if (siteId) { conditions.push('site_id = $2'); params.push(siteId); }
         else if (siteName) { conditions.push('site_name = $2'); params.push(siteName); }
 

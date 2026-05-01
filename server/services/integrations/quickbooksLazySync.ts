@@ -123,7 +123,7 @@ async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function qbQuery(apiBase: string, realmId: string, accessToken: string, query: string): Promise<any[]> {
+async function qbQuery(apiBase: string, realmId: string, accessToken: string, query: string): Promise<Record<string,unknown>[]> {
   const url = `${apiBase}/v3/company/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=${API_MINOR_VERSION}`;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -160,7 +160,7 @@ async function qbQuery(apiBase: string, realmId: string, accessToken: string, qu
   return [];
 }
 
-async function qbCreate(apiBase: string, realmId: string, accessToken: string, entity: string, payload: any): Promise<unknown> {
+async function qbCreate(apiBase: string, realmId: string, accessToken: string, entity: string, payload: Record<string, unknown>): Promise<unknown> {
   const url = `${apiBase}/v3/company/${realmId}/${entity}?minorversion=${API_MINOR_VERSION}`;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

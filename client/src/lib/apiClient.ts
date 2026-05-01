@@ -12,7 +12,7 @@ export type RequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface RequestOptions {
   method?: RequestMethod;
-  body?: any;
+  body?: unknown;
   headers?: Record<string, string>;
   params?: Record<string, unknown>;
 }
@@ -24,7 +24,7 @@ interface RequestOptions {
 export async function apiClient(
   endpointPath: string,
   options: RequestOptions = {}
-): Promise<any> {
+): Promise<unknown> {
   try {
     const { method = "GET", body, headers = {}, params } = options;
 
@@ -81,21 +81,21 @@ export function apiGet(endpoint: string, params?: Record<string, unknown>) {
 /**
  * POST request helper
  */
-export function apiPost(endpoint: string, body?: any, params?: Record<string, unknown>) {
+export function apiPost(endpoint: string, body?: unknown, params?: Record<string, unknown>) {
   return apiClient(endpoint, { method: "POST", body, params });
 }
 
 /**
  * PUT request helper
  */
-export function apiPut(endpoint: string, body?: any, params?: Record<string, unknown>) {
+export function apiPut(endpoint: string, body?: unknown, params?: Record<string, unknown>) {
   return apiClient(endpoint, { method: "PUT", body, params });
 }
 
 /**
  * PATCH request helper
  */
-export function apiPatch(endpoint: string, body?: any, params?: Record<string, unknown>) {
+export function apiPatch(endpoint: string, body?: unknown, params?: Record<string, unknown>) {
   return apiClient(endpoint, { method: "PATCH", body, params });
 }
 

@@ -19,7 +19,7 @@ const log = createLogger('trinityFieldIntelligence');
 
 const SERVICE = '[TrinityFieldIntel]';
 
-const _log = (msg: string, data?: any) => {
+const _log = (msg: string, data?: unknown) => {
   log.info(`${SERVICE} ${msg}`, data ? JSON.stringify(data).slice(0, 200) : '');
 };
 

@@ -67,7 +67,7 @@ export interface InboxWorkflow {
   type: string;
   currentStep: number;
   totalSteps: number;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 export interface InboxDocument {
@@ -105,7 +105,7 @@ export interface InboxItem {
   workflow?: InboxWorkflow;
   document?: InboxDocument;
   shift?: InboxShift;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface InboxFilters {

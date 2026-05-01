@@ -160,7 +160,7 @@ class ApprovalRequestService {
     }
 
     const now = new Date();
-    const updateFields: any = {
+    const updateFields: Record<string, unknown> = {
       status: decision,
       approverId,
       statusHistory: sql`${aiApprovalRequests.statusHistory} || ${JSON.stringify([{

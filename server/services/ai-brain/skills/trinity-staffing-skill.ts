@@ -142,7 +142,7 @@ export class TrinityStaffingSkill extends BaseSkill {
     log.info('[TrinityStaffing] Skill initialized - Premier automated staffing ready');
   }
 
-  async execute(context: SkillContext, params: { action: string; payload: any }): Promise<SkillResult> {
+  async execute(context: SkillContext, params: { action: string; payload: Record<string, unknown> }): Promise<SkillResult> {
     const { action, payload } = params;
     
     switch (action) {
@@ -366,7 +366,7 @@ export class TrinityStaffingSkill extends BaseSkill {
   private async findEligibleEmployees(
     workspaceId: string,
     request: WorkRequest
-  ): Promise<any[]> {
+  ): Promise<Record<string,unknown>[]> {
     const result = await db.select()
       .from(employees)
       .where(

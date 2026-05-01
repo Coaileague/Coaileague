@@ -60,7 +60,7 @@ class TrinityClarificationService {
   evaluate(
     userMessage: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
-    workspaceContext?: any,
+    workspaceContext?: unknown,
   ): ClarificationDecision {
     const score = this.scoreAmbiguity(userMessage, conversationHistory);
 
@@ -153,7 +153,7 @@ class TrinityClarificationService {
   private generateClarifyingQuestion(
     message: string,
     score: AmbiguityScore,
-    context?: any,
+    context?: unknown,
   ): string {
     // Priority: missing param → multiple interpretations → contradictory signals
 

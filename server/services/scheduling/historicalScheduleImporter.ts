@@ -197,7 +197,7 @@ class HistoricalScheduleImporterService {
   /**
    * Map CSV record to ImportedShift
    */
-  private mapCSVRecord(record: any, options: any): ImportedShift {
+  private mapCSVRecord(record: any, options: Record<string, unknown>): ImportedShift {
     // Flexible column name matching
     const getField = (names: string[]): string => {
       for (const name of names) {

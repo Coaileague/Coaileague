@@ -85,7 +85,7 @@ class MeteredGeminiClient {
     const cacheKey = `${modelName}-${systemInstruction || 'default'}`;
     
     if (!this.modelCache.has(cacheKey)) {
-      const config: any = {};
+      const config: Record<string, unknown> = {};
       if (systemInstruction) {
         config.systemInstruction = systemInstruction;
       }

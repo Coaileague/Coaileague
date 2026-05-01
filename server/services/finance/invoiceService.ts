@@ -8,7 +8,7 @@ const log = createLogger('FinanceInvoiceService');
 const _billingInvoiceService = new InvoiceService();
 
 export const invoiceService = {
-  async sendInvoice(invoiceId: string, workspaceId: string): Promise<{ success: boolean; message: string; data?: any }> {
+  async sendInvoice(invoiceId: string, workspaceId: string): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
       const [invoice] = await db.select()
         .from(invoices)

@@ -21,6 +21,7 @@ import { cacheManager } from '../services/platform/cacheManager';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
 import { employeeInvitations } from '@shared/schema';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('AdminRoutes');
 
 
@@ -1576,7 +1577,7 @@ router.get('/support/org/:orgId/overview', async (req: AuthenticatedRequest, res
       ipAddress: req.ip || req.socket?.remoteAddress,
     });
     res.json({
-      workspace: workspace ? { id: workspace.id, name: workspace.name, status: (workspace as any).status, plan: workspace.subscriptionTier } : null,
+      workspace: workspace ? { id: workspace.id, name: workspace.name, status: (workspace as WorkspaceWithExtras).status, plan: workspace.subscriptionTier } : null,
       counts: {
         employees: employeesList.length,
         activeEmployees: employeesList.filter((e: any) => e.isActive).length,
@@ -1743,7 +1744,7 @@ router.get('/support/org/:orgId/expenses', async (req: AuthenticatedRequest, res
   try {
     const { orgId } = req.params;
     const { status, employeeId } = req.query;
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (status) filters.status = status as string;
     if (employeeId) filters.employeeId = employeeId as string;
     const expenses = await storage.getExpensesByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
@@ -1769,7 +1770,7 @@ router.get('/support/org/:orgId/pto', async (req: AuthenticatedRequest, res) => 
   try {
     const { orgId } = req.params;
     const { status } = req.query;
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (status) filters.status = status as string;
     const ptoRequests = await storage.getPtoRequestsByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
@@ -1794,7 +1795,7 @@ router.get('/support/org/:orgId/disputes', async (req: AuthenticatedRequest, res
   try {
     const { orgId } = req.params;
     const { status, disputeType } = req.query;
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (status) filters.status = status as string;
     if (disputeType) filters.disputeType = disputeType as string;
     const disputes = await storage.getDisputesByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
@@ -1820,7 +1821,7 @@ router.get('/support/org/:orgId/chat-history', async (req: AuthenticatedRequest,
   try {
     const { orgId } = req.params;
     const { status } = req.query;
-    const filters: any = {};
+    const filters: Record<string, unknown> = {};
     if (status) filters.status = status as string;
     const conversations = await storage.getChatConversationsByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
@@ -2198,7 +2199,7 @@ router.get('/action-invocations', async (req: AuthenticatedRequest, res) => {
       ? 'AND workspace_id = $2'
       : '';
 
-    const params: any[] = [days];
+    const params: Record<string, unknown>[] = [days];
     if (workspaceId) params.push(workspaceId);
 
     // CATEGORY C — Raw SQL retained: GROUP BY | Tables: trinity_action_invocations | Verified: 2026-03-23
@@ -2220,7 +2221,7 @@ router.get('/action-invocations', async (req: AuthenticatedRequest, res) => {
     res.json({
       days,
       workspaceId: workspaceId || null,
-      total: (result as any).length,
+      total: (result as Record<string, unknown>).length,
       actions: result,
     });
   } catch (err: unknown) {

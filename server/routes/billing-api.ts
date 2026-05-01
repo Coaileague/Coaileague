@@ -42,6 +42,7 @@ export const billingRouter = Router();
 
 import { subscriptionTiers, orgSubscriptions, platformInvoices, employees } from '@shared/schema';
 import { createLogger } from '../lib/logger';
+import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('BillingApi');
 
 billingRouter.use((req, res, next) => {
@@ -629,7 +630,7 @@ billingRouter.post('/create-checkout-session', async (req: AuthenticatedRequest,
     // tier is now required — no silent enterprise fallback that would misrepresent the purchase
     const resolvedTier = tier;
 
-    const sessionConfig: any = {
+    const sessionConfig: Record<string, unknown> = {
       payment_method_types: ['card'],
       line_items: [
         {

@@ -609,7 +609,7 @@ class CognitiveOnboardingService {
     provider: IntegrationProvider,
     dataType: DataSyncType,
     options: { since?: Date; limit?: number }
-  ): Promise<any[]> {
+  ): Promise<Record<string,unknown>[]> {
     const config = PROVIDER_CONFIGS[provider];
     let endpoint = config.dataEndpoints[dataType];
 
@@ -772,7 +772,7 @@ Return JSON with:
   }
 
   private applyMapping(record: any, mapping: Record<string, string>): any {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [source, target] of Object.entries(mapping)) {
       if (record[source] !== undefined) {
         result[target] = record[source];
@@ -785,7 +785,7 @@ Return JSON with:
 
   private defaultMapping(record: any, dataType: DataSyncType): any {
     // Basic field name normalization
-    const normalized: any = { externalId: record.Id || record.id };
+    const normalized: Record<string, unknown> = { externalId: record.Id || record.id };
     
     for (const [key, value] of Object.entries(record)) {
       const normalizedKey = key.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');

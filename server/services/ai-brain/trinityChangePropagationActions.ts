@@ -21,7 +21,7 @@ import { broadcastToWorkspace } from '../../websocket';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('trinityChangePropagationActions');
 
-function mkAction(actionId: string, fn: (params: any) => Promise<unknown>): ActionHandler {
+function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {
   return {
     actionId,
     name: actionId,
