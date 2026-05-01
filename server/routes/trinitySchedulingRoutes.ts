@@ -106,9 +106,10 @@ router.get('/insights', async (req: any, res) => {
 
 router.post('/auto-fill', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.id || req.user?.id;
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
       // Use middleware-resolved workspaceId first, fall back to DB lookup
-      const workspaceId: string = req.workspaceId || 
+      const workspaceId: string = req.workspaceId ||
         (await storage.getWorkspaceMemberByUserId(userId))?.workspaceId ||
         (await storage.getWorkspaceByOwnerId(userId))?.id || '';
       if (!workspaceId) return res.status(404).json({ message: "Workspace not found" });
@@ -365,7 +366,7 @@ router.get('/pending-approvals', requireAuth, async (req: AuthenticatedRequest, 
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(401).json({ error: 'Workspace required' });
-    const { trinityProposedActions } = await import('@shared/schema').catch(() => ({ trinityProposedActions: null }));
+    const { trinityProposedActions } = (await import('@shared/schema').catch(() => ({ trinityProposedActions: null }))) as any;
     if (!trinityProposedActions) return res.json({ approvals: [] });
     const { db } = await import('../db');
     const { eq, and, desc } = await import('drizzle-orm');
@@ -390,7 +391,7 @@ router.post('/pending-approvals/:id/approve', requireManager, async (req: Authen
     const workspaceId = req.workspaceId;
     const userId = req.user?.id;
     if (!workspaceId) return res.status(401).json({ error: 'Workspace required' });
-    const { trinityProposedActions } = await import('@shared/schema').catch(() => ({ trinityProposedActions: null }));
+    const { trinityProposedActions } = (await import('@shared/schema').catch(() => ({ trinityProposedActions: null }))) as any;
     if (!trinityProposedActions) return res.status(503).json({ error: 'Schema not available' });
     const { db } = await import('../db');
     const { eq } = await import('drizzle-orm');
@@ -412,7 +413,7 @@ router.post('/pending-approvals/:id/reject', requireManager, async (req: Authent
     const workspaceId = req.workspaceId;
     const userId = req.user?.id;
     if (!workspaceId) return res.status(401).json({ error: 'Workspace required' });
-    const { trinityProposedActions } = await import('@shared/schema').catch(() => ({ trinityProposedActions: null }));
+    const { trinityProposedActions } = (await import('@shared/schema').catch(() => ({ trinityProposedActions: null }))) as any;
     if (!trinityProposedActions) return res.status(503).json({ error: 'Schema not available' });
     const { db } = await import('../db');
     const { eq } = await import('drizzle-orm');

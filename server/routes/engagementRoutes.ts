@@ -184,7 +184,7 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
         .set({
           ...templateUpdateParsed.data,
           updatedAt: new Date()
-        })
+        } as any)
         .where(eq(pulseSurveyTemplates.id, id))
         .returning();
       
@@ -925,8 +925,12 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       const alreadyScoredSet = new Set(existingScores.map((s: any) => s.employeeId));
       const engTimeCountMap = new Map<string, number>();
       const engShiftCountMap = new Map<string, number>();
-      for (const te of allTeTimeEntries) engTimeCountMap.set(te.employeeId, (engTimeCountMap.get(te.employeeId) || 0) + 1);
-      for (const sh of allTeShifts) engShiftCountMap.set(sh.employeeId, (engShiftCountMap.get(sh.employeeId) || 0) + 1);
+      for (const te of allTeTimeEntries) {
+        if (te.employeeId) engTimeCountMap.set(te.employeeId, (engTimeCountMap.get(te.employeeId) || 0) + 1);
+      }
+      for (const sh of allTeShifts) {
+        if (sh.employeeId) engShiftCountMap.set(sh.employeeId, (engShiftCountMap.get(sh.employeeId) || 0) + 1);
+      }
 
       for (const emp of workspaceEmployees) {
         if (alreadyScoredSet.has(emp.id)) continue;
@@ -1077,7 +1081,7 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
     try {
       const workspaceId = req.workspaceId!;
       const benchSchema = z.object({
-      benchmarkType: z.string().min(1).max(50),
+      benchmarkType: z.enum(['manager', 'location', 'department', 'organization']),
       targetId: z.string().optional(),
       targetName: z.string().max(200).optional(),
       periodStart: z.string().min(1),

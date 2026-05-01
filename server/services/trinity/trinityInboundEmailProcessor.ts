@@ -139,7 +139,7 @@ async function handleCommandEmail(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type EmailCategory = 'calloff' | 'incident' | 'docs' | 'support' | 'careers' | 'unknown';
+export type EmailCategory = 'calloff' | 'incident' | 'docs' | 'support' | 'careers' | 'staffing' | 'unknown';
 
 export interface ParsedInboundEmail {
   messageId?: string;
@@ -1191,8 +1191,8 @@ async function processStaffing(
 
     // Count open shifts for context
     const { db: _db } = await import('../../db');
-    const { shifts: _shifts, sql: _sql } = await import('@shared/schema');
-    const { count } = await import('drizzle-orm');
+    const { shifts: _shifts } = await import('@shared/schema');
+    const { sql: _sql, count } = await import('drizzle-orm');
     const { eq: _eq, isNull: _isNull, gte: _gte, and: _and } = await import('drizzle-orm');
 
     const [openShiftCount] = await _db
@@ -1223,9 +1223,12 @@ async function processStaffing(
         const { trinityAutonomousScheduler } = await import('../scheduling/trinityAutonomousScheduler');
         await trinityAutonomousScheduler.executeAutonomousScheduling({
           workspaceId,
+          userId: 'trinity',
           mode: 'current_week',
-          triggeredBy: `email:${email.fromEmail}`,
-          sessionId: `email-staffing-${logId}`,
+          prioritizeBy: 'urgency',
+          useContractorFallback: true,
+          maxShiftsPerEmployee: 0,
+          respectAvailability: true,
         });
         log.info(`[processStaffing] Auto-fill triggered for workspace ${workspaceId} — ${openCount} open shifts`);
       } catch (err: any) {
@@ -1235,7 +1238,7 @@ async function processStaffing(
 
     // Notify the manager who owns this workspace about the email + action taken
     try {
-      const { universalNotificationEngine } = await import('../../universalNotificationEngine');
+      const { universalNotificationEngine } = await import('../universalNotificationEngine');
       await universalNotificationEngine.sendNotification({
         workspaceId,
         type: 'trinity_autonomous_action',

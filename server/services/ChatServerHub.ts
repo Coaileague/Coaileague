@@ -1153,8 +1153,8 @@ class ChatServerHubClass {
     // If REDIS_URL is set, this instance subscribes to room events published
     // by OTHER replicas — eliminating the "lost message" problem across replicas.
     // Falls back gracefully to in-memory (single-replica mode) if Redis unavailable.
-    import('../chat/chatDurabilityAdapter').then(({ initChatDurability, subscribeToRoomBroadcasts }) => {
-      initChatDurability().then(available => {
+    import('./chat/chatDurabilityAdapter').then(({ initChatDurability, subscribeToRoomBroadcasts }) => {
+      initChatDurability().then((available: boolean) => {
         if (available) {
           subscribeToRoomBroadcasts((event: Record<string, unknown>) => {
             // Incoming from another replica — broadcast to our local WS clients
@@ -1166,7 +1166,7 @@ class ChatServerHubClass {
         } else {
           log.info('[ChatServerHub] No REDIS_URL — single-replica in-memory mode');
         }
-      }).catch(err => log.warn('[ChatServerHub] Redis init failed (non-fatal):', err));
+      }).catch((err: unknown) => log.warn('[ChatServerHub] Redis init failed (non-fatal):', err));
     }).catch(() => null);
   }
 

@@ -116,9 +116,15 @@ export interface WorkspaceContext {
   userRole?: string;
   activeFeatures?: string[];
   subscriptionTier?: string;
-  creditBalance?: number;  // Trinity credit awareness
-  creditAllocation?: number;  // Monthly credit allocation
-  creditPercentUsed?: number;  // Usage percentage
+  /** @deprecated use tokenBalance */
+  creditBalance?: number;
+  /** @deprecated use tokenAllocation */
+  creditAllocation?: number;
+  /** @deprecated use tokenPercentUsed */
+  creditPercentUsed?: number;
+  tokenBalance?: number;
+  tokenAllocation?: number;
+  tokenPercentUsed?: number;
 }
 
 export interface SessionMetrics {
@@ -573,9 +579,9 @@ class TrinityContextManager {
       
       // TRINITY TOKEN/ACTION AWARENESS: Include monthly usage status for self-aware decision making
       if (context.memory.workspaceContext.tokenBalance !== undefined) {
-        const creditBalance = context.memory.workspaceContext.creditBalance;
-        const creditAllocation = context.memory.workspaceContext.creditAllocation || 0;
-        const creditPercentUsed = context.memory.workspaceContext.creditPercentUsed || 0;
+        const creditBalance = context.memory.workspaceContext.tokenBalance ?? 0;
+        const creditAllocation = context.memory.workspaceContext.tokenAllocation || 0;
+        const creditPercentUsed = context.memory.workspaceContext.tokenPercentUsed || 0;
         
         promptContext += `\n## Token Status (Tenant Awareness)\n`;
         promptContext += `- Tokens Remaining: ${creditBalance}/${creditAllocation}\n`;

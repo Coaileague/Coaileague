@@ -6,7 +6,8 @@
  * Powers the AIContextRail entity panel in EmailHubCanvas.tsx.
  */
 import { Router } from 'express';
-import { requireAuth, type AuthenticatedRequest } from '../auth';
+import { requireAuth } from '../auth';
+import { type AuthenticatedRequest } from '../rbac';
 import { db } from '../db';
 import { clients, employees, shifts, invoices, employeeCertifications } from '@shared/schema';
 import { eq, and, gte, count, sql } from 'drizzle-orm';
@@ -29,13 +30,13 @@ router.get('/api/email/entity-context', requireAuth, async (req: AuthenticatedRe
     const [client] = await db.select({
       id: clients.id,
       name: clients.companyName,
-      contactEmail: clients.contactEmail,
+      contactEmail: clients.apContactEmail,
       billingRate: (clients as any).billingRate,
     })
       .from(clients)
       .where(and(
         eq(clients.workspaceId, workspaceId),
-        sql`LOWER(${clients.contactEmail}) = ${senderEmail}`
+        sql`LOWER(${clients.apContactEmail}) = ${senderEmail}`
       ))
       .limit(1);
 
@@ -61,7 +62,7 @@ router.get('/api/email/entity-context', requireAuth, async (req: AuthenticatedRe
         ));
 
       const [mtdInvoices] = await db.select({
-        total: sql<number>`COALESCE(SUM(CAST(${invoices.totalAmount} AS NUMERIC)), 0)`
+        total: sql<number>`COALESCE(SUM(CAST(${invoices.total} AS NUMERIC)), 0)`
       })
         .from(invoices)
         .where(and(

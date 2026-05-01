@@ -271,7 +271,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
             .from(notifications)
             .where(
               and(
-                eq(notifications.recipientUserId, matchedEmpDecline.userId || ''),
+                eq(notifications.userId, matchedEmpDecline.userId || ''),
                 eq(notifications.type, 'coverage_offer' as any),
               )
             );
@@ -493,6 +493,31 @@ function getWebhookBase(): string {
   return process.env.APP_BASE_URL
 
     || 'https://www.coaileague.com';
+}
+
+// ── Voice interview helpers (stubs) ───────────────────────────────────────────
+// Keep the Twilio voice interview surface live. Real session state and
+// speech-to-text scoring are tracked by the Trinity recruitment subagent.
+interface VoiceSessionState {
+  questions: Array<{ questionText: string }>;
+  currentIndex: number;
+}
+
+async function getVoiceSessionState(_sessionId: string, _workspaceId: string): Promise<VoiceSessionState | null> {
+  return null;
+}
+
+function buildClosingTwiml(score: number): string {
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">Thank you for completing the interview. Your score is ${Math.round(score)}. We will be in touch soon. Goodbye.</Say><Hangup/></Response>`;
+}
+
+function buildQuestionTwiml(sessionId: string, workspaceId: string, qIndex: number, questionText: string, base: string): string {
+  const responseUrl = `${base}/api/webhooks/twilio/voice-interview/response?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&qIndex=${qIndex}`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">${questionText}</Say><Gather input="speech" action="${responseUrl}" method="POST" speechTimeout="auto"/></Response>`;
+}
+
+async function scoreSpeechResponse(_sessionId: string, _workspaceId: string, _qIndex: number, _transcript: string): Promise<number> {
+  return 0;
 }
 
 /**

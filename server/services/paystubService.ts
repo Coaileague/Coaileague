@@ -230,24 +230,22 @@ export class PaystubService {
         renderPdfHeader(doc, {
           title: 'EARNINGS STATEMENT',
           subtitle: `Pay Period: ${periodLabel}`,
-          docId,
+          refLabel: docId,
           workspaceName: workspaceName || 'CoAIleague',
-          pageNum,
-          totalPages: 1,
         });
 
         let y = PAGE.MT;
         const L = PAGE.ML, R = PAGE.ML + PAGE.CW;
 
         // Section: Earnings
-        y = sectionBar(doc, 'EARNINGS', y) + 8;
+        doc.y = y; sectionBar(doc, 'EARNINGS'); y = doc.y + 8;
         doc.fontSize(9).fillColor(PDF.gray);
         doc.text('Description', L, y);
         doc.text('Hours', L + 240, y);
         doc.text('Rate', L + 310, y);
         doc.text('Amount', L + 390, y, { width: 80, align: 'right' });
         y += 14;
-        hlinePdf(doc, PDF.grayLight, y);
+        doc.y = y; hlinePdf(doc, PDF.grayLight);
         y += 6;
 
         doc.fillColor(PDF.dark).fontSize(10);
@@ -268,7 +266,7 @@ export class PaystubService {
         }
 
         y += 4;
-        hlinePdf(doc, PDF.grayLight, y);
+        doc.y = y; hlinePdf(doc, PDF.grayLight);
         y += 8;
         doc.fontSize(11).fillColor(PDF.navyMid).font('Helvetica-Bold');
         doc.text('Gross Pay', L, y);
@@ -277,7 +275,7 @@ export class PaystubService {
         y += 24;
 
         // Section: Deductions
-        y = sectionBar(doc, 'DEDUCTIONS', y) + 8;
+        doc.y = y; sectionBar(doc, 'DEDUCTIONS'); y = doc.y + 8;
         doc.fillColor(PDF.dark).fontSize(10);
 
         const totalDed = data.deductions.reduce((s, d) => s + d.amount, 0);
@@ -287,7 +285,7 @@ export class PaystubService {
           y += 18;
         }
         y += 4;
-        hlinePdf(doc, PDF.grayLight, y);
+        doc.y = y; hlinePdf(doc, PDF.grayLight);
         y += 8;
         doc.fontSize(11).fillColor(PDF.warn).font('Helvetica-Bold');
         doc.text('Total Deductions', L, y);
@@ -322,7 +320,7 @@ export class PaystubService {
         }
 
         // Branded footer
-        renderPdfFooter(doc, { docId, pageNum, totalPages: 1 });
+        renderPdfFooter(doc, { docId, docType: 'Earnings Statement' });
         doc.end();
       }).catch(reject);
     });
@@ -349,6 +347,7 @@ export class PaystubService {
         return { success: false, error: 'No hours worked in this period' };
       }
 
+      const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
       const pdfBuffer = await this.generatePDF(data, (ws as any)?.name);
 
       if (sendNotification) {
@@ -370,8 +369,7 @@ export class PaystubService {
         }
       }
 
-      // Resolve workspace name for branded header
-      const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
+
 
       // Stamp branded header/footer and save to tenant vault
       const periodLabel = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
