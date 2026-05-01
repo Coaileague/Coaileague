@@ -1,34 +1,35 @@
 Sandbox base: http://localhost:5000
 Workspace:   dev-acme-security-ws
 
-[PASS] GET /sw-health (server alive) — 200 76ms
-[PASS] GET /api/shifts (paginated list) — 200 35ms
-[PASS] GET /api/shifts/:id (detail) — 200 13ms
+[PASS] GET /sw-health (server alive) — 200 81ms
+[PASS] GET /api/shifts (paginated list) — 200 25ms
+[PASS] GET /api/shifts/:id (detail) — 200 12ms
 [PASS] GET /api/shifts/today — 200 8ms
-[PASS] GET /api/shifts/upcoming — 200 8ms
-[PASS] GET /api/shifts/pending — 200 13ms
-[PASS] GET /api/shifts/stats — 200 9ms
-[PASS] GET /api/employees — 200 11ms
-[PASS] GET /api/clients — 200 12ms
-[PASS] GET /api/schedules/week/stats — 200 9ms
+[PASS] GET /api/shifts/upcoming — 200 10ms
+[PASS] GET /api/shifts/pending — 200 7ms
+[PASS] GET /api/shifts/stats — 200 7ms
+[PASS] GET /api/employees — 200 9ms
+[PASS] GET /api/clients — 200 8ms
+[PASS] GET /api/schedules/week/stats — 200 8ms
 [PASS] GET /api/schedules/ai-insights — 200 8ms
 [PASS] GET /api/scheduleos/ai/status — 200 7ms
-[PASS] POST /api/scheduleos/ai/toggle — 200 24ms
-[PASS] GET /api/orchestrated-schedule/status — 200 4ms
-[PASS] GET /api/coverage/forecast — 404 8ms
-[PASS] GET /api/calendar — 404 6ms
+[PASS] POST /api/scheduleos/ai/toggle — 200 14ms
+[PASS] GET /api/orchestrated-schedule/status — 200 5ms
+[PASS] GET /api/coverage/forecast — 404 4ms
+[PASS] GET /api/calendar — 404 4ms
 [PASS] GET /api/scheduling/swap-requests — 200 9ms
-[PASS] GET /api/scheduling/alerts — 200 5ms
-[PASS] GET /api/trinity/scheduling/status — 404 11ms
-[PASS] GET /api/shift-trading/marketplace — 200 6ms
-[PASS] POST /api/shifts (create) — 201 18ms
-[PASS] PATCH /api/shifts/:id (update) — 200 18ms
-[PASS] POST /api/scheduling/shifts/:id/duplicate — 200 21ms
-[PASS] DELETE /api/shifts/:id (cleanup) — 200 12ms
-[PASS] POST /api/scheduling/shifts/:id/swap-request (FRONTEND CALLS — should NOT 404) — 201 14ms
-[PASS] POST /api/schedules/unpublish (workspaceId binding) — 200 11ms
-[PASS] POST /api/shifts/:id/send-reminder DUPLICATE (no misleading 404) — 200 5ms
+[PASS] GET /api/scheduling/alerts — 200 4ms
+[PASS] GET /api/trinity/scheduling/status — 404 10ms
+[PASS] GET /api/shift-trading/marketplace — 200 4ms
+[PASS] POST /api/shifts (create) — 201 11ms
+[PASS] PATCH /api/shifts/:id (update) — 200 23ms
+[PASS] POST /api/scheduling/shifts/:id/duplicate — 200 14ms
+[PASS] DELETE /api/shifts/:id (cleanup) — 200 25ms
+[PASS] POST /api/scheduling/shifts/:id/swap-request (FRONTEND CALLS — should NOT 404) — 201 27ms
+[PASS] POST /api/availability/exception (Zod aligned with service) — 200 14ms
+[PASS] POST /api/schedules/unpublish (workspaceId binding) — 200 13ms
+[PASS] POST /api/shifts/:id/send-reminder DUPLICATE (no misleading 404) — 200 6ms
 
 ════════════════════════════════════════════════════════════════
-SUMMARY: 27 passed, 0 failed (total 27)
+SUMMARY: 28 passed, 0 failed (total 28)
 ════════════════════════════════════════════════════════════════

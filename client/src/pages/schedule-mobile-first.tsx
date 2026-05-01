@@ -702,37 +702,52 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
           )}
         </div>
 
-        {/* Row 2: View Mode Tabs */}
+        {/* Row 2: View Mode Tabs — bumped from text-[10px]/py-0.5 to
+            text-xs/py-1 so tap targets clear ~32px and labels are
+            readable per WCAG 2.5.5. aria-pressed surfaces state to AT. */}
         <div className="px-1 pb-0">
-          <div className="flex bg-primary-foreground/15 rounded p-0.5 gap-0.5">
+          <div className="flex bg-primary-foreground/15 rounded p-0.5 gap-0.5" role="tablist" aria-label="Schedule view">
             <button
+              type="button"
+              role="tab"
+              aria-pressed={viewMode === 'my'}
               onClick={() => setViewMode('my')}
-              className={['flex-1 py-0.5 text-[10px] font-semibold rounded transition-all', viewMode === 'my' 
-                  ? 'bg-primary-foreground text-primary shadow-sm' 
+              className={['flex-1 py-1 text-xs font-semibold rounded transition-all', viewMode === 'my'
+                  ? 'bg-primary-foreground text-primary shadow-sm'
                   : 'text-primary-foreground/90 hover:bg-primary-foreground/10'].join(' ')}
               data-testid="tab-my-schedule"
             >
               My Schedule
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-pressed={viewMode === 'full'}
               onClick={() => setViewMode('full')}
-              className={['flex-1 py-0.5 text-[10px] font-semibold rounded transition-all', viewMode === 'full' 
-                  ? 'bg-primary-foreground text-primary shadow-sm' 
+              className={['flex-1 py-1 text-xs font-semibold rounded transition-all', viewMode === 'full'
+                  ? 'bg-primary-foreground text-primary shadow-sm'
                   : 'text-primary-foreground/90 hover:bg-primary-foreground/10'].join(' ')}
               data-testid="tab-full-schedule"
             >
               Full Team
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-pressed={viewMode === 'pending'}
               onClick={() => setViewMode('pending')}
-              className={['flex-1 py-0.5 text-[10px] font-semibold rounded transition-all relative', viewMode === 'pending' 
-                  ? 'bg-primary-foreground text-primary shadow-sm' 
+              className={['flex-1 py-1 text-xs font-semibold rounded transition-all relative', viewMode === 'pending'
+                  ? 'bg-primary-foreground text-primary shadow-sm'
                   : 'text-primary-foreground/90 hover:bg-primary-foreground/10'].join(' ')}
               data-testid="tab-pending"
             >
               Pending
               {pendingShifts.length > 0 && (
-                <Badge variant="destructive" className="absolute -top-1 -right-1 h-3.5 min-w-3.5 text-[8px] px-0.5">
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-4 min-w-4 text-[10px] px-1"
+                  aria-label={`${pendingShifts.length} pending shift${pendingShifts.length === 1 ? '' : 's'}`}
+                >
                   {pendingShifts.length}
                 </Badge>
               )}

@@ -199,10 +199,11 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           .select({ id: clients.id, companyName: clients.companyName })
           .from(clients)
           .where(inArray(clients.id, clientIds));
-        
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+
+        // companyName is nullable in the schema — coerce nulls to empty
+        // strings so the resulting map is a sound Record<string, string>.
         clientNameMap = Object.fromEntries(
-          clientsData.map(c => [c.id, c.companyName])
+          clientsData.map(c => [c.id, c.companyName ?? ''])
         );
       }
       
@@ -2160,10 +2161,10 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
         return res.status(403).json({ message: "You can only deny shifts assigned to you" });
       }
 
-      // Mark shift as denied
+      // Mark shift as denied. The deniedAt column is timestamp, not text —
+      // pass a Date directly (Drizzle handles serialization).
       const deniedShift = await storage.updateShift(req.params.id, workspaceId, {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
-        deniedAt: new Date().toISOString(),
+        deniedAt: new Date(),
         denialReason: denialReason || 'Employee declined assignment',
         status: 'cancelled',
       });

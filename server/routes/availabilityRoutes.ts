@@ -172,10 +172,15 @@ router.post('/exception', requireAuth, async (req: AuthenticatedRequest, res) =>
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
+    // requestType MUST match availabilityService.createException's contract
+    // ('vacation' | 'sick' | 'personal' | 'unpaid'). The UI in
+    // client/src/pages/availability.tsx sends 'vacation' as the default —
+    // a previous schema here used a different enum and silently rejected
+    // every submission.
     const reqSchema = z.object({
       startDate: z.string().min(1),
       endDate: z.string().min(1),
-      requestType: z.enum(['time_off', 'schedule_change', 'availability_update', 'other']),
+      requestType: z.enum(['vacation', 'sick', 'personal', 'unpaid']),
       reason: z.string().max(1000).optional(),
       notes: z.string().max(500).optional(),
     });

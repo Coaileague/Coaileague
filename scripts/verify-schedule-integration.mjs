@@ -192,6 +192,18 @@ async function main() {
       { workspaceId: WS, reason: 'sandbox', targetEmployeeId: 'dev-acme-emp-marcus' });
   }
 
+  // ── 18b. Availability exception — used to silently 400 because the
+  // route's Zod schema accepted ['time_off','schedule_change',…] but the
+  // service only accepts ['vacation','sick','personal','unpaid'].
+  await check('POST /api/availability/exception (Zod aligned with service)',
+    'POST', '/api/availability/exception', 200,
+    { workspaceId: WS,
+      startDate: new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10),
+      endDate:   new Date(Date.now() + 32 * 86400_000).toISOString().slice(0, 10),
+      requestType: 'vacation',
+      reason: 'sandbox verifier',
+    });
+
   // ── 19. Schedules publish/unpublish — these used to crash with
   //          ReferenceError: workspaceId is not defined.
   await check('POST /api/schedules/unpublish (workspaceId binding)', 'POST',

@@ -56,7 +56,19 @@ interface SchedulingConfig {
   useContractorFallback: boolean;
   maxShiftsPerEmployee: number;
   respectAvailability: boolean;
+  /** Free-form attribution string ("email:foo@bar", "cron:weekly", etc.) — surfaced in audit logs. */
+  triggeredBy?: string;
+  /** Optional session/correlation id to thread async progress events. */
+  sessionId?: string;
 }
+
+/**
+ * Caller-friendly partial config used by entry points that only know a
+ * workspace + mode. executeAutonomousScheduling fills in defaults.
+ */
+type PartialSchedulingConfig =
+  Pick<SchedulingConfig, 'workspaceId' | 'mode'> &
+  Partial<SchedulingConfig>;
 
 interface ShiftPriority {
   shiftId: string;
@@ -247,7 +259,7 @@ class TrinityAutonomousSchedulerService {
   /**
    * MAIN ENTRY POINT: Execute autonomous scheduling for a workspace
    */
-  async executeAutonomousScheduling(config: SchedulingConfig): Promise<{
+  async executeAutonomousScheduling(input: PartialSchedulingConfig): Promise<{
     success: boolean;
     session: SchedulingSession;
     summary: {
@@ -258,7 +270,20 @@ class TrinityAutonomousSchedulerService {
       avgConfidence: number;
     };
   }> {
-    const sessionId = `trinity-sched-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
+    // Normalize partial input to a fully-defaulted config. Callers (cron,
+    // inbound email, REST routes) only need to supply workspaceId + mode.
+    const config: SchedulingConfig = {
+      userId: input.userId ?? 'system',
+      workspaceId: input.workspaceId,
+      mode: input.mode,
+      prioritizeBy: input.prioritizeBy ?? 'urgency',
+      useContractorFallback: input.useContractorFallback ?? true,
+      maxShiftsPerEmployee: input.maxShiftsPerEmployee ?? 0,
+      respectAvailability: input.respectAvailability ?? true,
+      triggeredBy: input.triggeredBy,
+      sessionId: input.sessionId,
+    };
+    const sessionId = config.sessionId ?? `trinity-sched-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     
     const session: SchedulingSession = {
       sessionId,
