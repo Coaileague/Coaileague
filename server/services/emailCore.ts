@@ -302,6 +302,21 @@ export interface CanSpamEmailOptions {
   /** BCC address(es) for audit copies */
   bcc?: string | string[];
   /**
+   * Override the default sender. Use sparingly — Trinity / support /
+   * notification-reply paths need their own from-address (e.g.
+   * `Trinity <trinity@coaileague.com>`); everything else should fall
+   * through to the platform default. The address must already be
+   * verified in the Resend dashboard.
+   */
+  from?: string;
+  /**
+   * Extra RFC 5322 headers (e.g. `In-Reply-To`, `References`). Merged
+   * AFTER the CAN-SPAM `List-Unsubscribe*` headers so the wrapper's
+   * compliance values always win. Use lower-case keys per Resend's
+   * convention.
+   */
+  extraHeaders?: Record<string, string>;
+  /**
    * Resend tags for delivery-webhook tracking.
    * Each tag becomes a key/value pair on the Resend message so the
    * email.delivered webhook can identify exactly which record to update.
@@ -320,7 +335,10 @@ export interface CanSpamEmailOptions {
 export async function sendCanSpamCompliantEmail(
   options: CanSpamEmailOptions
 ): Promise<{ success: boolean; data?: any; error?: any; skipped?: boolean; reason?: string }> {
-  const { to, subject, html, emailType, workspaceId, skipUnsubscribeCheck, tags, replyTo, bcc } = options;
+  const {
+    to, subject, html, emailType, workspaceId, skipUnsubscribeCheck, tags,
+    replyTo, bcc, from: fromOverride, extraHeaders,
+  } = options;
   const isTransactional = isTransactionalEmail(emailType);
 
   // Email format validation
@@ -369,14 +387,26 @@ export async function sendCanSpamCompliantEmail(
     // Add unsubscribe footer for non-transactional emails
     let finalHtml = html;
     if (!isTransactional) {
-      finalHtml = addUnsubscribeFooterToHtml(html, unsubscribeUrl);
+      finalHtml = addUnsubscribeFooterToHtml(finalHtml, unsubscribeUrl);
+    }
+
+    // Auto-wrap raw HTML fragments with the mobile-responsive wrapper.
+    // Templates produced via `emailLayout()` already include their own
+    // <html><head> with viewport meta + @media query and are left alone.
+    // Hand-rolled `<div>...</div>` strings (passed by NDS callers, ad-hoc
+    // notifications, etc.) get the wrapper injected here so every send —
+    // not just the canonical templates — renders correctly on phones.
+    if (!/^\s*<!DOCTYPE\s+html/i.test(finalHtml) && !/^\s*<html\b/i.test(finalHtml)) {
+      const { wrapInlineEmailHtml } = await import('./email/wrapInlineEmailHtml');
+      finalHtml = wrapInlineEmailHtml(finalHtml, { title: subject });
     }
 
     // Get Resend client
     const { client, fromEmail } = await getUncachableResendClient();
 
-    // Build headers with List-Unsubscribe for CAN-SPAM compliance
-    const headers: Record<string, string> = {};
+    // Build headers — extras first, CAN-SPAM compliance values second so
+    // they always win over a caller-supplied override of the same key.
+    const headers: Record<string, string> = { ...(extraHeaders || {}) };
 
     if (!isTransactional) {
       // RFC 2369 List-Unsubscribe header (mailto and https)
@@ -391,7 +421,7 @@ export async function sendCanSpamCompliantEmail(
     const plainText = options.text || htmlToPlainText(finalHtml);
 
     const sendPromise = client.emails.send({
-      from: fromEmail,
+      from: fromOverride || fromEmail,
       to: [to],
       subject,
       html: finalHtml,

@@ -570,6 +570,81 @@ section('Front-end UX polish');
     /Boolean\(internalError \|\| externalError\)/.test(src), '', 'high');
 }
 
+// ─── Canonical wrapper covers ALL outbound paths ─────────────────────────────
+section('Canonical wrapper covers all outbound paths');
+{
+  const core = readFile('server/services/emailCore.ts');
+  record('CanSpamEmailOptions accepts custom `from` override',
+    /from\?\:\s*string;/.test(core) && /fromOverride/.test(core));
+  record('CanSpamEmailOptions accepts `extraHeaders`',
+    /extraHeaders\?\:\s*Record<string,\s*string>/.test(core));
+  record('extraHeaders merged before CAN-SPAM headers (compliance always wins)',
+    /\.\.\.\(extraHeaders \|\| \{\}\)[\s\S]{0,300}List-Unsubscribe/.test(core));
+  record('sendCanSpamCompliantEmail honours `from` override',
+    /from:\s*fromOverride \|\| fromEmail/.test(core));
+  record('sendCanSpamCompliantEmail auto-wraps raw HTML fragments for mobile',
+    /Auto-wrap raw HTML fragments[\s\S]+wrapInlineEmailHtml/.test(core));
+
+  // Direct client.emails.send call sites should now be limited to the
+  // legitimate exceptions (user-composed inbox send, retry-queue legacy path
+  // is gone, emailAutomation internal send, support agent reply)
+  const directHits = [
+    'server/services/authService.ts',
+    'server/services/notificationDeliveryService.ts',
+    'server/services/emailService.ts',
+  ].map(f => ({ f, count: (readFile(f).match(/client\.emails\.send\(/g) || []).length }));
+  for (const { f, count } of directHits) {
+    record(`${f} has zero direct client.emails.send calls`,
+      count === 0, count ? `still has ${count}` : '', 'high');
+  }
+
+  // resendWebhooks.ts auto-replies must use sendCanSpamCompliantEmail
+  const webhooks = readFile('server/routes/resendWebhooks.ts');
+  record('Trinity marketing reply routes through sendCanSpamCompliantEmail',
+    /TrinityMarketing[\s\S]{0,500}sendCanSpamCompliantEmail/.test(webhooks));
+  record('Platform support auto-reply routes through sendCanSpamCompliantEmail',
+    /sendCanSpamCompliantEmail\(\{[\s\S]{0,1500}\$\{PLATFORM\.name\} Support[\s\S]{0,200}replyTo:\s*'support@coaileague\.com'/.test(webhooks));
+
+  // notificationDeliveryService.sendEmailReply migrated
+  const nds = readFile('server/services/notificationDeliveryService.ts');
+  record('NDS.sendEmailReply uses sendCanSpamCompliantEmail with extraHeaders',
+    /sendCanSpamCompliantEmail\(\{[\s\S]{0,500}extraHeaders:[\s\S]{0,200}'In-Reply-To'/.test(nds));
+}
+
+// ─── Drizzle schema covers platform email tables ────────────────────────────
+section('Drizzle schema covers platform email tables');
+{
+  const schema = readFile('shared/schema/domains/comms/index.ts');
+  // Each table: const declared in plural snake-style, type in singular PascalCase.
+  const tables = [
+    { table: 'platformEmailAddresses', type: 'PlatformEmailAddress' },
+    { table: 'emailRouting',           type: 'EmailRouting' },
+    { table: 'platformEmails',         type: 'PlatformEmail' },
+    { table: 'platformEmailAttachments', type: 'PlatformEmailAttachment' },
+  ];
+  for (const { table, type } of tables) {
+    record(`schema exports ${table}`,
+      new RegExp(`export const ${table} = pgTable\\(`).test(schema), '', 'high');
+    record(`schema exports type ${type}`,
+      new RegExp(`export type ${type} = typeof ${table}\\.\\$inferSelect`).test(schema));
+  }
+  record('schema barrel re-exports comms domain via export *',
+    /export \* from '\.\/schema\/domains\/comms'/.test(readFile('shared/schema.ts')));
+}
+
+// ─── Route mount documentation + conflict guard ─────────────────────────────
+section('Route mount documentation + conflict guard');
+{
+  const main = readFile('server/routes.ts');
+  record('server/routes.ts has the email mount map block',
+    /Email mount map \(read this before adding ANY new email route\)/.test(main));
+  const comms = readFile('server/routes/domains/comms.ts');
+  record('comms.ts annotates singular vs plural distinction',
+    /SINGULAR \/api\/email\/\* \(mounted in server\/routes\.ts\) is the per-user inbox/.test(comms));
+  record('comms.ts emits boot-time disjoint guard for /api/email routers',
+    /email-router disjoint guard/.test(comms));
+}
+
 // ─── Live Resend round-trip (REST API, no SDK required) ──────────────────────
 section('Live Resend send (REST round-trip)');
 

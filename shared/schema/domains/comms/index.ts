@@ -1987,6 +1987,136 @@ export type EmailDelivery = typeof emailDeliveries.$inferSelect;
 export const insertEmailDeliverySchema = createInsertSchema(emailDeliveries).omit({ id: true, createdAt: true });
 export type InsertEmailDelivery = z.infer<typeof insertEmailDeliverySchema>;
 
+// ─── PLATFORM EMAIL INFRASTRUCTURE ────────────────────────────────────────────
+// Until 2026-05-01 these four tables existed only as raw SQL inside
+// server/routes/inboundEmailRoutes.ts (registerLegacyBootstrap('email-tables')).
+// They power the per-org @<slug>.coaileague.com inbox, the inbound webhook
+// classifier, and outbound user-composed sends. The runtime CREATE TABLE
+// IF NOT EXISTS statements remain authoritative for production migrations;
+// these Drizzle definitions exist so query callers get type checking and
+// IDE autocomplete instead of stringly-typed pool.query everywhere.
+
+export const platformEmailAddresses = pgTable("platform_email_addresses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id"),
+  userId: varchar("user_id"),
+  clientId: varchar("client_id"),
+  address: varchar("address", { length: 320 }).notNull().unique(),
+  localPart: varchar("local_part", { length: 255 }).notNull(),
+  subdomain: varchar("subdomain", { length: 100 }),
+  displayName: varchar("display_name", { length: 255 }),
+  addressType: varchar("address_type", { length: 50 }).notNull(),
+  isActive: boolean("is_active").default(false),
+  isProtected: boolean("is_protected").default(false),
+  isOutboundOnly: boolean("is_outbound_only").default(false),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  activatedBy: varchar("activated_by"),
+  deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+  billingSeatId: varchar("billing_seat_id", { length: 255 }),
+  fairUseMonthlyLimit: integer("fair_use_monthly_limit").default(500),
+  emailsSentThisPeriod: integer("emails_sent_this_period").default(0),
+  emailsReceivedThisPeriod: integer("emails_received_this_period").default(0),
+  autoTrinityProcess: boolean("auto_trinity_process").default(false),
+  trinityCalltype: varchar("trinity_calltype", { length: 100 }),
+  forwardingAddress: varchar("forwarding_address", { length: 320 }),
+  forwardingEnabled: boolean("forwarding_enabled").default(false),
+  signatureText: text("signature_text"),
+  signatureHtml: text("signature_html"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("idx_email_addresses_address").on(table.address),
+  index("idx_email_addresses_workspace").on(table.workspaceId),
+  index("idx_email_addresses_user_workspace").on(table.userId, table.workspaceId),
+]);
+export type PlatformEmailAddress = typeof platformEmailAddresses.$inferSelect;
+export const insertPlatformEmailAddressSchema = createInsertSchema(platformEmailAddresses).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPlatformEmailAddress = z.infer<typeof insertPlatformEmailAddressSchema>;
+
+export const emailRouting = pgTable("email_routing", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  address: varchar("address", { length: 320 }).notNull().unique(),
+  emailAddressId: varchar("email_address_id"),
+  routeType: varchar("route_type", { length: 50 }).notNull(),
+  targetWorkspaceId: varchar("target_workspace_id"),
+  targetUserId: varchar("target_user_id"),
+  targetInboxType: varchar("target_inbox_type", { length: 100 }),
+  autoProcess: boolean("auto_process").default(false),
+  processAs: varchar("process_as", { length: 100 }),
+  forwardTo: varchar("forward_to", { length: 320 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("idx_email_routing_address").on(table.address),
+]);
+export type EmailRouting = typeof emailRouting.$inferSelect;
+export const insertEmailRoutingSchema = createInsertSchema(emailRouting).omit({ id: true, createdAt: true });
+export type InsertEmailRouting = z.infer<typeof insertEmailRoutingSchema>;
+
+export const platformEmails = pgTable("platform_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id"),
+  resendEmailId: varchar("resend_email_id", { length: 255 }).unique(),
+  messageId: varchar("message_id", { length: 500 }),
+  inReplyTo: varchar("in_reply_to", { length: 500 }),
+  referencesHeader: text("references_header"),
+  direction: varchar("direction", { length: 20 }).notNull(),
+  fromAddress: varchar("from_address", { length: 320 }).notNull(),
+  fromName: varchar("from_name", { length: 255 }),
+  // Postgres TEXT[] arrays — Drizzle expresses these via `.array()` on a text column.
+  toAddresses: text("to_addresses").array().notNull(),
+  ccAddresses: text("cc_addresses").array(),
+  bccAddresses: text("bcc_addresses").array(),
+  replyTo: varchar("reply_to", { length: 320 }),
+  subject: text("subject"),
+  bodyHtml: text("body_html"),
+  bodyText: text("body_text"),
+  snippet: text("snippet"),
+  ownerUserId: varchar("owner_user_id"),
+  ownerClientId: varchar("owner_client_id"),
+  folder: varchar("folder", { length: 50 }).default('inbox'),
+  isRead: boolean("is_read").default(false),
+  isStarred: boolean("is_starred").default(false),
+  isArchived: boolean("is_archived").default(false),
+  isDeleted: boolean("is_deleted").default(false),
+  trinityProcessed: boolean("trinity_processed").default(false),
+  trinityProcessedAt: timestamp("trinity_processed_at", { withTimezone: true }),
+  trinityCategory: varchar("trinity_category", { length: 100 }),
+  trinitySummary: text("trinity_summary"),
+  trinityActionTaken: varchar("trinity_action_taken", { length: 100 }),
+  trinityActionRecordId: varchar("trinity_action_record_id"),
+  trinityDraftReply: text("trinity_draft_reply"),
+  trinityPriority: varchar("trinity_priority", { length: 20 }).default('normal'),
+  receivedAt: timestamp("received_at", { withTimezone: true }),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("idx_platform_emails_workspace").on(table.workspaceId, table.folder, table.createdAt),
+  index("idx_platform_emails_owner").on(table.ownerUserId, table.folder, table.isRead),
+  index("idx_platform_emails_thread").on(table.messageId, table.inReplyTo),
+]);
+export type PlatformEmail = typeof platformEmails.$inferSelect;
+export const insertPlatformEmailSchema = createInsertSchema(platformEmails).omit({ id: true, createdAt: true });
+export type InsertPlatformEmail = z.infer<typeof insertPlatformEmailSchema>;
+
+export const platformEmailAttachments = pgTable("email_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  emailId: varchar("email_id").notNull(),
+  filename: varchar("filename", { length: 500 }).notNull(),
+  contentType: varchar("content_type", { length: 200 }),
+  sizeBytes: integer("size_bytes"),
+  storageUrl: text("storage_url"),
+  sha256Hash: varchar("sha256_hash", { length: 64 }),
+  isInline: boolean("is_inline").default(false),
+  contentId: varchar("content_id", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("idx_email_attachments_email").on(table.emailId),
+]);
+export type PlatformEmailAttachment = typeof platformEmailAttachments.$inferSelect;
+export const insertPlatformEmailAttachmentSchema = createInsertSchema(platformEmailAttachments).omit({ id: true, createdAt: true });
+export type InsertPlatformEmailAttachment = z.infer<typeof insertPlatformEmailAttachmentSchema>;
+
 // ─── GROUP 5 PHASE 35C: DOCCHAT BOT COMMANDS ────────────────────────────────
 export const chatBotCommands = pgTable("chat_bot_commands", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

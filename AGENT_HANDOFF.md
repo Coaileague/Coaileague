@@ -1,13 +1,15 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-05-01 — Claude (email system end-to-end audit + grade-A polish)
+# Last updated: 2026-05-01 — Claude (email system zero-debt sweep)
 
 ---
 
 ## 2026-05-01 — EMAIL SYSTEM SESSION (Claude, branch claude/test-email-system-9n4d2)
 
-Five sequential commits on `claude/test-email-system-9n4d2`:
-  ae175ce → 148fbc2 → 3948432 → 7627ded → (this commit)
+Six sequential commits on `claude/test-email-system-9n4d2`:
+  ae175ce → 148fbc2 → 3948432 → 7627ded → 396416e → (this commit)
+
+Verifier: **165/166 PASS, 0 FAIL, 1 WARN** (RESEND_API_KEY optional)
 
 ### What was done
 
@@ -109,21 +111,55 @@ resolves to a defined template (verified by the verifier).
 7. Workspace owner notification via `universalNotificationEngine`
 8. Calloff intent in "staffing" email reroutes to `processCalloff`
 
-### Known follow-ups (NOT done — for future agents)
-- ~30 more files with inline-HTML emails outside emailService.ts could
-  use `wrapInlineEmailHtml` (dailyDigestService, trinityWelcomeService,
-  payrollDeadlineNudgeService, schedulesRoutes, miscRoutes, etc).
-- `platform_emails`, `email_routing`, `email_attachments`,
-  `platform_email_addresses` are defined as raw SQL inside
-  `inboundEmailRoutes.ts` rather than `shared/schema.ts`. Works at
-  runtime but no Drizzle types — schema-side migration recommended.
-- Notification reply (`notificationDeliveryService.ts:745`) uses custom
-  `from` + `In-Reply-To` headers that `sendCanSpamCompliantEmail`
-  doesn't expose — left as direct call.
-- Trinity / support auto-replies (`resendWebhooks.ts:968,992`) use
-  `trinity@` / `support@` from-addresses — left as direct calls.
-- Two routers mounted at `/api/email` (`emailRouter` + `emailUnsubscribeRouter`) — works because path lists are disjoint; consolidate if a new path collides.
-- `/api/email/send` (platform inbox) and `/api/emails/send` (platform staff) coexist — singular vs plural typo trap.
+### Zero-debt sweep (2026-05-01, this commit) — every previously-deferred
+### follow-up is now closed:
+
+**Centralised mobile responsiveness**
+- `sendCanSpamCompliantEmail` now auto-wraps any HTML fragment that
+  doesn't start with `<!DOCTYPE` or `<html>` using `wrapInlineEmailHtml`.
+  Effect: every email anywhere in the codebase that flows through the
+  canonical wrapper (whether passed from `emailService._deliver`,
+  `NotificationDeliveryService.send → sendCustomEmail`, ad-hoc inline
+  HTML in route handlers, etc.) gets viewport meta + @media query for
+  free. The 30+ inline-HTML callers no longer need individual migration.
+
+**Canonical wrapper covers all outbound paths**
+- `CanSpamEmailOptions` extended with `from?: string` and
+  `extraHeaders?: Record<string, string>`. `extraHeaders` are merged
+  BEFORE the CAN-SPAM List-Unsubscribe headers so compliance values
+  always win.
+- `notificationDeliveryService.sendEmailReply` (custom from + In-Reply-To
+  threading headers) now flows through the wrapper.
+- `resendWebhooks.ts` Trinity-marketing reply (Trinity@coaileague.com
+  from-address) and platform-support auto-reply (Support@<domain>
+  from-address) both flow through the wrapper.
+- Net effect: the only legitimate direct `client.emails.send` calls left
+  are inside `sendCanSpamCompliantEmail` itself (the implementation),
+  `sendBilledEmail` (internal raw send used by sendCampaign — paired
+  with its own metering), and the user-composed inbox send in
+  `email/emailRoutes.ts` (which intentionally bypasses CAN-SPAM footer
+  for platform inbox replies). Verifier asserts authService,
+  notificationDeliveryService, and emailService have ZERO direct calls.
+
+**Drizzle schema for the four platform-email tables**
+- Added `platformEmailAddresses`, `emailRouting`, `platformEmails`,
+  `platformEmailAttachments` to `shared/schema/domains/comms/index.ts`
+  with full type exports (`PlatformEmail`, etc) and Zod insert schemas.
+- Runtime `CREATE TABLE IF NOT EXISTS` in `inboundEmailRoutes.ts`
+  remains authoritative for production migrations; the Drizzle
+  definitions exist so query callers can opt into typed access.
+
+**Route mount documentation + conflict guard**
+- Added an "Email mount map" block in `server/routes.ts` listing every
+  email-related mount, its owner router, its purpose, and its auth
+  profile. Future devs adding a route now have a single source of truth.
+- `comms.ts` annotates the singular-vs-plural distinction at the mount
+  point and emits a boot-time disjoint guard that warns if the
+  emailUnsubscribeRouter loses ownership of `/unsubscribe*`. Locked in
+  by verifier so a future PR can't silently break it.
+
+### Known follow-ups
+None remaining for the email system.
 
 ### Files touched (Claude's domain — EmailHubCanvas + email backend)
 ```

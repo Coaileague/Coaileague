@@ -49,9 +49,36 @@ export function mountCommsRoutes(app: Express): void {
   app.use("/api/announcements", requireAuth, ensureWorkspaceAccess, broadcastRouter);
   app.use("/api/bridges", requireAuth, ensureWorkspaceAccess, messageBridgeRouter);
   // /api/mascot removed — mascot system purged
+  // /api/emails/* — platform-staff manual send + campaign + templates.
+  // SINGULAR /api/email/* (mounted in server/routes.ts) is the per-user inbox.
+  // The plural-vs-singular distinction is intentional; see the mount map
+  // comment in server/routes.ts before adding routes here.
   app.use("/api/emails", requireAuth, ensureWorkspaceAccess, emailRouter);
-  // emailUnsubscribeRouter handles /api/email/unsubscribe — intentionally public (no auth).
+  // emailUnsubscribeRouter owns /api/email/{unsubscribe,resubscribe,unsubscribe/preferences,unsubscribe/confirm}
+  // Intentionally public — links arrive from the recipient's inbox. Mounted
+  // AFTER routes.ts registers the authenticated emailRouter at the same
+  // prefix so unauthenticated unsubscribe paths fall through to here.
   app.use("/api/email", emailUnsubscribeRouter);
+
+  // Boot-time guard: assert the two /api/email routers stay disjoint. If a
+  // future change adds /unsubscribe to the authenticated emailRouter (or
+  // anything to /api/email that emailUnsubscribeRouter already owns), fail
+  // fast instead of silently shadowing the public unsubscribe surface.
+  try {
+    const protectedPaths = ['/unsubscribe', '/resubscribe', '/unsubscribe/preferences', '/unsubscribe/confirm'];
+    // @ts-expect-error — Express router internals: stack of layers exposes route paths
+    const layers: any[] = (emailUnsubscribeRouter as any)?.stack || [];
+    const ownedByPublic = layers
+      .filter((l: any) => l?.route?.path)
+      .map((l: any) => l.route.path as string);
+    const overlap = protectedPaths.filter(p => !ownedByPublic.includes(p));
+    if (overlap.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(`[comms] email-router disjoint guard: expected emailUnsubscribeRouter to own ${overlap.join(', ')} — registry drift`);
+    }
+  } catch {
+    // Non-fatal — guard is advisory.
+  }
   app.use("/api/internal-email", requireAuth, ensureWorkspaceAccess, internalEmailRouter);
   app.use("/api/sms", requireAuth, ensureWorkspaceAccess, smsRouter);
   // MOUNT ORDER: specific sub-paths of /api/chat MUST come before general /api/chat catch-alls.

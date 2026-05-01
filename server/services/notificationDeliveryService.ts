@@ -739,19 +739,28 @@ export class NotificationDeliveryService {
     html: string;
     originalMessageId: string;
   }): Promise<void> {
-    const { getUncachableResendClient } = await import('./emailCore');
-    const { client } = await getUncachableResendClient();
+    const { sendCanSpamCompliantEmail } = await import('./emailCore');
     const subject = params.subject.startsWith('Re:') ? params.subject : `Re: ${params.subject}`;
-    await client.emails.send({
-      from: params.fromAddress,
+    // Routed through the canonical wrapper so replies inherit hard-bounce
+    // suppression, the 15s Resend timeout, and CAN-SPAM List-Unsubscribe
+    // headers. The custom `from` (the user's platform email) and the
+    // RFC 5322 threading headers are passed through via the new
+    // `from` / `extraHeaders` options.
+    const result = await sendCanSpamCompliantEmail({
       to: params.toAddress,
       subject,
       html: params.html,
-      headers: {
+      emailType: 'inbound_forward',
+      from: params.fromAddress,
+      extraHeaders: {
         'In-Reply-To': params.originalMessageId,
         'References': params.originalMessageId,
       },
     });
+    if (!result.success) {
+      log.warn(`[NDS] sendEmailReply → ${params.toAddress} failed: ${result.reason || result.error?.message}`);
+      return;
+    }
     log.info(`[NDS] sendEmailReply → ${params.toAddress} from ${params.fromAddress}`);
   }
 }

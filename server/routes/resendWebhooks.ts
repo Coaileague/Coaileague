@@ -958,19 +958,22 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
             if (platformAddr === 'trinity@coaileague.com') {
               // trinity@ is reserved for outbound marketing + reply classification.
               // Inbound replies are classified into REGULATORY or PROSPECT lanes.
+              // The marketing reply is now routed through the canonical wrapper
+              // so it inherits hard-bounce suppression and the 15s timeout.
               log.info(`[TrinityMarketing] Marketing reply received at trinity@ — classifying sender lane`);
               const { processTrinityMarketingReply } = await import('../services/trinityMarketingReplyProcessor');
-              const { getUncachableResendClient } = await import('../services/emailCore');
-              const { client } = await getUncachableResendClient();
+              const { sendCanSpamCompliantEmail } = await import('../services/emailCore');
               await processTrinityMarketingReply(
                 { from: fromEmail, fromName, subject, body: emailBody },
                 async ({ to, subject: replySubject, text }) => {
-                  await client.emails.send({
-                    from: 'Trinity <trinity@coaileague.com>',
-                    to: [to],
-                    replyTo: 'trinity@coaileague.com',
+                  await sendCanSpamCompliantEmail({
+                    to,
                     subject: replySubject,
+                    html: `<pre style="font-family:inherit;white-space:pre-wrap;margin:0;">${text}</pre>`,
                     text,
+                    emailType: 'marketing',
+                    from: 'Trinity <trinity@coaileague.com>',
+                    replyTo: 'trinity@coaileague.com',
                   });
                 }
               );
@@ -987,16 +990,22 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
               });
 
               if (aiResp?.text && aiResp.text.length > 30) {
-                const { getUncachableResendClient } = await import('../services/emailCore');
-                const { client } = await getUncachableResendClient();
-                await client.emails.send({
-                  from: `${PLATFORM.name} Support <support@${PLATFORM.domain}>`,
-                  to: [fromEmail],
-                  replyTo: 'support@coaileague.com',
+                const { sendCanSpamCompliantEmail } = await import('../services/emailCore');
+                const replyText = aiResp.text.trim();
+                const replyResult = await sendCanSpamCompliantEmail({
+                  to: fromEmail,
                   subject: `Re: ${subject}`,
-                  text: aiResp.text.trim(),
+                  html: `<pre style="font-family:inherit;white-space:pre-wrap;margin:0;">${replyText}</pre>`,
+                  text: replyText,
+                  emailType: 'support',
+                  from: `${PLATFORM.name} Support <support@${PLATFORM.domain}>`,
+                  replyTo: 'support@coaileague.com',
                 });
-                log.info(`[Platform Support] Replied to ${fromEmail} re: "${subject}"`);
+                if (replyResult.success) {
+                  log.info(`[Platform Support] Replied to ${fromEmail} re: "${subject}"`);
+                } else {
+                  log.warn(`[Platform Support] Reply failed to ${fromEmail}: ${replyResult.reason || replyResult.error?.message}`);
+                }
               }
             }
           } catch (trinityErr: any) {

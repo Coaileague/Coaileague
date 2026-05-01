@@ -945,7 +945,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/inbound/email', inboundEmailRouter);
 
 
-  // Email API: inbox, send, thread, management (requires auth)
+  // ───────────────────────────────────────────────────────────────────────────
+  // Email mount map (read this before adding ANY new email route):
+  //
+  //   /api/email/*               → emailRouter (this line)
+  //                                Per-user platform inbox. Owns:
+  //                                /inbox, /thread/*, /send, /:emailId,
+  //                                /:emailId/reply, /management, /addresses/mine,
+  //                                /support-inbox, /addresses/:id/{settings,activate,deactivate}
+  //                                requireAuth + workspaceAccess applied inside the router.
+  //
+  //   /api/email/{unsubscribe,resubscribe} → emailUnsubscribeRouter
+  //                                Mounted later in mountCommsRoutes — INTENTIONALLY UNAUTH'd
+  //                                because the link arrives from the recipient's inbox.
+  //                                Express tries emailRouter first; the two paths above are
+  //                                NOT registered there, so the request falls through to
+  //                                emailUnsubscribeRouter. If you ever add /unsubscribe* to
+  //                                emailRouter you will silently shadow the public route.
+  //
+  //   /api/emails/*              → routes/emails.ts (mounted in mountCommsRoutes)
+  //                                requirePlatformStaff manual-send + campaign + templates.
+  //                                Singular-vs-plural distinction is intentional but a
+  //                                known typo trap. Use /api/email for inbox, /api/emails
+  //                                for staff manual-send.
+  //
+  //   /api/external-emails/*     → registerExternalEmailRoutes (compose UI uses this)
+  //   /api/internal-email/*      → routes/internalEmails.ts
+  //   /api/email-attachments/*   → routes/email-attachments.ts
+  //   /api/inbound/email         → routes/inboundEmailRoutes.ts (Resend webhook)
+  // ───────────────────────────────────────────────────────────────────────────
   app.use('/api/email', emailRouter);
 
   // ── PLATFORM FEEDBACK — survey collection for CoAIleague improvement ────
