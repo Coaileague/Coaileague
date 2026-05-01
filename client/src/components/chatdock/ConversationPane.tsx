@@ -248,56 +248,6 @@ const QUICK_REACTIONS = [
   { key: "🎯", emoji: "🎯", icon: Check, label: "On it" },
 ];
 
-// Emoticon shortcuts mapped to emoji (WhatsApp-style)
-const EMOTICON_MAP: Record<string, string> = {
-  ':)': '😊', ':-)': '😊', ':D': '😄', ':-D': '😄',
-  ':P': '😛', ':-P': '😛', ':o': '😮', ':-o': '😮',
-  ':s': '😣', ':(': '😔', ':-(': '😔',
-  '<3': '❤️', '</3': '💔',
-  ':+1:': '👍', ':-1:': '👎',
-  ':thumbsup:': '👍', ':check:': '✅', ':fire:': '🔥',
-};
-
-function applyEmoticonShortcuts(text: string): string {
-  let result = text;
-  for (const [shortcut, emoji] of Object.entries(EMOTICON_MAP)) {
-    const escapedShortcut = shortcut.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    result = result.replace(new RegExp('(^|\\s)' + escapedShortcut + '(\\s|$)', 'g'), `$1${emoji}$2`);
-  }
-  return result;
-}
-
-function EmojiReactionBar({
-  messageId,
-  conversationId,
-  onClose,
-}: {
-  messageId: string;
-  conversationId: string;
-  onClose: () => void;
-}) {
-  const { toggleReaction } = useMessageActions(messageId, conversationId, { onAfter: onClose });
-
-  return (
-    <div
-      className="chatdock-reaction-reveal flex items-center bg-card border border-border rounded-full shadow-md px-2 py-1 gap-0.5 z-50"
-      data-testid={`reaction-bar-${messageId}`}
-    >
-      {QUICK_REACTIONS.map((r) => (
-        <button
-          key={r.key}
-          className="flex items-center justify-center w-7 h-7 rounded-full text-base hover:bg-muted transition-all hover:scale-125 active:scale-100"
-          onClick={(e) => { e.stopPropagation(); haptics.light(); toggleReaction.mutate(r.key); }}
-          data-testid={`reaction-${r.key}-${messageId}`}
-          title={r.label}
-        >
-          {r.emoji}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function ReactionBadges({
   messageId,
   reactions,
@@ -903,30 +853,6 @@ function getChannelColor(channelType: string) {
   }
 }
 
-function getChannelBadgeColor(channelType: string) {
-  switch (channelType) {
-    case "sms": return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-    case "whatsapp": return "bg-green-500/10 text-green-600 dark:text-green-400";
-    case "email": return "bg-orange-500/10 text-orange-600 dark:text-orange-400";
-    case "messenger": return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400";
-    default: return "bg-muted text-muted-foreground";
-  }
-}
-
-function ChannelBadge({ channelType }: { channelType: string }) {
-  const Icon = getChannelIcon(channelType);
-  if (!Icon) return null;
-  const label = channelType === "sms" ? "SMS" : channelType === "whatsapp" ? "WhatsApp" : channelType === "email" ? "Email" : channelType.charAt(0).toUpperCase() + channelType.slice(1);
-  return (
-    <span
-      className={cn("inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[9px] font-medium", getChannelBadgeColor(channelType))}
-      data-testid={`badge-channel-${channelType}`}
-    >
-      <Icon className="h-2.5 w-2.5" />
-      {label}
-    </span>
-  );
-}
 
 function ChannelIndicator({ channelType }: { channelType: string }) {
   const Icon = getChannelIcon(channelType);
