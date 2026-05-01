@@ -15,7 +15,9 @@
     "test:readiness": "vitest run tests/unit/readiness-*.test.ts",
     "audit:consolidation": "node scripts/audit/holistic-consolidation-audit.mjs",
     "db:push": "drizzle-kit push",
-    "db:bootstrap-statewide": "npx tsx scripts/prod/bootstrap-statewide-workspace.ts"
+    "db:bootstrap-statewide": "npx tsx scripts/prod/bootstrap-statewide-workspace.ts",
+    "sim:acme30": "npx tsx server/tests/acme30DaySimulation.ts",
+    "sim:billing": "npx tsx scripts/billing-stress-test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
