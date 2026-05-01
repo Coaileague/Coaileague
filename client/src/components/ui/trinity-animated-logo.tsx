@@ -112,52 +112,41 @@ export function TrinityAnimatedLogo({
           strokeWidth="0.7" strokeDasharray="4 16" opacity="0.2"/>
       </g>
 
-      {/* ── The three trifecta arms ── */}
-      {/* Arm 1 — 12 o'clock */}
-      <g filter={`url(#ga-${uid})`}>
-        <path d={ARM} fill={`url(#a1-${uid})`}>
-          {alwaysAnimate && (
-            <animate attributeName="opacity"
-              values="0.65;1;0.65" dur={sp.arm} repeatCount="indefinite"/>
-          )}
-        </path>
-        <circle cx="60" cy="6" r="3" fill={c.arm1} opacity="0.9">
-          {alwaysAnimate && (
-            <animate attributeName="r" values="2;4;2" dur={sp.arm} repeatCount="indefinite"/>
-          )}
-        </circle>
+      {/* ── Trifecta: all 3 arms spin as one unit ── */}
+      <g>
+        {alwaysAnimate && (
+          <animateTransform attributeName="transform" type="rotate"
+            from="0 60 60" to="360 60 60" dur={sp.ring1}
+            repeatCount="indefinite"/>
+        )}
+        {/* Arm 1 — 12 o'clock */}
+        <g filter={`url(#ga-${uid})`}>
+          <path d={ARM} fill={`url(#a1-${uid})`}>
+            {alwaysAnimate && <animate attributeName="opacity" values="0.6;1;0.6" dur={sp.core} repeatCount="indefinite"/>}
+          </path>
+          <circle cx="60" cy="6" r="3" fill={c.arm1} opacity="0.9">
+            {alwaysAnimate && <animate attributeName="r" values="2;4;2" dur={sp.core} repeatCount="indefinite"/>}
+          </circle>
+        </g>
+        {/* Arm 2 — 4 o'clock */}
+        <g filter={`url(#ga-${uid})`} transform="rotate(120 60 60)">
+          <path d={ARM} fill={`url(#a2-${uid})`}>
+            {alwaysAnimate && <animate attributeName="opacity" values="0.6;1;0.6" dur={sp.core} begin="0.5s" repeatCount="indefinite"/>}
+          </path>
+          <circle cx="60" cy="6" r="3" fill={c.arm2} opacity="0.9">
+            {alwaysAnimate && <animate attributeName="r" values="2;4;2" dur={sp.core} begin="0.5s" repeatCount="indefinite"/>}
+          </circle>
+        </g>
+        {/* Arm 3 — 8 o'clock */}
+        <g filter={`url(#ga-${uid})`} transform="rotate(240 60 60)">
+          <path d={ARM} fill={`url(#a3-${uid})`}>
+            {alwaysAnimate && <animate attributeName="opacity" values="0.6;1;0.6" dur={sp.core} begin="1s" repeatCount="indefinite"/>}
+          </path>
+          <circle cx="60" cy="6" r="3" fill={c.arm3} opacity="0.9">
+            {alwaysAnimate && <animate attributeName="r" values="2;4;2" dur={sp.core} begin="1s" repeatCount="indefinite"/>}
+          </circle>
+        </g>
       </g>
-
-      {/* Arm 2 — 4 o'clock */}
-      <g filter={`url(#ga-${uid})`} transform="rotate(120 60 60)">
-        <path d={ARM} fill={`url(#a2-${uid})`}>
-          {alwaysAnimate && (
-            <animate attributeName="opacity"
-              values="0.65;1;0.65" dur={sp.arm} begin="0.5s" repeatCount="indefinite"/>
-          )}
-        </path>
-        <circle cx="60" cy="6" r="3" fill={c.arm2} opacity="0.9">
-          {alwaysAnimate && (
-            <animate attributeName="r" values="2;4;2" dur={sp.arm} begin="0.5s" repeatCount="indefinite"/>
-          )}
-        </circle>
-      </g>
-
-      {/* Arm 3 — 8 o'clock */}
-      <g filter={`url(#ga-${uid})`} transform="rotate(240 60 60)">
-        <path d={ARM} fill={`url(#a3-${uid})`}>
-          {alwaysAnimate && (
-            <animate attributeName="opacity"
-              values="0.65;1;0.65" dur={sp.arm} begin="1s" repeatCount="indefinite"/>
-          )}
-        </path>
-        <circle cx="60" cy="6" r="3" fill={c.arm3} opacity="0.9">
-          {alwaysAnimate && (
-            <animate attributeName="r" values="2;4;2" dur={sp.arm} begin="1s" repeatCount="indefinite"/>
-          )}
-        </circle>
-      </g>
-
       {/* ── Core — breathing radial glow ── */}
       <circle cx="60" cy="60" r="16" fill={`url(#c-${uid})`}
         filter={`url(#gc-${uid})`} opacity="0.85">

@@ -876,7 +876,7 @@ function AppContent() {
   // Check if user is Root Admin (platform-level access)
   const isRootAdmin = (user as any)?.platformRole === 'root_admin' || (user as any)?.platformRole === 'sysop';
 
-  if (isLoading && !isPublicRoute) {
+  if (authLoading && !loadingTimedOut && !isPublicRoute) {
     return <LoadingScreen />;
   }
 
@@ -1915,6 +1915,8 @@ function AppContent() {
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(() => {
+    // Never show if HTML splash already ran this session
+    try { if (sessionStorage.getItem('coai_html_splash_done')) return false; } catch(e) {}
     // Never show the splash screen on public/marketing routes —
     // it covers everything (fixed inset-0 z-99999) and would blank the page.
     const publicPaths = [

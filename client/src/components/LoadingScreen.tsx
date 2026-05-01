@@ -63,26 +63,20 @@ export function LoadingScreen() {
 
   return (
     <div
-      className="fixed inset-0 flex flex-col items-center justify-center z-[9999] bg-background text-foreground"
+      className="fixed inset-0 flex flex-col items-center justify-center z-[9999]" style={{ backgroundColor: "#0a1628", color: "#e2e8f0" }}
       role="status"
       aria-live="polite"
       aria-label="Loading CoAIleague"
       data-testid="loading-screen"
     >
-      {/* ── Ambient glow rings ── */}
+      {/* ── Ambient glow rings — subtle, not card-like ── */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div
-          className="rounded-full border border-primary/10"
-          style={{ width: 320, height: 320, animation: "ringPulse 3s ease-in-out infinite" }}
-        />
-        <div
-          className="absolute rounded-full border border-primary/10"
-          style={{ width: 220, height: 220, animation: "ringPulse 3s ease-in-out infinite 1s" }}
-        />
-        <div
-          className="absolute rounded-full border border-primary/10"
-          style={{ width: 150, height: 150, animation: "ringPulse 3s ease-in-out infinite 2s" }}
-        />
+        <div style={{ width: 300, height: 300, borderRadius: "50%",
+          border: "1px solid rgba(139,92,246,0.12)",
+          animation: "ringPulse 3s ease-in-out infinite" }} />
+        <div style={{ position: "absolute", width: 200, height: 200, borderRadius: "50%",
+          border: "1px solid rgba(139,92,246,0.08)",
+          animation: "ringPulse 3s ease-in-out infinite 1s" }} />
       </div>
 
       {/* ── Trinity SVG Logo + name ── */}
@@ -202,7 +196,7 @@ export function LoadingScreen() {
 
       {/* ── Keyframes (inline to keep component self-contained) ── */}
       <style>{`
-        @keyframes logoOrbit    { to { transform: rotate(360deg); } }
+        /* removed: @keyframes logoOrbit    { to { transform: rotate(360deg); } }
         @keyframes ringPulse    { 0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.9;transform:scale(1.05)} }
         @keyframes orbGlow      { 0%,100%{opacity:1;filter:drop-shadow(0 0 4px #fff)}50%{opacity:.85;filter:drop-shadow(0 0 10px #e2e8f0)} }
         @keyframes fadeSlideUp  { from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)} }
