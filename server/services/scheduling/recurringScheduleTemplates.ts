@@ -69,7 +69,7 @@ class RecurringScheduleTemplateService {
       workspaceId,
       name,
       description,
-      shiftPatterns: templateShifts as any,
+      shiftPatterns: templateShifts as unknown,
     }).returning();
 
     log.info(`[RecurringTemplates] Created template "${name}" with ${templateShifts.length} shifts`);

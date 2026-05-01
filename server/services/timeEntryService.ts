@@ -53,7 +53,7 @@ export async function getTimeEntriesByWorkspace(
   ];
 
   if (status) {
-    filters.push(eq(timeEntries.status, status as any));
+    filters.push(eq(timeEntries.status, status as unknown));
   }
 
   return db.query.timeEntries.findMany({

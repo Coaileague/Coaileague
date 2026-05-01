@@ -474,7 +474,7 @@ export default function CADConsole() {
           { id: 'officers', label: 'Field Roster' }
         ]}
         activeTab={activeView}
-        onTabChange={(v) => setActiveView(v as any)}
+        onTabChange={(v) => setActiveView(v as unknown)}
         className="mb-6"
       />
 

@@ -148,7 +148,7 @@ class LostFoundService {
   async listItems(workspaceId: string, status?: string, siteId?: string, limit = 50): Promise<LostFoundItem[]> {
     const { and, eq, desc } = await import('drizzle-orm');
     const conditions = [eq(lostFoundItems.workspaceId, workspaceId)];
-    if (status) conditions.push(eq(lostFoundItems.status, status as any));
+    if (status) conditions.push(eq(lostFoundItems.status, status as unknown));
     if (siteId) conditions.push(eq(lostFoundItems.siteId, siteId));
 
     const result = await db

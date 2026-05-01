@@ -544,7 +544,7 @@ class PolicyDecisionPoint {
     if (!conditions || Object.keys(conditions).length === 0) return true;
 
     for (const [key, value] of Object.entries(conditions)) {
-      const attrValue = attributes[key] || (subject as any)[key];
+      const attrValue = attributes[key] || (subject as unknown)[key];
       
       if (Array.isArray(value)) {
         if (!value.includes(attrValue)) return false;

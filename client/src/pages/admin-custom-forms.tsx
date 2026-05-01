@@ -468,7 +468,7 @@ function FieldSettings({ field, allFields, onChange }: { field: FormField; allFi
           </Select>
           {field.conditional?.fieldId && (
             <div className="space-y-1">
-              <Select value={field.conditional.operator} onValueChange={v => onChange({ conditional: { ...field.conditional!, operator: v as any } })}>
+              <Select value={field.conditional.operator} onValueChange={v => onChange({ conditional: { ...field.conditional!, operator: v as unknown } })}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="equals">equals</SelectItem>

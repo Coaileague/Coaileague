@@ -260,7 +260,7 @@ export function BroadcastFeedbackForm({
                 <Label>Preferred contact method</Label>
                 <Select
                   value={form.watch('contactMethod') || 'in_app'}
-                  onValueChange={(v) => form.setValue('contactMethod', v as any)}
+                  onValueChange={(v) => form.setValue('contactMethod', v as unknown)}
                 >
                   <SelectTrigger>
                     <SelectValue />

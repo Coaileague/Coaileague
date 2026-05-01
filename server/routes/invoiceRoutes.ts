@@ -1026,7 +1026,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
       }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
       notificationHelpers.createInvoiceCreatedNotification(
-        { storage: storage as any },
+        { storage: storage as unknown },
         {
           workspaceId: workspace.id,
           userId,

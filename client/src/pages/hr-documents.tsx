@@ -1285,7 +1285,7 @@ export default function HrDocuments() {
         </div>
 
         {/* ── Category Tabs ─────────────────────────────────── */}
-        <Tabs value={activeCategory} onValueChange={v => setActiveCategory(v as any)}>
+        <Tabs value={activeCategory} onValueChange={v => setActiveCategory(v as unknown)}>
           <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4" data-testid="tabs-document-category">
             {(Object.entries(CATEGORY_CONFIG) as [typeof activeCategory, typeof catConfig][]).map(([key, cfg]) => {
               const Icon = cfg.icon;

@@ -500,7 +500,7 @@ export async function getUncachableResendClient() {
             return { data: { id: `dev-${Date.now()}` } };
           }
         }
-      } as any,
+      } as unknown,
       fromEmail: process.env.RESEND_FROM_EMAIL || EMAIL.senders.noreply
     };
   }

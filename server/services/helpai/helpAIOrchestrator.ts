@@ -740,7 +740,7 @@ class HelpAIOrchestrator {
           category: 'general',
           source: 'helpai_bot',
           isAiHandled: false,
-        } as any).returning({ id: supportTickets.id });
+        } as unknown).returning({ id: supportTickets.id });
         ticketId = ticket.id;
       } catch (e) {
         log.error('[HelpAI Orchestrator] Failed to create escalation ticket:', e);
@@ -753,7 +753,7 @@ class HelpAIOrchestrator {
             description: `[Agent Handoff Summary]\n${agentSummary}\n\n[Escalation Reason]\n${reason}`,
             status: 'open',
             isAiHandled: false,
-          } as any)
+          } as unknown)
           .where(eq(supportTickets.id, ticketId));
       } catch (e) {
         log.warn('[HelpAI Orchestrator] Ticket update failed:', e);

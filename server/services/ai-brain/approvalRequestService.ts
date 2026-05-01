@@ -87,7 +87,7 @@ class ApprovalRequestService {
     const conditions: unknown[] = [eq(aiApprovalRequests.workspaceId, workspaceId)];
 
     if (decision && decision.length > 0) {
-      conditions.push(inArray(aiApprovalRequests.status, decision as any));
+      conditions.push(inArray(aiApprovalRequests.status, decision as unknown));
     }
 
     if (scope === 'employee') {

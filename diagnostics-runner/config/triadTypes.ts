@@ -63,7 +63,7 @@ export interface APITestCase {
   headers?: Record<string, string>;
   body?: unknown;
   expectedStatus: number | number[];
-  validateResponse?: (response: any) => boolean;
+  validateResponse?: (response: unknown) => boolean;
   requiresAuth: boolean;
   description?: string;
 }

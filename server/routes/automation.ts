@@ -857,7 +857,7 @@ automationRouter.get('/status', requireAuth, async (req: AuthenticatedRequest, r
     });
 
     // Calculate stats for each automation type
-    const schedulingEvents = recentEvents.filter(e => (e as Record<string, unknown>).eventType?.includes('(schedule as any)') || (e as Record<string, unknown>).eventType?.includes('shift'));
+    const schedulingEvents = recentEvents.filter(e => (e as Record<string, unknown>).eventType?.includes('(schedule as unknown)') || (e as Record<string, unknown>).eventType?.includes('shift'));
     const invoicingEvents = recentEvents.filter(e => (e as Record<string, unknown>).eventType?.includes('invoice'));
     const payrollEvents = recentEvents.filter(e => (e as Record<string, unknown>).eventType?.includes('payroll'));
     const complianceEvents = recentEvents.filter(e => (e as Record<string, unknown>).eventType?.includes('compliance'));
@@ -1054,7 +1054,7 @@ automationRouter.get('/compliance/recent', requireAuth, async (req: Authenticate
     }
 
     const lastScan = recentScans[0];
-    const metadata = lastScan.metadata as any;
+    const metadata = lastScan.metadata as unknown;
 
     return res.json({
       hasData: true,

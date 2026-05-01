@@ -1159,7 +1159,7 @@ class ChatServerHubClass {
           subscribeToRoomBroadcasts((event: Record<string, unknown>) => {
             // Incoming from another replica — broadcast to our local WS clients
             if (this.wsBroadcaster && event) {
-              this.wsBroadcaster(event as any);
+              this.wsBroadcaster(event as unknown);
             }
           });
           log.info('[ChatServerHub] Redis pub/sub active — multi-replica broadcast enabled');

@@ -176,8 +176,8 @@ export async function rewriteUniversalId(
     entityType: spec.auditEntityType,
     entityId,
     success: true,
-    changesBefore: { [spec.column]: oldCode } as any,
-    changesAfter: { [spec.column]: newCode } as any,
+    changesBefore: { [spec.column]: oldCode } as unknown,
+    changesAfter: { [spec.column]: newCode } as unknown,
     payload: { entity, reason },
     durationMs: Date.now() - start,
   });

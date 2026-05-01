@@ -510,7 +510,7 @@ class TrinityFastModeService {
           failCount: results.filter(r => !r.success).length,
           totalDurationMs: telemetry.executionMs,
           parallelSpeedup: telemetry.parallelSpeedup
-        } as any,
+        } as unknown,
         createdAt: new Date()
       });
     } catch (error) {

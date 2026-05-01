@@ -26,7 +26,7 @@ const log = createLogger('TrinityStaffingRoutes');
 async function persistWebhookConfig(workspaceId: string, token: string, secret: string | undefined, systemUserId?: string): Promise<void> {
   const payload = { staffingWebhookToken: token, staffingWebhookSecret: secret || null, staffingWebhookSystemUserId: systemUserId || null, staffingWebhookCreatedAt: new Date().toISOString() };
   // CATEGORY C — Raw SQL retained: JSONB merge via || operator not expressible in Drizzle ORM | Tables: workspaces | Verified: 2026-03-23
-  await (db as any).$client.query(
+  await (db as unknown).$client.query(
     `UPDATE workspaces SET automation_policy_blob = COALESCE(automation_policy_blob, '{}') || $1::jsonb WHERE id = $2`,
     [JSON.stringify(payload), workspaceId]
   ).catch ((err: unknown) => {

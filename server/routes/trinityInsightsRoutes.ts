@@ -979,7 +979,7 @@ router.get('/audit', async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
     
-    if (!canAccessTrinity(user as any)) {
+    if (!canAccessTrinity(user as unknown)) {
       return res.status(403).json({ success: false, error: 'Trinity access required' });
     }
     
@@ -1009,7 +1009,7 @@ router.get('/audit/summary', async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
     
-    if (!canAccessTrinity(user as any)) {
+    if (!canAccessTrinity(user as unknown)) {
       return res.status(403).json({ success: false, error: 'Trinity access required' });
     }
     

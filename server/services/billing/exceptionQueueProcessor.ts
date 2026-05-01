@@ -265,7 +265,7 @@ class ExceptionQueueProcessor {
       .from(platformRoles)
       .where(
         and(
-          inArray(platformRoles.role, ['root_admin', 'deputy_admin', 'sysop', 'support_manager'] as any),
+          inArray(platformRoles.role, ['root_admin', 'deputy_admin', 'sysop', 'support_manager'] as unknown),
           isNull(platformRoles.revokedAt),
           eq(platformRoles.isSuspended, false)
         )

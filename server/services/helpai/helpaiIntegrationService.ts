@@ -76,7 +76,7 @@ export class HelpaiIntegrationService {
         registryId: config.registryId,
         isEnabled: config.isEnabled !== false,
         customEndpoint: config.customEndpoint,
-        customConfig: (config.customConfig || {}) as any,
+        customConfig: (config.customConfig || {}) as unknown,
         autoSyncEnabled: config.autoSyncEnabled || false,
         syncIntervalMinutes: config.syncIntervalMinutes || 60,
         configuredBy,

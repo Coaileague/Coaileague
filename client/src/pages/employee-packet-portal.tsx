@@ -378,7 +378,7 @@ export default function EmployeePacketPortal() {
     );
   }
 
-  const err = error as any;
+  const err = error as unknown;
   if (err?.completed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">

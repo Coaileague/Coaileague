@@ -1040,7 +1040,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
                 subject: validated.subject,
                 emailId: email.id,
                 preview: validated.bodyText?.substring(0, 100),
-                priority: validated.priority as any,
+                priority: validated.priority as unknown,
               });
             }
           }

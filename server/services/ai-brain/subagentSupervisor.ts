@@ -3493,7 +3493,7 @@ class SubagentSupervisor {
   private async completeTelemetry(
     telemetryId: string,
     status: SubagentStatus,
-    result: any,
+    result: unknown,
     durationMs: number,
     errorMessage?: string,
     retriesUsed?: number

@@ -394,7 +394,7 @@ class TrinityFieldIntelligence {
             ))
             .catch(err => { _log('Failed to count geofence departures', err); return [{ count: 0 }]; });
 
-          const count = parseInt(String((departureCountRows[0] as any)?.count || '0'));
+          const count = parseInt(String((departureCountRows[0] as unknown)?.count || '0'));
           if (count >= 3) {
             _log(`Officer ${employeeName} has ${count} geofence departures in 30 days — flagging for training review`);
             // Converted to Drizzle ORM
@@ -443,7 +443,7 @@ class TrinityFieldIntelligence {
             ))
             .catch(() => [{ count: 0 }]);
 
-          const count = parseInt(String((overrideCountRows[0] as any)?.count || '0'));
+          const count = parseInt(String((overrideCountRows[0] as unknown)?.count || '0'));
           if (count >= 3) {
             _log(`Officer ${employeeName} has ${count} manual overrides in 30 days — Trinity flagging for supervisor review`);
           }

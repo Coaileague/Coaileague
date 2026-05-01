@@ -109,7 +109,7 @@ export async function provisionWorkspace(params: {
         steps: ['stripe', 'finance_settings', 'payroll_cycle', 'owner_membership', 'default_site'],
       },
       sourceRoute: '/api/workspace',
-    } as any);
+    } as unknown);
   } catch (err: unknown) {
     log.warn('[WorkspaceProvisioning] Audit trail write failed (non-blocking):', (err as Error)?.message);
   }

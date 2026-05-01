@@ -196,7 +196,7 @@ async function main() {
     // Use tok_visa (Stripe's pre-built test token) — raw card numbers are blocked by the API
     const pm = await stripe.paymentMethods.create({
       type: 'card',
-      card: { token: 'tok_visa' } as any,
+      card: { token: 'tok_visa' } as unknown,
     });
     await stripe.paymentMethods.attach(pm.id, { customer: customerId });
     await stripe.customers.update(customerId, {

@@ -206,7 +206,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res) => {
     }
 
     const [updated] = await db.update(trainingCertifications)
-      .set(updates as any)
+      .set(updates as unknown)
       .where(and(eq(trainingCertifications.id, req.params.id), eq(trainingCertifications.workspaceId, workspaceId)))
       .returning();
 

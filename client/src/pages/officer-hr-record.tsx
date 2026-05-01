@@ -464,7 +464,7 @@ export default function OfficerHrRecord() {
             <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
               <div className="space-y-1.5">
                 <Label>Subject Type</Label>
-                <Select value={subjectType} onValueChange={(v) => setSubjectType(v as any)}>
+                <Select value={subjectType} onValueChange={(v) => setSubjectType(v as unknown)}>
                   <SelectTrigger data-testid="select-subject-type">
                     <SelectValue />
                   </SelectTrigger>

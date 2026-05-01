@@ -393,7 +393,7 @@ export class GustoIntegration {
           totalGrossPay: totalGross.toFixed(2),
           totalNetPay: totalNet.toFixed(2),
           notes: `Imported from Gusto payroll ${payrollId}`,
-        } as any)
+        } as unknown)
         .returning({ id: payrollRuns.id });
       runId = newRun.id;
     }
@@ -427,7 +427,7 @@ export class GustoIntegration {
             paidPeriodStart: periodStart,
             paidPeriodEnd: periodEnd,
             notes: `Gusto import: payroll ${payrollId}`,
-          } as any)
+          } as unknown)
           .onConflictDoNothing();
         imported++;
       } catch (error) {

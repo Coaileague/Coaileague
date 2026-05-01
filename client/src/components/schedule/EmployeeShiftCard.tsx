@@ -66,7 +66,7 @@ interface EmployeeShiftCardProps {
 }
 
 function resolveEmployeePosition(employee: Employee): PositionDefinition | undefined {
-  const emp = employee as any;
+  const emp = employee as unknown;
   if (emp.position) {
     const byId = getPositionById(emp.position);
     if (byId) return byId;

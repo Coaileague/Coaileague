@@ -732,7 +732,7 @@ router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
       // holds the previousRole we read before the auth checks above.
       const [updatedUser] = await tx.update(users)
         .set({ role, updatedAt: new Date() })
-        .where(and(eq(users.id, userId), eq(users.role, previousRole as any)))
+        .where(and(eq(users.id, userId), eq(users.role, previousRole as unknown)))
         .returning({ id: users.id });
 
       if (!updatedUser) {

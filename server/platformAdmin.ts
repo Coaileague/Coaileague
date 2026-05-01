@@ -492,10 +492,10 @@ export async function getPlatformUsers(req: Request, res: Response) {
     const platformUsers = await db
       .select({
         user: users,
-        platformRole: (platformRoles as any)
+        platformRole: (platformRoles as unknown)
       })
       .from(users)
-      .innerJoin((platformRoles as any), eq(users.id, (platformRoles as Record<string,unknown>).userId))
+      .innerJoin((platformRoles as unknown), eq(users.id, (platformRoles as Record<string,unknown>).userId))
       .orderBy(desc(users.createdAt));
 
     res.json(platformUsers.map(({ user, platformRole }: unknown) => ({

@@ -103,7 +103,7 @@ export class MonitorRegistry {
       .values({
         workspaceId: params.workspaceId,
         scope: params.scope,
-        monitoringType: params.monitoringType as any,
+        monitoringType: params.monitoringType as unknown,
         targetEntityType: params.targetEntityType,
         targetEntityId: params.targetEntityId || '',
         configuration: params.configuration || {},
@@ -172,7 +172,7 @@ export class MonitorRegistry {
         consecutiveFailures,
         failureReason: reason,
         lastRunStatus: 'failed',
-        status: newStatus as any,
+        status: newStatus as unknown,
         updatedAt: new Date(),
       })
       .where(eq(aiMonitoringTasks.id, taskId));

@@ -171,7 +171,7 @@ class ReinforcementLearningLoop {
             confidenceLevel: 0.5,
             contextFactors: dbExp.context || {},
           },
-          outcome: dbExp.outcome as any,
+          outcome: dbExp.outcome as unknown,
           reward: parseFloat(dbExp.reward || '0'),
           humanIntervention: dbExp.humanValidated || false,
           contextWindow: dbExp.context || {},

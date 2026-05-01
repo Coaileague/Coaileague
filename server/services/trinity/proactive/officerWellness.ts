@@ -359,7 +359,7 @@ async function sendCheckInSms(c: WellnessCandidate): Promise<boolean> {
         description: `Sent wellness SMS to ${c.firstName ?? 'officer'} after ${hours}h shift.`,
         severity: 'low',
         metadata: { timeEntryId: c.timeEntryId, employeeId: c.employeeId, hoursWorked: hours },
-      } as any);
+      } as unknown);
     } catch (err: unknown) {
       log.warn('[officerWellness] event publish failed (non-fatal):', err?.message);
     }

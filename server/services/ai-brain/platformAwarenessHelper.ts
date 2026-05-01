@@ -108,7 +108,7 @@ export function notifyTrinity(
           resourceType,
           workspaceId,
           source: 'trinity_awareness_gateway',
-        } as any);
+        } as unknown);
       }
     } catch {
       // Silent failure — never disrupt the main flow

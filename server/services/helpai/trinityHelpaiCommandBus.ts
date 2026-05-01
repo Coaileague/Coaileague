@@ -238,7 +238,7 @@ class TrinityHelpAICommandBus {
                 message: `Critical command bus item requires immediate attention: ${(payload as unknown as EscalationPayload).issue_summary || payload.description || 'Review queued items'}`,
                 severity: 'critical',
                 source: 'helpai_command_bus',
-              } as any);
+              } as unknown);
             }
           }
         }
@@ -283,7 +283,7 @@ class TrinityHelpAICommandBus {
           'Critical item on command bus — immediate review required',
         severity: 'critical',
         source: 'helpai_command_bus',
-      } as any);
+      } as unknown);
     }
 
     await this.markReceived(item.id);

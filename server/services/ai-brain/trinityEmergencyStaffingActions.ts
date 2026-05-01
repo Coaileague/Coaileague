@@ -201,7 +201,7 @@ export function registerEmergencyStaffingActions() {
         severity: 'critical',
         targetRoles: [], // We use targetUserIds below
         metadata: { incidentId, source: 'trinity_emergency', isEmergency: true }
-      } as any);
+      } as unknown);
       
       // The universalNotificationEngine.sendNotification doesn't take multiple userIds easily in the current schema without a role
       // So we might need to loop or use a specialized channel if it supported it.
@@ -323,7 +323,7 @@ export function registerEmergencyStaffingActions() {
     await db.update(orchestrationRuns)
       .set({
         status: 'completed',
-        outputResult: { resolution, resolvedAt: new Date().toISOString() } as any,
+        outputResult: { resolution, resolvedAt: new Date().toISOString() } as unknown,
         completedAt: new Date(),
         updatedAt: new Date(),
       })

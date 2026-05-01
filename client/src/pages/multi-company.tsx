@@ -54,7 +54,7 @@ interface Subsidiary {
   created_at: string;
   workspace_id: string;
   name: string;
-  config: any;
+  config: Record<string, unknown>;
 }
 
 interface ConsolidatedMetric {

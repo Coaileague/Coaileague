@@ -1413,7 +1413,7 @@ router.get("/api/orchestration/dashboard", requireAuth, async (req: Authenticate
         and(
           eq(orchestrationOverlays.workspaceId, workspaceId),
           gte(orchestrationOverlays.createdAt, twentyFourHoursAgo),
-          inArray(orchestrationOverlays.phase, terminalPhases as any)
+          inArray(orchestrationOverlays.phase, terminalPhases as unknown)
         )
       )
       .orderBy(desc(orchestrationOverlays.completedAt))

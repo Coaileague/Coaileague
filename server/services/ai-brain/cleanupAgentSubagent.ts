@@ -317,7 +317,7 @@ class CleanupAgentSubagent {
     const matches: (string | number | boolean | null)[] = [];
 
     for (const [id, component] of Object.entries(components)) {
-      const comp = component as any;
+      const comp = component as unknown;
       if (
         id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         comp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -347,7 +347,7 @@ class CleanupAgentSubagent {
     let totalFiles = 0;
 
     for (const component of Object.values(components)) {
-      const comp = component as any;
+      const comp = component as unknown;
       if (comp.tier && byTier[comp.tier] !== undefined) {
         byTier[comp.tier]++;
       }

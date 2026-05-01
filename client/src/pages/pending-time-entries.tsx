@@ -467,7 +467,7 @@ export default function PendingTimeEntries() {
                               {entry.client ? (
                                 <div className="flex items-center gap-2">
                                   <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                                  <span>{(entry.client as any).companyName || `${(entry.client as any).firstName || ''} ${(entry.client as any).lastName || ''}`.trim() || 'Unknown Client'}</span>
+                                  <span>{(entry.client as unknown).companyName || `${(entry.client as unknown).firstName || ''} ${(entry.client as unknown).lastName || ''}`.trim() || 'Unknown Client'}</span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
@@ -663,7 +663,7 @@ export default function PendingTimeEntries() {
                 </p>
                 {selectedEntry.client && (
                   <p className="text-sm">
-                    Client: {(selectedEntry.client as any).companyName || `${(selectedEntry.client as any).firstName || ''} ${(selectedEntry.client as any).lastName || ''}`.trim() || 'Unknown Client'}
+                    Client: {(selectedEntry.client as unknown).companyName || `${(selectedEntry.client as unknown).firstName || ''} ${(selectedEntry.client as unknown).lastName || ''}`.trim() || 'Unknown Client'}
                   </p>
                 )}
               </div>

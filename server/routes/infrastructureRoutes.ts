@@ -537,7 +537,7 @@ router.get('/health-check/services', (req: Request, res: Response) => {
   try {
     const status = req.query.status as string | undefined;
     if (status) {
-      const services = healthCheckAggregation.getServicesByStatus(status as any);
+      const services = healthCheckAggregation.getServicesByStatus(status as unknown);
       res.json({ success: true, data: services });
     } else {
       const aggregate = healthCheckAggregation.getAggregateHealth();
@@ -760,7 +760,7 @@ router.get('/launch/readiness/stats', (req: Request, res: Response) => {
 router.get('/launch/readiness/checks', (req: Request, res: Response) => {
   try {
     const category = req.query.category as string | undefined;
-    const checks = launchReadinessService.getChecks(category as any);
+    const checks = launchReadinessService.getChecks(category as unknown);
     res.json({ success: true, data: checks });
   } catch (error: unknown) {
     res.status(500).json({ success: false, error: sanitizeError(error) });

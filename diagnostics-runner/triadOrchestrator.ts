@@ -255,8 +255,8 @@ export class TriadOrchestrator {
       highCount,
       mediumCount,
       lowCount,
-      bySubsystem: bySubsystem as any,
-      byCrawler: byCrawler as any,
+      bySubsystem: bySubsystem as unknown,
+      byCrawler: byCrawler as unknown,
       readinessScore,
       blockers
     };

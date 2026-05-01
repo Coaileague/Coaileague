@@ -321,7 +321,7 @@ function StaffTab() {
   const selected = all.find(p => p.id === selectedId);
 
   const selectedDocIds = new Set(
-    REGULATORY_KEYS.map(({ key }) => (selected?.completeness[key]?.doc as any)?.id).filter(Boolean)
+    REGULATORY_KEYS.map(({ key }) => (selected?.completeness[key]?.doc as unknown)?.id).filter(Boolean)
   );
 
   return (

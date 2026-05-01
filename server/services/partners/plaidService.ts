@@ -221,7 +221,7 @@ export async function initiateTransfer(opts: {
 
   const authorization = authResponse.data.authorization;
   if (authorization.decision !== 'approved') {
-    const rationale = authorization.decision_rationale as any;
+    const rationale = authorization.decision_rationale as unknown;
     throw new Error(`Transfer authorization declined: ${rationale?.description || authorization.decision}`);
   }
 
@@ -374,7 +374,7 @@ export async function verifyPlaidWebhookJwt(token: string | undefined): Promise<
     if (!cached || cached.expiresAt < Date.now()) {
       const client = buildClient();
       const keyResponse = await client.webhookVerificationKeyGet({ key_id: kid });
-      const jwk = keyResponse.data.key as any;
+      const jwk = keyResponse.data.key as unknown;
       const key = await importJWK(jwk, header.alg || 'RS256');
       cached = { key, expiresAt: Date.now() + 5 * 60 * 1000 };
       _jwkCache.set(kid, cached);

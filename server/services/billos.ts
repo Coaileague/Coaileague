@@ -113,7 +113,7 @@ class SmartBillingService {
 
   async publishBillingEvent(type: string, workspaceId: string, metadata: Record<string, unknown>) {
     await platformEventBus.publish({
-      type: type as any,
+      type: type as unknown,
       category: 'automation',
       title: `Smart Billing: ${type}`,
       description: `Billing event: ${type}`,

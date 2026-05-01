@@ -81,7 +81,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     }
 
-    if (parsed.data.stage && !VALID_STAGES.includes(parsed.data.stage as any)) {
+    if (parsed.data.stage && !VALID_STAGES.includes(parsed.data.stage as unknown)) {
       return res.status(400).json({ error: `Invalid stage: ${parsed.data.stage}. Must be one of: ${VALID_STAGES.join(', ')}` });
     }
 

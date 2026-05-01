@@ -331,7 +331,7 @@ function WorkspaceDrawer({
               <CardContent className="space-y-3">
                 <div>
                   <Label>Severity</Label>
-                  <Select value={severity} onValueChange={(v) => setSeverity(v as any)}>
+                  <Select value={severity} onValueChange={(v) => setSeverity(v as unknown)}>
                     <SelectTrigger data-testid="select-flag-severity"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="info">Info</SelectItem>

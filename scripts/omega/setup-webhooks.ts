@@ -66,7 +66,7 @@ async function setupStripeWebhook(secretKey: string, label: string): Promise<voi
 
   try {
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' as any });
+    const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' as unknown });
 
     const existing = await stripe.webhookEndpoints.list({ limit: 100 });
     const found = existing.data.find(e => e.url === endpointUrl);

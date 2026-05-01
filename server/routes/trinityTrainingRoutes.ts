@@ -87,7 +87,7 @@ router.post('/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     const { scenarioSeederService } = await import('../services/training/scenarioSeeder');
-    const result = await scenarioSeederService.seedScenario(workspaceId, difficulty as any);
+    const result = await scenarioSeederService.seedScenario(workspaceId, difficulty as unknown);
 
     res.json({
       success: true,

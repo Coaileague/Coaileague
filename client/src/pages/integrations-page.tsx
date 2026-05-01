@@ -38,7 +38,7 @@ interface PartnerConnection {
   lastSyncedAt: Date | null;
   accessTokenExpiresAt: Date | null;
   refreshTokenExpiresAt: Date | null;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 interface HRISProvider {

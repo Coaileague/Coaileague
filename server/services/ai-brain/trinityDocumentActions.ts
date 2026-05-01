@@ -75,7 +75,7 @@ export function registerTrinityDocumentActions(orchestrator: { registerAction: (
             description: `Trinity generated from template ${templateId} for ${recipientType} ${recipientId}`,
             requiresSignature: false,
             isActive: true,
-            accessConfig: { templateId, recipientId, recipientType, mergeData, generatedByTrinity: true } as any,
+            accessConfig: { templateId, recipientId, recipientType, mergeData, generatedByTrinity: true } as unknown,
           })
           .returning({ id: orgDocuments.id });
 

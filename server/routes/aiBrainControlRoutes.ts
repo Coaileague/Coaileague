@@ -135,7 +135,7 @@ router.get('/workflows', requirePlatformStaff, async (req: Request, res: Respons
   try {
     const { status, limit = '50' } = req.query;
     const workflows = await workflowLedger.getRecentRuns({
-      status: status as any,
+      status: status as unknown,
       limit: Math.min(Math.max(1, parseInt(limit as string) || 50), 200),
     });
     res.json({ workflows });

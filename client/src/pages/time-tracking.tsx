@@ -1064,7 +1064,7 @@ export default function TimeTracking() {
                 ...(canApprove && !isSimpleMode ? [{ id: 'reports', label: 'Reports' }] : []),
               ]}
               activeTab={view}
-              onTabChange={(id) => setView(id as any)}
+              onTabChange={(id) => setView(id as unknown)}
             />
           </div>
         </div>

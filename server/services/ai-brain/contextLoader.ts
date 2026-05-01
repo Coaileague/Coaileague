@@ -85,7 +85,7 @@ export class ContextLoader {
 
     // Load from database
     const conditions = [
-      eq(aiContext.monitoringType, params.featureKey as any),
+      eq(aiContext.monitoringType, params.featureKey as unknown),
     ];
 
     if (params.workspaceId !== undefined) {
@@ -214,7 +214,7 @@ export class ContextLoader {
       .values({
         workspaceId,
         scope,
-        monitoringType: params.monitoringType as any,
+        monitoringType: params.monitoringType as unknown,
         contextKey: params.contextKey,
         entityType: params.entityType,
         entityId,

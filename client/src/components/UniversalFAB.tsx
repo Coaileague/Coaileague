@@ -231,7 +231,7 @@ export function UniversalFAB() {
     if (isClockedIn) { clockMutation.mutate("out"); return; }
     if (eligibility && !eligibility.canClockIn) {
       if (eligibility.reason === "no_shift") {
-        toast({ title: "No Shift Today", description: "You are not scheduled to work today.", variant: "destructive" } as any);
+        toast({ title: "No Shift Today", description: "You are not scheduled to work today.", variant: "destructive" } as unknown);
       } else if (eligibility.reason === "too_early") {
         const shiftTime = eligibility.shiftStartTime
           ? new Date(eligibility.shiftStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })

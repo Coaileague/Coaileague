@@ -1020,7 +1020,7 @@ export function trinityOrchestrationMiddleware() {
         notifyTrinity(
           workspaceId,
           resourceType,
-          operation as any,
+          operation as unknown,
           trinitySource,
           {
             resourceId: (res as Record<string, unknown>).responseData?.id

@@ -150,7 +150,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       ) RETURNING *
     `);
     
-    const accessId = (result[0] as any)?.id;
+    const accessId = (result[0] as unknown)?.id;
     const shortLivedToken = generateShortLivedToken(accessId);
     
     // CATEGORY C — Raw SQL retained: ::jsonb | Tables: compliance_audit_trail | Verified: 2026-03-23

@@ -253,7 +253,7 @@ class AutomationTriggerService {
           .from(employees)
           .where(and(
             eq(employees.workspaceId, workspaceId),
-            inArray(employees.workspaceRole, ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager'] as any),
+            inArray(employees.workspaceRole, ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager'] as unknown),
             isNotNull(employees.userId),
           ));
 
@@ -279,7 +279,7 @@ class AutomationTriggerService {
           source: 'automation_trigger_service',
           sourceTrustTier: 'workspace',
           signalPayload: { employeeId, employeeName, readyAt: new Date().toISOString() },
-        } as any);
+        } as unknown);
       },
     });
 

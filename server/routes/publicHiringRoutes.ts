@@ -129,7 +129,7 @@ router.post('/:workspaceId/apply', async (req, res) => {
       const posting = postingResult.rows[0] || {};
 
       const result = await screenCandidate(
-        { id, workspaceId } as any,
+        { id, workspaceId } as unknown,
         resumeText,
         posting.position_type || 'unarmed_officer',
         {

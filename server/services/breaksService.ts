@@ -697,7 +697,7 @@ export async function updateWorkspaceJurisdiction(
   }
   const [updated] = await db
     .update(workspaces)
-    .set(updates as any)
+    .set(updates as unknown)
     .where(eq(workspaces.id, workspaceId))
     .returning();
 

@@ -55,7 +55,7 @@ async function verifyStripe(secretKey: string, label: string): Promise<void> {
 
   try {
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' as any });
+    const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' as unknown });
 
     const endpoints = await stripe.webhookEndpoints.list({ limit: 100 });
     const found = endpoints.data.find(e => e.url === targetUrl);

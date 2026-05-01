@@ -582,7 +582,7 @@ router.post("/forms/:formId/submissions/:submissionId/submit", async (req: Authe
     });
 
     // Notify the approver if routing rules specify one
-    const routingRules = form.routingRules as any;
+    const routingRules = form.routingRules as unknown;
     if (routingRules?.approverUserId) {
       try {
         await NotificationDeliveryService.send({

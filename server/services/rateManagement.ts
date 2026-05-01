@@ -234,7 +234,7 @@ export async function updateEmployeeRate(employeeId: string, hourlyRate: number,
         delta: (hourlyRate - parseFloat(String(previousRate || '0'))).toFixed(2),
       },
       ipAddress: 'system',
-    } as any);
+    } as unknown);
   });
 
   // Notify the employee their pay rate was updated

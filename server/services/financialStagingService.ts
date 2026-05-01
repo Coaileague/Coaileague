@@ -580,7 +580,7 @@ export async function addPayrollAdjustment(
 
     await tx.update(payrollEntries)
       .set({
-        adjustments: updatedAdjustments as any,
+        adjustments: updatedAdjustments as unknown,
         netPay: netPayForDB,
         updatedAt: new Date(),
         notes: `${entry.notes || ''}\n[ADJUSTMENT ${adjustment.id} ${adjustment.addedAt}] ${kind} '${label}' ${adjustment.amount} by ${addedBy}${reason ? ` — ${reason}` : ''}`,

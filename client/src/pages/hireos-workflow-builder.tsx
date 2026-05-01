@@ -231,7 +231,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
               <Label>Custom Form Template (ReportOS™ Integration)</Label>
               <Select
                 value={(formData.customFormTemplateId as unknown as string) || ''}
-                onValueChange={(value) => setFormData({ ...formData, customFormTemplateId: value as any })}
+                onValueChange={(value) => setFormData({ ...formData, customFormTemplateId: value as unknown })}
               >
                 <SelectTrigger data-testid="select-custom-form">
                   <SelectValue placeholder="Select a custom form template" />
@@ -283,7 +283,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
                         value={(formData.conditionalLogic as unknown)?.field || ''}
                         onValueChange={(value) => setFormData({
                           ...formData,
-                          conditionalLogic: { ...(formData.conditionalLogic || {}), field: value } as any
+                          conditionalLogic: { ...(formData.conditionalLogic || {}), field: value } as unknown
                         })}
                       >
                         <SelectTrigger data-testid="select-condition-field">
@@ -303,7 +303,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
                         value={(formData.conditionalLogic as unknown)?.operator || 'equals'}
                         onValueChange={(value) => setFormData({
                           ...formData,
-                          conditionalLogic: { ...(formData.conditionalLogic || {}), operator: value } as any
+                          conditionalLogic: { ...(formData.conditionalLogic || {}), operator: value } as unknown
                         })}
                       >
                         <SelectTrigger>
@@ -323,7 +323,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
                         value={(formData.conditionalLogic as unknown)?.value || ''}
                         onChange={(e) => setFormData({
                           ...formData,
-                          conditionalLogic: { ...(formData.conditionalLogic || {}), value: e.target.value } as any
+                          conditionalLogic: { ...(formData.conditionalLogic || {}), value: e.target.value } as unknown
                         })}
                         data-testid="input-condition-value"
                       />

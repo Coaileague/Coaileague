@@ -184,7 +184,7 @@ export async function synthesizeStripeInvoiceWebhook(
     const { stripeWebhookService } = await import('../billing/stripeWebhooks');
     // The class exposes `handleEvent(event)` which dedupes via DB; we call
     // directly to avoid the live signing key requirement.
-    const result = await stripeWebhookService.handleEvent(payload as any);
+    const result = await stripeWebhookService.handleEvent(payload as unknown);
     handlerOk = result.success && result.handled;
     handlerMsg = result.message || result.error || 'no message';
   } catch (err: unknown) {

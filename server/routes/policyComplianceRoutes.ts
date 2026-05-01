@@ -403,7 +403,7 @@ router.post("/compliance-reports/generate", requireManager, async (req: Authenti
 
     const [report] = await db.insert(complianceReports).values({
       workspaceId,
-      reportType: reportType as any,
+      reportType: reportType as unknown,
       reportTitle: catalog.name,
       description: catalog.description,
       periodStart,

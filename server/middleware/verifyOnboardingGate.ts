@@ -48,11 +48,11 @@ export async function verifyOnboardingGate(
   next: NextFunction
 ): Promise<void> {
   // Only applies to authenticated sessions
-  const userId = (req.session as any)?.userId;
+  const userId = (req.session as unknown)?.userId;
   if (!userId) return next();
 
   // Only applies to client-role users
-  const userRole = req.user?.role || (req.session as any)?.role;
+  const userRole = req.user?.role || (req.session as unknown)?.role;
   if (userRole !== 'client') return next();
 
   // Allow exempt routes through

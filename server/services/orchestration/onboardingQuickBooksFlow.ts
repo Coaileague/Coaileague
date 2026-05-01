@@ -737,7 +737,7 @@ class OnboardingQuickBooksFlow {
       if (existing) {
         await db.update(quickbooksOnboardingFlows)
           .set({
-            stage: flow.stage as any,
+            stage: flow.stage as unknown,
             connectionId: flow.connectionId,
             realmId: flow.realmId,
             syncJobId: flow.syncJobId,
@@ -756,7 +756,7 @@ class OnboardingQuickBooksFlow {
           id: flow.flowId,
           workspaceId: flow.workspaceId,
           userId: flow.userId,
-          stage: flow.stage as any,
+          stage: flow.stage as unknown,
           connectionId: flow.connectionId,
           realmId: flow.realmId,
           syncJobId: flow.syncJobId,

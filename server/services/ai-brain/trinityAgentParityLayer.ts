@@ -241,7 +241,7 @@ class TrinityAgentParityLayer {
     
     const goalLower = context.goal.toLowerCase();
     for (const [id, component] of Object.entries(components)) {
-      const comp = component as any;
+      const comp = component as unknown;
       const matchesIntent = comp.intent?.toLowerCase().includes(goalLower) ||
                            comp.name?.toLowerCase().includes(goalLower);
       

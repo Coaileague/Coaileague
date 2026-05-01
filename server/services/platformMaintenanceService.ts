@@ -345,7 +345,7 @@ class PlatformMaintenanceService {
           type: 'system',
         title: 'Support Audit',
         message,
-        severity: this.getActionSeverity(event.action) as any,
+        severity: this.getActionSeverity(event.action) as unknown,
         targetRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         metadata: {
           auditEvent: event,

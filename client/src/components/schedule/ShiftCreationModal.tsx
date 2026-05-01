@@ -166,7 +166,7 @@ export function ShiftCreationModal({
       startTime,
       endTime,
       workspaceId: workspaceId!,
-    } as any);
+    } as unknown);
     onCreateShift();
   });
 

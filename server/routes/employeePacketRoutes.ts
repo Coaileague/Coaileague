@@ -37,7 +37,7 @@ employeePacketRouter.post('/', async (req: AuthenticatedRequest, res) => {
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
 
     const token = randomUUID();
-    const docType = `employee_packet_${input.packetType === 'contractor' ? 'unarmed' : input.packetType}` as any;
+    const docType = `employee_packet_${input.packetType === 'contractor' ? 'unarmed' : input.packetType}` as unknown;
     const docTitle = PACKET_DISPLAY[input.packetType];
 
     const [packet] = await db.insert(documentSignatures).values({

@@ -967,7 +967,7 @@ router.post(
         .where(and(
           eq(employeeDocuments.workspaceId, workspaceId),
           eq(employeeDocuments.employeeId, 'company'),
-          eq(employeeDocuments.documentType, docKey as any),
+          eq(employeeDocuments.documentType, docKey as unknown),
         ))
         .limit(1);
 
@@ -992,7 +992,7 @@ router.post(
           id: crypto.randomUUID(),
           workspaceId,
           employeeId: 'company',
-          documentType: docKey as any,
+          documentType: docKey as unknown,
           documentName: docLabel || docKey,
           fileUrl,
           fileSize: req.file.size,

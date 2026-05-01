@@ -100,7 +100,7 @@ export default function EmployeeComplianceDetail() {
     enabled: !!employeeId,
   });
 
-  const { data: recordsData, isLoading: recordsLoading } = useQuery<{ success: boolean; records: { record: ComplianceRecord; state: any }[] }>({
+  const { data: recordsData, isLoading: recordsLoading } = useQuery<{ success: boolean; records: { record: ComplianceRecord; state: Record<string, unknown> }[] }>({
     queryKey: ['/api/security-compliance/records/employee', employeeId],
     enabled: !!employeeId,
   });

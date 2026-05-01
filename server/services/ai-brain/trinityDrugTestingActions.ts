@@ -134,7 +134,7 @@ export function registerDrugTestingActions() {
     await db.update(orchestrationRuns)
       .set({
         status: result === 'passed' ? 'completed' : 'failed',
-        inputParams: updatedParams as any,
+        inputParams: updatedParams as unknown,
         updatedAt: new Date(),
         completedAt: new Date()
       })

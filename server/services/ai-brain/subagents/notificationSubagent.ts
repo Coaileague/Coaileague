@@ -500,7 +500,7 @@ class NotificationSubagentService {
       // Always deliver in-app via UniversalNotificationEngine for Trinity AI enrichment and validation
       if (tier.channels.includes('in_app')) {
         await universalNotificationEngine.sendNotification({
-          type: payload.type as any,
+          type: payload.type as unknown,
           title: payload.title,
           message: payload.message,
           workspaceId,

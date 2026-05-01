@@ -1104,7 +1104,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
         const { handleEmploymentVerificationEmail } = await import(
           '../services/trinity/employmentVerificationService'
         );
-        await handleEmploymentVerificationEmail(inboundEmail as any, slug, workspaceId);
+        await handleEmploymentVerificationEmail(inboundEmail as unknown, slug, workspaceId);
       } catch (verifyErr: unknown) {
         log.warn('[Resend Inbound] Employment verification handler failed (non-fatal):', verifyErr?.message);
       }

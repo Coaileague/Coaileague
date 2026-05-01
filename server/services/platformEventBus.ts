@@ -702,7 +702,7 @@ class PlatformEventBus {
       const result = await notificationEngine.sendPlatformUpdate({
         title: event.title,
         description: event.description,
-        category: event.category as any,
+        category: event.category as unknown,
         workspaceId: event.workspaceId,
         priority: event.priority || 1,
         learnMoreUrl: event.learnMoreUrl,

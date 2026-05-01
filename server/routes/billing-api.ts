@@ -34,7 +34,7 @@ import '../types';
 // Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing.
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
-    return (getStripe() as any)[prop];
+    return (getStripe() as unknown)[prop];
   },
 });
 
@@ -59,7 +59,7 @@ billingRouter.use(async (req, res, next) => {
   const authReq = req as AuthenticatedRequest;
   const runMiddleware = (mw: RequestHandler) =>
     new Promise<void>((resolve, reject) => {
-      (mw as any)(req, res, (err: unknown) => (err ? reject(err) : resolve()));
+      (mw as unknown)(req, res, (err: unknown) => (err ? reject(err) : resolve()));
     });
 
   try {

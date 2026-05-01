@@ -27,7 +27,7 @@ const log = createLogger('stripeConnectPayoutService');
 // Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing (CLAUDE.md §F).
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
-    return (getStripe() as any)[prop];
+    return (getStripe() as unknown)[prop];
   },
 });
 

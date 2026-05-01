@@ -279,7 +279,7 @@ async function notify(flag: PreShiftFlag, shift: UpcomingShift): Promise<boolean
         code: flag.code,
         details: flag.details ?? null,
       },
-    } as any);
+    } as unknown);
   } catch (err: unknown) {
     log.warn('[preShiftIntel] event publish failed (non-fatal):', err?.message);
   }

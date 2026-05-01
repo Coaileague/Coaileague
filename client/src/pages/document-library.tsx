@@ -433,7 +433,7 @@ function SendForSignatureDialog({
 
   const updateRecipient = (index: number, field: keyof RecipientEntry, value: string) => {
     const updated = [...recipients];
-    (updated[index] as any)[field] = value;
+    (updated[index] as unknown)[field] = value;
     setRecipients(updated);
   };
 

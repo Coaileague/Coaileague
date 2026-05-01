@@ -638,7 +638,7 @@ Return ONLY valid JSON (no markdown):
 
         const rateContext = resolveInvoiceRate(params.client, params.timeEntries);
         const clientContractRate = parseDecimal(params.client.contractRate);
-        const clientBillableRate = parseDecimal((params.client as any).billableHourlyRate);
+        const clientBillableRate = parseDecimal((params.client as unknown).billableHourlyRate);
 
         const prompt = `You are an invoicing AI for CoAIleague. Generate an invoice for client services:
 

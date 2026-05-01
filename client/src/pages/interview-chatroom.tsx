@@ -310,7 +310,7 @@ export default function InterviewChatroomPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      sendMessage(e as any);
+                      sendMessage(e as unknown);
                     }
                   }}
                 />

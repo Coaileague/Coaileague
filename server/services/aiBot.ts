@@ -22,7 +22,7 @@ function getOpenAI(): OpenAI {
 }
 const openai = new Proxy({} as OpenAI, {
   get(_t, prop) {
-    return (getOpenAI() as any)[prop];
+    return (getOpenAI() as unknown)[prop];
   },
 });
 

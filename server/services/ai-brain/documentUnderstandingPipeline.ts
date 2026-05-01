@@ -694,7 +694,7 @@ Only include fields where data was found. Estimate confidence based on data clar
         action: `document_pipeline:${action}`,
         entityType: 'document_pipeline',
         entityId: pipelineId,
-        changes: { ...data } as any,
+        changes: { ...data } as unknown,
         createdAt: new Date()
       });
     } catch (error) {

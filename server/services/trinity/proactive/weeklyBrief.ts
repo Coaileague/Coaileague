@@ -147,7 +147,7 @@ export async function sendWeeklyBriefForWorkspace(
       description: body.split('\n')[0],
       severity: 'low',
       metadata: { workflow: WORKFLOW_NAME, snapshot: snap, triggerSource },
-    } as any);
+    } as unknown);
   } catch (err: unknown) {
     log.warn('[weeklyBrief] event publish failed (non-fatal):', err?.message);
   }

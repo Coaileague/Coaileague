@@ -356,7 +356,7 @@ export async function triggerEmergencyProtocol(ctx: EmergencyContext): Promise<{
         severity: 'critical',
         actionUrl: `/helpdesk?conversation=${ctx.conversationId}`,
         source: 'helpai_emergency',
-      } as any);
+      } as unknown);
     }
   } catch (err) {
     log.error('[HelpAI:Emergency] Notification failed:', err);

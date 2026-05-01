@@ -286,7 +286,7 @@ export async function anonymizeEmployeeData(
         // photo and SSN
         profilePhotoUrl: null,
         ssnLast4: null,
-      } as any)
+      } as unknown)
       .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
     totalRows += empResult.rowCount || 0;
 

@@ -223,7 +223,7 @@ export function registerPermissionManagementActions(): void {
 
       await db
         .update(employees)
-        .set({ workspaceRole: workspaceRole as any })
+        .set({ workspaceRole: workspaceRole as unknown })
         .where(eq(employees.id, userId));
 
       broadcastToWorkspace(workspaceId, {

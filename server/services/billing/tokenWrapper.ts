@@ -40,7 +40,7 @@ export async function withTokens<T>(
     return { success: true, result, tokensUsed: 0, usageEventId: null };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    log.error({ options, err } as any, 'withTokens fn threw');
+    log.error({ options, err } as unknown, 'withTokens fn threw');
     return { success: false, error: msg };
   }
 }

@@ -174,7 +174,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
         try {
           const raw = run.workerTypeBreakdown;
           if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-            currentBreakdown = { ...(raw as any) };
+            currentBreakdown = { ...(raw as unknown) };
           }
         } catch { /* leave as {} */ }
 

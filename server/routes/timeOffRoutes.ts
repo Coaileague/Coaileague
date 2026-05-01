@@ -141,7 +141,7 @@ router.patch("/api/pto/:id/approve", requireAuth, requireManager, async (req: Au
     }
 
     // Cascade: cancel overlapping shifts for the approved PTO window
-    const pto = approved as any;
+    const pto = approved as unknown;
     if (pto.employeeId && pto.startDate && pto.endDate) {
       await db.update(shifts)
         .set({ status: 'cancelled' } as Record<string, unknown>)

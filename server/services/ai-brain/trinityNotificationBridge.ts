@@ -305,7 +305,7 @@ class TrinityNotificationBridge {
     const staffWithRoles = await db.select({ userId: platformRoles.userId })
       .from(platformRoles)
       .where(
-        inArray(platformRoles.role, supportRoles as any)
+        inArray(platformRoles.role, supportRoles as unknown)
       );
 
     const userIds = staffWithRoles.map(r => r.userId);

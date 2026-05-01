@@ -298,7 +298,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
           // Mark as declined
           const currentMeta = (offerNotif as Record<string,unknown>).metadata || {};
           await db.update(notifications)
-            .set({ metadata: { ...currentMeta, status: 'declined', declinedAt: new Date().toISOString(), declinedVia: 'sms' } } as any)
+            .set({ metadata: { ...currentMeta, status: 'declined', declinedAt: new Date().toISOString(), declinedVia: 'sms' } } as unknown)
             .where(eq(notifications.id, offerNotif.id));
 
           platformEventBus.emit('shift_offer_declined', {

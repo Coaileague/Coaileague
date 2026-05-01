@@ -632,7 +632,7 @@ export default function GoLivePage() {
             title={step.title}
             description={step.description}
             icon={step.icon}
-            status={step.status as any}
+            status={step.status as unknown}
             expanded={expandedStep === step.id}
             onToggle={() => toggle(step.id)}
             detail={step.detail}

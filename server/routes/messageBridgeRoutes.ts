@@ -41,7 +41,7 @@ webhookRouter.post("/api/bridges/webhook/:channelType/:bridgeId", async (req, re
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const bridge = await messageBridgeService.findBridgeByWebhookSecret(secret, channelType as any);
+    const bridge = await messageBridgeService.findBridgeByWebhookSecret(secret, channelType as unknown);
     if (!bridge || bridge.id !== bridgeId) {
       log.warn("Webhook auth failed: invalid secret or bridge mismatch", { channelType, bridgeId });
       return res.status(401).json({ error: "Unauthorized" });

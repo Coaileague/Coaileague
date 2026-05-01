@@ -63,7 +63,7 @@ export async function softDelete(params: SoftDeleteParams): Promise<void> {
         whereSql: (where as Record<string,unknown>).toString?.() ?? null,
       },
       createdAt: new Date(),
-    } as any);
+    } as unknown);
   } catch (auditErr : unknown) {
     log.warn('[softDelete] Audit log write failed (non-fatal):', auditErr?.message);
   }

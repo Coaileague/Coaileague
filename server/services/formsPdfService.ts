@@ -382,7 +382,7 @@ export interface CustomFormPdfOptions {
 
 export async function generateCustomFormPdf(opts: CustomFormPdfOptions): Promise<Buffer> {
   const { form, submission, signatures = [] } = opts;
-  const template = form.template as any;
+  const template = form.template as unknown;
   const fields: Array<{ id?: string; label: string; type: string }> = template?.fields || [];
   const formData = submission.formData as Record<string, unknown> || {};
 
@@ -433,7 +433,7 @@ export async function generateCustomFormPdf(opts: CustomFormPdfOptions): Promise
     }
 
     // ── Signature block ─────────────────────────────────────────────────────
-    const sigData = submission.signatureData as any;
+    const sigData = submission.signatureData as unknown;
     const hasDrawnSig = sigData?.drawn && typeof sigData.drawn === 'string' && sigData.drawn.startsWith('data:image');
     const typedName = sigData?.name || sigData?.typedName;
 

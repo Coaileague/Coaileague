@@ -46,7 +46,7 @@ async function wasAlertRecentlySent(
       and(
         eq(notifications.workspaceId, workspaceId),
         eq(notifications.userId, userId),
-        eq(notifications.type, `shift_escalation_${level}` as any),
+        eq(notifications.type, `shift_escalation_${level}` as unknown),
         eq(notifications.relatedEntityId, shiftId),
         gte(notifications.createdAt, cutoff),
       )

@@ -560,7 +560,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
                     <Label>Conflict Resolution</Label>
                     <Select
                       value={conflictResolution}
-                      onValueChange={(v) => setConflictResolution(v as any)}
+                      onValueChange={(v) => setConflictResolution(v as unknown)}
                     >
                       <SelectTrigger data-testid="select-conflict-resolution">
                         <SelectValue />

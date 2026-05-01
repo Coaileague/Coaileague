@@ -208,7 +208,7 @@ router.get("/pending", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { id?: string };
     const [adminRole] = await db.select({ role: platformRoles.role }).from(platformRoles)
-      .where(and(eq(platformRoles.userId, user.id || ''), inArray(platformRoles.role, ['root_admin', 'deputy_admin'] as any), isNull(platformRoles.revokedAt))).limit(1);
+      .where(and(eq(platformRoles.userId, user.id || ''), inArray(platformRoles.role, ['root_admin', 'deputy_admin'] as unknown), isNull(platformRoles.revokedAt))).limit(1);
     if (!adminRole) {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -226,7 +226,7 @@ router.post("/:id/publish", requireAuth, async (req: Request, res: Response) => 
   try {
     const user = req.user as { id?: string };
     const [adminRole] = await db.select({ role: platformRoles.role }).from(platformRoles)
-      .where(and(eq(platformRoles.userId, user.id || ''), inArray(platformRoles.role, ['root_admin', 'deputy_admin'] as any), isNull(platformRoles.revokedAt))).limit(1);
+      .where(and(eq(platformRoles.userId, user.id || ''), inArray(platformRoles.role, ['root_admin', 'deputy_admin'] as unknown), isNull(platformRoles.revokedAt))).limit(1);
     if (!adminRole) {
       return res.status(403).json({ error: "Admin access required" });
     }

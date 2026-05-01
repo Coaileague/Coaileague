@@ -71,7 +71,7 @@ async function logEscalation(
   try {
     await universalAudit({
       workspaceId,
-      action: `invoice.collections_tier${tier}` as any,
+      action: `invoice.collections_tier${tier}` as unknown,
       entityType: 'invoice',
       entityId: invoiceId,
       metadata: {

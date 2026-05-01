@@ -276,11 +276,11 @@ async function populateDemoData() {
       employeeId: shift.employeeId,
       clientId: shift.clientId,
       title: shift.title,
-      category: shift.category as any,
+      category: shift.category as unknown,
       description: `${shift.category.replace('_', ' ')} shift`,
       startTime: shiftStart,
       endTime: shiftEnd,
-      status: shift.status as any,
+      status: shift.status as unknown,
       aiGenerated: false,
       contractRate: clientRateMap.get(shift.clientId) || '40.00',
     }).returning();

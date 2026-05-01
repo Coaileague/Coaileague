@@ -30,7 +30,7 @@ function getOverageRate(tier: TierKey): number {
 // Lazy proxy avoids module-load crash when STRIPE_SECRET_KEY is missing.
 const stripe = new Proxy({} as Stripe, {
   get(_t, prop) {
-    return (getStripe() as any)[prop];
+    return (getStripe() as unknown)[prop];
   },
 });
 

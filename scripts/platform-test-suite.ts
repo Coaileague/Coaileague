@@ -239,7 +239,7 @@ const subagentPath = 'server/services/ai-brain/subagentBanker.ts';
 // Find the actual files
 let monitoringContent = '';
 let subagentContent = '';
-fs.readdirSync(path.join(BASE, 'server/services'), { recursive: true } as any).forEach((f: unknown) => {
+fs.readdirSync(path.join(BASE, 'server/services'), { recursive: true } as unknown).forEach((f: unknown) => {
   if (typeof f === 'string') {
     if (f.endsWith('monitoringService.ts')) monitoringContent = readFile(`server/services/${f}`);
     if (f.endsWith('subagentBanker.ts')) subagentContent = readFile(`server/services/ai-brain/${f.split('/').pop()!}`);

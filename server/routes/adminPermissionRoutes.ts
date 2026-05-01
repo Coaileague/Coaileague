@@ -260,7 +260,7 @@ router.patch('/workspaces/:wsId/users/:userId/role', requireSupportManager, asyn
 
     await db
       .update(employees)
-      .set({ workspaceRole: workspaceRole as any })
+      .set({ workspaceRole: workspaceRole as unknown })
       .where(eq(employees.id, userId));
 
     await universalAudit.log({
