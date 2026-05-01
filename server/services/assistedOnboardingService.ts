@@ -429,13 +429,31 @@ class AssistedOnboardingService {
   async completeHandoff(token: string, userId: string, claimingEmail?: string): Promise<HandoffCompleteResult> {
     try {
       // Lookup by hashed token (raw token only ever lives in the email).
+      // Backward-compat: any handoff issued BEFORE the hashing rollout has
+      // a raw token persisted in handoffToken. We try the hash first, then
+      // fall back to raw equality so in-flight pre-deploy handoffs still
+      // work. Once matched via raw, we re-hash on the outgoing UPDATE so
+      // the row never goes back to raw.
       const tokenHash = this.hashHandoffToken(token);
-      const workspace = await db.query.workspaces.findFirst({
+      let workspace = await db.query.workspaces.findFirst({
         where: and(
           eq(workspaces.handoffToken, tokenHash),
           eq(workspaces.handoffStatus, 'handoff_sent'),
         ),
       });
+      let matchedViaLegacyRaw = false;
+      if (!workspace) {
+        workspace = await db.query.workspaces.findFirst({
+          where: and(
+            eq(workspaces.handoffToken, token),
+            eq(workspaces.handoffStatus, 'handoff_sent'),
+          ),
+        });
+        if (workspace) {
+          matchedViaLegacyRaw = true;
+          log.warn(`[AssistedOnboarding] Legacy raw-token handoff matched for workspace ${workspace.id}; will hash on completion`);
+        }
+      }
 
       if (!workspace) {
         return { success: false, error: 'Invalid or expired handoff token' };
@@ -587,11 +605,17 @@ class AssistedOnboardingService {
     error?: string;
   }> {
     try {
-      // Lookup by hash — raw token never persisted.
+      // Lookup by hash first; fall back to raw for pre-rollout handoffs
+      // that are still in-flight. See completeHandoff for the same pattern.
       const tokenHash = this.hashHandoffToken(token);
-      const workspace = await db.query.workspaces.findFirst({
+      let workspace = await db.query.workspaces.findFirst({
         where: eq(workspaces.handoffToken, tokenHash),
       });
+      if (!workspace) {
+        workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.handoffToken, token),
+        });
+      }
 
       if (!workspace) {
         return { valid: false, error: 'Invalid handoff token' };

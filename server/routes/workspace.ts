@@ -988,6 +988,8 @@ router.post('/onboarding/admin-force-complete/:workspaceId', requireAuth, async 
     if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
 
     const completedAt = new Date();
+    // Defensive: write the flag directly first so this endpoint always
+    // succeeds even if the event handler is the thing that's broken.
     await db.update(workspaces).set({
       onboardingFullyComplete: true,
       onboardingFullyCompleteAt: completedAt,
@@ -1007,6 +1009,25 @@ router.post('/onboarding/admin-force-complete/:workspaceId', requireAuth, async 
         ipAddress: req.ip || (req as any).socket?.remoteAddress,
       });
     } catch (_) { /* best-effort */ }
+
+    // Also publish onboarding_completed so the in-app notification +
+    // WS broadcast + thalamic_log signal still fire when the handler is
+    // healthy. The handler's UPDATE is now idempotent (flag already true).
+    platformEventBus.publish({
+      type: 'onboarding_completed',
+      category: 'automation',
+      title: 'Onboarding Completed (admin force)',
+      description: `Admin force-completed onboarding for workspace ${workspaceId}`,
+      workspaceId,
+      metadata: {
+        workspaceId,
+        ownerId: userId,
+        completedAt: completedAt.toISOString(),
+        forcedByAdmin: true,
+      },
+    }).catch((err: unknown) => {
+      log.warn('[Onboarding Admin Force] event publish failed (non-fatal):', (err as any)?.message);
+    });
 
     res.json({ ok: true, workspaceId, completedAt });
   } catch (err: unknown) {

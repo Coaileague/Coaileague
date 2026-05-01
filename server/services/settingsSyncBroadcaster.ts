@@ -18,7 +18,7 @@
 
 import { db } from '../db';
 import { workspaces } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { broadcastToWorkspace } from '../websocket';
 import { platformEventBus } from './platformEventBus';
 import { createLogger } from '../lib/logger';
@@ -46,18 +46,31 @@ export async function broadcastSettingsUpdated(
     log.warn(`[SettingsSync] websocket broadcast failed for ${workspaceId}: ${err?.message}`);
   }
 
-  // 2. Fan out to sub-tenants that inherit from this workspace so their
-  //    inherited reads also refresh.
+  // 2. Fan out to ALL descendants (recursive — not just direct children).
+  //    A 3-level tree (grandparent → parent → child) needs the grandchild
+  //    to refresh too; the previous direct-children-only loop missed it.
+  //    Bounded BFS with depth 5 + 200-node visit cap as a safety guard
+  //    against accidental cycles or pathological trees.
   try {
-    const subTenants = await db
-      .select({ id: workspaces.id })
-      .from(workspaces)
-      .where(eq(workspaces.parentWorkspaceId, workspaceId));
+    const visited = new Set<string>([workspaceId]);
+    let frontier = [workspaceId];
+    for (let depth = 0; depth < 5 && frontier.length > 0; depth++) {
+      const children = await db
+        .select({ id: workspaces.id })
+        .from(workspaces)
+        .where(inArray(workspaces.parentWorkspaceId, frontier));
 
-    for (const sub of subTenants) {
-      try {
-        broadcastToWorkspace(sub.id, { ...payload, inheritedFrom: workspaceId });
-      } catch (_) { /* per-sub failures are non-fatal */ }
+      const next: string[] = [];
+      for (const child of children) {
+        if (visited.has(child.id)) continue;
+        if (visited.size >= 200) break;
+        visited.add(child.id);
+        next.push(child.id);
+        try {
+          broadcastToWorkspace(child.id, { ...payload, inheritedFrom: workspaceId });
+        } catch (_) { /* per-sub failures are non-fatal */ }
+      }
+      frontier = next;
     }
   } catch (err: any) {
     log.warn(`[SettingsSync] sub-tenant fan-out failed for ${workspaceId}: ${err?.message}`);

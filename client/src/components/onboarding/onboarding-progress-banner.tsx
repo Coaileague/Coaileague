@@ -77,7 +77,12 @@ export function OnboardingProgressBanner(): JSX.Element | null {
   const completeMut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/workspace/onboarding/complete", {}),
     onSuccess: () => {
-      toast({ title: "Onboarding complete", description: "Trinity Swarm and intake flows are now unlocked." });
+      // Skip the toast if the WS event already fired the celebration card —
+      // the user would otherwise see "Onboarding complete" + "Trinity is
+      // ready" within the same tick.
+      if (!celebrate) {
+        toast({ title: "Onboarding complete", description: "Trinity Swarm and intake flows are now unlocked." });
+      }
       qc.invalidateQueries({ queryKey: ["/api/workspace/onboarding/progress"] });
       qc.invalidateQueries({ queryKey: ["/api/auth/me"] });
     },

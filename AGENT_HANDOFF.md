@@ -1,6 +1,6 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-05-01 17:42 UTC — Claude (action-wiring scan COMPLETE — 11 fixes shipped, 4 deferred for owner agents)
+# Last updated: 2026-05-01 18:14 UTC — Claude (self-audit pass — 6 follow-up fixes pre-merge)
 
 ---
 
@@ -88,6 +88,43 @@ Trinity actions, and end-user actions. After per-issue verification:
 
 Both `tsc --noEmit -p tsconfig.server.json` and `tsc --noEmit -p
 tsconfig.json` clean after the patches.
+
+### SELF-AUDIT PASS — FOLLOW-UP FIXES (2026-05-01 18:14 UTC)
+
+A cold-eyes review of the previous 6 commits caught issues I had introduced
+in my own work. These were verified directly (not just by agent summary)
+and patched before merge:
+
+- **assistedOnboardingService.ts** — Hashing handoff tokens broke pending
+  pre-deploy handoffs (raw token in DB, hashed token from email → no match).
+  Added dual-lookup fallback in both `completeHandoff` and
+  `getWorkspaceByToken`: try hash first, fall back to raw, log warn on
+  legacy match.
+- **workspace.ts /onboarding/admin-force-complete** — was flipping the
+  flag directly but NOT publishing `onboarding_completed`, so the in-app
+  notification + WS broadcast + thalamic_log signal all silently skipped.
+  Now publishes the event after the defensive UPDATE; the handler's
+  UPDATE is idempotent so this doesn't loop.
+- **miscRoutes.ts client signup** — `req.session` properties were set
+  but `save()` never awaited, so the Set-Cookie header could race the
+  redirect to `/client-portal` and land users on `/login` with no session.
+  Now awaits `req.session.save()` and only redirects to `/client-portal`
+  if the save succeeded; falls back to `/login` otherwise.
+- **onboarding-progress-banner.tsx** — `completeMut.onSuccess` and the
+  WS `onboarding_completed` event would both fire toasts on the same
+  tick (banner morphs into celebration AND toast pops up). Now skips the
+  mutation toast when `celebrate` is already true.
+- **settingsSyncBroadcaster.ts** — Sub-tenant fan-out only broadcast to
+  direct children, missing 3-level-deep grandchildren that inherit
+  through the parent chain. Now does a bounded BFS (depth 5, 200-node
+  cap) over `parentWorkspaceId` so all descendants invalidate.
+- **tests/unit/onboarding-wiring.test.ts** — Old assertion required
+  exactly one `type: 'onboarding_completed'` occurrence in workspace.ts;
+  the new admin-force endpoint added a second valid one. Test now
+  scopes the "must NOT be in create handler" check to the create-block
+  slice and adds a router-shape assertion for the new endpoint.
+
+Both `tsc --noEmit` runs still clean.
 
 ### DEFERRED ISSUES (open for owner agents — DO NOT silently re-fix)
 

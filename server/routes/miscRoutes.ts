@@ -1729,12 +1729,25 @@ router.post("/api/client-signup", async (req, res) => {
 
     // Auto-authenticate so the client lands at /client-portal directly
     // instead of having to enter credentials again on /login. Sets the same
-    // session shape that /api/auth/login produces.
+    // session shape that /api/auth/login produces, then EXPLICITLY saves
+    // before res.json so the Set-Cookie header reaches the browser before
+    // the redirect fires (the default save-on-end races with the response).
+    let sessionSaved = false;
     try {
       if (req.session) {
         req.session.userId = newUser.id;
         req.session.workspaceId = prospect.workspaceId;
         req.session.workspaceRole = "client";
+        await new Promise<void>((resolve) => {
+          req.session!.save((err: unknown) => {
+            if (err) {
+              log.warn("[ClientSignup] Session save failed (non-blocking):", (err as any)?.message);
+            } else {
+              sessionSaved = true;
+            }
+            resolve();
+          });
+        });
       }
     } catch (sessErr: unknown) {
       log.warn("[ClientSignup] Session bootstrap failed (non-blocking):", (sessErr as any)?.message);
@@ -1744,9 +1757,10 @@ router.post("/api/client-signup", async (req, res) => {
       success: true,
       message: "Account created successfully",
       clientCode: newClient.clientCode,
-      // Auto-redirect straight to the portal — no second login required.
-      redirectTo: "/client-portal",
-      authenticated: Boolean(req.session?.userId),
+      // If session save failed, fall back to /login so the client doesn't
+      // land at /client-portal without a cookie and bounce back.
+      redirectTo: sessionSaved ? "/client-portal" : "/login",
+      authenticated: sessionSaved,
     });
   } catch (error: unknown) {
     log.error("[ClientSignup] Error:", error);

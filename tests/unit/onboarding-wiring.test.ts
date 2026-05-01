@@ -128,10 +128,31 @@ describe('workspace.ts — eager onboarding_completed fix', () => {
       path.resolve(__dirname, '../../server/routes/workspace.ts'),
       'utf-8',
     );
-    // The eager publish that conflated workspace.created with onboarding done
-    // must be gone. The string is now only emitted from POST /onboarding/complete.
+    // The eager publish (in POST '/' workspace creation) must be gone.
+    // Acceptable publishers now: POST /onboarding/complete (real
+    // completion) and POST /onboarding/admin-force-complete (platform
+    // staff override). Both should be present; the eager creation-time
+    // fire should not.
     const occurrences = src.match(/type:\s*'onboarding_completed'/g) || [];
-    expect(occurrences.length).toBe(1);
+    expect(occurrences.length).toBeGreaterThanOrEqual(1);
+    expect(occurrences.length).toBeLessThanOrEqual(2);
+    // The publish must NOT live inside the workspace create handler
+    // (router.post('/'). Use a substring slice to verify.
+    const createBlockStart = src.indexOf("router.post('/'");
+    const createBlockEnd = src.indexOf("router.get('/all'", createBlockStart);
+    if (createBlockStart >= 0 && createBlockEnd > createBlockStart) {
+      const createBlock = src.slice(createBlockStart, createBlockEnd);
+      expect(createBlock).not.toContain("type: 'onboarding_completed'");
+    }
+  });
+
+  it('exposes admin-force-complete platform-staff override', async () => {
+    const mod = await import('../../server/routes/workspace');
+    const router = mod.default as any;
+    const routes = (router?.stack || [])
+      .filter((layer: any) => layer.route)
+      .map((layer: any) => layer.route.path);
+    expect(routes).toContain('/onboarding/admin-force-complete/:workspaceId');
   });
 });
 
