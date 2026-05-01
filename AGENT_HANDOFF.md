@@ -1,6 +1,65 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-04-28 — Claude (architect plan, parallel lanes launched)
+# Last updated: 2026-05-01 16:36 UTC — Claude (onboarding grade-A series + shift/Trinity action scan)
+
+---
+
+## ACTIVE CLAIM (Claude — 2026-05-01)
+
+```
+BRANCH: claude/setup-onboarding-workflow-uE8II  (4 commits ahead of main)
+SCOPE:  Onboarding/registration/invite/Trinity-gating series
+        + ongoing scan for shift CRUD / Trinity action / end-user action
+          wiring, race conditions, TS errors, semantic logic bugs.
+STATUS: Onboarding series shipped. Action-wiring scan launched in parallel.
+DO NOT TOUCH while this claim is active:
+  • client/src/components/onboarding/* (new banners)
+  • client/src/pages/sub-orgs.tsx
+  • client/src/pages/co-auditor-dashboard.tsx (auditor settings + NDA bump)
+  • server/services/assistedOnboardingService.ts (token hashing + identity gate)
+  • server/services/trinityEventSubscriptions.ts (TrinityOnboardingCompletionHandler)
+  • server/services/settingsSyncBroadcaster.ts (new broadcast helper)
+  • server/middleware/workspaceScope.ts (requireOnboardingComplete)
+  • server/routes/workspace.ts (onboarding/progress|step|complete)
+  • server/routes/auditorRoutes.ts (settings, nda/last-accepted)
+  • server/routes/assisted-onboarding.ts (handoff identity gate)
+  • shared/schema/domains/audit/index.ts (auditorSettings table)
+  • migrations/0006_auditor_settings.sql
+
+If you need to edit any of these, COMMENT in this file BEFORE touching.
+```
+
+---
+
+## RECENT MERGES TO claude/setup-onboarding-workflow-uE8II
+
+```
+50f0da3  polish(onboarding): grade-A series — security, loop closure, UI surfaces, docs
+56470a0  polish(onboarding): grade-A finish — WS sync, real completion gate, UIs, tests, docs
+c1553f8  feat(onboarding): close remaining settings/sync/Trinity gating gaps
+7a1174b  fix(onboarding): wire missing pipeline links across roles & tenants
+```
+
+Cumulative footprint: ~30 files, ~1,800 insertions. Both `tsc --noEmit -p
+tsconfig.json` and `tsc --noEmit -p tsconfig.server.json` clean.
+
+Key changes (so other agents don't re-do them):
+- `workspace.handoff_completed`, `workspace.assisted_created`, `client.registered`,
+  `onboarding_step.completed`, `onboarding.completed` audit_log actions are NEW —
+  prefer adding to these rather than creating parallel actions.
+- `requireOnboardingComplete` middleware exists — apply to new Trinity-gated
+  routes via `import { requireOnboardingComplete } from '../middleware/workspaceScope'`.
+- `broadcastSettingsUpdated()` is the canonical settings invalidation helper.
+  All new settings PATCH endpoints should call it rather than rolling their own.
+- `useSettingsSync` (mounted globally in App.tsx) auto-invalidates react-query
+  keys on `settings_updated` WS events — register your scope in the
+  SCOPE_TO_QUERY_KEYS map in `client/src/hooks/use-settings-sync.ts`.
+- `OnboardingProgressBanner` is mounted globally and listens for
+  `onboarding_completed`. Don't render a parallel celebration card.
+- `auditorSettings` table replaces all per-auditor preferences;
+  workspace-scoped writes require an active audit (auditorHasAuditForWorkspace).
+- `currentNdaVersion()` controls auditor NDA gate — bump
+  `process.env.AUDITOR_NDA_VERSION` to force re-acceptance.
 
 ---
 
