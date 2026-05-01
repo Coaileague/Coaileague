@@ -8,6 +8,7 @@ import { requireAuth } from "../rbac";
 import type { AuthenticatedRequest } from "../rbac";
 import { requirePlan } from '../tierGuards';
 import { universalAudit } from "../services/universalAuditService";
+import { downloadFileFromObjectStorage } from "../objectStorage";
 import { createLogger } from '../lib/logger';
 const log = createLogger('DocumentVaultRoutes');
 
@@ -223,6 +224,121 @@ router.get("/:id", async (req: AuthenticatedRequest, res) => {
     log.error("[Document Vault] Get error:", error);
     res.status(500).json({ error: "Failed to fetch document" });
   }
+});
+
+// ─── Stream the stored PDF buffer back to the caller ──────────────────────────
+// fileUrl is the GCS object path written by businessFormsVaultService.saveToVault
+// (or any future writer that follows the same convention). Officers may only
+// download documents addressed to them or signed by them — same scope rules as
+// the list endpoint. ?disposition=inline serves the PDF for in-app viewing,
+// otherwise it downloads as an attachment.
+async function streamVaultPdf(req: AuthenticatedRequest, res: any, mode: 'attachment' | 'inline') {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+
+    const [doc] = await db
+      .select()
+      .from(documentVault)
+      .where(and(
+        eq(documentVault.id, req.params.id),
+        eq(documentVault.workspaceId, workspaceId),
+        isNull(documentVault.deletedAt)
+      ));
+
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+
+    // Officer scope — same rules as list (signatory or addressed-to)
+    const role = req.workspaceRole || (req as any).session?.workspaceRole || req.user?.platformRole || undefined;
+    if (role && OFFICER_ROLES.includes(role)) {
+      const userId = req.user?.id;
+      if (!userId) return res.status(403).json({ error: "Unauthorized" });
+
+      const [emp] = await db
+        .select({ id: employees.id })
+        .from(employees)
+        .where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)));
+
+      const sigRows = await db
+        .select({ documentId: orgDocumentSignatures.documentId })
+        .from(orgDocumentSignatures)
+        .where(eq(orgDocumentSignatures.signerUserId, userId));
+
+      const allowedSigIds = new Set(sigRows.map(r => r.documentId).filter(Boolean) as string[]);
+      const isAddressee = !!emp && doc.relatedEntityId === emp.id;
+      const isSignatory = allowedSigIds.has(doc.id);
+      if (!isAddressee && !isSignatory) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+    }
+
+    // Resolve the storage path stored in fileUrl. Reject anything that doesn't
+    // look like an internal object path so we never make outbound requests on
+    // behalf of an authenticated user.
+    const fileUrl = doc.fileUrl || '';
+    if (/^https?:\/\//i.test(fileUrl) || fileUrl.startsWith('internal://')) {
+      log.warn(`[DocumentVault] download refused — fileUrl is not an internal storage path: ${fileUrl}`);
+      return res.status(409).json({ error: "Document file is not available for streaming" });
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await downloadFileFromObjectStorage(fileUrl);
+    } catch (err: any) {
+      log.error(`[DocumentVault] storage fetch failed for doc=${doc.id} path=${fileUrl}:`, err?.message);
+      return res.status(404).json({ error: "Document file not found in storage" });
+    }
+
+    // Verify integrity hash if one was recorded at write time. The hash stored
+    // by businessFormsVaultService is the SHA-256 of the stamped buffer.
+    let integrityVerified = true;
+    if (doc.integrityHash) {
+      const computed = createHash('sha256').update(buffer).digest('hex');
+      integrityVerified = computed === doc.integrityHash;
+      if (!integrityVerified) {
+        log.error(`[DocumentVault] INTEGRITY MISMATCH doc=${doc.id} expected=${doc.integrityHash} computed=${computed}`);
+      }
+    }
+
+    await universalAudit.log({
+      workspaceId,
+      actorId: req.user?.id || 'unknown',
+      actorType: 'user',
+      changeType: 'read',
+      action: mode === 'inline' ? 'DOCUMENT_VAULT:PREVIEWED' : 'DOCUMENT_VAULT:DOWNLOADED',
+      entityType: 'document_vault',
+      entityId: doc.id,
+      entityName: doc.title,
+      metadata: { category: doc.category, integrityVerified, sizeBytes: buffer.length },
+    });
+
+    if (!integrityVerified) {
+      // Refuse to serve a tampered file — same as a 409 on the metadata path
+      return res.status(409).json({ error: "Document integrity check failed" });
+    }
+
+    const filename = `${doc.documentNumber || doc.id}.pdf`;
+    res.setHeader('Content-Type', doc.mimeType || 'application/pdf');
+    res.setHeader('Content-Length', String(buffer.length));
+    res.setHeader(
+      'Content-Disposition',
+      `${mode}; filename="${filename.replace(/[^A-Za-z0-9._-]/g, '_')}"`
+    );
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.send(buffer);
+  } catch (error: unknown) {
+    log.error("[Document Vault] Stream error:", error);
+    return res.status(500).json({ error: "Failed to stream document" });
+  }
+}
+
+router.get("/:id/download", async (req: AuthenticatedRequest, res) => {
+  return streamVaultPdf(req, res, 'attachment');
+});
+
+router.get("/:id/preview", async (req: AuthenticatedRequest, res) => {
+  return streamVaultPdf(req, res, 'inline');
 });
 
 router.post("/", async (req: AuthenticatedRequest, res) => {

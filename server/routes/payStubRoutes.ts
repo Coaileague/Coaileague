@@ -10,9 +10,12 @@ import { requireAuth } from '../auth';
 import { attachWorkspaceId, requireEmployee, requireManager, type AuthenticatedRequest } from '../rbac';
 import { paystubService } from '../services/paystubService';
 import { db } from '../db';
-import { employees, payStubs } from '@shared/schema';
+import { employees, payStubs, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
+import { downloadFileFromObjectStorage } from '../objectStorage';
+import { createLogger } from '../lib/logger';
+const log = createLogger('PayStubRoutes');
 
 const BatchGenerateSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -60,6 +63,99 @@ router.get('/pay-stubs/:id', requireAuth, attachWorkspaceId, async (req: Request
   } catch (error) {
     console.error('[PayStubs] Error fetching pay stub by id:', error);
     res.status(500).json({ message: 'Failed to fetch pay stub' });
+  }
+});
+
+/**
+ * GET /api/pay-stubs/:id/pdf — render the PDF for a single pay stub.
+ *
+ * Backs the Print/Download button on the pay-stub detail page. Employees may
+ * only fetch their own stub; managers/admins may fetch any stub in their
+ * workspace. If the pay stub row already has a stored PDF (pdfStorageKey),
+ * the bytes are streamed from object storage; otherwise the PDF is regenerated
+ * on demand from the live data and streamed back without creating a new vault
+ * copy (vault copies are produced by the original generatePaystub flow).
+ */
+router.get('/pay-stubs/:id/pdf', requireAuth, attachWorkspaceId, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const workspaceId = authReq.workspaceId;
+    const { id } = req.params;
+
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    if (!workspaceId) return res.status(400).json({ message: 'Workspace context required' });
+
+    // Determine if requester is an employee in this workspace; if so, scope to
+    // their own pay stubs. Managers/admins skip this scope and may pull any
+    // stub in the workspace.
+    const requestingEmployee = await db.query.employees.findFirst({
+      where: and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)),
+    });
+    const role =
+      (authReq as any).workspaceRole ||
+      (authReq as any).session?.workspaceRole ||
+      authReq.user?.platformRole ||
+      undefined;
+    const isManager = ['org_owner', 'co_owner', 'manager', 'department_manager', 'supervisor', 'root_admin', 'sysop'].includes(role);
+
+    const stubConditions = [eq(payStubs.id, id), eq(payStubs.workspaceId, workspaceId)];
+    if (!isManager) {
+      if (!requestingEmployee) return res.status(403).json({ message: 'Access denied' });
+      stubConditions.push(eq(payStubs.employeeId, requestingEmployee.id));
+    }
+
+    const [stub] = await db
+      .select()
+      .from(payStubs)
+      .where(and(...stubConditions))
+      .limit(1);
+
+    if (!stub) return res.status(404).json({ error: 'Pay stub not found' });
+
+    const filename = `paystub-${stub.id}.pdf`.replace(/[^A-Za-z0-9._-]/g, '_');
+
+    // Fast path: stream the previously stored PDF if we already have one.
+    const storageKey = (stub as any).pdfStorageKey as string | null | undefined;
+    if (storageKey && !/^https?:\/\//i.test(storageKey) && !storageKey.startsWith('internal://')) {
+      try {
+        const buffer = await downloadFileFromObjectStorage(storageKey);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Length', String(buffer.length));
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'private, no-store');
+        return res.send(buffer);
+      } catch (err: any) {
+        log.warn(`[PayStubs] storage fetch failed for stub=${stub.id}, falling back to regenerate: ${err?.message}`);
+        // fall through to regenerate
+      }
+    }
+
+    // Slow path: regenerate from live data without re-vaulting. The original
+    // saveToVault copy is produced once at generation time; this endpoint is
+    // a read-time render, so we use the lower-level generatePDF() to avoid
+    // creating duplicate vault rows on every download.
+    const data = await paystubService.calculatePayPeriod(
+      stub.employeeId,
+      workspaceId,
+      new Date(stub.payPeriodStart),
+      new Date(stub.payPeriodEnd),
+    );
+    if (!data) return res.status(404).json({ error: 'Pay stub data unavailable' });
+
+    const ws = await db.query.workspaces.findFirst({ where: eq(workspaces.id, workspaceId) });
+    const buffer = await paystubService.generatePDF(data, (ws as any)?.name);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', String(buffer.length));
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.send(buffer);
+  } catch (error) {
+    log.error('[PayStubs] Error generating pay stub PDF:', error);
+    return res.status(500).json({ message: 'Failed to generate pay stub PDF' });
   }
 });
 

@@ -36,6 +36,7 @@ import { documentVault } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
 import { createHash } from 'crypto';
+import { uploadFileToObjectStorage } from '../../objectStorage';
 
 const log = createLogger('BusinessFormsVaultService');
 
@@ -218,7 +219,33 @@ async function persistToVault(
   docNumber: string,
 ): Promise<VaultRecord> {
   const integrityHash = createHash('sha256').update(stampedBuffer).digest('hex');
-  const fileUrl = `internal://vault/${opts.workspaceId}/${docNumber}.pdf`;
+
+  // Persist the stamped buffer to object storage. Path matches the convention
+  // used by other PDF services (proposalPdfService, formsPdfService, darPdfService):
+  //   <category>/<workspaceId>/<docNumber>.pdf
+  // The fileUrl stored on the vault row is this object path, which the download
+  // route can hand to downloadFileFromObjectStorage() to stream the PDF back.
+  const objectPath = `vault/${opts.category}/${opts.workspaceId}/${docNumber}.pdf`;
+  await uploadFileToObjectStorage({
+    objectPath,
+    buffer: stampedBuffer,
+    workspaceId: opts.workspaceId,
+    storageCategory: 'documents',
+    metadata: {
+      contentType: 'application/pdf',
+      metadata: {
+        documentNumber: docNumber,
+        category: opts.category,
+        formNumber: opts.formNumber ?? '',
+        period: opts.period ?? '',
+        relatedEntityType: opts.relatedEntityType ?? '',
+        relatedEntityId: opts.relatedEntityId ?? '',
+        integrityHash,
+      },
+    },
+  });
+
+  const fileUrl = objectPath;
   const title = opts.formNumber
     ? `${opts.documentTitle} – ${opts.formNumber}${opts.period ? ` (${opts.period})` : ''}`
     : `${opts.documentTitle}${opts.period ? ` (${opts.period})` : ''}`;
