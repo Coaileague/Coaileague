@@ -45,6 +45,36 @@ function getUserKey(req: Request): string {
 }
 
 /**
+ * Crawler-bypass predicate for the rate limiters.
+ *
+ * Mirrors the test-key validation in auth.ts (we can't import from auth.ts
+ * without a circular dependency, since auth.ts pulls in this module). The
+ * canonical security gate is still requireAuth — this predicate only decides
+ * whether the limiter even counts the request. Production refuses the bypass
+ * outright via NODE_ENV check.
+ */
+import crypto from 'crypto';
+function isCrawlerWithValidTestKey(req: Request): boolean {
+  const testKey = req.get?.('x-test-key');
+  if (!testKey) return false;
+  // NODE_ENV check first — production bypass is forbidden.
+  const nodeEnv = (process.env.NODE_ENV || '').toLowerCase();
+  if (nodeEnv === 'production') return false;
+
+  const playwrightKey = process.env.PLAYWRIGHT_TEST_KEY;
+  const diagKey = process.env.DIAG_BYPASS_SECRET || process.env.TEST_MODE_SECRET;
+  for (const expected of [playwrightKey, diagKey]) {
+    if (!expected) continue;
+    try {
+      const a = Buffer.from(testKey);
+      const b = Buffer.from(expected);
+      if (a.length === b.length && crypto.timingSafeEqual(a, b)) return true;
+    } catch { /* ignore */ }
+  }
+  return false;
+}
+
+/**
  * Rate Limit Violation Logger
  *
  * Logs every 429 response. On repeat violations (3+ in 10 minutes from same IP),
@@ -172,6 +202,8 @@ export const mutationLimiter = rateLimit({
     retryAfter: '1 minute'
   },
   keyGenerator: (req: Request) => getUserKey(req),
+  // Same crawler bypass as publicApiLimiter — see note there.
+  skip: isCrawlerWithValidTestKey,
 
   handler: (req: Request, res: Response) => {
     setRetryAfterHeader(res, 60);
@@ -495,6 +527,12 @@ export const publicApiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => getClientIp(req),
+  // Skip rate limit for diagnostic crawlers carrying a valid x-test-key. The
+  // requireAuth middleware (auth.ts) does the canonical validation; we mirror
+  // a minimal copy here because the limiter runs BEFORE requireAuth and we
+  // can't import auth.ts without a circular dependency. Production refuses
+  // the bypass entirely — see auth.ts requireAuth.
+  skip: isCrawlerWithValidTestKey,
   handler: (req: Request, res: Response) => {
     setRetryAfterHeader(res, 60);
     logRateLimitViolation(req, 'public_api');

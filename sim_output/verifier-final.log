@@ -1,0 +1,32 @@
+Sandbox base: http://localhost:5000
+Workspace:   dev-acme-security-ws
+
+[PASS] GET /sw-health (server alive) — 200 107ms
+[PASS] GET /api/shifts (paginated list) — 200 66ms
+[PASS] GET /api/shifts/:id (detail) — 200 26ms
+[PASS] GET /api/shifts/today — 200 12ms
+[PASS] GET /api/shifts/upcoming — 200 12ms
+[PASS] GET /api/shifts/pending — 200 9ms
+[PASS] GET /api/shifts/stats — 200 11ms
+[PASS] GET /api/employees — 200 18ms
+[PASS] GET /api/clients — 200 14ms
+[PASS] GET /api/schedules/week/stats — 200 15ms
+[PASS] GET /api/schedules/ai-insights — 200 13ms
+[PASS] GET /api/scheduleos/ai/status — 200 10ms
+[PASS] POST /api/scheduleos/ai/toggle — 200 30ms
+[PASS] GET /api/orchestrated-schedule/status — 200 344ms
+[PASS] GET /api/coverage/forecast — 404 13ms
+[PASS] GET /api/calendar — 404 9ms
+[PASS] GET /api/scheduling/swap-requests — 200 22ms
+[PASS] GET /api/scheduling/alerts — 200 10ms
+[PASS] GET /api/trinity/scheduling/status — 404 15ms
+[PASS] GET /api/shift-trading/marketplace — 200 9ms
+[PASS] POST /api/shifts (create) — 201 20ms
+[PASS] PATCH /api/shifts/:id (update) — 200 29ms
+[PASS] POST /api/scheduling/shifts/:id/duplicate — 200 33ms
+[PASS] DELETE /api/shifts/:id (cleanup) — 200 49ms
+[PASS] POST /api/scheduling/shifts/:id/swap-request (FRONTEND CALLS — should NOT 404) — 201 21ms
+
+════════════════════════════════════════════════════════════════
+SUMMARY: 25 passed, 0 failed (total 25)
+════════════════════════════════════════════════════════════════

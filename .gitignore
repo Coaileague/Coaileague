@@ -7,3 +7,10 @@ vite.config.ts.*
 *.tar.gz.parta*
 *.tar.gz.partb*
 workforceos-platform.tar.gz.*
+
+# Sandbox/local-dev artifacts (not for git)
+.env
+.env.local
+sim_output/server.log
+sim_output/server.pid
+sim_output/run-dev.sh

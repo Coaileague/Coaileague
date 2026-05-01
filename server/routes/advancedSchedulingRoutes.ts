@@ -161,29 +161,30 @@ advancedSchedulingRouter.post('/recurring/:patternId/generate', requireManager, 
 // ============================================================================
 
 
-// POST /swap-requests — create a new shift swap request
-// Body: { shiftId, targetEmployeeId, reason }
-advancedSchedulingRouter.post('/swap-requests', requireAuth, async (req: Request, res: Response) => {
+// Shared handler for swap-request creation. Used by both:
+//   POST /swap-requests                       (collection-style; shiftId in body)
+//   POST /shifts/:shiftId/swap-request        (nested-resource style; shiftId in path)
+// The nested form is what universal-schedule.tsx invokes; without it the
+// "Request swap" button in the frontend silently 404'd.
+async function createSwapRequest(req: Request, res: Response, shiftIdFromPath?: string) {
   try {
     const user = req.user;
     const workspaceId = req.workspaceId || (user as any)?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     if (!workspaceId || !userId) return res.status(400).json({ error: 'No workspace context' });
 
-    const { shiftId, targetEmployeeId, reason } = req.body;
+    const shiftId = shiftIdFromPath || req.body?.shiftId;
+    const { targetEmployeeId, reason } = req.body || {};
     if (!shiftId) return res.status(400).json({ error: 'shiftId is required' });
-    if (!targetEmployeeId) return res.status(400).json({ error: 'targetEmployeeId is required' });
 
     const { shiftSwapRequests, shifts, employees } = await import('@shared/schema');
     const { db } = await import('../db');
     const { eq, and } = await import('drizzle-orm');
 
-    // Validate shift belongs to this workspace
     const [shift] = await db.select().from(shifts)
       .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId))).limit(1);
     if (!shift) return res.status(404).json({ error: 'Shift not found' });
 
-    // Validate requesting employee
     const [reqEmployee] = await db.select().from(employees)
       .where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId))).limit(1);
     if (!reqEmployee) return res.status(404).json({ error: 'Employee record not found' });
@@ -191,8 +192,11 @@ advancedSchedulingRouter.post('/swap-requests', requireAuth, async (req: Request
     const [created] = await db.insert(shiftSwapRequests).values({
       workspaceId,
       shiftId,
-      requestedById: reqEmployee.id,
-      targetEmployeeId,
+      // Schema column is `requester_id` (drizzle: requesterId) — earlier code
+      // wrote `requestedById` which silently dropped to NULL and failed the
+      // NOT NULL constraint. Keep this aligned with shared/schema.
+      requesterId: reqEmployee.id,
+      targetEmployeeId: targetEmployeeId || null,
       reason: reason || null,
       status: 'pending',
       createdAt: new Date(),
@@ -203,7 +207,16 @@ advancedSchedulingRouter.post('/swap-requests', requireAuth, async (req: Request
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to create swap request' });
   }
-});
+}
+
+// POST /swap-requests — collection-style (shiftId in body)
+advancedSchedulingRouter.post('/swap-requests', requireAuth, (req, res) =>
+  createSwapRequest(req, res));
+
+// POST /shifts/:shiftId/swap-request — nested-resource style (shiftId in path)
+// This is the path universal-schedule.tsx posts to.
+advancedSchedulingRouter.post('/shifts/:shiftId/swap-request', requireAuth, (req, res) =>
+  createSwapRequest(req, res, req.params.shiftId));
 
 advancedSchedulingRouter.get('/swap-requests', requireAuth, async (req: Request, res: Response) => {
   try {

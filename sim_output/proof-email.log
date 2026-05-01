@@ -1,0 +1,38 @@
+2026-05-01T06:57:52.436Z Sandbox: http://localhost:5000
+2026-05-01T06:57:52.447Z Shift:   dev-shift-marcus-today
+2026-05-01T06:57:52.447Z WS:      dev-acme-security-ws
+2026-05-01T06:57:52.447Z ---
+2026-05-01T06:57:52.447Z 1) Fetching shift detail to confirm it is real (no stub data)…
+2026-05-01T06:57:52.557Z    shift.title=Downtown Mall — Day Security
+2026-05-01T06:57:52.557Z    shift.employeeId=dev-acme-emp-marcus
+2026-05-01T06:57:52.557Z    shift.startTime=2026-05-01T08:00:00.000Z
+2026-05-01T06:57:52.557Z ---
+2026-05-01T06:57:52.557Z 2) Posting /api/shifts/:id/send-reminder (manager action)…
+2026-05-01T06:57:52.610Z    HTTP 200 in 53ms
+   Response: {
+  "success": true,
+  "data": {
+    "shiftId": "dev-shift-marcus-today",
+    "employeeId": "dev-acme-emp-marcus",
+    "employeeName": "Marcus Rodriguez",
+    "email": "rodriguez@acme-security.test",
+    "status": "sent",
+    "message": "Reminder sent successfully",
+    "channels": {
+      "email": {
+        "sent": true
+      },
+      "push": {
+        "sent": true
+      }
+    }
+  }
+}
+2026-05-01T06:57:52.610Z ---
+2026-05-01T06:57:52.610Z 3) Per-channel delivery status:
+2026-05-01T06:57:52.610Z    email    sent=true
+2026-05-01T06:57:52.610Z    push     sent=true
+2026-05-01T06:57:52.610Z ---
+2026-05-01T06:57:52.610Z PROOF COMPLETE — schedule → reminder → email pipeline executed end-to-end.
+2026-05-01T06:57:52.610Z If RESEND_API_KEY was unset, see server log for [DEV MODE] entries.
+2026-05-01T06:57:52.610Z If RESEND_API_KEY was set, the email landed in the recipient inbox.

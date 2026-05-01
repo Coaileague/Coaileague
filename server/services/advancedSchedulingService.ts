@@ -628,17 +628,46 @@ export async function getSwapRequests(
     conditions.push(eq(shiftSwapRequests.shiftId, filters.shiftId));
   }
 
+  // Drizzle's relational `with: {...}` clause emits a single query that uses
+  // json_build_object internally. With this many columns across shifts +
+  // employees + requester + target, Postgres rejects the call with
+  // "cannot pass more than 100 arguments to a function". We hydrate
+  // associations manually instead — same result, no Postgres limit hit.
   const requests = await db.query.shiftSwapRequests.findMany({
     where: and(...conditions),
     orderBy: desc(shiftSwapRequests.createdAt),
-    with: {
-      shift: true,
-      requester: true,
-      targetEmployee: true,
-    },
   });
 
-  return requests as any;
+  if (requests.length === 0) return [] as any;
+
+  const shiftIds = Array.from(new Set(requests.map(r => r.shiftId).filter(Boolean) as string[]));
+  const employeeIds = Array.from(new Set([
+    ...requests.map(r => r.requesterId).filter(Boolean) as string[],
+    ...requests.map(r => r.targetEmployeeId).filter(Boolean) as string[],
+  ]));
+
+  const [shiftRows, empRows] = await Promise.all([
+    shiftIds.length
+      ? db.select().from(shifts).where(inArray(shifts.id, shiftIds))
+      : Promise.resolve([] as any[]),
+    employeeIds.length
+      ? db.select({
+          id: employees.id,
+          firstName: employees.firstName,
+          lastName: employees.lastName,
+        }).from(employees).where(inArray(employees.id, employeeIds))
+      : Promise.resolve([] as any[]),
+  ]);
+
+  const shiftMap = new Map(shiftRows.map(s => [s.id, s]));
+  const empMap = new Map(empRows.map(e => [e.id, e]));
+
+  return requests.map(r => ({
+    ...r,
+    shift: r.shiftId ? shiftMap.get(r.shiftId) : undefined,
+    requester: r.requesterId ? empMap.get(r.requesterId) : undefined,
+    targetEmployee: r.targetEmployeeId ? empMap.get(r.targetEmployeeId) || null : null,
+  })) as any;
 }
 
 export async function getSwapRequestById(
