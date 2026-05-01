@@ -44,8 +44,32 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
 router.post("/:sessionId/turn", async (req: AuthenticatedRequest, res) => {
   try {
     const { sessionId } = req.params;
+    const userId = (req as any).user?.id || (req as any).user;
     const { role, content, contentType, toolCalls, toolResults, confidenceScore, confidenceFactors } = req.body;
     if (!role || !content) return res.status(400).json({ success: false, error: "role and content required" });
+
+    // Ownership gate — closes the IDOR hole where any authenticated user could
+    // POST turns into another user's session by guessing a sessionId.
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Authentication required" });
+    }
+    try {
+      const { db } = await import("../db");
+      const { trinityConversationSessions } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [session] = await db.select({ userId: trinityConversationSessions.userId })
+        .from(trinityConversationSessions)
+        .where(eq(trinityConversationSessions.id, sessionId))
+        .limit(1);
+      if (!session) return res.status(404).json({ success: false, error: "Session not found" });
+      if (session.userId !== userId) {
+        return res.status(403).json({ success: false, error: "Session does not belong to this user" });
+      }
+    } catch (_) {
+      // If the ownership lookup fails (DB issue), fail closed.
+      return res.status(500).json({ success: false, error: "Failed to verify session ownership" });
+    }
+
     const turn = await trinityContextManager.addTurn(sessionId, role, content, { contentType, toolCalls, toolResults, confidenceScore, confidenceFactors });
     if (!turn) return res.status(500).json({ success: false, error: "Failed to add turn" });
     res.json({ success: true, turn });
@@ -79,6 +103,28 @@ router.post("/:sessionId/escalate", async (req: AuthenticatedRequest, res) => {
 router.post("/:sessionId/end", async (req: AuthenticatedRequest, res) => {
   try {
     const { sessionId } = req.params;
+    const userId = (req as any).user?.id || (req as any).user;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Authentication required" });
+    }
+
+    // Ownership gate so a user cannot end someone else's session.
+    try {
+      const { db } = await import("../db");
+      const { trinityConversationSessions } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [session] = await db.select({ userId: trinityConversationSessions.userId })
+        .from(trinityConversationSessions)
+        .where(eq(trinityConversationSessions.id, sessionId))
+        .limit(1);
+      if (!session) return res.status(404).json({ success: false, error: "Session not found" });
+      if (session.userId !== userId) {
+        return res.status(403).json({ success: false, error: "Session does not belong to this user" });
+      }
+    } catch (_) {
+      return res.status(500).json({ success: false, error: "Failed to verify session ownership" });
+    }
+
     const success = await trinityContextManager.endSession(sessionId);
     res.json({ success });
   } catch (error: unknown) {

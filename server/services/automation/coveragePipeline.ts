@@ -120,13 +120,29 @@ class CoveragePipelineService {
    * Main entry point: trigger coverage pipeline for a shift
    */
   async triggerCoverage(input: CoverageTriggerInput): Promise<CoverageResult> {
+    // Include the shift's current updatedAt so re-triggering coverage after
+    // a state change (covered → uncovered when the original officer cancels)
+    // creates a new idempotency scope. Previously the pipeline silently
+    // no-op'd because the per-(workspace, shift) key was already consumed,
+    // leaving coverage cascades stuck.
+    let revisionToken = '';
+    try {
+      const currentShift = await db.query.shifts.findFirst({
+        where: eq(shifts.id, input.shiftId),
+        columns: { updatedAt: true },
+      });
+      if (currentShift?.updatedAt) {
+        revisionToken = `:${new Date(currentShift.updatedAt).getTime()}`;
+      }
+    } catch (_) { /* fall back to non-revisioned scope */ }
+
     return automationOrchestration.executeAutomation(
       {
         domain: 'scheduling',
-        // Scope the action name per-shift so the idempotency key is unique
-        // per (workspace, shift) pair — prevents concurrent coverage triggers
-        // for different shifts in the same workspace from blocking each other.
-        automationName: `trigger-coverage-pipeline:${input.shiftId}`,
+        // Scope the action name per (workspace, shift, shift.updatedAt) so
+        // concurrent triggers for different shifts (or the same shift after
+        // a real state change) all proceed.
+        automationName: `trigger-coverage-pipeline:${input.shiftId}${revisionToken}`,
         automationType: 'background_process',
         workspaceId: input.workspaceId,
         triggeredBy: 'event',

@@ -971,4 +971,48 @@ router.post('/onboarding/complete', requireAuth, async (req: AuthenticatedReques
   }
 });
 
+// Platform-staff-only manual override for workspaces stuck mid-onboarding
+// because the TrinityOnboardingCompletionHandler subscriber failed silently
+// (DB error during the publish chain). Without this, the only way to
+// unstick a tenant was a hand-crafted SQL UPDATE.
+router.post('/onboarding/admin-force-complete/:workspaceId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { hasPlatformWideAccess, getUserPlatformRole } = await import('../rbac');
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const platformRole = await getUserPlatformRole(userId);
+    if (!hasPlatformWideAccess(platformRole)) {
+      return res.status(403).json({ message: 'Platform staff only' });
+    }
+    const { workspaceId } = req.params as { workspaceId: string };
+    if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
+
+    const completedAt = new Date();
+    await db.update(workspaces).set({
+      onboardingFullyComplete: true,
+      onboardingFullyCompleteAt: completedAt,
+      onboardingCompletedAt: completedAt,
+      onboardingCompletionPercent: 100,
+    }).where(eq(workspaces.id, workspaceId));
+
+    try {
+      await storage.createAuditLog({
+        userId,
+        workspaceId,
+        action: 'onboarding.admin_force_complete',
+        entityType: 'workspace',
+        entityId: workspaceId,
+        // @ts-expect-error — storage.createAuditLog is loose-typed
+        details: { reason: req.body?.reason || 'unstuck onboarding flag' },
+        ipAddress: req.ip || (req as any).socket?.remoteAddress,
+      });
+    } catch (_) { /* best-effort */ }
+
+    res.json({ ok: true, workspaceId, completedAt });
+  } catch (err: unknown) {
+    log.error('[Onboarding Admin Force]', sanitizeError(err));
+    res.status(500).json({ message: 'Failed to force-complete onboarding' });
+  }
+});
+
 export default router;

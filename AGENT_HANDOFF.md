@@ -1,17 +1,18 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-05-01 16:36 UTC — Claude (onboarding grade-A series + shift/Trinity action scan)
+# Last updated: 2026-05-01 17:42 UTC — Claude (action-wiring scan COMPLETE — 11 fixes shipped, 4 deferred for owner agents)
 
 ---
 
 ## ACTIVE CLAIM (Claude — 2026-05-01)
 
 ```
-BRANCH: claude/setup-onboarding-workflow-uE8II  (4 commits ahead of main)
+BRANCH: claude/setup-onboarding-workflow-uE8II  (5+ commits ahead of main)
 SCOPE:  Onboarding/registration/invite/Trinity-gating series
-        + ongoing scan for shift CRUD / Trinity action / end-user action
-          wiring, race conditions, TS errors, semantic logic bugs.
-STATUS: Onboarding series shipped. Action-wiring scan launched in parallel.
+        + action-wiring scan (shift CRUD / Trinity / end-user / races)
+STATUS: Onboarding series shipped. Action-wiring scan complete — 11 fixes
+        shipped this turn. Scan-deferred items listed in
+        "DEFERRED ISSUES (open for owner agents)" below.
 DO NOT TOUCH while this claim is active:
   • client/src/components/onboarding/* (new banners)
   • client/src/pages/sub-orgs.tsx
@@ -34,11 +35,92 @@ If you need to edit any of these, COMMENT in this file BEFORE touching.
 ## RECENT MERGES TO claude/setup-onboarding-workflow-uE8II
 
 ```
+[next]   fix(actions): action-wiring scan — schedules/shifts/Trinity/auth/timeentries
+da854f7  chore(handoff): claim active scan + log onboarding series in AGENT_HANDOFF
 50f0da3  polish(onboarding): grade-A series — security, loop closure, UI surfaces, docs
 56470a0  polish(onboarding): grade-A finish — WS sync, real completion gate, UIs, tests, docs
 c1553f8  feat(onboarding): close remaining settings/sync/Trinity gating gaps
 7a1174b  fix(onboarding): wire missing pipeline links across roles & tenants
 ```
+
+### ACTION-WIRING SCAN — FIXES SHIPPED (2026-05-01)
+
+Three parallel Explore agents reported 25+ issues across shift CRUD,
+Trinity actions, and end-user actions. After per-issue verification:
+
+1. **schedulesRoutes.ts:101+150+301** — `workspaceId` ReferenceError on
+   /publish, audit log, and /unpublish. Replaced with `userWorkspace.workspaceId`
+   and `workspace.id`. (CRITICAL — both endpoints crashed on first call.)
+2. **shiftRoutes.ts:1853** — shift marketplace pickup had no WS broadcast
+   or event publish. Added `broadcastShiftUpdate` + `platformEventBus.publish('shift_assigned')`.
+3. **shiftRoutes.ts:1809** — `getEmployeeByUserId` called without workspaceId.
+   Added the scope arg so multi-workspace users hit the right row first.
+4. **shiftRoutes.ts:3000+** — shift switch request had no broadcast/event.
+   Added `broadcastToWorkspace('shift_switch_requested')` + event publish.
+5. **timeEntryRoutes.ts** — missing imports for `format`, `broadcastToWorkspace`,
+   `GeoComplianceService`, `calculatePayrollHours` (would have crashed clock-in,
+   approve, reject, bulk-approve, clock-out, CSV export, payroll calc). Added.
+6. **trinitySessionRoutes.ts:44+79** — `/turn` and `/end` had NO ownership
+   check (IDOR-style: any auth'd user could inject turns into another user's
+   session). Added `trinityConversationSessions.userId` lookup with 403 on
+   mismatch.
+7. **trinityIntakeRoutes.ts:65+** — `/respond` race window between INSERT
+   into trinity_intake_responses and UPDATE of trinity_intake_sessions.
+   Wrapped in `BEGIN/COMMIT` via dedicated client.
+8. **coveragePipeline.ts:122+** — idempotency key was `${shiftId}` only,
+   so re-triggering after coverage flipped was silently no-op. Now includes
+   `shift.updatedAt.getTime()` so real state changes pass through.
+9. **trinityEventSubscriptions.ts (onOnboardingCompleted)** — WS broadcast
+   failure was swallowed silently. Now `log.warn`s so ops can detect stale
+   completions.
+10. **authCoreRoutes.ts:117+** — register email-uniqueness race
+    (parallel signups bypass pre-INSERT SELECT and crash on UNIQUE
+    constraint). Switched to `INSERT ... ON CONFLICT DO NOTHING` and
+    return 400 if no row comes back.
+11. **automationTriggerService.ts (handleSchedulePublished)** — re-fired
+    events ignored the per-feature automation toggle. Added
+    `trinityAutomationToggle.isFeatureAutomated('schedule_publishing')`
+    early return.
+12. **workspace.ts** — new platform-staff-only manual override
+    `POST /api/workspace/onboarding/admin-force-complete/:workspaceId` so
+    workspaces stuck mid-onboarding (silent subscriber failure) can be
+    unstuck without hand-crafted SQL.
+
+Both `tsc --noEmit -p tsconfig.server.json` and `tsc --noEmit -p
+tsconfig.json` clean after the patches.
+
+### DEFERRED ISSUES (open for owner agents — DO NOT silently re-fix)
+
+These were flagged by the scan but require infrastructure I didn't want
+to invent without owner-agent buy-in. Pick them up with a comment in this
+file before starting:
+
+- **trinityDecisionRoutes.ts:87+** — override endpoint not idempotent.
+  Needs `idempotencyKeys` table integration (executeIdempotencyCheck
+  pattern). OWNER: whoever owns Trinity decisions / execution-tracker.
+- **trinityDecisionLogger.ts:59+** — duplicate decision-log entries
+  possible on retry. Needs UNIQUE constraint OR
+  ON CONFLICT DO NOTHING with a deterministic dedup key.
+- **trinitySwarmRoutes.ts** — agent-spawning consumes AI tokens with no
+  budget gate. Needs `aiTokenGateway.hasTokenBudget` /
+  `aiTokenGateway.consumeTokens` integration before each spawn.
+- **trinitySelfEditRoutes.ts:136+** — sysop can approve `core_infrastructure`
+  / `database_schema` tier proposals. Add `requirePlatformStaff` branch
+  inside the proposal handler when the proposal touches those tiers.
+- **timeEntryRoutes.ts:703** — manual clock-in override INSERT references
+  columns that don't exist in the Drizzle schema (employee_name, site_id,
+  site_name, reason_code, reason_detail). Either add columns to schema
+  or rename to camelCase mirrors. Coordinate with whoever owns the
+  manual_clockin_overrides table.
+- **shiftRoutes.ts:2083+** — open-shift accept race (two officers
+  claiming simultaneously). Mitigated already by `.for('update')` row
+  lock at marketplace pickup (line 1832), but the separate accept route
+  still needs the advisory lock pattern. Verify if this is a duplicate
+  surface before patching.
+- **time-entry-routes.ts (manager edit)** — last-write-wins on time-entry
+  edits. Needs version/updatedAt check returning 409 on conflict.
+- **TRINITY_BOT_TOKEN startup validation** — env var should be validated
+  at boot. Add to server/index.ts startup checks.
 
 Cumulative footprint: ~30 files, ~1,800 insertions. Both `tsc --noEmit -p
 tsconfig.json` and `tsc --noEmit -p tsconfig.server.json` clean.

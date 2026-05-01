@@ -114,18 +114,8 @@ router.post("/api/auth/register", async (req, res) => {
       return res.status(429).json({ message: "Suspicious activity detected. Please try again later." });
     }
 
-    // Check if email already exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, data.email))
-      .limit(1);
-
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
-    }
-
-    // Validate password strength
+    // Validate password strength BEFORE the DB insert race window so we
+    // don't waste the slot on a bad password.
     const passwordValidation = validatePassword(data.password);
     if (!passwordValidation.isValid) {
       return res.status(400).json({
@@ -137,9 +127,11 @@ router.post("/api/auth/register", async (req, res) => {
     // Hash password
     const passwordHash = await hashPassword(data.password);
 
-    // Create ONLY the user account - NO workspace/employee yet
-    // User will be redirected to /create-org to set up their organization
-    const [newUser] = await db
+    // Race-safe email uniqueness: skip the pre-INSERT SELECT (which races
+    // with parallel signups using the same email) and rely on the unique
+    // constraint via INSERT ... ON CONFLICT DO NOTHING. If no row comes
+    // back, an existing user already owns the email — return 400.
+    const inserted = await db
       .insert(users)
       .values({
         email: data.email,
@@ -150,7 +142,13 @@ router.post("/api/auth/register", async (req, res) => {
         role: "user",
         // currentWorkspaceId is left null - user needs to create org first
       })
+      .onConflictDoNothing({ target: users.email })
       .returning();
+
+    const newUser = inserted[0];
+    if (!newUser) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
 
     log.info(`[Registration] Created user ${newUser.id} (${newUser.email}) - needs org setup`);
 

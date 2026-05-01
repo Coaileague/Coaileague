@@ -83,28 +83,40 @@ router.post('/intake/:sessionId/respond', requireAuth, async (req, res, next) =>
     const flow = TRINITY_INTAKE_FLOWS[session.session_type];
     if (!flow) return res.status(404).json({ error: 'Flow definition not found' });
 
-    await pool.query(`
-      INSERT INTO trinity_intake_responses
-        (session_id, workspace_id, step_index, field_id,
-         field_label, field_type, raw_value, parsed_value)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [
-      sessionId, workspaceId, stepIndex, fieldId,
-      flow.steps[stepIndex]?.question ?? '',
-      flow.steps[stepIndex]?.widgetType ?? 'text',
-      String(value),
-      JSON.stringify(value)
-    ]);
-
+    // Wrap response insert + session update in a single transaction so
+    // concurrent /respond calls cannot interleave and corrupt
+    // collected_data or overwrite step_index with stale values.
     const updatedData = {
       ...(session.collected_data || {}),
       [fieldId]: value
     };
 
-    await pool.query(
-      'UPDATE trinity_intake_sessions SET collected_data = $1, current_step_index = $2 WHERE id = $3',
-      [JSON.stringify(updatedData), stepIndex, sessionId]
-    );
+    const txClient = await pool.connect();
+    try {
+      await txClient.query('BEGIN');
+      await txClient.query(`
+        INSERT INTO trinity_intake_responses
+          (session_id, workspace_id, step_index, field_id,
+           field_label, field_type, raw_value, parsed_value)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+        sessionId, workspaceId, stepIndex, fieldId,
+        flow.steps[stepIndex]?.question ?? '',
+        flow.steps[stepIndex]?.widgetType ?? 'text',
+        String(value),
+        JSON.stringify(value)
+      ]);
+      await txClient.query(
+        'UPDATE trinity_intake_sessions SET collected_data = $1, current_step_index = $2 WHERE id = $3',
+        [JSON.stringify(updatedData), stepIndex, sessionId]
+      );
+      await txClient.query('COMMIT');
+    } catch (txErr) {
+      await txClient.query('ROLLBACK').catch(() => null);
+      throw txErr;
+    } finally {
+      txClient.release();
+    }
 
     let nextStepIndex = stepIndex + 1;
     while (nextStepIndex < flow.steps.length) {

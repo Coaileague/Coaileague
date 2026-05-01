@@ -767,7 +767,13 @@ async function onOnboardingCompleted(event: PlatformEvent): Promise<void> {
       ownerId,
       completedAt: completedAt.toISOString(),
     });
-  } catch (_) { /* WS broadcast is best-effort */ }
+  } catch (broadcastErr: any) {
+    // Log so ops can detect stale onboarding completions where the user
+    // never saw "Trinity is ready" because the WS broadcast failed.
+    log.warn(
+      `[TrinityEvents] onboarding_completed WS broadcast failed for ${workspaceId}: ${broadcastErr?.message || broadcastErr}`,
+    );
+  }
 }
 
 /**

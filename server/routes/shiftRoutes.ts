@@ -1806,7 +1806,10 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         return res.status(409).json({ message: 'This shift is already assigned to an employee' });
       }
 
-      const employee = await storage.getEmployeeByUserId(userId);
+      // Scope the lookup to the current workspace. Multi-workspace users
+      // could otherwise pick up the wrong employee row before the equality
+      // guard below catches it.
+      const employee = await storage.getEmployeeByUserId(userId, workspaceId);
       if (!employee) {
         return res.status(404).json({ message: 'Employee record not found for current user' });
       }
@@ -1849,6 +1852,26 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           .returning();
         return updated;
       });
+
+      // Broadcast + event so connected manager dashboards refresh and Trinity
+      // sees the assignment. Closes the gap where pickups returned 200 but
+      // no client refetched and no downstream service knew.
+      try {
+        broadcastShiftUpdate(workspaceId, 'shift_updated', updatedShift);
+      } catch (_) { /* WS broadcast is best-effort */ }
+      platformEventBus.publish({
+        type: 'shift_assigned',
+        category: 'workforce',
+        title: 'Shift Picked Up',
+        description: `Shift ${shiftId} picked up by employee ${employee.id}`,
+        workspaceId,
+        metadata: {
+          shiftId,
+          employeeId: employee.id,
+          source: 'marketplace_pickup',
+          startTime: updatedShift?.startTime,
+        },
+      }).catch(() => null);
 
       res.json(updatedShift);
     } catch (error: unknown) {
@@ -2996,6 +3019,31 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
           reason,
         })
         .returning();
+
+      // Broadcast + event so the target employee is notified and managers
+      // see the pending request without manual refresh.
+      try {
+        broadcastToWorkspace(workspaceId, {
+          type: 'shift_switch_requested',
+          shiftId,
+          requesterId: employeeId,
+          targetEmployeeId,
+          switchRequestId: switchRequest?.id,
+        });
+      } catch (_) { /* WS broadcast is best-effort */ }
+      platformEventBus.publish({
+        type: 'shift_switch_requested',
+        category: 'workforce',
+        title: 'Shift Switch Requested',
+        description: `Shift ${shiftId} switch requested → ${targetEmployeeId}`,
+        workspaceId,
+        metadata: {
+          shiftId,
+          switchRequestId: switchRequest?.id,
+          requesterId: employeeId,
+          targetEmployeeId,
+        },
+      }).catch(() => null);
 
       res.json(switchRequest);
     } catch (error: unknown) {

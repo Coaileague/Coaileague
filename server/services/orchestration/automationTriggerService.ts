@@ -919,6 +919,18 @@ class AutomationTriggerService {
   private async handleSchedulePublished(workspaceId: string, payload: any): Promise<void> {
     log.info(`[AutomationTriggerService] Schedule published for workspace ${workspaceId}`, payload);
 
+    // Respect the per-feature automation toggle so a re-fire (retried webhook,
+    // manual republish) cannot re-spawn schedule generation after the user
+    // disabled Trinity scheduling.
+    try {
+      const { trinityAutomationToggle } = await import('../automation/trinityAutomationToggle');
+      const enabled = await trinityAutomationToggle.isFeatureAutomated(workspaceId, 'schedule_publishing');
+      if (!enabled) {
+        log.info(`[AutomationTriggerService] schedule_publishing disabled for ${workspaceId} — skip cascade`);
+        return;
+      }
+    } catch (_) { /* best-effort gate; fall through if toggle service is down */ }
+
     // GAP-C FIX: Ensure invoice + payroll triggers exist for this workspace
     // so the pipeline fires when time entries are approved later.
     await this.bootstrapWorkspaceTriggers(workspaceId);
