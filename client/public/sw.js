@@ -1,5 +1,5 @@
 /**
- * CoAIleague Service Worker v4.8.0
+ * CoAIleague Service Worker v4.9.0
  * APK-ready with IndexedDB offline queue, SW update prompts, and enhanced caching.
  *
  * Canonical registration: navigator.serviceWorker.register('/sw.js').
@@ -105,7 +105,7 @@ function openDB() {
 }
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v4.8.0');
+  console.log('[SW] Installing service worker v4.9.0');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Caching app shell');
@@ -116,7 +116,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v4.8.0 — purging ALL old caches + standalone HTML bypass');
+  console.log('[SW] Activating service worker v4.9.0 — purging ALL old caches + standalone HTML bypass');
   event.waitUntil(
     Promise.all([
       // Delete ALL caches that aren't the current valid set — this purges any stale Vite module caches
@@ -155,7 +155,7 @@ self.addEventListener('activate', (event) => {
           // navigate() forces a full reload, bypassing any stale in-memory modules
           c.navigate(c.url).catch(() => {
             // fallback: postMessage if navigate fails
-            c.postMessage({ type: 'SW_UPDATED', version: 'v4.8.0' });
+            c.postMessage({ type: 'SW_UPDATED', version: 'v4.9.0' });
           });
         });
       });
@@ -501,8 +501,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: data.body || data.message,
-    icon: data.icon || '/icons/icon-192x192.png',
-    badge: data.badge || '/icons/icon-72x72.png',
+    icon: data.icon || '/icons/notification-icon-192x192.png',
+    badge: data.badge || '/icons/badge-72.png',
     image: data.image || undefined,
     vibrate: data.vibrate || getVibrationPattern(data.type),
     data: {
@@ -766,8 +766,8 @@ async function refreshChatUnread() {
         if (total > 0 && self.registration?.showNotification) {
           await self.registration.showNotification('CoAIleague Messages', {
             body: total === 1 ? 'You have 1 unread message' : `You have ${total} unread messages`,
-            badge: '/icons/badge.png',
-            icon: '/coaileague-logo.png',
+            badge: '/icons/badge-72.png',
+            icon: '/icons/notification-icon-192x192.png',
             tag: 'chatdock-unread',
             renotify: false,
             silent: true,
@@ -823,7 +823,7 @@ self.addEventListener('message', (event) => {
   }
 
   if (event.data?.type === 'GET_VERSION') {
-    event.source?.postMessage({ type: 'SW_VERSION', version: 'v4.8.0' });
+    event.source?.postMessage({ type: 'SW_VERSION', version: 'v4.9.0' });
   }
 
   if (event.data?.type === 'CLEAR_ALL_CACHES') {
@@ -860,4 +860,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[SW] Service Worker loaded - v4.8.0 (Unified sw.js + accept/decline/sign/clock_in handlers for NOTIFICATION_ACTION_MAP)');
+console.log('[SW] Service Worker loaded - v4.9.0 (Unified sw.js + accept/decline/sign/clock_in handlers for NOTIFICATION_ACTION_MAP)');
