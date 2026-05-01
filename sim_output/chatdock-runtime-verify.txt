@@ -5,7 +5,7 @@ DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
 
 [seed] preparing sandbox fixtures…
 [seed] users=3, workspace=ws-chatdock-sandbox
-[server] listening at http://127.0.0.1:42943
+[server] listening at http://127.0.0.1:45825
 
 [stage 1] List rooms (manager) — fresh workspace should be empty
   ✓ [200] GET /api/chat/rooms returns 200 — rooms=0
@@ -14,10 +14,10 @@ DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
   ✓ [200] Manager search finds peer in workspace — result_count=1
 
 [stage 3] Manager opens DM with peer
-  ✓ [200] POST /api/chat/manage/dm/create returns 200 + conversationId — conversationId=4519c919-0d20-4958-a789-ea75d01bf990
+  ✓ [200] POST /api/chat/manage/dm/create returns 200 + conversationId — conversationId=56604b48-0cab-4240-aff3-66eb28c91d7e
 
 [stage 4] Manager creates a group room with peer + bystander
-  ✓ [200] Group room creation returns conversationId — conversationId=1b14f7e5-afb1-4ad0-a09d-b8f3ebfb7f51 participantCount=4
+  ✓ [200] Group room creation returns conversationId — conversationId=37cce1c2-9ad5-4b72-ab0b-f0343f1cafd7 participantCount=4
 
 [stage 5] Get group room participants — must list all three users + HelpAI orchestrator
   ✓ [200] Participants endpoint returns all 3 seeded users — count=4 ids=usr-chatdock-manager,usr-chatdock-peer,usr-chatdock-bystander,helpai-bot
@@ -30,7 +30,7 @@ DATABASE_URL: postgres://coai:***@127.0.0.1:5432/coai_chatdock_sandbox
 Type…"
 
 [stage 6] Direct DB write of two messages (simulates WS chat_message persistence)
-  ✓ Two DM messages persisted via Drizzle — manager_msg=ab4b3597-6596-42e5-a3d9-2944d9dcd53f peer_msg=ac93662d-22d2-47c4-b575-b11fcafc3aa0
+  ✓ Two DM messages persisted via Drizzle — manager_msg=d4adf9fd-26bf-4c75-99f6-f67a1a2b214c peer_msg=b3aa0f81-b640-49fa-b724-7020caba3620
 
 [stage 7] Manager reacts to peer's message with 👍
   ✓ [200] POST reactions returns 2xx — {"success":true,"action":"added"}
@@ -56,7 +56,7 @@ Type…"
 
 [stage 13] Bystander hides the group room from their own list
   ✓ [200] Bystander hide returns 2xx — {"success":true,"message":"Conversation hidden"}
-  ✓ After hide, bystander's room list excludes the hidden room — room_count=0 hiddenRoom=1b14f7e5-afb1-4ad0-a09d-b8f3ebfb7f51
+  ✓ After hide, bystander's room list excludes the hidden room — room_count=0 hiddenRoom=37cce1c2-9ad5-4b72-ab0b-f0343f1cafd7
 
 [stage 14] Mark-as-read (manager) on the DM
   ✓ [200] POST mark-as-read returns 2xx — {"success":true,"message":"Messages marked as read"}
@@ -68,7 +68,7 @@ Type…"
   ✓ blocked_contacts row removed after unblock — rows=0
 
 [stage 16] Manager forwards their pinned message to the group room
-  ✓ [200] POST forward returns 2xx — {"success":true,"forwardedMessageId":"41421a2d-29fe-4f5b-8415-b11a0012921b"}
+  ✓ [200] POST forward returns 2xx — {"success":true,"forwardedMessageId":"deaa7965-7312-4b1f-98fd-2a32e8edb36f"}
   ✓ Forwarded message lands in the group room — group_msg_count=2
 
 [stage 17] Link preview probe — server must not return a usable preview for loopback URLs (SSRF guard)
@@ -79,14 +79,14 @@ Type…"
   ✓ message_deleted_for row persisted (per-user soft delete) — rows=1
 
 [stage 18b] @HelpAI summon endpoint — POST /api/helpai/message returns a HelpAI reply
-  ✓ [200] POST /api/helpai/message returns a HelpAI reply (no longer a ghost endpoint) — reply="Oops! Something didn't work right. Let me try again if you resend that.…"
+  ✓ [200] POST /api/helpai/message returns a HelpAI reply (no longer a ghost endpoint) — reply="I hit a small snag. Let's try that again in just a second.…"
 
 [stage 19] Trinity auto-react probe — previously a 404 ghost endpoint
-  ✓ [200] POST trinity-react returns 2xx (no longer a ghost endpoint) — {"success":true,"reacted":true,"messageId":"720dd215-8e7e-4b5f-aad4-28df99757f69","emoji":"✅"}
+  ✓ [200] POST trinity-react returns 2xx (no longer a ghost endpoint) — {"success":true,"reacted":true,"messageId":"aa5a5d48-a306-4a1c-82d9-0d603fea0afe","emoji":"✅"}
   ✓ Trinity ✅ reaction persisted on the user's message — rows=1
 
 [stage 20] Re-list rooms (manager) — should now contain the group room + DM
-  ✓ [200] Manager's room list contains the DM and the group room — rooms=2 ids=1b14f7e5-afb1-4ad0-a09d-b8f3ebfb7f51,4519c919-0d20-4958-a789-ea75d01bf990
+  ✓ [200] Manager's room list contains the DM and the group room — rooms=2 ids=37cce1c2-9ad5-4b72-ab0b-f0343f1cafd7,56604b48-0cab-4240-aff3-66eb28c91d7e
 
 ═══════════════════════════════════════════════════════════════
   Summary: 35 passed, 0 failed, 35 total

@@ -1,7 +1,7 @@
 [1] POST /api/chat/dock/rooms
-    status=201 body={"id":"53237ca6-2b2d-413f-9175-22c4f280a4e9","workspace_id":"ws-dockchat-smoke","room_name":"Smoke Room 1777623052645","room_slug":"smoke-room-1777623052645-1777623052688","description":"schema-correc
+    status=201 body={"id":"d59ade5e-3ff4-4169-bd0a-e6a10524c3ce","workspace_id":"ws-dockchat-smoke","room_name":"Smoke Room 1777653243662","room_slug":"smoke-room-1777653243662-1777653243697","description":"schema-correc
 [2] POST /api/chat/dock/rooms/:id/messages
-    status=201 body={"id":"3f4f570e-55d0-4abe-83ff-1f031360b2e6","workspace_id":"ws-dockchat-smoke","conversation_id":"ff984c17-8663-4406-b04c-9f14b920404a","sender_id":"usr-dockchat-smoke","sender_name":"Smoke Tester","
+    status=201 body={"id":"9ffd3cdf-b289-425b-a02c-a31913fe52e3","workspace_id":"ws-dockchat-smoke","conversation_id":"f57e4155-5c72-4d3d-a87f-23b1d5be6c1d","sender_id":"usr-dockchat-smoke","sender_name":"Smoke Tester","
 [3] GET /api/chat/dock/rooms/:id/messages
     status=200 count=1
 [4] POST /api/chat/dock/rooms/:id/messages with /help bot command
