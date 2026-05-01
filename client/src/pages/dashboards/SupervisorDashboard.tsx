@@ -11,6 +11,7 @@ import { DashboardLoadError } from "@/components/dashboard/DashboardLoadError";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { SafeSection } from "@/components/ui/safe-section";
+import { useLoadingTimeout } from '@/hooks/useLoadingTimeout';
 
 const pageConfig: CanvasPageConfig = {
   id: "supervisor-dashboard",
@@ -21,7 +22,8 @@ const pageConfig: CanvasPageConfig = {
 };
 
 export default function SupervisorDashboard() {
-  const [, setLocation] = useLocation();
+
+  const loadingTimedOut = useLoadingTimeout(4000); // 4s max skeleton  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -68,7 +70,7 @@ export default function SupervisorDashboard() {
 
   const orgName = workspace?.name ?? "Your Organization";
 
-  if (isLoading) {
+  if (isLoading && !loadingTimedOut) {
     return (
       <CanvasHubPage config={pageConfig}>
         <PageSkeleton />

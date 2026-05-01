@@ -757,19 +757,29 @@ function WorkerDashboardInner() {
   const { data: authUser, isError: authUserIsError, error: authUserError, refetch: refetchAuthUser } = useQuery<AuthUser>({ queryKey: ["/api/auth/me"] });
   const { data: clockStatus, isLoading: clockLoading, isError: clockIsError, error: clockError, refetch: refetchClockStatus } = useQuery<ClockStatus>({
     queryKey: ["/api/time-entries/status"],
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
     refetchInterval: 30000,
   });
   const { data: todayShifts, isLoading: shiftsLoading, isError: todayShiftsIsError, error: todayShiftsError, refetch: refetchTodayShifts } = useQuery<TodayShift[]>({
     queryKey: ["/api/shifts/today"],
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
   });
   const { data: upcomingShifts, isError: upcomingShiftsIsError, error: upcomingShiftsError, refetch: refetchUpcomingShifts } = useQuery<UpcomingShift[]>({
     queryKey: ["/api/shifts/upcoming"],
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
   const { data: earnings, isLoading: earningsLoading, isError: earningsIsError, error: earningsError, refetch: refetchEarnings } = useQuery<EarningsSummary>({
     queryKey: ["/api/dashboard/worker-earnings"],
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
   const { data: notificationsData, isError: notificationsIsError, error: notificationsError, refetch: refetchNotifications } = useQuery<{ notifications?: Notification[]; items?: Notification[] } | Notification[]>({
     queryKey: ["/api/notifications"],
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
   });
   const { data: pendingHandoff, isError: pendingHandoffIsError, error: pendingHandoffError, refetch: refetchPendingHandoff } = useQuery<PendingHandoff | null>({
     queryKey: ["/api/shift-handoff/pending"],

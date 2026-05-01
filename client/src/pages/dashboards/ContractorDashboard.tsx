@@ -9,6 +9,7 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { DashboardLoadError } from "@/components/dashboard/DashboardLoadError";
 import { useAuth } from "@/hooks/useAuth";
 import { SafeSection } from "@/components/ui/safe-section";
+import { useLoadingTimeout } from '@/hooks/useLoadingTimeout';
 
 const pageConfig: CanvasPageConfig = {
   id: "contractor-dashboard",
@@ -19,7 +20,8 @@ const pageConfig: CanvasPageConfig = {
 };
 
 export default function ContractorDashboard() {
-  const [, setLocation] = useLocation();
+
+  const loadingTimedOut = useLoadingTimeout(4000); // 4s max skeleton  const [, setLocation] = useLocation();
   const { user } = useAuth();
 
   const { data: earningsData, isLoading: earningsLoading, isError: earningsIsError, error: earningsError, refetch: refetchEarnings } = useQuery<{
@@ -56,7 +58,7 @@ export default function ContractorDashboard() {
 
   const firstName = user?.firstName || user?.email?.split("@")[0] || "Contractor";
 
-  if (isLoading) {
+  if (isLoading && !loadingTimedOut) {
     return (
       <CanvasHubPage config={pageConfig}>
         <PageSkeleton />

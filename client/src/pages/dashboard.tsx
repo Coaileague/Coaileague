@@ -1,4 +1,4 @@
-import { useEffect, Suspense, lazy } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
@@ -23,16 +23,52 @@ const ContractorDashboard = lazy(() => import("./dashboards/ContractorDashboard"
 const AuditorDashboard    = lazy(() => import("./dashboards/AuditorDashboard"));
 
 function LoadingSpinner() {
+  const [isOffline, setIsOffline] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  
+  useEffect(() => {
+    setIsOffline(!navigator.onLine);
+    const handleOffline = () => setIsOffline(true);
+    const handleOnline  = () => setIsOffline(false);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online',  handleOnline);
+    const tick = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online',  handleOnline);
+      clearInterval(tick);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center h-screen gap-4">
       <Suspense fallback={<div className="w-20 h-20" />}>
         <TrinityArrowMark size={80} />
       </Suspense>
       <div className="text-center space-y-1">
-        <p className="text-sm font-medium text-foreground">Loading your dashboard</p>
-        <p className="text-xs text-muted-foreground">
-          We are checking your workspace access, role, and starting view.
-        </p>
+        {isOffline ? (
+          <>
+            <p className="text-sm font-medium text-destructive">No internet connection</p>
+            <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+          </>
+        ) : elapsed > 6 ? (
+          <>
+            <p className="text-sm font-medium text-foreground">Still loading…</p>
+            <p className="text-xs text-muted-foreground">
+              Taking longer than usual.{" "}
+              <button className="underline text-primary" onClick={() => window.location.reload()}>
+                Reload
+              </button>
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-foreground">Loading your dashboard</p>
+            <p className="text-xs text-muted-foreground">
+              Checking your workspace access and role.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

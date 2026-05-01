@@ -303,7 +303,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 0,
+      staleTime: 30 * 1000,       // 30s global default — prevents refetch on every navigation
+      gcTime: 10 * 60 * 1000,   // 10 min cache retention
       retry: (failureCount, error) => {
         // 429 is retryable — the getQueryFn already does one inline retry with
         // Retry-After delay. If it still fails, allow one more attempt here.

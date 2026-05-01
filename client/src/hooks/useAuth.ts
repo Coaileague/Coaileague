@@ -65,9 +65,9 @@ export function useAuth() {
     retry: (failureCount, err: unknown) => {
       const status = parseInt(err?.message?.split(":")[0]);
       if (status >= 400 && status < 500) return false; // auth decision is final
-      return failureCount < 8; // retry aggressively for 5xx / network errors
+      return failureCount < 3; // 3 retries max — avoids 87s wait on mobile flaky networks
     },
-    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 10_000),
+    retryDelay: (attempt) => Math.min(800 * 2 ** attempt, 5_000), // max 5s delay — faster recovery
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
     refetchOnMount: true,

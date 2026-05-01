@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -39,6 +39,7 @@ import { DashboardLoadError } from "@/components/dashboard/DashboardLoadError";
 import { TrinityApprovalQueue } from "@/components/trinity/TrinityApprovalQueue";
 import { TrinityObservations } from "@/components/trinity/TrinityObservations";
 import { SafeSection } from "@/components/ui/safe-section";
+import { useLoadingTimeout } from '@/hooks/useLoadingTimeout';
 
 const pageConfig: CanvasPageConfig = {
   id: "org-owner-dashboard",
@@ -63,7 +64,8 @@ type SetupAction = {
 };
 
 export default function OrgOwnerDashboard() {
-  const [, setLocation] = useLocation();
+
+  const loadingTimedOut = useLoadingTimeout(4000); // 4s max skeleton  const [, setLocation] = useLocation();
   const { user } = useAuth();
 
   const {
@@ -265,7 +267,7 @@ export default function OrgOwnerDashboard() {
     setTimeout(() => setPinCopied(false), 1500);
   };
 
-  if (isDashboardLoading) {
+  if (isDashboardLoading && !loadingTimedOut) {
     return (
       <CanvasHubPage config={pageConfig}>
         <PageSkeleton />
