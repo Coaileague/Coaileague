@@ -22,7 +22,10 @@ export type ViolationType =
   | 'armed_without_qualification'
   | 'wrong_license_class'
   | 'company_license_expired'
-  | 'state_specific_hard_block';
+  | 'state_specific_hard_block'
+  | 'armed_commission_invalid'
+  | 'plainclothes_without_ppo'
+  | 'psych_eval_pending';
 
 interface CreateViolationParams {
   workspaceId: string;
@@ -47,15 +50,23 @@ const VIOLATION_TYPE_LABELS: Record<ViolationType, string> = {
   wrong_license_class: 'Assignment Requires License Class Not Held',
   company_license_expired: 'Company Operating Without Valid License',
   state_specific_hard_block: 'State-Specific Regulatory Hard Block Override',
+  armed_commission_invalid: 'Armed Assignment Without Valid Commissioned Officer License',
+  plainclothes_without_ppo: 'Plainclothes Assignment Without Personal Protection Officer Endorsement',
+  psych_eval_pending: 'Armed Status Without Cleared Psychological Evaluation',
 };
 
-const VIOLATION_CITATIONS: Record<string, Record<ViolationType, string>> = {
+// Inner Record is Partial so states without an explicit citation fall back to the generic
+// hard-block string in getCitation(). New TX-only violation types do not require CA/FL/NY equivalents.
+const VIOLATION_CITATIONS: Record<string, Partial<Record<ViolationType, string>>> = {
   TX: {
     expired_license_override: 'Texas Occupations Code Chapter 1702, § 1702.221',
     armed_without_qualification: 'Texas Occupations Code Chapter 1702, § 1702.163',
     wrong_license_class: 'Texas Occupations Code Chapter 1702, § 1702.101',
     company_license_expired: 'Texas Occupations Code Chapter 1702, § 1702.102',
     state_specific_hard_block: 'Texas Occupations Code Chapter 1702',
+    armed_commission_invalid: 'Texas Occupations Code Chapter 1702, § 1702.161',
+    plainclothes_without_ppo: 'Texas Occupations Code Chapter 1702, § 1702.323',
+    psych_eval_pending: 'Texas Occupations Code Chapter 1702, § 1702.163',
   },
   CA: {
     expired_license_override: 'California B&P Code § 7583.3',

@@ -2,12 +2,6 @@ import { db } from 'server/db';
 import { timeEntries } from '@shared/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
-// Accept either the top-level db handle or a Drizzle transaction handle —
-// callers compose this helper inside an outer db.transaction(...) and the
-// tx parameter there is structurally narrower than typeof db.
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type DbExecutor = typeof db | DbTransaction;
-
 export interface PayrollTimeEntryClaimResult {
   requestedCount: number;
   claimedCount: number;
@@ -15,13 +9,18 @@ export interface PayrollTimeEntryClaimResult {
   unclaimedIds: string[];
 }
 
+// Accept either the top-level db handle or a Drizzle transaction object. The claimer only
+// uses .select() / .update(), which both share, so the union keeps callers within
+// db.transaction(async (tx) => ...) type-safe without bypassing the schema.
+export type PayrollClaimerTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export interface ClaimPayrollTimeEntriesParams {
   workspaceId: string;
   timeEntryIds: string[];
   payrollRunId: string;
   requireAll?: boolean;
   claimedAt?: Date;
-  tx?: DbExecutor;
+  tx?: PayrollClaimerTx;
 }
 
 /**
@@ -65,8 +64,7 @@ export async function claimPayrollTimeEntries({
     .where(and(
       eq(timeEntries.workspaceId, workspaceId),
       inArray(timeEntries.id, uniqueIds),
-      isNull(timeEntries.payrolledAt),           // Not already payrolled
-      eq(timeEntries.status as any, 'approved'), // Only approved entries can be payrolled
+      isNull(timeEntries.payrolledAt),
     ))
     .returning({ id: timeEntries.id });
 

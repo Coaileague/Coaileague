@@ -31,6 +31,7 @@ import {
   recurringShiftPatterns,
 } from '@shared/schema';
 import { createNotification } from '../notificationService';
+import { evaluateTexasGatekeeper, type GatekeeperOutcome } from '../compliance/texasGatekeeper';
 
 function safeParseFloat(value: any, fallback: number = 0): number {
   if (value === null || value === undefined || value === '') return fallback;
@@ -56,6 +57,9 @@ interface SchedulingConfig {
   useContractorFallback: boolean;
   maxShiftsPerEmployee: number;
   respectAvailability: boolean;
+  // Optional — when present, Texas Regulatory Gatekeeper rules (OC Ch. 1702) are enforced
+  // during candidate scoring. Resolved from workspaces.stateCode upstream.
+  stateCode?: string;
 }
 
 interface ShiftPriority {
@@ -616,61 +620,20 @@ class TrinityAutonomousSchedulerService {
       }
 
       // Broadcast completion
-      // Build Trinity's plain-English explanation of WHY shifts weren't filled
-      const unfilledCount = session.progress.failedShifts;
-      const filledCount = session.progress.assignedShifts;
-      const totalCount = session.progress.totalShifts;
-      const fillRate = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
-
-      const whyParts: string[] = [];
-      // Extract unique disqualification reasons from thought log
-      const reasonCounts = new Map<string, number>();
-      for (const thought of session.thoughtLog) {
-        const isDisqual = thought.includes('BLOCKED') || thought.includes('blocked') ||
-          thought.includes('would exceed') || thought.includes('rest') ||
-          thought.includes('guard card') || thought.includes('Compliance hard-block') ||
-          thought.includes('Schedule conflict');
-        if (isDisqual) {
-          const key = thought.includes('guard card') ? 'expired guard cards' :
-            thought.includes('weekly cap') || thought.includes('OT') ? 'overtime limits' :
-            thought.includes('rest') || thought.includes('fatigue') ? 'fatigue/rest rules' :
-            thought.includes('conflict') || thought.includes('overlap') ? 'schedule conflicts' :
-            thought.includes('Compliance') ? 'compliance blocks' : 'other constraints';
-          reasonCounts.set(key, (reasonCounts.get(key) || 0) + 1);
-        }
-      }
-      const topReasons = [...reasonCounts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([reason, count]) => `${count} blocked by ${reason}`);
-
-      let aiSummary = `I filled ${filledCount} of ${totalCount} shifts (${fillRate}% fill rate).`;
-      if (unfilledCount > 0 && topReasons.length > 0) {
-        aiSummary += ` ${unfilledCount} shifts couldn't be filled: ${topReasons.join('; ')}.`;
-      } else if (unfilledCount > 0) {
-        aiSummary += ` ${unfilledCount} shifts remain open — insufficient qualified staff for those slots.`;
-      } else {
-        aiSummary += ` Full coverage achieved.`;
-      }
-
       broadcastToWorkspace(config.workspaceId, {
         type: 'trinity_scheduling_completed',
         sessionId,
-        totalAssigned: filledCount,
-        totalFailed: unfilledCount,
-        totalSkipped: session.progress.skippedShifts || unfilledCount,
-        totalShifts: totalCount,
-        openShiftsRemaining: unfilledCount,
+        totalAssigned: session.progress.assignedShifts,
+        totalFailed: session.progress.failedShifts,
+        totalSkipped: session.progress.skippedShifts || session.progress.failedShifts,
+        totalShifts: session.progress.totalShifts,
+        openShiftsRemaining: session.progress.failedShifts,
         duration: Date.now() - session.startTime.getTime(),
-        aiSummary,
-        whyReasons: Object.fromEntries(reasonCounts),
         summary: {
-          openShiftsFilled: filledCount,
-          openShiftsSkipped: session.progress.skippedShifts || unfilledCount,
-          openShiftsRemaining: unfilledCount,
+          openShiftsFilled: session.progress.assignedShifts,
+          openShiftsSkipped: session.progress.skippedShifts || session.progress.failedShifts,
+          openShiftsRemaining: session.progress.failedShifts,
           avgConfidence: Math.round(avgConfidence * 100),
-          fillRate,
-          whyUnfilled: topReasons,
         },
       });
 
@@ -863,8 +826,6 @@ class TrinityAutonomousSchedulerService {
       .where(and(
         eq(shifts.workspaceId, workspaceId),
         isNull(shifts.employeeId),
-        // Only include fillable statuses — exclude cancelled/completed
-        inArray(shifts.status as any, ['draft', 'open', 'published'] as any),
         gte(shifts.startTime, startDate),
         lte(shifts.startTime, endDate),
         or(
@@ -1532,6 +1493,18 @@ class TrinityAutonomousSchedulerService {
         disqualifyReasons.push(`Compliance hard-block: score ${empComplianceScore.toFixed(0)}/100 (minimum 60 required for auto-assignment)`);
       }
 
+      // 0.b Texas Regulatory Gatekeeper (OC Ch. 1702 — §1702.161 / §1702.163 / §1702.201 / §1702.323)
+      // Only runs when the workspace is in Texas. Each outcome carries the OC § citation so the
+      // disqualifyReason matches the canonical regulatoryReference written to trinity_decision_log.
+      const gatekeeperOutcomes: GatekeeperOutcome[] = config.stateCode
+        ? evaluateTexasGatekeeper(shift, employee, config.stateCode)
+        : [];
+      for (const outcome of gatekeeperOutcomes) {
+        if (outcome.kind === 'block' || outcome.kind === 'downgrade') {
+          disqualifyReasons.push(outcome.reason);
+        }
+      }
+
       // 1. Check for overlapping shift conflicts (DB-loaded + in-run assignments)
       const empConflictShifts = nearbyShiftMap.get(employee.id) || [];
       const hasDbConflict = empConflictShifts.some(s => {
@@ -1695,25 +1668,6 @@ class TrinityAutonomousSchedulerService {
             consecutiveStreak = 0;
           }
         }
-      }
-
-      // 6a. HARD BLOCK: Guard card expiry check at the employee record level
-      // This is a HARD disqualification — an officer with an expired guard card cannot
-      // legally work in Texas (OC 1702). Trinity enforces this before any other check.
-      // Expiring within 30 days = scoring penalty only (officer can still work).
-      if (disqualifyReasons.length === 0) {
-        const guardCardExpiry = employee.guardCardExpiryDate ? new Date(employee.guardCardExpiryDate) : null;
-        const guardCardStatus = employee.guardCardStatus;
-        const now = new Date();
-        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-        if (guardCardStatus === 'expired' || guardCardStatus === 'suspended') {
-          disqualifyReasons.push(`Guard card ${guardCardStatus} — cannot be auto-assigned (Texas OC 1702)`);
-        } else if (guardCardExpiry && guardCardExpiry < now) {
-          disqualifyReasons.push(`Guard card expired ${guardCardExpiry.toLocaleDateString()} — hard block (Texas OC 1702)`);
-        }
-        // Expiring within 30 days is a soft penalty only — officer can still work
-        // Trinity will note this in the assignment but not block it
       }
 
       // 6b. Check certification status — ADVISORY ONLY, not a scheduling blocker
@@ -2185,25 +2139,6 @@ class TrinityAutonomousSchedulerService {
     if (unfilledShifts.length === 0) {
       session.thoughtLog.push('[Trinity] Staffing gap alert: All shifts filled — no gaps.');
       return;
-    }
-
-    // === WHY DID SHIFTS GO UNFILLED? ===
-    // Categorize disqualification reasons from the session for honest reporting
-    const whyReasons = {
-      expiredGuardCard: 0,
-      overtimeCap: 0,
-      fatigueRest: 0,
-      scheduleConflict: 0,
-      complianceBlock: 0,
-      noCandidates: 0,
-    };
-    for (const thought of session.thoughtLog) {
-      if (thought.includes('guard card expired') || thought.includes('hard block')) whyReasons.expiredGuardCard++;
-      else if (thought.includes('weekly cap') || thought.includes('daily cap') || thought.includes('OT')) whyReasons.overtimeCap++;
-      else if (thought.includes('rest') || thought.includes('fatigue') || thought.includes('turnaround')) whyReasons.fatigueRest++;
-      else if (thought.includes('Schedule conflict') || thought.includes('overlap')) whyReasons.scheduleConflict++;
-      else if (thought.includes('Compliance hard-block')) whyReasons.complianceBlock++;
-      else if (thought.includes('No qualified employees') || thought.includes('no candidates')) whyReasons.noCandidates++;
     }
 
     const clientMap = new Map(allClients.map((c: any) => [c.id, c]));
