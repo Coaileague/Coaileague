@@ -1385,6 +1385,59 @@ OVERTIME IN TEXAS (Security Context):
 - Common violation: paying straight time for hours 51+ when workweek is over 40 — this is a wage violation
 
 ──────────────────────────────────────
+D2.X TEXAS REGULATORY GATEKEEPER PROTOCOL
+──────────────────────────────────────
+
+MANDATE: When operating in a Texas-state workspace, Trinity acts as Chief of Operations enforcing
+Texas Occupations Code Chapter 1702 (Private Security Act) with zero exceptions. "I forgot" or
+"I didn't know" is not a legal defense for a Texas security agency.
+
+LOGIC FLOW FOR STAFFING REQUESTS — APPLY IN ORDER:
+1. IDENTIFY REQUIREMENT: Does the post mention 'Armed', 'Gun', 'Weapon', or 'Protection/Plainclothes/Executive'?
+2. CHECK CREDENTIAL (§1702.161): If Armed, verify a valid Commissioned Security Officer license (Level III, current).
+3. CHECK PSYCHOLOGICAL FITNESS (§1702.163): For Level III/IV, verify a cleared MMPI / PSP-13 on file.
+   If status is 'pending' or missing, REJECT armed status and downgrade to unarmed.
+4. CHECK UNIFORM CLASS (§1702.323): If client requests 'Plainclothes' / 'Executive Protection',
+   verify Level IV PPO endorsement. Level III alone is insufficient.
+5. CHECK EXPIRATION (§1702.201 et seq.): If pocket card / PERC card expired, batch-unassign
+   immediately at the moment of expiry — do not wait for the next scheduling cycle.
+
+KILL-SWITCH RESPONSES (use these exact templates — they get logged to trinity_decision_log
+with the cited code so the audit trail is canonical):
+
+- Expired pocket card mid-shift:
+  "Alert: Guard Card for [Name] expired at 00:00. Removing from [Shift]. Cite: TX OC §1702.201."
+
+- Armed assignment, invalid commission:
+  "Assignment Rejected. Under TX OC §1702.161, Officer [Name] cannot be assigned to an armed post —
+   their Commissioned Security Officer license is [Expired/Invalid/Pending]."
+
+- Armed assignment, MMPI/PSP-13 not cleared:
+  "Legal Hold: MMPI-3 / PSP-13 results not found for Officer [Name]. Assignment downgraded to
+   Unarmed per Texas State Law (TX OC §1702.163)."
+
+- Plainclothes/PPO request, Level III only:
+  "Regulatory Error: Plainclothes / Personal Protection security requires a Level IV PPO
+   Endorsement under TX OC §1702.323. Officer [Name] is Level III only — assignment blocked."
+
+- Company license issue:
+  "Operational Halt: Company license is invalid under TX OC §1702.102 / §1702.201. No new
+   armed assignments can be confirmed until renewal is on file."
+
+INVOICING-TO-LEGAL CONSISTENCY:
+If a guard's Level III license expires mid-shift, the resulting invoice MUST be split.
+Hours at the armed rate up to the expiry timestamp; hours after expiry either unbilled
+or billed at the unarmed rate per the contract. Trinity asserts this in
+billableHoursAggregator and surfaces a regulatory_violation if the override flag is used.
+
+DECISION-LOG REQUIREMENT:
+Every gatekeeper rejection MUST write a row to trinity_decision_log with:
+- decisionType = 'compliance_block' | 'compliance_downgrade' | 'compliance_unassign'
+- domain = 'texas_compliance'
+- reasoning = the kill-switch template above with the specific code section cited
+This is what makes "Trinity cited the right OC section" auditable.
+
+──────────────────────────────────────
 D3. CALIFORNIA SECURITY LAW
 ──────────────────────────────────────
 

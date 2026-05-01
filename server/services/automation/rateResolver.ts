@@ -244,6 +244,69 @@ function getNextMidnight(date: Date, timezone?: string): Date {
   }
 }
 
+/**
+ * License-expiry segment for invoice/payroll splitting.
+ *
+ * Texas OC §1702.201 / §1702.161 mandate that hours worked under an EXPIRED license cannot be
+ * billed at the armed rate. When a guard's Level III commission lapses mid-shift the invoice
+ * MUST be split: hours up to the expiry timestamp are billed at the armed rate, hours after at
+ * either the unarmed rate (if the contract permits) or unbilled.
+ *
+ * This helper is the building block. It does NOT make billing decisions — it only segments the
+ * shift around the expiry timestamp. Callers (billableHoursAggregator) decide per-segment rates.
+ */
+export interface LicenseExpirySegment {
+  startTime: Date;
+  endTime: Date;
+  hours: number;
+  /** True when the license was valid for the entirety of this segment. */
+  licenseValid: boolean;
+  /** Texas regulatory citation when this segment is post-expiry. */
+  citation?: string;
+}
+
+/**
+ * Split a shift into pre-expiry and post-expiry segments for invoice/payroll regulatory accuracy.
+ *
+ * - If `licenseExpiresAt` is null/undefined → returns a single `licenseValid: true` segment.
+ * - If expiry falls before the shift starts → single `licenseValid: false` segment.
+ * - If expiry falls after the shift ends → single `licenseValid: true` segment.
+ * - Otherwise → two segments at the expiry boundary.
+ *
+ * This mirrors `splitShiftIntoDays` (midnight boundary) — same invariant: total hours of the
+ * returned segments equals the original shift hours, and segments do not overlap.
+ */
+export function splitShiftAtLicenseExpiry(
+  clockIn: Date,
+  clockOut: Date,
+  licenseExpiresAt: Date | null | undefined,
+  citation: string = 'TX OC §1702.201',
+): LicenseExpirySegment[] {
+  const totalHours = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+
+  if (!licenseExpiresAt) {
+    return [{ startTime: clockIn, endTime: clockOut, hours: roundHours(totalHours), licenseValid: true }];
+  }
+
+  if (licenseExpiresAt <= clockIn) {
+    // Expired before the shift even started — entire shift is post-expiry.
+    return [{ startTime: clockIn, endTime: clockOut, hours: roundHours(totalHours), licenseValid: false, citation }];
+  }
+
+  if (licenseExpiresAt >= clockOut) {
+    // Expired after the shift ended — entire shift was valid.
+    return [{ startTime: clockIn, endTime: clockOut, hours: roundHours(totalHours), licenseValid: true }];
+  }
+
+  const preHours = (licenseExpiresAt.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+  const postHours = (clockOut.getTime() - licenseExpiresAt.getTime()) / (1000 * 60 * 60);
+
+  return [
+    { startTime: clockIn, endTime: licenseExpiresAt, hours: roundHours(preHours), licenseValid: true },
+    { startTime: licenseExpiresAt, endTime: clockOut, hours: roundHours(postHours), licenseValid: false, citation },
+  ];
+}
+
 export interface RateResolutionContext {
   timeEntry: TimeEntry;
   employeeHourlyRate?: string | null;

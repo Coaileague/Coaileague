@@ -9,13 +9,18 @@ export interface PayrollTimeEntryClaimResult {
   unclaimedIds: string[];
 }
 
+// Accept either the top-level db handle or a Drizzle transaction object. The claimer only
+// uses .select() / .update(), which both share, so the union keeps callers within
+// db.transaction(async (tx) => ...) type-safe without bypassing the schema.
+export type PayrollClaimerTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export interface ClaimPayrollTimeEntriesParams {
   workspaceId: string;
   timeEntryIds: string[];
   payrollRunId: string;
   requireAll?: boolean;
   claimedAt?: Date;
-  tx?: typeof db;
+  tx?: PayrollClaimerTx;
 }
 
 /**

@@ -31,6 +31,7 @@ import {
   recurringShiftPatterns,
 } from '@shared/schema';
 import { createNotification } from '../notificationService';
+import { evaluateTexasGatekeeper, type GatekeeperOutcome } from '../compliance/texasGatekeeper';
 
 function safeParseFloat(value: any, fallback: number = 0): number {
   if (value === null || value === undefined || value === '') return fallback;
@@ -56,6 +57,9 @@ interface SchedulingConfig {
   useContractorFallback: boolean;
   maxShiftsPerEmployee: number;
   respectAvailability: boolean;
+  // Optional — when present, Texas Regulatory Gatekeeper rules (OC Ch. 1702) are enforced
+  // during candidate scoring. Resolved from workspaces.stateCode upstream.
+  stateCode?: string;
 }
 
 interface ShiftPriority {
@@ -1487,6 +1491,18 @@ class TrinityAutonomousSchedulerService {
       const empComplianceScore = safeParseFloat(employee.complianceScore, 100);
       if (empComplianceScore < 60) {
         disqualifyReasons.push(`Compliance hard-block: score ${empComplianceScore.toFixed(0)}/100 (minimum 60 required for auto-assignment)`);
+      }
+
+      // 0.b Texas Regulatory Gatekeeper (OC Ch. 1702 — §1702.161 / §1702.163 / §1702.201 / §1702.323)
+      // Only runs when the workspace is in Texas. Each outcome carries the OC § citation so the
+      // disqualifyReason matches the canonical regulatoryReference written to trinity_decision_log.
+      const gatekeeperOutcomes: GatekeeperOutcome[] = config.stateCode
+        ? evaluateTexasGatekeeper(shift, employee, config.stateCode)
+        : [];
+      for (const outcome of gatekeeperOutcomes) {
+        if (outcome.kind === 'block' || outcome.kind === 'downgrade') {
+          disqualifyReasons.push(outcome.reason);
+        }
       }
 
       // 1. Check for overlapping shift conflicts (DB-loaded + in-run assignments)

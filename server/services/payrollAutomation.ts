@@ -1389,6 +1389,15 @@ export class PayrollAutomationEngine {
     // C5: Wrap payroll run creation, payroll entries, and time entry marking in a single
     // atomic transaction. If any step fails, the entire payroll is rolled back —
     // no orphaned run records and no entries marked payrolled without a corresponding run.
+
+    // One-week-in-arrears invariant (bi-weekly default).
+    // Compliance constraint: bi-weekly payroll for security operations is processed one full
+    // week after period end so timesheets can be approved, edits flagged, and tax-period
+    // boundaries respected. We set disbursementDate = periodEnd + 7d explicitly here; if a
+    // workspace's policy ever overrides this, the override should be applied AFTER this default.
+    const arrearsDays = 7;
+    const expectedDisbursementDate = new Date(payPeriod.end.getTime() + arrearsDays * 24 * 60 * 60 * 1000);
+
     const payrollRun = await db.transaction(async (tx) => {
       const [run] = await tx
         .insert(payrollRuns)
@@ -1400,6 +1409,7 @@ export class PayrollAutomationEngine {
           runType: 'regular',
           isOffCycle: false,
           disbursementStatus: 'pending',
+          disbursementDate: expectedDisbursementDate,
           workerTypeBreakdown,
           totalGrossPay: totalGrossPay.toFixed(2),
           totalTaxes: totalActualTaxes.toFixed(2),
@@ -1607,9 +1617,11 @@ export class PayrollAutomationEngine {
       }
 
       // Bulk-claim source time entries atomically via canonical claimer.
+      // workspaceId is sourced from the returning() row above so this approval path stays
+      // self-contained — callers do not need to pass it separately.
       if (timeEntryIds && timeEntryIds.length > 0) {
         const claimed = await claimPayrollTimeEntries({
-          workspaceId,
+          workspaceId: row.workspaceId,
           timeEntryIds,
           payrollRunId,
           requireAll: true,
