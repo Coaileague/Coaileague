@@ -2,19 +2,46 @@
 
 **Owner:** assign during next refactoring sprint
 **Created:** 2026-04-30, branch `claude/trinity-autonomous-sweep-FkZBB`
+**Updated:** 2026-05-01, branch `claude/fix-handoff-issues-4fHaj`
 **Build impact:** none — production build uses `esbuild` (`build.mjs`) which strips types. `npm run check` (tsc) is the only consumer.
 
 ## Status snapshot
 
-| | Before | After this branch |
-|---|---|---|
-| Total `tsc` errors (server) | 245 | 185 |
-| In-scope (Trinity / billing / payroll / scheduling) | 60 | **0** |
-| Out-of-scope (this file) | 185 | 185 |
+| | Original | After previous branch | After this branch |
+|---|---|---|---|
+| Total `tsc` errors | 245 | 381 (regressed) | **92** |
+| In-scope (Trinity / billing / payroll / scheduling) | 60 | 0 | 0 |
+| Out-of-scope (this file) | 185 | 381 | 92 |
 
-The 60 errors closed on this branch lived in code paths the Trinity 30-day sweep touches: `payrollRoutes`, `billingEnforcement`, `taxFormGeneratorService`, `staffingBroadcastService`, `invoiceAdjustmentService`, `notifications`, `paystubService`, `payrollAutomation`, `time-entry-routes`, `timeEntryRoutes`, `payStubRoutes`, `achTransferService`, `payrollTimesheetRoutes`, `quickbooks-sync`, `schedulesRoutes`, `curePeriodTrackerService`, `payrollReadinessScanner`, `billing/invoice`, `quickbooksWebhookService`, `approvalGateEnforcement`, `trinitySchedulingOrchestrator`, `shiftStorage`.
+This branch (`claude/fix-handoff-issues-4fHaj`) closed **289 of the 381 errors**
+— see `AGENT_HANDOFF.md` "OUT-OF-SCOPE DEBT — ADDRESSED THIS BRANCH" for the
+domain-by-domain breakdown.
 
-The 185 errors below are pre-existing tech debt from in-flight refactor work in unrelated domains. They are tracked here so they don't get lost.
+What was fixed in this sweep:
+
+  • TS2578 unused `@ts-expect-error` — 61 directives stripped (two passes)
+  • Pattern 1 — local `AuthenticatedRequest` drift: replaced
+    `from '../auth'` → `from '../rbac'` in 6 route files
+  • `trinityDocumentActions.ts` (28 errors → 0) — restructured so
+    scanOverdueI9s lives below registerTrinityDocumentActions; replaced
+    `helpaiOrchestrator.registerAction(mkAction({}))` with the existing
+    `orchestrator.registerAction({})` pattern; wired claudeService.call
+    where the broken claudeVerificationService.verify call used to be
+  • `trinityChatService.ts` (21 → 0) — restored `mode` local in chat()
+  • `authCoreRoutes.ts` (13 → 0) — proper validatePendingMfaToken impl,
+    canonical verifyPassword + verifyMfaToken imports
+  • `chat-rooms.ts` (12 → 0) — alias organizationChatRooms as chatRooms
+  • `onboardingOrchestrator.ts` (11 → 0) — extended gamification stub
+  • Calendar OAuth + Twilio voice interview + Anthropic SDK loading
+    stubbed inline so the surfaces typecheck
+  • Three new service files created: chatInterviewService,
+    businessFormsGenerators, businessArtifactDiagnosticService rewritten
+  • actionRegistry.ts: +170 lines logActionAudit instrumentation
+    (Phase-18 backlog item from CLAUDE.md Section L)
+
+The remaining 92 errors are documented below. They live in client pages
+or services where domain ownership review is needed before mechanical
+type narrowing.
 
 ## Remaining out-of-scope errors (185 total, 42 files)
 
