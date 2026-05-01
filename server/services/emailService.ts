@@ -35,6 +35,10 @@ import {
 
 // Per-category templates moved to ./email/templates/{account,billing,support,onboarding,scheduling}.ts
 import { emailTemplates } from "./email/templates";
+// Mobile-responsive wrapper for hand-rolled inline HTML (Trinity, paystub,
+// scheduling broadcasts). Adds viewport meta + @media query that collapses
+// the legacy 600/640px container to 100% on phones — no template rewrite.
+import { wrapInlineEmailHtml } from "./email/wrapInlineEmailHtml";
 
 // ============================================================================
 // EMAIL SERVICE CLASS
@@ -192,22 +196,28 @@ export class EmailService {
         continue;
       }
       
-      // Attempt to resend
-      try {
-        const { client, fromEmail } = await getUncachableResendClient();
-        const result = await client.emails.send({
-          from: fromEmail,
-          to: job.recipientEmail,
-          subject: job.subject,
-          html: job.html,
-        });
-        
-        // Success - update log and remove from queue
-        await this.updateEmailEvent(job.eventId, 'sent', result.data?.id);
+      // Routed through sendCanSpamCompliantEmail so retries inherit hard-bounce
+      // suppression, the 15s Resend timeout, and the same {success,error}
+      // contract as the original send. Without this wrapper a retry could
+      // resurrect delivery to a permanently-suppressed address.
+      const sendResult = await sendCanSpamCompliantEmail({
+        to: job.recipientEmail,
+        subject: job.subject,
+        html: job.html,
+        emailType: job.emailType,
+        workspaceId: job.workspaceId,
+      });
+
+      if (sendResult.success) {
+        await this.updateEmailEvent(job.eventId, 'sent', sendResult.data?.data?.id);
         this.retryQueue.delete(job.id);
         log.info(`[EmailService] Retry successful: ${job.emailType} to ${job.recipientEmail}`);
-      } catch (error: any) {
-        // Schedule next retry
+      } else if (sendResult.skipped) {
+        // Hard-bounced or unsubscribed — drop the retry, do not reschedule.
+        await this.updateEmailEvent(job.eventId, 'failed', undefined, sendResult.reason);
+        this.retryQueue.delete(job.id);
+        log.warn(`[EmailService] Retry dropped (suppressed): ${job.emailType} to ${job.recipientEmail} — ${sendResult.reason}`);
+      } else {
         job.retryCount++;
         job.nextRetryAt = this.getNextRetryTime(job.retryCount);
         log.warn(`[EmailService] Retry failed: ${job.emailType} to ${job.recipientEmail}, next attempt: ${job.nextRetryAt}`);
@@ -998,7 +1008,7 @@ export class EmailService {
       ? `We've identified <strong>${params.extractedShiftCount} shift${params.extractedShiftCount > 1 ? 's' : ''}</strong> in your request.`
       : 'Our team is reviewing your request details.';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; border-radius: 12px 12px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 24px;">Request Received</h1>
@@ -1042,7 +1052,7 @@ export class EmailService {
           </p>
         </div>
       </div>
-    `;
+    `);
 
     return this._deliver(
       params.senderEmail,
@@ -1083,7 +1093,7 @@ export class EmailService {
       </tr>
     `).join('');
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; border-radius: 12px 12px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 24px;">✓ Request Fulfilled!</h1>
@@ -1137,7 +1147,7 @@ export class EmailService {
           </p>
         </div>
       </div>
-    `;
+    `);
 
     return this._deliver(
       params.senderEmail,
@@ -1173,7 +1183,7 @@ export class EmailService {
         </div>
       ` : '';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 30px; border-radius: 12px 12px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 24px;">Unable to Fulfill Request</h1>
@@ -1218,7 +1228,7 @@ export class EmailService {
           </p>
         </div>
       </div>
-    `;
+    `);
 
     return this._deliver(
       params.senderEmail,
@@ -1277,7 +1287,7 @@ export class EmailService {
       </div>
     ` : '';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: ${step.color}; padding: 20px; border-radius: 12px 12px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 20px;">${step.icon} ${step.label}</h1>
@@ -1313,7 +1323,7 @@ export class EmailService {
           </p>
         </div>
       </div>
-    `;
+    `);
 
     const _subject = `${step.icon} Step ${params.stepNumber}/${params.totalSteps}: ${step.label} - ${params.referenceNumber}`;
     const { NotificationDeliveryService } = await import('./notificationDeliveryService');
@@ -1383,7 +1393,7 @@ export class EmailService {
       ? `<p style="margin: 5px 0; color: #1e293b; font-size: 14px;"><strong>Requirements:</strong> ${summary.what.specialRequirements.join(', ')}</p>`
       : '';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 26px;">🎉 Staffing Complete!</h1>
@@ -1487,7 +1497,7 @@ export class EmailService {
           </div>
         </div>
       </div>
-    `;
+    `);
 
     return this._deliver(
       params.senderEmail,
@@ -1512,7 +1522,7 @@ export class EmailService {
     orgEmail: string;
   }): Promise<EmailResult> {
     const name = params.senderName || 'there';
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">${params.workspaceName}</h1>
@@ -1563,7 +1573,7 @@ export class EmailService {
           </p>
         </div>
       </div>
-    `;
+    `);
 
     return this._deliver(
       params.senderEmail,
@@ -1608,7 +1618,7 @@ export class EmailService {
       ? `<p style="margin:5px 0;font-size:14px;color:#1e293b;"><strong>Your Pay Rate:</strong> $${params.officerPayRate.toFixed(2)}/hr</p>`
       : '';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #0891b2 100%); padding: 25px; border-radius: 12px 12px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 22px;">Shift Offer — ${params.workspaceName}</h1>
@@ -1657,7 +1667,7 @@ export class EmailService {
           </p>
         </div>
       </div>
-    `;
+    `);
 
     return this._deliver(
       params.officerEmail,
@@ -1710,7 +1720,7 @@ export class EmailService {
       </div>
     ` : '';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%); padding: 25px; border-radius: 12px 12px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 22px;">Staffing Complete — Internal Summary</h1>
@@ -1770,7 +1780,7 @@ export class EmailService {
           </p>
         </div>
       </div>
-    `;
+    `);
 
     const results: EmailResult[] = [];
     for (const recipient of params.recipients) {
@@ -1802,7 +1812,7 @@ export class EmailService {
   }): Promise<EmailResult> {
     const greeting = params.clientName ? `Dear ${params.clientName}` : 'Hello';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #059669; padding: 20px; border-radius: 8px 8px 0 0;">
           <h2 style="color: white; margin: 0; font-size: 20px;">Your Client Portal is Ready</h2>
@@ -1851,7 +1861,7 @@ export class EmailService {
           </div>
         </div>
       </div>
-    `;
+    `);
 
     const { NotificationDeliveryService: NDS3 } = await import('./notificationDeliveryService');
     await NDS3.send({ type: 'client_portal_invitation', workspaceId: params.workspaceId || 'system', recipientUserId: params.clientEmail, channel: 'email', body: { to: params.clientEmail, subject: `Your Client Portal is Ready - ${params.workspaceName}`, html } });
@@ -1879,7 +1889,7 @@ export class EmailService {
       </div>
     ` : '';
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <table width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;background-color:#e8edf2;">
         <tr><td align="center" style="padding:8px 6px;">
         <div style="max-width:600px;width:100%;margin:0 auto;">
@@ -1924,7 +1934,7 @@ export class EmailService {
         </div>
         </td></tr>
       </table>
-    `;
+    `);
 
     return this._deliver(
       params.clientEmail,
@@ -2049,7 +2059,7 @@ export class EmailService {
           subjectPrefix: 'Staffing Request Received —',
         };
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <table width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;background-color:#e8edf2;">
         <tr><td align="center" style="padding:8px 6px;">
         <div style="max-width:640px;width:100%;margin:0 auto;">
@@ -2148,7 +2158,7 @@ export class EmailService {
         </div>
         </td></tr>
       </table>
-    `;
+    `);
 
     return this._deliver(
       params.senderEmail,
@@ -2202,7 +2212,7 @@ export class EmailService {
       </tr>
     `).join('');
 
-    const html = `
+    const html = wrapInlineEmailHtml(`
       <table width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;background-color:#e8edf2;">
         <tr><td align="center" style="padding:8px 6px;">
         <div style="max-width:640px;width:100%;margin:0 auto;">
@@ -2359,7 +2369,7 @@ export class EmailService {
         </div>
         </td></tr>
       </table>
-    `;
+    `);
 
     const { NotificationDeliveryService: NDS4 } = await import('./notificationDeliveryService');
     await NDS4.send({ type: 'staffing_onboarding_invitation', workspaceId: params.workspaceId || 'system', recipientUserId: params.clientEmail, channel: 'email', body: { to: params.clientEmail, subject: `Your Assignment is Staffed — ${params.workspaceName} [${params.confirmationNumber}]`, html } });

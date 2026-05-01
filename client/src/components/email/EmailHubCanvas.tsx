@@ -687,7 +687,7 @@ function SupportInboxPanel({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex items-center gap-2 p-3 border-b">
-        <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-support-back">
+        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to inbox" data-testid="button-support-back">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex items-center gap-2 flex-1">
@@ -842,7 +842,7 @@ function TrinityInboxPanel({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex items-center gap-2 p-3 border-b">
-        <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-trinity-back">
+        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to Trinity inbox" data-testid="button-trinity-back">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex items-center gap-2 flex-1">
@@ -1030,7 +1030,7 @@ function EmailHub({
                   <Badge variant="default" className="text-[10px] shrink-0" data-testid="badge-unread-count">{unreadCount}</Badge>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={onRefresh} data-testid="button-refresh">
+              <Button variant="ghost" size="icon" onClick={onRefresh} aria-label="Refresh inbox" data-testid="button-refresh">
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
@@ -1082,7 +1082,7 @@ function EmailHub({
                   <Badge variant="secondary" className="text-[11px]" data-testid="badge-unread-count">{unreadCount}</Badge>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={onRefresh} data-testid="button-refresh">
+              <Button variant="ghost" size="icon" onClick={onRefresh} aria-label="Refresh inbox" data-testid="button-refresh">
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
@@ -1497,7 +1497,7 @@ function EmailCanvas({
         isMobile ? "px-2 py-1.5" : "p-3"
       )}>
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back">
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to inbox list" data-testid="button-back">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         )}
@@ -1520,7 +1520,14 @@ function EmailCanvas({
         
         <div className="flex items-center shrink-0">
           {isMobile && (
-            <Button variant="ghost" size="icon" onClick={() => onStar?.()} data-testid="button-star-mobile">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onStar?.()}
+              aria-label={email.isStarred ? 'Unstar this email' : 'Star this email'}
+              aria-pressed={email.isStarred}
+              data-testid="button-star-mobile"
+            >
               <Star className={cn(
                 "w-3.5 h-3.5",
                 email.isStarred ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
@@ -1529,10 +1536,10 @@ function EmailCanvas({
           )}
           {!isMobile && (
             <>
-              <Button variant="ghost" size="icon" onClick={onReply} data-testid="button-reply">
+              <Button variant="ghost" size="icon" onClick={onReply} aria-label="Reply (r)" data-testid="button-reply">
                 <Reply className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={onForward} data-testid="button-forward">
+              <Button variant="ghost" size="icon" onClick={onForward} aria-label="Forward (f)" data-testid="button-forward">
                 <Forward className="w-4 h-4" />
               </Button>
             </>
@@ -1694,10 +1701,10 @@ function EmailCanvas({
           </Button>
           {isMobile && (
             <>
-              <Button variant="outline" size="sm" onClick={onArchive} data-testid="button-archive-bottom">
+              <Button variant="outline" size="sm" onClick={onArchive} aria-label="Archive (e)" data-testid="button-archive-bottom">
                 <Archive className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="outline" size="sm" onClick={onDelete} className="text-destructive" data-testid="button-delete-bottom">
+              <Button variant="outline" size="sm" onClick={onDelete} className="text-destructive" aria-label="Delete (#)" data-testid="button-delete-bottom">
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </>
@@ -3745,6 +3752,12 @@ export function EmailHubCanvas() {
     refetchFolders();
   }, [refetchInternal, refetchExternal, refetchFolders]);
 
+  // Gmail-style keyboard shortcuts: j/k navigate prev/next, e archives,
+  // # deletes, r replies, f forwards, c composes, / focuses search,
+  // Esc closes detail/compose. Handler ignores keystrokes when the user is
+  // typing in an input/textarea so search and compose are unaffected. Only
+  // active when the EmailHubCanvas is mounted (no global pollution).
+
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedEmailIds(prev => {
       const next = new Set(prev);
@@ -3817,6 +3830,18 @@ export function EmailHubCanvas() {
     });
   };
 
+  // Undo helpers — server-side reverse for archive (re-set status='inbox')
+  // and delete (PATCH a restored=true flag handled by the same endpoint that
+  // would have returned the row before deletion). For internal emails the
+  // PATCH just sets status back to 'inbox'; external emails reuse the same
+  // status field. We keep a window of 5 seconds to reverse via the toast.
+  const reverseArchive = async (email: UnifiedEmail) => {
+    const path = email.type === 'internal' ? '/api/internal-email' : '/api/external-emails';
+    await apiRequest('PATCH', `${path}/${email.id}`, { status: 'inbox' });
+    queryClient.invalidateQueries({ queryKey: ['/api/internal-email/inbox'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/external-emails'] });
+  };
+
   const archiveMutation = useMutation({
     mutationFn: async (email: UnifiedEmail) => {
       if (email.type === 'internal') {
@@ -3837,8 +3862,19 @@ export function EmailHubCanvas() {
       }
       return { snap };
     },
-    onSuccess: () => {
-      toast({ title: 'Email archived' });
+    onSuccess: (_data, email) => {
+      toast({
+        title: 'Email archived',
+        duration: 5000,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            reverseArchive(email).catch(() => {
+              toast({ title: 'Could not undo archive', variant: 'destructive' });
+            });
+          },
+        },
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/internal-email/inbox'] });
       queryClient.invalidateQueries({ queryKey: ['/api/external-emails'] });
       queryClient.invalidateQueries({ queryKey: ['/api/internal-email/mailbox/auto-create'] });
@@ -3868,8 +3904,33 @@ export function EmailHubCanvas() {
       }
       return { snap };
     },
-    onSuccess: () => {
-      toast({ title: 'Email deleted' });
+    onSuccess: (_data, email, ctx) => {
+      // Delete is destructive on the server, but we still surface "Undo" so
+      // the user has a 5s window to roll the cache back. Real server-side
+      // restore would require a soft-delete column — for now the snapshot
+      // restores the local view and the next sync will reconcile.
+      toast({
+        title: 'Email deleted',
+        duration: 5000,
+        action: ctx?.snap ? {
+          label: 'Undo',
+          onClick: () => {
+            if (ctx.snap) restoreInboxes(ctx.snap);
+            // Best-effort server restore: PATCH the row back to inbox if the
+            // backend supports soft-delete; otherwise the next refetch
+            // surfaces the discrepancy.
+            apiRequest(
+              'PATCH',
+              email.type === 'internal'
+                ? `/api/internal-email/${email.id}`
+                : `/api/external-emails/${email.id}`,
+              { status: 'inbox', isDeleted: false },
+            ).catch(() => {
+              toast({ title: 'Server delete already committed; cache restored locally', variant: 'warning' });
+            });
+          },
+        } : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/internal-email/inbox'] });
       queryClient.invalidateQueries({ queryKey: ['/api/external-emails'] });
       queryClient.invalidateQueries({ queryKey: ['/api/internal-email/mailbox/auto-create'] });
@@ -3925,6 +3986,79 @@ export function EmailHubCanvas() {
     if (target) starMutation.mutate({ email: target, starred: !target.isStarred });
   }, [selectedEmail, starMutation]);
 
+  // Keyboard shortcuts effect — see comment near handleRefresh.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
+      if (isTyping) return;
+      // Modifier-bearing shortcuts belong to the OS / browser — never intercept.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (viewState !== 'hub') {
+        if (e.key === 'Escape') {
+          setViewState('hub');
+          setReplyTo(null);
+          setForwardFrom(null);
+          e.preventDefault();
+        }
+        return;
+      }
+      const idx = selectedEmail ? allEmails.findIndex(em => em.id === selectedEmail.id) : -1;
+      switch (e.key) {
+        case 'j': {
+          if (allEmails.length === 0) return;
+          const next = idx < 0 ? 0 : Math.min(idx + 1, allEmails.length - 1);
+          setSelectedEmail(allEmails[next]);
+          e.preventDefault();
+          break;
+        }
+        case 'k': {
+          if (allEmails.length === 0) return;
+          const prev = idx <= 0 ? 0 : idx - 1;
+          setSelectedEmail(allEmails[prev]);
+          e.preventDefault();
+          break;
+        }
+        case 'r':
+          if (selectedEmail) { handleReply(); e.preventDefault(); }
+          break;
+        case 'f':
+          if (selectedEmail) { handleForward(); e.preventDefault(); }
+          break;
+        case 'e':
+          if (selectedEmail) { handleArchive(selectedEmail); e.preventDefault(); }
+          break;
+        case '#':
+          if (selectedEmail) { handleDelete(selectedEmail); e.preventDefault(); }
+          break;
+        case 's':
+          if (selectedEmail) { handleStar(selectedEmail); e.preventDefault(); }
+          break;
+        case 'c':
+          handleCompose();
+          e.preventDefault();
+          break;
+        case '/': {
+          const input = document.querySelector<HTMLInputElement>('[data-testid="input-email-search"]');
+          if (input) { input.focus(); e.preventDefault(); }
+          break;
+        }
+        case 'Escape':
+          if (selectedEmail) {
+            setSelectedEmail(null);
+            e.preventDefault();
+          }
+          break;
+        default:
+          // Allow native typing through to focused elements
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [allEmails, selectedEmail, viewState, handleReply, handleForward, handleArchive, handleDelete, handleStar, handleCompose]);
+
   // 7-Step Workflow Email Sending State
   const [sendingStep, setSendingStep] = useState(0);
   const [sendingError, setSendingError] = useState<string | null>(null);
@@ -3932,22 +4066,22 @@ export function EmailHubCanvas() {
 
   const sendEmailMutation = useMutation({
     mutationFn: async (data: { to: string; cc: string; subject: string; body: string; attachments?: Array<{ name: string; url: string; size: number; type: string }> }) => {
-      // Reset workflow state
+      // Each step is tied to a real piece of work so the progress bar mirrors
+      // actual progress instead of stalling on fixed setTimeout(200) calls
+      // (which used to add 1.4s of artificial delay to every send).
       setSendingError(null);
       setShowWorkflowProgress(true);
 
-      // Step 1: TRIGGER - Initiating send request
+      // Step 1: TRIGGER — caller invoked the mutation
       setSendingStep(0);
-      await new Promise(r => setTimeout(r, 200));
 
       const recipients = data.to.split(',').map(e => e.trim()).filter(Boolean);
       const isExternal = recipients.some(r => !r.endsWith('@coaileague.internal'));
 
-      // Step 2: FETCH - Loading mailbox data
+      // Step 2: FETCH — recipients parsed
       setSendingStep(1);
-      await new Promise(r => setTimeout(r, 200));
 
-      // Step 3: VALIDATE - Checking recipients and content
+      // Step 3: VALIDATE — synchronous content checks
       setSendingStep(2);
       if (recipients.length === 0) {
         throw new Error('At least one recipient is required');
@@ -3955,18 +4089,14 @@ export function EmailHubCanvas() {
       if (!data.subject.trim()) {
         throw new Error('Subject is required');
       }
-      await new Promise(r => setTimeout(r, 200));
 
-      // Step 4: PROCESS - Preparing email for delivery
+      // Step 4: PROCESS — payload assembled, about to POST
       setSendingStep(3);
-      await new Promise(r => setTimeout(r, 200));
 
       let result;
+      // Step 5: MUTATE — server insert + dispatch
+      setSendingStep(4);
       if (isExternal) {
-        // Single-call send: the server inserts and dispatches in one
-        // round-trip and returns 502 with detail if Resend rejects, so
-        // there's no orphan-draft race between the two old requests.
-        setSendingStep(4);
         const res = await apiRequest('POST', '/api/external-emails/send', {
           toEmail: recipients[0],
           ccEmails: data.cc.split(',').map(e => e.trim()).filter(Boolean),
@@ -3977,8 +4107,6 @@ export function EmailHubCanvas() {
         });
         result = await res.json();
       } else {
-        // Step 5: MUTATE - Saving to database
-        setSendingStep(4);
         const res = await apiRequest('POST', '/api/internal-email/send', {
           to: recipients,
           cc: data.cc.split(',').map(e => e.trim()).filter(Boolean),
@@ -3989,18 +4117,14 @@ export function EmailHubCanvas() {
         });
         result = await res.json();
       }
-      
-      // Step 6: CONFIRM - Verifying delivery
+
+      // Step 6: CONFIRM — server returned a row id
       setSendingStep(5);
-      await new Promise(r => setTimeout(r, 200));
-      
-      // Step 7: NOTIFY - Sending notifications
+
+      // Step 7: NOTIFY — fire query invalidations so the inbox refreshes
       setSendingStep(6);
-      await new Promise(r => setTimeout(r, 200));
-      
-      // Complete
+
       setSendingStep(7);
-      
       return result;
     },
     onSuccess: () => {
@@ -4031,9 +4155,11 @@ export function EmailHubCanvas() {
   const folders = foldersData?.folders ?? [];
   const totalUnread = foldersData?.totalUnread ?? 0;
 
-  // Show an error banner when both feeds fail — without this, an inbox API
-  // outage looks identical to "all caught up" and users don't know to retry.
-  const isLoadError = (internalError && externalError) || (internalError && !externalEmailsData);
+  // Show an error banner whenever either feed fails — earlier this required
+  // BOTH to fail, which masked single-feed outages as an empty inbox.
+  // The hub keeps rendering whatever data did load; the banner just tells
+  // the user some content is missing and offers a retry.
+  const isLoadError = Boolean(internalError || externalError);
 
   const sharedEmailHubProps = {
     emails: allEmails,

@@ -5,7 +5,7 @@ import { users, authTokens, authSessions, employees, clients } from "@shared/sch
 import { eq, and, gt, lt, isNull, sql } from "drizzle-orm";
 import { getAppBaseUrl } from "../utils/getAppBaseUrl";
 import { EMAIL, AUTH, PLATFORM } from '../config/platformConfig';
-import { getUncachableResendClient } from './emailCore';
+import { getUncachableResendClient, sendCanSpamCompliantEmail } from './emailCore';
 import { createLogger } from '../lib/logger';
 const log = createLogger('authService');
 
@@ -707,54 +707,56 @@ export class AuthService {
   private async sendVerificationEmail(email: string, token: string): Promise<void> {
     const verifyUrl = `${this.getBaseUrl()}/verify-email?token=${token}`;
 
-    try {
-      const { client, fromEmail } = await getUncachableResendClient();
-      await client.emails.send({
-        from: `${PLATFORM.name} <${fromEmail}>`,
-        to: [email],
-        subject: `Verify your email - ${PLATFORM.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Verify Your Email</h2>
-            <p>Click the button below to verify your email address:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${verifyUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Verify Email</a>
-            </div>
-            <p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours.</p>
-            <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, ignore this email.</p>
+    // Routed through sendCanSpamCompliantEmail (transactional bypasses unsubscribe
+    // but still gets hard-bounce suppression, 15s timeout, and structured logging).
+    const result = await sendCanSpamCompliantEmail({
+      to: email,
+      subject: `Verify your email - ${PLATFORM.name}`,
+      emailType: 'verification',
+      skipUnsubscribeCheck: true,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Verify Your Email</h2>
+          <p>Click the button below to verify your email address:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verifyUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Verify Email</a>
           </div>
-        `,
-      });
+          <p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours.</p>
+          <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, ignore this email.</p>
+        </div>
+      `,
+    });
+    if (!result.success) {
+      log.error('[AuthService] Failed to send verification email:', result.reason || result.error?.message);
+    } else {
       log.info(`[AuthService] Verification email sent to ${email}`);
-    } catch (error) {
-      log.error("[AuthService] Failed to send verification email:", error);
     }
   }
 
   private async sendMagicLinkEmail(email: string, token: string): Promise<void> {
     const loginUrl = `${this.getBaseUrl()}/auth/magic-link?token=${token}`;
 
-    try {
-      const { client, fromEmail } = await getUncachableResendClient();
-      await client.emails.send({
-        from: `${PLATFORM.name} <${fromEmail}>`,
-        to: [email],
-        subject: `Your login link - ${PLATFORM.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Login to ${PLATFORM.name}</h2>
-            <p>Click the button below to log in:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${loginUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Log In</a>
-            </div>
-            <p style="color: #6b7280; font-size: 14px;">This link expires in 15 minutes.</p>
-            <p style="color: #6b7280; font-size: 14px;">If you didn't request this, ignore this email.</p>
+    const result = await sendCanSpamCompliantEmail({
+      to: email,
+      subject: `Your login link - ${PLATFORM.name}`,
+      emailType: 'verification',
+      skipUnsubscribeCheck: true,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Login to ${PLATFORM.name}</h2>
+          <p>Click the button below to log in:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Log In</a>
           </div>
-        `,
-      });
+          <p style="color: #6b7280; font-size: 14px;">This link expires in 15 minutes.</p>
+          <p style="color: #6b7280; font-size: 14px;">If you didn't request this, ignore this email.</p>
+        </div>
+      `,
+    });
+    if (!result.success) {
+      log.error('[AuthService] Failed to send magic link email:', result.reason || result.error?.message);
+    } else {
       log.info(`[AuthService] Magic link email sent to ${email}`);
-    } catch (error) {
-      log.error("[AuthService] Failed to send magic link email:", error);
     }
   }
 
@@ -927,56 +929,54 @@ export class AuthService {
 
   private async sendEmailChangeVerification(newEmail: string, token: string): Promise<void> { // infra
     const confirmUrl = `${this.getBaseUrl()}/api/auth/confirm-email-change?token=${token}`;
-    try {
-      const { client, fromEmail } = await getUncachableResendClient();
-      await client.emails.send({
-        from: `${PLATFORM.name} <${fromEmail}>`,
-        to: [newEmail],
-        subject: `Confirm your new email address - ${PLATFORM.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Confirm Email Change</h2>
-            <p>You requested to change your ${PLATFORM.name} account email address to <strong>${newEmail}</strong>.</p>
-            <p>Click the button below to confirm this change:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${confirmUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Confirm New Email</a>
-            </div>
-            <p style="color: #6b7280; font-size: 14px;">This link expires in 2 hours.</p>
-            <p style="color: #6b7280; font-size: 14px;">If you did not request this change, you can safely ignore this email — your current email address remains unchanged.</p>
+    const result = await sendCanSpamCompliantEmail({
+      to: newEmail,
+      subject: `Confirm your new email address - ${PLATFORM.name}`,
+      emailType: 'verification',
+      skipUnsubscribeCheck: true,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Confirm Email Change</h2>
+          <p>You requested to change your ${PLATFORM.name} account email address to <strong>${newEmail}</strong>.</p>
+          <p>Click the button below to confirm this change:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${confirmUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Confirm New Email</a>
           </div>
-        `,
-      });
-      log.info(`[AuthService] Email change verification sent to ${newEmail}`);
-    } catch (error) {
-      log.error('[AuthService] Failed to send email change verification:', error);
-      throw error;
+          <p style="color: #6b7280; font-size: 14px;">This link expires in 2 hours.</p>
+          <p style="color: #6b7280; font-size: 14px;">If you did not request this change, you can safely ignore this email — your current email address remains unchanged.</p>
+        </div>
+      `,
+    });
+    if (!result.success) {
+      log.error('[AuthService] Failed to send email change verification:', result.reason || result.error?.message);
+      throw new Error(result.reason || 'Email change verification failed');
     }
+    log.info(`[AuthService] Email change verification sent to ${newEmail}`);
   }
 
   // SECURITY: Notifies the original email address that an email-change request
   // was initiated, so the account owner can act if this was not them.
   private async sendEmailChangeSecurityNotice(oldEmail: string, newEmail: string): Promise<void> {
-    try {
-      const { client, fromEmail } = await getUncachableResendClient();
-      await client.emails.send({
-        from: `${PLATFORM.name} <${fromEmail}>`,
-        to: [oldEmail],
-        subject: `Security notice: Email change requested - ${PLATFORM.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc2626;">Security Notice</h2>
-            <p>A request was made to change the email address on your <strong>${PLATFORM.name}</strong> account to <strong>${newEmail}</strong>.</p>
-            <p>If you made this request, no action is needed — a confirmation link has been sent to the new address.</p>
-            <p style="color: #dc2626; font-weight: 600;">If you did NOT make this request, your account may be compromised. Please log in immediately and change your password.</p>
-            <p style="color: #6b7280; font-size: 14px;">If you do not confirm the change within 2 hours, the request will expire and your email address will remain unchanged.</p>
-          </div>
-        `,
-      });
-      log.info(`[AuthService] Email-change security notice sent to old address`);
-    } catch (error) {
-      log.error('[AuthService] Failed to send email-change security notice:', error);
-      throw error;
+    const result = await sendCanSpamCompliantEmail({
+      to: oldEmail,
+      subject: `Security notice: Email change requested - ${PLATFORM.name}`,
+      emailType: 'security_alert',
+      skipUnsubscribeCheck: true,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Security Notice</h2>
+          <p>A request was made to change the email address on your <strong>${PLATFORM.name}</strong> account to <strong>${newEmail}</strong>.</p>
+          <p>If you made this request, no action is needed — a confirmation link has been sent to the new address.</p>
+          <p style="color: #dc2626; font-weight: 600;">If you did NOT make this request, your account may be compromised. Please log in immediately and change your password.</p>
+          <p style="color: #6b7280; font-size: 14px;">If you do not confirm the change within 2 hours, the request will expire and your email address will remain unchanged.</p>
+        </div>
+      `,
+    });
+    if (!result.success) {
+      log.error('[AuthService] Failed to send email-change security notice:', result.reason || result.error?.message);
+      throw new Error(result.reason || 'Email change security notice failed');
     }
+    log.info(`[AuthService] Email-change security notice sent to old address`);
   }
 }
 

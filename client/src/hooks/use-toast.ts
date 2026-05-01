@@ -24,8 +24,13 @@ interface ToastOptions {
   description?: string;
   variant?: "default" | "destructive" | "warning" | "info" | "success";
   duration?: number;
-  /** Ignored — universal toast handles its own action UI */
-  action?: unknown;
+  /**
+   * Optional inline action button (e.g. "Undo"). The underlying
+   * UniversalToast renders the label and invokes onClick before dismissing.
+   * Pass `{ label, onClick }` — anything else (including legacy Shadcn
+   * ToastAction elements) is ignored for backwards compatibility.
+   */
+  action?: { label: string; onClick: () => void } | unknown;
 }
 
 function buildMessage(title: string, description?: string): string {
@@ -36,9 +41,16 @@ function buildMessage(title: string, description?: string): string {
 export function useToast() {
   const ut = useUniversalToast();
 
-  const toast = ({ title, description, variant, duration }: ToastOptions) => {
+  const toast = ({ title, description, variant, duration, action }: ToastOptions) => {
     const msg = buildMessage(title, description);
-    const opts = duration ? { duration } : undefined;
+    const validAction =
+      action && typeof action === 'object' &&
+      'label' in (action as any) && 'onClick' in (action as any)
+        ? (action as { label: string; onClick: () => void })
+        : undefined;
+    const opts = (duration || validAction)
+      ? { ...(duration ? { duration } : {}), ...(validAction ? { action: validAction } : {}) }
+      : undefined;
 
     if (variant === "destructive") {
       ut.error(msg, opts);

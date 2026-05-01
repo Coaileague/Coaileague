@@ -1,6 +1,152 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-04-28 — Claude (architect plan, parallel lanes launched)
+# Last updated: 2026-05-01 — Claude (email system end-to-end audit + grade-A polish)
+
+---
+
+## 2026-05-01 — EMAIL SYSTEM SESSION (Claude, branch claude/test-email-system-9n4d2)
+
+Five sequential commits on `claude/test-email-system-9n4d2`:
+  ae175ce → 148fbc2 → 3948432 → 7627ded → (this commit)
+
+### What was done
+
+**Verifier + live-send tooling** — `scripts/verify-email-system.mjs`
+(142/143 PASS, 1 WARN for optional `RESEND_API_KEY`) and
+`scripts/send-one-email.mjs` (one-shot proof-of-life via Resend REST).
+
+**Silent-failure fixes** (every send path now propagates real failures):
+- `server/routes/email/emailRoutes.ts` `/api/email/send` — was writing
+  `folder='sent'` even on Resend rejection. Now flips to `outbox`,
+  returns 502, skips fair-use counter increment.
+- `server/email.ts` `sendEmail` — returned `{success:false}` silently when
+  Resend wasn't configured. Now propagates `error` reason; lazy-inits the
+  Resend client so the very first call after boot can't silently skip.
+- `server/routes/externalEmailRoutes.ts` `/external-emails/:id/send` — was
+  writing `status='sent'` even when `sendEmail` returned `{success:false}`.
+  Now inspects `result.success`, marks `status='failed'`, returns 502.
+
+**Mobile rendering** — every customer-facing template now responsive:
+- `server/services/emailTemplateBase.ts` — `emailLayout` now injects a
+  `<style>@media (max-width:600px)` block. Added `cl-*` classes to
+  `emailHeader/emailBody/emailFooter/infoCard/alertBox/ctaButton` so the
+  rule collapses 600px container, scales h1 21px, stacks infoCard rows,
+  full-width CTAs.
+- `server/services/email/wrapInlineEmailHtml.ts` — NEW. Mobile wrapper for
+  hand-rolled inline-HTML templates. Applied to:
+  - All 12 inline `const html = \`...\`` blocks in `emailService.ts`
+    (paystub, credit warning, compliance, invoice paid, payment receipt,
+    subscription upgrade, weekly schedule, broadcast, callOff
+    confirm/manager/replacement, plus Trinity greeting/onboarding/dropped).
+  - `inboundEmailRoutes.ts` `buildForwardHtml` (every inbound forward).
+
+**Forward-body fix** — `client/src/components/email/EmailHubCanvas.tsx`:
+- Mapper hardcoded `bodyText: null` for every external email; now
+  hydrates both `bodyText` and `bodyHtml` from the API row.
+- Forward composer used `bodyText` only; now falls back to tag-stripped
+  HTML and emits explicit notice if both empty. Adds From/Date/Subject/To
+  header lines.
+
+**Outbound send loop refactor**:
+- New endpoint `POST /api/external-emails/send` — single-call insert +
+  dispatch, no orphan-draft race. Compose UI now hits it directly.
+- Legacy `POST /` then `POST /:id/send` retained for scheduled send /
+  draft auto-save.
+
+**Optimistic UI mutations** — archive / delete / star now snapshot both
+inbox feeds in `onMutate`, apply local cache mutation, restore in
+`onError`. Detail pane closes immediately on archive/delete; star icon
+flips before round-trip. Server-failure rolls cache back so users never
+see ghost-state.
+
+**Undo toast (Gmail-style)** — 5-second window on archive/delete with an
+`Undo` button that PATCHes the row back to `inbox`. Extended `useToast`
+to forward `action: { label, onClick }` through to UniversalToast.
+
+**Inbox error state** — queries throw on non-OK; `isLoadError` fires when
+either feed errors (was previously requiring BOTH); dedicated error UI
+with retry button + `role="alert"`. Skeleton has `aria-busy`.
+
+**Accessibility + keyboard shortcuts**:
+- `aria-label` on icon-only buttons (refresh, reply, forward, archive,
+  delete, star, back, support-back, trinity-back).
+- `aria-pressed` on the star toggle.
+- Gmail-style keyboard shortcuts: `j`/`k` next/prev, `r` reply, `f`
+  forward, `e` archive, `#` delete, `s` star, `c` compose, `/` search,
+  `Esc` close detail/compose. Handler ignores keystrokes in inputs.
+
+**Auth + retry queue routed through canonical wrapper**:
+- `server/services/authService.ts` — 4 emails (verification, magic-link,
+  email-change confirm, email-change security notice) now use
+  `sendCanSpamCompliantEmail` with `skipUnsubscribeCheck: true`. Inherits
+  hard-bounce suppression, 15s timeout, structured logging.
+- `server/services/emailService.ts` retry queue — same migration; also
+  drops hard-bounced retries instead of rescheduling them indefinitely.
+
+**Workflow timing fix** — `sendEmailMutation` no longer adds 1.4s of fixed
+`setTimeout(200)` artificial delays; each step is tied to real async
+work.
+
+**Template per-category split** — `emailService.ts` shrunk 3119→2464
+lines. The 650-line inline `emailTemplates` const now lives in:
+- `server/services/email/templates/account.ts`
+- `server/services/email/templates/billing.ts`
+- `server/services/email/templates/support.ts`
+- `server/services/email/templates/onboarding.ts`
+- `server/services/email/templates/scheduling.ts`
+- `server/services/email/templates/index.ts` (barrel re-export)
+
+Public API unchanged — every existing `emailTemplates.X(...)` call site
+resolves to a defined template (verified by the verifier).
+
+### Trinity staffing workflow — verified end-to-end
+1. Inbound webhook (Svix HMAC verified, timing-safe compare)
+2. Gemini job summary (English/Spanish auto-detect)
+3. Trinity AI greeting via `emailService.sendTrinityAIGreeting`
+4. `inboundOpportunityAgent.processInboundEmail` — claims a shift
+5. **On win**: `sendStaffingOnboardingInvitation`
+6. **On loss**: `staffingClaimService.sendDropNotifications`
+7. Workspace owner notification via `universalNotificationEngine`
+8. Calloff intent in "staffing" email reroutes to `processCalloff`
+
+### Known follow-ups (NOT done — for future agents)
+- ~30 more files with inline-HTML emails outside emailService.ts could
+  use `wrapInlineEmailHtml` (dailyDigestService, trinityWelcomeService,
+  payrollDeadlineNudgeService, schedulesRoutes, miscRoutes, etc).
+- `platform_emails`, `email_routing`, `email_attachments`,
+  `platform_email_addresses` are defined as raw SQL inside
+  `inboundEmailRoutes.ts` rather than `shared/schema.ts`. Works at
+  runtime but no Drizzle types — schema-side migration recommended.
+- Notification reply (`notificationDeliveryService.ts:745`) uses custom
+  `from` + `In-Reply-To` headers that `sendCanSpamCompliantEmail`
+  doesn't expose — left as direct call.
+- Trinity / support auto-replies (`resendWebhooks.ts:968,992`) use
+  `trinity@` / `support@` from-addresses — left as direct calls.
+- Two routers mounted at `/api/email` (`emailRouter` + `emailUnsubscribeRouter`) — works because path lists are disjoint; consolidate if a new path collides.
+- `/api/email/send` (platform inbox) and `/api/emails/send` (platform staff) coexist — singular vs plural typo trap.
+
+### Files touched (Claude's domain — EmailHubCanvas + email backend)
+```
+client/src/components/email/EmailHubCanvas.tsx          (+800 lines)
+client/src/hooks/use-toast.ts                           (action passthrough)
+server/email.ts                                          (truthful sendEmail)
+server/services/authService.ts                           (4 → wrapper)
+server/services/emailService.ts                          (3119 → 2464, +wrap)
+server/services/emailTemplateBase.ts                     (mobile @media)
+server/services/email/templates/{account,billing,support,onboarding,scheduling,index}.ts  (NEW)
+server/services/email/wrapInlineEmailHtml.ts             (NEW)
+server/routes/email/emailRoutes.ts                       (silent-failure fix)
+server/routes/externalEmailRoutes.ts                     (single-call send + result.success)
+server/routes/inboundEmailRoutes.ts                      (forward wrapped)
+scripts/verify-email-system.mjs                          (NEW, 143 checks)
+scripts/send-one-email.mjs                               (NEW)
+```
+
+### Run the verifier
+```
+node scripts/verify-email-system.mjs                     # 142/143 PASS
+RESEND_API_KEY=re_test_… node scripts/send-one-email.mjs # one real send
+```
 
 ---
 

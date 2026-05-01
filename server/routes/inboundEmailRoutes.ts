@@ -18,6 +18,7 @@ import { pool } from '../db';
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 import { isProduction } from '../lib/isProduction';
 import { sendCanSpamCompliantEmail } from '../services/emailCore';
+import { wrapInlineEmailHtml } from '../services/email/wrapInlineEmailHtml';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 const log = createLogger('InboundEmailRoutes');
 
@@ -340,7 +341,7 @@ function buildForwardHtml(opts: {
     : bodyText && bodyText.trim().length > 0
       ? `<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:0;">${escapeHtml(bodyText)}</pre>`
       : `<p style="color:#a16207;font-style:italic;">(Original message had no text or HTML body — only headers and attachments.)</p>`;
-  return `
+  return wrapInlineEmailHtml(`
 <div style="font-family:Arial,sans-serif;max-width:700px;color:#222;">
   <p style="color:#555;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:16px;">
     -------- ${escapeHtml(bannerLabel)} --------<br>
@@ -350,7 +351,7 @@ function buildForwardHtml(opts: {
     <strong>Subject:</strong> ${escapeHtml(subject)}
   </p>
   ${bodySection}
-</div>`;
+</div>`, { title: `Forwarded: ${subject}` });
 }
 
 // ─── Canonical Platform Addresses ────────────────────────────────────────────

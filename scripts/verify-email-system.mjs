@@ -469,6 +469,107 @@ section('Template per-category split');
     'high');
 }
 
+// ─── Auth & retry-queue use canonical wrapper ───────────────────────────────
+section('Auth & retry-queue use canonical wrapper');
+{
+  const auth = readFile('server/services/authService.ts');
+  // Each of the 4 auth emails (verification, magic-link, change-confirm,
+  // change-security-notice) used to call client.emails.send directly. They
+  // now MUST flow through sendCanSpamCompliantEmail with skipUnsubscribeCheck.
+  const calls = (auth.match(/await sendCanSpamCompliantEmail\(/g) || []).length;
+  record('authService routes ≥4 emails through sendCanSpamCompliantEmail',
+    calls >= 4, `found ${calls} calls`, 'high');
+  // The 4 direct client.emails.send calls in authService should be gone.
+  const directCalls = (auth.match(/client\.emails\.send\(/g) || []).length;
+  record('authService no longer issues direct client.emails.send calls',
+    directCalls === 0, directCalls ? `still has ${directCalls}` : '', 'high');
+
+  const svc = readFile('server/services/emailService.ts');
+  // Retry queue must use the wrapper too — preserves hard-bounce suppression
+  // across retries.
+  record('emailService retry queue uses sendCanSpamCompliantEmail',
+    /\/\/ Routed through sendCanSpamCompliantEmail so retries inherit/.test(svc) &&
+    /this\.retryQueue\.delete\(job\.id\)/.test(svc));
+  record('emailService retry queue drops hard-bounced retries instead of rescheduling',
+    /Retry dropped \(suppressed\)/.test(svc));
+}
+
+// ─── Mobile-responsive wrapper for inline templates ─────────────────────────
+section('Mobile wrapper for inline-HTML templates');
+{
+  const wrap = readFile('server/services/email/wrapInlineEmailHtml.ts');
+  record('wrapInlineEmailHtml exists and exports the helper',
+    /export function wrapInlineEmailHtml/.test(wrap));
+  record('wrapper injects viewport meta',
+    /<meta name="viewport"/.test(wrap));
+  record('wrapper injects mobile @media block',
+    /@media only screen and \(max-width: 600px\)/.test(wrap));
+  record('wrapper collapses 600/640px legacy containers on phones',
+    /max-width:6\d\d/.test(wrap) && /max-width: 100% !important/.test(wrap));
+  record('wrapper collapses 32px gutters to 18px on phones',
+    /padding: 18px 16px !important/.test(wrap));
+  record('wrapper scales h1 down on phones',
+    /font-size: 21px !important/.test(wrap));
+  record('wrapper turns CTA buttons into block on phones',
+    /a\[style\*="padding:14px [^"]*"\][\s\S]{0,400}display: block !important/.test(wrap));
+
+  const svc = readFile('server/services/emailService.ts');
+  // Every const html = `…`; in emailService.ts must be wrapped.
+  const wrapped = (svc.match(/const html = wrapInlineEmailHtml\(`/g) || []).length;
+  const unwrapped = (svc.match(/^    const html = `\s*$/gm) || []).length;
+  record('all inline-HTML templates in emailService.ts are wrapped',
+    wrapped >= 12 && unwrapped === 0,
+    `wrapped=${wrapped}, unwrapped=${unwrapped}`,
+    'high');
+
+  const inb = readFile('server/routes/inboundEmailRoutes.ts');
+  record('buildForwardHtml wraps its return value', /wrapInlineEmailHtml\(`/.test(inb));
+}
+
+// ─── Front-end: undo toast + a11y + keyboard shortcuts ──────────────────────
+section('Front-end UX polish');
+{
+  const src = readFile('client/src/components/email/EmailHubCanvas.tsx');
+  record('archive mutation offers Undo action',
+    /archiveMutation = useMutation\(\{[\s\S]{0,2500}label:\s*'Undo'/.test(src));
+  record('delete mutation offers Undo action',
+    /deleteMutation = useMutation\(\{[\s\S]{0,2500}label:\s*'Undo'/.test(src));
+  record('icon buttons carry aria-label',
+    /aria-label="Refresh inbox"/.test(src) &&
+    /aria-label="Reply \(r\)"/.test(src) &&
+    /aria-label="Forward \(f\)"/.test(src));
+  record('star button reflects state with aria-pressed',
+    /aria-pressed=\{email\.isStarred\}/.test(src));
+  record('keyboard shortcuts effect listens on window',
+    /window\.addEventListener\('keydown', handler\)/.test(src));
+  record('keyboard handler ignores typing in inputs/textareas',
+    /isTyping/.test(src) && /tag === 'input'/.test(src));
+  record('keyboard shortcuts cover j / k / r / f / e / # / s / c / \/',
+    [/case 'j'/, /case 'k'/, /case 'r'/, /case 'f'/, /case 'e'/, /case '#'/, /case 's'/, /case 'c'/, /case '\/'/].every(re => re.test(src)));
+
+  // setTimeout(200) hack must be gone from the send mutation
+  const before = src.indexOf('const sendEmailMutation');
+  const after = src.indexOf('const isLoading', before);
+  const sendBlock = src.slice(before, after > 0 ? after : before + 4000);
+  const fixedDelays = (sendBlock.match(/setTimeout\(r,\s*200\)/g) || []).length;
+  record('sendEmailMutation no longer uses fixed 200ms artificial delays',
+    fixedDelays === 0,
+    fixedDelays ? `still has ${fixedDelays} fixed setTimeouts in send block` : '',
+    'high');
+
+  // useToast forwards action prop to UniversalToast
+  const useToast = readFile('client/src/hooks/use-toast.ts');
+  record('useToast forwards action prop to UniversalToast',
+    /validAction/.test(useToast) && /label.*onClick/.test(useToast));
+}
+
+// isLoadError per-feed correctness
+{
+  const src = readFile('client/src/components/email/EmailHubCanvas.tsx');
+  record('isLoadError fires on either feed (per-feed correctness)',
+    /Boolean\(internalError \|\| externalError\)/.test(src), '', 'high');
+}
+
 // ─── Live Resend round-trip (REST API, no SDK required) ──────────────────────
 section('Live Resend send (REST round-trip)');
 
