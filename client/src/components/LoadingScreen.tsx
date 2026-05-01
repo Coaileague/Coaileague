@@ -16,6 +16,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 
 const PLATFORM_NAME = "CoAIleague";
 
@@ -79,29 +80,8 @@ export function LoadingScreen() {
       {/* ── Trinity SVG Logo + name ── */}
       <div className="flex flex-col items-center mb-5">
         {/* Spinning logo — brand colors intentional, not theme tokens */}
-        <div className="relative mb-2.5" style={{ width: 120, height: 120 }}>
-          <div className="w-full h-full" style={{ animation: "logoOrbit 6s linear infinite" }}>
-            <svg viewBox="0 0 120 120" width="120" height="120" xmlns="http://www.w3.org/2000/svg">
-              {/* Blue arrow — UP */}
-              <g style={{ animation: "arrowPulseBlue 2s ease-in-out infinite" }}>
-                <polygon points="60,8 72,32 64,32 64,58 56,58 56,32 48,32" fill="#3b82f6" />
-                <polygon points="60,4 76,28 44,28" fill="#60a5fa" />
-              </g>
-              {/* Orange arrow — BOTTOM-RIGHT */}
-              <g style={{ transformOrigin: "60px 60px", transform: "rotate(120deg)", animation: "arrowPulseOrange 2s ease-in-out infinite 0.66s" }}>
-                <polygon points="60,8 72,32 64,32 64,58 56,58 56,32 48,32" fill="#f97316" />
-                <polygon points="60,4 76,28 44,28" fill="#fb923c" />
-              </g>
-              {/* Purple arrow — BOTTOM-LEFT */}
-              <g style={{ transformOrigin: "60px 60px", transform: "rotate(240deg)", animation: "arrowPulsePurple 2s ease-in-out infinite 1.33s" }}>
-                <polygon points="60,8 72,32 64,32 64,58 56,58 56,32 48,32" fill="#8b5cf6" />
-                <polygon points="60,4 76,28 44,28" fill="#a78bfa" />
-              </g>
-              {/* Center orb — intentional white core */}
-              <circle cx="60" cy="60" r="10" fill="white" style={{ animation: "orbGlow 2s ease-in-out infinite" }} />
-              <circle cx="60" cy="60" r="7" fill="#e2e8f0" />
-            </svg>
-          </div>
+        <div className="relative mb-2.5 flex items-center justify-center" style={{ width: 120, height: 120 }}>
+          <TrinityAnimatedLogo size={120} state="idle" alwaysAnimate={true} />
         </div>
 
         {/* Trinity™ — the AI identity */}

@@ -14,6 +14,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { TrinityArrowMark } from "@/components/trinity-logo";
+import { TrinityOrbitalAvatar, type TrinityState } from "@/components/ui/trinity-animated-logo";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 
 // ─── Module-level fallback (accessible to ALL sub-components) ───────────────
@@ -593,7 +594,7 @@ function TrinityIcon({
         />
       )}
       <span style={{ display: "inline-flex", animation: markAnimation }}>
-        <TrinityArrowMark size={16} />
+        <TrinityOrbitalAvatar size={36} state={"idle"} />
       </span>
     </span>
   );
