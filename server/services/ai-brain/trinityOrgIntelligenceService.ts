@@ -142,14 +142,14 @@ class TrinityOrgIntelligenceService {
   }
 
   private subscribeToEvents() {
-    platformEventBus.subscribe('bot_command_executed' as any, {
+    platformEventBus.subscribe('bot_command_executed', {
       name: 'TrinityOrgIntel-BotResult',
       handler: async (event) => {
         await this.handleBotResult(event.metadata || {});
       },
     });
 
-    platformEventBus.subscribe('schedule_published' as any, {
+    platformEventBus.subscribe('schedule_published', {
       name: 'TrinityOrgIntel-SchedulePublished',
       handler: async (event) => {
         if (event.workspaceId) {

@@ -39,7 +39,7 @@ function getClientIp(req: Request): string {
  * key by IP where per-IP limiting is semantically correct.
  */
 function getUserKey(req: Request): string {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.id;
   if (userId) return `user:${userId}`;
   return getClientIp(req);
 }

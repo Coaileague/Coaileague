@@ -18,7 +18,7 @@ function mkTaxAction(actionId: string, fn: (params: Record<string, unknown>) => 
   return {
     actionId,
     name: actionId,
-    category: 'compliance' as any,
+    category: 'compliance',
     description: `Trinity tax compliance: ${actionId}`,
     // Tax actions: read/audit = owner + support; any table-update action must
     // be root_admin only (enforced by the 'root_admin_only' flag below).

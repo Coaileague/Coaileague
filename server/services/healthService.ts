@@ -326,7 +326,7 @@ export async function runTrinityFastDiagnostics(mode: 'quick' | 'full' = 'full')
     );
     const results = await runParallelDiagnostics(criticalAndEssential);
     
-    const byDomain: Record<DiagnosticDomain, { status: ServiceStatus; services: ServiceHealth[] }> = {} as any;
+    const byDomain: Record<DiagnosticDomain, { status: ServiceStatus; services: ServiceHealth[] }> = {};
     const domains = getAllDomains();
     
     for (const domain of domains) {

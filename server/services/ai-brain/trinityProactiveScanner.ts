@@ -188,7 +188,7 @@ class TrinityProactiveScannerService {
         lte(shifts.startTime, threshold15),
         gte(shifts.startTime, new Date(now.getTime() - 4 * 3600000)),
         ne(shifts.status, 'cancelled'),
-        ne(shifts.employeeId, null as any)
+        ne(shifts.employeeId, null)
       ))
       .catch(() => []);
     let missedPunches = 0;
@@ -286,7 +286,7 @@ class TrinityProactiveScannerService {
       const activeCollections = await db.select({ id: clients.id, companyName: clients.companyName, firstName: clients.firstName, lastName: clients.lastName, collectionsStatus: (clients as any).collectionsStatus, collectionAttemptCount: (clients as any).collectionAttemptCount })
         .from(clients)
         .where(and(eq(clients.workspaceId, workspaceId), eq((clients as any).collectionsStatus as any, 'active')))
-        .catch(() => [] as any[]);
+        .catch(() => []);
       if (activeCollections.length > 0) {
         const names = activeCollections.slice(0, 3).map((c: any) => c.companyName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown').join(', ');
         const more = activeCollections.length > 3 ? ` (+${activeCollections.length - 3} more)` : '';

@@ -72,7 +72,7 @@ router.post("/analyze", requireAuth, async (req: AuthenticatedRequest, res) => {
        WHERE workspace_id = $1 AND COALESCE(occurred_at, updated_at) >= $2
        ORDER BY occurred_at DESC`,
       [wid, cutoff.toISOString()]
-    ).catch(() => ({ rows: [] as any[] }))).rows;
+    ).catch(() => ({ rows: [] }))).rows;
 
     if (!incidents.length) {
       return res.json({ patternsFound: 0, message: "No incidents in last 90 days" });
@@ -141,7 +141,7 @@ router.post("/analyze", requireAuth, async (req: AuthenticatedRequest, res) => {
           [wid, incType, `%${siteId}%`]
         );
         if (existing.rows.length === 0) {
-          const siteR = await db.$client.query(`SELECT name FROM sites WHERE id = $1`, [siteId]).catch(() => ({ rows: [] as any[] }));
+          const siteR = await db.$client.query(`SELECT name FROM sites WHERE id = $1`, [siteId]).catch(() => ({ rows: [] }));
           const siteName = siteR.rows[0]?.name || siteId;
           const id = `ip-${randomUUID()}`;
           await db.$client.query(

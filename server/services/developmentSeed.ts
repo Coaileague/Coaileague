@@ -595,7 +595,7 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
         employeeId: 'dev-acme-emp-marcus',
         clientId: 'dev-client-downtown-mall',
         title: 'Downtown Mall — Day Security',
-        category: 'security' as any,
+        category: 'security',
         startTime: shiftStart0,
         endTime: shiftEnd0,
         date: today0.toISOString().split('T')[0],

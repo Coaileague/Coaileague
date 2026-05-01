@@ -2134,7 +2134,7 @@ export async function executeInternalPayroll(
   // cannot both succeed — only the first UPDATE returns rows.
   try {
     const disbursing = await db.update(payrollRuns)
-      .set({ status: 'disbursing' as any, updatedAt: new Date() })
+      .set({ status: 'disbursing', updatedAt: new Date() })
       .where(and(
         eq(payrollRuns.id, payrollRunId),
         eq(payrollRuns.workspaceId, workspaceId),

@@ -1442,7 +1442,7 @@ class PlatformActionHub {
             workspaceId,
             periodStart: new Date(start),
             periodEnd: new Date(end),
-            status: 'pending' as any,
+            status: 'pending',
             processedBy: request.userId,
           })
           .returning({ id: payrollRuns.id });

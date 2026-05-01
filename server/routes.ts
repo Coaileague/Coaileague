@@ -972,9 +972,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mega Phase: Legal consent (accept agreements, opt-out, consent prefs)
   // Note: /api/legal/opt-out is public (TCPA compliance), others require auth
   app.use("/api/legal", legalConsentRouter);
-  // Feature stubs — graceful 503 for unbuilt features.
-  // Mounted BEFORE domain routes so they are overridden when a real route is added.
-  app.use("/api", requireAuth, featureStubRouter);
+  // Feature stubs — graceful 503 for genuinely unbuilt features.
+  // NOTE: Mounted LAST so real domain routes always take precedence.
+  // ⚠  Must stay at the bottom of all app.use() registrations.
+  // (moved from middle of routes to avoid shadowing billing + ops domain mounts)
   // Legal document downloads — DPA, AUP (Phase 52; public, no auth required)
   // MUST be mounted here, BEFORE any domain that uses app.use("/api", requireAuth, ...)
   // catch-alls (billing, compliance, comms). Route: GET /api/legal/dpa/download
@@ -1149,6 +1150,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Global Express Error Handler ──────────────────────────────────────────
   // Must be registered AFTER all routes (4-argument signature tells Express this is an error handler)
+  // ── Feature stubs — must be LAST, after all real domain routes ──────────────
+  // Only fires for routes that have no real handler registered above.
+  app.use("/api", requireAuth, featureStubRouter);
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status: number = typeof err.statusCode === "number" ? err.statusCode
       : typeof err.status === "number" ? err.status

@@ -163,11 +163,11 @@ class AIBrainActionRegistry {
     if (this.initialized) return;
 
     // Fix: check if it's already being initialized to prevent duplicate calls from module load + server/index.ts
-    if ((global as any)._aiBrainActionRegistryInitializing) {
+    if ((global as NodeJS.Global & Record<string, unknown>)._aiBrainActionRegistryInitializing) {
       log.info('[AI Brain Action Registry] Initialization already in progress, skipping duplicate call');
       return;
     }
-    (global as any)._aiBrainActionRegistryInitializing = true;
+    (global as NodeJS.Global & Record<string, unknown>)._aiBrainActionRegistryInitializing = true;
 
     log.info('[AI Brain Action Registry] Initializing action registry...');
 
@@ -272,7 +272,7 @@ class AIBrainActionRegistry {
     registerProactiveActions();
 
     this.initialized = true;
-    (global as any)._aiBrainActionRegistryInitializing = false;
+    (global as NodeJS.Global & Record<string, unknown>)._aiBrainActionRegistryInitializing = false;
     log.info(`[AI Brain Action Registry] Initialization complete — all action modules registered`);
   }
 
@@ -3268,15 +3268,15 @@ class AIBrainActionRegistry {
 
         const pending = await db.select({ count: sql`count(*)::int` })
           .from(employeeInvitations)
-          .where(eq(employeeInvitations.inviteStatus, 'pending' as any));
+          .where(eq(employeeInvitations.inviteStatus, 'pending'));
 
         const accepted = await db.select({ count: sql`count(*)::int` })
           .from(employeeInvitations)
-          .where(eq(employeeInvitations.inviteStatus, 'accepted' as any));
+          .where(eq(employeeInvitations.inviteStatus, 'accepted'));
 
         const expired = await db.select({ count: sql`count(*)::int` })
           .from(employeeInvitations)
-          .where(eq(employeeInvitations.inviteStatus, 'expired' as any));
+          .where(eq(employeeInvitations.inviteStatus, 'expired'));
 
         return createResult(request.actionId, true, 'Platform onboarding status retrieved', {
           pendingInvitations: pending[0]?.count || 0,

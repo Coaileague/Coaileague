@@ -131,7 +131,7 @@ async function main() {
   }
 
   const stripe = new Stripe(TEST_API_KEY!, {
-    apiVersion: '2025-09-30.clover' as any,
+    apiVersion: '2025-09-30.clover',
   });
 
   // ── 1. Look up ACME workspace ─────────────────────────────────────────────

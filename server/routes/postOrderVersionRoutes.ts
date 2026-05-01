@@ -147,7 +147,7 @@ router.post("/sites/:siteId/versions", requireAuth, async (req: AuthenticatedReq
          JOIN site_assignments sa ON sa.employee_id = e.id
          WHERE sa.site_id = $1 AND sa.workspace_id = $2 AND e.status = 'active'`,
         [siteId, wid]
-      ).catch(() => ({ rows: [] as any[] }));
+      ).catch(() => ({ rows: [] }));
       officerIds = empR.rows.map((r: any) => r.id);
     }
 
@@ -165,7 +165,7 @@ router.post("/sites/:siteId/versions", requireAuth, async (req: AuthenticatedReq
     );
 
     // Get site name for event
-    const siteR = await db.$client.query(`SELECT name FROM sites WHERE id = $1`, [siteId]).catch(() => ({ rows: [] as any[] }));
+    const siteR = await db.$client.query(`SELECT name FROM sites WHERE id = $1`, [siteId]).catch(() => ({ rows: [] }));
     const siteName = siteR.rows[0]?.name || siteId;
 
     platformEventBus.publish({

@@ -713,7 +713,7 @@ export function registerFinanceOrchestratorActions(): void {
   const getConnectionStatus: ActionHandler = {
     actionId: 'billing.sync_qb',
     name: 'QuickBooks Sync & Status',
-    category: 'billing' as any,
+    category: 'billing',
     description: 'Consolidated QB action. Use payload.action: "status" to get QB connection status (default), "push" to push an entity to QB (requires payload.type and payload.id), "prepare" to prepare an invoice QB payload (requires payload.invoiceId).',
     requiredRoles: ['manager', 'owner', 'root_admin'],
     handler: async (req: ActionRequest): Promise<ActionResult> => {
@@ -756,7 +756,7 @@ export function registerFinanceOrchestratorActions(): void {
   const gatherSnapshot: ActionHandler = {
     actionId: 'billing.financial_snapshot',
     name: 'Gather Financial Snapshot',
-    category: 'billing' as any,
+    category: 'billing',
     description: 'Pull complete financial dataset: unbilled work, open payroll period, pending invoices, QB AR aging (if connected), and data quality score.',
     requiredRoles: ['manager', 'owner', 'root_admin'],
     handler: async (req: ActionRequest): Promise<ActionResult> => {
@@ -783,7 +783,7 @@ export function registerFinanceOrchestratorActions(): void {
   const draftInvoices: ActionHandler = {
     actionId: 'billing.invoice_generate',
     name: 'Generate Draft Invoices',
-    category: 'billing' as any,
+    category: 'billing',
     description: 'Generate draft invoices for all clients with approved, unbilled time entries. Auto-detects QB vs internal mode. In QB_MODE, triggers confidence pipeline for potential auto-sync.',
     requiredRoles: ['manager', 'owner', 'root_admin'],
     handler: async (req: ActionRequest): Promise<ActionResult> => {
@@ -805,7 +805,7 @@ export function registerFinanceOrchestratorActions(): void {
   const draftPayroll: ActionHandler = {
     actionId: 'payroll.draft',
     name: 'Draft Payroll Run',
-    category: 'billing' as any,
+    category: 'billing',
     description: 'Generate a draft payroll run for the current or specified pay period. Auto-detects QB vs internal mode. Uses full internal tax engine (FLSA, OT, state taxes). In QB_MODE, triggers pipeline for QB sync after approval.',
     requiredRoles: ['manager', 'owner', 'root_admin'],
     handler: async (req: ActionRequest): Promise<ActionResult> => {
@@ -830,7 +830,7 @@ export function registerFinanceOrchestratorActions(): void {
   const pushToQB: ActionHandler = {
     actionId: 'billing.push_to_qb',
     name: 'Push to QuickBooks',
-    category: 'billing' as any,
+    category: 'billing',
     description: 'Push a specific invoice or payroll run to QuickBooks. Requires QB_MODE (active QB connection). For invoices: direct QBO sync. For payroll: approve the run first, pipeline handles QB sync.',
     requiredRoles: ['manager', 'owner', 'root_admin'],
     handler: async (req: ActionRequest): Promise<ActionResult> => {
@@ -853,7 +853,7 @@ export function registerFinanceOrchestratorActions(): void {
   const reconcile: ActionHandler = {
     actionId: 'billing.reconcile',
     name: 'Reconcile Financial Records',
-    category: 'billing' as any,
+    category: 'billing',
     description: 'Compare CoAIleague records vs QuickBooks ledger. Surfaces hours variance, revenue gaps, sync errors. In INTERNAL mode, reports on internal record consistency.',
     requiredRoles: ['manager', 'owner', 'root_admin'],
     handler: async (req: ActionRequest): Promise<ActionResult> => {

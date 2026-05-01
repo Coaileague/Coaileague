@@ -108,10 +108,10 @@ export async function runTaxDeadlineMonitor(): Promise<TaxDeadlineSweepResult> {
 
         try {
           await NotificationDeliveryService.send({
-            type: 'tax.deadline_reminder' as any,
+            type: 'tax.deadline_reminder',
             workspaceId: ws.id,
             recipientUserId: ws.ownerId,
-            channel: 'in_app' as any,
+            channel: 'in_app',
             subject,
             body: {
               formType: dl.formType,

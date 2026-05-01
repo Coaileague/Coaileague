@@ -127,10 +127,10 @@ async function notifyOwners(
       if (!userId) continue;
       try {
         await NotificationDeliveryService.send({
-          type: 'compliance_alert' as any,
+          type: 'compliance_alert',
           workspaceId,
           recipientUserId: userId,
-          channel: 'in_app' as any,
+          channel: 'in_app',
           subject: `Compliance score dropped ${previousScore - currentScore} points`,
           body: {
             previousScore,

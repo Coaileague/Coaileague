@@ -413,7 +413,7 @@ export class AccountStateService {
           },
         });
       } catch (error) {
-        log.error('Failed to process overdue invoice', { invoiceId: invoice.id, error: (error as any).message });
+        log.error('Failed to process overdue invoice', { invoiceId: invoice.id, error: (error instanceof Error ? error.message : String(error)) });
       }
     }
   }

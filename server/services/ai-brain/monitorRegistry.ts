@@ -171,7 +171,7 @@ export class MonitorRegistry {
       .set({
         consecutiveFailures,
         failureReason: reason,
-        lastRunStatus: 'failed' as any,
+        lastRunStatus: 'failed',
         status: newStatus as any,
         updatedAt: new Date(),
       })

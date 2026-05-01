@@ -491,7 +491,7 @@ class OrchestrationStateMachine {
             requiredPermissions: capabilities,
             grantedPermissions: [],
             deniedPermissions: capabilities,
-            permissionResult: 'denied' as any,
+            permissionResult: 'denied',
             permissionCheckedAt: new Date(),
             permissionCheckedBy: 'auth_service',
             permissionDeniedReason: `Permission check error: ${error.message}`,

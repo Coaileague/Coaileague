@@ -227,10 +227,10 @@ async function sendReminder(params: {
   if (params.userId) {
     try {
       await NotificationDeliveryService.send({
-        type: 'shift.reminder' as any,
+        type: 'shift.reminder',
         workspaceId: params.workspaceId,
         recipientUserId: params.userId,
-        channel: 'in_app' as any,
+        channel: 'in_app',
         subject: `Shift reminder (${params.bucket === '4h' ? '4 hours' : '1 hour'})`,
         body: {
           shiftId: params.shiftId,

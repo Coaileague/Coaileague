@@ -9,7 +9,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
   return {
     actionId,
     name: actionId,
-    category: 'scheduling' as any,
+    category: 'scheduling',
     description: `Trinity scheduling action: ${actionId}`,
     inputSchema: { type: 'object' as const, properties: {} },
     handler: async (req: ActionRequest): Promise<ActionResult> => {

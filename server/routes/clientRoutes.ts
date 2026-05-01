@@ -1199,7 +1199,7 @@ router.post('/contract-renewal-request', requireAuth, async (req: AuthenticatedR
       userId: userId || 'system',
       userEmail: userEmail || 'client@portal.com',
       userRole: 'client',
-      action: 'contract_renewal_request' as any,
+      action: 'contract_renewal_request',
       entityType: 'contract',
       entityId: workspaceId,
       changes: {
@@ -1215,7 +1215,7 @@ router.post('/contract-renewal-request', requireAuth, async (req: AuthenticatedR
     await db.insert(notifications).values({
       workspaceId,
       userId: userId || '',
-      type: 'document_uploaded' as any,
+      type: 'document_uploaded',
       title: 'Contract Renewal Request',
       message: `${userEmail} has requested renewal of contract: "${contractTitle}". ${notes ? `Notes: ${notes}` : ''}`,
       isRead: false,
@@ -1259,7 +1259,7 @@ router.post('/coi-request', requireAuth, async (req: AuthenticatedRequest, res) 
       userId: userId || 'system',
       userEmail: userEmail || 'client@portal.com',
       userRole: 'client',
-      action: 'coi_request' as any,
+      action: 'coi_request',
       entityType: 'document',
       entityId: workspaceId,
       changes: {
@@ -1278,7 +1278,7 @@ router.post('/coi-request', requireAuth, async (req: AuthenticatedRequest, res) 
     await db.insert(notifications).values({
       workspaceId,
       userId: userId || '',
-      type: 'document_expiring' as any, // Reuse existing type for document requests
+      type: 'document_expiring', // Reuse existing type for document requests
       title: 'COI Request from Client Portal',
       message: `${clientName || userEmail} has requested a Certificate of Insurance (COI/Proof of Insurance). Certificate Holder: ${certificateHolder || 'N/A'}. Reason: ${reason || 'Not specified'}.`,
       isRead: false,

@@ -250,11 +250,11 @@ router.get("/ar-aging", async (req: AuthenticatedRequest, res) => {
 
     const now = new Date();
     const buckets = {
-      current: { label: "Current", invoices: [] as any[], total: 0 },
-      "1-30": { label: "1-30 Days", invoices: [] as any[], total: 0 },
-      "31-60": { label: "31-60 Days", invoices: [] as any[], total: 0 },
-      "61-90": { label: "61-90 Days", invoices: [] as any[], total: 0 },
-      "90+": { label: "90+ Days", invoices: [] as any[], total: 0 },
+      current: { label: "Current", invoices: [], total: 0 },
+      "1-30": { label: "1-30 Days", invoices: [], total: 0 },
+      "31-60": { label: "31-60 Days", invoices: [], total: 0 },
+      "61-90": { label: "61-90 Days", invoices: [], total: 0 },
+      "90+": { label: "90+ Days", invoices: [], total: 0 },
     };
 
     for (const inv of allInvoices) {

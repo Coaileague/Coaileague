@@ -192,7 +192,7 @@ class TrinityFastModeService {
         // Emit streaming update if enabled
         if (request.streaming) {
           platformEventBus.publish({
-            type: 'automation' as any,
+            type: 'automation',
             title: 'Batch Execution Started',
             description: `Executing batch ${batches.indexOf(batch) + 1}/${batches.length} with ${batch.length} operations`,
             data: { requestId, batchSize: batch.length, batchIndex: batches.indexOf(batch) + 1, totalBatches: batches.length },
@@ -263,7 +263,7 @@ class TrinityFastModeService {
 
       // Emit completion event
       platformEventBus.publish({
-        type: 'automation' as any,
+        type: 'automation',
         title: 'FAST Mode Execution Complete',
         description: `Completed ${completedOperations}/${request.operations.length} operations (${parallelSpeedup.toFixed(1)}x speedup)`,
         data: { requestId, workspaceId: request.workspaceId, tier: request.tier, completedOperations, failedOperations, parallelSpeedup, creditsCost },

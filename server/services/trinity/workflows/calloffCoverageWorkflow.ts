@@ -518,10 +518,10 @@ async function notifySupervisors(params: {
   await Promise.allSettled(
     supervisorIds.map((recipientUserId) =>
       NotificationDeliveryService.send({
-        type: 'calloff.coverage.initiated' as any,
+        type: 'calloff.coverage.initiated',
         workspaceId: params.workspaceId,
         recipientUserId,
-        channel: 'in_app' as any,
+        channel: 'in_app',
         subject: `Calloff: ${officerName}`,
         body: {
           summary,
@@ -594,10 +594,10 @@ async function escalateToSupervisor(params: {
   await Promise.allSettled([
     ...supervisorIds.map((recipientUserId) =>
       NotificationDeliveryService.send({
-        type: 'calloff.coverage.escalated' as any,
+        type: 'calloff.coverage.escalated',
         workspaceId: params.workspaceId,
         recipientUserId,
-        channel: 'in_app' as any,
+        channel: 'in_app',
         subject: 'ESCALATION: Calloff uncovered',
         body,
         idempotencyKey: `calloff-escalation-${params.shiftId}-${recipientUserId}`,

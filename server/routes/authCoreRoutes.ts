@@ -612,7 +612,7 @@ router.post("/api/auth/login", async (req, res) => {
             if (clientRecord.clientOnboardingStatus !== 'active') {
               await db.update(clients)
                 .set({
-                  clientOnboardingStatus: 'active' as any,
+                  clientOnboardingStatus: 'active',
                   updatedAt: new Date(),
                   // activated_at = the exact moment of first login (Pillar 2, Step 4)
                   activatedAt: new Date() as any,

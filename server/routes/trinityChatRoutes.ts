@@ -182,7 +182,7 @@ router.get('/history', attachWorkspaceId, requireTrinityAccess, async (req: Requ
 router.get('/session/:sessionId/messages', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     const workspaceId = req.workspaceId;
     if (!userId || !workspaceId) return res.status(401).json({ error: 'Auth context required' });
     const messages = await trinityChatService.getSessionMessages(sessionId, userId, workspaceId);

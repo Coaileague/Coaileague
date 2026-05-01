@@ -1418,7 +1418,7 @@ billingRouter.get('/production-readiness', async (req: AuthenticatedRequest, res
     // Check if Stripe is initialized
     try {
       const stripeTest = new (await import('stripe')).default(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: '2025-09-30.clover' as any,
+        apiVersion: '2025-09-30.clover',
       });
       await stripeTest.balance.retrieve();
       runtimeChecks.push({ name: 'Stripe API Connection', status: 'pass', message: 'Successfully connected' });

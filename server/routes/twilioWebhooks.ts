@@ -273,7 +273,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
             .where(
               and(
                 eq(notifications.recipientUserId, matchedEmpDecline.userId || ''),
-                eq(notifications.type, 'coverage_offer' as any),
+                eq(notifications.type, 'coverage_offer'),
               )
             );
 
@@ -382,7 +382,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
       .where(
         and(
           eq(notifications.workspaceId, workspaceId),
-          eq(notifications.type, 'coverage_offer' as any),
+          eq(notifications.type, 'coverage_offer'),
         ),
       );
 

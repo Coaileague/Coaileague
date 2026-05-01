@@ -161,7 +161,7 @@ class AIBrainMasterOrchestrator {
         notification = await storage.createNotification({
           userId,
           workspaceId,
-          scope: 'workspace' as any,
+          scope: 'workspace',
           title,
           message,
           type: notificationType_db as any,

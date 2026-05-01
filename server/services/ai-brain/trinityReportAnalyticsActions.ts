@@ -27,7 +27,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
   return {
     actionId,
     name: actionId,
-    category: 'analytics' as any,
+    category: 'analytics',
     description: `Trinity analytics: ${actionId}`,
     handler: async (req: import('../helpai/platformActionHub').ActionRequest): Promise<import('../helpai/platformActionHub').ActionResult> => {
       try {

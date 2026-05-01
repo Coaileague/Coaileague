@@ -741,7 +741,7 @@ export class UniversalNotificationEngine {
           const [notification] = await db.insert(notifications).values({
             workspaceId: admin.workspaceId,
             userId: admin.userId,
-            type: 'system' as any,
+            type: 'system',
             title: enrichedTitle,
             message: enrichedMessage,
             actionUrl: payload.actionUrl || '/updates',
@@ -1221,7 +1221,7 @@ export class UniversalNotificationEngine {
         .values({
           workspaceId: payload.workspaceId,
           userId: payload.recipientUserId,
-          type: 'system' as any,
+          type: 'system',
           title,
           message,
           actionUrl,

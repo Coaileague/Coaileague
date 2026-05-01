@@ -251,7 +251,7 @@ class DocumentUnderstandingPipelineService {
         });
 
         platformEventBus.publish({
-          type: 'automation' as any,
+          type: 'automation',
           title: 'Document Ingestion Complete',
           description: `Extracted ${extractedData.employees?.length || 0} employees, ${extractedData.schedules?.length || 0} schedules`,
           data: { pipelineId, workspaceId: request.workspaceId, extractedCounts: { employees: extractedData.employees?.length || 0, schedules: extractedData.schedules?.length || 0, positions: extractedData.positions?.length || 0 } },
@@ -616,7 +616,7 @@ Only include fields where data was found. Estimate confidence based on data clar
 
       // Emit event
       platformEventBus.publish({
-        type: 'automation' as any,
+        type: 'automation',
         title: 'Organization Setup Complete',
         description: `Created ${createdRecords.employees} employees, ${createdRecords.positions} positions`,
         data: { workspaceId, createdRecords },

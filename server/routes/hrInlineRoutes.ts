@@ -254,7 +254,7 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
         eq(shifts.workspaceId, workspaceId),
         gte(shifts.startTime, todayStart.toISOString()),
         lteOp(shifts.startTime, todayEnd.toISOString()),
-        neOp(shifts.status, 'cancelled' as any),
+        neOp(shifts.status, 'cancelled'),
       ))
       .orderBy(shifts.startTime)
       .limit(50);

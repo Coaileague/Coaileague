@@ -188,7 +188,7 @@ router.post('/api/internal/reset-password', async (req: Request, res: Response) 
       const { auditLogs } = await import('@shared/schema');
       await db.insert(auditLogs).values({
         userId: targetUser.id,
-        action: 'reset_password' as any,
+        action: 'reset_password',
         entityType: 'user',
         entityId: targetUser.id,
         metadata: { source: 'internal_reset_endpoint', clientIp, targetSource },

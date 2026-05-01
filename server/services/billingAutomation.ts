@@ -1495,11 +1495,11 @@ export async function generateAgingReport(workspaceId: string) {
   ));
 
   const buckets = {
-    current: [] as any[],
-    thirtyDay: [] as any[],
-    sixtyDay: [] as any[],
-    ninetyDay: [] as any[],
-    ninetyPlus: [] as any[],
+    current: [],
+    thirtyDay: [],
+    sixtyDay: [],
+    ninetyDay: [],
+    ninetyPlus: [],
   };
 
   for (const inv of unpaidInvoices) {

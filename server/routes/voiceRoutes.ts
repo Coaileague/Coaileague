@@ -4149,7 +4149,7 @@ voiceRouter.post('/guest-employment-verify', twilioSignatureMiddleware, async (r
         const sessionRow = await pool.query(
           `SELECT metadata FROM voice_call_sessions WHERE twilio_call_sid = $1 LIMIT 1`,
           [req.body.CallSid || sessionId]
-        ).catch(() => ({ rows: [] as any[] }));
+        ).catch(() => ({ rows: [] }));
         const requesterInfo = sessionRow.rows[0]?.metadata?.verify_requester || 'Unknown caller';
         const refNum = `VER-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 

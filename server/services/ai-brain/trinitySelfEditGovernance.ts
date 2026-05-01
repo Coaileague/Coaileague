@@ -636,8 +636,8 @@ class TrinitySelfEditGovernanceService {
         executedByBot: true,
         executorType: 'trinity_ai',
         confidenceScore: proposal.confidenceScore ? Math.round(proposal.confidenceScore * 100) : 0,
-        computedLevel: 'autonomous' as any,
-        policyLevel: 'autonomous' as any,
+        computedLevel: 'autonomous',
+        policyLevel: 'autonomous',
         inputPayload: {
           type: 'self_edit_proposal',
           trinitySessionId: proposal.trinitySessionId,

@@ -100,7 +100,7 @@ const INSTANT_ANSWERS: Record<string, string> = {
   onboarding_stuck: 'If your onboarding is stuck on a task, try refreshing the app. If a specific task won\'t complete, reply with which task and we\'ll reset it for you.',
   compliance_alert: 'If your license or certification is expiring, upload the renewal in the Documents > Compliance section of the app. It typically takes 1-2 days to verify.',
   technical_error: 'Try closing the app and reopening it. If the problem continues, reply with what error you\'re seeing and we\'ll fix it.',
-  general_question: null as any,
+  general_question: null,
 };
 
 const INSTANT_ANSWERS_ES: Record<string, string> = {
@@ -112,7 +112,7 @@ const INSTANT_ANSWERS_ES: Record<string, string> = {
   onboarding_stuck: 'Si tu incorporación está atascada en una tarea, intenta actualizar la aplicación. Si una tarea específica no se completa, responde con cuál es la tarea y la reiniciaremos.',
   compliance_alert: 'Si tu licencia o certificación está por vencer, sube la renovación en la sección de Documentos > Cumplimiento de la aplicación. Normalmente tarda 1-2 días en verificarse.',
   technical_error: 'Intenta cerrar la aplicación y volver a abrirla. Si el problema continúa, responde con el error que estás viendo y lo resolveremos.',
-  general_question: null as any,
+  general_question: null,
 };
 
 // ─── Trinity AI Fallback ───────────────────────────────────────────────────

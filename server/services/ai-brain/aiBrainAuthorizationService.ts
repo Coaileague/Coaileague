@@ -459,7 +459,7 @@ class AIBrainAuthorizationService {
 
       return { valid: true, role };
     } catch (error) {
-      return { valid: false, reason: `Validation error: ${(error as any).message}` };
+      return { valid: false, reason: `Validation error: ${(error instanceof Error ? error.message : String(error))}` };
     }
   }
 

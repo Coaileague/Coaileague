@@ -2257,7 +2257,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
    * Get pending approvals across all skills
    */
   async getPendingApprovals(workspaceId?: string): Promise<AiBrainJob[]> {
-    const conditions = [eq(aiBrainJobs.status, 'requires_approval' as any)];
+    const conditions = [eq(aiBrainJobs.status, 'requires_approval')];
     
     if (workspaceId) {
       conditions.push(eq(aiBrainJobs.workspaceId, workspaceId));
@@ -2277,7 +2277,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
     await db
       .update(aiBrainJobs)
       .set({
-        status: 'completed' as any,
+        status: 'completed',
         approvedBy: userId,
         approvedAt: new Date()
       })
@@ -2293,7 +2293,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
     await db
       .update(aiBrainJobs)
       .set({
-        status: 'failed' as any,
+        status: 'failed',
         rejectedBy: userId,
         rejectedAt: new Date(),
         rejectionReason: reason

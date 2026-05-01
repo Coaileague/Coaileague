@@ -121,7 +121,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
         workspaceId,
         operationType: operationType as any,
         requestFingerprint: fingerprint,
-        status: 'processing' as any,
+        status: 'processing',
         expiresAt,
       }).onConflictDoNothing({
         target: [idempotencyKeys.workspaceId, idempotencyKeys.operationType, idempotencyKeys.requestFingerprint],
@@ -168,7 +168,7 @@ export const idempotencyMiddleware = (req: Request, res: Response, next: NextFun
             eq(idempotencyKeys.workspaceId, workspaceId),
             eq(idempotencyKeys.operationType, operationType as any),
             eq(idempotencyKeys.requestFingerprint, fingerprint),
-            eq(idempotencyKeys.status, 'processing' as any),
+            eq(idempotencyKeys.status, 'processing'),
             sql`${idempotencyKeys.createdAt} < now() - interval '30 seconds'`
           ))
           .returning({ id: idempotencyKeys.id });

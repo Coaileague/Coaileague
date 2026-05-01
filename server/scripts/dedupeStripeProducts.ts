@@ -17,7 +17,7 @@ if (!LIVE_KEY?.startsWith('sk_live_')) {
   process.exit(1);
 }
 
-const stripe = new Stripe(LIVE_KEY, { apiVersion: '2025-09-30.clover' as any });
+const stripe = new Stripe(LIVE_KEY, { apiVersion: '2025-09-30.clover' });
 
 function sep(s: string) { console.log(`\n${'═'.repeat(64)}\n  ${s}\n${'═'.repeat(64)}`); }
 function ok(s: string) { console.log(`  ✅ ${s}`); }

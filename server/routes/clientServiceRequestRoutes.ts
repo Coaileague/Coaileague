@@ -153,10 +153,10 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
       await Promise.allSettled(
         managerIds.flatMap((recipientUserId) => [
           NotificationDeliveryService.send({
-            type: 'client_portal_report' as any,
+            type: 'client_portal_report',
             workspaceId,
             recipientUserId,
-            channel: 'in_app' as any,
+            channel: 'in_app',
             subject: `New Client Service Request — ${parsed.data.requestType}`,
             body: {
               title: 'New Client Service Request',
@@ -167,10 +167,10 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
             idempotencyKey: `srq-${request.id}-inapp-${recipientUserId}`,
           }),
           ...(isHighPriority ? [NotificationDeliveryService.send({
-            type: 'client_portal_report' as any,
+            type: 'client_portal_report',
             workspaceId,
             recipientUserId,
-            channel: 'push' as any,
+            channel: 'push',
             subject: `${parsed.data.urgency?.toUpperCase()}: Client Service Request`,
             body: {
               title: `${parsed.data.urgency?.toUpperCase()}: Service Request`,

@@ -34,7 +34,7 @@ if (!WEBHOOK_SECRET) {
   process.exit(1);
 }
 
-const stripe = new Stripe(TEST_KEY, { apiVersion: '2025-09-30.clover' as any });
+const stripe = new Stripe(TEST_KEY, { apiVersion: '2025-09-30.clover' });
 
 // ── Pricing catalogue (mirrors billingConfig.ts exactly) ─────────────────────
 const CATALOGUE = [

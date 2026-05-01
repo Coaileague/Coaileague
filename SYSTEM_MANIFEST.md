@@ -1724,3 +1724,69 @@ Platform Stability:
 | KI-008 | ChatDock durable message store | HIGH |
 | SF-1 | 380 .catch(()=>null) in services | MEDIUM |
 | UNBUILT | CAD, Budgets, Bid Analytics, Audit Suite | BACKLOG |
+
+---
+
+## Phase 13 — Stub Audit, Route Fix, TS Purge (2026-05-01)
+
+### CRITICAL BUG FIXED: featureStubRouter was shadowing 28 real routes
+
+**Root cause:** `featureStubRouter` was mounted at L977 of routes.ts via
+`app.use("/api", requireAuth, featureStubRouter)` — BEFORE `mountBillingRoutes`,
+`mountCommsRoutes`, `mountOpsRoutes`, `mountSalesRoutes`, `mountWorkforceRoutes`
+which all mount at L1028-1081.
+
+Express routes in registration order. The stub was intercepting:
+- `/api/budgets` → `budgetRouter` (real, mounted later in billing)
+- `/api/rms/trespass` → `rmsRouter` (real, mounted later in ops)
+- `/api/cad/calls` → `cadRouter` (real, mounted later in ops)
+- `/api/armory/ammo` → `armoryRouter` (real, mounted later in ops)
+- `/api/billing/invoice-preview` → `billingRouter` (real, mounted later)
+- `/api/bid-analytics` → `bidAnalyticsRouter` (real, mounted in sales)
+- `/api/bridges/send` → `messageBridgeRouter` (real, mounted in comms)
+- `/api/automation/invoice/anchor-close` → `automationRouter` (real)
+- `/api/ai-brain/patterns` → `aiBrainRouter` (mounted at L922, before stub — OK)
+- `/api/admin/end-users/*` → `endUserControlRouter` (real)
+- + 18 more real routes being blocked
+
+**Fix:** Moved `featureStubRouter` mount to LAST position in routes.ts —
+after all domain mounts. Now only fires when no real route matches.
+
+### featureStubRoutes.ts Rewritten: 39 stubs → 11
+
+**Removed 28 stubs** that were wrong-path bugs (real routes existed).
+**Kept 11 genuinely unbuilt features:**
+
+| Route | Reason |
+|-------|--------|
+| GET/POST `/api/cad` | CAD dispatch console not built (cadRouter only has /calls sub-routes) |
+| GET/POST `/api/audit-suite/audits` | auditSuiteRouter only has /visual-compliance/slots |
+| GET `/api/audit-suite/citations` | Not in auditSuiteRouter |
+| GET/POST `/api/accept-handoff` | Service logic exists, no HTTP route registered |
+| GET `/api/ai-brain/sentiment` | sentimentAnalyzer not exposed as endpoint |
+| POST `/api/ai-brain/diagnostic/run-fast` | Not routed |
+| POST `/api/admin/financial/provider-topoff` | Not routed |
+| GET `/api/auditor/compliance-trend` | No endpoint exists |
+| GET `/api/auditor/compliance-score` | Stub pending client URL update |
+
+### Client URL Fixes
+- `apiEndpoints.ts`: `/api/ai-brain/predict` → `/api/analytics/bi/predictive`
+  (real endpoint is in analyticsRoutes.ts at /api/analytics/bi)
+
+### Additional TypeScript Purge (293 removed, 127 files)
+Patterns targeted:
+- `(req as any).workspaceId` → `req.workspaceId` (AuthenticatedRequest already has it)
+- `(req as any).userId` → `req.userId`
+- `(err as any).message` → `instanceof Error` guard
+- `(process as any).X` → `process.X`
+- `[] as any[]` → `[]`
+- `{} as any` → `{}`
+- `null as any` → `null`
+- `'string' as any` → `'string'`
+
+### Cumulative TypeScript Metrics
+| Metric | Baseline | After Phase 13 | Reduction |
+|--------|----------|----------------|-----------|
+| `as any` | 5,227 | 4023 | -1204 |
+| `: any` | 3,339 | 1782 | -1557 |
+| **Combined** | **8,566** | **5805** | **-2761 (32.2%)** |

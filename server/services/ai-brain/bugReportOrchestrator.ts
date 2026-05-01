@@ -133,7 +133,7 @@ class BugReportOrchestrator {
 
     // Emit event for real-time tracking
     platformEventBus.publish({
-      type: 'automation_completed' as any,
+      type: 'automation_completed',
       category: 'ai_brain',
       title: 'Bug Report Received',
       description: `New ${report.type} report: ${report.title}`,
@@ -190,7 +190,7 @@ Always prioritize user safety and data integrity.`,
       }
 
       platformEventBus.publish({
-        type: 'automation_completed' as any,
+        type: 'automation_completed',
         category: 'ai_brain',
         title: 'Bug Analysis Complete',
         description: `Analysis for report ${reportId}: ${analysis.severity} severity, ${analysis.category} issue`,
@@ -331,7 +331,7 @@ Always prioritize user safety and data integrity.`,
     log.info(`[BugReportOrchestrator] Remediation request created: ${requestId}`);
 
     platformEventBus.publish({
-      type: 'ticket_created' as any,
+      type: 'ticket_created',
       category: 'ai_brain',
       title: `🔧 Auto-Fix Pending: ${report?.title || 'Bug fix'}`,
       description: `I've proposed a fix. Severity: ${analysis.severity}, Confidence: ${(analysis.suggestedFix.confidence * 100).toFixed(0)}%`,
@@ -392,7 +392,7 @@ Always prioritize user safety and data integrity.`,
         request.executionTimestamp = new Date();
 
         platformEventBus.publish({
-          type: 'automation_completed' as any,
+          type: 'automation_completed',
           category: 'ai_brain',
           title: 'Hotfix Applied Successfully',
           description: `Bug fix committed: ${result.commitHash}`,

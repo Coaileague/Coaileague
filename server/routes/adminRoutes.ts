@@ -2150,7 +2150,7 @@ router.post('/compliance/notify-pending', async (req: AuthenticatedRequest, res)
       await createNotification({
         workspaceId: owner.workspaceId,
         userId: owner.userId,
-        type: 'system' as any,
+        type: 'system',
         title: `${count} Compliance Document${count > 1 ? 's' : ''} Awaiting Review`,
         message: `You have ${count} compliance document${count > 1 ? 's' : ''} pending approval. Note: These notifications may not have been sent previously due to an email delivery issue that has since been fixed.`,
         actionUrl: '/compliance-scenarios',

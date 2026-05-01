@@ -121,7 +121,7 @@ export function requireBreakGlass(action: string) {
     try {
       // @ts-expect-error — TS migration: fix in refactoring sprint
       const { universalAudit } = await import('../services/audit/universalAuditLogger').catch(() =>
-        import('../services/universalAuditLogger' as any)
+        import('../services/universalAuditLogger')
       ) as any;
 
       if (universalAudit?.log) {
@@ -169,7 +169,7 @@ export async function completeBreakGlassAudit(
   try {
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const { universalAudit } = await import('../services/audit/universalAuditLogger').catch(() =>
-      import('../services/universalAuditLogger' as any)
+      import('../services/universalAuditLogger')
     ) as any;
 
     if (universalAudit?.log) {

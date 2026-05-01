@@ -867,7 +867,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const managers = await db.query.employees.findMany({
           where: and(
             eq(employees.workspaceId, workspaceId),
-            eq(employees.role, 'owner' as any)
+            eq(employees.role, 'owner')
           ),
           limit: 3,
         });
@@ -1283,7 +1283,7 @@ export function initializeTrinityEventSubscriptions(): void {
           .where(and(eq(wm.workspaceId, workspaceId), sqlOp`${wm.role} IN ('org_owner', 'co_owner')`));
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'alert' as any,
+            workspaceId, userId: o.userId, type: 'alert',
             title: 'Payroll Funding Account Disconnected',
             message: `${metadata?.priorInstitution || 'Your bank account'} has been disconnected. ACH payroll disbursement is suspended until a funding account is reconnected.`,
             priority: 'urgent',
@@ -1329,7 +1329,7 @@ export function initializeTrinityEventSubscriptions(): void {
             await createNotification({
               workspaceId,
               userId: emp.userId,
-              type: 'payroll_alert' as any,
+              type: 'payroll_alert',
               title: 'Your Direct Deposit Has Arrived',
               message: `Your payroll payment of $${parseFloat(String(metadata?.amount || 0)).toFixed(2)} has been deposited to your bank account.`,
               priority: 'normal',
@@ -1405,7 +1405,7 @@ export function initializeTrinityEventSubscriptions(): void {
             await notificationService.createNotification({
               userId: ws.ownerId,
               workspaceId,
-              type: 'payroll_transfer_failed' as any,
+              type: 'payroll_transfer_failed',
               title: 'ACH Transfer Failed',
               message: `An employee ACH payroll transfer ${metadata?.status}: ${metadata?.failureReason || 'Contact your bank'}. Pay stub ID: ${metadata?.payStubId}.`,
               priority: 'high',
@@ -1435,7 +1435,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const mgr of managers) {
           await createNotification({
-            workspaceId, userId: mgr.userId, type: 'agent_escalation' as any,
+            workspaceId, userId: mgr.userId, type: 'agent_escalation',
             title: isCritical ? 'CRITICAL: AI Agent Needs Human Intervention' : 'AI Agent Escalated — Review Required',
             message: `Trinity's autonomous agent stopped execution of "${metadata?.goal}" at ${Math.round((metadata?.confidence || 0) * 100)}% confidence. ${isCritical ? 'CRITICAL: Immediate human review required.' : 'Please review and approve continuation or rollback.'}`,
             priority,
@@ -1462,7 +1462,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const mgr of managers) {
           await createNotification({
-            workspaceId, userId: mgr.userId, type: 'schedule_escalation' as any,
+            workspaceId, userId: mgr.userId, type: 'schedule_escalation',
             title: 'Schedule Blocked by Safety Review — Approval Required',
             message: `Trinity's scheduling judge blocked a schedule from publishing. Risk score: ${metadata?.riskScore ?? 'N/A'}. Reason: ${metadata?.reason || 'Policy violation detected'}. Manual approval or revision required before the schedule can go live.`,
             priority: 'high',
@@ -1491,7 +1491,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const owner of owners) {
           await createNotification({
-            workspaceId, userId: owner.userId, type: 'ai_cost_alert' as any,
+            workspaceId, userId: owner.userId, type: 'ai_cost_alert',
             title: 'AI Credit Pricing Alert — Unprofitable Operation',
             message: `Operation "${metadata?.operationType}" exceeded AI cost budget. Loss: $${metadata?.loss?.toFixed(4)} (margin: ${metadata?.margin?.toFixed(2)}%). Review credit pricing in Settings > AI Usage to prevent revenue leakage.`,
             priority: 'high',
@@ -1523,7 +1523,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const shiftId = payload?.shiftId || metadata?.shiftId;
         for (const m of managers) {
           await createNotification({
-            workspaceId, userId: m.userId, type: 'sla_breach' as any,
+            workspaceId, userId: m.userId, type: 'sla_breach',
             title: 'SLA Breach Detected',
             message: `Service level agreement violated: ${breachType}. ${clientId ? `Client ${clientId} affected.` : ''} Immediate review required to prevent contract penalty.`,
             priority: 'urgent',
@@ -1573,7 +1573,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const o of owners) {
           await createNotification({
-            workspaceId: targetWorkspaceId, userId: o.userId, type: 'circuit_breaker_opened' as any,
+            workspaceId: targetWorkspaceId, userId: o.userId, type: 'circuit_breaker_opened',
             title: `Infrastructure Alert: ${serviceName} Circuit Breaker Opened`,
             message: `The ${serviceName} service has exceeded failure thresholds (${failureCount} consecutive failures) and has been circuit-breaker protected. Some automated operations may be temporarily paused. Trinity is monitoring recovery.`,
             priority: 'high',
@@ -1659,7 +1659,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'trinity_action_blocked' as any,
+            workspaceId, userId: o.userId, type: 'trinity_action_blocked',
             title: 'Action Review Required',
             message: `Trinity paused a scheduled task and flagged it for your review. ${reason} You can review or adjust your Compliance & Approval settings if this was unintentional.`,
             priority: 'high',
@@ -1740,7 +1740,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const resolvedClientId = existingClientId || autoCreatedClientId;
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'contract_executed' as any,
+            workspaceId, userId: o.userId, type: 'contract_executed',
             title: `Contract Fully Executed: ${clientName}`,
             message: autoCreatedClientId
               ? `"${title}" has been countersigned. Trinity auto-created the client record. Next step: assign officers to the site and confirm billing rates before scheduling.`
@@ -1906,7 +1906,7 @@ export function initializeTrinityEventSubscriptions(): void {
           if (empUser[0]) {
             const { createNotification } = await import('./notificationService');
             await createNotification({
-              workspaceId, userId: empUser[0].userId, type: 'document_bridged' as any,
+              workspaceId, userId: empUser[0].userId, type: 'document_bridged',
               title: 'Compliance Document Added to Your Profile',
               message: `A ${documentType} has been added to your employee record from the compliance vault. Please review and confirm accuracy in your profile.`,
               priority: 'normal',
@@ -1966,7 +1966,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'reconciliation_alert' as any,
+            workspaceId, userId: o.userId, type: 'reconciliation_alert',
             title: 'Financial Reconciliation Alert — Review Required',
             message: `${discrepancy}${amount ? ` Amount discrepancy: $${amount}.` : ''} Disbursement has been paused pending review. Navigate to Payroll or Billing to investigate.`,
             priority: 'urgent',
@@ -2004,7 +2004,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'subscription_payment_blocked' as any,
+            workspaceId, userId: o.userId, type: 'subscription_payment_blocked',
             title: 'Account Access Restricted — Payment Required',
             message: `${reason}. Staff access has been paused. Update your payment method in Settings > Billing to restore full access immediately.`,
             priority: 'urgent',
@@ -2043,7 +2043,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'content_moderation_alert' as any,
+            workspaceId, userId: o.userId, type: 'content_moderation_alert',
             title: 'Content Moderation Alert',
             message: `HelpAI flagged a critical content policy violation: ${flagType}. ${userId ? `User involved recorded.` : ''} Review the chat audit log for details.`,
             priority: 'high',
@@ -2092,7 +2092,7 @@ export function initializeTrinityEventSubscriptions(): void {
           const { createNotification } = await import('./notificationService');
           for (const o of owners) {
             await createNotification({
-              workspaceId: targetWs, userId: o.userId, type: 'scheduler_job_failed' as any,
+              workspaceId: targetWs, userId: o.userId, type: 'scheduler_job_failed',
               title: `Automation Job Failed: ${jobName}`,
               idempotencyKey: `scheduler_job_failed-${Date.now()}-${o.userId}`,
               message: `A background automation job (${jobName}) failed with error: ${String(error).substring(0, 150)}. Trinity will attempt retry. If this persists, contact support.`,
@@ -2124,7 +2124,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const m of managers) {
           await createNotification({
-            workspaceId, userId: m.userId, type: 'coverage_gap_detected' as any,
+            workspaceId, userId: m.userId, type: 'coverage_gap_detected',
             title: 'Coverage Gap — No Officer Available',
             message: `Trinity exhausted all automated coverage options for ${site}${shiftDate ? ` on ${shiftDate}` : ''}. Manual intervention required to fill this shift before it goes uncovered.`,
             priority: 'urgent',
@@ -2172,7 +2172,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'employee_terminated' as any,
+            workspaceId, userId: o.userId, type: 'employee_terminated',
             title: `Employee Offboarding: ${employeeName}`,
             message: `${employeeName} has been marked as terminated. Trinity is scanning for any future shifts still assigned to this employee and will escalate conflicts. Verify access credentials have been revoked.`,
             priority: 'high',
@@ -2211,7 +2211,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { createNotification } = await import('./notificationService');
         for (const m of managers) {
           await createNotification({
-            workspaceId, userId: m.userId, type: 'employee_hired' as any,
+            workspaceId, userId: m.userId, type: 'employee_hired',
             title: `New Employee Onboarding: ${employeeName}`,
             message: `${employeeName} has been added to the team. Trinity will guide the onboarding checklist: background check, license verification, I-9, direct deposit, and schedule setup.`,
             priority: 'normal',
@@ -2258,7 +2258,7 @@ export function initializeTrinityEventSubscriptions(): void {
           const { createNotification } = await import('./notificationService');
           for (const s of supervisors) {
             await createNotification({
-              workspaceId, userId: s.userId, type: 'geofence_override_required' as any,
+              workspaceId, userId: s.userId, type: 'geofence_override_required',
               title: 'GPS Override Submitted',
               idempotencyKey: `geofence_override_required-${Date.now()}-${s.userId}`,
               message: `An officer submitted a manual GPS/geofence override (${overrideType}): "${reason}". Trinity is monitoring for habitual bypass patterns.`,
@@ -2317,7 +2317,7 @@ export function initializeTrinityEventSubscriptions(): void {
           .where(and(eq(wm.workspaceId, workspaceId), sqlOp`${wm.role} IN ('org_owner', 'co_owner')`));
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'alert' as any,
+            workspaceId, userId: o.userId, type: 'alert',
             title: event.title || 'Approval Escalated',
             message: event.description || `Approval escalated to level ${payload?.newLevel}`,
             priority: 'urgent',
@@ -2353,7 +2353,7 @@ export function initializeTrinityEventSubscriptions(): void {
           .where(and(eq(wm.workspaceId, workspaceId), sqlOp`${wm.role} IN ('org_owner', 'co_owner', 'manager')`));
         for (const o of owners) {
           await createNotification({
-            workspaceId, userId: o.userId, type: 'alert' as any,
+            workspaceId, userId: o.userId, type: 'alert',
             title: event.title || 'Approval Window Expired',
             message: event.description || `Approval for "${payload?.actionName}" expired — operation has been blocked`,
             priority: 'high',

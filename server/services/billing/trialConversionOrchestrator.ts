@@ -369,7 +369,7 @@ class TrialConversionOrchestrator {
 
     await db.update(subscriptions)
       // @ts-expect-error — TS migration: fix in refactoring sprint
-      .set({ status: 'active', tier: 'free' as any })
+      .set({ status: 'active', tier: 'free' })
       .where(eq(subscriptions.workspaceId, workspaceId));
 
     await db.update(workspaces)

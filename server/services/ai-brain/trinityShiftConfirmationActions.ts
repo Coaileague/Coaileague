@@ -29,7 +29,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
   return {
     actionId,
     name: actionId,
-    category: 'automation' as any,
+    category: 'automation',
     description: `Trinity shift confirmation: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
@@ -201,7 +201,7 @@ export function registerShiftConfirmationActions() {
         ne(shifts.status, 'cancelled'),
         gte(shifts.startTime, now),
         lt(shifts.startTime, threshold),
-        ne(shifts.employeeId, null as any),
+        ne(shifts.employeeId, null),
       ))
       .catch(() => []);
 
@@ -262,7 +262,7 @@ export function registerShiftConfirmationActions() {
         ne(shifts.status, 'cancelled'),
         gte(shifts.startTime, tomorrowStart),
         lte(shifts.startTime, tomorrowEnd),
-        ne(shifts.employeeId, null as any),
+        ne(shifts.employeeId, null),
       ))
       .catch(() => []);
 

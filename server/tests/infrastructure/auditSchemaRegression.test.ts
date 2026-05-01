@@ -80,7 +80,7 @@ async function testRequiredFieldValidation(): Promise<AuditSchemaTestResult> {
     // This should fail because action is null
     await db.insert(systemAuditLogs).values({
       id: testId,
-      action: null as any, // Intentionally null to test constraint
+      action: null, // Intentionally null to test constraint
       entityType: 'regression_test',
       entityId: 'test-entity-002',
       createdAt: new Date()

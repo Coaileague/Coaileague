@@ -323,7 +323,7 @@ class SchedulerCoordinatorService {
   }
 
   getQueueStats(): Record<AgentType, { queued: number; active: number; rateLimitRemaining: number }> {
-    const stats: Record<AgentType, { queued: number; active: number; rateLimitRemaining: number }> = {} as any;
+    const stats: Record<AgentType, { queued: number; active: number; rateLimitRemaining: number }> = {};
 
     for (const agentType of this.agentConfigs.keys()) {
       const config = this.agentConfigs.get(agentType)!;

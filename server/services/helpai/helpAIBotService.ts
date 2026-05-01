@@ -1784,7 +1784,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
               AND s.status NOT IN ('cancelled','completed')
             ORDER BY s.start_time ASC LIMIT 1`,
           [employeeId, workspaceId],
-        ).catch(() => ({ rows: [] as any[] }));
+        ).catch(() => ({ rows: [] }));
 
         if (!shifts.length) {
           return { success: false, message: "You don't have any upcoming shifts to call off from." };
@@ -1847,7 +1847,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
               AND COALESCE(e.guard_card_status, '') NOT IN ('expired_hard_block')
             ORDER BY s.start_time ASC LIMIT 5`,
           [employeeId, workspaceId],
-        ).catch(() => ({ rows: [] as any[] }));
+        ).catch(() => ({ rows: [] }));
 
         if (!openShifts.length) {
           return {
@@ -1886,7 +1886,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
               AND start_time > NOW() AND status NOT IN ('cancelled','completed')
             ORDER BY start_time ASC LIMIT 1`,
           [employeeId, workspaceId],
-        ).catch(() => ({ rows: [] as any[] }));
+        ).catch(() => ({ rows: [] }));
 
         if (!rows.length) {
           return { success: false, message: "You don't have any upcoming shifts to confirm." };
@@ -1919,7 +1919,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
               AND pe.workspace_id = $2
             ORDER BY pr.period_end DESC LIMIT 1`,
           [employeeId, workspaceId],
-        ).catch(() => ({ rows: [] as any[] }));
+        ).catch(() => ({ rows: [] }));
 
         if (!rows.length) {
           return { success: true, message: 'No payroll records found yet. Check back after your first payroll run.' };

@@ -2343,7 +2343,7 @@ class ShiftRoomBotOrchestrator {
         await storage.createNotification({
           workspaceId,
           userId: owner.userId,
-          type: 'compliance_alert' as any,
+          type: 'compliance_alert',
           scope: 'workspace',
           category: 'alert',
           title,

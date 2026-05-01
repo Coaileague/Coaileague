@@ -51,7 +51,7 @@ export async function verifyOnboardingGate(
   if (!userId) return next();
 
   // Only applies to client-role users
-  const userRole = (req as any).user?.role || (req.session as any)?.role;
+  const userRole = req.user?.role || (req.session as any)?.role;
   if (userRole !== 'client') return next();
 
   // Allow exempt routes through

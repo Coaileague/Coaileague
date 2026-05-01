@@ -102,7 +102,7 @@ router.post("/generate", requireManager, async (req: AuthenticatedRequest, res) 
       description: reportMeta.description,
       periodStart: start,
       periodEnd: end,
-      status: "complete" as any,
+      status: "complete",
       generatedBy: userId,
       generatedAt: new Date(),
       automatedGeneration: false,

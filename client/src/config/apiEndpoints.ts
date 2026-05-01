@@ -140,7 +140,7 @@ export const API_ENDPOINTS = {
   ai: {
     brain: "/api/ai-brain",
     schedule: "/api/ai-brain/schedule",
-    predict: "/api/ai-brain/predict",
+    predict: "/api/analytics/bi/predictive",
     sentiment: "/api/ai-brain/sentiment"
   },
 

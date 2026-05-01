@@ -20,7 +20,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
   return {
     actionId,
     name: actionId,
-    category: 'automation' as any,
+    category: 'automation',
     description: `Trinity subcontractor actions: ${actionId}`,
     requiredRoles: ['root_admin', 'deputy_admin', 'sysop', 'manager'],
     handler: async (req: ActionRequest): Promise<ActionResult> => {

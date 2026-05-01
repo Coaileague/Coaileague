@@ -242,7 +242,7 @@ router.post('/exchange/employee/:employeeId', requireAuth, async (req, res) => {
     const userId = getUserId(req);
     const { employeeId } = req.params;
 
-    const workspaceRole = (req as any).workspaceRole || (req as any).user?.workspaceRole || '';
+    const workspaceRole = req.workspaceRole || req.user?.workspaceRole || '';
     const isManagerOrAbove = ['org_owner', 'co_owner', 'manager', 'supervisor'].includes(workspaceRole);
 
     const emp = await db

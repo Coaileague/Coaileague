@@ -129,7 +129,7 @@ router.post("/records", requireAuth, async (req: AuthenticatedRequest, res) => {
       const previous = parseFloat(trend.rows[1].satisfaction_score || '5');
       if (previous - latest >= 0.5) {
         // Tenant isolation: enforce workspace_id (TRINITY.md §1)
-        const clientR = await db.$client.query(`SELECT company_name FROM clients WHERE id = $1 AND workspace_id = $2`, [client_id, wid]).catch(() => ({ rows: [] as any[] }));
+        const clientR = await db.$client.query(`SELECT company_name FROM clients WHERE id = $1 AND workspace_id = $2`, [client_id, wid]).catch(() => ({ rows: [] }));
         const clientName = clientR.rows[0]?.company_name || 'Client';
         platformEventBus.publish({
           type: 'client_satisfaction_decline',

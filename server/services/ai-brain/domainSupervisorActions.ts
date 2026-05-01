@@ -277,15 +277,15 @@ export function registerDomainSupervisorActions(): void {
 
           const pending = await db.select({ count: sql`count(*)::int` })
             .from(employeeInvitations)
-            .where(eq(employeeInvitations.inviteStatus, 'pending' as any));
+            .where(eq(employeeInvitations.inviteStatus, 'pending'));
 
           const accepted = await db.select({ count: sql`count(*)::int` })
             .from(employeeInvitations)
-            .where(eq(employeeInvitations.inviteStatus, 'accepted' as any));
+            .where(eq(employeeInvitations.inviteStatus, 'accepted'));
 
           const expired = await db.select({ count: sql`count(*)::int` })
             .from(employeeInvitations)
-            .where(eq(employeeInvitations.inviteStatus, 'expired' as any));
+            .where(eq(employeeInvitations.inviteStatus, 'expired'));
 
           return {
             success: true,

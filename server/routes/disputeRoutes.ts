@@ -165,7 +165,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
         await createNotification({
           workspaceId: workspaceId,
           userId: manager.userId,
-          type: 'dispute_filed' as any,
+          type: 'dispute_filed',
           title: '🚨 New Dispute Filed',
           message: `${employee.firstName || 'Employee'} filed a dispute: "${data.title}"`,
           actionUrl: `/disputes/${dispute.id}`,

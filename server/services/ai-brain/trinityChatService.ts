@@ -1789,9 +1789,9 @@ Do NOT skip steps — decompose fully before concluding.`;
         {
           workspaceId: workspaceId || '',
           userId: userId || '',
-          userRole: (request as any).workspaceRole || workspaceRole || 'org_owner',
+          userRole: request.workspaceRole || workspaceRole || 'org_owner',
           sessionId: session.id,
-          platformRole: (request as any).platformRole,
+          platformRole: request.platformRole,
         }
       );
       if (dispatchResult.appendToResponse) {
@@ -3350,7 +3350,7 @@ If no significant insight, respond with:
             AND tea.trinity_attention_level IN ('concerned', 'active')
           ORDER BY tea.last_assessed_at DESC
           LIMIT 3
-        `).catch(() => ({ rows: [] as any[] })),
+        `).catch(() => ({ rows: [] })),
         db.execute(sql`
           SELECT
             (SELECT COUNT(*) FROM shifts

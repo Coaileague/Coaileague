@@ -34,7 +34,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>, req: A
   return {
     actionId,
     name: actionId,
-    category: 'automation' as any,
+    category: 'automation',
     description: `Trinity emergency staffing: ${actionId}`,
     requiredRoles: [],
     inputSchema: { type: 'object' as const, properties: {} },

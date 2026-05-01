@@ -13,7 +13,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
   return {
     actionId,
     name: actionId,
-    category: 'automation' as any,
+    category: 'automation',
     description: `Trinity action: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
@@ -150,7 +150,7 @@ export function registerComplianceIncidentActions() {
   helpaiOrchestrator.registerAction(mkAction('incident.escalate', async (params) => {
     const { incidentId, escalatedBy, reason } = params;
     if (!incidentId) return { error: 'incidentId required' };
-    const result = await incidentRoutingService.updateIncidentStatus(incidentId, 'escalated' as any, escalatedBy, reason);
+    const result = await incidentRoutingService.updateIncidentStatus(incidentId, 'escalated', escalatedBy, reason);
     return result;
   }));
 

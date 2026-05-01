@@ -1457,9 +1457,9 @@ router.post('/team/bots/:agentId/action', async (req: AuthenticatedRequest, res)
       updates.suspensionReason = reason || 'Manually suspended by support team';
     } else if (action === 'activate' || action === 'restart') {
       updates.status = 'active';
-      updates.suspendedAt = null as any;
-      updates.suspendedBy = null as any;
-      updates.suspensionReason = null as any;
+      updates.suspendedAt = null;
+      updates.suspendedBy = null;
+      updates.suspensionReason = null;
     } else if (action === 'reset_stats') {
       updates.tokenCount24h = 0;
       updates.currentMinuteRequests = 0;
@@ -1518,7 +1518,7 @@ router.post('/team/agents/:userId/action', async (req: AuthenticatedRequest, res
         }
       });
     } else if (action === 'unfreeze' || action === 'reactivate') {
-      await db.update(users).set({ isSuspended: false, suspendedAt: null as any } as any)
+      await db.update(users).set({ isSuspended: false, suspendedAt: null } as any)
         .where(eq(users.id, userId));
     } else if (action === 'demote') {
       if (!targetRole) return res.status(400).json({ error: 'User has no platform role to demote' });

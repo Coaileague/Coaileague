@@ -504,7 +504,7 @@ export class StripeWebhookService {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       workspaceId = subscription.metadata.workspaceId;
     } catch (error) {
-      log.error('Failed to retrieve subscription', { error: (error as any).message });
+      log.error('Failed to retrieve subscription', { error: (error instanceof Error ? error.message : String(error)) });
     }
     
     if (!workspaceId) {
@@ -618,7 +618,7 @@ export class StripeWebhookService {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       workspaceId = subscription.metadata.workspaceId;
     } catch (error) {
-      log.error('Failed to retrieve subscription', { error: (error as any).message });
+      log.error('Failed to retrieve subscription', { error: (error instanceof Error ? error.message : String(error)) });
     }
     
     if (workspaceId) {
@@ -1307,7 +1307,7 @@ export class StripeWebhookService {
             .limit(1);
 
           if (!payment?.invoiceId) {
-            return { refundedInvoice: null as any, workspaceId: undefined as string | undefined };
+            return { refundedInvoice: null, workspaceId: undefined as string | undefined };
           }
 
           // 3. Revert invoice.status — paid invoices must not stay 'paid' after a refund
@@ -1318,7 +1318,7 @@ export class StripeWebhookService {
 
           return { refundedInvoice: updated || null, workspaceId: updated?.workspaceId as string | undefined };
         })
-      : { refundedInvoice: null as any, workspaceId: undefined as string | undefined };
+      : { refundedInvoice: null, workspaceId: undefined as string | undefined };
 
     if (refundedInvoice && workspaceId) {
       // 4. Write revenue ledger reversal — cash leaves the business so balance decreases
@@ -1619,7 +1619,7 @@ export class StripeWebhookService {
         paidAt: new Date(),
       });
     } catch (error) {
-      log.error('Failed to log subscription payment', { error: (error as any).message });
+      log.error('Failed to log subscription payment', { error: (error instanceof Error ? error.message : String(error)) });
     }
   }
 
@@ -1689,7 +1689,7 @@ export class StripeWebhookService {
       
       log.info('Sent subscription email via NDS', { emailType, recipientEmail: owner.email });
     } catch (error) {
-      log.error('Failed to send subscription email', { emailType, error: (error as any).message });
+      log.error('Failed to send subscription email', { emailType, error: (error instanceof Error ? error.message : String(error)) });
     }
   }
 

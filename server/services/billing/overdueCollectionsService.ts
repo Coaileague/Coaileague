@@ -162,7 +162,7 @@ async function runTier2(inv: OverdueInvoice, clientEmail: string, clientName: st
     await createNotification({
       workspaceId: inv.workspaceId,
       userId: owner.userId,
-      type: 'system' as any,
+      type: 'system',
       title: `Invoice ${inv.invoiceNumber} — 7-Day Overdue Alert`,
       idempotencyKey: `system-${Date.now()}-${owner.userId}`,
       message: `${clientName} has not paid invoice ${inv.invoiceNumber} ($${Number(inv.total).toFixed(2)}). Now ${inv.daysOverdue} days overdue. Escalation email sent to client.`,
@@ -214,7 +214,7 @@ ${workspaceName}`;
     await createNotification({
       workspaceId: inv.workspaceId,
       userId: owner.userId,
-      type: 'system' as any,
+      type: 'system',
       title: `URGENT: Invoice ${inv.invoiceNumber} — 30-Day Collections Flag`,
       idempotencyKey: `system-${Date.now()}-${owner.userId}`,
       message: `${clientName} is ${inv.daysOverdue} days overdue on invoice ${inv.invoiceNumber} ($${Number(inv.total).toFixed(2)}). Trinity recommends: (1) Call the AP contact today, (2) Review draft demand letter, (3) Consider collections agency referral if unpaid within 10 days.`,
@@ -329,7 +329,7 @@ export async function runOverdueCollectionsSweep(): Promise<CollectionsResult> {
     try {
       await db
         .update(invoices)
-        .set({ status: 'overdue' as any })
+        .set({ status: 'overdue' })
         .where(and(eq(invoices.id, inv.id), eq(invoices.status as any, 'sent')));
 
       if (days >= 30) {

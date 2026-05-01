@@ -176,7 +176,7 @@ async function pollPendingTransfers(): Promise<void> {
           try {
             await db
               .update(payStubs)
-              .set({ plaidTransferStatus: 'poll_failed' as any, updatedAt: new Date() })
+              .set({ plaidTransferStatus: 'poll_failed', updatedAt: new Date() })
               .where(eq(payStubs.id, stub.id));
           } catch (updateErr: unknown) {
             log.error('[PayrollTransferMonitor] Failed to mark poll_failed:', updateErr.message);

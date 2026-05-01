@@ -353,7 +353,7 @@ class TrinityCodeOpsService {
 
           // Emit event for approval notification
           platformEventBus.publish({
-            type: 'automation_completed' as any,
+            type: 'automation_completed',
             category: 'ai_brain',
             title: 'Code Change Approval Required',
             description: `${patches.length} patches require approval (Risk: ${riskLevel})`,
@@ -411,7 +411,7 @@ class TrinityCodeOpsService {
 
       // Emit success event
       platformEventBus.publish({
-        type: 'automation_completed' as any,
+        type: 'automation_completed',
         category: 'ai_brain',
         title: 'Code Patches Applied',
         description: `Applied ${appliedPatches} patches successfully`,
@@ -637,7 +637,7 @@ class TrinityCodeOpsService {
       await this.logOperation('rollback', { operationId });
 
       platformEventBus.publish({
-        type: 'automation_completed' as any,
+        type: 'automation_completed',
         category: 'ai_brain',
         title: 'Rollback Completed',
         description: `Operation ${operationId} rolled back successfully`,

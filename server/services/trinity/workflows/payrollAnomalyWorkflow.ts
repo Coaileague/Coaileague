@@ -331,10 +331,10 @@ async function notifyStakeholders(params: {
   await Promise.allSettled(
     managerIds.map((recipientUserId) =>
       NotificationDeliveryService.send({
-        type: params.blocked ? 'payroll.anomaly.blocked' : ('payroll.anomaly.flagged' as any),
+        type: params.blocked ? 'payroll.anomaly.blocked' : ('payroll.anomaly.flagged'),
         workspaceId: params.workspaceId,
         recipientUserId,
-        channel: 'in_app' as any,
+        channel: 'in_app',
         subject: params.blocked ? 'Payroll BLOCKED by Trinity' : 'Payroll anomaly flagged',
         body: {
           payrollRunId: params.payrollRunId,

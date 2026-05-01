@@ -216,7 +216,7 @@ class StripeEventBridge {
         workspaceId: workspace.id,
       }, { userId: 'system', userRole: 'sysop', workspaceId: workspace.id });
     } catch (error) {
-      log.warn('Could not create resume approval request', { error: (error as any).message });
+      log.warn('Could not create resume approval request', { error: (error instanceof Error ? error.message : String(error)) });
     }
 
     return {

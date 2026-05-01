@@ -82,7 +82,7 @@ export async function flipInvitedToActive(payload: HandshakePayload): Promise<Ha
       workspaceId: invite.workspaceId,
       userId: payload.userId,
       userEmail: payload.pocEmail,
-      action: 'onboarding_handshake_complete' as any,
+      action: 'onboarding_handshake_complete',
       entityType: 'client',
       entityId: invite.clientId,
       changes: {

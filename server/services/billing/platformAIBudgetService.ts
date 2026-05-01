@@ -369,7 +369,7 @@ class PlatformAIBudgetService {
       WHERE created_at >= NOW() - INTERVAL '7 days'
         AND event_type IN ('workspace_billing_processed', 'middleware_fee_charged', 'seat_overage_charged', 'ai_credit_overage_charged')
       GROUP BY event_type
-    `).catch(() => ({ rows: [] as any[] }));
+    `).catch(() => ({ rows: [] }));
 
     const billingEventMap: Record<string, typeof billingLayerResult.rows[0]> = {};
     for (const row of billingLayerResult.rows) {
@@ -423,7 +423,7 @@ class PlatformAIBudgetService {
           category: 'billing',
           message: `Billing Layer ${layer.layer} (${layer.name}) has ${layer.recentFailureCount} recent failures`,
         });
-        layer.status = 'critical' as any;
+        layer.status = 'critical';
       } else if (layer.recentFailureCount > 0) {
         layer.status = 'warning';
       }

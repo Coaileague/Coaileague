@@ -148,7 +148,7 @@ export async function bulkResendUndeliveredInvoices(
 
       await universalAudit({
         workspaceId: inv.workspaceId,
-        action: 'invoice.resent_after_failure' as any,
+        action: 'invoice.resent_after_failure',
         entityType: 'invoice',
         entityId: inv.id,
         actorId: requestedBy,

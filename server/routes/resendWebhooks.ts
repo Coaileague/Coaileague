@@ -568,7 +568,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
               // Write immutable audit trail entry
               await universalAudit.log({
                 workspaceId: inv.workspaceId,
-                action: 'invoice.delivery_confirmed' as any,
+                action: 'invoice.delivery_confirmed',
                 actorType: 'system',
                 actorId: 'resend-webhook',
                 changeType: 'action',

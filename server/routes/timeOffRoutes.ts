@@ -612,7 +612,7 @@ router.get("/api/timesheet-edit-requests/pending", requireManager, async (req: A
 
     const enriched = await Promise.all(
       requests.map(async (request) => {
-        const employee = await storage.getEmployee((request as any).employeeId, workspaceId);
+        const employee = await storage.getEmployee(request.employeeId, workspaceId);
         return {
           ...request,
           employeeName: employee ? `${employee.firstName} ${employee.lastName}` : "Unknown",

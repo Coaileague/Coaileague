@@ -237,10 +237,10 @@ async function notifyExpiration(
   if (exp.employeeUserId) {
     try {
       await NotificationDeliveryService.send({
-        type: 'compliance.cert_expiry' as any,
+        type: 'compliance.cert_expiry',
         workspaceId: exp.workspaceId,
         recipientUserId: exp.employeeUserId,
-        channel: 'in_app' as any,
+        channel: 'in_app',
         subject: label,
         body: {
           skillId: exp.skillId,
@@ -276,10 +276,10 @@ async function notifyExpiration(
       await Promise.allSettled(
         managerIds.map((recipientUserId) =>
           NotificationDeliveryService.send({
-            type: 'compliance.cert_expiry' as any,
+            type: 'compliance.cert_expiry',
             workspaceId: exp.workspaceId,
             recipientUserId,
-            channel: 'in_app' as any,
+            channel: 'in_app',
             subject: `Compliance: ${skill} (${name})`,
             body: {
               employeeId: exp.employeeId,

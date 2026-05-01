@@ -223,7 +223,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
 
   // Emit event so Trinity can react, log, and surface insights
   platformEventBus.publish({
-    type: 'payroll_run_approved' as any, // reuse closest type; Trinity listens on '*' wildcard too
+    type: 'payroll_run_approved', // reuse closest type; Trinity listens on '*' wildcard too
     category: 'payroll',
     title: 'Payroll Readiness Scan Complete',
     description: report.summary,

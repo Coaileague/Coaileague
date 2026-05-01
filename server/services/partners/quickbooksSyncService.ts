@@ -782,7 +782,7 @@ export class QuickBooksSyncService {
             lastName: emp.lastName,
             inviteToken,
             expiresAt,
-            status: 'sent' as any,
+            status: 'sent',
             sendEmailOnCreate: true, // email-tracked
             sentBy: invitedByUserId,
           }).returning();

@@ -824,7 +824,7 @@ export async function runComprehensiveDiagnostics(): Promise<ComprehensiveDiagno
   const startTime = Date.now();
   const allResults = await runParallelDiagnostics();
   
-  const byDomain: Record<DiagnosticDomain, { status: ServiceStatus; services: ServiceHealth[] }> = {} as any;
+  const byDomain: Record<DiagnosticDomain, { status: ServiceStatus; services: ServiceHealth[] }> = {};
   const domains = getAllDomains();
   
   for (const domain of domains) {
@@ -875,7 +875,7 @@ export async function runFastModeBatchDiagnostics(batchSize: number = 10): Promi
     allResults.push(...batchResults);
   }
   
-  const byDomain: Record<DiagnosticDomain, { status: ServiceStatus; services: ServiceHealth[] }> = {} as any;
+  const byDomain: Record<DiagnosticDomain, { status: ServiceStatus; services: ServiceHealth[] }> = {};
   const domains = getAllDomains();
   
   for (const domain of domains) {

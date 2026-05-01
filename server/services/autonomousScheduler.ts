@@ -1749,7 +1749,7 @@ async function runAutomaticPayrollProcessing() {
                       await createNotification({
                         workspaceId: workspace.id,
                         userId: emp.id,
-                        type: 'payroll_processed' as any,
+                        type: 'payroll_processed',
                         title: '💰 Payroll Processed',
                         message: `Your payroll has been processed. Check your account for payment details.`,
                         actionUrl: `/my-paychecks`,
@@ -4210,7 +4210,7 @@ export function startAutonomousScheduler() {
         const insights = await trinitySocialGraphEngine.recalculateWorkspaceGraph(wsId)
           .catch((e) => {
             log.warn('DreamCycle social graph recalc failed', { wsId, error: e?.message ?? e });
-            return [] as any[];
+            return [];
           });
         totalInsights += insights.length;
       }
@@ -4234,7 +4234,7 @@ export function startAutonomousScheduler() {
         const breakthroughs = await trinityIncubationEngine.runDreamCycle(wsId)
           .catch((e) => {
             log.warn('DreamCycle incubation failed', { wsId, error: e?.message ?? e });
-            return [] as any[];
+            return [];
           });
         totalBreakthroughs += breakthroughs.length;
       }

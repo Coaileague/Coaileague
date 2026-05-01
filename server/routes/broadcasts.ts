@@ -299,7 +299,7 @@ router.get('/briefing', requireAuth, requireRole(['org_owner', 'co_owner', 'mana
     const { workspaceId } = await getUserInfo(req);
     const broadcasts = await broadcastService.getBroadcasts({
       workspaceId,
-      type: 'briefing' as any,
+      type: 'briefing',
       isActive: true,
       includeDrafts: false,
       includeExpired: false,

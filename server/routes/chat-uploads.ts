@@ -313,7 +313,7 @@ router.post(
             const chatroomResult = await typedPool(
               `SELECT id, shift_id, assigned_employee_id FROM shift_chatrooms WHERE id = $1 LIMIT 1`,
               [conversationId]
-            ).catch(() => [] as any[]);
+            ).catch(() => []);
             const chatroomRows = Array.isArray(chatroomResult)
               ? chatroomResult
               : ((chatroomResult as any)?.rows || []);

@@ -31,7 +31,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
   return {
     actionId,
     name: actionId,
-    category: 'automation' as any,
+    category: 'automation',
     description: `Trinity delegation tracker: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {

@@ -52,10 +52,10 @@ export function registerIntegrationBrainActions(): void {
           userId: ctx.userId,
           workspaceId: ctx.workspaceId,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -95,10 +95,10 @@ export function registerIntegrationBrainActions(): void {
           userId: ctx.userId,
           workspaceId: ctx.workspaceId,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -148,10 +148,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -207,10 +207,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -259,10 +259,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -311,10 +311,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -361,10 +361,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -415,10 +415,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -459,10 +459,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         
@@ -513,10 +513,10 @@ export function registerIntegrationBrainActions(): void {
           userId: request.userId,
           workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
-          workspaceRole: (request as any).workspaceRole || '',
+          workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
             request.platformRole || '',
-            (request as any).workspaceRole || ''
+            request.workspaceRole || ''
           )
         };
         

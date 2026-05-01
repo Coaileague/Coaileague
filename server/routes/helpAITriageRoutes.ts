@@ -311,7 +311,7 @@ async function tryResolveDocumentMissing(
      ORDER BY fi.created_at DESC
      LIMIT 3`,
     [userId, workspaceId]
-  ).catch(() => ({ rows: [] as any[] }));
+  ).catch(() => ({ rows: [] }));
 
   let actionsPerformed = 0;
   for (const inv of invitations.rows) {

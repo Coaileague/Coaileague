@@ -61,8 +61,8 @@ const createHiringRecord = mkAction('hiring.create_record', async (req) => {
       lastName,
       email,
       phone: phone || null,
-      status: 'in_progress' as any,
-      currentStep: 'personal_info' as any,
+      status: 'in_progress',
+      currentStep: 'personal_info',
     } as any).returning();
 
     const [invite] = await db.insert(onboardingInvites).values({
@@ -73,7 +73,7 @@ const createHiringRecord = mkAction('hiring.create_record', async (req) => {
       role: role || 'Security Officer',
       inviteToken: `trinity-hire-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       expiresAt: new Date(Date.now() + 30 * 86400000),
-      status: 'sent' as any,
+      status: 'sent',
       sentBy: req.userId || 'trinity-auto',
     } as any).returning();
 
@@ -137,7 +137,7 @@ const initiateBackgroundCheck = mkAction('hiring.initiate_background_check', asy
     if (!applicationId || !wid) return createResult(req.actionId, false, 'applicationId and workspaceId required', null, start);
 
     await db.update(onboardingApplications)
-      .set({ status: 'background_check_initiated' as any, updatedAt: new Date() } as any)
+      .set({ status: 'background_check_initiated', updatedAt: new Date() } as any)
       .where(eq(onboardingApplications.id, applicationId));
 
     const checkTypes = ['criminal_federal', 'criminal_state_tx', 'sex_offender_registry', 'identity_verification'];
@@ -170,7 +170,7 @@ const schedulePERCTraining = mkAction('hiring.schedule_perc_training', async (re
     if (!applicationId) return createResult(req.actionId, false, 'applicationId required', null, start);
 
     await db.update(onboardingApplications)
-      .set({ status: 'training_scheduled' as any, updatedAt: new Date() } as any)
+      .set({ status: 'training_scheduled', updatedAt: new Date() } as any)
       .where(eq(onboardingApplications.id, applicationId));
 
     const instructions = [
@@ -199,7 +199,7 @@ const trackDPSApplication = mkAction('hiring.track_dps_application', async (req)
     if (!applicationId) return createResult(req.actionId, false, 'applicationId required', null, start);
 
     await db.update(onboardingApplications)
-      .set({ status: 'dps_application_submitted' as any, updatedAt: new Date() } as any)
+      .set({ status: 'dps_application_submitted', updatedAt: new Date() } as any)
       .where(eq(onboardingApplications.id, applicationId));
 
     const estimatedCompletion = submittedDate
@@ -223,7 +223,7 @@ const confirmLicenseReceived = mkAction('hiring.confirm_license_received', async
     if (!applicationId || !wid) return createResult(req.actionId, false, 'applicationId and workspaceId required', null, start);
 
     await db.update(onboardingApplications)
-      .set({ status: 'completed' as any, updatedAt: new Date() } as any)
+      .set({ status: 'completed', updatedAt: new Date() } as any)
       .where(eq(onboardingApplications.id, applicationId));
 
     if (employeeId && percCardNumber && expirationDate) {

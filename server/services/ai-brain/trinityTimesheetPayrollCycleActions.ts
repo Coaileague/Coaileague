@@ -457,7 +457,7 @@ export function registerTimesheetPayrollCycleActions() {
     // GAP-20 FIX: workspaceId added to WHERE so a Trinity action cannot void a foreign workspace's invoice.
     if (!invoiceId || !workspaceId) return { error: 'invoiceId and workspaceId required' };
     await db.update(invoices)
-      .set({ status: 'void' as any, notes: `[VOIDED] ${reason || 'Trinity void and reissue'}`, updatedAt: new Date() } as any)
+      .set({ status: 'void', notes: `[VOIDED] ${reason || 'Trinity void and reissue'}`, updatedAt: new Date() } as any)
       .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)));
     await platformEventBus.publish({
       eventType: 'invoice_voided',

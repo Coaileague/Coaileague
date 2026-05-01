@@ -10,7 +10,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
   return {
     actionId,
     name: actionId,
-    category: 'automation' as any,
+    category: 'automation',
     description: `Trinity helpdesk action: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {

@@ -518,7 +518,7 @@ export async function checkAuditReadinessReminders(): Promise<{ checked: number;
           .where(and(
             eq(notifications.workspaceId, ws.id),
             eq(notifications.userId, ws.ownerId),
-            eq(notifications.type, 'compliance_alert' as any),
+            eq(notifications.type, 'compliance_alert'),
             gte(notifications.createdAt, cutoff),
             sql`${notifications.title} LIKE 'Audit Readiness:%'`,
           ))

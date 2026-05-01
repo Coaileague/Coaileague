@@ -133,7 +133,7 @@ export async function runStaffingPipelineStressTest(): Promise<{
     await db.insert(notifications).values({
       workspaceId: DEV_WORKSPACE,
       userId: DEV_USER,
-      type: 'coverage_offer' as any,
+      type: 'coverage_offer',
       title: 'Shift Offer Available',
       message: 'You have a new shift offer at Test Location on Jan 15.',
       isRead: false,

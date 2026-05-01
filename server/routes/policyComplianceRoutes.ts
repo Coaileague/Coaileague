@@ -408,7 +408,7 @@ router.post("/compliance-reports/generate", requireManager, async (req: Authenti
       description: catalog.description,
       periodStart,
       periodEnd,
-      status: 'completed' as any,
+      status: 'completed',
       generatedBy: userId,
       generatedAt: now,
       automatedGeneration: false,

@@ -144,7 +144,7 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
           workspaceId: workspace.id,
           userId: req.user?.id || 'system',
           userEmail: req.user?.email || 'system',
-          action: 'employee_terminated' as any,
+          action: 'employee_terminated',
           entityType: 'employee',
           entityId: employeeId,
           changes: {

@@ -271,7 +271,7 @@ export class SandboxQuickBooksSimulator {
       companyName: '',
       email: e.email || '',
       taxId: (e as any).ssn || undefined,
-      is1099: (e as any).employmentType === '(1099 as any)' || (e as any).employmentType === 'contractor',
+      is1099: (e as any).employmentType === '(1099)' || (e as any).employmentType === 'contractor',
       balance: 0,
       syncStatus: e.quickbooksVendorId ? 'synced' : 'pending' as const,
       qbId: e.quickbooksVendorId || undefined,

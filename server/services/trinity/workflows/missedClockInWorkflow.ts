@@ -287,10 +287,10 @@ async function advanceToEscalation(
     await Promise.allSettled([
       ...supervisorIds.map((recipientUserId) =>
         NotificationDeliveryService.send({
-          type: 'missed_clockin.escalation' as any,
+          type: 'missed_clockin.escalation',
           workspaceId: miss.workspaceId,
           recipientUserId,
-          channel: 'in_app' as any,
+          channel: 'in_app',
           subject: 'Missed clock-in — unresponsive',
           body: {
             summary,

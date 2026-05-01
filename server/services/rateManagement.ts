@@ -221,7 +221,7 @@ export async function updateEmployeeRate(employeeId: string, hourlyRate: number,
       workspaceId: workspaceId || employee.workspaceId || 'system',
       userId: changedBy || 'system',
       userEmail: changedBy || 'system',
-      action: 'employee_pay_rate_changed' as any,
+      action: 'employee_pay_rate_changed',
       entityType: 'employee',
       entityId: employeeId,
       changes: {

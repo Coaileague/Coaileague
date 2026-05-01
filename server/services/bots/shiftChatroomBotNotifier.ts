@@ -41,9 +41,9 @@ export async function notifyManagers(
       .map(mgr => ({
         workspaceId,
         userId: mgr.userId!,
-        type: 'info' as any,
-        scope: 'workspace' as any,
-        category: 'schedule' as any,
+        type: 'info',
+        scope: 'workspace',
+        category: 'schedule',
         title: titles[eventType] || `ReportBot Alert — ${reporterName}`,
         message: message.slice(0, 500),
         relatedEntityType: 'shift_chatroom',

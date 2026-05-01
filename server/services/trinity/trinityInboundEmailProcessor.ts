@@ -694,7 +694,7 @@ const EMAIL_INSTANT_ANSWERS: Record<string, string> = {
   billing: 'Your current invoice and billing history are available in the app under Billing > Invoices. If you see a charge you don\'t recognize, please reply with the specific invoice number or date range and our finance team will verify it within one business day.',
   scheduling: 'Your schedule is visible in the app under the Schedule tab. If a shift appears incorrect, your operations supervisor can update it. Please reply with the shift date and location and we\'ll correct it right away.',
   technical: 'To resolve most technical issues, try logging out of the app and back in. If the problem persists, please reply with the exact error message or the page where it occurs and our platform team will investigate.',
-  general: null as any,
+  general: null,
 };
 
 /**
@@ -706,7 +706,7 @@ const EMAIL_INSTANT_ANSWERS_ES: Record<string, string> = {
   billing: 'Su factura actual y su historial de facturación están disponibles en la aplicación en Facturación > Facturas. Si ve un cargo que no reconoce, responda con el número de factura o el rango de fechas específico y nuestro equipo de finanzas lo verificará dentro de un día hábil.',
   scheduling: 'Su horario está visible en la aplicación en la pestaña Horario. Si un turno aparece incorrecto, su supervisor de operaciones puede actualizarlo. Responda con la fecha y el lugar del turno y lo corregiremos de inmediato.',
   technical: 'Para resolver la mayoría de los problemas técnicos, cierre sesión en la aplicación y vuelva a iniciarla. Si el problema persiste, responda con el mensaje de error exacto o la página donde ocurre y nuestro equipo de plataforma lo investigará.',
-  general: null as any,
+  general: null,
 };
 
 /** Lightweight FAQ search for inbound email text */

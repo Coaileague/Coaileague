@@ -285,7 +285,7 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // Check for test mode - crawlers get full access
     if (req.isTestMode) {
-      req.platformRole = "root_admin" as any;
+      req.platformRole = "root_admin";
       return next();
     }
 
@@ -763,7 +763,7 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // Check for test mode - crawlers get full access
     if (req.isTestMode) {
-      req.platformRole = "root_admin" as any;
+      req.platformRole = "root_admin";
       return next();
     }
 
@@ -777,7 +777,7 @@ export function requirePlatformRole(allowedRoles: PlatformRole[]) {
           code: 'BOT_ACCESS_DENIED',
         });
       }
-      req.platformRole = 'Bot' as any;
+      req.platformRole = 'Bot';
       return next();
     }
 

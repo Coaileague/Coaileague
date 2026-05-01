@@ -147,7 +147,7 @@ class ApprovalResumeOrchestrator {
         await createNotification({
           workspaceId,
           userId: approver.userId,
-          type: 'approval_required' as any,
+          type: 'approval_required',
           title: `Approval Required: ${domain} Automation`,
           message: description,
           actionUrl: approvalUrl,

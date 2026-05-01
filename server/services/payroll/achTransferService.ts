@@ -170,7 +170,7 @@ export async function initiatePayrollAchTransfer(params: {
     payrollEntryId: payrollEntryId || null,
     amount: amountStr,
     status: 'pending',
-  } as any).returning().catch(() => [null as any]);
+  } as any).returning().catch(() => [null]);
 
   try {
     const transfer = await initiateTransfer({

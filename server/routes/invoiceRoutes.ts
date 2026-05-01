@@ -2485,10 +2485,10 @@ router.get('/aging', async (req: AuthenticatedRequest, res) => {
     }
 
     const buckets = {
-      current: { label: '0–30 days', invoices: [] as any[], total: 0 },
-      thirtyOne: { label: '31–60 days', invoices: [] as any[], total: 0 },
-      sixtyOne: { label: '61–90 days', invoices: [] as any[], total: 0 },
-      ninetyPlus: { label: '90+ days', invoices: [] as any[], total: 0 },
+      current: { label: '0–30 days', invoices: [], total: 0 },
+      thirtyOne: { label: '31–60 days', invoices: [], total: 0 },
+      sixtyOne: { label: '61–90 days', invoices: [], total: 0 },
+      ninetyPlus: { label: '90+ days', invoices: [], total: 0 },
     };
 
     for (const inv of openInvoices) {
@@ -2891,7 +2891,7 @@ router.post(
   requireWorkspaceRole(['org_owner', 'co_owner']),
   async (req: Request, res: Response) => {
     try {
-      const workspaceId = req.workspaceId ?? (req as any).user?.workspaceId;
+      const workspaceId = req.workspaceId ?? req.user?.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }

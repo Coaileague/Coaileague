@@ -531,7 +531,7 @@ export class NotificationDeliveryService {
     await db.insert(notifications).values({
       workspaceId: record.workspaceId,
       userId: record.recipientUserId,
-      type: 'system' as any,
+      type: 'system',
       title,
       message,
       metadata: {
