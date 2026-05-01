@@ -3,6 +3,7 @@
  */
 
 import { sanitizeError } from '../middleware/errorHandler';
+import { randomUUID } from 'crypto';
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
 import { requireWorkspaceRole, requireManager } from '../rbac';
@@ -62,7 +63,7 @@ smsRouter.post('/send', requireWorkspaceRole(['org_owner', 'co_owner']), async (
     if (employeeId && !to) {
       const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
       const id = await NotificationDeliveryService.send({
-        idempotencyKey: `notif-${Date.now()}`,
+        idempotencyKey: `notif:sms:${employeeId}:${(type as string) || 'system_alert'}`,
             type: (type as any) || 'system_alert',
         workspaceId,
         recipientUserId: employeeId,
@@ -85,7 +86,7 @@ smsRouter.post('/send', requireWorkspaceRole(['org_owner', 'co_owner']), async (
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif:sms:${user?.id || targetPhone}:${(type as string) || 'system_alert'}`,
             type: (type as any) || 'system_alert',
       workspaceId,
       recipientUserId: user?.id || 'system',
@@ -129,7 +130,7 @@ smsRouter.post('/send-to-employee', requireManager, async (req: Request, res: Re
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif:sms:${employeeId}:${(type as string) || 'system_alert'}`,
             type: (type as any) || 'system_alert',
       workspaceId,
       recipientUserId: employeeId,
@@ -168,7 +169,7 @@ smsRouter.post('/shift-reminder', requireManager, async (req: Request, res: Resp
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif:sms:${employeeId}:shift_reminder`,
             type: 'shift_reminder',
       workspaceId,
       recipientUserId: employeeId,
@@ -213,7 +214,7 @@ smsRouter.post('/schedule-change', requireManager, async (req: Request, res: Res
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif:sms:${employeeId}:schedule_change`,
             type: 'schedule_notification',
       workspaceId,
       recipientUserId: employeeId,
@@ -247,7 +248,7 @@ smsRouter.post('/invoice-reminder', requireWorkspaceRole(['org_owner', 'co_owner
 
     const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
     const id = await NotificationDeliveryService.send({
-      idempotencyKey: `notif-${Date.now()}`,
+      idempotencyKey: `notif:sms:${clientPhone}:invoice_reminder`,
             type: 'invoice_notification',
       workspaceId: workspaceId || 'system',
       recipientUserId: clientPhone, // We don't have a userId here, using phone as identifier
