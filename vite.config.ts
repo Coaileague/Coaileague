@@ -18,6 +18,9 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      external: ["@capacitor/haptics"],
+    },
   },
   server: {
     host: '0.0.0.0',
