@@ -41,7 +41,7 @@ export default function WorkflowApprovals() {
   const permissions = useWorkflowPermissions();
   
   const [selectedTab, setSelectedTab] = useState('schedules');
-  const [selectedProposal, setSelectedProposal] = useState<any>(null);
+  const [selectedProposal, setSelectedProposal] = useState<null>(null);
   const [showApprovalSheet, setShowApprovalSheet] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');

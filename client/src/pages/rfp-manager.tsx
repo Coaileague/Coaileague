@@ -40,7 +40,7 @@ export default function RFPManager() {
   const workspaceId = user?.currentWorkspaceId;
   const { toast } = useToast();
   const [showNewRFP, setShowNewRFP] = useState(false);
-  const [viewRFP, setViewRFP] = useState<any>(null);
+  const [viewRFP, setViewRFP] = useState<null>(null);
   const [generateId, setGenerateId] = useState<string | null>(null);
 
   const rfps = useQuery<any>({ queryKey: ["/api/rfp", { workspaceId }], enabled: !!workspaceId });

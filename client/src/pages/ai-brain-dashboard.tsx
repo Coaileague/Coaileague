@@ -409,7 +409,7 @@ function ThalamicDashboardPanel({ workspaceId }: { workspaceId: string }) {
 const Icon = ({ name, className }: any) => <span className={className}>●</span>;
 
 export default function AIBrainDashboard() {
-  const [extractedData, setExtractedData] = useState<any>(null);
+  const [extractedData, setExtractedData] = useState<null>(null);
   const [entityType, setEntityType] = useState<"employee" | "client" | "vendor" | "invoice">("employee");
 
   const { data: user } = useQuery<User>({

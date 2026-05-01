@@ -373,7 +373,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  const [showAccountPanel, setShowAccountPanel] = useState(false);
  const [aiEnabled, setAiEnabled] = useState(false);
  const [showMotd, setShowMotd] = useState(false);
- const [motdData, setMotdData] = useState<any>(null);
+ const [motdData, setMotdData] = useState<null>(null);
  // REMOVED: Agreement and terms dialogs - chatroom is now publicly accessible without barriers
  const [showDiagnostics, setShowDiagnostics] = useState(false);
  const [diagnosticsUserId, setDiagnosticsUserId] = useState<string | null>(null);

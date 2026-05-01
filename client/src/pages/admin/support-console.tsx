@@ -33,8 +33,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 function SupportDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
+  const [selectedTicket, setSelectedTicket] = useState<null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<null>(null);
   const [actionDialog, setActionDialog] = useState<{ open: boolean; workspaceId?: string }>({ open: false });
   const [actionForm, setActionForm] = useState({ actionType: "", targetEntityType: "user", targetEntityId: "", reason: "" });
   const { toast } = useToast();

@@ -2504,7 +2504,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
               <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-md shadow-sm py-2 min-w-[180px] z-50 animate-in slide-in-from-bottom-2 fade-in duration-150" data-testid="menu-attach">
                 <button
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover-elevate active-elevate-2 text-left"
-                  onClick={() => { fileInputRef.current!.accept = "image/*"; fileInputRef.current!.click(); }}
+                  onClick={() => { fileInputRef.current!.accept = "image/*"; fileInputRef.current?.click(); }}
                   data-testid="button-attach-image"
                 >
                   <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
@@ -2514,7 +2514,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                 </button>
                 <button
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover-elevate active-elevate-2 text-left"
-                  onClick={() => { fileInputRef.current!.accept = "video/*"; fileInputRef.current!.click(); }}
+                  onClick={() => { fileInputRef.current!.accept = "video/*"; fileInputRef.current?.click(); }}
                   data-testid="button-attach-video"
                 >
                   <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
@@ -2524,7 +2524,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                 </button>
                 <button
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover-elevate active-elevate-2 text-left"
-                  onClick={() => { fileInputRef.current!.accept = "audio/*"; fileInputRef.current!.click(); }}
+                  onClick={() => { fileInputRef.current!.accept = "audio/*"; fileInputRef.current?.click(); }}
                   data-testid="button-attach-audio"
                 >
                   <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
@@ -2534,7 +2534,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                 </button>
                 <button
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover-elevate active-elevate-2 text-left"
-                  onClick={() => { fileInputRef.current!.accept = ".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"; fileInputRef.current!.click(); }}
+                  onClick={() => { fileInputRef.current!.accept = ".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"; fileInputRef.current?.click(); }}
                   data-testid="button-attach-document"
                 >
                   <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">

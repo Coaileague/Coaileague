@@ -65,7 +65,7 @@ function timeAgo(ts: string) {
 // Smart Site/Client Selector
 function SiteSelector({ workspaceId, onSelect }: { workspaceId: string | undefined; onSelect: (site) => void }) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<null>(null);
   const [search, setSearch] = useState("");
 
   const sites = useQuery<any>({
@@ -177,7 +177,7 @@ function QuickSubmitIncident({ workspaceId, onComplete }: { workspaceId: string 
   const { user } = useAuth();
   const { toast } = useToast();
   const gps = useGPS();
-  const [selectedSite, setSelectedSite] = useState<any>(null);
+  const [selectedSite, setSelectedSite] = useState<null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [narrative, setNarrative] = useState("");
   const [category, setCategory] = useState("theft");
@@ -317,7 +317,7 @@ export default function RMSHub() {
   const [showCreateDAR, setShowCreateDAR] = useState(false);
   const [showCreateVisitor, setShowCreateVisitor] = useState(false);
   const [showPreRegisterVisitor, setShowPreRegisterVisitor] = useState(false);
-  const [showVisitorDetail, setShowVisitorDetail] = useState<any>(null);
+  const [showVisitorDetail, setShowVisitorDetail] = useState<null>(null);
   const [visitorFilter, setVisitorFilter] = useState("all");
   const [visitorSearch, setVisitorSearch] = useState("");
   const [showCreateCase, setShowCreateCase] = useState(false);
@@ -326,7 +326,7 @@ export default function RMSHub() {
   const [showCreateTrespass, setShowCreateTrespass] = useState(false);
   const [showCreateBOLO, setShowCreateBOLO] = useState(false);
   const [showCreateEvidence, setShowCreateEvidence] = useState(false);
-  const [viewIncident, setViewIncident] = useState<any>(null);
+  const [viewIncident, setViewIncident] = useState<null>(null);
   const [quickTemplate, setQuickTemplate] = useState<string | null>(null);
 
   const stats = useQuery<any>({ queryKey: ["/api/rms/stats", { workspaceId }], enabled: !!workspaceId });
@@ -514,7 +514,7 @@ export default function RMSHub() {
   // Incident form with site selector + GPS + quick templates
   function IncidentForm() {
     const gps = useGPS();
-    const [selectedSite, setSelectedSite] = useState<any>(null);
+    const [selectedSite, setSelectedSite] = useState<null>(null);
     const [photos, setPhotos] = useState<string[]>([]);
     const [f, setF] = useState({
       category: "theft", priority: "medium", title: "", narrative: "",
@@ -615,7 +615,7 @@ export default function RMSHub() {
   }
 
   function DARForm() {
-    const [selectedSite, setSelectedSite] = useState<any>(null);
+    const [selectedSite, setSelectedSite] = useState<null>(null);
     const [photos, setPhotos] = useState<string[]>([]);
     const [f, setF] = useState({
       employeeName: user?.firstName || "", siteName: "", siteId: "",
@@ -700,7 +700,7 @@ export default function RMSHub() {
   }
 
   function PreRegisterForm() {
-    const [selectedSite, setSelectedSite] = useState<any>(null);
+    const [selectedSite, setSelectedSite] = useState<null>(null);
     const [f, setF] = useState({
       siteId: "", siteName: "", visitorName: "", visitorCompany: "", hostName: "", purpose: "",
       expectedArrival: new Date().toISOString().slice(0, 16), vehiclePlate: "", notes: ""
@@ -895,7 +895,7 @@ export default function RMSHub() {
   }
 
   function VisitorForm() {
-    const [selectedSite, setSelectedSite] = useState<any>(null);
+    const [selectedSite, setSelectedSite] = useState<null>(null);
     const [f, setF] = useState({
       siteId: "", siteName: "", visitorName: "", visitorCompany: "", purpose: "",
       hostName: "", vehiclePlate: "", checkedInBy: user?.firstName || "",
@@ -1661,7 +1661,7 @@ export default function RMSHub() {
 }
 
 function CaseForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
-  const [selectedSite, setSelectedSite] = useState<any>(null);
+  const [selectedSite, setSelectedSite] = useState<null>(null);
   const [f, setF] = useState({ title: "", category: "investigation", priority: "medium", description: "", siteName: "", siteId: "", assignedToName: "" });
   return (
     <div className="space-y-3">
@@ -1690,7 +1690,7 @@ function CaseForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d
 }
 
 function KeyForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
-  const [selectedSite, setSelectedSite] = useState<any>(null);
+  const [selectedSite, setSelectedSite] = useState<null>(null);
   const [f, setF] = useState({ keyIdentifier: "", keyDescription: "", checkedOutByName: "", purpose: "", siteName: "", siteId: "" });
   return (
     <div className="space-y-3">
@@ -1710,7 +1710,7 @@ function KeyForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d)
 }
 
 function LFForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
-  const [selectedSite, setSelectedSite] = useState<any>(null);
+  const [selectedSite, setSelectedSite] = useState<null>(null);
   const [f, setF] = useState({ description: "", category: "", foundLocation: "", foundByName: "", siteName: "", siteId: "", storageLocation: "" });
   return (
     <div className="space-y-3">
@@ -1731,7 +1731,7 @@ function LFForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) 
 }
 
 function TrespassForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
-  const [selectedSite, setSelectedSite] = useState<any>(null);
+  const [selectedSite, setSelectedSite] = useState<null>(null);
   const [f, setF] = useState({ subjectName: "", reason: "", siteName: "", siteId: "", issuedByName: "", isPermanent: false, policeNotified: false });
   return (
     <div className="space-y-3">

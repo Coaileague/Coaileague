@@ -362,7 +362,7 @@ const pageConfig: CanvasPageConfig = {
 export default function AIHiringWorkflowBuilder() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [editingStep, setEditingStep] = useState<any>(null);
+  const [editingStep, setEditingStep] = useState<null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');

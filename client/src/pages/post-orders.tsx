@@ -451,7 +451,7 @@ function AcknowledgmentTrackingPanel({ order, onClose }: { order: any; onClose: 
 function TrackingTab() {
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<null>(null);
 
   const { data: trackingData = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/post-orders/tracking", workspaceId],
@@ -565,10 +565,10 @@ export default function PostOrdersPage() {
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;
   const [showForm, setShowForm] = useState(false);
-  const [editOrder, setEditOrder] = useState<any>(null);
+  const [editOrder, setEditOrder] = useState<null>(null);
   const [filterPriority, setFilterPriority] = useState("all");
-  const [ackOrder, setAckOrder] = useState<any>(null);
-  const [viewAcksOrder, setViewAcksOrder] = useState<any>(null);
+  const [ackOrder, setAckOrder] = useState<null>(null);
+  const [viewAcksOrder, setViewAcksOrder] = useState<null>(null);
 
   const { data: templates = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/post-orders", workspaceId],

@@ -779,7 +779,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const lastAutoFillRef = useRef<number>(0); // Debounce auto-fill
-  const [schedulingResult, setSchedulingResult] = useState<any>(null);
+  const [schedulingResult, setSchedulingResult] = useState<null>(null);
   const [showSchedulingSummary, setShowSchedulingSummary] = useState(false);
   const [activeOrchestrationId, setActiveOrchestrationId] = useState<string | null>(null);
   const [manualApprovalMode, setManualApprovalMode] = useState(true);

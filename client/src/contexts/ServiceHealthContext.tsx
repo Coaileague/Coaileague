@@ -84,7 +84,7 @@ export function ServiceHealthProvider({ children, enablePolling = true }: Servic
         
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
-            return null as any;
+            return null;
           }
           const errorText = await response.text();
           console.error('[ServiceHealth] Health endpoint returned non-ok status:', {

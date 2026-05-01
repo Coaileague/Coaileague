@@ -384,11 +384,8 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
 
   return (
     <>
-      <div
-        className={className}
-        onClick={isMobile ? () => setLocation('/') : undefined}
-      >
-        {rightActions && <div className="flex items-center gap-2">{rightActions}</div>}
+      <div className={cn('w-full flex items-center justify-end', className)}>
+        {rightActions && <div className="flex items-center gap-2 ml-auto">{rightActions}</div>}
       </div>
 
       {/* Backdrop */}

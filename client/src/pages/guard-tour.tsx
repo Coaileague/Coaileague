@@ -355,7 +355,7 @@ function CheckpointList({ tourId }: { tourId: string }) {
   const workspaceId = (user as any)?.workspaceId;
   const { toast } = useToast();
   const [showCpForm, setShowCpForm] = useState(false);
-  const [editCp, setEditCp] = useState<any>(null);
+  const [editCp, setEditCp] = useState<null>(null);
 
   const { data: checkpoints = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/guard-tours/tours", tourId, "checkpoints"],
@@ -794,8 +794,8 @@ export default function GuardTourPage() {
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;
   const [showForm, setShowForm] = useState(false);
-  const [editTour, setEditTour] = useState<any>(null);
-  const [selectedTour, setSelectedTour] = useState<any>(null);
+  const [editTour, setEditTour] = useState<null>(null);
+  const [selectedTour, setSelectedTour] = useState<null>(null);
 
   const { data: tours = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/guard-tours", workspaceId],

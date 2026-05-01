@@ -108,6 +108,18 @@ export default function RootAdminDashboard() {
   const [, setLocation] = useLocation();
   const { user, isLoading} = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Ghost routes wired — platform activities + invitations
+  const { data: platformActivities } = useQuery({
+    queryKey: ['/api/platform/activities'],
+    queryFn: () => apiFetch('/api/platform/activities'),
+    staleTime: 30_000,
+  });
+  const { data: platformInvitations } = useQuery({
+    queryKey: ['/api/platform/invitations'],
+    queryFn: () => apiFetch('/api/platform/invitations'),
+    staleTime: 60_000,
+  });
   
   // Adaptive routing and platform detection
   const { navigate, scrollToAnchor } = useAdaptiveRoute();
@@ -140,8 +152,8 @@ export default function RootAdminDashboard() {
   const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [newRole, setNewRole] = useState("");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<null>(null);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [suspendReason, setSuspendReason] = useState("");
   const [lockDialogOpen, setLockDialogOpen] = useState(false);

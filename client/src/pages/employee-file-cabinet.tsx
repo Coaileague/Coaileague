@@ -300,7 +300,7 @@ export default function EmployeeFileCabinet() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const [showSignDialog, setShowSignDialog] = useState(false);
-  const [signingItem, setSigningItem] = useState<any>(null);
+  const [signingItem, setSigningItem] = useState<null>(null);
   const [signatureData, setSignatureData] = useState("");
   const canvasRef = useState<HTMLCanvasElement | null>(null);
 

@@ -200,7 +200,7 @@ function SchedulerTab(): JSX.Element {
 
 function DemoTenantTab(): JSX.Element {
   const { toast } = useToast();
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<null>(null);
 
   const mut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/dev/demo-tenant-seed", {}),
@@ -253,7 +253,7 @@ function DemoTenantTab(): JSX.Element {
 
 function RegulatoryTab(): JSX.Element {
   const { toast } = useToast();
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<null>(null);
 
   const mut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/dev/seed-multi-state-regulatory", {}),
@@ -300,7 +300,7 @@ function RegulatoryTab(): JSX.Element {
 function ComplianceTab(): JSX.Element {
   const { toast } = useToast();
   const [workspaceId, setWorkspaceId] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<null>(null);
 
   const mut = useMutation({
     mutationFn: () => apiRequest("POST", `/api/dev/compliance-snapshot/${workspaceId}`, {}),
@@ -351,7 +351,7 @@ function ComplianceTab(): JSX.Element {
 
 function RetentionTab(): JSX.Element {
   const { toast } = useToast();
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<null>(null);
 
   const mut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/dev/retention-scan", {}),

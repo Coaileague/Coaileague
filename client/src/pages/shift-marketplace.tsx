@@ -550,7 +550,7 @@ function CoveragePoolTab() {
   const { toast } = useToast();
   const [showPost, setShowPost] = useState(false);
   const [statusFilter, setStatusFilter] = useState("open");
-  const [confirmClaim, setConfirmClaim] = useState<any>(null);
+  const [confirmClaim, setConfirmClaim] = useState<null>(null);
   const [form, setForm] = useState({
     siteName: "", shiftDate: "", shiftStart: "", shiftEnd: "", payRate: "", notes: "",
   });

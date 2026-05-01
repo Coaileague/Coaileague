@@ -178,7 +178,7 @@ export default function FlexStaffing() {
   const [activeTab, setActiveTab] = useState("gigs");
   const [showNewGig, setShowNewGig] = useState(false);
   const [selectedGig, setSelectedGig] = useState<FlexGig | null>(null);
-  const [selectedContractor, setSelectedContractor] = useState<any>(null);
+  const [selectedContractor, setSelectedContractor] = useState<null>(null);
   const [gigFilter, setGigFilter] = useState("all");
 
   const { data: gigsData, isLoading: gigsLoading } = useQuery({

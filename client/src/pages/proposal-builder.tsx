@@ -852,7 +852,7 @@ export default function ProposalBuilderPage() {
   const workspaceId = (user as any)?.currentWorkspaceId;
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingProposal, setEditingProposal] = useState<any>(null);
+  const [editingProposal, setEditingProposal] = useState<null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [portalModal, setPortalModal] = useState<{ open: boolean; url: string; contractId: string } | null>(null);

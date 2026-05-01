@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, createContext, useContext } from "react";
-import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -8,7 +7,7 @@ import { Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, Zap, Chev
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger,  } from "@/components/ui/popover";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { UniversalModal, UniversalModalContent } from '@/components/ui/universal-modal'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,  } from "@/components/ui/alert-dialog";
 ;
@@ -999,7 +998,7 @@ function NotificationDetailModal({
                 : isHigh 
                 ? 'bg-amber-100 dark:bg-amber-900' 
                 : 'bg-primary/10'].join(' ')}>
-              <TrinityAnimatedLogo size={20} />
+              <TrinityLogo size={20} />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className={`font-bold text-sm sm:text-base leading-tight break-words ${
@@ -1093,6 +1092,7 @@ function NotificationDetailModal({
             const showApprove = t.includes('approval') || t.includes('timesheet') || title.includes('approval') || title.includes('approve');
             const showDeny = showApprove;
             const showReview = !showApprove && (notification.metadata?.requiresAction || title.includes('action required') || title.includes('review'));
+            // @ts-expect-error — TS migration: fix in refactoring sprint
             const navTarget = notification.metadata?.actionUrl || '/';
             return (
               <>
@@ -1225,12 +1225,14 @@ function getNotificationBadgeInfo(notification: UNSNotification): {
   type: NotificationBadgeType;
   className: string;
 } {
+  // @ts-expect-error — TS migration: fix in refactoring sprint
   const t = (notification.type || '').toLowerCase();
   const title = (notification.title || '').toLowerCase();
   const meta = notification.metadata || {};
 
   // TRINITY ADVISORY — AI decisions requiring human verification
   if (
+    // @ts-expect-error — TS migration: fix in refactoring sprint
     meta.aiBrainDecisionId ||
     t === 'ai_decision' ||
     t === 'trinity_autonomous_alert' ||
@@ -1398,7 +1400,7 @@ function NotificationCard({
                   ? 'bg-amber-100 dark:bg-amber-900' 
                   : 'bg-blue-100 dark:bg-blue-900'
               }`}>
-                <TrinityAnimatedLogo size={compact ? 20 : 24} />
+                <TrinityLogo size={compact ? 20 : 24} />
               </div>
               
               {/* Content & Actions - Always stacked in popover to maintain consistent width */}
@@ -1474,7 +1476,7 @@ function NotificationCard({
             <div className={compact ? "flex gap-2" : "flex gap-3"}>
               {/* Trinity AI Icon - Enhanced with glow ring */}
               <div className={`shrink-0 ${compact ? 'w-7 h-7' : 'w-9 h-9'} rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/15 to-blue-500/15 dark:from-cyan-400/20 dark:to-blue-400/20 ring-1 ring-cyan-500/20 dark:ring-cyan-400/25`}>
-                <TrinityAnimatedLogo size={compact ? 20 : 24} />
+                <TrinityLogo size={compact ? 20 : 24} />
               </div>
               
               {/* Content */}
@@ -1646,7 +1648,7 @@ function UNSCommandCenter({ isOpen, onClose, onAskTrinity, platformRole, workspa
   };
 
   return (
-    <div className="flex flex-col h-[460px] max-h-[65dvh] w-[400px] max-w-[calc(100vw-1.5rem)]">
+    <div className="flex flex-col h-[460px] max-h-[65vh] w-[400px] max-w-[calc(100vw-1.5rem)]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 shrink-0">
         <div className="flex items-center gap-2">
@@ -1750,7 +1752,7 @@ function UNSCommandCenter({ isOpen, onClose, onAskTrinity, platformRole, workspa
       </ScrollArea>
 
       {/* Footer */}
-      <div className="border-t border-border/40 p-2.5 flex gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="border-t border-border/40 p-2.5 flex gap-2 shrink-0">
         {pendingCount > 0 && (
           <Button onClick={onAskTrinity} size="sm" variant="outline" className="flex-1 gap-1 text-xs h-8">
             <Zap className="h-3 w-3 text-violet-500" />
@@ -2015,8 +2017,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       const cachedData = queryClient.getQueryData(["/api/notifications/combined"]) as NotificationsData | undefined;
       
       // Check each source array to determine which API endpoint to call
-      const isPlatformUpdate = cachedData?.platformUpdates?.some((u) => u.id === id);
-      const isMaintenanceAlert = cachedData?.maintenanceAlerts?.some((a) => a.id === id);
+      const isPlatformUpdate = cachedData?.platformUpdates?.some((u: any) => u.id === id);
+      const isMaintenanceAlert = cachedData?.maintenanceAlerts?.some((a: any) => a.id === id);
       
       let response: Response;
       if (isMaintenanceAlert) {
@@ -2040,7 +2042,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       
       // Optimistic cache update for immediate UI feedback
       const now = new Date().toISOString();
-      queryClient.setQueryData(["/api/notifications/combined"], (old) => {
+      queryClient.setQueryData(["/api/notifications/combined"], (old: any) => {
         if (!old) return old;
         
         // Find which type the item belongs to and decrement appropriate counter
@@ -2050,10 +2052,10 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         let unreadGapFindings = old.unreadGapFindings || 0;
         
         // Check each array and decrement the right counter
-        const inNotifications = old.notifications?.some((n) => n.id === id && !n.clearedAt);
-        const inPlatformUpdates = old.platformUpdates?.some((u) => u.id === id && !u.isViewed);
-        const inAlerts = old.maintenanceAlerts?.some((a) => a.id === id && !a.isAcknowledged);
-        const inGapFindings = old.gapFindings?.some((f) => f.id === id && !f.clearedAt);
+        const inNotifications = old.notifications?.some((n: any) => n.id === id && !n.clearedAt);
+        const inPlatformUpdates = old.platformUpdates?.some((u: any) => u.id === id && !u.isViewed);
+        const inAlerts = old.maintenanceAlerts?.some((a: any) => a.id === id && !a.isAcknowledged);
+        const inGapFindings = old.gapFindings?.some((f: any) => f.id === id && !f.clearedAt);
         
         if (inNotifications) unreadNotifications = Math.max(0, unreadNotifications - 1);
         if (inPlatformUpdates) unreadPlatformUpdates = Math.max(0, unreadPlatformUpdates - 1);
@@ -2062,16 +2064,16 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         
         return {
           ...old,
-          notifications: old.notifications?.map((n) => 
+          notifications: old.notifications?.map((n: any) => 
             n.id === id ? { ...n, clearedAt: now, isRead: true, metadata: { ...(n.metadata || {}), wasCleared: true } } : n
           ),
-          platformUpdates: old.platformUpdates?.map((u) => 
+          platformUpdates: old.platformUpdates?.map((u: any) => 
             u.id === id ? { ...u, isViewed: true, metadata: { ...(u.metadata || {}), wasCleared: true } } : u
           ),
-          maintenanceAlerts: old.maintenanceAlerts?.map((a) => 
+          maintenanceAlerts: old.maintenanceAlerts?.map((a: any) => 
             a.id === id ? { ...a, isAcknowledged: true, metadata: { ...(a.metadata || {}), wasCleared: true } } : a
           ),
-          gapFindings: old.gapFindings?.map((f) => 
+          gapFindings: old.gapFindings?.map((f: any) => 
             f.id === id ? { ...f, clearedAt: now, isRead: true, metadata: { ...(f.metadata || {}), wasCleared: true } } : f
           ),
           totalUnread: unreadNotifications + unreadPlatformUpdates + unreadAlerts,
@@ -2150,14 +2152,14 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       
       // Optimistic cache update for immediate UI feedback + pending set for protection
       // NOTE: Protected categories (hotpatch, system_fix, admin_action) are NOT cleared
-      queryClient.setQueryData(["/api/notifications/combined"], (old) => {
+      queryClient.setQueryData(["/api/notifications/combined"], (old: any) => {
         // Count how many protected notifications remain unread (not yet cleared)
-        const protectedUnreadCount = old?.notifications?.filter((n) => 
+        const protectedUnreadCount = old?.notifications?.filter((n: any) => 
           PROTECTED_CATEGORIES.includes(n.category) && !n.clearedAt && !n.isRead
         )?.length || 0;
         
         // Map notifications - mark all as cleared EXCEPT protected categories
-        const updatedNotifications = old?.notifications?.map((n) => {
+        const updatedNotifications = old?.notifications?.map((n: any) => {
           // Preserve protected notifications (hotpatch, system_fix, admin_action)
           if (PROTECTED_CATEGORIES.includes(n.category)) {
             return n; // Don't modify - these require explicit action
@@ -2173,17 +2175,17 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         return {
           ...old,
           notifications: updatedNotifications,
-          platformUpdates: old?.platformUpdates?.map((u) => ({ 
+          platformUpdates: old?.platformUpdates?.map((u: any) => ({ 
             ...u, 
             isViewed: true,
             metadata: { ...(u.metadata || {}), wasCleared: true }
           })) || [],
-          maintenanceAlerts: old?.maintenanceAlerts?.map((a) => ({ 
+          maintenanceAlerts: old?.maintenanceAlerts?.map((a: any) => ({ 
             ...a, 
             isAcknowledged: true,
             metadata: { ...(a.metadata || {}), wasCleared: true }
           })) || [],
-          gapFindings: old?.gapFindings?.map((f) => ({
+          gapFindings: old?.gapFindings?.map((f: any) => ({
             ...f,
             isRead: true,
             clearedAt: now,
@@ -2583,7 +2585,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
             <Suspense fallback={<div className="w-12 h-12" />}>
-              <TrinityAnimatedLogo size={48} />
+              <TrinityArrowMark size={48} />
             </Suspense>
             <span className="text-xs text-muted-foreground">Loading...</span>
           </div>
@@ -2714,39 +2716,61 @@ function NotificationsPopoverInner({ user }: { user: any }) {
     );
   };
 
+  const handleAskTrinityFromUNS = () => {
+    setOpen(false);
+    openTrinityModal();
+  };
+
   if (isMobile) {
     return (
       <>
-        {/* Bell button — triggers bottom sheet */}
+        {/* Notification Bell Trigger */}
         <button
-          className="relative inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-accent/60 transition-colors active:scale-95"
-          onClick={() => { chatDock?.closeBubble(); setOpen(prev => !prev); }}
+          type="button"
           aria-label={totalUnread > 0 ? `Notifications — ${totalUnread} unread` : 'Notifications'}
-          data-testid="button-mobile-notifications"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className="relative inline-flex items-center justify-center w-9 h-9 rounded-full text-foreground hover:bg-accent transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            chatDock?.closeBubble();
+            setOpen(true);
+          }}
+          data-testid="button-notifications-mobile"
         >
-          <Bell className="h-5 w-5 text-foreground" />
+          <Bell className="h-5 w-5" />
           {totalUnread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none pointer-events-none">
+            <span
+              className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center px-1 pointer-events-none"
+              data-testid="badge-mobile-notifications-unread"
+            >
               {totalUnread > 99 ? '99+' : totalUnread}
             </span>
           )}
         </button>
 
-        {/* Notifications bottom sheet — controlled open state */}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetContent
-            side="bottom"
-            className="flex flex-col p-0"
-            style={{ height: "82dvh", maxHeight: "82dvh" }}
-            data-testid="sheet-mobile-notifications"
+            side="right"
+            className="w-full sm:max-w-md p-0 flex flex-col"
+            data-testid="sheet-notifications-mobile"
           >
-            <div className="flex-1 overflow-y-auto min-h-0">
-              {renderNotificationsContent({ simplified: false, compact: true, enableSwipeDelete: true })}
+            <SheetHeader className="sr-only">
+              <SheetTitle>Notifications</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <UNSCommandCenter
+                isOpen={open}
+                onClose={() => setOpen(false)}
+                onAskTrinity={handleAskTrinityFromUNS}
+                platformRole={accessPlatformRole || userPlatformRole || undefined}
+                workspaceRole={workspaceRole || undefined}
+              />
             </div>
           </SheetContent>
         </Sheet>
 
-        {/* Detail modal for individual notifications */}
+        {/* Notification Detail Modal - Shows structured breakdown */}
         <NotificationDetailModal
           notification={selectedNotification}
           isOpen={!!selectedNotification}
@@ -2758,11 +2782,6 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       </>
     );
   }
-
-  const handleAskTrinityFromUNS = () => {
-    setOpen(false);
-    openTrinityModal();
-  };
 
   return (
     <>

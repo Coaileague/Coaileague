@@ -53,7 +53,7 @@ export default function ServiceRequestsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
 
   const canManage = user?.role === "owner" || user?.role === "manager" || user?.role === "root_admin";

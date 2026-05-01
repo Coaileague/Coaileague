@@ -249,7 +249,7 @@ function ProfileTabContent() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).message || 'Failed to update forwarding email');
+        throw new Error((error as Error).message || 'Failed to update forwarding email');
       }
       return res.json();
     },
@@ -2156,7 +2156,7 @@ export default function Settings() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).message || 'Failed to update forwarding email');
+        throw new Error((error as Error).message || 'Failed to update forwarding email');
       }
       return res.json();
     },

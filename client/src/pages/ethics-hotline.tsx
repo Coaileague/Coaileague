@@ -39,11 +39,11 @@ export default function EthicsHotline() {
   const workspaceId = user?.currentWorkspaceId;
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [viewReport, setViewReport] = useState<any>(null);
+  const [viewReport, setViewReport] = useState<null>(null);
   const [followupToken, setFollowupToken] = useState("");
   const [publicForm, setPublicForm] = useState({ category: "policy_violation", severity: "medium", description: "", siteName: "", reporterEmail: "" });
-  const [publicResult, setPublicResult] = useState<any>(null);
-  const [followupResult, setFollowupResult] = useState<any>(null);
+  const [publicResult, setPublicResult] = useState<null>(null);
+  const [followupResult, setFollowupResult] = useState<null>(null);
 
   const reports = useQuery<any>({ queryKey: ["/api/ethics/reports", { workspaceId }], enabled: !!workspaceId });
 

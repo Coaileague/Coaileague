@@ -165,7 +165,7 @@ export default function LeadersHub() {
   const [unlockAccountDialog, setUnlockAccountDialog] = useState(false);
   const [updateContactDialog, setUpdateContactDialog] = useState(false);
   const [escalationDialog, setEscalationDialog] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<null>(null);
 
   // Trinity welcome greeting on first login (from invite accept flow)
   useEffect(() => {

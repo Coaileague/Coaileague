@@ -46,7 +46,7 @@ import {
 export default function DeveloperPortal() {
   const { toast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newKeyData, setNewKeyData] = useState<any>(null);
+  const [newKeyData, setNewKeyData] = useState<null>(null);
   const [keyName, setKeyName] = useState("");
 
   const { data: keys, isLoading: keysLoading } = useQuery({

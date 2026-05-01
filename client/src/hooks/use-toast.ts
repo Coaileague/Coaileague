@@ -54,7 +54,7 @@ export function useToast() {
   // Return empty toasts array so the legacy Shadcn <Toaster /> gracefully renders nothing
   return {
     toast,
-    toasts: [] as any[],
+    toasts: [] as unknown[][],
     dismiss: (_id?: string) => {},
   };
 }

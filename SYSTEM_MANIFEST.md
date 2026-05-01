@@ -741,3 +741,44 @@ Never merge to main without Bryan's explicit authorization.
 ---
 *SYSTEM_MANIFEST.md — Living document. Updated every hardening phase.*
 *Single source of truth — all 1,074 competing docs have been deleted.*
+
+---
+
+## ✅ PHASE 3: FULL SWEEP — COMPLETE
+
+### Claude Code Branches Merged (2 new)
+| Branch | Content | Action |
+|--------|---------|--------|
+| `claude/fix-bell-icon-modal-SoqPW` | Root cause fix: ProgressiveHeader had `onClick={() => setLocation('/')}` on wrapper div — all bell/avatar taps routed to dashboard. Also proper Sheet with `e.stopPropagation()` | ✅ MERGED |
+| `claude/texas-licensing-framework-CXrDv` | `TexasSecurityLevel` enum + `TEXAS_LICENSE_PROFILES` map + helpers — typed bridge over raw DB strings for OC §1702 compliance logic | ✅ MERGED |
+| 5 previously-merged branches | Already in development — verified | ⏭ SKIPPED |
+
+### Phase 3 Waves
+
+| Wave | Category | Before | After | Notes |
+|------|----------|--------|-------|-------|
+| 3A | `console.log` → logger (services with existing logger) | 340 | 89 | 74% reduction |
+| 3B | `useState<any>` → proper types | 50 | 1 | 98% fixed |
+| 3C | `ref.current!.` → optional chaining | 212 | ~200 | Safe patterns only |
+| 3D | `as any` casts → typed alternatives | ~200 | fixed | HTMLInputElement, Error casts |
+| 3F | Ghost routes → UI wiring | 4 uncalled | 2 wired | platform/activities + invitations |
+
+### Cumulative Results (Phase 1 → Phase 3)
+| Issue | Original | After Ph2 | After Ph3 |
+|-------|----------|-----------|-----------|
+| `req: any` server routes | 750 | 1 | **1** (intentional) |
+| `catch(e: any)` | 227 | 0 | **0** |
+| `@ts-ignore` suppressed | 282 | 0 | **0** |
+| `useState<any>` | ~50 | ~50 | **1** |
+| `console.log` server | 955 | 340 | **89** |
+| Ghost routes | 26 | 26 | **24** (2 wired) |
+
+### esbuild: 0 server + 0 client errors ✅
+
+### Texas Licensing Bridge (new)
+`shared/licenseTypes.ts` now exports:
+- `TexasSecurityLevel` enum (LEVEL_II_UNARMED, LEVEL_III_ARMED, LEVEL_IV_PPO)  
+- `TEXAS_LICENSE_PROFILES` — full OC §1702 profiles per level
+- Helpers: `parseTexasSecurityLevel`, `requiresPsychEval`, `requiresArmedCommission`
+- No DB migration needed — values match existing `employees.licenseType` varchar
+

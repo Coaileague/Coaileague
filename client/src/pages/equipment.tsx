@@ -668,11 +668,11 @@ export default function EquipmentPage() {
   const { user } = useAuth();
   const workspaceId = (user as any)?.workspaceId;
   const [showForm, setShowForm] = useState(false);
-  const [editItem, setEditItem] = useState<any>(null);
+  const [editItem, setEditItem] = useState<null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [reportLostAssignment, setReportLostAssignment] = useState<any>(null);
-  const [reportDamageAssignment, setReportDamageAssignment] = useState<any>(null);
-  const [returnDeductionAssignment, setReturnDeductionAssignment] = useState<any>(null);
+  const [reportLostAssignment, setReportLostAssignment] = useState<null>(null);
+  const [reportDamageAssignment, setReportDamageAssignment] = useState<null>(null);
+  const [returnDeductionAssignment, setReturnDeductionAssignment] = useState<null>(null);
   const [assignItem, setAssignItem] = useState<{ id: string; name: string } | null>(null);
 
   const { data: items = [], isLoading, isError } = useQuery<any[]>({

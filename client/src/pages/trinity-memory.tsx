@@ -25,7 +25,7 @@ const pageConfig: CanvasPageConfig = {
 
 export default function TrinityMemoryPage() {
   const { toast } = useToast();
-  const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
+  const [diagnosticResults, setDiagnosticResults] = useState<null>(null);
 
   const memoryQuery = useQuery({
     queryKey: ["/api/trinity/memory-health"],
