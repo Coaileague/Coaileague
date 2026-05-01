@@ -1,17 +1,19 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-05-01 — Claude (unify duplicate services sweep)
+# Last updated: 2026-05-01 — Claude (unify duplicate services sweep — CLOSED)
 
 ---
 
 ## TURN TRACKER
 
 ```
-ACTIVE LANE — CLAUDE
+LANE — CLAUDE — ✅ CLOSED, READY FOR REVIEW/MERGE
   Branch: claude/unify-duplicate-services-7ZzYF
   Base:   438cca2  feat(simulation): hard-persist ACME simulation
-  Status: PHASE 1 LANDED — ai schedule trigger unified to one source of truth.
-          Comprehensive duplicate audit + roadmap published.
+  HEAD:   2884e3f  unify(phase 3): delete 9 dead services + fix 1 runtime bug
+  Commits: 3 (Phases 1, 2, 3)
+
+  Net diff vs base: 21 files changed, +385 / -3,033 LOC
 
 ARCHITECT: CLAUDE
   → Pulls all agent branches when submitted
@@ -25,13 +27,14 @@ ARCHITECT: CLAUDE
 ## CURRENT BASE
 
 ```
-HEAD on this branch → see latest commit on claude/unify-duplicate-services-7ZzYF
-Last green: 438cca2  feat(simulation): hard-persist ACME simulation + branded PDFs
+Branch:     claude/unify-duplicate-services-7ZzYF (pushed)
+HEAD:       2884e3f
+Base of branch: 438cca2  feat(simulation): hard-persist ACME simulation + branded PDFs
 ```
 
 ---
 
-## ACTIVE WORK — DUPLICATE SERVICE UNIFICATION
+## ✅ WORK COMPLETED ON THIS BRANCH (3 PHASES)
 
 **Audit doc:** `DUPLICATE_AUDIT_2026_05_01.md` (full duplicate map, route clusters, payload schemas, consolidation roadmap)
 
@@ -62,22 +65,82 @@ Last green: 438cca2  feat(simulation): hard-persist ACME simulation + branded PD
 **Cumulative across 3 phases:** 12 service files deleted, ~3,000 LOC of
 dead/stub code removed, 1 latent runtime bug fixed.
 
-**Phase 4 next (deferred — needs more verification):**
-- Move `VALID_NOTIFICATION_TYPES` to `shared/schema` (needs DB enum cross-check).
-- Sweep route files for zero-mount candidates.
-- Audit duplicate Zod schemas in `automation-schemas.ts` vs inline route schemas.
+---
 
-**Phase 3 (route consolidation — see audit for file lists):**
-- Chat routes 8 → 2.
-- AI Brain routes 8 → 3.
-- Schedule routes 4 → 1.
-- Automation routes 4 → 2.
-- Trinity routes 25+ → 4.
+## 🔍 DEBT LEFT BEHIND — REPORT TO NEXT AGENT
 
-**Phase 4 (legacy audit & deletion):**
-- `advancedSchedulingService.ts` — confirm zero callers, delete.
-- `scheduleMigration.ts` — confirm migration done, delete.
-- `emailAutomation.ts` — audit overlap with `emailService`.
+This branch's scope is **closed**. Sweep was thorough at the
+service-file level. Remaining duplicate-domain debt is documented
+in `DUPLICATE_AUDIT_2026_05_01.md` and listed below as a punch list
+for whoever picks up Phase 4+. None of these are blockers.
+
+### Phase 4 candidates (deferred — need verification before action)
+
+**Route file consolidation** (high LOC, low semantic risk if done carefully):
+- Chat routes: 8 files → consolidate to 2 (verify each mount path first).
+- AI Brain routes: 8 files → 3 (control / memory / orchestrator).
+- Schedule routes: 4 files → 1.
+- Automation routes: 4 files → 2.
+- Trinity routes: 25+ files → 4 (core / chat / ops / staffing).
+
+**Schema deduplication** (need DB enum cross-check):
+- `notificationService.VALID_NOTIFICATION_TYPES` — 90+ string set.
+  Move to `shared/schema` as the canonical source; import into runtime guard.
+- `automation-schemas.ts` (services) vs inline Zod schemas in
+  `routes/automation*.ts` — verify which is canonical.
+- `aiBrainGuardrails` config in `shared/config` vs runtime checks
+  scattered across `aiGuardRails.ts`, `aiBrainAuthorizationService.ts`.
+
+**Notification stack tightening** (decided keep, but boundaries fuzzy):
+- `notificationService` (per-user) and `universalNotificationEngine`
+  (RBAC broadcast) coexist. Document API contract so callers stop
+  mixing them.
+- `notificationRuleEngine` interaction with `notificationDeliveryService`
+  needs a single ordering contract.
+
+**Verified active in this sweep — DO NOT delete** (left as guidance for
+next agent so they don't waste cycles re-verifying):
+- `advancedSchedulingService.ts` — canonical per `sourceOfTruthRegistry`,
+  4+ callers via `aiBrainMasterOrchestrator` + `advancedSchedulingRoutes`.
+- `scheduleMigration.ts` — exports `extractedShiftSchema` for Zod
+  validation in `scheduleosRoutes.ts:444`. Active.
+- `emailAutomation.ts` — billing-aware bulk email, distinct from
+  transactional `emailService`. Used by cron + trial manager + collections.
+- `geoCompliance.ts` — real buddy-punching detection. Was almost flagged
+  as dead because of a missing import in `timeEntryRoutes.ts:791`
+  (Phase 3 fixed that import).
+- `notificationRuleEngine.ts` — separate domain from `notificationThrottleService`
+  (which was dead). Different concerns; do not merge.
+- `entityCreationNotifier.ts` — domain orchestrator (not a notification
+  duplicate). Fires notifications + creates onboarding tasks + drafts
+  contracts. Keep as-is.
+
+**Action registries (verified NOT duplicates — layered architecture):**
+- `services/helpai/platformActionHub.ts` (3,367 LOC) — central hub.
+- `services/helpai/actionCatalogPolicy.ts` (273 LOC) — classification policy.
+- `services/helpai/supportActionRegistry.ts` (565 LOC) — human support actions.
+- `services/ai-brain/actionRegistry.ts` (5,079 LOC) — Trinity AI registers
+  actions into the hub.
+- `services/bots/shiftBotActionRegistry.ts` (167 LOC) — shift-bot specific.
+
+**Email stack (verified layered, NOT duplicate):**
+- `emailCore.ts` = transport + CAN-SPAM-compliant typed senders.
+- `emailService.ts` = orchestration + automation flavor (imports emailCore).
+- `emailTemplateBase.ts` = shared HTML template helpers.
+
+---
+
+## STATUS: BRANCH CLOSED
+
+```
+✅ All 3 phases landed and pushed.
+✅ Zero lingering imports to deleted files.
+✅ Zero broken references in DOMAIN_CONTRACT, tests, registries.
+✅ One latent runtime bug discovered + fixed (GeoComplianceService import).
+✅ All "verified active" services documented to prevent future false-deletes.
+
+Ready for architect review + merge to development.
+```
 
 ---
 
