@@ -245,12 +245,12 @@ class TrinityACCService {
               workspaceId: action.workspaceId || 'unknown',
               actionType: 'armed_post_assignment',
               actionDescription: `Assigning officer ${officerId} to armed post`,
-              whatIKnow: `Action type: ${action.actionType}. Officer: ${officerId}. Armed license conflict: ${conflict ? 'YES — ' + conflict.description : 'none detected'}.`,
+              whatIKnow: `Action type: ${action.actionType}. Officer: ${officerId}. Armed license conflict: ${conflict ? 'YES — ' + conflict.contradictionDescription : 'none detected'}.`,
               myOptions: conflict
                 ? 'Block assignment (license expired/missing) OR override with supervisor approval'
                 : 'Approve assignment (license valid) OR flag for manual review',
               myDecision: conflict
-                ? `BLOCKED: ${conflict.description}`
+                ? `BLOCKED: ${conflict.contradictionDescription}`
                 : 'APPROVED: Officer license valid for armed post assignment',
               confidenceScore: conflict ? 0.98 : 0.85,
               actionId: action.actionId,

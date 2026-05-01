@@ -26,52 +26,11 @@ import { Briefcase, Heart, Shield, type LucideIcon } from 'lucide-react';
  * - Uses Claude for complex analysis and recommendations
  */
 
-/** @deprecated Trinity mode toggle removed — kept for DB schema compat only */
-export type ConversationMode = 'business';
-// SpiritualGuidance removed
-// ModeConfig removed
-
-// SpiritualConfig removed
-
-// AccountabilityConfig removed
-
-// TRINITY_MODES removed — Trinity decides internally, no mode toggle
-
-export const SPIRITUAL_GUIDANCE_OPTIONS: SpiritualConfig[] = [
-  {
-    id: 'none',
-    label: 'None',
-    description: 'Secular life coaching with evidence-based strategies',
-  },
-  {
-    id: 'general',
-    label: 'General',
-    description: 'Universal values, purpose, meaning, gratitude',
-  },
-  {
-    id: 'christian',
-    label: 'Christian',
-    description: 'Scripture references, prayer offerings, biblical wisdom',
-  },
-];
-
-export const ACCOUNTABILITY_LEVELS: AccountabilityConfig[] = [
-  {
-    id: 'gentle',
-    label: 'Gentle',
-    description: 'Supportive encouragement with soft nudges',
-  },
-  {
-    id: 'balanced',
-    label: 'Balanced',
-    description: 'Encouragement with honest challenge',
-  },
-  {
-    id: 'challenging',
-    label: 'Challenging',
-    description: 'Direct tough love, no sugarcoating',
-  },
-];
+// ConversationMode + mode toggles fully retired. Trinity decides depth/posture
+// internally from org state, emotional signals, and high-stakes keywords.
+// SpiritualGuidance / Accountability config tables retired with the BUDDY
+// settings page they were rendered from; the buddy_settings table still
+// stores raw values for migration back-compat.
 
 export const TRINITY_API_ENDPOINTS = {
   chat: '/api/trinity/chat',

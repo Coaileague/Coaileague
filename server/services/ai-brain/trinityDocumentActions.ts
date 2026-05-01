@@ -13,7 +13,7 @@
  * 7. document.post_orders_acknowledgment_scan — Check post order acknowledgments
  */
 
-import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
+import { helpaiOrchestrator, type ActionHandler, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { db } from '../../db';
 import { employees, orgDocuments, orgDocumentSignatures, employeeCertifications, hrDocumentRequests, workspaces, aiApprovals } from '@shared/schema';
 import { eq, and, lt, isNull, isNotNull, desc, inArray, sql } from 'drizzle-orm';
@@ -25,12 +25,80 @@ import { diagnoseBusinessArtifactCoverage } from '../documents/businessArtifactD
 import { invoiceService } from '../billing/invoice';
 import { generateTimesheetSupportPackage } from '../documents/timesheetSupportPackageGenerator';
 import { scoreRfpComplexity, buildRfpExtractionPrompt, type RfpScoringInputs } from '../billing/rfpComplexityScorer';
+import { claudeService } from './trinity-orchestration/claudeService';
 const log = createLogger('trinityDocumentActions');
 const I9_COMPLIANCE_WINDOW_DAYS = 90;
 const I9_DEADLINE_DAYS = 3;
 
+// Local helper for the elite per-use-priced AI actions below. Wraps a
+// minimal action spec into the full ActionHandler shape. The shape mirrors
+// the sibling helpers in trinitySchedulingPlatformActions.ts /
+// trinityPortalActions.ts but accepts an object so call sites can stay
+// declarative.
+function mkAction(spec: {
+  actionId: string;
+  description: string;
+  requiredRoles: string[];
+  category?: string;
+  execute: (request: any) => Promise<any>;
+}): ActionHandler {
+  return {
+    actionId: spec.actionId,
+    name: spec.actionId,
+    category: (spec.category ?? 'documents') as any,
+    description: spec.description,
+    requiredRoles: spec.requiredRoles as any,
+    inputSchema: { type: 'object' as const, properties: {} },
+    handler: async (req: ActionRequest): Promise<ActionResult> => {
+      try {
+        const data = await spec.execute(req);
+        return { success: true, message: 'OK', data } as ActionResult;
+      } catch (err: any) {
+        return { success: false, message: err?.message || 'Unknown error', error: err?.message || 'Unknown error' } as ActionResult;
+      }
+    },
+  };
+}
+
+// Stubs for business-document generators that haven't shipped yet. They
+// return a structured "not implemented" payload so the action surface stays
+// registered (callers still get a typed response) without claiming output
+// the file system doesn't actually have. Replace with real generators when
+// the Phase: Business Forms work lands.
+async function generateProofOfEmployment(_params: {
+  workspaceId: string; employeeId: string; requestedBy?: string; employerNote?: string;
+}): Promise<{ success: boolean; vaultId?: string; documentNumber?: string; error?: string }> {
+  return { success: false, error: 'generateProofOfEmployment not yet implemented' };
+}
+async function generateDirectDepositConfirmation(_params: {
+  workspaceId: string; employeeId: string; payrollRunId: string;
+  netPay: number; payDate: Date;
+  bankRoutingLast4?: string; bankAccountLast4?: string; accountType?: string;
+}): Promise<{ success: boolean; vaultId?: string; documentNumber?: string; error?: string }> {
+  return { success: false, error: 'generateDirectDepositConfirmation not yet implemented' };
+}
+async function generatePayrollRunSummary(_params: {
+  workspaceId: string; payrollRunId: string; generatedBy?: string;
+}): Promise<{ success: boolean; vaultId?: string; documentNumber?: string; error?: string }> {
+  return { success: false, error: 'generatePayrollRunSummary not yet implemented' };
+}
+async function generateW3Transmittal(_params: {
+  workspaceId: string; taxYear: number; generatedBy?: string;
+}): Promise<{ success: boolean; vaultId?: string; documentNumber?: string; error?: string }> {
+  return { success: false, error: 'generateW3Transmittal not yet implemented' };
+}
+
 export function registerTrinityDocumentActions(orchestrator: any): void {
   log.info('[TrinityDocumentActions] Registering 7 document orchestration actions...');
+  // The business document generators were originally orphaned inside
+  // scanOverdueI9s. They live in their own registration function now and
+  // are wired up here so a single registerTrinityDocumentActions call still
+  // installs the full action surface.
+  try {
+    registerBusinessDocumentGenerators(orchestrator);
+  } catch (err: any) {
+    log.warn('[TrinityDocumentActions] Business document generator registration skipped:', err?.message);
+  }
 
   // ─────────────────────────────────────────────────────
   // 1. document.generate
@@ -647,7 +715,6 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
       if (!workspaceId || (!documentId && !documentText)) {
         return { success: false, message: 'workspaceId and (documentId or documentText) required' };
       }
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
       const prompt = `You are a security industry contract specialist. Analyze this security services contract and provide:
 1. LIABILITY FLAGS: Specific clauses creating liability exposure (cite clause numbers)
 2. MISSING PROTECTIONS: Standard PSB/security industry protections that are absent
@@ -660,16 +727,12 @@ ${documentText ? 'CONTRACT TEXT:\n' + documentText.slice(0, 8000) : 'Document ID
 
 Return structured JSON with fields: liabilityFlags[], missingProtections[], statuteViolations[], redlines[], riskScore, executiveSummary`;
 
-      const analysis = await claudeVerificationService.verify({
-        workspaceId,
-        context: prompt,
-        taskType: 'contract_analysis',
-      });
+      const analysis = await claudeService.call(prompt, undefined, 4096);
 
       return {
         success: true,
         actionId: request.actionId,
-        contractAnalysis: analysis?.result || analysis,
+        contractAnalysis: analysis,
         priceCents: 14900, // $149 base (within $89-189 range)
         featureKey: 'contract_analysis',
       };
@@ -686,7 +749,7 @@ Return structured JSON with fields: liabilityFlags[], missingProtections[], stat
         return { success: false, message: 'workspaceId required' };
       }
 
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+      // Use claudeService.call() (imported at top) — the verification service is for self-verification reasoning, not generic LLM completion.
       const { db } = await import('../../db');
       const { pool } = await import('../../db');
 
@@ -731,14 +794,12 @@ Generate a formal compliance audit report with:
 
 Return structured JSON.`;
 
-      const report = await claudeVerificationService.verify({
-        workspaceId, context: prompt, taskType: 'compliance_audit'
-      });
+      const report = await claudeService.call(prompt, undefined, 4096);
 
       return {
         success: true,
         actionId: request.actionId,
-        auditReport: report?.result || report,
+        auditReport: report,
         workspaceId,
         generatedAt: new Date().toISOString(),
         priceCents: 16900, // $169 (within $129-199 range)
@@ -768,7 +829,7 @@ Return structured JSON.`;
         incident = result.rows[0];
       }
 
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+      // Use claudeService.call() (imported at top) — the verification service is for self-verification reasoning, not generic LLM completion.
       const prompt = `You are a security incident investigation specialist and expert witness preparer.
       
 Generate a court-ready incident investigation report for this security incident:
@@ -788,14 +849,12 @@ The report must include:
 
 Write in formal investigative report style. Use passive voice for officer actions. Cite specific policies and statutes where applicable. This report may be used in legal proceedings.`;
 
-      const report = await claudeVerificationService.verify({
-        workspaceId, context: prompt, taskType: 'incident_investigation'
-      });
+      const report = await claudeService.call(prompt, undefined, 4096);
 
       return {
         success: true,
         actionId: request.actionId,
-        investigationReport: report?.result || report,
+        investigationReport: report,
         incidentId,
         generatedAt: new Date().toISOString(),
         priceCents: 3900, // $39 (within $29-39 range)
@@ -828,7 +887,7 @@ Write in formal investigative report style. Use passive voice for officer action
       const attendance = attendanceData.rows[0] || {};
       const score = scoreData.rows[0] || {};
 
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+      // Use claudeService.call() (imported at top) — the verification service is for self-verification reasoning, not generic LLM completion.
       const prompt = `You are an HR performance review specialist for security operations.
 
 Generate a formal officer performance review for:
@@ -859,14 +918,12 @@ Generate a formal HR performance review with:
 
 Write in professional HR review style. Be specific and evidence-based. Avoid vague platitudes.`;
 
-      const review = await claudeVerificationService.verify({
-        workspaceId, context: prompt, taskType: 'performance_review'
-      });
+      const review = await claudeService.call(prompt, undefined, 4096);
 
       return {
         success: true,
         actionId: request.actionId,
-        performanceReview: review?.result || review,
+        performanceReview: review,
         employeeId,
         reviewPeriodMonths,
         generatedAt: new Date().toISOString(),
@@ -929,9 +986,14 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
       updatedAt: new Date(),
     });
   }
+}
 
-  // ── Business Document Generators (Phase: Business Forms) ──────────────────
+// ── Business Document Generators (Phase: Business Forms) ──────────────────
+// These actions used to live as orphan code at the tail of `scanOverdueI9s`
+// (an `orchestrator` reference with no orchestrator in scope). Lifted into a
+// separate registration function and invoked from `registerTrinityDocumentActions`.
 
+export function registerBusinessDocumentGenerators(orchestrator: any): void {
   orchestrator.registerAction({
     actionId: 'document.proof_of_employment',
     description: 'Generate a branded Proof of Employment letter for an employee and save to tenant vault',

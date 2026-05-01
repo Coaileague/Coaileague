@@ -22,6 +22,7 @@
     "sim:acme-purge": "python3 scripts/acme_purge_sim.py"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^7.4.4",
     "@capacitor/core": "^8.0.0",

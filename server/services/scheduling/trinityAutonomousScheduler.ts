@@ -50,12 +50,16 @@ const log = createLogger('trinityAutonomousScheduler');
 
 interface SchedulingConfig {
   workspaceId: string;
-  userId: string;
+  userId?: string;
   mode: 'current_day' | 'current_week' | 'next_week' | 'full_month' | 'full_quarter';
-  prioritizeBy: 'urgency' | 'value' | 'chronological';
-  useContractorFallback: boolean;
-  maxShiftsPerEmployee: number;
-  respectAvailability: boolean;
+  prioritizeBy?: 'urgency' | 'value' | 'chronological';
+  useContractorFallback?: boolean;
+  maxShiftsPerEmployee?: number;
+  respectAvailability?: boolean;
+  /** Optional provenance tag for audit/decision logs (e.g. "email:foo@bar"). */
+  triggeredBy?: string;
+  /** Optional correlation id linking this run to an upstream event/session. */
+  sessionId?: string;
 }
 
 interface ShiftPriority {
@@ -258,6 +262,17 @@ class TrinityAutonomousSchedulerService {
       avgConfidence: number;
     };
   }> {
+    // Normalize the optional knobs so downstream code can rely on concrete
+    // values. Defaults match the historical behavior before SchedulingConfig
+    // was widened for non-HTTP callers (inbound email, internal automation).
+    config = {
+      ...config,
+      userId: config.userId ?? 'system',
+      prioritizeBy: config.prioritizeBy ?? 'urgency',
+      useContractorFallback: config.useContractorFallback ?? true,
+      maxShiftsPerEmployee: config.maxShiftsPerEmployee ?? 0,
+      respectAvailability: config.respectAvailability ?? true,
+    };
     const sessionId = `trinity-sched-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     
     const session: SchedulingSession = {
@@ -280,7 +295,7 @@ class TrinityAutonomousSchedulerService {
 
     try {
       session.thoughtLog.push(`[Trinity] Starting autonomous scheduling session ${sessionId}`);
-      session.thoughtLog.push(`[Trinity] Mode: ${config.mode}, Priority: ${config.prioritizeBy}`);
+      session.thoughtLog.push(`[Trinity] Mode: ${config.mode}, Priority: ${(config.prioritizeBy ?? 'urgency')}`);
 
       broadcastToWorkspace(config.workspaceId, {
         type: 'trinity_scheduling_started',
@@ -300,12 +315,12 @@ class TrinityAutonomousSchedulerService {
             : 'scheduling_fill',
           workspaceId: config.workspaceId,
           userId: config.userId,
-          actionSummary: `Autonomous scheduling run — mode: ${config.mode}, priority: ${config.prioritizeBy}, contractor fallback: ${config.useContractorFallback}`,
+          actionSummary: `Autonomous scheduling run — mode: ${config.mode}, priority: ${(config.prioritizeBy ?? 'urgency')}, contractor fallback: ${config.useContractorFallback}`,
           payload: {
             mode: config.mode,
-            prioritizeBy: config.prioritizeBy,
+            prioritizeBy: (config.prioritizeBy ?? 'urgency'),
             useContractorFallback: config.useContractorFallback,
-            maxShiftsPerEmployee: config.maxShiftsPerEmployee,
+            maxShiftsPerEmployee: (config.maxShiftsPerEmployee ?? 0),
             respectAvailability: config.respectAvailability,
           },
         });
@@ -365,7 +380,7 @@ class TrinityAutonomousSchedulerService {
         'full_quarter': 'full quarter (90 days)',
       };
       this.emitDeliberation(config.workspaceId, session, '', 'analysis',
-        `Starting up... Let me analyze the schedule for ${modeLabels[config.mode] || config.mode}. Prioritizing by ${config.prioritizeBy}.`);
+        `Starting up... Let me analyze the schedule for ${modeLabels[config.mode] || config.mode}. Prioritizing by ${(config.prioritizeBy ?? 'urgency')}.`);
 
       // Step 1: Get date ranges based on mode
       const dateRanges = this.getDateRanges(config.mode);
@@ -432,8 +447,8 @@ class TrinityAutonomousSchedulerService {
       const weeksInRange = Math.max(1, daySpan / 7);
       const avgShiftsNeededPerEmployeePerWeek = Math.ceil(totalOpenCount / (employeeCount * weeksInRange));
       const dynamicMaxPerWeek = Math.max(5, Math.min(tierMaxShiftsPerWeek, avgShiftsNeededPerEmployeePerWeek + 4));
-      config.maxShiftsPerEmployee = (config.maxShiftsPerEmployee > 0 && config.maxShiftsPerEmployee <= dynamicMaxPerWeek) ? config.maxShiftsPerEmployee : dynamicMaxPerWeek;
-      session.thoughtLog.push(`[Trinity] Demand analysis: ${totalOpenCount} open shifts, ${employeeCount} employees, ${daySpan.toFixed(0)} days (${weeksInRange.toFixed(1)} weeks) → tier cap ${tierMaxShiftsPerWeek}, dynamic max ${config.maxShiftsPerEmployee} shifts/employee/week, session timeout ${Math.round(sessionTimeoutMs / 1000)}s`);
+      config.maxShiftsPerEmployee = ((config.maxShiftsPerEmployee ?? 0) > 0 && (config.maxShiftsPerEmployee ?? 0) <= dynamicMaxPerWeek) ? (config.maxShiftsPerEmployee ?? 0) : dynamicMaxPerWeek;
+      session.thoughtLog.push(`[Trinity] Demand analysis: ${totalOpenCount} open shifts, ${employeeCount} employees, ${daySpan.toFixed(0)} days (${weeksInRange.toFixed(1)} weeks) → tier cap ${tierMaxShiftsPerWeek}, dynamic max ${(config.maxShiftsPerEmployee ?? 0)} shifts/employee/week, session timeout ${Math.round(sessionTimeoutMs / 1000)}s`);
       
       const ratio = totalOpenCount / Math.max(1, employeeCount);
       const pressureAssessment = ratio > 3 ? 'High pressure — more shifts than employees can comfortably handle.' :
@@ -443,7 +458,7 @@ class TrinityAutonomousSchedulerService {
       this.emitDeliberation(config.workspaceId, session, '', 'decision',
         `Demand vs capacity: ${totalOpenCount} open shifts / ${employeeCount} employees across ${daySpan.toFixed(0)} days. ${pressureAssessment}`);
       this.emitDeliberation(config.workspaceId, session, '', 'decision',
-        `Setting max ${config.maxShiftsPerEmployee} shifts per employee per week to balance workload fairly.`);
+        `Setting max ${(config.maxShiftsPerEmployee ?? 0)} shifts per employee per week to balance workload fairly.`);
       this.emitDeliberation(config.workspaceId, session, '', 'analysis',
         `Applying compliance rules: 12h daily cap, 8h minimum rest between shifts, overtime tracking, consecutive day limits...`);
 
@@ -479,7 +494,7 @@ class TrinityAutonomousSchedulerService {
         session.dayProgress.set(dateRange.label, { total: openShifts.length, filled: 0 });
 
         // Step 4: Prioritize shifts by urgency/value
-        const prioritizedShifts = this.prioritizeShifts(openShifts, allClients, config.prioritizeBy);
+        const prioritizedShifts = this.prioritizeShifts(openShifts, allClients, (config.prioritizeBy ?? 'urgency'));
         session.thoughtLog.push(`[Trinity] Prioritized ${prioritizedShifts.length} shifts for ${dateRange.label}`);
 
         // Step 5: Process each shift
@@ -1643,8 +1658,8 @@ class TrinityAutonomousSchedulerService {
       const runAssignments = runTracker.getWeeklyCount(employee.id, weekStart, weekEnd);
       const currentAssignments = dbAssignments + runAssignments;
       if (!isContractor) {
-        if (currentAssignments >= config.maxShiftsPerEmployee) {
-          disqualifyReasons.push(`Already has ${currentAssignments} shifts this week (max: ${config.maxShiftsPerEmployee})`);
+        if (currentAssignments >= (config.maxShiftsPerEmployee ?? 0)) {
+          disqualifyReasons.push(`Already has ${currentAssignments} shifts this week (max: ${(config.maxShiftsPerEmployee ?? 0)})`);
         }
       }
 
@@ -1751,7 +1766,7 @@ class TrinityAutonomousSchedulerService {
       const availabilityScore = outsideAvailability ? 0.3 : 1.0;
       const performanceScore = this.calculatePerformanceScore(employee);
       const seniorityScore = this.calculateSeniorityScore(employee);
-      const workloadBalance = this.calculateWorkloadBalance(currentAssignments, config.maxShiftsPerEmployee);
+      const workloadBalance = this.calculateWorkloadBalance(currentAssignments, (config.maxShiftsPerEmployee ?? 0));
 
       // 9. Rate profitability bonus - prefer employees whose pay rate is below contract rate
       const employeeRate = safeParseFloat(employee.hourlyRate || employee.payRate || employee.currentHourlyRate, 20);

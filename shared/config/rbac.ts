@@ -24,8 +24,12 @@ export const PLATFORM_ROLES = [
   'root_admin',
   'deputy_admin',
   'sysop',
+  'system',
+  'trinity-brain',
+  'automation',
   'support_manager',
   'support_agent',
+  'helpai',
   'compliance_officer',
   'Bot',
   'none',
@@ -43,6 +47,7 @@ export const WORKSPACE_ROLES = [
   'employee',
   'auditor',
   'contractor',
+  'client',
 ] as const;
 
 export type PlatformRole = CanonicalPlatformRole;
@@ -60,6 +65,12 @@ export const PLATFORM_ROLE_LEVEL: Record<PlatformRole, number> = {
   support_agent: 4,
   compliance_officer: 5,
   Bot: 6,
+  // System / automation actors run at the same authority tier as Bot — they
+  // are non-human service identities, not platform staff.
+  system: 6,
+  automation: 6,
+  helpai: 6,
+  'trinity-brain': 6,
   none: 99,
 };
 
@@ -75,6 +86,9 @@ export const WORKSPACE_ROLE_LEVEL: Record<WorkspaceRole, number> = {
   employee: 5,
   auditor: 6,
   contractor: 6,
+  // External client-portal users get the lowest authority tier inside a
+  // workspace — read-only, scoped to their own portal entities.
+  client: 7,
 };
 
 const LEGACY_PLATFORM_ROLE_ALIASES: Record<string, PlatformRole> = {

@@ -106,6 +106,8 @@ export interface OrchestrationContext {
   status: 'in_progress' | 'completed' | 'failed' | 'pending_approval' | 'rejected';
   stagedPayload?: Record<string, any>;
   idempotencyKey?: string;
+  /** Free-form metadata bag (model used, latency, callsite, etc.). */
+  metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
 }

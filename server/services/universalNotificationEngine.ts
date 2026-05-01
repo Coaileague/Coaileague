@@ -978,6 +978,8 @@ export class UniversalNotificationEngine {
     priority?: number;
     learnMoreUrl?: string;
     metadata?: Record<string, any>;
+    /** Optional dedup key — when present, suppresses duplicate fires within 24h. */
+    idempotencyKey?: string;
   }): Promise<{ success: boolean; id?: string; isDuplicate?: boolean }> {
     try {
       // Validate title - reject empty or undefined titles

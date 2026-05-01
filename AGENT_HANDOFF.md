@@ -1,6 +1,92 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-04-28 — Claude (architect plan, parallel lanes launched)
+# Last updated: 2026-05-01 — Claude (Trinity sweep + push notification fix)
+
+---
+
+## ACTIVE BRANCH — Trinity sweep
+
+```
+Branch: claude/fix-trinity-notifications-EVDKv
+Scope: Trinity actions, Trinity Voice, Trinity AI surfaces — out-of-scope debt closed.
+
+Round 1 (push notifications, shipped):
+  • Android badge silhouette PNG so the status bar stops showing a white square
+  • Stable per-(type,workspace,user) push tag — Android collapses repeats
+  • 60-s in-memory dedup in deliverPushNotification absorbs fan-out storms
+  • SW bumped v4.10.0 / cache v14
+
+Round 2 (Trinity TS-debt sweep, this commit):
+  • ConversationMode + chat-time `mode` toggle FULLY RETIRED. The DB column
+    `trinity_conversation_sessions.mode` stays at the literal 'business' for
+    back-compat; Trinity decides depth/posture from org state, emotional
+    signals, and high-stakes keywords. switchMode() removed. ChatRequest /
+    ChatResponse / ConversationHistory `mode` field removed. SPIRITUAL_/
+    ACCOUNTABILITY_ option tables deleted (their settings page is gone).
+  • Trinity Document Actions (28 → 0 errors): structural fix. The 4 elite
+    AI actions (contract_analysis, compliance_audit_report,
+    incident_investigation_report, officer_performance_review) now call
+    claudeService.call() instead of the wrong claudeVerificationService.verify()
+    shape. Business document generators (proof_of_employment, direct_deposit_
+    confirmation, payroll_run_summary, w3_transmittal, etc.) lifted out of
+    `scanOverdueI9s` (they were orphaned where `orchestrator` wasn't in scope)
+    into `registerBusinessDocumentGenerators`, called from registerTrinity-
+    DocumentActions. Local mkAction helper added. Stub generators return
+    structured "not implemented" until the Phase: Business Forms work lands.
+  • Trinity Chat Service (21 → 0 errors): legacy mode references removed
+    everywhere — destructure, log lines, prompt template strings, RL context,
+    DB queries (literal 'business' constant LEGACY_BUSINESS_MODE used at
+    insert/select).
+  • Trinity Inbound Email Processor (6 → 0): EmailCategory now includes
+    'staffing' and 'billing'; prompts/actionMap entries added; bad import
+    path '../../universalNotificationEngine' fixed; dead `sql` re-import
+    dropped; unused @ts-expect-error directives removed.
+  • Trinity Scheduling Routes (6 → 0): null userId guarded; trinity-
+    ProposedActions schema-miss cast.
+  • Trinity Autonomous Scheduler (5 → 0): SchedulingConfig widened (userId,
+    prioritizeBy, useContractorFallback, maxShiftsPerEmployee, respectAvail-
+    ability now optional with defaults), call sites use ?? fallbacks. Added
+    triggeredBy + sessionId for inbound-email triggered runs.
+  • Trinity Context Manager (4 → 0): WorkspaceContext gained tokenBalance/
+    tokenAllocation/tokenPercentUsed aliases alongside creditBalance.
+  • Trinity ACC Service (2 → 0): callers use `contradictionDescription`
+    (the actual field) instead of `description` shorthand.
+  • Trinity Tax Compliance Actions (2 → 0): mkTaxAction now returns ActionResult
+    shape with required `message` field on both branches.
+  • Trinity Content Guardrails (1 → 0): added `legal_advice` refusal copy.
+  • Trinity Org State Routes (1 → 0): removed duplicate requirePlatformStaff
+    import shadowing the local declaration.
+  • Trinity Thought Status Routes (1 → 0): added optional metadata bag to
+    OrchestrationContext.
+  • Trinity Voice voiceRoutes (2 → 0): replaced `node-fetch` (untyped) with
+    Node 20 native fetch; fixed wrong import path
+    `voiceEventClassifier` → `voicemailSentimentService`.
+  • Action Registry (8 → 0): duplicate `employees` import removed; shift
+    select pulls updatedAt for the optimistic-lock check; `c` parameter typed
+    explicitly; getContracts return shape unwrapped.
+  • Trinity Anomaly Watch (2 → 0): Anomaly interface widened to accept
+    title/description/affectedEntity*/metadata fields the call sites use.
+  • Universal Notification Engine (3 → 0): sendPlatformUpdate payload type
+    gained optional idempotencyKey.
+  • shared/config/rbac.ts (2 → 0): PLATFORM_ROLES + PLATFORM_ROLE_LEVEL now
+    list system / automation / helpai / trinity-brain (Trinity-tier service
+    actors). WORKSPACE_ROLES + WORKSPACE_ROLE_LEVEL now list `client`
+    (client-portal users with read-only scoped access).
+  • package.json: added `@anthropic-ai/sdk` (Trinity's Claude brain — was
+    referenced by ai-brain/trinity-orchestration/claudeService.ts but never
+    declared as a dependency).
+
+Net TS impact (server tsconfig): 384 → 293 errors (-91). Trinity-specific
+errors: 94 → 1 (the @anthropic-ai/sdk import; resolves at deploy when
+npm install runs against the new package.json).
+
+Out-of-scope, deferred (tracked in TS_DEBT.md):
+  - 80+ mutating handlers in actionRegistry.ts still missing logActionAudit
+    (Section L Phase 18 backlog)
+  - High-density non-Trinity files (mascot-routes, authCoreRoutes, chat-rooms,
+    sales/engagement/review/calendar routes, paystubService) — those pre-date
+    this branch and belong to their domain owners.
+```
 
 ---
 

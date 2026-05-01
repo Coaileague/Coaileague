@@ -53,11 +53,17 @@ export interface Anomaly {
   workspaceId: string;
   code: AnomalyCode;
   severity: AnomalySeverity;
-  summary: string;
-  entityType: string;
-  entityId: string;
+  /** Short summary headline for digest display. Either `summary` or `title`/`description` is required. */
+  summary?: string;
+  title?: string;
+  description?: string;
+  entityType?: string;
+  entityId?: string;
+  affectedEntityType?: string;
+  affectedEntityId?: string;
   dedupKey: string;
   details?: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 export interface AnomalyWatchResult {

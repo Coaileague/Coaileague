@@ -20,7 +20,7 @@ export const claudeService = {
         system: systemPrompt ?? 'You are Trinity, an intelligent AI operations assistant for security workforce management.',
         messages,
       });
-      const text = response.content.find(b => b.type === 'text')?.text ?? '';
+      const text = response.content.find((b: any) => b.type === 'text')?.text ?? '';
       log.debug(`[ClaudeService] ${MODEL} responded (${response.usage.output_tokens} tokens)`);
       return text;
     } catch (err: any) {
@@ -37,7 +37,7 @@ export const claudeService = {
         system: systemPrompt ?? 'You are Trinity, an intelligent AI operations assistant.',
         messages,
       });
-      return response.content.find(b => b.type === 'text')?.text ?? '';
+      return response.content.find((b: any) => b.type === 'text')?.text ?? '';
     } catch (err: any) {
       log.error(`[ClaudeService] Context call failed: ${err?.message}`);
       throw err;

@@ -119,6 +119,11 @@ export interface WorkspaceContext {
   creditBalance?: number;  // Trinity credit awareness
   creditAllocation?: number;  // Monthly credit allocation
   creditPercentUsed?: number;  // Usage percentage
+  // Token-economy aliases — populated alongside credit fields above. Code
+  // paths still call into either name; both are valid surfaces.
+  tokenBalance?: number;
+  tokenAllocation?: number;
+  tokenPercentUsed?: number;
 }
 
 export interface SessionMetrics {
@@ -573,14 +578,14 @@ class TrinityContextManager {
       
       // TRINITY TOKEN/ACTION AWARENESS: Include monthly usage status for self-aware decision making
       if (context.memory.workspaceContext.tokenBalance !== undefined) {
-        const creditBalance = context.memory.workspaceContext.creditBalance;
+        const creditBalance = context.memory.workspaceContext.creditBalance ?? 0;
         const creditAllocation = context.memory.workspaceContext.creditAllocation || 0;
         const creditPercentUsed = context.memory.workspaceContext.creditPercentUsed || 0;
-        
+
         promptContext += `\n## Token Status (Tenant Awareness)\n`;
         promptContext += `- Tokens Remaining: ${creditBalance}/${creditAllocation}\n`;
         promptContext += `- Usage: ${creditPercentUsed}% of monthly token allotment consumed\n`;
-        
+
         // Add contextual hints based on tenant token status
         if (creditBalance < 10) {
           promptContext += `- ⚠️ LOW TOKEN HEADROOM: Tenant is near monthly soft-cap/overage zone; prioritize high-value actions\n`;

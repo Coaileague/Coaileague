@@ -133,21 +133,18 @@ function getLimbicBlock(signal: EmotionalSignal): string {
 // TYPES
 // ============================================================================
 
-// Trinity has no "modes". ConversationMode is retained as an internal
-// DB column value ('business') for session back-compat only; it does not
-// drive prompt construction. Guru-depth reasoning activates automatically
-// from org state, emotional signals, and high-stakes keywords.
-// Trinity is ONE — no mode switching. ConversationMode retained as type alias for migration compatibility.
-export type ConversationMode = 'business';
-// DEPRECATED: 'personal', 'integrated', 'guru' modes removed — one Trinity.
+// Trinity has no "modes". The legacy `ConversationMode` type and `mode`
+// field have been retired — Trinity decides depth and posture automatically
+// from org state, emotional signals, and high-stakes keywords. The DB column
+// `trinity_conversation_sessions.mode` still exists for migration back-compat
+// and is hardcoded to the literal 'business' on every write.
+const LEGACY_BUSINESS_MODE = 'business' as const;
 export type SpiritualGuidance = 'none' | 'general' | 'christian';
 
 export interface ChatRequest {
   userId: string;
   workspaceId: string;
   message: string;
-  /** Deprecated — retained for session column default only. */
-  mode?: ConversationMode;
   sessionId?: string;
   images?: string[];
   isSupportMode?: boolean;
@@ -181,7 +178,6 @@ export interface UsageData {
 export interface ChatResponse {
   sessionId: string;
   response: string;
-  mode: ConversationMode;
   usage?: UsageData;
   metadata?: {
     insightsGenerated?: number;
@@ -209,7 +205,6 @@ export interface ChatResponse {
 export interface ConversationHistory {
   sessions: {
     id: string;
-    mode: ConversationMode;
     startedAt: Date;
     lastActivityAt: Date;
     turnCount: number;
@@ -500,7 +495,9 @@ class TrinityChatService {
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const { userId, workspaceId, message, sessionId, images } = request;
-    // Trinity has no mode toggle — her biological brain decides how to respond
+    // Trinity has no mode toggle — her biological brain decides how to respond.
+    // The legacy `mode` field has been retired; the DB column still exists and
+    // is kept at the literal 'business' for migration compatibility.
 
     // THALAMUS — Universal Sensory Gateway (first organ every signal passes through)
     // Non-blocking for LOW priority; async-logged for background processing
@@ -637,7 +634,9 @@ class TrinityChatService {
             supportMode: true,
             supportAgentId: userId,
             supportTicketId: request.supportTicketId || null,
-            sessionId: session?.id || null,
+            // session is created later in chat() — at this point we only have the
+            // pre-existing sessionId from the request (if any).
+            sessionId: sessionId || null,
             messagePreview: request.message.substring(0, 120),
             trustTier: request.trustTier || 'owner',
           }),
@@ -667,7 +666,6 @@ class TrinityChatService {
       return {
         sessionId: sessionId || 'privacy-blocked',
         response: 'I can only help with your organization\'s information. I cannot access data from workspaces you don\'t belong to.',
-        mode,
         metadata: {
           privacyBlocked: true,
         },
@@ -678,14 +676,13 @@ class TrinityChatService {
     const guardrailResult = await this.checkContentGuardrails(workspaceId, userId, message);
     if (guardrailResult.blocked) {
       // Return guardrail response without processing the message
-      const session = sessionId 
+      const session = sessionId
         ? await this.getSession(sessionId, userId)
-        : await this.getOrCreateSession(userId, workspaceId, mode);
-      
+        : await this.getOrCreateSession(userId, workspaceId);
+
       return {
         sessionId: session?.id || 'blocked',
         response: guardrailResult.response || 'This request cannot be processed.',
-        mode,
         metadata: {
           guardrailTriggered: true,
           canUseChat: guardrailResult.status.canUseChat,
@@ -703,12 +700,12 @@ class TrinityChatService {
         session = await this.getSession(sessionId, userId); // G13 FIX: verify ownership
         // If sessionId was provided but not found (or belongs to a different user), create a new session
         if (!session) {
-          log.info('[TrinityChatService] Session not found, creating new one for user:', userId, 'workspace:', workspaceId, 'mode:', mode);
-          session = await this.getOrCreateSession(userId, workspaceId, mode);
+          log.info('[TrinityChatService] Session not found, creating new one for user:', userId, 'workspace:', workspaceId);
+          session = await this.getOrCreateSession(userId, workspaceId);
         }
       } else {
-        log.info('[TrinityChatService] Creating new session for user:', userId, 'workspace:', workspaceId, 'mode:', mode);
-        session = await this.getOrCreateSession(userId, workspaceId, mode);
+        log.info('[TrinityChatService] Creating new session for user:', userId, 'workspace:', workspaceId);
+        session = await this.getOrCreateSession(userId, workspaceId);
       }
     } catch (sessionError: any) {
       log.error('[TrinityChatService] Session operation failed:', sessionError?.message || sessionError);
@@ -758,7 +755,6 @@ class TrinityChatService {
         return {
           sessionId: session.id,
           response: chatResponse,
-          mode,
           usage: {
             timeMs: 0,
             totalTokens: 0,
@@ -788,10 +784,10 @@ class TrinityChatService {
       } catch { /* non-critical */ }
     }
 
-    // Build system prompt based on mode (with humanized personality + memory)
+    // Build system prompt (Trinity decides depth from context, not a mode toggle).
     let systemPrompt: string;
     try {
-      systemPrompt = this.buildSystemPrompt(mode, workspaceContext, buddySettings, userName, recentInsights, memoryProfile, supportHistory, workspaceId, isSupportMode, isManagerLevel, isSupervisorLevel, workspaceRole);
+      systemPrompt = this.buildSystemPrompt(workspaceContext, buddySettings, userName, recentInsights, memoryProfile, supportHistory, workspaceId, isSupportMode, isManagerLevel, isSupervisorLevel, workspaceRole);
     } catch (err: any) {
       log.warn('[TrinityChatService] System prompt build failed, using fallback:', err?.message);
       systemPrompt = 'You are Trinity, an AI co-pilot for CoAIleague. Be helpful and concise.';
@@ -1319,7 +1315,7 @@ DO NOT:
     let perceptionResult: { thoughtId?: string } = {};
     try {
       perceptionResult = await trinityThoughtEngine.perceive(
-        `User "${userName}" in ${mode} mode: "${message.substring(0, 200)}"${message.length > 200 ? '...' : ''}`,
+        `User "${userName}": "${message.substring(0, 200)}"${message.length > 200 ? '...' : ''}`,
         thoughtCtx
       );
     } catch (err: any) {
@@ -1340,7 +1336,7 @@ DO NOT:
     try {
       await trinityThoughtEngine.deliberate(
         `Intent classification: ${hasActions ? 'ACTION' : isStrategic ? 'STRATEGIC' : isQuestion ? 'INQUIRY' : 'CONVERSATIONAL'}. ` +
-        `Mode: ${mode}. Context depth: ${history.length} turns. Memory profile: ${memoryProfile ? 'loaded' : 'none'}.`,
+        `Context depth: ${history.length} turns. Memory profile: ${memoryProfile ? 'loaded' : 'none'}.`,
         deliberationAlternatives,
         deliberationConfidence,
         { ...thoughtCtx, parentThoughtId: perceptionResult?.thoughtId }
@@ -1359,7 +1355,7 @@ DO NOT:
       await trinityThoughtEngine.decide(
         chosenApproach,
         `Selected based on intent signals (action=${hasActions}, strategic=${isStrategic}, question=${isQuestion}), ` +
-        `conversation history (${history.length} turns), and ${mode} mode context.`,
+        `conversation history (${history.length} turns).`,
         deliberationConfidence,
         { ...thoughtCtx, parentThoughtId: perceptionResult?.thoughtId }
       );
@@ -1383,7 +1379,7 @@ DO NOT:
           description: message.substring(0, 500),
           priority: somaticFlag.fired ? 'high' : 'normal',
           sourceSystem: 'trinity_chat',
-          context: { mode, isStrategic, hasHighStakesKeywords: HIGH_STAKES_KEYWORDS.test(message) },
+          context: { isStrategic, hasHighStakesKeywords: HIGH_STAKES_KEYWORDS.test(message) },
         });
         if (deliberationResult?.reasoning) {
           systemPrompt += `\n\nPREFRONTAL DELIBERATION RESULT:\nBased on a full org-state analysis for this high-stakes scenario, here is the PFC synthesis to factor into your response:\n${deliberationResult.reasoning}`;
@@ -1413,7 +1409,6 @@ DO NOT:
           return {
             sessionId: session.id,
             response: clarificationDecision.question,
-            mode,
             metadata: {
               clarificationRequired: true,
               ambiguityScore: clarificationDecision.ambiguityScore,
@@ -1543,7 +1538,7 @@ Do NOT skip steps — decompose fully before concluding.`;
 
     const requestStartTime = Date.now();
 
-    const aiResponse = await this.generateResponse(systemPrompt, history, message, mode, workspaceId, images, userId, session.id);
+    const aiResponse = await this.generateResponse(systemPrompt, history, message, workspaceId, images, userId, session.id);
 
     const timeMs = Date.now() - requestStartTime;
 
@@ -1580,7 +1575,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         log.warn(`[PersonaAnchor] Drift detected (${driftCheck.driftType}) — re-generating response with correction.`);
         try {
           const correctedPrompt = `${systemPrompt}\n\nPERSONA DRIFT CORRECTION: ${driftCheck.correctionInstruction} Your previous draft had "${driftCheck.driftType}" drift — rewrite without it.`;
-          const corrected = await this.generateResponse(correctedPrompt, history, message, mode, workspaceId, images, userId, session.id);
+          const corrected = await this.generateResponse(correctedPrompt, history, message, workspaceId, images, userId, session.id);
           if (corrected?.text && corrected.text.length > 0) {
             finalResponseText = corrected.text;
           }
@@ -1665,7 +1660,7 @@ Do NOT skip steps — decompose fully before concluding.`;
       workspaceId
     ).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
 
-    this.analyzeForInsights(userId, workspaceId, session.id, message, aiResponse.text, mode).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
+    this.analyzeForInsights(userId, workspaceId, session.id, message, aiResponse.text).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
 
     // === REINFORCEMENT LEARNING — BASAL GANGLIA FEEDBACK LOOP ===
     // Record this chat interaction as an experience in the RL loop.
@@ -1683,7 +1678,6 @@ Do NOT skip steps — decompose fully before concluding.`;
         humanIntervention: false,
         executionTimeMs: timeMs,
         contextWindow: {
-          mode,
           messageLength: message.length,
           responseLength: aiResponse.text.length,
           tokensUsed: aiResponse.tokensUsed,
@@ -1815,7 +1809,6 @@ Do NOT skip steps — decompose fully before concluding.`;
       response: accConflict?.autoBlocked
         ? `I need to pause before delivering that response. I detected a potential issue: ${accConflict.contradictionDescription}\n\nRecommended next step: ${accConflict.recommendedResolution}`
         : (finalResponseText + dispatchAppend),
-      mode,
       usage,
       metadata: {
         memoryRecalled: !!memoryProfile,
@@ -1834,34 +1827,35 @@ Do NOT skip steps — decompose fully before concluding.`;
   }
 
   /**
-   * Get or create a conversation session
+   * Get or create a conversation session. The DB column `mode` is hardcoded
+   * to the literal 'business' for back-compat — Trinity has no mode toggle.
    */
-  private async getOrCreateSession(userId: string, workspaceId: string, mode: ConversationMode): Promise<TrinityConversationSession | null> {
+  private async getOrCreateSession(userId: string, workspaceId: string): Promise<TrinityConversationSession | null> {
     try {
       const existing = await db.select()
         .from(trinityConversationSessions)
         .where(and(
           eq(trinityConversationSessions.userId, userId),
           eq(trinityConversationSessions.workspaceId, workspaceId),
-          eq(trinityConversationSessions.mode, mode),
+          eq(trinityConversationSessions.mode, LEGACY_BUSINESS_MODE),
           eq(trinityConversationSessions.sessionState, 'active')
         ))
         .orderBy(desc(trinityConversationSessions.lastActivityAt))
         .limit(1);
       log.info('[TrinityChatService] Existing sessions found:', existing.length);
-      
+
       if (existing.length > 0) {
         log.info('[TrinityChatService] Found existing session:', existing[0].id);
         return existing[0];
       }
 
-      log.info('[TrinityChatService] Creating new session for user:', userId, 'workspace:', workspaceId, 'mode:', mode);
+      log.info('[TrinityChatService] Creating new session for user:', userId, 'workspace:', workspaceId);
       const [session] = await db
         .insert(trinityConversationSessions)
         .values({
           userId,
           workspaceId,
-          mode,
+          mode: LEGACY_BUSINESS_MODE,
           sessionState: 'active',
           turnCount: 0,
         })
@@ -2599,10 +2593,10 @@ Do NOT skip steps — decompose fully before concluding.`;
   }
 
   /**
-   * Build system prompt based on mode and context
+   * Build the system prompt. Trinity decides depth/posture from context
+   * (org state, emotional signals, high-stakes keywords) — no mode toggle.
    */
   private buildSystemPrompt(
-    mode: ConversationMode,
     workspaceContext: any,
     buddySettings: TrinityBuddySettings | null,
     userName: string,
@@ -2973,7 +2967,6 @@ Do NOT skip steps — decompose fully before concluding.`;
     systemPrompt: string,
     history: { role: string; content: string }[],
     message: string,
-    mode: ConversationMode,
     workspaceId?: string,
     images?: string[],
     userId?: string,
@@ -3065,11 +3058,9 @@ Do NOT skip steps — decompose fully before concluding.`;
     workspaceId: string,
     sessionId: string,
     userMessage: string,
-    response: string,
-    mode: ConversationMode
+    response: string
   ): Promise<void> {
     try {
-      // Build mode-appropriate insight prompt
       const insightTypes = true
         ? `- billing_pattern: User's billing/invoicing habits or concerns
 - payroll_concern: Pay accuracy, hold, or timing worry
@@ -3091,7 +3082,6 @@ Do NOT skip steps — decompose fully before concluding.`;
       const analysisPrompt = `
 Analyze this conversation exchange for actionable insights about the user.
 
-Mode: ${mode}
 User said: "${userMessage.substring(0, 400)}"
 Trinity responded: "${response.substring(0, 400)}"
 
@@ -3177,7 +3167,6 @@ If no significant insight, respond with:
 
         return {
           id: session.id,
-          mode: 'business' as const, // Trinity is unified — always 'business'
           startedAt: session.startedAt || session.createdAt!,
           lastActivityAt: session.lastActivityAt || session.createdAt!,
           turnCount: session.turnCount || 0,
@@ -3228,28 +3217,6 @@ If no significant insight, respond with:
       .returning();
 
     return updated;
-  }
-
-  /**
-   * Switch conversation mode
-   */
-  /** @deprecated Trinity has no modes — ConversationMode is hardcoded to 'business' for DB back-compat.
-   * This method updates the DB column only; it has no effect on Trinity's behavior. */
-  async switchMode(userId: string, workspaceId: string, newMode: ConversationMode): Promise<TrinityConversationSession> {
-    // End current active sessions
-    await db
-      .update(trinityConversationSessions)
-      .set({ sessionState: 'ended', endedAt: new Date() })
-      .where(and(
-        eq(trinityConversationSessions.userId, userId),
-        eq(trinityConversationSessions.workspaceId, workspaceId),
-        eq(trinityConversationSessions.sessionState, 'active')
-      ));
-
-    // Create new session with new mode
-    const session = await this.getOrCreateSession(userId, workspaceId, newMode);
-    if (!session) throw new Error('Failed to create session');
-    return session;
   }
 
   /**

@@ -1326,7 +1326,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
         // Try OpenAI Whisper first (better accuracy, uses confirmed OPENAI_API_KEY)
         if (process.env.OPENAI_API_KEY && RecordingUrl) {
           try {
-            const fetch = (await import('node-fetch')).default as any;
+            // Use Node 20+ global fetch — no node-fetch dependency required.
             const FormData = (await import('form-data')).default;
             // Download the recording from Twilio
             const audioResp = await fetch(RecordingUrl + '.mp3', {
@@ -1337,7 +1337,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
               },
             });
             if (audioResp.ok) {
-              const audioBuffer = await audioResp.buffer();
+              const audioBuffer = Buffer.from(await audioResp.arrayBuffer());
               const form = new FormData();
               form.append('file', audioBuffer, { filename: `${RecordingSid}.mp3`, contentType: 'audio/mpeg' });
               form.append('model', 'whisper-1');
@@ -1345,7 +1345,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
               const whisperResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, ...form.getHeaders() },
-                body: form,
+                body: form as any,
               });
               if (whisperResp.ok) {
                 const whisperData = await whisperResp.json() as { text?: string };
@@ -1353,7 +1353,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
                 if (transcript) {
                   log.info(`[VoiceRoutes] Whisper transcription complete for ${RecordingSid}: "${transcript.slice(0, 80)}"`);
                   // Store directly — no need for callback round-trip
-                  const { classifyAndPersist } = await import('../services/trinityVoice/voiceEventClassifier');
+                  const { classifyAndPersist } = await import('../services/trinityVoice/voicemailSentimentService');
                   await updateCallSession(CallSid, { transcript });
                   await classifyAndPersist({ callSid: CallSid, transcript });
                   transcribed = true;
