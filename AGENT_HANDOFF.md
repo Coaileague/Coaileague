@@ -47,13 +47,84 @@
 
 | Session | Branch | Domain | Key files | Started (UTC) | Last update |
 |---------|--------|--------|-----------|---------------|-------------|
-| _claude-action-wiring-LjP5K_ | `claude/action-wiring-manifest-LjP5K` | Action Wiring Manifest first-pass + Claude-only handoff protocol | `scripts/audit/generate-action-wiring-manifest.ts`, `scripts/audit/check-action-wiring-gaps.ts`, `ACTION_WIRING_MANIFEST.md`, `action-wiring-manifest.json`, `AGENT_HANDOFF.md` | 2026-05-01 | 2026-05-01 — signed out, see RECENT SESSIONS |
+| _claude-action-wiring-LjP5K_ | `claude/action-wiring-manifest-LjP5K` | Action Wiring Manifest first-pass + Claude-only handoff protocol | `scripts/audit/generate-action-wiring-manifest.ts`, `scripts/audit/check-action-wiring-gaps.ts`, `ACTION_WIRING_MANIFEST.md`, `action-wiring-manifest.json`, `AGENT_HANDOFF.md` | 2026-05-01 | 2026-05-01 — signed out |
+| _claude-platform-health-LjP5K_ | `claude/action-wiring-manifest-LjP5K` | Platform health rescan — TS errors, route conflicts, race conditions, Trinity-law violations | `scripts/audit/scan-platform-health.ts`, `PLATFORM_HEALTH_AUDIT.md`, `platform-health-audit.json`, `AGENT_HANDOFF.md` | 2026-05-01 | 2026-05-01 — signed out |
+
+_(no other active sessions)_
 
 _(no other active sessions)_
 
 ---
 
 ## SESSION LOG (newest at top — append, do not edit history)
+
+### 2026-05-01 · claude-platform-health-LjP5K
+**Branch:** `claude/action-wiring-manifest-LjP5K`
+**Commit:** _(pending — will be appended)_
+**What changed:**
+- Added `scripts/audit/scan-platform-health.ts` — re-uses
+  `action-wiring-manifest.json` and adds new sweeps for route conflicts,
+  mount-prefix overlaps, race-condition patterns, Trinity-law violations
+  (§A REPLIT_DEPLOYMENT, §B fire-and-forget, §F module-load assertion,
+  §G raw SQL without workspace_id, §I hardcoded UUIDs), direct provider
+  SDK calls outside NDS, and a TypeScript-error roll-up.
+- Generated `PLATFORM_HEALTH_AUDIT.md` + `platform-health-audit.json`.
+- Comment-line guard (`isInComment`) added to all sweeps so doc-comments
+  referencing forbidden patterns are not falsely flagged.
+**Top findings (all citations in PLATFORM_HEALTH_AUDIT.md):**
+- **TypeScript:** 381 errors. Worst files:
+  `server/services/ai-brain/trinityDocumentActions.ts` (28),
+  `trinityChatService.ts` (21), `EmailHubCanvas.tsx` (13),
+  `settings/HiringSettings.tsx` (13), `routes/authCoreRoutes.ts` (13),
+  `engagementRoutes.ts` (13), `chat-rooms.ts` (12).
+- **Route conflicts:** 43 distinct (METHOD, full-path) pairs declared in
+  multiple files — same path resolved through different routers, first
+  match wins. Examples:
+  - `POST /api/admin/dev-execute` in `adminDevExecuteRoute.ts:92` AND
+    `adminRoutes.ts:60`.
+  - `POST /api/auth/mfa/verify` in `authCoreRoutes.ts:824` AND
+    `authRoutes.ts:517`.
+  - Whole `chat.ts` ↔ `chatInlineRoutes.ts` overlap on
+    `/api/chat/conversations*` (≥7 routes).
+- **Same-file dupes (medium):** 71 cases where one file declares the
+  same path twice — second declaration unreachable. Worst offenders:
+  `chat-management.ts` (`/messages/:id/{reactions,edit,pin,forward}`
+  each declared 2-7×), `supportRoutes.ts` priority-queue (3×),
+  `commInlineRoutes.ts` alert config endpoints (each 2×).
+- **Mount overlaps:** 15 prefixes mounted with conflicting middleware
+  stacks — bypass risk. Top: `/api/onboarding`, `/api/form-builder`,
+  `/api/legal`, `/api/trinity`, `/api/staffing`.
+- **TRINITY.md §G blockers:** 55 raw-SQL `UPDATE`/`DELETE` calls on
+  multi-tenant tables without `workspace_id` in the `WHERE`. Examples:
+  `clockinPinRoutes.ts:68,183,246` UPDATE employees,
+  `chatInlineRoutes.ts:284` UPDATE chat_messages,
+  `authCoreRoutes.ts:979` DELETE FROM user_sessions.
+- **TRINITY.md §F:** 4 module-load Stripe instantiations with `!` env
+  asserts: `routes/integrations-status.ts:274`,
+  `scripts/seed-stripe-products.ts:21`, `setup-new-pricing-products.ts:31`,
+  `verify-stripe-products.ts:3`.
+- **TRINITY.md §I:** 3 hardcoded UUID literals outside dev seeds:
+  `routes/internalResetRoutes.ts:32`, `services/productionSeed.ts:862,
+  1112,1148`.
+- **TRINITY.md §A:** 0 real (the only match was a comment in `index.ts`
+  which `isInComment` now correctly filters).
+- **Race patterns:** 168 fire-and-forget `.catch()` after Promise.all
+  filtering, 30 `setImmediate/setTimeout(async ...)` calls, 391 files
+  with multi-write but no `db.transaction`, 112 read-then-write paths
+  without lock or transaction.
+**Open for next session:**
+- Triage the §G blockers first — those are tenant-isolation leaks (53
+  routes touching `employees`, `chat_messages`, `user_sessions`, etc.).
+- Resolve the chat-management same-file dupes — likely a merge artifact.
+- TS errors are concentrated in 7 files; fixing those clears ~50% of the
+  381-error count. `trinityDocumentActions.ts` and `trinityChatService.ts`
+  alone account for 49.
+- Re-run after each batch:
+  ```
+  npx tsx scripts/audit/scan-platform-health.ts
+  ```
+**Build:** not run — audit-only changes, no server code touched.
+**Sign-out:** done.
 
 ### 2026-05-01 · claude-action-wiring-LjP5K
 **Branch:** `claude/action-wiring-manifest-LjP5K`
@@ -83,6 +154,7 @@ Schedule. Audit is map-only — no fixes applied yet.
 
 | When | Session | Branch | Status | Notes |
 |------|---------|--------|--------|-------|
+| 2026-05-01 | claude-platform-health-LjP5K | `claude/action-wiring-manifest-LjP5K` | done | Platform Health Audit shipped. 381 TS errors, 43 cross-file route conflicts, 55 §G tenant-isolation blockers, 168 fire-and-forget races. Map only, no fixes. |
 | 2026-05-01 | claude-action-wiring-LjP5K | `claude/action-wiring-manifest-LjP5K` | done | Action Wiring Manifest first-pass shipped. Map only, no fixes. |
 
 ---
@@ -161,14 +233,21 @@ Schedule. Audit is map-only — no fixes applied yet.
 ### Audit scripts
 
 ```bash
+# Action wiring map (UI ↔ backend ↔ Trinity ↔ WS ↔ automation)
 npx tsx scripts/audit/generate-action-wiring-manifest.ts
 npx tsx scripts/audit/check-action-wiring-gaps.ts          # --strict to gate CI
+
+# Platform health (route conflicts, races, Trinity-law violations, TS errors)
+npx tsc --noEmit > /tmp/tsc-output.txt 2>&1                 # ~10min on this repo
+npx tsx scripts/audit/scan-platform-health.ts              # consumes /tmp/tsc-output.txt
 ```
 
-### Manifest paths
+### Manifest / report paths
 
-- `ACTION_WIRING_MANIFEST.md`     — human-readable
-- `action-wiring-manifest.json`   — machine-readable
+- `ACTION_WIRING_MANIFEST.md`     — human-readable wiring map
+- `action-wiring-manifest.json`   — machine-readable wiring map
+- `PLATFORM_HEALTH_AUDIT.md`      — human-readable health/race/conflict report
+- `platform-health-audit.json`    — machine-readable health report (incl. tsc top-files)
 
 ### First-pass scope counts
 
