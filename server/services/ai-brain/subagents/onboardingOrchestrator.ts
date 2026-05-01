@@ -467,14 +467,14 @@ class OnboardingOrchestrator {
 
     return {
       gamificationEnabled,
-      automationGates: gateStatus.gates.map(g => ({
+      automationGates: gateStatus.gates.map((g: Record<string,unknown>) => ({
         id: g.id,
         name: g.name,
         unlocked: g.unlocked,
         requiredLevel: g.requiredLevel,
       })),
       currentLevel: gateStatus.currentLevel,
-      readyForAutomation: gateStatus.gates.some(g => g.unlocked),
+      readyForAutomation: gateStatus.gates.some((g: Record<string,unknown>) => g.unlocked),
     };
   }
 
@@ -1284,7 +1284,7 @@ class OnboardingOrchestrator {
       if (!trinityInitialized) {
         recommendations.push('Initialize Trinity AI assistant for personalized guidance');
       }
-      if (gateStatus.gates.filter(g => g.unlocked).length === 0) {
+      if (gateStatus.gates.filter((g: Record<string,unknown>) => g.unlocked).length === 0) {
         recommendations.push('Complete onboarding challenges to unlock automation gates');
       }
       if (!dataImported) {
@@ -1293,10 +1293,10 @@ class OnboardingOrchestrator {
 
       return {
         workspaceId,
-        onboardingComplete: gamificationEnabled && gateStatus.gates.some(g => g.unlocked),
+        onboardingComplete: gamificationEnabled && gateStatus.gates.some((g: Record<string,unknown>) => g.unlocked),
         trinityInitialized,
         gamificationActive: gamificationEnabled,
-        automationGatesUnlocked: gateStatus.gates.filter(g => g.unlocked).map(g => g.name),
+        automationGatesUnlocked: gateStatus.gates.filter((g: Record<string,unknown>) => g.unlocked).map((g: Record<string,unknown>) => g.name),
         dataImported,
         errors,
         recommendations,

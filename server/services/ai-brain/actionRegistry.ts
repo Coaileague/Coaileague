@@ -3230,7 +3230,7 @@ class AIBrainActionRegistry {
         }
 
         await db.update(platformRoles)
-          .set({ revokedAt: new Date(), revokedReason: 'Role changed via AI Brain' })
+          .set({ revokedAt: new Date(), revokedReason: 'Role changed via AI Brain' , updatedAt: new Date() })
           .where(and(eq(platformRoles.userId, userId)));
 
         if (role !== 'none') {

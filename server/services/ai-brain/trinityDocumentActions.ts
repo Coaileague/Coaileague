@@ -25,11 +25,16 @@ import { diagnoseBusinessArtifactCoverage } from '../documents/businessArtifactD
 import { invoiceService } from '../billing/invoice';
 import { generateTimesheetSupportPackage } from '../documents/timesheetSupportPackageGenerator';
 import { scoreRfpComplexity, buildRfpExtractionPrompt, type RfpScoringInputs } from '../billing/rfpComplexityScorer';
+import { generateProofOfEmployment, generateDirectDepositConfirmation, generatePayrollRunSummary, generateW3Transmittal } from '../documents/businessFormsGenerators';
+
+function mkAction(actionDef: Record<string, unknown>) {
+  return actionDef;
+}
 const log = createLogger('trinityDocumentActions');
 const I9_COMPLIANCE_WINDOW_DAYS = 90;
 const I9_DEADLINE_DAYS = 3;
 
-export function registerTrinityDocumentActions(orchestrator: unknown): void {
+export function registerTrinityDocumentActions(orchestrator: { registerAction: (action: unknown) => void }): void {
   log.info('[TrinityDocumentActions] Registering 7 document orchestration actions...');
 
   // ─────────────────────────────────────────────────────
@@ -633,7 +638,7 @@ export function registerTrinityDocumentActions(orchestrator: unknown): void {
   });
   // ── Elite AI Actions — Per-Use Pricing ($89-199 range) ──────────────────
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.contract_analysis',
     description: 'Line-by-line liability flagging, missing-protection callouts, and auto-redlines against PSB requirements. Cites exact statute violations.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
@@ -669,9 +674,9 @@ Return structured JSON with fields: liabilityFlags[], missingProtections[], stat
         featureKey: 'contract_analysis',
       };
     },
-  }));
+  });
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.compliance_audit_report',
     description: 'Full audit-readiness report with compliance score, findings categorized by severity, and auditor-ready exhibit index.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
@@ -740,9 +745,9 @@ Return structured JSON.`;
         featureKey: 'compliance_audit_report',
       };
     },
-  }));
+  });
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.incident_investigation_report',
     description: 'Court-ready incident investigation narrative with timeline, root cause analysis, and officer conduct assessment for insurance and litigation.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager', 'supervisor'],
@@ -797,9 +802,9 @@ Write in formal investigative report style. Use passive voice for officer action
         featureKey: 'incident_investigation_report',
       };
     },
-  }));
+  });
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.officer_performance_review',
     description: 'Structured performance review narrative from 12 months of shift, attendance, incident, and compliance data.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
@@ -869,7 +874,7 @@ Write in professional HR review style. Be specific and evidence-based. Avoid vag
         featureKey: 'officer_performance_review',
       };
     },
-  }));
+  });
 
 }
 

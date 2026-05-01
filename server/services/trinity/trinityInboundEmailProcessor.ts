@@ -140,7 +140,7 @@ async function handleCommandEmail(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type EmailCategory = 'calloff' | 'incident' | 'docs' | 'support' | 'careers' | 'unknown';
+export type EmailCategory = 'calloff' | 'incident' | 'docs' | 'support' | 'careers' | 'unknown' | 'staffing';
 
 export interface ParsedInboundEmail {
   messageId?: string;
@@ -1221,7 +1221,7 @@ async function processStaffing(
 
     // Notify the manager who owns this workspace about the email + action taken
     try {
-      const { universalNotificationEngine } = await import('../../universalNotificationEngine');
+      const { universalNotificationEngine } = await import('../universalNotificationEngine');
       await universalNotificationEngine.sendNotification({
         workspaceId,
         type: 'trinity_autonomous_action',

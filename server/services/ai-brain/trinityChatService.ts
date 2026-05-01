@@ -500,7 +500,7 @@ class TrinityChatService {
    * Send a message to Trinity and get a response
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
-    const { userId, workspaceId, message, sessionId, images } = request;
+    const { userId, workspaceId, message, sessionId, images, mode = 'business' as const } = request as ChatRequest & { mode?: string };
     // Trinity has no mode toggle — her biological brain decides how to respond
 
     // THALAMUS — Universal Sensory Gateway (first organ every signal passes through)

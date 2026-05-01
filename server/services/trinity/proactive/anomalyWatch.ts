@@ -58,6 +58,7 @@ export interface Anomaly {
   entityId: string;
   dedupKey: string;
   details?: Record<string, unknown>;
+  description?: string;
 }
 
 export interface AnomalyWatchResult {
